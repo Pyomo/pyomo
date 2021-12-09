@@ -167,8 +167,11 @@ class TRFInterface(object):
         for i, y in b.ef_outputs.items():
             b.basis_model_output[i] = value(b.basis_expressions[y])
             b.truth_model_output[i] = value(b.truth_models[y])
+            # Basis functions are Pyomo expressions, in theory.
+            # So this is possible to call
             gradBasis = differentiate(b.basis_expressions[y],
                                       wrt_list=b.ef_inputs[y])
+            # These, however, are external functions
             gradTruth = self.gradientOfEF(b.truth_models[y],
                                           b.ef_inputs[y])
             for j, w in enumerate(b.ef_inputs[y]):
