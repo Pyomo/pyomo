@@ -81,7 +81,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         nonlinear equality constraints.
 
         Args:
-            target_model (Pyomo model): the MILP main problem.
+            target_model (Pyomo model): the MIP main problem.
             dual_values (list): contains the value of the duals for each constraint.
             solve_data (MindtPySolveData): data container that holds solve-instance data.
             config (ConfigBlock): the specific configurations for MindtPy.
@@ -678,7 +678,7 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
 
 
 def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, solve_data, config):
-    """This function is called during the branch and bound of main MILP problem, 
+    """This function is called during the branch and bound of main MIP problem, 
     more exactly when a feasible solution is found and LazyCallback is activated.
 
     Copy the solution to working model and update upper or lower bound.

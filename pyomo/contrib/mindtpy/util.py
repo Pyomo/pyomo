@@ -274,7 +274,7 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
 
 
 def generate_lag_objective_function(model, setpoint_model, config, solve_data, discrete_only=False):
-    """The function generate taylor extension of the Lagrangean function.
+    """The function generates the second-order Taylor approximation of the Lagrangean.
 
     Args:
         model (Pyomo model): the model that needs new objective function.
@@ -391,7 +391,7 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
 
 
 def set_solver_options(opt, solve_data, config, solver_type, regularization=False):
-    """set options for MIP/NLP solvers.
+    """Set options for MIP/NLP solvers.
 
     Args:
         opt (SolverFactory): the MIP/NLP solver.
