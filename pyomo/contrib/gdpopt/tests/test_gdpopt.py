@@ -230,6 +230,55 @@ class TestGDPopt(unittest.TestCase):
         )
         self.assertAlmostEqual(value(m.o), 0)
 
+    def test_nested_disjunctions_set_covering(self):
+        # This test triggers the InfeasibleConstraintException in
+        # deactivate_trivial_constraints in one of the subproblem solves during
+        # initialization. This makes sure we get the correct answer anyway, as
+        # there is a feasible solution.
+        m = models.makeNestedNonlinearModel()
+        SolverFactory('gdpopt').solve(m, strategy='LOA', mip_solver=mip_solver,
+                                      nlp_solver=nlp_solver,
+                                      init_strategy='set_covering')
+        self.assertAlmostEqual(value(m.x), sqrt(2)/2)
+        self.assertAlmostEqual(value(m.y), sqrt(2)/2)
+        self.assertTrue(value(m.disj.disjuncts[1].indicator_var))
+        self.assertFalse(value(m.disj.disjuncts[0].indicator_var))
+        self.assertTrue(value(m.d1.indicator_var))
+        self.assertFalse(value(m.d2.indicator_var))
+
+    def test_equality_propagation_infeasibility_in_subproblems(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-10, 10))
+        m.y = Var(bounds=(-10, 10))
+        m.disj = Disjunction(expr=[[m.x == m.y, m.y == 2],
+                                   [m.y == 8],
+                                   [m.x + m.y >= 4, m.y == m.x + 1]])
+        m.cons = Constraint(expr=m.x == 3)
+        m.obj = Objective(expr=m.x + m.y)
+        SolverFactory('gdpopt').solve(m, strategy='RIC', mip_solver=mip_solver,
+                                      nlp_solver=nlp_solver,
+                                      init_strategy='set_covering')
+        self.assertAlmostEqual(value(m.x), 3)
+        self.assertAlmostEqual(value(m.y), 4)
+        self.assertFalse(value(m.disj.disjuncts[0].indicator_var))
+        self.assertFalse(value(m.disj.disjuncts[1].indicator_var))
+        self.assertTrue(value(m.disj.disjuncts[2].indicator_var))
+
+    def test_bound_infeasibility_in_subproblems(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(2,4))
+        m.y = Var(bounds=(5,10))
+        m.disj = Disjunction(expr=[[m.x == m.y, m.x + m.y >= 8],
+                                   [m.x == 4]])
+        m.obj = Objective(expr=m.x + m.y)
+        SolverFactory('gdpopt').solve(m, strategy='RIC', mip_solver=mip_solver,
+                                      nlp_solver=nlp_solver,
+                                      init_strategy='set_covering')
+        self.assertAlmostEqual(value(m.x), 4)
+        self.assertAlmostEqual(value(m.y), 5)
+        self.assertFalse(value(m.disj.disjuncts[0].indicator_var))
+        self.assertTrue(value(m.disj.disjuncts[1].indicator_var))
+
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_logical_constraints_on_disjuncts(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
@@ -243,15 +292,6 @@ class TestGDPopt(unittest.TestCase):
         SolverFactory('gdpopt').solve(m, strategy='LOA', mip_solver=mip_solver,
                                       nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 4)
-
-    # [ESJ 10/27/21] This should work, but it won't until #2171 is resolved
-    # def test_nested_disjunctions_set_covering(self):
-    #     m = models.makeNestedNonlinearModel()
-    #     SolverFactory('gdpopt').solve(m, strategy='LOA', mip_solver=mip_solver,
-    #                                   nlp_solver=nlp_solver,
-    #                                   init_strategy='set_covering')
-    #     self.assertAlmostEqual(value(m.x), sqrt(2)/2)
-    #     self.assertAlmostEqual(value(m.y), sqrt(2)/2)
 
     def test_nested_disjunctions_no_init(self):
         m = models.makeNestedNonlinearModel()

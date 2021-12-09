@@ -12,6 +12,7 @@
 from __future__ import division
 import logging
 from pyomo.common.collections import ComponentMap
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_no_good_cuts, add_affine_cuts)
 from pyomo.contrib.mindtpy.util import add_feas_slacks, set_solver_options
@@ -88,14 +89,14 @@ def solve_subproblem(solve_data, config):
                     MindtPy.variable_list,
                     solve_data.initial_var_values):
                 if not nlp_var.fixed and not nlp_var.is_binary():
-                    nlp_var.value = orig_val
+                    nlp_var.set_value(orig_val, skip_validation=True)
             # fixed_nlp.tmp_duals[c] = c_leq * max(
             #     0, c_leq*(value(c.body) - rhs))
             # TODO: change logic to c_leq based on benchmarking
     try:
         TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
             fixed_nlp, tmp=True, ignore_infeasible=False, tolerance=config.constraint_tolerance)
-    except ValueError:
+    except InfeasibleConstraintException:
         config.logger.warning(
             'infeasibility detected in deactivate_trivial_constraints')
         results = SolverResults()
@@ -396,7 +397,7 @@ def solve_feasibility_subproblem(solve_data, config):
                     MindtPy.variable_list,
                     solve_data.initial_var_values):
                 if not nlp_var.fixed and not nlp_var.is_binary():
-                    nlp_var.value = orig_val
+                    nlp_var.set_value(orig_val, skip_validation=True)
             with time_code(solve_data.timing, 'feasibility subproblem'):
                 feas_soln = nlpopt.solve(
                     feas_subproblem, tee=config.nlp_solver_tee, **nlp_args)

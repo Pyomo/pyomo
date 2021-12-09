@@ -396,12 +396,16 @@ class _GeneralVarData(_VarData):
             if val not in self.domain:
                 logger.warning(
                     "Setting Var '%s' to a value `%s` (%s) not in domain %s." %
-                    (self.name, val, type(val).__name__, self.domain))
+                    (self.name, val, type(val).__name__, self.domain),
+                    extra={'id':'W1001'},
+                )
             elif (self._lb is not None and val < value(self._lb)) or (
                     self._ub is not None and val > value(self._ub)):
                 logger.warning(
                     "Setting Var '%s' to a numeric value `%s` "
-                    "outside the bounds %s." % (self.name, val, self.bounds))
+                    "outside the bounds %s." % (self.name, val, self.bounds),
+                    extra={'id':'W1002'},
+                )
 
         self._value = val
         self.stale = False
@@ -412,8 +416,7 @@ class _GeneralVarData(_VarData):
         return self._value
     @value.setter
     def value(self, val):
-        # TODO: this should be changed to use valid=False
-        self.set_value(val, True)
+        self.set_value(val)
 
     @property
     def domain(self):
@@ -426,8 +429,9 @@ class _GeneralVarData(_VarData):
         except:
             logger.error(
                 "%s is not a valid domain. Variable domains must be an "
-                "instance of a Pyomo Set or convertable to a Pyomo Set.  "
-                "Examples: NonNegativeReals, Integers, Binary" % (domain,))
+                "instance of a Pyomo Set or convertable to a Pyomo Set."
+                % (domain,),
+                extra={'id': 'E2001'})
             raise
 
     @_VarData.bounds.getter
@@ -924,9 +928,10 @@ class VarList(IndexedVar):
     Variable-length indexed variable objects used to construct Pyomo models.
     """
 
-    def __init__(self, **kwds):
+    def __init__(self, **kwargs):
+        self._starting_index = kwargs.pop('starting_index', 1)
         args = (Set(dimen=1),)
-        IndexedVar.__init__(self, *args, **kwds)
+        IndexedVar.__init__(self, *args, **kwargs)
 
     def construct(self, data=None):
         """Construct this component."""
@@ -947,11 +952,11 @@ class VarList(IndexedVar):
         # then let _validate_index complain when we set the value.
         if self._rule_init is not None and self._rule_init.contains_indices():
             for i, idx in enumerate(self._rule_init.indices()):
-                self._index.add(i+1)
+                self._index.add(i + self._starting_index)
         super(VarList,self).construct(data)
 
     def add(self):
         """Add a variable to this list."""
-        next_idx = len(self._index) + 1
+        next_idx = len(self._index) + self._starting_index
         self._index.add(next_idx)
         return self[next_idx]
