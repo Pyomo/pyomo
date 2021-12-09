@@ -186,9 +186,9 @@ class TRFInterface(object):
 
     def gradientOfEF(self, ef, inputs):
         """
-        Finite difference gradient of an external function
+        TODO: Finite difference gradient of an external function
         """
-        gradient = [value(inputs[i]) - value(ef[i]) for i in range(len(inputs))]
+        gradient = []
         return gradient
 
     def calculateFeasibility(self):
