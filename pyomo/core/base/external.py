@@ -91,7 +91,7 @@ class ExternalFunction(Component):
         args_ = []
         for arg in args:
             if type(arg) is types.GeneratorType:
-                args_.extend(val for val in arg)
+                args_.extend(arg)
             else:
                 args_.append(arg)
         #
