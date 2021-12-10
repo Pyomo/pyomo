@@ -83,7 +83,7 @@ class ExternalFunction(Component):
             try:
                 # Q: Is there a better way to test if a value is an object
                 #    not in native_types and not a standard expression type?
-                if arg.__class__ in native_types or arg.is_expression_type():
+                if arg.__class__ in native_types:
                     continue
                 if arg.is_potentially_variable():
                     pv = True
