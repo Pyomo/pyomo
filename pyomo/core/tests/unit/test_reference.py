@@ -883,6 +883,25 @@ class TestReference(unittest.TestCase):
                 KeyError, "Index '1' is not valid for indexed component 'r'"):
             m.r[1] = m.x
 
+    def test_reference_to_set(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,3,5])
+        m.r = Reference(m.I)
+        self.assertEqual(len(m.r), 1)
+        self.assertEqual(list(m.r.keys()), [None])
+        self.assertEqual(list(m.r.values()), [m.I])
+        self.assertIs(m.r[None], m.I)
+
+        # Test that a referent Set containing None doesn't break the
+        # None index
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,3,None,5])
+        m.r = Reference(m.I)
+        self.assertEqual(len(m.r), 1)
+        self.assertEqual(list(m.r.keys()), [None])
+        self.assertEqual(list(m.r.values()), [m.I])
+        self.assertIs(m.r[None], m.I)
+
     def test_is_reference(self):
         m = ConcreteModel()
         m.v0 = Var()

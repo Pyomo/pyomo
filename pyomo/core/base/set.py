@@ -1382,6 +1382,7 @@ class _ScalarOrderedSetMixin(object):
 
 class _OrderedSetMixin(object):
     __slots__ = ()
+    _valid_getitem_keys = {None, (None,), Ellipsis}
 
     def at(self, index):
         raise DeveloperError("Derived ordered set class (%s) failed to "
@@ -1392,8 +1393,15 @@ class _OrderedSetMixin(object):
                              "implement ord" % (type(self).__name__,))
 
     def __getitem__(self, key):
-        if key is None and not self.is_indexed():
-            return self
+        # If key looks like the valid key for UnindexedComponent_set, or
+        # is an Ellipsis/slice (because someone is generating a
+        # component slice), then treat this like a regular Scalar
+        # component and defer to the IndexedComponent implementation.
+        # In any other case, defer to the deprecated OrderedScalarSet
+        # functionality
+        if not self.is_indexed() and (
+                key in self._valid_getitem_keys or type(key) is slice):
+            return super().__getitem__(key)
         deprecation_warning(
             "Using __getitem__ to return a set value from its (ordered) "
             "position is deprecated.  Please use at()",
