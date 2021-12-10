@@ -25,7 +25,7 @@ from pyomo.environ import (
 from pyomo.common.collections import ComponentSet
 from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set import (
-    SetProduct, FiniteSetOf, UnknownSetDimen, normalize_index,
+    SetProduct, FiniteSetOf, OrderedSetOf, UnknownSetDimen, normalize_index,
 )
 from pyomo.core.base.indexed_component import (
     UnindexedComponent_set, IndexedComponent
@@ -412,7 +412,7 @@ class TestReference(unittest.TestCase):
         self.assertIs(m.r.ctype, Var)
         self.assertIsNot(m.r.index_set(), m.x.index_set())
         self.assertIs(m.x.index_set(), UnindexedComponent_set)
-        self.assertIs(type(m.r.index_set()), FiniteSetOf)
+        self.assertIs(type(m.r.index_set()), OrderedSetOf)
         self.assertEqual(len(m.r), 1)
         self.assertTrue(m.r.is_indexed())
         self.assertIn(None, m.r)
@@ -426,7 +426,7 @@ class TestReference(unittest.TestCase):
         self.assertIs(m.s.ctype, Var)
         self.assertIsNot(m.s.index_set(), m.x.index_set())
         self.assertIs(m.x.index_set(), UnindexedComponent_set)
-        self.assertIs(type(m.s.index_set()), FiniteSetOf)
+        self.assertIs(type(m.s.index_set()), OrderedSetOf)
         self.assertEqual(len(m.s), 1)
         self.assertTrue(m.s.is_indexed())
         self.assertIn(None, m.s)
@@ -457,7 +457,7 @@ class TestReference(unittest.TestCase):
         self.assertIs(m.r.ctype, Var)
         self.assertIsNot(m.r.index_set(), m.y.index_set())
         self.assertIs(m.y.index_set(), m.y_index)
-        self.assertIs(type(m.r.index_set()), FiniteSetOf)
+        self.assertIs(type(m.r.index_set()), OrderedSetOf)
         self.assertEqual(len(m.r), 1)
         self.assertTrue(m.r.is_indexed())
         self.assertIn(None, m.r)
@@ -698,8 +698,8 @@ class TestReference(unittest.TestCase):
         self.assertEqual(m.r.index_set().dimen, 2)
         base_sets = list(m.r.index_set().subsets())
         self.assertEqual(len(base_sets), 2)
-        self.assertIs(type(base_sets[0]), FiniteSetOf)
-        self.assertIs(type(base_sets[1]), FiniteSetOf)
+        self.assertIs(type(base_sets[0]), OrderedSetOf)
+        self.assertIs(type(base_sets[1]), OrderedSetOf)
 
     def test_ctype_detection(self):
         m = ConcreteModel()

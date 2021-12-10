@@ -2296,7 +2296,7 @@ class SetOf(_SetData, Component):
         if cls is not SetOf:
             return super(SetOf, cls).__new__(cls)
         reference, = args
-        if isinstance(reference, _SetData):
+        if isinstance(reference, (_SetData, GlobalSetBase)):
             if reference.isfinite():
                 if reference.isordered():
                     return super(SetOf, cls).__new__(OrderedSetOf)
