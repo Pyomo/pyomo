@@ -67,6 +67,27 @@ class ExternalFunction(Component):
         return self._arg_units
 
     def __call__(self, *args):
+        """Return a Pyomo expression that evaluates this function
+
+        Note that this does not evaluate the external function
+        represented by this :class:`ExternalFunction` component, but
+        rather generates a Pyomo expression object that represents
+        symbolic evaluation of the external function at the specified
+        arguments (which themselves may be Pyomo expression objects).
+
+        Parameters
+        ----------
+        *args:
+            Arguments (constants, variables, expressions) to pass to
+            this External function.
+
+        Returns
+        -------
+        ExternalFunctionExpression or NPV_ExternalFunctionExpression:
+            The new Pyomo expression node.
+
+        """
+
         args_ = []
         for arg in args:
             if type(arg) is types.GeneratorType:
@@ -95,11 +116,66 @@ class ExternalFunction(Component):
         return EXPR.NPV_ExternalFunctionExpression(args_, self)
 
     def evaluate(self, args):
+
+        """Return the value of the function given the specified arguments
+
+        Parameters
+        ----------
+        args: Iterable
+            Iterable containing the arguments to pass to the external
+            function.  Non-native type elements will be converted to a
+            native value using the :py:func:`value()` function.
+
+        Returns
+        -------
+        float
+            The return value of the function evaluated at `args`
+        """
         args_ = [arg if arg.__class__ in native_types else value(arg)
                  for arg in args]
         return self._evaluate(args_, 0, None)[0]
 
     def evaluate_fgh(self, args, fixed=None, fgh=2):
+        """Evaluate the function and gradients given the specified arguments
+
+        This evaluates the function given the specified arguments
+        returning a 3-tuple of (function value [f], list of first partial
+        derivatives [g], and the upper triangle of the Hessian matrix
+        [h]).
+
+        Parameters
+        ----------
+        args: Iterable
+            Iterable containing the arguments to pass to the external
+            function.  Non-native type elements will be converted to a
+            native value using the :py:func:`value()` function.
+
+        fixed: Optional[List[bool]]
+            List of values indicating if the corresponding argument
+            value is fixed.  Any fixed indices are guaranteed to return
+            0 for first and second derivatives, regardless of what is
+            computed by the external function.
+
+        fgh: {0, 1, 2}
+            What evaluations to return:
+              - 0: just return function evaluation
+              - 1: return function and first derivatives
+              - 2: return function, first derivatives, and hessian matrix
+            Any return values not requested will be `None`
+
+        Returns
+        -------
+        f: float
+            The return value of the function evaluated at `args`
+        g: List[float] or None
+            The list of first partial derivatives
+        h: List[float] or None
+            The upper-triangle of the Hessian matrix (second partial
+            derivatives).  Element :math:`H_{i,j}` (with
+            :math:`0 <= i <= j < N` are mapped using
+            :math:`h[i + j*(j + 1)/2] == H_{i,j}`.
+
+        """
         args_ = [arg if arg.__class__ in native_types else value(arg)
                  for arg in args]
         f, g, h = self._evaluate(args_, fgh, fixed)
