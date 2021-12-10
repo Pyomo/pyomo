@@ -29,26 +29,28 @@ logger = logging.getLogger('pyomo.core')
 
 class ExternalFunction(Component):
 
-    def __new__(cls, *args, **kwds):
-        if cls != ExternalFunction:
+    def __new__(cls, *args, **kwargs):
+        if cls is not ExternalFunction:
             return super(ExternalFunction, cls).__new__(cls)
-        if len(args) == 1 and type(args[0]) is types.FunctionType:
-            return PythonCallbackFunction.__new__(PythonCallbackFunction)
-        elif not args and 'library' not in kwds and 'function' in kwds and \
-                type(kwds['function']) is types.FunctionType:
-            return PythonCallbackFunction.__new__(PythonCallbackFunction)
+        elif args and len(args) <= 3 and all(
+                isinstance(arg, types.FunctionType) for arg in args):
+            return super(ExternalFunction, cls).__new__(PythonCallbackFunction)
+        elif not args and 'library' not in kwargs and any(
+                kw in kwargs and isinstance(kwargs[kw], types.FunctionType)
+                for kw in ('function', 'fgh')):
+            return super(ExternalFunction, cls).__new__(PythonCallbackFunction)
         else:
-            return AMPLExternalFunction.__new__(AMPLExternalFunction)
+            return super(ExternalFunction, cls).__new__(AMPLExternalFunction)
 
-    def __init__(self, *args, **kwds):
-        self._units = kwds.pop('units', None)
+    def __init__(self, *args, **kwargs):
+        self._units = kwargs.pop('units', None)
         if self._units is not None:
             self._units = units.get_units(self._units)
-        self._arg_units = kwds.pop('arg_units', None)
+        self._arg_units = kwargs.pop('arg_units', None)
         if self._arg_units is not None:
             self._arg_units = [units.get_units(u) for u in self._arg_units]
-        kwds.setdefault('ctype', ExternalFunction)
-        Component.__init__(self, **kwds)
+        kwargs.setdefault('ctype', ExternalFunction)
+        Component.__init__(self, **kwargs)
         self._constructed = True
         ### HACK ###
         # FIXME: We must declare an _index attribute because
@@ -82,8 +84,8 @@ class ExternalFunction(Component):
                 # Q: Is there a better way to test if a value is an object
                 #    not in native_types and not a standard expression type?
                 if arg.__class__ in native_types or arg.is_expression_type():
-                    pass
-                if not arg.__class__ in native_types and arg.is_potentially_variable():
+                    continue
+                if arg.is_potentially_variable():
                     pv = True
             except AttributeError:
                 args_[i] = NonNumericValue(arg)
@@ -93,22 +95,53 @@ class ExternalFunction(Component):
         return EXPR.NPV_ExternalFunctionExpression(args_, self)
 
     def evaluate(self, args):
+        args_ = [arg if arg.__class__ in native_types else value(arg)
+                 for arg in args]
+        return self._evaluate(args_, 0, None)[0]
+
+    def evaluate_fgh(self, args, fixed=None, fgh=2):
+        args_ = [arg if arg.__class__ in native_types else value(arg)
+                 for arg in args]
+        f, g, h = self._evaluate(args_, fgh, fixed)
+        # Note: the ASL does not require clients to honor the fixed flag
+        # (allowing them to return non-0 values for the derivative with
+        # respect to a fixed numeric value).  We will allow clients to
+        # be similarly lazy and enforce the fixed flag here.
+        if fixed is not None:
+            if fgh > 0:
+                for i, v in enumerate(fixed):
+                    if not v:
+                        continue
+                    g[i] = 0
+            if fgh > 1:
+                N = len(args_)
+                for i, v in enumerate(fixed):
+                    if not v:
+                        continue
+                    for j in range(N):
+                        if i <= j:
+                            h[i + (j*(j + 1))//2] = 0
+                        else:
+                            h[j + (i*(i + 1))//2] = 0
+        return f, g, h
+
+    def _evaluate(self, args):
         raise NotImplementedError(
-            "General external functions can not be evaluated within Python." )
+            f"{type(self)} did not implement _evaluate()" )
 
 
 class AMPLExternalFunction(ExternalFunction):
 
-    def __init__(self, *args, **kwds):
+    def __init__(self, *args, **kwargs):
         if args:
             raise ValueError(
                 "AMPLExternalFunction constructor does not support "
                 "positional arguments" )
-        self._library = kwds.pop('library', None)
-        self._function = kwds.pop('function', None)
+        self._library = kwargs.pop('library', None)
+        self._function = kwargs.pop('function', None)
         self._known_functions = None
         self._so = None
-        ExternalFunction.__init__(self, *args, **kwds)
+        ExternalFunction.__init__(self, *args, **kwargs)
 
     def __getstate__(self):
         state = super(AMPLExternalFunction, self).__getstate__()
@@ -127,28 +160,18 @@ class AMPLExternalFunction(ExternalFunction):
                 % ( self._function, self._library,
                     ', '.join(self._known_functions.keys()) ) )
         #
-        args_ = []
-        for arg in args:
-            if arg.__class__ is NonNumericValue:
-                args_.append(arg.value)
-            else:
-                args_.append(arg)
-        arglist = _ARGLIST( args_, fgh, fixed )
+        N = len(args)
+        arglist = _ARGLIST(args, fgh, fixed)
         fcn = self._known_functions[self._function][0]
         f = fcn(byref(arglist))
-        return f, arglist
-
-    def evaluate(self, args):
-        return self._evaluate(args, 0, None)[0]
-
-    def evaluate_fgh(self, args, fixed=None):
-        if fixed is None:
-            fixed = tuple( arg.__class__ in native_types or arg.is_fixed()
-                           for arg in args )
-        N = len(args)
-        f, arglist = self._evaluate(args, 2, fixed)
-        g = [arglist.derivs[i] for i in range(N)]
-        h = [arglist.hes[i] for i in range((N+N**2)//2)]
+        if fgh > 0:
+            g = [arglist.derivs[i] for i in range(N)]
+        else:
+            g = None
+        if fgh > 1:
+            h = [arglist.hes[i] for i in range((N + N**2)//2)]
+        else:
+            h = None
         return f, g, h
 
     def load_library(self):
@@ -210,44 +233,72 @@ class PythonCallbackFunction(ExternalFunction):
         cls.global_registry[_id] = weakref.ref(instance)
         return _id
 
-    def __init__(self, *args, **kwds):
-        if args:
-            self._fcn = args[0]
-            if len(args) > 1:
+    def __init__(self, *args, **kwargs):
+        for i, kw in enumerate(('function', 'gradient', 'hessian')):
+            if len(args) <= i:
+                break
+            if kw in kwargs:
                 raise ValueError(
-                    "PythonCallbackFunction constructor only supports a "
-                    "single positional positional arguments" )
-        if not args:
-            self._fcn = kwds.pop('function')
+                    "duplicate definition of external function through "
+                    f"positional and keyword ('{kw}=') arguments")
+            kwargs[kw] = args[i]
+        if len(args) > 3:
+            raise ValueError(
+                "PythonCallbackFunction constructor only supports "
+                "0 - 3 positional arguments" )
+        self._fcn = kwargs.pop('function', None)
+        self._grad = kwargs.pop('gradient', None)
+        self._hess = kwargs.pop('hessian', None)
+        self._fgh = kwargs.pop('fgh', None)
+        if self._fgh is not None and any((self._fcn, self._grad, self._hess)):
+            raise ValueError(
+                "Cannot specify 'fgh' with any of "
+                "{'function', 'gradient', hessian'}")
 
         # There is an implicit first argument (the function pointer), we
         # need to add that to the arg_units
-        arg_units = kwds.get('arg_units', None)
+        arg_units = kwargs.get('arg_units', None)
         if arg_units is not None:
-            kwds['arg_units'] = [None] + list(arg_units)
+            kwargs['arg_units'] = [None] + list(arg_units)
 
+        # TODO: complete/distribute the pyomo_socket_server /
+        # pyomo_ampl.so AMPL extension
         self._library = 'pyomo_ampl.so'
         self._function = 'pyomo_socket_server'
-        ExternalFunction.__init__(self, *args, **kwds)
+        ExternalFunction.__init__(self, *args, **kwargs)
         self._fcn_id = PythonCallbackFunction.register_instance(self)
 
     def __call__(self, *args):
         return super(PythonCallbackFunction, self).__call__(self._fcn_id, *args)
 
-    def evaluate(self, args):
-        if args.__class__ is types.GeneratorType:
-            args = tuple(args)
-        args_ = []
-        for arg in args:
-            if arg.__class__ is NonNumericValue:
-                args_.append(arg.value)
-            else:
-                args_.append(arg)
-        _id = args_[0]
+    def _evaluate(self, args, fgh, fixed):
+        _id = args.pop(0)
         if _id != self._fcn_id:
             raise RuntimeError(
                 "PythonCallbackFunction called with invalid Global ID" )
-        return self._fcn(*args_[1:])
+        if self._fgh is not None:
+            f, g, h = self._fgh(args, fgh, fixed)
+        else:
+            f = self._fcn(*args)
+            if fgh > 0:
+                if self._grad is None:
+                    raise RuntimeError(
+                        "ExternalFunction {self.name} was not defined "
+                        "with a gradient callback.  Cannot evaluate the "
+                        "derivative of the function")
+                g = self._grad(args, fixed)
+            else:
+                g = None
+            if fgh > 1:
+                if self._hess is None:
+                    raise RuntimeError(
+                        "ExternalFunction {self.name} was not defined "
+                        "with a Hessian callback.  Cannot evaluate the "
+                        "second derivative of the function")
+                h = self._hess(args, fixed)
+            else:
+                h = None
+        return f, g, h
 
     def _pprint(self):
         return (
@@ -322,6 +373,7 @@ class _ARGLIST(Structure):
             self.ra[i] = v
 
         if fixed:
+            # This has to be revisited if nr != ra
             self.dig = (c_byte*N)(0)
             for i,v in enumerate(fixed):
                 if v:
