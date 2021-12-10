@@ -17,7 +17,9 @@ from ctypes import (
     Structure, POINTER, CFUNCTYPE, cdll, byref,
     c_int, c_long, c_ulong, c_double, c_byte, c_char_p, c_void_p )
 
-from pyomo.core.expr.numvalue import native_types, NonNumericValue
+from pyomo.core.expr.numvalue import (
+    native_types, pyomo_constant_types, NonNumericValue, NumericConstant,
+)
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import Component
 from pyomo.core.base.units_container import units
@@ -312,14 +314,53 @@ class AMPLExternalFunction(ExternalFunction):
         )
 
 
+class _PythonCallbackFunctionID(NumericConstant):
+    """A specialized NumericConstant to preserve FunctionIDs through deepcopy.
+
+    Function IDs are effectively pointers back to the
+    PythonCallbackFunction.  As such, we need special handling to
+    maintain / preserve the correct linkages through deepcopy (and
+    model.clone().
+
+    """
+    __slots__ = ()
+
+    def is_constant(self):
+        return False
+
+    def __getstate__(self):
+        state = super().__getstate__()
+        state['value'] = PythonCallbackFunction.global_registry[
+            state['value']]()
+        return state
+
+    def __setstate__(self, state):
+        state['value'] = state['value']._fcn_id
+        super().__setstate__(state)
+
+pyomo_constant_types.add(_PythonCallbackFunctionID)
+
+
 class PythonCallbackFunction(ExternalFunction):
-    global_registry = {}
+    global_registry = []
+    global_id_to_fid = {}
 
     @classmethod
     def register_instance(cls, instance):
-        _id = len(cls.global_registry)
-        cls.global_registry[_id] = weakref.ref(instance)
-        return _id
+        # Ideally, we would just use the id() as the finction id, but
+        # Python id() is more than 32-bits, which can cause problems for
+        # the ASL.  We will map id() to a "small" integer and use that
+        # small integer as the "function id".
+        _id = id(instance)
+        if _id in cls.global_id_to_fid:
+            prev_fid = cls.global_id_to_fid[_id]
+            prev_obj = cls.global_registry[prev_fid]
+            if prev_obj() is not None:
+                assert prev_obj() is instance
+                return prev_fid
+        cls.global_id_to_fid[_id] = _fid = len(cls.global_registry)
+        cls.global_registry.append(weakref.ref(instance))
+        return _fid
 
     def __init__(self, *args, **kwargs):
         for i, kw in enumerate(('function', 'gradient', 'hessian')):
@@ -356,8 +397,19 @@ class PythonCallbackFunction(ExternalFunction):
         ExternalFunction.__init__(self, *args, **kwargs)
         self._fcn_id = PythonCallbackFunction.register_instance(self)
 
+    def __getstate__(self):
+        state = super().__getstate__()
+        state['_fcn_id'] = self
+        return state
+
+    def __setstate__(self, state):
+        state['_fcn_id'] = PythonCallbackFunction.register_instance(
+            state['_fcn_id'])
+        super().__setstate__(state)
+
     def __call__(self, *args):
-        return super(PythonCallbackFunction, self).__call__(self._fcn_id, *args)
+        return super(PythonCallbackFunction, self).__call__(
+            _PythonCallbackFunctionID(self._fcn_id), *args)
 
     def _evaluate(self, args, fixed, fgh):
         _id = args.pop(0)
