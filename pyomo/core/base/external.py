@@ -133,7 +133,7 @@ class ExternalFunction(Component):
         """
         args_ = [arg if arg.__class__ in native_types else value(arg)
                  for arg in args]
-        return self._evaluate(args_, 0, None)[0]
+        return self._evaluate(args_, None, 0)[0]
 
     def evaluate_fgh(self, args, fixed=None, fgh=2):
         """Evaluate the function and gradients given the specified arguments
@@ -178,7 +178,12 @@ class ExternalFunction(Component):
         """
         args_ = [arg if arg.__class__ in native_types else value(arg)
                  for arg in args]
-        f, g, h = self._evaluate(args_, fgh, fixed)
+        f, g, h = self._evaluate(args_, fixed, fgh)
+        # Guarantee the return value behavior documented in the docstring
+        if fgh < 2:
+            h = None
+            if fgh < 1:
+                g = None
         # Note: the ASL does not require clients to honor the fixed flag
         # (allowing them to return non-0 values for the derivative with
         # respect to a fixed numeric value).  We will allow clients to
@@ -201,7 +206,14 @@ class ExternalFunction(Component):
                             h[j + (i*(i + 1))//2] = 0
         return f, g, h
 
-    def _evaluate(self, args):
+    def _evaluate(self, args, fixed, fgh):
+        """Derived class implementation to evaluate an external function.
+
+        The API follows :meth:`evaluate_fgh()`, with the exception that
+        the `args` iterable is guaranteed to already have been reduced
+        to concrete values (it will not have Pyomo components or
+        expressions).
+        """
         raise NotImplementedError(
             f"{type(self)} did not implement _evaluate()" )
 
@@ -226,7 +238,7 @@ class AMPLExternalFunction(ExternalFunction):
         state['_so'] = state['_known_functions'] = None
         return state
 
-    def _evaluate(self, args, fgh, fixed):
+    def _evaluate(self, args, fixed, fgh):
         if self._so is None:
             self.load_library()
         if self._function not in self._known_functions:
@@ -347,7 +359,7 @@ class PythonCallbackFunction(ExternalFunction):
     def __call__(self, *args):
         return super(PythonCallbackFunction, self).__call__(self._fcn_id, *args)
 
-    def _evaluate(self, args, fgh, fixed):
+    def _evaluate(self, args, fixed, fgh):
         _id = args.pop(0)
         if _id != self._fcn_id:
             raise RuntimeError(
