@@ -8,12 +8,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 #
-
+import os
+import shutil
 from io import StringIO
 
 import pyomo.common.unittest as unittest
 
 from pyomo.common.getGSL import find_GSL
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.environ import ConcreteModel, Var, Objective, SolverFactory, value
 from pyomo.core.base.external import (PythonCallbackFunction,
                                       ExternalFunction,
@@ -116,6 +118,33 @@ class TestAMPLExternalFunction(unittest.TestCase):
         self.assertEqual(M.m.f.local_name, "f")
         self.assertEqual(M.m.f.getname(), "f")
         self.assertEqual(M.m.f.getname(True), "m.f")
+
+    def test_load_local_asl_library(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+
+        LIB = 'test_pyomo_external_gsl.dll'
+
+        model = ConcreteModel()
+        model.gamma = ExternalFunction(
+            library=LIB, function="gsl_sf_gamma")
+        model.x = Var(initialize=3, bounds=(1e-5,None))
+        model.o = Objective(expr=model.gamma(model.x))
+
+        with TempfileManager.new_context() as tempfile:
+            dname = tempfile.mkdtemp()
+            shutil.copyfile(DLL, os.path.join(dname, LIB))
+            # Without changing directories, the load should fail
+            with self.assertRaises(OSError):
+                value(model.o)
+            # Changing directories should pick up the library
+            try:
+                orig_dir = os.getcwd()
+                os.chdir(dname)
+                self.assertAlmostEqual(value(model.o), 2.0, 7)
+            finally:
+                os.chdir(orig_dir)
 
     def test_eval_gsl_function(self):
         DLL = find_GSL()
