@@ -14,6 +14,7 @@ import logging
 import math
 import sys
 import weakref
+from typing import overload
 
 from pyomo.common.deprecation import (
     deprecated, deprecation_warning, RenamedClass,
@@ -1780,12 +1781,6 @@ class Set(IndexedComponent):
 
     Parameters
     ----------
-    name : str, optional
-        The name of the set
-
-    doc : str, optional
-        A text string describing this component
-
     initialize : initializer(iterable), optional
         The initial values to store in the Set when it is
         constructed.  Values passed to ``initialize`` may be
@@ -1834,6 +1829,12 @@ class Set(IndexedComponent):
         and returns True if the data belongs in the set.  Set will
         raise a ``ValueError`` for any values where `validate`
         returns False.
+
+    name : str, optional
+        The name of the set
+
+    doc : str, optional
+        A text string describing this component
 
     Notes
     -----
@@ -1908,6 +1909,11 @@ class Set(IndexedComponent):
             else:
                 newObj._ComponentDataClass = _FiniteSetData
             return newObj
+
+    @overload
+    def __init__(self, *indexes, initialize=None, dimen=UnknownSetDimen,
+                 ordered=InsertionOrder, within=None, domain=None,
+                 bounds=None, filter=None, validate=None, name=None, doc=None): ...
 
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', Set)
@@ -2669,6 +2675,11 @@ class RangeSet(Component):
         for every data member of the set, and if it returns False, a
         ValueError will be raised.
 
+    name: str, optional
+        Name for this component.
+
+    doc: str, optional
+        Text describing this component.        
     """
 
     def __new__(cls, *args, **kwds):
@@ -2709,6 +2720,20 @@ class RangeSet(Component):
         else:
             return super(RangeSet, cls).__new__(AbstractInfiniteScalarRangeSet)
 
+    # `start`, `end`, `step` in `*args` are positional-only that cannot be filled with keywords.
+    # But positional-only params syntax are not supported before python 3.8.
+    # To emphasize they are positional-only, an underscore is added before their name.
+    @overload
+    def __init__(self, _end, *, finite=None, ranges=(), bounds=None,
+                 filter=None, validate=None, name=None, doc=None): ...
+
+    @overload
+    def __init__(self, _start, _end, _step=1, *, finite=None, ranges=(), bounds=None,
+                 filter=None, validate=None, name=None, doc=None): ...
+
+    @overload
+    def __init__(self, *, finite=None, ranges=(), bounds=None,
+                 filter=None, validate=None, name=None, doc=None): ...
 
     def __init__(self, *args, **kwds):
         # Finite was processed by __new__

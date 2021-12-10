@@ -13,6 +13,7 @@ __all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar',
 
 import logging
 import sys
+from typing import overload
 from weakref import ref as weakref_ref
 
 from pyomo.common.collections import Sequence
@@ -577,6 +578,8 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             to True.
         units (pyomo units expression, optional): Set the units corresponding
             to the entries in this variable.
+        name (str, optional): Name for this component.
+        doc (str, optional): Text describing this component.
     """
 
     _ComponentDataClass = _GeneralVarData
@@ -589,6 +592,11 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         else:
             return super(Var, cls).__new__(IndexedVar)
 
+    @overload
+    def __init__(self, *indexes, domain=Reals, within=Reals, bounds=None,
+                 initialize=None, rule=None, dense=True, units=None,
+                 name=None, doc=None): ...
+    
     def __init__(self, *args, **kwargs):
         #
         # Default keyword values

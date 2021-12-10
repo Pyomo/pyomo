@@ -14,6 +14,7 @@ import sys
 import types
 import logging
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
@@ -219,11 +220,6 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     A parameter value, which may be defined over an index.
 
     Constructor Arguments:
-        name        
-            The name of this parameter
-        index       
-            The index set that defines the distinct parameters. By default, 
-            this is None, indicating that there is a single parameter.
         domain      
             A set that defines the type of values that each parameter must be.
         within      
@@ -242,6 +238,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         mutable: `boolean`
             Flag indicating if the value of the parameter may change between
             calls to a solver. Defaults to `False`
+        name
+            Name for this component.
+        doc
+            Text describing this component.
     """
 
     DefaultMutable = False
@@ -258,6 +258,11 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             return super(Param, cls).__new__(ScalarParam)
         else:
             return super(Param, cls).__new__(IndexedParam)
+
+    @overload
+    def __init__(self, *indexes, rule=NOTSET, initialize=NOTSET,
+                 domain=None, within=None, validate=None, mutable=False, default=NoValue,
+                 initialize_as_dense=False, units=None, name=None, doc=None): ...
 
     def __init__(self, *args, **kwd):
         _init = self._pop_from_kwargs(
