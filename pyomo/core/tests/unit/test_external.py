@@ -23,16 +23,16 @@ from pyomo.core.base.external import (PythonCallbackFunction,
 from pyomo.core.base.units_container import pint_available, units
 from pyomo.opt import check_available_solvers
 
-def _g(*args):
+def _count(*args):
     return len(args)
 
-def _h(*args):
+def _sum(*args):
     return 2 + sum(args)
 
 class TestPythonCallbackFunction(unittest.TestCase):
     def test_call_countArgs(self):
         m = ConcreteModel()
-        m.f = ExternalFunction(_g)
+        m.f = ExternalFunction(_count)
         self.assertIsInstance(m.f, PythonCallbackFunction)
         self.assertEqual(value(m.f()), 0)
         self.assertEqual(value(m.f(2)), 1)
@@ -40,7 +40,7 @@ class TestPythonCallbackFunction(unittest.TestCase):
 
     def test_call_sumfcn(self):
         m = ConcreteModel()
-        m.f = ExternalFunction(_h)
+        m.f = ExternalFunction(_sum)
         self.assertIsInstance(m.f, PythonCallbackFunction)
         self.assertEqual(value(m.f()), 2.0)
         self.assertEqual(value(m.f(1)), 3.0)
@@ -48,7 +48,7 @@ class TestPythonCallbackFunction(unittest.TestCase):
 
     def test_getname(self):
         m = ConcreteModel()
-        m.f = ExternalFunction(_h)
+        m.f = ExternalFunction(_sum)
         self.assertIsInstance(m.f, PythonCallbackFunction)
         self.assertEqual(m.f.name, "f")
         self.assertEqual(m.f.local_name, "f")
@@ -65,31 +65,31 @@ class TestPythonCallbackFunction(unittest.TestCase):
     def test_extra_kwargs(self):
         m = ConcreteModel()
         with self.assertRaises(ValueError):
-            m.f = ExternalFunction(_g, this_should_raise_error='foo')
+            m.f = ExternalFunction(_count, this_should_raise_error='foo')
 
     def test_pprint(self):
         m = ConcreteModel()
-        m.h = ExternalFunction(_g)
+        m.h = ExternalFunction(_count)
 
         out = StringIO()
         m.pprint(ostream=out)
         self.assertEqual(out.getvalue().strip(), """
 1 ExternalFunction Declarations
-    h : function=_g, units=None, arg_units=None
+    h : function=_count, units=None, arg_units=None
 
 1 Declarations: h
         """.strip())
 
         if not pint_available:
             return
-        m.i = ExternalFunction(function=_h,
+        m.i = ExternalFunction(function=_sum,
                                units=units.kg, arg_units=[units.m, units.s])
         out = StringIO()
         m.pprint(ostream=out)
         self.assertEqual(out.getvalue().strip(), """
 2 ExternalFunction Declarations
-    h : function=_g, units=None, arg_units=None
-    i : function=_h, units=kg, arg_units=['m', 's']
+    h : function=_count, units=None, arg_units=None
+    i : function=_sum, units=kg, arg_units=['m', 's']
 
 2 Declarations: h i
         """.strip())
