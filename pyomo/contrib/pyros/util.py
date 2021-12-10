@@ -284,9 +284,11 @@ def transform_to_standard_form(model):
     equality (i.e. the `equality` attribute of the constraint object
     is `False`), then the constraint is recast to the equality `g(v) == a`.
     """
-    cons = [con for con in model.component_data_objects(Constraint,
-                                                        descend_into=True,
-                                                        active=True)].copy()
+    # Note: because we wwill be adding / modifying the number of
+    # constraints, we want to resolve the generator to a list before
+    # starting.
+    cons = list(model.component_data_objects(
+        Constraint, descend_into=True, active=True))
     for con in cons:
         if not con.equality:
             has_lb = con.lower is not None
