@@ -16,10 +16,12 @@ import pyomo.common.unittest as unittest
 
 from pyomo.common.getGSL import find_GSL
 from pyomo.common.tempfiles import TempfileManager
-from pyomo.environ import ConcreteModel, Var, Objective, SolverFactory, value
-from pyomo.core.base.external import (PythonCallbackFunction,
-                                      ExternalFunction,
-                                      AMPLExternalFunction)
+from pyomo.environ import (
+    ConcreteModel, Block, Var, Objective, Expression, SolverFactory, value,
+)
+from pyomo.core.base.external import (
+    PythonCallbackFunction, ExternalFunction, AMPLExternalFunction,
+)
 from pyomo.core.base.units_container import pint_available, units
 from pyomo.opt import check_available_solvers
 
@@ -29,7 +31,44 @@ def _count(*args):
 def _sum(*args):
     return 2 + sum(args)
 
+def _f(x, y, z):
+    return x**2 + 3*x*y + x*y*z**2
+
+def _g(args, fixed):
+    x, y, z = args
+    return [
+        2*x + 3*y + y*z**2,
+        3*x + x*z**2,
+        2*x*y*z
+    ]
+
+def _h(args, fixed):
+    x, y, z = args
+    return [
+        2,
+        3+z**2,     0,
+        2*y*z,  2*x*z, 2*x*y,
+    ]
+
+def _fgh(args, fixed, fgh):
+    return _f(*args), _g(args, fixed), _h(args, fixed)
+
 class TestPythonCallbackFunction(unittest.TestCase):
+    def test_constructor_errors(self):
+        m = ConcreteModel()
+        with self.assertRaisesRegex(
+                ValueError, "Duplicate definition of external function "
+                r"through positional and keyword \('function='\)"):
+            m.f = ExternalFunction(_count, function=_count)
+        with self.assertRaisesRegex(
+                ValueError, "PythonCallbackFunction constructor only "
+                "supports 0 - 3 positional arguments"):
+            m.f = ExternalFunction(1, 2, 3, 4)
+        with self.assertRaisesRegex(
+                ValueError, "Cannot specify 'fgh' with any of "
+                "{'function', 'gradient', hessian'}"):
+            m.f = ExternalFunction(_count, fgh=_fgh)
+
     def test_call_countArgs(self):
         m = ConcreteModel()
         m.f = ExternalFunction(_count)
@@ -45,6 +84,38 @@ class TestPythonCallbackFunction(unittest.TestCase):
         self.assertEqual(value(m.f()), 2.0)
         self.assertEqual(value(m.f(1)), 3.0)
         self.assertEqual(value(m.f(1,2)), 5.0)
+
+    def test_evaluate_fgh_fgh(self):
+        m = ConcreteModel()
+        m.f = ExternalFunction(fgh=_fgh)
+        f, g, h = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id))
+        self.assertEqual(f, 5**2 + 3*5*7 + 5*7*11**2)
+        self.assertEqual(g, [2*5 + 3*7 + 7*11**2,
+                             3*5 + 5*11**2,
+                             2*5*7*11,
+                             0])
+        self.assertEqual(h, [
+                  2,
+            3+11**2,      0,
+             2*7*11, 2*5*11, 2*5*7,
+                  0,      0,     0,  0,
+        ])
+
+        f, g, h = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id),
+                                   fixed=[0, 1, 0, 1])
+        self.assertEqual(f, 5**2 + 3*5*7 + 5*7*11**2)
+        self.assertEqual(g, [2*5 + 3*7 + 7*11**2,
+                             0,
+                             2*5*7*11,
+                             0])
+        self.assertEqual(h, [
+                  2,
+                  0,      0,
+             2*7*11,      0, 2*5*7,
+                  0,      0,     0,  0,
+        ])
+
+
 
     def test_getname(self):
         m = ConcreteModel()
@@ -66,6 +137,54 @@ class TestPythonCallbackFunction(unittest.TestCase):
         m = ConcreteModel()
         with self.assertRaises(ValueError):
             m.f = ExternalFunction(_count, this_should_raise_error='foo')
+
+    def test_clone(self):
+        m = ConcreteModel()
+        m.f = ExternalFunction(_sum)
+        m.x = Var(initialize=3)
+        m.y = Var(initialize=5)
+        m.e = Expression(expr=m.f(m.x, m.y))
+        self.assertIsInstance(m.f, PythonCallbackFunction)
+        self.assertEqual(m.f._fcn_id, m.e.arg(0).arg(-1).value)
+        self.assertEqual(value(m.e), 10)
+
+        i = m.clone()
+        self.assertIsInstance(i.f, PythonCallbackFunction)
+        self.assertIsNot(i.f, m.f)
+        self.assertIsNot(i.e, m.e)
+        self.assertIsNot(i.e.arg(0), m.e.arg(0))
+        self.assertEqual(i.f._fcn_id, i.e.arg(0).arg(-1).value)
+        self.assertNotEqual(i.f._fcn_id, m.f._fcn_id)
+        self.assertEqual(value(i.e), 10)
+
+    def test_partial_clone(self):
+        m = ConcreteModel()
+        m.f = ExternalFunction(_sum)
+        m.x = Var(initialize=3)
+        m.y = Var(initialize=5)
+        m.b = Block()
+        m.b.e = Expression(expr=m.f(m.x, m.y))
+        self.assertIsInstance(m.f, PythonCallbackFunction)
+        self.assertEqual(m.f._fcn_id, m.b.e.arg(0).arg(-1).value)
+        self.assertEqual(value(m.b.e), 10)
+
+        m.c = m.b.clone()
+        self.assertIsNot(m.b.e, m.c.e)
+        self.assertIsNot(m.b.e.arg(0), m.c.e.arg(0))
+        self.assertEqual(m.f._fcn_id, m.b.e.arg(0).arg(-1).value)
+        self.assertEqual(m.f._fcn_id, m.c.e.arg(0).arg(-1).value)
+        self.assertEqual(value(m.c.e), 10)
+
+        # save / restore should not change the fcn_id
+        _fcn_id = m.f._fcn_id
+        m.f.__setstate__(m.f.__getstate__())
+        self.assertEqual(m.f._fcn_id, _fcn_id)
+
+        self.assertIsNot(m.b.e, m.c.e)
+        self.assertIsNot(m.b.e.arg(0), m.c.e.arg(0))
+        self.assertEqual(m.f._fcn_id, m.b.e.arg(0).arg(-1).value)
+        self.assertEqual(m.f._fcn_id, m.c.e.arg(0).arg(-1).value)
+        self.assertEqual(value(m.c.e), 10)
 
     def test_pprint(self):
         m = ConcreteModel()
