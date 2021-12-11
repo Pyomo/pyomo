@@ -2,7 +2,7 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
@@ -34,12 +34,10 @@ class ExternalFunction(Component):
     def __new__(cls, *args, **kwargs):
         if cls is not ExternalFunction:
             return super(ExternalFunction, cls).__new__(cls)
-        elif args and len(args) <= 3 and all(
-                isinstance(arg, types.FunctionType) for arg in args):
+        elif args:
             return super(ExternalFunction, cls).__new__(PythonCallbackFunction)
-        elif not args and 'library' not in kwargs and any(
-                kw in kwargs and isinstance(kwargs[kw], types.FunctionType)
-                for kw in ('function', 'fgh')):
+        elif 'library' not in kwargs and any(
+                kw in kwargs for kw in ('function', 'fgh')):
             return super(ExternalFunction, cls).__new__(PythonCallbackFunction)
         else:
             return super(ExternalFunction, cls).__new__(AMPLExternalFunction)
@@ -173,31 +171,47 @@ class ExternalFunction(Component):
             The list of first partial derivatives
         h: List[float] or None
             The upper-triangle of the Hessian matrix (second partial
-            derivatives).  Element :math:`H_{i,j}` (with
-            :math:`0 <= i <= j < N` are mapped using
+            derivatives), stored column-wise.  Element :math:`H_{i,j}`
+            (with :math:`0 <= i <= j < N` are mapped using
             :math:`h[i + j*(j + 1)/2] == H_{i,j}`.
 
         """
         args_ = [arg if arg.__class__ in native_types else value(arg)
                  for arg in args]
+        # Note: this is passed-by-reference, and the args_ list may be
+        # changed by _evaluate (e.g., for PythonCallbackFunction).
+        # Remember the original length of the list.
+        N = len(args_)
         f, g, h = self._evaluate(args_, fixed, fgh)
         # Guarantee the return value behavior documented in the docstring
-        if fgh < 2:
+        if fgh == 2:
+            n = N - 1
+            if len(h) - 1 != n + n*(n+1)//2:
+                raise RuntimeError(
+                    f"External function '{self.name}' returned an invalid "
+                    f"Hessian matrix (expected {n + n*(n+1)//2 + 1}, "
+                    f"received {len(h)}")
+        else:
             h = None
-            if fgh < 1:
-                g = None
+        if fgh >= 1:
+            if len(g) != N:
+                raise RuntimeError(
+                    f"External function '{self.name}' returned an invalid "
+                    f"derivative vector (expected {N}, "
+                    f"received {len(g)}")
+        else:
+            g = None
         # Note: the ASL does not require clients to honor the fixed flag
         # (allowing them to return non-0 values for the derivative with
         # respect to a fixed numeric value).  We will allow clients to
         # be similarly lazy and enforce the fixed flag here.
         if fixed is not None:
-            if fgh > 0:
+            if fgh >= 1:
                 for i, v in enumerate(fixed):
                     if not v:
                         continue
                     g[i] = 0
-            if fgh > 1:
-                N = len(args_)
+            if fgh >= 2:
                 for i, v in enumerate(fixed):
                     if not v:
                         continue
@@ -326,6 +340,7 @@ class _PythonCallbackFunctionID(NumericConstant):
     __slots__ = ()
 
     def is_constant(self):
+        # Return False so this object is not simplified out of expressions
         return False
 
     def __getstate__(self):
@@ -368,7 +383,7 @@ class PythonCallbackFunction(ExternalFunction):
                 break
             if kw in kwargs:
                 raise ValueError(
-                    "duplicate definition of external function through "
+                    "Duplicate definition of external function through "
                     f"positional and keyword ('{kw}=') arguments")
             kwargs[kw] = args[i]
         if len(args) > 3:
@@ -408,11 +423,17 @@ class PythonCallbackFunction(ExternalFunction):
         super().__setstate__(state)
 
     def __call__(self, *args):
+        # NOTE: we append the Function ID to the END of the argument
+        # list because it is easier to update the gradient / hessian
+        # results
         return super(PythonCallbackFunction, self).__call__(
-            _PythonCallbackFunctionID(self._fcn_id), *args)
+            *args, _PythonCallbackFunctionID(self._fcn_id))
 
     def _evaluate(self, args, fixed, fgh):
-        _id = args.pop(0)
+        # Remove the fcn_id
+        _id = args.pop()
+        if fixed is not None:
+            fixed = fixed[:-1]
         if _id != self._fcn_id:
             raise RuntimeError(
                 "PythonCallbackFunction called with invalid Global ID" )
@@ -420,24 +441,30 @@ class PythonCallbackFunction(ExternalFunction):
             f, g, h = self._fgh(args, fgh, fixed)
         else:
             f = self._fcn(*args)
-            if fgh > 0:
+            if fgh >= 1:
                 if self._grad is None:
                     raise RuntimeError(
-                        "ExternalFunction {self.name} was not defined "
+                        "ExternalFunction '{self.name}' was not defined "
                         "with a gradient callback.  Cannot evaluate the "
                         "derivative of the function")
                 g = self._grad(args, fixed)
             else:
                 g = None
-            if fgh > 1:
+            if fgh == 2:
                 if self._hess is None:
                     raise RuntimeError(
-                        "ExternalFunction {self.name} was not defined "
+                        "ExternalFunction '{self.name}' was not defined "
                         "with a Hessian callback.  Cannot evaluate the "
                         "second derivative of the function")
                 h = self._hess(args, fixed)
             else:
                 h = None
+        # Update g,h to reflect the function id (which by defiition is
+        # always fixed)
+        if g is not None:
+            g.append(0)
+        if h is not None:
+            h.extend([0]*(len(args)+1))
         return f, g, h
 
     def _pprint(self):
