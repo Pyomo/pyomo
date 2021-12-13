@@ -183,7 +183,7 @@ A usage example for OA with solution pool is as follows:
   ...                                    mip_solver='cplex_peristent',
   ...                                    nlp_solver='ipopt',
   ...                                    solution_pool=True,
-  ...                                    num_solution_iteration=10 # default=5
+  ...                                    num_solution_iteration=10, # default=5
   ...                                    tee=True
   ...                                    )
   >>> model.objective.display()
