@@ -10,6 +10,7 @@
 #
 import os
 import shutil
+import sys
 from io import StringIO
 
 import pyomo.common.unittest as unittest
@@ -18,11 +19,15 @@ from pyomo.common.getGSL import find_GSL
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.environ import (
     ConcreteModel, Block, Var, Objective, Expression, SolverFactory, value,
+    Param,
 )
 from pyomo.core.base.external import (
     PythonCallbackFunction, ExternalFunction, AMPLExternalFunction,
 )
 from pyomo.core.base.units_container import pint_available, units
+from pyomo.core.expr.numeric_expr import (
+    ExternalFunctionExpression, NPV_ExternalFunctionExpression,
+)
 from pyomo.opt import check_available_solvers
 
 def _count(*args):
@@ -35,17 +40,34 @@ def _f(x, y, z):
     return x**2 + 3*x*y + x*y*z**2
 
 def _g(args, fixed):
-    x, y, z = args
+    x, y, z = args[:3]
     return [
         2*x + 3*y + y*z**2,
         3*x + x*z**2,
-        2*x*y*z
+        2*x*y*z,
     ]
 
 def _h(args, fixed):
-    x, y, z = args
+    x, y, z = args[:3]
     return [
         2,
+        3+z**2,     0,
+        2*y*z,  2*x*z, 2*x*y,
+    ]
+
+def _g_bad(args, fixed):
+    x, y, z = args[:3]
+    return [
+        2*x + 3*y + y*z**2,
+        3*x + x*z**2,
+        2*x*y*z,
+        0,
+    ]
+
+def _h_bad(args, fixed):
+    x, y, z = args[:3]
+    return [
+        #2,
         3+z**2,     0,
         2*y*z,  2*x*z, 2*x*y,
     ]
@@ -115,7 +137,110 @@ class TestPythonCallbackFunction(unittest.TestCase):
                   0,      0,     0,  0,
         ])
 
+    def test_evaluate_fgh_f_g_h(self):
+        m = ConcreteModel()
+        m.f = ExternalFunction(_f, _g, _h)
+        f, g, h = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id))
+        self.assertEqual(f, 5**2 + 3*5*7 + 5*7*11**2)
+        self.assertEqual(g, [2*5 + 3*7 + 7*11**2,
+                             3*5 + 5*11**2,
+                             2*5*7*11,
+                             0])
+        self.assertEqual(h, [
+                  2,
+            3+11**2,      0,
+             2*7*11, 2*5*11, 2*5*7,
+                  0,      0,     0,  0,
+        ])
 
+        f, g, h = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id),
+                                   fixed=[0, 1, 0, 1])
+        self.assertEqual(f, 5**2 + 3*5*7 + 5*7*11**2)
+        self.assertEqual(g, [2*5 + 3*7 + 7*11**2,
+                             0,
+                             2*5*7*11,
+                             0])
+        self.assertEqual(h, [
+                  2,
+                  0,      0,
+             2*7*11,      0, 2*5*7,
+                  0,      0,     0,  0,
+        ])
+
+        f, g, h = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id), fgh=1)
+        self.assertEqual(f, 5**2 + 3*5*7 + 5*7*11**2)
+        self.assertEqual(g, [2*5 + 3*7 + 7*11**2,
+                             3*5 + 5*11**2,
+                             2*5*7*11,
+                             0])
+        self.assertIsNone(h)
+
+        f, g, h = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id), fgh=0)
+        self.assertEqual(f, 5**2 + 3*5*7 + 5*7*11**2)
+        self.assertIsNone(g)
+        self.assertIsNone(h)
+
+    def test_evaluate_fgh_f_g(self):
+        m = ConcreteModel()
+        m.f = ExternalFunction(_f, _g)
+        with self.assertRaisesRegex(
+                RuntimeError, "ExternalFunction 'f' was not defined "
+                "with a Hessian callback."):
+            f, g, h = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id))
+
+        f, g, h = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id), fgh=1)
+        self.assertEqual(f, 5**2 + 3*5*7 + 5*7*11**2)
+        self.assertEqual(g, [2*5 + 3*7 + 7*11**2,
+                             3*5 + 5*11**2,
+                             2*5*7*11,
+                             0])
+        self.assertIsNone(h)
+
+        f, g, h = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id), fgh=0)
+        self.assertEqual(f, 5**2 + 3*5*7 + 5*7*11**2)
+        self.assertIsNone(g)
+        self.assertIsNone(h)
+
+    def test_evaluate_fgh_f(self):
+        m = ConcreteModel()
+        m.f = ExternalFunction(_f)
+        with self.assertRaisesRegex(
+                RuntimeError, "ExternalFunction 'f' was not defined "
+                "with a gradient callback."):
+            f, g, h = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id))
+
+        with self.assertRaisesRegex(
+                RuntimeError, "ExternalFunction 'f' was not defined "
+                "with a gradient callback."):
+            f, g, h = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id), fgh=1)
+
+        f, g, h = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id), fgh=0)
+        self.assertEqual(f, 5**2 + 3*5*7 + 5*7*11**2)
+        self.assertIsNone(g)
+        self.assertIsNone(h)
+
+    def test_evaluate_errors(self):
+        m = ConcreteModel()
+        m.f = ExternalFunction(_f, _g_bad, _h_bad)
+        f = m.f.evaluate((5, 7, 11, m.f._fcn_id))
+        self.assertEqual(f, 5**2 + 3*5*7 + 5*7*11**2)
+
+        with self.assertRaisesRegex(
+                RuntimeError,
+                "PythonCallbackFunction called with invalid Global ID"):
+            f = m.f.evaluate((5, 7, 11, -1))
+
+        with self.assertRaisesRegex(
+                RuntimeError,
+                "External function 'f' returned an invalid "
+                r"derivative vector \(expected 4, received 5\)"):
+            f = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id), fgh=1)
+
+        with self.assertRaisesRegex(
+                RuntimeError,
+                "External function 'f' returned an invalid "
+                r"Hessian matrix \(expected 10, received 9\)"):
+            f = m.f.evaluate_fgh((5, 7, 11, m.f._fcn_id), fgh=2)
 
     def test_getname(self):
         m = ConcreteModel()
@@ -186,6 +311,36 @@ class TestPythonCallbackFunction(unittest.TestCase):
         self.assertEqual(m.f._fcn_id, m.c.e.arg(0).arg(-1).value)
         self.assertEqual(value(m.c.e), 10)
 
+    def test_properties(self):
+        m = ConcreteModel()
+        m.f = ExternalFunction(_sum)
+        e = m.f()
+        self.assertIsInstance(e, NPV_ExternalFunctionExpression)
+        self.assertFalse(e.is_constant())
+        self.assertTrue(e.is_fixed())
+        self.assertFalse(e.is_potentially_variable())
+
+        # This is just a check for coverage: the expression is_constant
+        # catches that the function ID is a NumericConstant and doesn't
+        # call the method.
+        self.assertFalse(e.arg(0).is_constant())
+        self.assertTrue(e.arg(0).is_fixed())
+        self.assertFalse(e.arg(0).is_potentially_variable())
+
+        m.p = Param(initialize=1)
+        e = m.f(m.p)
+        self.assertIsInstance(e, NPV_ExternalFunctionExpression)
+        self.assertFalse(e.is_constant())
+        self.assertTrue(e.is_fixed())
+        self.assertFalse(e.is_potentially_variable())
+
+        m.x = Var(initialize=1)
+        e = m.f(m.p, m.x)
+        self.assertIsInstance(e, ExternalFunctionExpression)
+        self.assertFalse(e.is_constant())
+        self.assertFalse(e.is_fixed())
+        self.assertTrue(e.is_potentially_variable())
+
     def test_pprint(self):
         m = ConcreteModel()
         m.h = ExternalFunction(_count)
@@ -238,6 +393,9 @@ class TestAMPLExternalFunction(unittest.TestCase):
         self.assertEqual(M.m.f.getname(), "f")
         self.assertEqual(M.m.f.getname(True), "m.f")
 
+    @unittest.skipIf(sys.platform.lower().startswith('win'),
+                     "Cannot (easily) unload a DLL in Windows, so "
+                     "cannot clean up the 'temporary' DLL")
     def test_load_local_asl_library(self):
         DLL = find_GSL()
         if not DLL:
@@ -280,6 +438,18 @@ class TestAMPLExternalFunction(unittest.TestCase):
 
         f = model.bessel.evaluate((0.5, 2.0,))
         self.assertAlmostEqual(f, 0.5130161365618272, 7)
+
+    def test_eval_gsl_error(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+        model = ConcreteModel()
+        model.bogus = ExternalFunction(
+            library=DLL, function="bogus_function")
+        with self.assertRaisesRegex(
+                RuntimeError, "Error: external function 'bogus_function' was "
+                "not registered within external library(?s:.*)gsl_sf_gamma"):
+            f = model.bogus.evaluate((1,))
 
     def test_eval_fgh_gsl_function(self):
         DLL = find_GSL()

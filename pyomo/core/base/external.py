@@ -190,7 +190,7 @@ class ExternalFunction(Component):
                 raise RuntimeError(
                     f"External function '{self.name}' returned an invalid "
                     f"Hessian matrix (expected {n + n*(n+1)//2 + 1}, "
-                    f"received {len(h)}")
+                    f"received {len(h)})")
         else:
             h = None
         if fgh >= 1:
@@ -198,7 +198,7 @@ class ExternalFunction(Component):
                 raise RuntimeError(
                     f"External function '{self.name}' returned an invalid "
                     f"derivative vector (expected {N}, "
-                    f"received {len(g)}")
+                    f"received {len(g)})")
         else:
             g = None
         # Note: the ASL does not require clients to honor the fixed flag
@@ -259,7 +259,7 @@ class AMPLExternalFunction(ExternalFunction):
             self.load_library()
         if self._function not in self._known_functions:
             raise RuntimeError(
-                "Error: external function %s was not registered within "
+                "Error: external function '%s' was not registered within "
                 "external library %s.\n\tAvailable functions: (%s)"
                 % ( self._function, self._library,
                     ', '.join(self._known_functions.keys()) ) )
@@ -445,7 +445,7 @@ class PythonCallbackFunction(ExternalFunction):
             if fgh >= 1:
                 if self._grad is None:
                     raise RuntimeError(
-                        "ExternalFunction '{self.name}' was not defined "
+                        f"ExternalFunction '{self.name}' was not defined "
                         "with a gradient callback.  Cannot evaluate the "
                         "derivative of the function")
                 g = self._grad(args, fixed)
@@ -454,7 +454,7 @@ class PythonCallbackFunction(ExternalFunction):
             if fgh == 2:
                 if self._hess is None:
                     raise RuntimeError(
-                        "ExternalFunction '{self.name}' was not defined "
+                        f"ExternalFunction '{self.name}' was not defined "
                         "with a Hessian callback.  Cannot evaluate the "
                         "second derivative of the function")
                 h = self._hess(args, fixed)
