@@ -268,11 +268,11 @@ class AMPLExternalFunction(ExternalFunction):
         arglist = _ARGLIST(args, fgh, fixed)
         fcn = self._known_functions[self._function][0]
         f = fcn(byref(arglist))
-        if fgh > 0:
+        if fgh >= 1:
             g = [arglist.derivs[i] for i in range(N)]
         else:
             g = None
-        if fgh > 1:
+        if fgh >= 2:
             h = [arglist.hes[i] for i in range((N + N**2)//2)]
         else:
             h = None
@@ -531,9 +531,9 @@ class _ARGLIST(Structure):
         self.at = (c_int*N)()
         self.ra = (c_double*N)()
         self.sa = None
-        if fgh > 0:
+        if fgh >= 1:
             self.derivs = (c_double*N)(0.)
-        if fgh > 1:
+        if fgh >= 2:
             self.hes = (c_double*((N+N*N)//2))(0.)
 
         for i,v in enumerate(args):
