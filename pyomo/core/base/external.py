@@ -12,6 +12,7 @@ import logging
 import os
 import types
 import weakref
+from typing import overload
 
 from ctypes import (
     Structure, POINTER, CFUNCTYPE, cdll, byref,
@@ -30,7 +31,23 @@ logger = logging.getLogger('pyomo.core')
 
 
 class ExternalFunction(Component):
+    """Interface to an external (non-algrbraic) function.
 
+    :class:`ExternalFunction` provides an interface for declaring
+    general user-provided functiona, and then embedding calls to the
+    external functions within Pyomo expressions.
+
+    .. note::
+
+       Just because you can express a Pyomo model with external
+       functions does not mean that the resulting model is solvable.  In
+       particular, linear solvers do not accept external functions.  The
+       AMPL Solver Library (ASL) interface does support external
+       functions for general nonlinear solvers compiled against it, but
+       only allows functions in compiled libraries through the
+       :class:`AMPLExternalFunction` interface.
+
+    """
     def __new__(cls, *args, **kwargs):
         if cls is not ExternalFunction:
             return super(ExternalFunction, cls).__new__(cls)
@@ -42,7 +59,66 @@ class ExternalFunction(Component):
         else:
             return super(ExternalFunction, cls).__new__(AMPLExternalFunction)
 
+    @overload
+    def __init__(self, function=None, gradient=None, hessian=None,
+                 *, fgh=None): ...
+
+    @overload
+    def __init__(self, *, library: str, function: str): ...
+
     def __init__(self, *args, **kwargs):
+        """Construct a reference to an external function.
+
+        There are two fundamental interfaces supported by
+        :class:`ExternalFunction`: Python callback functions and AMPL
+        external functions.
+
+        **Python callback functions**
+
+        Python callback functions can be specified one of two ways:
+
+        1. FGH interface:
+
+          A single external function call with a signature matching the
+          :meth:`evaluate_fgh()` method.
+
+        2. Independent functions:
+
+          One to three functions that can evaluate the function value,
+          gradient of the function [partial derivatives] with respect to
+          its inputs, and the Hessian of the function [partial second
+          dericatives].  The ``function`` interface expects a function
+          matching the prototype:
+
+          .. code::
+
+             def function(*args): float
+
+          The ``gradient`` amd ``hessian`` interface expect functions
+          matching the prototype:
+
+          .. code::
+
+             def gradient_or_hessian(args, fixed=None): List[float]
+
+          Where ``args`` is a tuple of function arguments and ``fixed``
+          is either None or a list of values equal in length to ``args``
+          indicating which arguments are currently fixed (``True``) or
+          variable (``False``).
+
+        **ASL function libraries**
+
+        Pyomo can also call functions compiles as part of an AMPL
+        External Function library (see the `User-defined functions
+        <https://www.ampl.com/REFS/HOOKING/#userdefinedfuncs>`_ section
+        in the `Hooking your solver to AMPL
+        <https://www.ampl.com/REFS/hooking3.pdf>`_ report).  Links to
+        these functions are declared by creating an
+        :class:`ExternalFunction` and passing the compiled library name
+        (or path) to the ``library`` keyword and the name of the
+        function to the ``function`` keyword.
+
+        """
         self._units = kwargs.pop('units', None)
         if self._units is not None:
             self._units = units.get_units(self._units)
@@ -158,10 +234,12 @@ class ExternalFunction(Component):
 
         fgh: {0, 1, 2}
             What evaluations to return:
-              - 0: just return function evaluation
-              - 1: return function and first derivatives
-              - 2: return function, first derivatives, and hessian matrix
-            Any return values not requested will be `None`
+
+            * **0**: just return function evaluation
+            * **1**: return function and first derivatives
+            * **2**: return function, first derivatives, and hessian matrix
+
+            Any return values not requested will be `None`.
 
         Returns
         -------
