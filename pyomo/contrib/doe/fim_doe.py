@@ -9,7 +9,7 @@ from itertools import permutations, product
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation, get_dsdp
 
 class Measurements:
-    def __init__(self, measurement_index_time):
+    def __init__(self, measurement_index_time, ind_string='_index_'):
         '''
         This class stores measurements' information
         Parameters:
@@ -21,6 +21,7 @@ class Measurements:
                 so the measurements are C[scenario, 'CA', 0]..., k[scenario, 0]....
         '''
         self.measurement_all_info = measurement_index_time
+        self.ind_string = ind_string
         # a list of measurement names
         self.measurement_name = list(measurement_index_time.keys())
         # begin flatten
@@ -30,6 +31,14 @@ class Measurements:
         print('All measurements are flattened.')
         print('Flatten measurement name:', self.flatten_measure_name)
         print('Flatten measurement timeset:', self.flatten_measure_timeset)
+
+        # generate the overall measurement time points set, including the measurement time for all measurements
+        flatten_timepoint = list(self.flatten_measure_timeset.values())
+        overall_time = []
+        for i in flatten_timepoint:
+            overall_time += i
+            timepoint_overall_set = list(set(overall_time))
+        self.timepoint_overall_set = timepoint_overall_set
 
 
     def __name_and_index_generator(self, all_info):
@@ -77,7 +86,7 @@ class Measurements:
         for j in list(measure_name_and_index.keys()):
             if measure_name_and_index[j] is not None: # if it has extra index
                 for ind in measure_name_and_index[j]:
-                    flatten_name = j + '_index_' + str(ind)
+                    flatten_name = j + self.ind_string + str(ind)
                     flatten_names.append(flatten_name)
             else:
                 flatten_names.append(j)
@@ -92,9 +101,9 @@ class Measurements:
         flatten_measure_timeset = {}
         for i in flatten_measure_name:
             # split the flattened name if needed
-            if '_index_' in i:
-                measure_name = i.split('_index_')[0]
-                measure_index = i.split('_index_')[1]
+            if self.ind_string in i:
+                measure_name = i.split(self.ind_string)[0]
+                measure_index = i.split(self.ind_string)[1]
                 if type(name_and_index[measure_name][0]) is int:
                     measure_index = int(measure_index)
                 flatten_measure_timeset[i] = all_info[measure_name][measure_index]
@@ -102,7 +111,7 @@ class Measurements:
                 flatten_measure_timeset[i] = all_info[i]
         self.flatten_measure_timeset = flatten_measure_timeset
 
-    def check_subset(self,subset, throw_error=True):
+    def check_subset(self,subset, throw_error=True, valid_subset=True):
         '''
         Check if the subset is correctly defined with right name, index and time.
         subset: measurement name and index involved in jacobian calculation
@@ -114,15 +123,17 @@ class Measurements:
         for i in flatten_subset:
             # check if subset measurement names are in the overall measurement names
             if i not in self.flatten_measure_name:
+                valid_subset = False
                 if throw_error:
                     raise ValueError('This is not a legal subset of the measurement overall set!')
             else:
                 # check if subset measurement timepoints are in the overall measurement timepoints
                 for t in flatten_timeset[i]:
                     if t not in self.flatten_measure_timeset[i]:
+                        valid_subset = False
                         if throw_error:
                             raise ValueError('The time of ', t, ' is not included as measurements before.')
-
+        return valid_subset
 
 class DesignOfExperiments:
     def __init__(self, param_init, design_variable_timepoints, measurement_object, create_model, solver=None,
@@ -186,6 +197,8 @@ class DesignOfExperiments:
 
         # if print statements
         self.verbose = verbose
+
+
         
     def __check_inputs(self, check_mode=False):
         '''Check if inputs are consistent
@@ -233,7 +246,7 @@ class DesignOfExperiments:
         design_values: initial point for optimization, a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
         if_optimize: if true, continue to do optimization. else, just run square problem with given design variable values
         objective_option: supporting maximizing the 'det' determinant or the 'trace' trace of the FIM
-        jac_involved_measurement: a dictionary of measurement names and extra indexes. It should be subsets of the measurement sets given to this class.
+        jac_involved_measurement: the measurement class involved in calculation. If None, take the overall measurement class
         scale_nominal_param_value: if scale Jacobian by the corresponding parameter nominal value
         scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
         if_Cholesky: if true, cholesky decomposition is used for Objective function (to optimize determinant).
@@ -281,18 +294,12 @@ class DesignOfExperiments:
 
         # identify measurements involved in calculation
         if jac_involved_measurement is not None:
-            self.jac_involved_name = self.measure.generate_flatten_name(jac_involved_measurement)
+            self.jac_involved_name = jac_involved_measurement.flatten_measure_name.copy()
 
         else:
             self.jac_involved_name = self.flatten_measure_name.copy()
 
-        # generate the overall measurement time points set, including the measurement time for all measurements
-        flatten_timepoint = list(self.flatten_measure_timeset.values())
-        overall_time = []
-        for i in flatten_timepoint:
-            overall_time += i
-            timepoint_overall_set = list(set(overall_time))
-        self.timepoint_overall_set = timepoint_overall_set
+        self.timepoint_overall_set = jac_involved_measurement.timepoint_overall_set.copy()
 
         # check if inputs are valid
         # simultaneous mode does not need to check mode and dimension of design variables
@@ -334,7 +341,7 @@ class DesignOfExperiments:
             time_solve2 = time1_solve2 - time0_solve2
 
             # extract Jac
-            jac_optimize = self.__extract_jac(m, y_set=self.jac_involved_name, t_all_set=self.timepoint_overall_set)
+            jac_optimize = self.__extract_jac(m)
 
             # create result object
             analysis_optimize = FIM_result(self.param_name, self.measure, jacobian_info=None, all_jacobian_info=jac_optimize,
@@ -369,12 +376,12 @@ class DesignOfExperiments:
                     tee_opt=True, scale_nominal_param_value=False, scale_constant_value=1,
                     store_output = None, read_output=None, extract_single_model=None,
                     formula='central', step=0.001,
-                    objective_option='det',jac_initial=None, fim_initial=None,
+                    objective_option='det',
                     if_Cholesky=False, L_LB=1E-10, L_initial=None):
         '''
         This function solves a square Pyomo model with fixed design variables to compute the FIM.
         The problem is structured in one of the four following modes:
-        1. simultaneous_finite: Calculate a multiple scenario model. Sensitivity info estimated by finite difference. Instead of 1,
+        1. simultaneous_finite: Calculate a multiple scenario model. Sensitivity info estimated by finite difference. This mode is accomplished by optimize_doe().
         2. sequential_finite: Calculates a one scenario model multiple times for
         multiple scenarios. Sensitivity info estimated by finite difference
         3. sequential_sipopt: calculate sensitivity by sIPOPT.
@@ -430,58 +437,7 @@ class DesignOfExperiments:
         # check inputs valid
         self.__check_inputs(check_mode=True)
 
-        # if using simultaneous model
-        if (self.mode == 'simultaneous_finite'):
-            
-            self.jac_initial = jac_initial
-            self.fim_initial = fim_initial
-            # identify measurements involved in calculation
-            self.jac_involved_name = self.flatten_measure_name.copy()
-
-            # generate the overall measurement time points set, including the measurement time for all measurements
-            flatten_timepoint = list(self.flatten_measure_timeset.values())
-            overall_time = []
-            for i in flatten_timepoint:
-                overall_time += i
-                timepoint_overall_set = list(set(overall_time))
-            self.timepoint_overall_set = timepoint_overall_set
-
-            time0_build = time.time()
-            m = self.__create_doe_model()
-            time1_build = time.time()
-
-            time0_solve = time.time()
-            # solve model, achieve results for square problem, and results for optimization problem
-            square_result = self.__solve_doe(m, fix=True)
-            time1_solve = time.time()
-
-            time_build = time1_build - time0_build
-            time_solve = time1_solve - time0_solve
-            if self.verbose:
-                print('Build time with simultaneous_finite mode [s]:', time_build)
-                print('Solve time with simultaneous_finite mode [s]:', time_solve)
-
-            # analyze results
-            if specified_prior is None:
-                prior_in_use = self.prior_FIM
-            else:
-                prior_in_use = specified_prior
-
-            jac = self.__extract_jac(m, y_set=self.jac_involved_name, t_all_set=self.timepoint_overall_set)
-
-            FIM_analysis = FIM_result(self.param_name, self.measure, jacobian_info=None, all_jacobian_info=jac,
-                                      prior_FIM=prior_in_use, store_FIM=FIM_store_name,
-                                      scale_constant_value=self.scale_constant_value)
-
-            # add the formed simultaneous model to the object so that users can have access
-            self.m = m
-            self.square_result = square_result
-            FIM_analysis.build_time = time_build
-            FIM_analysis.solve_time = time_solve
-
-            return FIM_analysis
-
-        elif self.mode=='sequential_finite':
+        if self.mode=='sequential_finite':
             no_para = len(self.param_name)
 
             # if using sequential model
@@ -539,13 +495,15 @@ class DesignOfExperiments:
                         dataframe = extract_single_model(mod, square_result)
                         dataframe.to_csv(mod_name)
 
+                    
+
                     # loop over measurement item and time to store model measurements
                     output_combine = []
                     for j in self.flatten_measure_name:
                         # split flattened name if needed
-                        if '_index_' in j:
-                            measure_name = j.split('_index_')[0]
-                            measure_index = j.split('_index_')[1]
+                        if self.measure.ind_string in j:
+                            measure_name = j.split(self.measure.ind_string)[0]
+                            measure_index = j.split(self.measure.ind_string)[1]
                             # this is needed for using eval(). if the extra index is 'CA', it converts to "'CA'". only for the extra index as a string
                             if type(self.measure.name_and_index[measure_name][0]) is str:
                                 measure_index = '"' + measure_index + '"'
@@ -676,9 +634,9 @@ class DesignOfExperiments:
                     # extract sipopt result
                     for j in self.flatten_measure_name:
                         # check if this variable needs split name
-                        if '_index_' in j:
-                            measure_name = j.split('_index_')[0]
-                            measure_index = j.split('_index_')[1]
+                        if self.measure.ind_string in j:
+                            measure_name = j.split(self.measure.ind_string)[0]
+                            measure_index = j.split(self.measure.ind_string)[1]
                             # this is needed for using eval(). if the extra index is 'CA', it converts to "'CA'". only for the extra index as a string
                             if type(measure_index) is str:
                                 measure_index_doublequotes = '"' + measure_index + '"'
@@ -839,9 +797,9 @@ class DesignOfExperiments:
             zero_sens = np.zeros(len(self.param_name))
             # loop over measurement variables and their time points
             for mname in self.flatten_measure_name:
-                if '_index_' in mname:
-                    measure_name = mname.split('_index_')[0]
-                    measure_index = mname.split('_index_')[1]
+                if self.measure.ind_string in mname:
+                    measure_name = mname.split(self.measure.ind_string)[0]
+                    measure_index = mname.split(self.measure.ind_string)[1]
                     for tim in measurement_accurate_time[mname]:
                         # get the measurement name in the model
                         measurement_name = measure_name+'[0,'+measure_index+','+str(tim)+']'
@@ -963,38 +921,29 @@ class DesignOfExperiments:
 
         return jac
 
-    def __extract_jac(self, m, y_set=None, t_all_set=None):
+    def __extract_jac(self, m):
         '''
         Extract jacobian from simultaneous mode
         Arguments
         ---------
         m: solved simultaneous model
-        y_set: measurement flattened names
-        t_all_set: the overall time set (the combination of all timepoints measured)
-
         Returns
         ------
         JAC: the overall jacobian as a dictionary
         '''
         no_para = len(self.param_name)
-        #if y_set is not None:
-        #    no_y = len(y_set)
-        #    no_t = len(t_all_set)
-        #    JAC = np.ones((no_y, no_para, no_t))
-        #    for n1, name1 in enumerate(y_set):
-        #        for n2, name2 in enumerate(self.param_name):
-        #            for t, tim in enumerate(t_all_set):
-        #                JAC[n1, n2, t] = value(m.jac[name1, name2, tim])
-                        
         jac = {}
         for p in self.param_name: 
             jac_para = []
-            for n1, name1 in enumerate(y_set):
-                for t, tim in enumerate(t_all_set):
+            for n1, name1 in enumerate(self.jac_involved_name):
+                for t, tim in enumerate(self.timepoint_overall_set):
                     jac_para.append(value(m.jac[name1, p, tim]))
             jac[p] = jac_para
         
         return jac
+
+    def __extract_measurement(self,m):
+
 
 
     def generate_sequential_experiments(self, design_values_set, mode='sequential_finite', tee_option=False,
@@ -1388,9 +1337,9 @@ class DesignOfExperiments:
             # A better way to do this: 
             # https://github.com/IDAES/idaes-pse/blob/274e58bef55f2f969f0df97cbb1fb7d99342388e/idaes/apps/uncertainty_propagation/sens.py#L296
             # check if j is a measurement with extra index by checking if there is '_index_' in its name
-            if '_index_' in j:
-                measure_name = j.split('_index_')[0]
-                measure_index = j.split('_index_')[1]
+            if self.measure.ind_string in j:
+                measure_name = j.split(self.measure.ind_string)[0]
+                measure_index = j.split(self.measure.ind_string)[1]
                 if type(self.measure.name_and_index[measure_name][0]) is str:
                     measure_index = '"' + measure_index + '"'
                 if t in self.flatten_measure_timeset[j]:
