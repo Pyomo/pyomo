@@ -35,12 +35,17 @@ def MindtPy_iteration_loop(solve_data, config):
     This is the outermost function for the algorithms in this package; this function controls the progression of
     solving the model.
 
-    Args:
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
 
-    Raises:
-        ValueError: the strategy value is not correct or not included.
+    Raises
+    ------
+    ValueError
+        The strategy value is not correct or not included.
     """
     last_iter_cuts = False
     while solve_data.mip_iter < config.iteration_limit:
@@ -220,13 +225,19 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
     (Sets the solve_data.results.solver.termination_condition to the appropriate condition, i.e. optimal,
     maxIterations, maxTimeLimit).
 
-    Args:
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
-        check_cycling (bool): check for a special case that causes a binary variable to loop through the same values.
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    check_cycling : bool
+        Whether check for a special case that causes the discrete variables to loop through the same values.
 
-    Returns:
-        bool: True if the algorithm should terminate else returns False.
+    Returns
+    -------
+    bool
+        True if the algorithm should terminate, Flase otherwise.
     """
     if solve_data.should_terminate:
         if solve_data.objective_sense == minimize:
@@ -381,10 +392,14 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
 def fix_dual_bound(solve_data, config, last_iter_cuts):
     """Fix the dual bound when no-good cuts or tabu list is activated.
 
-    Args:
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
-        last_iter_cuts (bool): whether the cuts in the last iteration have been added.
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    last_iter_cuts : bool
+        Whether the cuts in the last iteration have been added.
     """
     if config.single_tree:
         config.logger.info(

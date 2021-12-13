@@ -67,11 +67,15 @@ class MindtPySolver(object):
     def solve(self, model, **kwds):
         """Solve the model.
 
-        Warning: this solver is still in beta. Keyword arguments subject to
-        change. Undocumented keyword arguments definitely subject to change.
+        Parameters
+        ----------
+        model : Pyomo model
+            The MINLP model to be solved.
 
-        Args:
-            model (Block): a Pyomo model or block to be solved.
+        Returns
+        -------
+        results : SolverResults
+            Results from solving the MINLP problem by MindtPy.
         """
         config = self.CONFIG(kwds.pop('options', {}))
         config.set_value(kwds)

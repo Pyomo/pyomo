@@ -30,16 +30,20 @@ def solve_subproblem(solve_data, config):
     This function sets up the 'fixed_nlp' by fixing binaries, sets continuous variables to their intial var values,
     precomputes dual values, deactivates trivial constraints, and then solves NLP model.
 
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
 
-    Args:
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
-
-    Returns:
-        fixed_nlp (Pyomo model): integer-variable-fixed NLP model.
-        results (SolverResults): results from solving the Fixed-NLP.
+    Returns
+    -------
+    fixed_nlp : Pyomo model
+        Integer-variable-fixed NLP model.
+    results : SolverResults
+        Results from solving the Fixed-NLP.
     """
-
     fixed_nlp = solve_data.working_model.clone()
     MindtPy = fixed_nlp.MindtPy_utils
     solve_data.nlp_iter += 1
@@ -102,12 +106,18 @@ def solve_subproblem(solve_data, config):
 def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config, cb_opt=None):
     """This function handles different terminaton conditions of the fixed-NLP subproblem.
 
-    Args:
-        fixed_nlp (Pyomo model): integer-variable-fixed NLP model.
-        results (SolverResults): results from solving the NLP subproblem.
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
-        cb_opt (SolverFactory, optional): the gurobi_persistent solver. Defaults to None.
+    Parameters
+    ----------
+    fixed_nlp : Pyomo model
+        Integer-variable-fixed NLP model.
+    result : SolverResults
+        Results from solving the NLP subproblem.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    cb_opt : SolverFactory, optional
+        The gurobi_persistent solver, by default None.
     """
     if result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt)
@@ -136,12 +146,18 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
     the bounds, adds OA and no-good cuts, and then stores the new solution if it is the new best solution. This
     function handles the result of the latest iteration of solving the NLP subproblem given an optimal solution.
 
-    Args:
-        fixed_nlp (Pyomo model): integer-variable-fixed NLP model.
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
-        cb_opt (SolverFactory, optional): the gurobi_persistent solver. Defaults to None.
-        fp (bool, optional): whether it is in the loop of feasibility pump. Defaults to False.
+    Parameters
+    ----------
+    fixed_nlp : Pyomo model
+        Integer-variable-fixed NLP model.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    cb_opt : SolverFactory, optional
+        The gurobi_persistent solver, by default None.
+    fp : bool, optional
+        Whether it is in the loop of feasibility pump, by default False.
     """
     copy_var_list_values(
         fixed_nlp.MindtPy_utils.variable_list,
@@ -216,16 +232,21 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
 
 
 def handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt=None):
-    """Solves feasibility problem and adds cut according to the specified strategy
+    """Solves feasibility problem and adds cut according to the specified strategy.
 
     This function handles the result of the latest iteration of solving the NLP subproblem given an infeasible
     solution and copies the solution of the feasibility problem to the working model.
 
-    Args:
-        fixed_nlp (Pyomo model): integer-variable-fixed NLP model.
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
-        cb_opt (SolverFactory, optional): the gurobi_persistent solver. Defaults to None.
+    Parameters
+    ----------
+    fixed_nlp : Pyomo model
+        Integer-variable-fixed NLP model.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    cb_opt : SolverFactory, optional
+        The gurobi_persistent solver, by default None.
     """
     # TODO try something else? Reinitialize with different initial
     # value?
@@ -278,14 +299,21 @@ def handle_subproblem_other_termination(fixed_nlp, termination_condition,
     """Handles the result of the latest iteration of solving the fixed NLP subproblem given
     a solution that is neither optimal nor infeasible.
 
-    Args:
-        fixed_nlp (Pyomo model): integer-variable-fixed NLP model.
-        termination_condition (Pyomo TerminationCondition): the termination condition of the fixed NLP subproblem.
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    fixed_nlp : Pyomo model
+        Integer-variable-fixed NLP model.
+    termination_condition : Pyomo TerminationCondition
+        The termination condition of the fixed NLP subproblem.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
 
-    Raises:
-        ValueError: MindtPy unable to handle the NLP subproblem termination condition.
+    Raises
+    ------
+    ValueError
+        MindtPy unable to handle the NLP subproblem termination condition.
     """
     if termination_condition is tc.maxIterations:
         # TODO try something else? Reinitialize with different initial value?
@@ -306,13 +334,19 @@ def handle_subproblem_other_termination(fixed_nlp, termination_condition,
 def solve_feasibility_subproblem(solve_data, config):
     """Solves a feasibility NLP if the fixed_nlp problem is infeasible.
 
-    Args:
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
 
-    Returns:
-        feas_subproblem (Pyomo model): feasibility NLP from the model.
-        feas_soln (SolverResults): results from solving the feasibility NLP.
+    Returns
+    -------
+    feas_subproblem : Pyomo model
+        Feasibility NLP from the model.
+    feas_soln : SolverResults
+        Results from solving the feasibility NLP.
     """
     feas_subproblem = solve_data.working_model.clone()
     add_feas_slacks(feas_subproblem, config)
@@ -366,11 +400,16 @@ def handle_feasibility_subproblem_tc(subprob_terminate_cond, MindtPy, solve_data
     """Handles the result of the latest iteration of solving the feasibility NLP subproblem given
     a solution that is neither optimal nor infeasible.
 
-    Args:
-        subprob_terminate_cond (Pyomo TerminationCondition): the termination condition of the feasibility NLP subproblem.
-        MindtPy (Pyomo Block): the MindtPy_utils block.
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    subprob_terminate_cond : Pyomo TerminationCondition
+        The termination condition of the feasibility NLP subproblem.
+    MindtPy : Pyomo Block
+        The MindtPy_utils block.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
     """
     if subprob_terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         copy_var_list_values(

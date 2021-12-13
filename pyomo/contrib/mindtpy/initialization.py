@@ -27,12 +27,15 @@ from pyomo.contrib.mindtpy.feasibility_pump import fp_loop
 def MindtPy_initialize_main(solve_data, config):
     """Initializes the decomposition algorithm and creates the main MIP/MILP problem.
 
-    This function initializes the decomposition problem, which includes generating the initial cuts required to
-    build the main MIP.
+    This function initializes the decomposition problem, which includes generating the
+    initial cuts required to build the main MIP.
 
-    Args:
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
     """
     # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded main problem.
     if config.single_tree:
@@ -105,12 +108,17 @@ def init_rNLP(solve_data, config):
     """Initialize the problem by solving the relaxed NLP and then store the optimal variable
     values obtained from solving the rNLP.
 
-    Args:
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
 
-    Raises:
-        ValueError: MindtPy unable to handlen the termination condition of the relaxed NLP.
+    Raises
+    ------
+    ValueError
+        MindtPy unable to handle the termination condition of the relaxed NLP.
     """
     m = solve_data.working_model.clone()
     config.logger.debug(
@@ -176,13 +184,19 @@ def init_max_binaries(solve_data, config):
     Note - The user would usually want to call solve_subproblem after an invocation 
     of this function.
 
-    Args:
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
 
-    Raises:
-        ValueError: MILP main problem is infeasible.
-        ValueError: MindtPy unable to handle the termination condition of the MILP main problem.
+    Raises
+    ------
+    ValueError
+        MILP main problem is infeasible.
+    ValueError
+        MindtPy unable to handle the termination condition of the MILP main problem.
     """
     m = solve_data.working_model.clone()
     if config.calculate_dual:

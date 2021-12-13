@@ -27,14 +27,22 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
     For nonconvex problems, turn on 'config.add_slack'. 
     Slack variables will always be used for nonlinear equality constraints.
 
-    Args:
-        target_model (Pyomo model): the relaxed problem.
-        dual_values (list): contains the value of the duals for each constraint.
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
-        cb_opt (SolverFactory, optional): gurobi_persistent. Defaults to None.
-        linearize_active (bool, optional): whether linearize the active nonlinear constraints. Defaults to True.
-        linearize_violated (bool, optional): whether linearize the violated nonlinear constraints. Defaults to True.
+    Parameters
+    ----------
+    target_model : Pyomo model
+        The relaxed linear model.
+    dual_values : list
+        The value of the duals for each constraint.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    cb_opt : SolverFactory, optional
+        Gurobi_persistent solver, by default None.
+    linearize_active : bool, optional
+        Whether linearize the active nonlinear constraints, by default True.
+    linearize_violated : bool, optional
+        Whether linearize the violated nonlinear constraints, by default True.
     """
     with time_code(solve_data.timing, 'OA cut generation'):
         for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
@@ -103,12 +111,18 @@ def add_ecp_cuts(target_model, solve_data, config,
                  linearize_violated=True):
     """Linearizes nonlinear constraints. Adds the cuts for the ECP method.
 
-    Args:
-        target_model (Pyomo model): the relaxed linear model.
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
-        linearize_active (bool, optional): whether linearize the active nonlinear constraints. Defaults to True.
-        linearize_violated (bool, optional): whether linearize the violated nonlinear constraints. Defaults to True.
+    Parameters
+    ----------
+    target_model : Pyomo model
+        The relaxed linear model.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    linearize_active : bool, optional
+        Whether linearize the active nonlinear constraints, by default True.
+    linearize_violated : bool, optional
+        Whether linearize the violated nonlinear constraints, by default True.
     """
     with time_code(solve_data.timing, 'ECP cut generation'):
         for constr in target_model.MindtPy_utils.nonlinear_constraint_list:
@@ -175,13 +189,20 @@ def add_no_good_cuts(var_values, solve_data, config):
     This adds an no-good cuts to the no_good_cuts ConstraintList, which is not activated by default.
     However, it may be activated as needed in certain situations or for certain values of option flags.
 
-    Args:
-        var_values (list): variable values of the current solution, used to generate the cut.
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
 
-    Raises:
-        ValueError: binary variable is not 0 or 1.
+    Parameters
+    ----------
+    var_values : list
+        Variable values of the current solution, used to generate the cut.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+
+    Raises
+    ------
+    ValueError
+        The value of binary variable is not 0 or 1.
     """
     if not config.add_no_good_cuts:
         return
@@ -221,9 +242,12 @@ def add_no_good_cuts(var_values, solve_data, config):
 def add_affine_cuts(solve_data, config):
     """Adds affine cuts using MCPP.
 
-    Args:
-        solve_data (MindtPySolveData): data container that holds solve-instance data.
-        config (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
     """
     with time_code(solve_data.timing, 'Affine cut generation'):
         m = solve_data.mip

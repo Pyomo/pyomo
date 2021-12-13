@@ -7,8 +7,10 @@ from pyomo.contrib.gdpopt.util import _DoNothing, a_logger, logging
 def _get_MindtPy_config():
     """Set up the configurations for MindtPy.
 
-    Returns:
-        config (ConfigBlock): the specific configurations for MindtPy.
+    Returns
+    -------
+    CONFIG : ConfigBlock
+        The specific configurations for MindtPy
     """
     CONFIG = ConfigBlock('MindtPy')
 
@@ -212,8 +214,10 @@ def _get_MindtPy_config():
 def _add_subsolver_configs(CONFIG):
     """Adds the subsolver-related configurations.
 
-    Args:
-        CONFIG (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    CONFIG : ConfigBlock
+        The specific configurations for MindtPy.
     """
     CONFIG.declare('nlp_solver', ConfigValue(
         default='ipopt',
@@ -286,8 +290,10 @@ def _add_subsolver_configs(CONFIG):
 def _add_tolerance_configs(CONFIG):
     """Adds the tolerance-related configurations.
 
-    Args:
-        CONFIG (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    CONFIG : ConfigBlock
+        The specific configurations for MindtPy.
     """
     CONFIG.declare('bound_tolerance', ConfigValue(
         default=1E-4,
@@ -337,8 +343,10 @@ def _add_tolerance_configs(CONFIG):
 def _add_bound_configs(CONFIG):
     """Adds the bound related configurations.
 
-    Args:
-        CONFIG (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    CONFIG : ConfigBlock
+        The specific configurations for MindtPy.
     """
     CONFIG.declare('obj_bound', ConfigValue(
         default=1E15,
@@ -360,8 +368,10 @@ def _add_bound_configs(CONFIG):
 def _add_fp_configs(CONFIG):
     """Adds the feasibility pump-related configurations.
 
-    Args:
-        CONFIG (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    CONFIG : ConfigBlock
+        The specific configurations for MindtPy.
     """
     CONFIG.declare('fp_cutoffdecr', ConfigValue(
         default=1E-1,
@@ -420,8 +430,10 @@ def _add_fp_configs(CONFIG):
 def _add_loa_configs(CONFIG):
     """Adds the LOA-related configurations.
 
-    Args:
-        CONFIG (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    CONFIG : ConfigBlock
+        The specific configurations for MindtPy.
     """
     CONFIG.declare('level_coef', ConfigValue(
         default=0.5,
@@ -459,8 +471,10 @@ def _add_loa_configs(CONFIG):
 def check_config(config):
     """Checks if the configuration options make sense.
 
-    Args:
-        config (ConfigBlock): the specific configurations for MindtPy.
+    Parameters
+    ----------
+    config : ConfigBlock
+        The specific configurations for MindtPy.
     """
     # configuration confirmation
     if config.add_regularization is not None:
