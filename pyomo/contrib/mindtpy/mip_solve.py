@@ -285,7 +285,7 @@ def handle_main_max_timelimit(main_mip, main_mip_results, solve_data, config):
         solve_data (MindtPySolveData): data container that holds solve-instance data.
         config (ConfigBlock): the specific configurations for MindtPy.
     """
-    # TODO check that status is actually ok and everything is feasible
+    # TODO if we have found a valid feasible solution, we take that, if not, we can at least use the dual bound
     MindtPy = main_mip.MindtPy_utils
     config.logger.info(
         'Unable to optimize MILP main problem '
