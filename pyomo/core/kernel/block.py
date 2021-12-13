@@ -429,7 +429,7 @@ class block(IBlock):
                             % (var.name, attr_value,
                                comparison_tolerance_for_fixed_vars,
                                var.value))
-                    var.value = attr_value
+                    var.set_value(attr_value, skip_validation=True)
                     var.stale = False
                 elif attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][var] = attr_value
@@ -510,7 +510,7 @@ class block(IBlock):
                         % (var.name, default_variable_value,
                            comparison_tolerance_for_fixed_vars,
                            var.value))
-                var.value = default_variable_value
+                var.set_value(default_variable_value, skip_validation=True)
                 var.stale = False
 
 # inserts class definitions for simple _tuple, _list, and

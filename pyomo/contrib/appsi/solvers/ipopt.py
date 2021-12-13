@@ -349,7 +349,7 @@ class Ipopt(PersistentSolver):
 
         if results.termination_condition == TerminationCondition.optimal and self.config.load_solution:
             for v, val in self._primal_sol.items():
-                v.value = val
+                v.set_value(val, skip_validation=True)
 
             if self._writer.get_active_objective() is None:
                 results.best_feasible_objective = None

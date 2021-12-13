@@ -378,7 +378,7 @@ class _slice_generator(object):
             self.component_iter = component.index_set().__iter__()
         else:
             # The default behavior is to iterate over the component.
-            self.component_iter = component.__iter__()
+            self.component_iter = component.keys()
 
         # Cache for the most recent index returned. This is used to
         # iterate over keys of the slice (for instance, in a

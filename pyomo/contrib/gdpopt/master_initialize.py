@@ -17,7 +17,6 @@ from pyomo.core import (
 )
 from pyomo.gdp import Disjunct
 
-
 def GDPopt_initialize_master(solve_data, config):
     """Initialize the decomposition algorithm.
 

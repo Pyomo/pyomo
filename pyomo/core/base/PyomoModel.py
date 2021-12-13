@@ -520,7 +520,7 @@ class ModelSolutions(object):
                                        str(comparison_tolerance_for_fixed_vars),
                                        str(vdata.value)))
 
-            vdata.value = val
+            vdata.set_value(val, skip_validation=True)
             vdata.stale = False
 
             for _attr_key, attr_value in entry.items():
