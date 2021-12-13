@@ -403,7 +403,8 @@ class PythonCallbackFunction(ExternalFunction):
         # need to add that to the arg_units
         arg_units = kwargs.get('arg_units', None)
         if arg_units is not None:
-            kwargs['arg_units'] = [None] + list(arg_units)
+            kwargs['arg_units'] = list(arg_units)
+            kwargs['arg_units'].append(None)
 
         # TODO: complete/distribute the pyomo_socket_server /
         # pyomo_ampl.so AMPL extension
@@ -471,7 +472,7 @@ class PythonCallbackFunction(ExternalFunction):
         return (
             [ ('function', self._fcn.__qualname__),
               ('units', str(self._units)),
-              ('arg_units', [ str(u) for u in self._arg_units[1:] ]
+              ('arg_units', [ str(u) for u in self._arg_units[:-1] ]
                if self._arg_units is not None else None),
             ],
             (), None, None
