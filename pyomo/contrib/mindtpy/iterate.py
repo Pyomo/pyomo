@@ -286,9 +286,10 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         return True
 
     # Check if algorithm is stalling
-    # BUG TODO: here only applies to minimization problems.
-    if len(solve_data.LB_progress) >= config.stalling_limit:
-        if abs(solve_data.LB_progress[-1] - solve_data.LB_progress[-config.stalling_limit]) <= config.zero_tolerance:
+    if (len(solve_data.LB_progress) >= config.stalling_limit and solve_data.objective_sense == maximize) or \
+        (len(solve_data.UB_progress) >= config.stalling_limit and solve_data.objective_sense == minimize):
+        if (abs(solve_data.LB_progress[-1] - solve_data.LB_progress[-config.stalling_limit]) <= config.zero_tolerance and solve_data.objective_sense == maximize) or \
+            (abs(solve_data.UB_progress[-1] - solve_data.UB_progress[-config.stalling_limit]) <= config.zero_tolerance and solve_data.objective_sense == minimize):
             config.logger.info(
                 'Algorithm is not making enough progress. '
                 'Exiting iteration loop.')

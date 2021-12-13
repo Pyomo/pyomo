@@ -22,7 +22,7 @@ def _get_MindtPy_config():
         default=15,
         domain=PositiveInt,
         description='Stalling limit',
-        doc='Stalling limit for progress in the decomposition methods.'
+        doc='Stalling limit for primal bound progress in the decomposition methods.'
     ))
     CONFIG.declare('time_limit', ConfigValue(
         default=600,
