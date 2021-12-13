@@ -73,7 +73,8 @@ class ExternalFunction(Component):
         :class:`ExternalFunction`: Python callback functions and AMPL
         external functions.
 
-        **Python callback functions**
+        **Python callback functions** (:class:`PythonCallbackFunction`
+        interface)
 
         Python callback functions can be specified one of two ways:
 
@@ -106,7 +107,7 @@ class ExternalFunction(Component):
           indicating which arguments are currently fixed (``True``) or
           variable (``False``).
 
-        **ASL function libraries**
+        **ASL function libraries** (:class:`AMPLExternalFunction` interface)
 
         Pyomo can also call functions compiles as part of an AMPL
         External Function library (see the `User-defined functions
