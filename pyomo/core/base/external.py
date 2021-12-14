@@ -31,10 +31,10 @@ logger = logging.getLogger('pyomo.core')
 
 
 class ExternalFunction(Component):
-    """Interface to an external (non-algrbraic) function.
+    """Interface to an external (non-algebraic) function.
 
     :class:`ExternalFunction` provides an interface for declaring
-    general user-provided functiona, and then embedding calls to the
+    general user-provided functions, and then embedding calls to the
     external functions within Pyomo expressions.
 
     .. note::
@@ -50,14 +50,14 @@ class ExternalFunction(Component):
     """
     def __new__(cls, *args, **kwargs):
         if cls is not ExternalFunction:
-            return super(ExternalFunction, cls).__new__(cls)
+            return super().__new__(cls)
         elif args:
-            return super(ExternalFunction, cls).__new__(PythonCallbackFunction)
+            return super().__new__(PythonCallbackFunction)
         elif 'library' not in kwargs and any(
                 kw in kwargs for kw in ('function', 'fgh')):
-            return super(ExternalFunction, cls).__new__(PythonCallbackFunction)
+            return super().__new__(PythonCallbackFunction)
         else:
-            return super(ExternalFunction, cls).__new__(AMPLExternalFunction)
+            return super().__new__(AMPLExternalFunction)
 
     @overload
     def __init__(self, function=None, gradient=None, hessian=None,
@@ -88,14 +88,14 @@ class ExternalFunction(Component):
           One to three functions that can evaluate the function value,
           gradient of the function [partial derivatives] with respect to
           its inputs, and the Hessian of the function [partial second
-          dericatives].  The ``function`` interface expects a function
+          derivatives].  The ``function`` interface expects a function
           matching the prototype:
 
           .. code::
 
              def function(*args): float
 
-          The ``gradient`` amd ``hessian`` interface expect functions
+          The ``gradient`` and ``hessian`` interface expect functions
           matching the prototype:
 
           .. code::
@@ -109,7 +109,7 @@ class ExternalFunction(Component):
 
         **ASL function libraries** (:class:`AMPLExternalFunction` interface)
 
-        Pyomo can also call functions compiles as part of an AMPL
+        Pyomo can also call functions compiled as part of an AMPL
         External Function library (see the `User-defined functions
         <https://www.ampl.com/REFS/HOOKING/#userdefinedfuncs>`_ section
         in the `Hooking your solver to AMPL
@@ -327,7 +327,7 @@ class AMPLExternalFunction(ExternalFunction):
         ExternalFunction.__init__(self, *args, **kwargs)
 
     def __getstate__(self):
-        state = super(AMPLExternalFunction, self).__getstate__()
+        state = super().__getstate__()
         # Remove reference to loaded library (they are not copyable or
         # picklable)
         state['_so'] = state['_known_functions'] = None
@@ -413,7 +413,7 @@ class _PythonCallbackFunctionID(NumericConstant):
     Function IDs are effectively pointers back to the
     PythonCallbackFunction.  As such, we need special handling to
     maintain / preserve the correct linkages through deepcopy (and
-    model.clone().
+    model.clone()).
 
     """
     __slots__ = ()
@@ -441,7 +441,7 @@ class PythonCallbackFunction(ExternalFunction):
 
     @classmethod
     def register_instance(cls, instance):
-        # Ideally, we would just use the id() as the finction id, but
+        # Ideally, we would just use the id() as the function id, but
         # Python id() is more than 32-bits, which can cause problems for
         # the ASL.  We will map id() to a "small" integer and use that
         # small integer as the "function id".
@@ -506,8 +506,7 @@ class PythonCallbackFunction(ExternalFunction):
         # NOTE: we append the Function ID to the END of the argument
         # list because it is easier to update the gradient / hessian
         # results
-        return super(PythonCallbackFunction, self).__call__(
-            *args, _PythonCallbackFunctionID(self._fcn_id))
+        return super().__call__(*args, _PythonCallbackFunctionID(self._fcn_id))
 
     def _evaluate(self, args, fixed, fgh):
         # Remove the fcn_id
@@ -604,7 +603,7 @@ class _ARGLIST(Structure):
         ]
 
     def __init__(self, args, fgh=0, fixed=None):
-        super(_ARGLIST, self).__init__()
+        super().__init__()
         N = len(args)
         self.n = self.nr = N
         self.at = (c_int*N)()
