@@ -185,12 +185,8 @@ class TRFInterface(object):
             # So this is possible to call
             gradBasis = differentiate(b.basis_expressions[y],
                                       wrt_list=b.ef_inputs[y])
-            # These, however, are external functions.
-            # TODO JDS: Add function call to ExternalFunction API for 
-            # finding derivatives
-            # Temporary name: evaluatefgh
-            gradTruth = evaluatefgh(b.truth_models[y],
-                                          b.ef_inputs[y])
+            gradTruth = differentiate(b.truth_models[y],
+                                      wrt_list=b.ef_inputs[y])
             for j, w in enumerate(b.ef_inputs[y]):
                 b.grad_basis_model_output[i, j] = gradBasis[j]
                 b.grad_truth_model_output[i, j] = gradTruth[j]
