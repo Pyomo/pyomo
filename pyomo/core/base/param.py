@@ -95,6 +95,11 @@ class _ImplicitAny(Any.__class__):
                 version='5.6.9', remove_in='6.0')
         return True
 
+    # This should "mock up" a global set, so the "name" should always be
+    # the local name (without block scope)
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
+        return super().getname(False, name_buffer, relative_to)
+
     # The parent tracks the parent of the owner.  We can't set it
     # directly here because the owner has not been assigned to a block
     # when we create the _ImplicitAny

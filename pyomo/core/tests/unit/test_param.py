@@ -24,13 +24,13 @@ import sys
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (Set, RangeSet, Param, ConcreteModel,
-                           AbstractModel, Constraint, Var,
-                           NonNegativeIntegers, Integers,
-                           NonNegativeReals, Boolean, Reals, Any, display,
-                           value, set_options, sin, cos, tan, log, log10,
-                           exp, sqrt, ceil, floor, asin, acos, atan, sinh,
-                           cosh, tanh, asinh, acosh, atanh)
+from pyomo.environ import (
+    Set, RangeSet, Param, ConcreteModel, AbstractModel, Block, Constraint, Var,
+    NonNegativeIntegers, Integers, NonNegativeReals, Boolean, Reals, Any,
+    display, value, set_options,
+    sin, cos, tan, log, log10, exp, sqrt, ceil, floor, asin, acos, atan,
+    sinh, cosh, tanh, asinh, acosh, atanh,
+)
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
@@ -1417,6 +1417,17 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
             "DEPRECATED: Param 'p' declared with an implicit domain of 'Any'",
             log.getvalue().replace('\n', ' '))
         self.assertEqual(value(m.p), 'a')
+
+        m.b = Block()
+        m.b.q = Param()
+        buf = StringIO()
+        m.b.q.pprint(ostream=buf)
+        self.assertEqual(
+            buf.getvalue().strip(),
+            """
+q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
+    Key : Value
+            """.strip())
 
         i = m.clone()
         self.assertIsNot(m.p.domain, i.p.domain)
