@@ -46,7 +46,7 @@ jobs:
           PYENV: pip
 
         - os: windows-latest
-          python: 3.6
+          python: 3.7
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
