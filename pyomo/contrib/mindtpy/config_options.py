@@ -40,7 +40,7 @@ def _get_MindtPy_config():
         domain=In(['level_L1', 'level_L2', 'level_L_infinity',
                    'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag']),
         description='add regularization',
-        doc='solving a regularization problem before solve the fixed subproblem'
+        doc='Solving a regularization problem before solve the fixed subproblem'
             'the objective function of the regularization problem.'
     ))
     CONFIG.declare('init_strategy', ConfigValue(
@@ -114,17 +114,17 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare('add_affine_cuts', ConfigValue(
         default=False,
-        description='Add affine cuts drive from MC++',
+        description='Add affine cuts drive from MC++.',
         domain=bool
     ))
     CONFIG.declare('single_tree', ConfigValue(
         default=False,
-        description='Use single tree implementation in solving the MILP main problem.',
+        description='Use single tree implementation in solving the MIP main problem.',
         domain=bool
     ))
     CONFIG.declare('solution_pool', ConfigValue(
         default=False,
-        description='Use solution pool in solving the MILP main problem.',
+        description='Use solution pool in solving the MIP main problem.',
         domain=bool
     ))
     CONFIG.declare('num_solution_iteration', ConfigValue(
@@ -134,24 +134,24 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare('add_slack', ConfigValue(
         default=False,
-        description='whether add slack variable here.'
+        description='Whether add slack variable here.'
                     'slack variables here are used to deal with nonconvex MINLP.',
         domain=bool
     ))
     CONFIG.declare('cycling_check', ConfigValue(
         default=True,
-        description='check if OA algorithm is stalled in a cycle and terminate.',
+        description='Check if OA algorithm is stalled in a cycle and terminate.',
         domain=bool
     ))
     CONFIG.declare('feasibility_norm', ConfigValue(
         default='L_infinity',
         domain=In(['L1', 'L2', 'L_infinity']),
-        description='different forms of objective function in feasibility subproblem.'
+        description='Different forms of objective function in feasibility subproblem.'
     ))
     CONFIG.declare('differentiate_mode', ConfigValue(
         default='reverse_symbolic',
         domain=In(['reverse_symbolic', 'sympy']),
-        description='differentiate mode to calculate jacobian.'
+        description='Differentiate mode to calculate jacobian.'
     ))
     CONFIG.declare('linearize_inactive', ConfigValue(
         default=False,
@@ -160,33 +160,33 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare('use_mcpp', ConfigValue(
         default=False,
-        description="use package MC++ to set a bound for variable 'objective_value', which is introduced when the original problem's objective function is nonlinear.",
+        description="Use package MC++ to set a bound for variable 'objective_value', which is introduced when the original problem's objective function is nonlinear.",
         domain=bool
     ))
     CONFIG.declare('equality_relaxation', ConfigValue(
         default=False,
-        description='use dual solution from the nlp solver to add OA cuts for equality constraints.',
+        description='Use dual solution from the NLP solver to add OA cuts for equality constraints.',
         domain=bool
     ))
     CONFIG.declare('calculate_dual', ConfigValue(
         default=False,
-        description='calculate duals of the NLP subproblem',
+        description='Calculate duals of the NLP subproblem.',
         domain=bool
     ))
     CONFIG.declare('use_fbbt', ConfigValue(
         default=False,
-        description='use fbbt to tighten the feasible region of the problem',
+        description='Use fbbt to tighten the feasible region of the problem.',
         domain=bool
     ))
     CONFIG.declare('use_dual_bound', ConfigValue(
         default=True,
-        description='add dual bound constraint to enforce the objective satisfies best-found dual bound',
+        description='Add dual bound constraint to enforce the objective satisfies best-found dual bound.',
         domain=bool
     ))
     CONFIG.declare('heuristic_nonconvex', ConfigValue(
         default=False,
-        description='use dual solution from the NLP solver and slack variables to add OA cuts for equality constraints (Equality relaxation)'
-                    'and minimize the sum of the slack variables (Augmented Penalty)',
+        description='Use dual solution from the NLP solver and slack variables to add OA cuts for equality constraints (Equality relaxation)'
+                    'and minimize the sum of the slack variables (Augmented Penalty).',
         domain=bool
     ))
 
@@ -229,28 +229,28 @@ def _add_subsolver_configs(CONFIG):
     CONFIG.declare('mip_solver_mipgap', ConfigValue(
         default=1E-4,
         domain=PositiveFloat,
-        description='mipgap passed to mip solver'
+        description='Mipgap passed to MIP solver.'
     ))
     CONFIG.declare('threads', ConfigValue(
         default=0,
         domain=NonNegativeInt,
         description='Threads',
-        doc='Threads used by milp solver and nlp solver.'
+        doc='Threads used by MIP solver and NLP solver.'
     ))
     CONFIG.declare('regularization_mip_threads', ConfigValue(
         default=0,
         domain=NonNegativeInt,
-        description='regularization mip threads',
-        doc='Threads used by milp solver to solve regularization main problem.'
+        description='regularization MIP threads',
+        doc='Threads used by MIP solver to solve regularization main problem.'
     ))
     CONFIG.declare('solver_tee', ConfigValue(
         default=False,
-        description='Stream the output of mip solver and nlp solver to terminal.',
+        description='Stream the output of MIP solver and NLP solver to terminal.',
         domain=bool
     ))
     CONFIG.declare('mip_solver_tee', ConfigValue(
         default=False,
-        description='Stream the output of mip solver to terminal.',
+        description='Stream the output of MIP solver to terminal.',
         domain=bool
     ))
     CONFIG.declare('nlp_solver_tee', ConfigValue(
@@ -263,7 +263,7 @@ def _add_subsolver_configs(CONFIG):
         domain=In(['gurobi', 'cplex', 'cbc', 'glpk', 'gams',
                    'gurobi_persistent', 'cplex_persistent']),
         description='MIP subsolver for regularization problem',
-        doc='Which MIP subsolver is going to be used for solving the regularization problem'
+        doc='Which MIP subsolver is going to be used for solving the regularization problem.'
     ))
 
 
@@ -317,16 +317,16 @@ def _add_bound_configs(CONFIG):
     CONFIG.declare('obj_bound', ConfigValue(
         default=1E15,
         domain=PositiveFloat,
-        description='Bound applied to the linearization of the objective function if main MILP is unbounded.'
+        description='Bound applied to the linearization of the objective function if main MIP is unbounded.'
     ))
     CONFIG.declare('continuous_var_bound', ConfigValue(
         default=1e10,
-        description='default bound added to unbounded continuous variables in nonlinear constraint if single tree is activated.',
+        description='Default bound added to unbounded continuous variables in nonlinear constraint if single tree is activated.',
         domain=PositiveFloat
     ))
     CONFIG.declare('integer_var_bound', ConfigValue(
         default=1e9,
-        description='default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.',
+        description='Default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.',
         domain=PositiveFloat
     ))
 
@@ -335,7 +335,7 @@ def _add_fp_configs(CONFIG):
     CONFIG.declare('fp_cutoffdecr', ConfigValue(
         default=1E-1,
         domain=PositiveFloat,
-        description='Additional relative decrement of cutoff value for the original objective function'
+        description='Additional relative decrement of cutoff value for the original objective function.'
     ))
     CONFIG.declare('fp_iteration_limit', ConfigValue(
         default=20,
@@ -346,23 +346,23 @@ def _add_fp_configs(CONFIG):
     # TODO: integrate this option
     CONFIG.declare('fp_projcuts', ConfigValue(
         default=True,
-        description='Whether to add cut derived from regularization of MIP solution onto NLP feasible set',
+        description='Whether to add cut derived from regularization of MIP solution onto NLP feasible set.',
         domain=bool
     ))
     CONFIG.declare('fp_transfercuts', ConfigValue(
         default=True,
-        description='Whether to transfer cuts from the Feasibility Pump MIP to main MIP in selected strategy (all except from the round in which the FP MIP became infeasible)',
+        description='Whether to transfer cuts from the Feasibility Pump MIP to main MIP in selected strategy (all except from the round in which the FP MIP became infeasible).',
         domain=bool
     ))
     CONFIG.declare('fp_projzerotol', ConfigValue(
         default=1E-4,
         domain=PositiveFloat,
-        description='Tolerance on when to consider optimal value of regularization problem as zero, which may trigger the solution of a Sub-NLP'
+        description='Tolerance on when to consider optimal value of regularization problem as zero, which may trigger the solution of a Sub-NLP.'
     ))
     CONFIG.declare('fp_mipgap', ConfigValue(
         default=1E-2,
         domain=PositiveFloat,
-        description='Optimality tolerance (relative gap) to use for solving MIP regularization problem'
+        description='Optimality tolerance (relative gap) to use for solving MIP regularization problem.'
     ))
     CONFIG.declare('fp_discrete_only', ConfigValue(
         default=True,
@@ -372,7 +372,7 @@ def _add_fp_configs(CONFIG):
     CONFIG.declare('fp_main_norm', ConfigValue(
         default='L1',
         domain=In(['L1', 'L2', 'L_infinity']),
-        description='different forms of objective function MIP regularization problem.'
+        description='Different forms of objective function MIP regularization problem.'
     ))
     CONFIG.declare('fp_norm_constraint', ConfigValue(
         default=True,
@@ -390,13 +390,13 @@ def _add_loa_configs(CONFIG):
     CONFIG.declare('level_coef', ConfigValue(
         default=0.5,
         domain=PositiveFloat,
-        description='the coefficient in the regularization main problem'
+        description='The coefficient in the regularization main problem'
         'represents how much the linear approximation of the MINLP problem is trusted.'
     ))
     CONFIG.declare('solution_limit', ConfigValue(
         default=10,
         domain=PositiveInt,
-        description='The solution limit for the regularization problem since it does not need to be solved to optimality'
+        description='The solution limit for the regularization problem since it does not need to be solved to optimality.'
     ))
     CONFIG.declare('add_cuts_at_incumbent', ConfigValue(
         default=False,
@@ -405,18 +405,18 @@ def _add_loa_configs(CONFIG):
     ))
     CONFIG.declare('reduce_level_coef', ConfigValue(
         default=False,
-        description='Whether to reduce level coefficient in ROA single tree when regularization problem is infeasible',
+        description='Whether to reduce level coefficient in ROA single tree when regularization problem is infeasible.',
         domain=bool
     ))
     CONFIG.declare('use_bb_tree_incumbent', ConfigValue(
         default=False,
-        description='Whether to use the incumbent solution of branch & bound tree in ROA single tree when regularization problem is infeasible',
+        description='Whether to use the incumbent solution of branch & bound tree in ROA single tree when regularization problem is infeasible.',
         domain=bool
     ))
     CONFIG.declare('sqp_lag_scaling_coef', ConfigValue(
         default='fixed',
         domain=In(['fixed', 'variable_dependent']),
-        description='the coefficient used to scale the L2 norm in sqp_lag'
+        description='The coefficient used to scale the L2 norm in sqp_lag.'
     ))
 
 
