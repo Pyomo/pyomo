@@ -28,6 +28,7 @@ class Measurements:
         self.__name_and_index_generator(self.measurement_all_info)
         self.__generate_flatten_name(self.name_and_index)
         self.__generate_flatten_timeset(self.measurement_all_info, self.flatten_measure_name, self.name_and_index)
+        self.__model_measure_name()
         print('All measurements are flattened.')
         print('Flatten measurement name:', self.flatten_measure_name)
         print('Flatten measurement timeset:', self.flatten_measure_timeset)
@@ -110,6 +111,68 @@ class Measurements:
             else:
                 flatten_measure_timeset[i] = all_info[i]
         self.flatten_measure_timeset = flatten_measure_timeset
+
+    def __model_measure_name(self):
+        measurement_names = []
+        for mname in self.flatten_measure_name:
+            if self.ind_string in mname:
+                measure_name = mname.split(self.ind_string)[0]
+                measure_index = mname.split(self.ind_string)[1]
+                for tim in self.flatten_measure_timeset[mname]:
+                    # get the measurement name in the model
+                    measurement_name = measure_name + '[0,' + measure_index + ',' + str(tim) + ']'
+                    measurement_names.append(measurement_name)
+            else:
+                for tim in self.flatten_measure_timeset[mname]:
+                    # get the measurement name in the model
+                    measurement_name = mname + '[0,' + str(tim) + ']'
+                    measurement_names.append(measurement_name)
+        self.model_measure_name = measurement_names
+
+    def __SP_measure_name(self, scenario_all, j, t, p=None, mode=None, legal_t=True):
+
+        if mode=='simultaneous_finite':
+            if self.ind_string in j:
+                measure_name = j.split(self.ind_string)[0]
+                measure_index = j.split(self.ind_string)[1]
+                if type(self.name_and_index[measure_name][0]) is str:
+                    measure_index = '"' + measure_index + '"'
+                if t in self.flatten_measure_timeset[j]:
+                    up_C = 'm.' + measure_name + '[' + str(scenario_all['jac-index'][p][0]) + ',' + measure_index + ',' + str(t) + ']'
+                    lo_C = 'm.' + measure_name + '[' + str(scenario_all['jac-index'][p][1]) + ',' + measure_index + ',' + str(t) + ']'
+                else:
+                    legal_t = False
+            else:
+                up_C = 'm.' + j + '[' + str(scenario_all['jac-index'][p][0]) + ',' + str(t) + ']'
+                lo_C = 'm.' + j + '[' + str(scenario_all['jac-index'][p][1]) + ',' + str(t) + ']'
+
+            return up_C, lo_C, legal_t
+
+        elif mode == 'sequential_finite':
+            if self.ind_string in j:
+                measure_name = j.split(self.ind_string)[0]
+                measure_index = j.split(self.ind_string)[1]
+                if type(self.name_and_index[measure_name][0]) is str:
+                    measure_index = '"' + measure_index + '"'
+                if t in self.flatten_measure_timeset[j]:
+                    string_name = 'mod.' + measure_name + '[0,' + str((measure_index)) + ',' + str(t) + ']'
+            else:
+                string_name = 'mod.' + j + '[0,' + str((measure_index)) + ',' + str(t) + ']'
+
+            return string_name
+
+        elif mode in ['sequential_sipopt', 'sequential_kaug']:
+            if self.ind_string in j:
+                measure_name = j.split(self.ind_string)[0]
+                measure_index = j.split(self.ind_string)[1]
+                if type(self.name_and_index[measure_name][0]) is str:
+                    measure_index = '"' + measure_index + '"'
+
+            return None
+
+
+    def __sequential_measure_name(self, j, t):
+
 
     def check_subset(self,subset, throw_error=True, valid_subset=True):
         '''
@@ -495,28 +558,17 @@ class DesignOfExperiments:
                         dataframe = extract_single_model(mod, square_result)
                         dataframe.to_csv(mod_name)
 
-                    
-
                     # loop over measurement item and time to store model measurements
-                    output_combine = []
-                    for j in self.flatten_measure_name:
-                        # split flattened name if needed
-                        if self.measure.ind_string in j:
-                            measure_name = j.split(self.measure.ind_string)[0]
-                            measure_index = j.split(self.measure.ind_string)[1]
-                            # this is needed for using eval(). if the extra index is 'CA', it converts to "'CA'". only for the extra index as a string
-                            if type(self.measure.name_and_index[measure_name][0]) is str:
-                                measure_index = '"' + measure_index + '"'
-                            for t in self.flatten_measure_timeset[j]:
-                                C_value = eval('mod.' + str(measure_name) + '[0,' + str((measure_index)) + ',' + str(t) + ']')
-                                output_combine.append(value(C_value))
+                    output_iter = []
 
-                        else:
-                            for t in self.flatten_measure_timeset[j]:
-                                C_value = eval('mod.' + j + '[0,' + str(t) + ']')
-                                output_combine.append(value(C_value))
-                    output_record[no_s] = output_combine
-                        
+                    for j in self.flatten_measure_name:
+                        for t in self.flatten_measure_timeset[j]:
+                            measure_string_name = self.measure.__SP_measure_names(j,t)
+                            C_value = eval(measure_string_name)
+                            output_iter.append(C_value)
+
+                    output_record[no_s] = output_iter
+
                     print('Output this time: ', output_record[no_s])
 
                 output_record['design'] = design_values
@@ -631,57 +683,8 @@ class DesignOfExperiments:
                     time1_solve = time.time()
                     time_allsolve.append(time1_solve - time0_solve)
 
-                    # extract sipopt result
-                    for j in self.flatten_measure_name:
-                        # check if this variable needs split name
-                        if self.measure.ind_string in j:
-                            measure_name = j.split(self.measure.ind_string)[0]
-                            measure_index = j.split(self.measure.ind_string)[1]
-                            # this is needed for using eval(). if the extra index is 'CA', it converts to "'CA'". only for the extra index as a string
-                            if type(measure_index) is str:
-                                measure_index_doublequotes = '"' + measure_index + '"'
-                            for t in self.flatten_measure_timeset[j]:
-                                measure_var = getattr(m_sipopt, measure_name)
-                                # check if this variable is fixed
-                                if (measure_var[0,measure_index,t].fixed == True):
-                                    perturb_value = value(measure_var[0,measure_index,t])
-                                else:
-                                    # if it is not fixed, record its perturbed value
-                                    if self.mode =='sequential_sipopt':
-                                        perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + measure_name + '[0,'+str(measure_index_doublequotes)+',' + str(t) + ']]')
-                                    else:
-                                        perturb_value = eval('m_sipopt.' + measure_name + '[0,' +str(measure_index_doublequotes)+',' + str(t) + ']()')
-
-                                # base case values
-                                if self.mode == 'sequential_sipopt':
-                                    base_value = eval('m_sipopt.' + measure_name + '[0,'+str(measure_index_doublequotes)+',' + str(t) + '].value')
-                                else:
-                                    base_value = value(eval('mod.' + measure_name + '[0,' +str(measure_index_doublequotes)+','+ str(t) + ']'))
-
-                                perturb_mea.append(perturb_value)
-                                base_mea.append(base_value)
-
-                        else:
-                            # fetch the measurement variable
-                            measure_var = getattr(m_sipopt, j)
-                            for t in self.flatten_measure_timeset[j]:
-                                if (measure_var[0,t].fixed == True):
-                                    perturb_value = value(measure_var[0, t])
-                                else:
-                                    # if it is not fixed, record its perturbed value
-                                    if self.mode == 'sequential_sipopt':
-                                        perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,' + str(t) + ']]')
-                                    else:
-                                        perturb_value = eval('m_sipopt.' + j + '[0,' + str(t) + ']()')
-
-                                # base case values
-                                if self.mode == 'sequential_sipopt':
-                                    base_value = eval('m_sipopt.' + j + '[0,'+ str(t) + '].value')
-                                else:
-                                    base_value = value(eval('mod.' + j + '[0,'+ str(t) + ']'))
-
-                                perturb_mea.append(perturb_value)
-                                base_mea.append(base_value)
+                    # extract measurements
+                    perturb_mea, base_mea = self.__extract_measurement()
 
                     # store extracted measurements
                     all_perturb_measure.append(perturb_mea)
@@ -722,7 +725,6 @@ class DesignOfExperiments:
             return FIM_analysis
 
         elif self.mode =='direct_kaug':
-            print('===In construction===')
 
             # create scenario class for a base case
             scena_gen = Scenario_generator(self.param_init, formula=None, step=self.step)
@@ -782,9 +784,9 @@ class DesignOfExperiments:
             # analyze result
             dsdp_array = dsdp_re.toarray().T
             # here for construction. Remove after finishing.
-            dd = pd.DataFrame(dsdp_array)
-            print(dd)
-            dd.to_csv('test_kaug.csv')
+            #dd = pd.DataFrame(dsdp_array)
+            #print(dd)
+            #dd.to_csv('test_kaug.csv')
             # here for fixed bed
             self.dsdp = dsdp_array
             self.dsdp = col
@@ -795,56 +797,28 @@ class DesignOfExperiments:
             measurement_names = []
             # produce the sensitivity for fixed variables
             zero_sens = np.zeros(len(self.param_name))
+
             # loop over measurement variables and their time points
-            for mname in self.flatten_measure_name:
-                if self.measure.ind_string in mname:
-                    measure_name = mname.split(self.measure.ind_string)[0]
-                    measure_index = mname.split(self.measure.ind_string)[1]
-                    for tim in measurement_accurate_time[mname]:
-                        # get the measurement name in the model
-                        measurement_name = measure_name+'[0,'+measure_index+','+str(tim)+']'
-                        measurement_names.append(measurement_name)
-                        # get right line number in kaug results
-                        if self.discretize_model is not None:
-                            # for DAE model, some variables are fixed
-                            try:
-                                kaug_no = col.index(measurement_name)
-                                measurement_index.append(kaug_no)
-                                # get right line of dsdp
-                                dsdp_extract.append(dsdp_array[kaug_no])
-                            except:
-                                if self.verbose:
-                                    print('The variable is fixed:', measurement_name)
-                                # for fixed variables, the sensitivity are a zero vector
-                                dsdp_extract.append(zero_sens)
-                        else:
-                            kaug_no = col.index(measure_name)
-                            measurement_index.append(kaug_no)
-                            # get right line of dsdp
-                            dsdp_extract.append(dsdp_array[kaug_no])
+            for measurement_name in self.measure.model_measure_name:
+                # get right line number in kaug results
+                if self.discretize_model is not None:
+                    # for DAE model, some variables are fixed
+                    try:
+                        kaug_no = col.index(measurement_name)
+                        measurement_index.append(kaug_no)
+                        # get right line of dsdp
+                        dsdp_extract.append(dsdp_array[kaug_no])
+                    except:
+                        if self.verbose:
+                            print('The variable is fixed:', measurement_name)
+                        # for fixed variables, the sensitivity are a zero vector
+                        dsdp_extract.append(zero_sens)
                 else:
-                    for tim in self.flatten_measure_timeset[mname]:
-                        # get the measurement name in the model
-                        measure_name = mname+'[0,'+str(tim)+']'
-                        measurement_names.append(measure_name)
-                        # get right line number in kaug results
-                        if self.discretize_model is not None:
-                            # for DAE model, some variables are fixed
-                            try:
-                                kaug_no = col.index(measure_name)
-                                measurement_index.append(kaug_no)
-                                # get right line of dsdp
-                                dsdp_extract.append(dsdp_array[kaug_no])
-                            except:
-                                if self.verbose:
-                                    print('The variable is fixed:', measure_name)
-                                # for fixed variables, the sensitivity are a zero vector
-                                dsdp_extract.append(zero_sens)
-                        else:
-                            kaug_no = col.index(measure_name)
-                            measurement_index.append(kaug_no)
-                            # get right line of dsdp
-                            dsdp_extract.append(dsdp_array[kaug_no])
+                    kaug_no = col.index(measurement_name)
+                    measurement_index.append(kaug_no)
+                    # get right line of dsdp
+                    dsdp_extract.append(dsdp_array[kaug_no])
+
             print('dsdp extract is:', dsdp_extract)
             # Extract and calculate sensitivity if scaled by constants or parameters.
             # Convert sensitivity to a dictionary
@@ -932,7 +906,9 @@ class DesignOfExperiments:
         JAC: the overall jacobian as a dictionary
         '''
         no_para = len(self.param_name)
+        # dictionary form of jacobian
         jac = {}
+        # loop over parameters
         for p in self.param_name: 
             jac_para = []
             for n1, name1 in enumerate(self.jac_involved_name):
@@ -942,8 +918,88 @@ class DesignOfExperiments:
         
         return jac
 
-    def __extract_measurement(self,m):
+    def __extract_measurement(self):
+        output_combine = []
 
+        if self.mode == 'sequential_finite':
+            for j in self.flatten_measure_name:
+                # split flattened name if needed
+                if self.measure.ind_string in j:
+                    measure_name = j.split(self.measure.ind_string)[0]
+                    measure_index = j.split(self.measure.ind_string)[1]
+                    # this is needed for using eval(). if the extra index is 'CA', it converts to "'CA'". only for the extra index as a string
+                    if type(self.measure.name_and_index[measure_name][0]) is str:
+                        measure_index = '"' + measure_index + '"'
+                    for t in self.flatten_measure_timeset[j]:
+                        C_value = eval('mod.' + str(measure_name) + '[0,' + str((measure_index)) + ',' + str(t) + ']')
+                        output_combine.append(value(C_value))
+
+                else:
+                    for t in self.flatten_measure_timeset[j]:
+                        C_value = eval('mod.' + j + '[0,' + str(t) + ']')
+                        output_combine.append(value(C_value))
+            return output_combine
+
+        elif self.mode in ['sequential_sipopt', 'sequential_kaug']:
+            # extract sipopt result
+            for j in self.flatten_measure_name:
+                # check if this variable needs split name
+                if self.measure.ind_string in j:
+                    measure_name = j.split(self.measure.ind_string)[0]
+                    measure_index = j.split(self.measure.ind_string)[1]
+                    # this is needed for using eval(). if the extra index is 'CA', it converts to "'CA'". only for the extra index as a string
+                    if type(measure_index) is str:
+                        measure_index_doublequotes = '"' + measure_index + '"'
+                    for t in self.flatten_measure_timeset[j]:
+                        measure_var = getattr(m_sipopt, measure_name)
+                        # check if this variable is fixed
+                        if (measure_var[0, measure_index, t].fixed == True):
+                            perturb_value = value(measure_var[0, measure_index, t])
+                        else:
+                            # if it is not fixed, record its perturbed value
+                            if self.mode == 'sequential_sipopt':
+                                perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + measure_name + '[0,' + str(
+                                    measure_index_doublequotes) + ',' + str(t) + ']]')
+                            else:
+                                perturb_value = eval(
+                                    'm_sipopt.' + measure_name + '[0,' + str(measure_index_doublequotes) + ',' + str(
+                                        t) + ']()')
+
+                        # base case values
+                        if self.mode == 'sequential_sipopt':
+                            base_value = eval(
+                                'm_sipopt.' + measure_name + '[0,' + str(measure_index_doublequotes) + ',' + str(
+                                    t) + '].value')
+                        else:
+                            base_value = value(eval(
+                                'mod.' + measure_name + '[0,' + str(measure_index_doublequotes) + ',' + str(t) + ']'))
+
+                        perturb_mea.append(perturb_value)
+                        base_mea.append(base_value)
+
+                else:
+                    # fetch the measurement variable
+                    measure_var = getattr(m_sipopt, j)
+                    for t in self.flatten_measure_timeset[j]:
+                        if (measure_var[0, t].fixed == True):
+                            perturb_value = value(measure_var[0, t])
+                        else:
+                            # if it is not fixed, record its perturbed value
+                            if self.mode == 'sequential_sipopt':
+                                perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,' + str(t) + ']]')
+                            else:
+                                perturb_value = eval('m_sipopt.' + j + '[0,' + str(t) + ']()')
+
+                        # base case values
+                        if self.mode == 'sequential_sipopt':
+                            base_value = eval('m_sipopt.' + j + '[0,' + str(t) + '].value')
+                        else:
+                            base_value = value(eval('mod.' + j + '[0,' + str(t) + ']'))
+
+                        perturb_mea.append(perturb_value)
+                        base_mea.append(base_value)
+
+            return perturb_mea, base_mea
 
 
     def generate_sequential_experiments(self, design_values_set, mode='sequential_finite', tee_option=False,
@@ -1178,10 +1234,7 @@ class DesignOfExperiments:
 
         Parameters:
         -----------
-        jac_involved_name: a list of measurement names involved in calculation of FIM
-        jac_involved_extra_index: a list of measurement extra index involved in calculation of FIM. If there is no extra index for this variable, use None.
-        self.measurement_variables: the variable name of the model output, for e.g., ['CA', 'CB', 'CC'].
-        self.measurement_timeset: a list of measurement time points. can be different from control time points
+        jac_involved: a measurement object
         self.design_values: a dict of dictionaries, keys are the name of design variables, values are a dict where keys are the time points, values are the design variable value at that time point
 
         self.optimize: if True, solve the problem unfixing the design variables. if False, solve the problem as a
@@ -1337,23 +1390,14 @@ class DesignOfExperiments:
             # A better way to do this: 
             # https://github.com/IDAES/idaes-pse/blob/274e58bef55f2f969f0df97cbb1fb7d99342388e/idaes/apps/uncertainty_propagation/sens.py#L296
             # check if j is a measurement with extra index by checking if there is '_index_' in its name
-            if self.measure.ind_string in j:
-                measure_name = j.split(self.measure.ind_string)[0]
-                measure_index = j.split(self.measure.ind_string)[1]
-                if type(self.measure.name_and_index[measure_name][0]) is str:
-                    measure_index = '"' + measure_index + '"'
-                if t in self.flatten_measure_timeset[j]:
-                    up_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][0]) + ',' + measure_index + ',' + str(t) + ']')
-                    lo_C = eval('m.' + measure_name + '[' + str(scenario_all['jac-index'][p][1]) + ',' + measure_index + ',' + str(t) + ']')
-                    return m.jac[j, p, t] == (up_C - lo_C) / scenario_all['eps-abs'][p] * self.scale_constant_value
+            up_C_name, lo_C_name, legal_t_option = self.measure.__SP_measure_names(scenario_all,j,p,t)
+            if legal_t_option:
+                up_C = eval(up_C_name)
+                lo_C = eval(lo_C_name)
+                return m.jac[j, p, t] == (up_C - lo_C) / scenario_all['eps-abs'][p] * self.scale_constant_value
                 # if t is not measured, let the value be 0
-                else:
-                    return m.jac[j, p, t] == 0
             else:
-                up_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][0])+','+str(t)+']')
-                lo_C = eval('m.'+j+'['+str(scenario_all['jac-index'][p][1])+','+str(t)+']')
-
-                return m.jac[j,p,t] == (up_C - lo_C)/scenario_all['eps-abs'][p] *self.scale_constant_value
+                return m.jac[j, p, t] == 0
 
         #A constraint to calculate elements in Hessian matrix
         # transfer prior FIM to be Expressions
@@ -1961,7 +2005,7 @@ class FIM_result:
         small_jac = self.__split_jacobian(measurement_subset)
 
         # create a new subject
-        FIM_subclass = FIM_result(self.para_name, measurement_subset, jacobian_info=small_jac, all_jacobian_info=self.all_jacobian_info, prior_FIM=self.prior_FIM, store_FIM=self.store_FIM, scale_constant_value=self.scale_constant_value, max_condition_number=self.max_condition_number)
+        FIM_subclass = FIM_result(self.para_name, measurement_subset, jacobian_info=small_jac, prior_FIM=self.prior_FIM, store_FIM=self.store_FIM, scale_constant_value=self.scale_constant_value, max_condition_number=self.max_condition_number)
 
         return FIM_subclass
 
@@ -1978,10 +2022,11 @@ class FIM_result:
         jaco_info = {}
 
         # convert the form of jacobian for split
-        jaco_3D = self.__jac_reform_3D(self.all_jacobian_info)
+        jaco_3D = self.__jac_reform_3D(self.jacobian_info)
 
         involved_flatten_index = measurement_subset.flatten_measure_name
-        print('involved flatten name:', involved_flatten_index)
+        if self.verbose:
+            print('involved flatten name:', involved_flatten_index)
 
         # reorganize the jacobian subset with the same form of the jacobian
         # loop over parameters
