@@ -2,7 +2,7 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
@@ -12,12 +12,15 @@ import logging
 import os
 import types
 import weakref
+from typing import overload
 
 from ctypes import (
     Structure, POINTER, CFUNCTYPE, cdll, byref,
     c_int, c_long, c_ulong, c_double, c_byte, c_char_p, c_void_p )
 
-from pyomo.core.expr.numvalue import native_types, NonNumericValue
+from pyomo.core.expr.numvalue import (
+    native_types, pyomo_constant_types, NonNumericValue, NumericConstant,
+)
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import Component
 from pyomo.core.base.units_container import units
@@ -28,27 +31,103 @@ logger = logging.getLogger('pyomo.core')
 
 
 class ExternalFunction(Component):
+    """Interface to an external (non-algebraic) function.
 
-    def __new__(cls, *args, **kwds):
-        if cls != ExternalFunction:
-            return super(ExternalFunction, cls).__new__(cls)
-        if len(args) == 1 and type(args[0]) is types.FunctionType:
-            return PythonCallbackFunction.__new__(PythonCallbackFunction)
-        elif not args and 'library' not in kwds and 'function' in kwds and \
-                type(kwds['function']) is types.FunctionType:
-            return PythonCallbackFunction.__new__(PythonCallbackFunction)
+    :class:`ExternalFunction` provides an interface for declaring
+    general user-provided functions, and then embedding calls to the
+    external functions within Pyomo expressions.
+
+    .. note::
+
+       Just because you can express a Pyomo model with external
+       functions does not mean that the resulting model is solvable.  In
+       particular, linear solvers do not accept external functions.  The
+       AMPL Solver Library (ASL) interface does support external
+       functions for general nonlinear solvers compiled against it, but
+       only allows functions in compiled libraries through the
+       :class:`AMPLExternalFunction` interface.
+
+    """
+    def __new__(cls, *args, **kwargs):
+        if cls is not ExternalFunction:
+            return super().__new__(cls)
+        elif args:
+            return super().__new__(PythonCallbackFunction)
+        elif 'library' not in kwargs and any(
+                kw in kwargs for kw in ('function', 'fgh')):
+            return super().__new__(PythonCallbackFunction)
         else:
-            return AMPLExternalFunction.__new__(AMPLExternalFunction)
+            return super().__new__(AMPLExternalFunction)
 
-    def __init__(self, *args, **kwds):
-        self._units = kwds.pop('units', None)
+    @overload
+    def __init__(self, function=None, gradient=None, hessian=None,
+                 *, fgh=None): ...
+
+    @overload
+    def __init__(self, *, library: str, function: str): ...
+
+    def __init__(self, *args, **kwargs):
+        """Construct a reference to an external function.
+
+        There are two fundamental interfaces supported by
+        :class:`ExternalFunction`: Python callback functions and AMPL
+        external functions.
+
+        **Python callback functions** (:class:`PythonCallbackFunction`
+        interface)
+
+        Python callback functions can be specified one of two ways:
+
+        1. FGH interface:
+
+          A single external function call with a signature matching the
+          :meth:`evaluate_fgh()` method.
+
+        2. Independent functions:
+
+          One to three functions that can evaluate the function value,
+          gradient of the function [partial derivatives] with respect to
+          its inputs, and the Hessian of the function [partial second
+          derivatives].  The ``function`` interface expects a function
+          matching the prototype:
+
+          .. code::
+
+             def function(*args): float
+
+          The ``gradient`` and ``hessian`` interface expect functions
+          matching the prototype:
+
+          .. code::
+
+             def gradient_or_hessian(args, fixed=None): List[float]
+
+          Where ``args`` is a tuple of function arguments and ``fixed``
+          is either None or a list of values equal in length to ``args``
+          indicating which arguments are currently fixed (``True``) or
+          variable (``False``).
+
+        **ASL function libraries** (:class:`AMPLExternalFunction` interface)
+
+        Pyomo can also call functions compiled as part of an AMPL
+        External Function library (see the `User-defined functions
+        <https://www.ampl.com/REFS/HOOKING/#userdefinedfuncs>`_ section
+        in the `Hooking your solver to AMPL
+        <https://www.ampl.com/REFS/hooking3.pdf>`_ report).  Links to
+        these functions are declared by creating an
+        :class:`ExternalFunction` and passing the compiled library name
+        (or path) to the ``library`` keyword and the name of the
+        function to the ``function`` keyword.
+
+        """
+        self._units = kwargs.pop('units', None)
         if self._units is not None:
             self._units = units.get_units(self._units)
-        self._arg_units = kwds.pop('arg_units', None)
+        self._arg_units = kwargs.pop('arg_units', None)
         if self._arg_units is not None:
             self._arg_units = [units.get_units(u) for u in self._arg_units]
-        kwds.setdefault('ctype', ExternalFunction)
-        Component.__init__(self, **kwds)
+        kwargs.setdefault('ctype', ExternalFunction)
+        Component.__init__(self, **kwargs)
         self._constructed = True
         ### HACK ###
         # FIXME: We must declare an _index attribute because
@@ -65,10 +144,31 @@ class ExternalFunction(Component):
         return self._arg_units
 
     def __call__(self, *args):
+        """Return a Pyomo expression that evaluates this function
+
+        Note that this does not evaluate the external function
+        represented by this :class:`ExternalFunction` component, but
+        rather generates a Pyomo expression object that represents
+        symbolic evaluation of the external function at the specified
+        arguments (which themselves may be Pyomo expression objects).
+
+        Parameters
+        ----------
+        *args:
+            Arguments (constants, variables, expressions) to pass to
+            this External function.
+
+        Returns
+        -------
+        ExternalFunctionExpression or NPV_ExternalFunctionExpression:
+            The new Pyomo expression node.
+
+        """
+
         args_ = []
         for arg in args:
             if type(arg) is types.GeneratorType:
-                args_.extend(val for val in arg)
+                args_.extend(arg)
             else:
                 args_.append(arg)
         #
@@ -81,9 +181,9 @@ class ExternalFunction(Component):
             try:
                 # Q: Is there a better way to test if a value is an object
                 #    not in native_types and not a standard expression type?
-                if arg.__class__ in native_types or arg.is_expression_type():
-                    pass
-                if not arg.__class__ in native_types and arg.is_potentially_variable():
+                if arg.__class__ in native_types:
+                    continue
+                if arg.is_potentially_variable():
                     pv = True
             except AttributeError:
                 args_[i] = NonNumericValue(arg)
@@ -93,62 +193,168 @@ class ExternalFunction(Component):
         return EXPR.NPV_ExternalFunctionExpression(args_, self)
 
     def evaluate(self, args):
+
+        """Return the value of the function given the specified arguments
+
+        Parameters
+        ----------
+        args: Iterable
+            Iterable containing the arguments to pass to the external
+            function.  Non-native type elements will be converted to a
+            native value using the :py:func:`value()` function.
+
+        Returns
+        -------
+        float
+            The return value of the function evaluated at `args`
+        """
+        args_ = [arg if arg.__class__ in native_types else value(arg)
+                 for arg in args]
+        return self._evaluate(args_, None, 0)[0]
+
+    def evaluate_fgh(self, args, fixed=None, fgh=2):
+        """Evaluate the function and gradients given the specified arguments
+
+        This evaluates the function given the specified arguments
+        returning a 3-tuple of (function value [f], list of first partial
+        derivatives [g], and the upper triangle of the Hessian matrix
+        [h]).
+
+        Parameters
+        ----------
+        args: Iterable
+            Iterable containing the arguments to pass to the external
+            function.  Non-native type elements will be converted to a
+            native value using the :py:func:`value()` function.
+
+        fixed: Optional[List[bool]]
+            List of values indicating if the corresponding argument
+            value is fixed.  Any fixed indices are guaranteed to return
+            0 for first and second derivatives, regardless of what is
+            computed by the external function.
+
+        fgh: {0, 1, 2}
+            What evaluations to return:
+
+            * **0**: just return function evaluation
+            * **1**: return function and first derivatives
+            * **2**: return function, first derivatives, and hessian matrix
+
+            Any return values not requested will be `None`.
+
+        Returns
+        -------
+        f: float
+            The return value of the function evaluated at `args`
+        g: List[float] or None
+            The list of first partial derivatives
+        h: List[float] or None
+            The upper-triangle of the Hessian matrix (second partial
+            derivatives), stored column-wise.  Element :math:`H_{i,j}`
+            (with :math:`0 <= i <= j < N` are mapped using
+            :math:`h[i + j*(j + 1)/2] == H_{i,j}`.
+
+        """
+        args_ = [arg if arg.__class__ in native_types else value(arg)
+                 for arg in args]
+        # Note: this is passed-by-reference, and the args_ list may be
+        # changed by _evaluate (e.g., for PythonCallbackFunction).
+        # Remember the original length of the list.
+        N = len(args_)
+        f, g, h = self._evaluate(args_, fixed, fgh)
+        # Guarantee the return value behavior documented in the docstring
+        if fgh == 2:
+            n = N - 1
+            if len(h) - 1 != n + n*(n+1)//2:
+                raise RuntimeError(
+                    f"External function '{self.name}' returned an invalid "
+                    f"Hessian matrix (expected {n + n*(n+1)//2 + 1}, "
+                    f"received {len(h)})")
+        else:
+            h = None
+        if fgh >= 1:
+            if len(g) != N:
+                raise RuntimeError(
+                    f"External function '{self.name}' returned an invalid "
+                    f"derivative vector (expected {N}, "
+                    f"received {len(g)})")
+        else:
+            g = None
+        # Note: the ASL does not require clients to honor the fixed flag
+        # (allowing them to return non-0 values for the derivative with
+        # respect to a fixed numeric value).  We will allow clients to
+        # be similarly lazy and enforce the fixed flag here.
+        if fixed is not None:
+            if fgh >= 1:
+                for i, v in enumerate(fixed):
+                    if not v:
+                        continue
+                    g[i] = 0
+            if fgh >= 2:
+                for i, v in enumerate(fixed):
+                    if not v:
+                        continue
+                    for j in range(N):
+                        if i <= j:
+                            h[i + (j*(j + 1))//2] = 0
+                        else:
+                            h[j + (i*(i + 1))//2] = 0
+        return f, g, h
+
+    def _evaluate(self, args, fixed, fgh):
+        """Derived class implementation to evaluate an external function.
+
+        The API follows :meth:`evaluate_fgh()`, with the exception that
+        the `args` iterable is guaranteed to already have been reduced
+        to concrete values (it will not have Pyomo components or
+        expressions).
+        """
         raise NotImplementedError(
-            "General external functions can not be evaluated within Python." )
+            f"{type(self)} did not implement _evaluate()" )
 
 
 class AMPLExternalFunction(ExternalFunction):
 
-    def __init__(self, *args, **kwds):
+    def __init__(self, *args, **kwargs):
         if args:
             raise ValueError(
                 "AMPLExternalFunction constructor does not support "
                 "positional arguments" )
-        self._library = kwds.pop('library', None)
-        self._function = kwds.pop('function', None)
+        self._library = kwargs.pop('library', None)
+        self._function = kwargs.pop('function', None)
         self._known_functions = None
         self._so = None
-        ExternalFunction.__init__(self, *args, **kwds)
+        ExternalFunction.__init__(self, *args, **kwargs)
 
     def __getstate__(self):
-        state = super(AMPLExternalFunction, self).__getstate__()
+        state = super().__getstate__()
         # Remove reference to loaded library (they are not copyable or
         # picklable)
         state['_so'] = state['_known_functions'] = None
         return state
 
-    def _evaluate(self, args, fgh, fixed):
+    def _evaluate(self, args, fixed, fgh):
         if self._so is None:
             self.load_library()
         if self._function not in self._known_functions:
             raise RuntimeError(
-                "Error: external function %s was not registered within "
+                "Error: external function '%s' was not registered within "
                 "external library %s.\n\tAvailable functions: (%s)"
                 % ( self._function, self._library,
                     ', '.join(self._known_functions.keys()) ) )
         #
-        args_ = []
-        for arg in args:
-            if arg.__class__ is NonNumericValue:
-                args_.append(arg.value)
-            else:
-                args_.append(arg)
-        arglist = _ARGLIST( args_, fgh, fixed )
+        N = len(args)
+        arglist = _ARGLIST(args, fgh, fixed)
         fcn = self._known_functions[self._function][0]
         f = fcn(byref(arglist))
-        return f, arglist
-
-    def evaluate(self, args):
-        return self._evaluate(args, 0, None)[0]
-
-    def evaluate_fgh(self, args, fixed=None):
-        if fixed is None:
-            fixed = tuple( arg.__class__ in native_types or arg.is_fixed()
-                           for arg in args )
-        N = len(args)
-        f, arglist = self._evaluate(args, 2, fixed)
-        g = [arglist.derivs[i] for i in range(N)]
-        h = [arglist.hes[i] for i in range((N+N**2)//2)]
+        if fgh >= 1:
+            g = [arglist.derivs[i] for i in range(N)]
+        else:
+            g = None
+        if fgh >= 2:
+            h = [arglist.hes[i] for i in range((N + N**2)//2)]
+        else:
+            h = None
         return f, g, h
 
     def load_library(self):
@@ -201,59 +407,150 @@ class AMPLExternalFunction(ExternalFunction):
         )
 
 
+class _PythonCallbackFunctionID(NumericConstant):
+    """A specialized NumericConstant to preserve FunctionIDs through deepcopy.
+
+    Function IDs are effectively pointers back to the
+    PythonCallbackFunction.  As such, we need special handling to
+    maintain / preserve the correct linkages through deepcopy (and
+    model.clone()).
+
+    """
+    __slots__ = ()
+
+    def is_constant(self):
+        # Return False so this object is not simplified out of expressions
+        return False
+
+    def __getstate__(self):
+        state = super().__getstate__()
+        state['value'] = PythonCallbackFunction.global_registry[
+            state['value']]()
+        return state
+
+    def __setstate__(self, state):
+        state['value'] = state['value']._fcn_id
+        super().__setstate__(state)
+
+pyomo_constant_types.add(_PythonCallbackFunctionID)
+
+
 class PythonCallbackFunction(ExternalFunction):
-    global_registry = {}
+    global_registry = []
+    global_id_to_fid = {}
 
     @classmethod
     def register_instance(cls, instance):
-        _id = len(cls.global_registry)
-        cls.global_registry[_id] = weakref.ref(instance)
-        return _id
+        # Ideally, we would just use the id() as the function id, but
+        # Python id() is more than 32-bits, which can cause problems for
+        # the ASL.  We will map id() to a "small" integer and use that
+        # small integer as the "function id".
+        _id = id(instance)
+        if _id in cls.global_id_to_fid:
+            prev_fid = cls.global_id_to_fid[_id]
+            prev_obj = cls.global_registry[prev_fid]
+            if prev_obj() is not None:
+                assert prev_obj() is instance
+                return prev_fid
+        cls.global_id_to_fid[_id] = _fid = len(cls.global_registry)
+        cls.global_registry.append(weakref.ref(instance))
+        return _fid
 
-    def __init__(self, *args, **kwds):
-        if args:
-            self._fcn = args[0]
-            if len(args) > 1:
+    def __init__(self, *args, **kwargs):
+        for i, kw in enumerate(('function', 'gradient', 'hessian')):
+            if len(args) <= i:
+                break
+            if kw in kwargs:
                 raise ValueError(
-                    "PythonCallbackFunction constructor only supports a "
-                    "single positional positional arguments" )
-        if not args:
-            self._fcn = kwds.pop('function')
+                    "Duplicate definition of external function through "
+                    f"positional and keyword ('{kw}=') arguments")
+            kwargs[kw] = args[i]
+        if len(args) > 3:
+            raise ValueError(
+                "PythonCallbackFunction constructor only supports "
+                "0 - 3 positional arguments" )
+        self._fcn = kwargs.pop('function', None)
+        self._grad = kwargs.pop('gradient', None)
+        self._hess = kwargs.pop('hessian', None)
+        self._fgh = kwargs.pop('fgh', None)
+        if self._fgh is not None and any((self._fcn, self._grad, self._hess)):
+            raise ValueError(
+                "Cannot specify 'fgh' with any of "
+                "{'function', 'gradient', hessian'}")
 
         # There is an implicit first argument (the function pointer), we
         # need to add that to the arg_units
-        arg_units = kwds.get('arg_units', None)
+        arg_units = kwargs.get('arg_units', None)
         if arg_units is not None:
-            kwds['arg_units'] = [None] + list(arg_units)
+            kwargs['arg_units'] = list(arg_units)
+            kwargs['arg_units'].append(None)
 
+        # TODO: complete/distribute the pyomo_socket_server /
+        # pyomo_ampl.so AMPL extension
         self._library = 'pyomo_ampl.so'
         self._function = 'pyomo_socket_server'
-        ExternalFunction.__init__(self, *args, **kwds)
+        ExternalFunction.__init__(self, *args, **kwargs)
         self._fcn_id = PythonCallbackFunction.register_instance(self)
 
-    def __call__(self, *args):
-        return super(PythonCallbackFunction, self).__call__(self._fcn_id, *args)
+    def __getstate__(self):
+        state = super().__getstate__()
+        state['_fcn_id'] = self
+        return state
 
-    def evaluate(self, args):
-        if args.__class__ is types.GeneratorType:
-            args = tuple(args)
-        args_ = []
-        for arg in args:
-            if arg.__class__ is NonNumericValue:
-                args_.append(arg.value)
-            else:
-                args_.append(arg)
-        _id = args_[0]
+    def __setstate__(self, state):
+        state['_fcn_id'] = PythonCallbackFunction.register_instance(
+            state['_fcn_id'])
+        super().__setstate__(state)
+
+    def __call__(self, *args):
+        # NOTE: we append the Function ID to the END of the argument
+        # list because it is easier to update the gradient / hessian
+        # results
+        return super().__call__(*args, _PythonCallbackFunctionID(self._fcn_id))
+
+    def _evaluate(self, args, fixed, fgh):
+        # Remove the fcn_id
+        _id = args.pop()
+        if fixed is not None:
+            fixed = fixed[:-1]
         if _id != self._fcn_id:
             raise RuntimeError(
                 "PythonCallbackFunction called with invalid Global ID" )
-        return self._fcn(*args_[1:])
+        if self._fgh is not None:
+            f, g, h = self._fgh(args, fgh, fixed)
+        else:
+            f = self._fcn(*args)
+            if fgh >= 1:
+                if self._grad is None:
+                    raise RuntimeError(
+                        f"ExternalFunction '{self.name}' was not defined "
+                        "with a gradient callback.  Cannot evaluate the "
+                        "derivative of the function")
+                g = self._grad(args, fixed)
+            else:
+                g = None
+            if fgh == 2:
+                if self._hess is None:
+                    raise RuntimeError(
+                        f"ExternalFunction '{self.name}' was not defined "
+                        "with a Hessian callback.  Cannot evaluate the "
+                        "second derivative of the function")
+                h = self._hess(args, fixed)
+            else:
+                h = None
+        # Update g,h to reflect the function id (which by definition is
+        # always fixed)
+        if g is not None:
+            g.append(0)
+        if h is not None:
+            h.extend([0]*(len(args)+1))
+        return f, g, h
 
     def _pprint(self):
         return (
             [ ('function', self._fcn.__qualname__),
               ('units', str(self._units)),
-              ('arg_units', [ str(u) for u in self._arg_units[1:] ]
+              ('arg_units', [ str(u) for u in self._arg_units[:-1] ]
                if self._arg_units is not None else None),
             ],
             (), None, None
@@ -306,15 +603,15 @@ class _ARGLIST(Structure):
         ]
 
     def __init__(self, args, fgh=0, fixed=None):
-        super(_ARGLIST, self).__init__()
+        super().__init__()
         N = len(args)
         self.n = self.nr = N
         self.at = (c_int*N)()
         self.ra = (c_double*N)()
         self.sa = None
-        if fgh > 0:
+        if fgh >= 1:
             self.derivs = (c_double*N)(0.)
-        if fgh > 1:
+        if fgh >= 2:
             self.hes = (c_double*((N+N*N)//2))(0.)
 
         for i,v in enumerate(args):
@@ -322,6 +619,7 @@ class _ARGLIST(Structure):
             self.ra[i] = v
 
         if fixed:
+            # This has to be revisited if nr != ra
             self.dig = (c_byte*N)(0)
             for i,v in enumerate(fixed):
                 if v:

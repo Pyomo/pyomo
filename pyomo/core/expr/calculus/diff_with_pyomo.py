@@ -338,13 +338,13 @@ def _diff_ExternalFunctionExpression(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.numeric_expr.ProductExpression
+    node: pyomo.core.expr.numeric_expr.ExternalFunctionExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
     der = der_dict[node]
     vals = tuple(val_dict[i] for i in node.args)
-    derivs = node._fcn.evaluate_fgh(vals)[1]
+    derivs = node._fcn.evaluate_fgh(vals, fgh=1)[1]
     for ndx, arg in enumerate(node.args):
         der_dict[arg] += der * derivs[ndx]
 
