@@ -538,7 +538,7 @@ class PythonCallbackFunction(ExternalFunction):
                 h = self._hess(args, fixed)
             else:
                 h = None
-        # Update g,h to reflect the function id (which by defiition is
+        # Update g,h to reflect the function id (which by definition is
         # always fixed)
         if g is not None:
             g.append(0)
