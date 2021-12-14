@@ -65,7 +65,7 @@ def solve_master_feasibility_problem(model_data, config):
         for v in model.component_data_objects(Var):
             master_v = model_data.master_model.find_component(v)
             if master_v is not None:
-                master_v.value = v.value
+                master_v.set_value(v.value, skip_validation=True)
     return results
 
 
@@ -210,7 +210,7 @@ def minimize_dr_vars(model_data, config):
 
     for i, d in enumerate(model_data.master_model.scenarios[0, 0].util.decision_rule_vars):
         for index in d:
-            d[index].value = polishing_model.scenarios[0, 0].util.decision_rule_vars[i][index].value
+            d[index].set_value(polishing_model.scenarios[0, 0].util.decision_rule_vars[i][index].value, skip_validation=True)
 
     return results
 

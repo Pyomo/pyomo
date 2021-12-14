@@ -153,7 +153,7 @@ class SolutionLoaderBase(abc.ABC):
             to all primal variables will be loaded.
         """
         for v, val in self.get_primals(vars_to_load=vars_to_load).items():
-            v.value = val
+            v.set_value(val, skip_validation=True)
 
     @abc.abstractmethod
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
@@ -485,7 +485,7 @@ class PersistentSolver(Solver):
             to all primal variables will be loaded.
         """
         for v, val in self.get_primals(vars_to_load=vars_to_load).items():
-            v.value = val
+            v.set_value(val, skip_validation=True)
 
     @abc.abstractmethod
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
