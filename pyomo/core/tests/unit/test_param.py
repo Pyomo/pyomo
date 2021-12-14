@@ -1411,12 +1411,17 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
         with LoggingIntercept(log, 'pyomo.core'):
             m.p = 'a'
         self.assertIn(
-            "DEPRECATED: The default domain for Param objects is 'Any'",
-            log.getvalue())
+            "The default domain for Param objects is 'Any'",
+            log.getvalue().replace('\n', ' '))
         self.assertIn(
-            "domain of this Param (p) to be 'Any'",
-            log.getvalue())
+            "DEPRECATED: Param 'p' declared with an implicit domain of 'Any'",
+            log.getvalue().replace('\n', ' '))
         self.assertEqual(value(m.p), 'a')
+
+        i = m.clone()
+        self.assertIsNot(m.p.domain, i.p.domain)
+        self.assertIs(m.p.domain._owner(), m.p)
+        self.assertIs(i.p.domain._owner(), i.p)
 
     @unittest.skipUnless(pint_available, "units test requires pint module")
     def test_set_value_units(self):
