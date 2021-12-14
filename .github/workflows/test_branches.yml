@@ -293,6 +293,17 @@ jobs:
                 | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
         done
 
+    #############################################################
+    # TODO: Delete this once Python 3.6 is deprecated - 12/2021 #
+    #############################################################
+    - name: Windows Python 3.6 Temporary Fix (conda)
+      if: |
+        (matrix.PYENV == 'conda' &&
+        matrix.TARGET == 'win' &&
+        matrix.python == '3.6')
+      run: |
+        conda install tomli==1.2.2 --force-reinstall
+
     - name: Setup TPL package directories
       run: |
         TPL_DIR="${GITHUB_WORKSPACE}/cache/tpl"

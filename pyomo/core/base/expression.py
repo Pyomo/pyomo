@@ -13,6 +13,7 @@ __all__ = ['Expression', '_ExpressionData']
 import sys
 import logging
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecated, RenamedClass
@@ -240,6 +241,8 @@ class Expression(IndexedComponent):
                         used to initialize this object.
         expr        A synonym for initialize.
         rule        A rule function used to initialize this object.
+        name        Name for this component.
+        doc         Text describing this component.
     """
 
     _ComponentDataClass = _GeneralExpressionData
@@ -253,6 +256,10 @@ class Expression(IndexedComponent):
             return ScalarExpression.__new__(ScalarExpression)
         else:
             return IndexedExpression.__new__(IndexedExpression)
+
+    @overload
+    def __init__(self, *indexes, rule=None, expr=None, initialize=None,
+                 name=None, doc=None): ...
 
     def __init__(self, *args, **kwds):
         _init = self._pop_from_kwargs(

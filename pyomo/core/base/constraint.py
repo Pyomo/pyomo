@@ -16,6 +16,7 @@ import sys
 import logging
 import math
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import DeveloperError
@@ -638,10 +639,10 @@ class Constraint(ActiveIndexedComponent):
             A Pyomo expression for this constraint
         rule
             A function that is used to construct constraint expressions
-        doc
-            A text string describing this component
         name
             A name for this component
+        doc
+            A text string describing this component
 
     Public class attributes:
         doc
@@ -685,7 +686,10 @@ class Constraint(ActiveIndexedComponent):
             return super(Constraint, cls).__new__(AbstractScalarConstraint)
         else:
             return super(Constraint, cls).__new__(IndexedConstraint)
-
+    
+    @overload
+    def __init__(self, *indexes, expr=None, rule=None, name=None, doc=None): ...
+    
     def __init__(self, *args, **kwargs):
         _init = self._pop_from_kwargs(
             'Constraint', kwargs, ('rule', 'expr'), None)
