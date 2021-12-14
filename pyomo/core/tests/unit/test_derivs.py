@@ -176,7 +176,9 @@ class TestDerivs(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(initialize=2.0)
         e = 2 * abs(m.x)
-        with self.assertRaisesRegexp(DifferentiationException, 'Cannot perform symbolic differentiation of abs\(x\)'):
+        with self.assertRaisesRegexp(
+                DifferentiationException,
+                r'Cannot perform symbolic differentiation of abs\(x\)'):
             reverse_sd(e)
         derivs = reverse_ad(e)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
@@ -184,7 +186,9 @@ class TestDerivs(unittest.TestCase):
         derivs = reverse_ad(e)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         m.x.value = 0
-        with self.assertRaisesRegexp(DifferentiationException, 'Cannot differentiate abs\(x\) at x=0'):
+        with self.assertRaisesRegexp(
+                DifferentiationException,
+                r'Cannot differentiate abs\(x\) at x=0'):
             reverse_ad(e)
 
     def test_nested(self):
