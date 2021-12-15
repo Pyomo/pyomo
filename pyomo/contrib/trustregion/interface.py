@@ -57,6 +57,10 @@ class EFReplacement(ExpressionReplacementVisitor):
             return new_node
 
         _output = self.trfData.ef_outputs.add()
+        try:
+            _output.set_value(value(node))
+        except:
+            _output.set_value(0)
         # Preserve the new node as a truth model
         # self.TRF.truth_models is a ComponentMap
         self.trfData.truth_models[_output] = new_node
@@ -141,6 +145,7 @@ class TRFInterface(object):
                 list(identify_variables(self.data.truth_models[self.data.ef_outputs[i]],
                                         include_fixed=False))
         self.data.all_variables.update(self.data.ef_outputs.values())
+        self.data.all_variables = list(self.data.all_variables)
 
     def createConstraints(self):
         """
@@ -199,11 +204,17 @@ class TRFInterface(object):
         Return current variable values
         """
         ans = ComponentMap()
-        for output_var in self.data.ef_outputs:
-            current_inputs = [value(input_var) for input_var in self.data.ef_inputs[output_var]]
-            current_outputs = value(output_var)
-            ans[output_var] = (current_inputs, current_outputs)
+        for i, v in self.data.ef_outputs.items():
+            current_inputs = [value(input_var) for input_var in self.data.ef_inputs[i]]
+            current_outputs = value(v)
+            ans[i] = (current_inputs, current_outputs)
         return ans
+
+    def getCurrentModelState(self):
+        """
+        Return current state of model
+        """
+        return list(value(v, exception=False) for v in self.data.all_variables)
 
     def calculateFeasibility(self):
         """
@@ -212,6 +223,22 @@ class TRFInterface(object):
         """
         b = self.data
         return sum(abs(value(y) - value(b.truth_model_output[i])) for i, y in b.ef_outputs.items())
+
+    def calculateStepSizeNorm(self, original_values, new_values):
+        """
+        Taking original and new values, calculate the step-size norm ||s_k||:
+            || (w - w_k), (d(w) - d(w_k)) ||_inf
+
+        The values are assumed to be of the output given by getCurrentEFValues.
+        """
+        original_vals = new_vals = []
+        for i, v in original_values.items():
+            original_vals.extend(v[0])
+            original_vals.append(v[1])
+        for i, v in new_values.items():
+            new_vals.extend(v[0])
+            new_vals.append(v[1])
+        return max([abs(old - new) for old, new in zip(original_vals, new_vals)])
 
     def initializeProblem(self):
         """
@@ -231,9 +258,9 @@ class TRFInterface(object):
         """
         self.replaceExternalFunctionsWithVariables()
         self.createConstraints()
-        self.data.basis_constraints.activate()
+        self.data.basis_constraint.activate()
         result, objective_value, _, _ = self.solveModel()
-        self.data.basis_constraints.deactivate()
+        self.data.basis_constraint.deactivate()
         self.updateSurrogateModel()
         feasibility = self.calculateFeasibility()
         self.data.sm_constraint_basis.activate()
@@ -246,23 +273,18 @@ class TRFInterface(object):
         This also caches the previous values of the vars, just in case
         we need to access them later if a step is rejected
         """
-        # TODO: Update this for new return type
-        self.cached_inputs, self.cached_outputs = self.getCurrentValues()
-        # TODO: need getModelVariables and setModelVariables
+        currentEFValues = self.getCurrentEFValues()
+        self.previous_model_state = self.getCurrentModelState()
         results = self.solver.solve(self.model, keepfiles=self.config.keepfiles,
-                                    tee=self.config.tee,
-                                    load_solution=self.config.load_solution)
+                                    tee=self.config.tee)
 
         if ((results.solver.status == SolverStatus.ok)
             and (results.solver.termination_condition ==
                  TerminationCondition.optimal)):
             self.model.solutions.load_from(results)
-            # Find the step size norm between the values
-            # TODO: Update this for new return type
-            new_inputs, new_outputs = self.getCurrentValues()
-            step_norm = np.linalg.norm(np.concatenate(self.cached_inputs - new_inputs,
-                                                      self.cached_outputs - new_outputs),
-                                       np.inf)
+            newEFValues = self.getCurrentEFValues()
+            step_norm = self.calculateStepSizeNorm(currentEFValues,
+                                                   newEFValues)
             feasibility = self.calculateFeasibility()
             for obj in self.model.component_data_objects(Objective, active=True):
                 return True, obj(), step_norm, feasibility
@@ -276,11 +298,6 @@ class TRFInterface(object):
         If a step is rejected, we reset the model variables values back
         to their cached state - which we set in solveModel
         """
-        # TODO: Change this to correctly reset the entire state space
-        # TODO: need getModelVariables and setModelVariables
-        # At the very beginning, we need to build a list of ALL vars in the model
-        b = self.data
-        for i, v in b.ef_outputs.items():
-            b.ef_outputs[i].set_value(self.cached_outputs[i])
-            for j, y in enumerate(b.ef_inputs[v]):
-                y.set_value(self.cached_inputs[i][j])
+        for var, val in zip(self.data.all_variables,
+                            self.data.previous_model_state):
+            var.set_value(val, skip_validation=True)

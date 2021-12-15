@@ -15,9 +15,12 @@ from pyomo.common.dependencies import numpy_available
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.environ import (
-    Var, VarList, ConcreteModel, Reals, ExternalFunction,
-    Objective, Constraint, sqrt, sin, SolverFactory, Block
+    Var, VarList, ConcreteModel, Reals, ExternalFunction, value,
+    Objective, Constraint, sqrt, sin, cos, SolverFactory, Block
     )
+from pyomo.core.base.external import PythonCallbackFunction
+from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.contrib.trustregion.interface import TRFInterface
 from pyomo.contrib.trustregion.TRF import _trf_config
@@ -35,10 +38,13 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.m.x = Var(range(2), initialize=2.)
         self.m.x[1] = 1.0
 
-        def blackbox(a,b):
-            return sin(a-b)
+        def blackbox(a, b):
+            return sin(a - b)
+        def grad_blackbox(args, fixed):
+            a, b = args[:2]
+            return [ cos(a - b), -cos(a - b) ]
 
-        self.m.bb = ExternalFunction(blackbox)
+        self.m.bb = ExternalFunction(blackbox, grad_blackbox)
 
         self.m.obj = Objective(
             expr=(self.m.z[0]-1.0)**2 + (self.m.z[0]-self.m.z[1])**2
@@ -54,7 +60,8 @@ class TestTrustRegionInterface(unittest.TestCase):
             expr=self.m.z[2]**4 * self.m.z[1]**2 + self.m.z[1] == 8+sqrt(2.0))
         self.config = _trf_config()
         self.ext_fcn_surrogate_map_rule = lambda comp,ef: 0
-        self.interface = TRFInterface(self.m, self.ext_fcn_surrogate_map_rule,
+        self.interface = TRFInterface(self.m,
+                                      self.ext_fcn_surrogate_map_rule,
                                       self.config)
 
     def test_initializeInterface(self):
@@ -112,15 +119,26 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.interface.replaceExternalFunctionsWithVariables()
         # Check the directly defined model vars against all_variables
         for var in self.interface.model.component_data_objects(Var):
-            self.assertIn(var, self.interface.data.all_variables)
+            self.assertIn(var, ComponentSet(self.interface.data.all_variables))
         # Check the output vars against all_variables
         for i in self.interface.data.ef_outputs:
-            self.assertIn(self.interface.data.ef_outputs[i], self.interface.data.all_variables)
+            self.assertIn(self.interface.data.ef_outputs[i],
+                          ComponentSet(self.interface.data.all_variables))
         # The truth models should be a mapping from the EF to
         # the replacement
-        # TODO: (12/14/2021) Finish this test suite
         for i, k in self.interface.data.truth_models.items():
-            print(i, k)
+            self.assertIsInstance(k, ExternalFunctionExpression)
+            self.assertIn(str(self.interface.model.x[0]), str(k))
+            self.assertIn(str(self.interface.model.x[1]), str(k))
+            self.assertIsInstance(i, _GeneralVarData)
+            self.assertEqual(i, self.interface.data.ef_outputs[1])
+        for i, k in self.interface.data.basis_expressions.items():
+            self.assertEqual(k, 0)
+            self.assertEqual(i, self.interface.data.ef_outputs[1])
+        self.assertEqual(1, list(self.interface.data.ef_inputs.keys())[0])
+        self.assertEqual(self.interface.data.ef_inputs[1],
+                         [self.interface.model.x[0],
+                          self.interface.model.x[1]])
         # TRF only supports one active Objective
         # Make sure that it fails if there are multiple objs
         self.m.obj2 = Objective(
@@ -157,17 +175,144 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.assertIn(self.interface.data.ef_outputs[1], cs)
 
     def test_updateSurrogateModel(self):
+        # Set up necessary data objects and Params
         self.interface.replaceExternalFunctionsWithVariables()
         self.interface.createConstraints()
+        # Set starter values on the model
+        self.interface.model.x[0] = 2.0
+        self.interface.model.z.set_values({0: 5.0, 1: 2.5, 2: -1.0})
         self.interface.data.basis_model_output[:] = 0
         self.interface.data.grad_basis_model_output[...] = 0
         self.interface.data.truth_model_output[:] = 0
         self.interface.data.grad_truth_model_output[...] = 0
         self.interface.data.value_of_ef_inputs[...] = 0
+        self.interface.updateSurrogateModel()
+        # The basis model here is 0, so all basis values should be 0
+        for key, val in self.interface.data.basis_model_output.items():
+            self.assertEqual(value(val), 0)
+        for key, val in self.interface.data.grad_basis_model_output.items():
+            self.assertEqual(value(val), 0)
+        # The truth model value should equal the output of sin(2-1)
+        for key, val in self.interface.data.truth_model_output.items():
+            self.assertEqual(value(val), sin(1))
+        # The truth gradients should equal the output of [cos(2-1), -cos(2-1)]
+        truth_grads = []
+        for key, val in self.interface.data.grad_truth_model_output.items():
+            truth_grads.append(value(val))
+        self.assertEqual(truth_grads, [cos(1), -cos(1)])
+        # The inputs should be the values of x[0] and x[1]
+        for key, val in self.interface.data.value_of_ef_inputs.items():
+            self.assertEqual(value(self.interface.model.x[key[1]]), value(val))
+        # Change the model values to something else and try again
+        self.interface.model.x.set_values({0 : 0, 1 : 0})
+        self.interface.updateSurrogateModel()
+        # The basis values should still all be 0
+        for key, val in self.interface.data.basis_model_output.items():
+            self.assertEqual(value(val), 0)
+        for key, val in self.interface.data.grad_basis_model_output.items():
+            self.assertEqual(value(val), 0)
+        # The truth model value should equal the output of sin(0-0)
+        for key, val in self.interface.data.truth_model_output.items():
+            self.assertEqual(value(val), sin(0))
+        # The truth gradients should equal the output of [cos(0-0), -cos(0-0)]
+        truth_grads = []
+        for key, val in self.interface.data.grad_truth_model_output.items():
+            truth_grads.append(value(val))
+        self.assertEqual(truth_grads, [cos(0), -cos(0)])
+        # The inputs should be the values of x[0] and x[1]
+        for key, val in self.interface.data.value_of_ef_inputs.items():
+            self.assertEqual(value(self.interface.model.x[key[1]]), value(val))
+
+    def test_getCurrentEFValues(self):
+        # Set up necessary data objects
+        self.interface.replaceExternalFunctionsWithVariables()
+        # Initialize variable values
+        self.interface.model.x.set_values({0 : 2, 1 : 1})
+        result = self.interface.getCurrentEFValues()
+        # The initialized value for the output, calculated in line 228,
+        self.assertEqual(result, { 1 : ([value(self.interface.model.x[0]),
+                                         value(self.interface.model.x[1])],
+                                        sin(1))})
+        self.interface.model.x[0] = self.interface.model.x[1] = 0
+        result = self.interface.getCurrentEFValues()
+        self.assertEqual(result, { 1 : ([value(self.interface.model.x[0]),
+                                         value(self.interface.model.x[1])],
+                                        sin(1))})
+
+    def test_getCurrentModelState(self):
+        # Set up necessary data objects
+        self.interface.replaceExternalFunctionsWithVariables()
+        # Set starter values on the model
         self.interface.model.x[0] = 2.0
         self.interface.model.z.set_values({0: 5.0, 1: 2.5, 2: -1.0})
-        # self.interface.updateSurrogateModel()
+        result = self.interface.getCurrentModelState()
+        self.assertEqual(len(result), len(self.interface.data.all_variables))
+        for var in self.interface.data.all_variables:
+            self.assertIn(value(var), result)
 
+    def test_calculateFeasibility(self):
+        # Set up necessary data objects
+        self.interface.replaceExternalFunctionsWithVariables()
+        self.interface.createConstraints()
+        # Set starter values on the model
+        self.interface.model.x[0] = 2.0
+        self.interface.model.z.set_values({0: 5.0, 1: 2.5, 2: -1.0})
+        self.interface.data.basis_model_output[:] = 0
+        self.interface.data.grad_basis_model_output[...] = 0
+        self.interface.data.truth_model_output[:] = 0
+        self.interface.data.grad_truth_model_output[...] = 0
+        self.interface.data.value_of_ef_inputs[...] = 0
+        feasibility = self.interface.calculateFeasibility()
+        # Because we initialized the param values to be 0,
+        # the feasibility should just be the initial value of
+        # the truth model
+        self.assertEqual(feasibility, sin(value(self.interface.model.x[0])
+                                          - value(self.interface.model.x[1])))
+        # We update the surrogate model to get real parameters
+        self.interface.updateSurrogateModel()
+        feasibility = self.interface.calculateFeasibility()
+        # Because we have not solved the model, the output and truth model
+        # should currently match
+        self.assertEqual(feasibility, 0)
+        # TODO: Add a test for after the model is solved (12/15/2021)
+
+    def test_calculateStepSizeNorm(self):
+        # Set up necessary data objects
+        self.interface.replaceExternalFunctionsWithVariables()
+        self.interface.createConstraints()
+        # Set starter values on the model
+        self.interface.model.x[0] = 2.0
+        self.interface.model.z.set_values({0: 5.0, 1: 2.5, 2: -1.0})
+        self.interface.data.basis_model_output[:] = 0
+        self.interface.data.grad_basis_model_output[...] = 0
+        self.interface.data.truth_model_output[:] = 0
+        self.interface.data.grad_truth_model_output[...] = 0
+        self.interface.data.value_of_ef_inputs[...] = 0
+        # Get original and new values
+        original_values = self.interface.getCurrentEFValues()
+        self.interface.updateSurrogateModel()
+        new_values = self.interface.getCurrentEFValues()
+        stepnorm = self.interface.calculateStepSizeNorm(original_values,
+                                                        new_values)
+        # Currently, we have taken NO step.
+        # Therefore, the norm should be 0.
+        self.assertEqual(stepnorm, 0)
+        # TODO: Add a test for after the model is solved (12/15/2021)
+
+    def test_solveModel(self):
+        # Set up initial data objects and Params
+        self.interface.replaceExternalFunctionsWithVariables()
+        self.interface.createConstraints()
+        self.interface.data.basis_constraint.activate()
+        # Set starter values on the model
+        self.interface.model.x[0] = 2.0
+        self.interface.model.z.set_values({0: 5.0, 1: 2.5, 2: -1.0})
+        self.interface.data.basis_model_output[:] = 0
+        self.interface.data.grad_basis_model_output[...] = 0
+        self.interface.data.truth_model_output[:] = 0
+        self.interface.data.grad_truth_model_output[...] = 0
+        self.interface.data.value_of_ef_inputs[...] = 0
+        result, objective, step_norm, feasibility = self.interface.solveModel()
 
 
 if __name__ == '__main__':

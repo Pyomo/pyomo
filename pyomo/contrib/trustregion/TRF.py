@@ -163,13 +163,7 @@ def _trf_config():
         description="Optional. Default = False. Sets the ``tee`` "
                     "for sub-solver(s) utilized."
     ))
-    CONFIG.declare('load_solution', ConfigValue(
-        default=True,
-        domain=Bool,
-        description="Optional. Default = True. "
-                    "Whether or not to load the final solution of "
-                    "Trust Region into the model object."
-    ))
+
     ### Trust Region specific options
     CONFIG.declare('trust radius', ConfigValue(
         default=1.0,
