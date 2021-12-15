@@ -41,8 +41,8 @@ class EFReplacement(ExpressionReplacementVisitor):
 
     def beforeChild(self, node, child, child_idx):
         # We want to capture all of the variables on the model
+        # If we reject a step, we need to know all the vars to reset
         descend, result = super().beforeChild(node, child, child_idx)
-        # TODO: Make this match whatever identify_variables uses
         if not descend and result.__class__ not in native_types and result.is_variable_type():
             self.trfData.all_variables.add(result)
         return descend, result
@@ -140,6 +140,7 @@ class TRFInterface(object):
             self.data.ef_inputs[i] = \
                 list(identify_variables(self.data.truth_models[self.data.ef_outputs[i]],
                                         include_fixed=False))
+        self.data.all_variables.update(self.data.ef_outputs.values())
 
     def createConstraints(self):
         """
@@ -148,19 +149,20 @@ class TRFInterface(object):
         b = self.data
         # This implements: y = b(w) from Yoshio/Biegler (2020)
         @b.Constraint(b.ef_outputs.index_set())
-        def basis_constraints(b, i):
+        def basis_constraint(b, i):
             ef_output_var = b.ef_outputs[i]
             return ef_output_var == b.basis_expressions[ef_output_var]
-        b.basis_constraints.deactivate()
+        b.basis_constraint.deactivate()
 
         b.INPUT_OUTPUT = Set(initialize=(
             (i, j) for i in b.ef_outputs.index_set()
-            for j in range(len(b.ef_inputs[b.ef_outputs[i]]))
+            for j in range(len(b.ef_inputs[i]))
         ))
         b.basis_model_output = Param(b.ef_outputs.index_set(), mutable=True)
         b.grad_basis_model_output = Param(b.INPUT_OUTPUT, mutable=True)
         b.truth_model_output = Param(b.ef_outputs.index_set(), mutable=True)
         b.grad_truth_model_output = Param(b.INPUT_OUTPUT, mutable=True)
+        b.value_of_ef_inputs = Param(b.INPUT_OUTPUT, mutable=True)
         # This implements: y = r_k(w)
         @b.Constraint(b.ef_outputs.index_set())
         def sm_constraint_basis(b, i):
@@ -168,9 +170,9 @@ class TRFInterface(object):
             return ef_output_var == b.basis_expressions[ef_output_var] + \
                 b.truth_model_output[i] - b.basis_model_output[i] + \
                 sum((b.grad_truth_model_output[i, j]
-                     - b.grad_basis_model_output[i, j])
-                    * (w - b.ef_inputs[j])
-                    for j, w in enumerate(b.ef_inputs[ef_output_var]))
+                      - b.grad_basis_model_output[i, j])
+                    * (w - b.value_of_ef_inputs[i, j])
+                    for j, w in enumerate(b.ef_inputs[i]))
         b.sm_constraint_basis.deactivate()
 
     def updateSurrogateModel(self):
@@ -181,15 +183,16 @@ class TRFInterface(object):
         for i, y in b.ef_outputs.items():
             b.basis_model_output[i] = value(b.basis_expressions[y])
             b.truth_model_output[i] = value(b.truth_models[y])
-            # Basis functions are Pyomo expressions, in theory.
-            # So this is possible to call
+            # Basis functions are Pyomo expressions (in theory)
             gradBasis = differentiate(b.basis_expressions[y],
-                                      wrt_list=b.ef_inputs[y])
+                                      wrt_list=b.ef_inputs[i])
+            # These, however, are external functions
             gradTruth = differentiate(b.truth_models[y],
-                                      wrt_list=b.ef_inputs[y])
-            for j, w in enumerate(b.ef_inputs[y]):
+                                      wrt_list=b.ef_inputs[i])
+            for j, w in enumerate(b.ef_inputs[i]):
                 b.grad_basis_model_output[i, j] = gradBasis[j]
                 b.grad_truth_model_output[i, j] = gradTruth[j]
+                b.value_of_ef_inputs[i, j] = value(w)
 
     def getCurrentEFValues(self):
         """
