@@ -17,7 +17,7 @@ from pyomo.opt import SolverFactory
 m = ConcreteModel()
 m.z = Var(range(3), domain=Reals, initialize=2.)
 m.x = Var(range(2), initialize=2.)
-m.x[1] = 1.0
+m.x[1] = 1.5
 
 def blackbox(a, b):
    return sin(a - b)
@@ -38,7 +38,7 @@ m.c2 = Constraint(expr=m.z[2]**4 * m.z[1]**2 + m.z[1] == 8+sqrt(2.0))
 
 m.pprint()
 
-optTRF = SolverFactory('trustregion')
+optTRF = SolverFactory('trustregion', maximum_iterations=10)
 optTRF.solve(m)
 
 m.display()

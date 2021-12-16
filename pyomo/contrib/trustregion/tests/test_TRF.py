@@ -15,6 +15,7 @@ from pyomo.environ import (
     Var, ConcreteModel, Reals, ExternalFunction,
     Objective, Constraint, sqrt, sin, cos, SolverFactory
     )
+from pyomo.contrib.trustregion.TRF import trust_region_method, _trf_config
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
@@ -60,6 +61,28 @@ class TestTrustRegionConfig(unittest.TestCase):
             print('error calling TRF.solve: %s' % str(e))
             status = False
         return status
+
+    def test_config_generator(self):
+        CONFIG = _trf_config()
+        self.assertEqual(CONFIG.solver, 'ipopt')
+        self.assertFalse(CONFIG.keepfiles)
+        self.assertFalse(CONFIG.tee)
+        self.assertEqual(CONFIG.trust_radius, 1.0)
+        self.assertEqual(CONFIG.minimum_radius, 0.5)
+        self.assertEqual(CONFIG.maximum_radius, 1000.0)
+        self.assertEqual(CONFIG.maximum_iterations, 50)
+        self.assertEqual(CONFIG.feasibility_termination, 1e-5)
+        self.assertEqual(CONFIG.step_size_termination, 1e-5)
+        self.assertEqual(CONFIG.minimum_feasibility, 1e-4)
+        self.assertEqual(CONFIG.switch_condition_kappa_theta, 0.1)
+        self.assertEqual(CONFIG.switch_condition_gamma_s, 2.0)
+        self.assertEqual(CONFIG.radius_update_param_gamma_c, 0.5)
+        self.assertEqual(CONFIG.radius_update_param_gamma_e, 2.5)
+        self.assertEqual(CONFIG.ratio_test_param_eta_1, 0.05)
+        self.assertEqual(CONFIG.ratio_test_param_eta_2, 0.25)
+        self.assertEqual(CONFIG.maximum_feasibility, 50.0)
+        self.assertEqual(CONFIG.filter_param_gamma_theta, 0.01)
+        self.assertEqual(CONFIG.filter_param_gamma_f, 0.01)
 
     def test_config_vars(self):
         self.TRF = SolverFactory('trustregion')
@@ -115,3 +138,42 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF._CONFIG.trust_radius, 3.0)
         self.assertEqual(self.TRF.config.trust_radius, 2.0)
+
+
+@unittest.skipIf(not SolverFactory('ipopt').available(False), "The IPOPT solver is not available")
+class TestTrustRegionMethod(unittest.TestCase):
+
+    def setUp(self):
+
+        self.m = ConcreteModel()
+        self.m.z = Var(range(3), domain=Reals, initialize=2.)
+        self.m.x = Var(range(2), initialize=2.)
+        self.m.x[1] = 1.0
+
+        def blackbox(a, b):
+            return sin(a - b)
+        def grad_blackbox(args, fixed):
+            a, b = args[:2]
+            return [ cos(a - b), -cos(a - b) ]
+
+        self.m.bb = ExternalFunction(blackbox, grad_blackbox)
+
+        self.m.obj = Objective(
+            expr=(self.m.z[0]-1.0)**2 + (self.m.z[0]-self.m.z[1])**2
+            + (self.m.z[2]-1.0)**2 + (self.m.x[0]-1.0)**4
+            + (self.m.x[1]-1.0)**6
+        )
+        self.m.c1 = Constraint(
+            expr=(self.m.x[0] * self.m.z[0]**2
+                  + self.m.bb(self.m.x[0], self.m.x[1])
+                  == 2*sqrt(2.0))
+            )
+        self.m.c2 = Constraint(
+            expr=self.m.z[2]**4 * self.m.z[1]**2 + self.m.z[1] == 8+sqrt(2.0))
+        self.config = _trf_config()
+        self.ext_fcn_surrogate_map_rule = lambda comp,ef: 0
+
+    def test_solver(self):
+        trust_region_method(self.m,
+                            self.config,
+                            self.ext_fcn_surrogate_map_rule)

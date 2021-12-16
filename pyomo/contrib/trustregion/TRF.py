@@ -52,11 +52,13 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
 
         # Generate suggorate model r_k(w)
         if rebuildSM:
+            print('REBUILDING')
             interface.updateSurrogateModel()
-
+        
+        print(feasibility_k, step_norm_k)
         # Check termination conditions
-        if ((feasibility_k <= config.feasibility_termination)
-            and (step_norm_k <= config.step_size_termination)):
+        if ((feasibility_k <= 1e-5)
+            and (step_norm_k <= 1e-5)):
             print('EXIT: Optimal solution found.')
             break
 
@@ -64,7 +66,7 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
         # terminate. The following condition must hold for two
         # consecutive iterations.
         if ((trust_radius <= config.minimum_radius) and
-            (feasibility_k < config.feasibility_termination)):
+            (abs(feasibility - feasibility_k) < config.feasibility_termination)):
             if subopt_flag:
                 print('WARNING: Insufficient progress.')
                 print('EXIT: Feasible solution found.')
@@ -77,6 +79,7 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
             subopt_flag = False
 
         obj_val_k, step_norm_k, feasibility_k = interface.solveModel()
+        print(feasibility_k)
 
         TRFLogger.newIteration(iteration, feasibility_k, obj_val_k,
                                trust_radius, step_norm_k)
@@ -85,6 +88,7 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
         filterElement = FilterElement(feasibility_k, obj_val_k)
         if not TRFilter.isAcceptable(filterElement, config.maximum_feasibility):
             # Reject the step
+            print('rejected')
             TRFLogger.iterrecord.rejected = True
             trust_radius = max(config.minimum_radius,
                                step_norm_k*config.radius_update_param_gamma_c)
@@ -115,11 +119,13 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
             # If rho_k is between eta_1 and eta_2, trust radius stays same
             if ((rho_k < config.ratio_test_param_eta_1) or
                 (feasibility > config.minimum_feasibility)):
+                print('Eta1')
                 trust_radius = max(config.minimum_radius,
                                    config.radius_update_param_gamma_c
                                    * step_norm_k)
             elif ((rho_k >= config.ratio_test_param_eta_2) and
                   (feasibility <= config.minimum_feasibility)):
+                print('eta2')
                 trust_radius = max(trust_radius,
                                    config.maximum_radius,
                                    config.radius_update_param_gamma_e
@@ -130,6 +136,7 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
 
         # Accept step and reset for next iteration
         rebuildSM = True
+        print(feasibility_k)
         feasibility = feasibility_k
         obj_val = obj_val_k
 

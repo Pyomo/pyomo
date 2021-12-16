@@ -70,6 +70,8 @@ class IterationLogger:
                                           trustRadius=trustRadius,
                                           stepNorm=stepNorm)
         self.iterations.append(self.iterrecord)
+        print("**** Iteration %d ****" % iteration)
+        print("trustRadius = %s" % trustRadius)
 
     def logIteration(self):
         """
