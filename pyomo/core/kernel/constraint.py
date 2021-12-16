@@ -199,7 +199,7 @@ class _MutableBoundsConstraintMixin(object):
     @property
     def lb(self):
         """The value of the lower bound of the constraint"""
-        return None if self._lb is None else value(self._lb)
+        return value(self._lb)
     @lb.setter
     def lb(self, lb):
         self.lower = lb
@@ -207,7 +207,7 @@ class _MutableBoundsConstraintMixin(object):
     @property
     def ub(self):
         """The value of the upper bound of the constraint"""
-        return None if self._ub is None else value(self._ub)
+        return value(self._ub)
     @ub.setter
     def ub(self, ub):
         self.upper = ub
