@@ -13,45 +13,8 @@ Common utilities for Trust Region Framework
 """
 
 import logging
-from pyomo.common.dependencies import (numpy as np, numpy_available)
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
-
-def copyVector(x, y, z):
-    """
-    This function is to create a hard copy of vector x, y, z.
-    """
-    return np.array(x), np.array(y), np.array(z)
-
-def minIgnoreNone(a, b):
-    """
-    Return minimum between two values, ignoring None unless both are None
-    """
-    if a is None:
-        return b
-    if b is None:
-        return a
-    if a < b:
-        return a
-    return b
-
-def maxIgnoreNone(a, b):
-    """
-    Return maximum between two values, ignoring None unless both are None
-    """
-    if a is None:
-        return b
-    if b is None:
-        return a
-    if a < b:
-        return b
-    return a
-
-def getVarDict(m, dict_keys=None):
-    """
-    Returns a dictionary of variables
-    """
-    return {name: m.find_component(name) for name in dict_keys}
 
 
 class IterationRecord:

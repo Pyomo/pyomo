@@ -13,12 +13,10 @@ import logging
 import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import numpy_available
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.common.modeling import unique_component_name
 from pyomo.environ import (
     Var, VarList, ConcreteModel, Reals, ExternalFunction, value,
-    Objective, Constraint, sqrt, sin, cos, SolverFactory, Block
+    Objective, Constraint, sqrt, sin, cos, SolverFactory
     )
-from pyomo.core.base.external import PythonCallbackFunction
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 from pyomo.core.expr.visitor import identify_variables
@@ -192,9 +190,10 @@ class TestTrustRegionInterface(unittest.TestCase):
             self.assertEqual(value(val), 0)
         for key, val in self.interface.data.grad_basis_model_output.items():
             self.assertEqual(value(val), 0)
-        # The truth model value should equal the output of sin(2-1)
+        # We initialized the parameters here to 0, and we do not update
+        # this param as part of updateSurrogateModel
         for key, val in self.interface.data.truth_model_output.items():
-            self.assertEqual(value(val), sin(1))
+            self.assertEqual(value(val), 0)
         # The truth gradients should equal the output of [cos(2-1), -cos(2-1)]
         truth_grads = []
         for key, val in self.interface.data.grad_truth_model_output.items():
@@ -211,9 +210,9 @@ class TestTrustRegionInterface(unittest.TestCase):
             self.assertEqual(value(val), 0)
         for key, val in self.interface.data.grad_basis_model_output.items():
             self.assertEqual(value(val), 0)
-        # The truth model value should equal the output of sin(0-0)
+        # We still have not updated this value, so the value should be 0
         for key, val in self.interface.data.truth_model_output.items():
-            self.assertEqual(value(val), sin(0))
+            self.assertEqual(value(val), 0)
         # The truth gradients should equal the output of [cos(0-0), -cos(0-0)]
         truth_grads = []
         for key, val in self.interface.data.grad_truth_model_output.items():
@@ -226,6 +225,7 @@ class TestTrustRegionInterface(unittest.TestCase):
     def test_getCurrentEFValues(self):
         # Set up necessary data objects
         self.interface.replaceExternalFunctionsWithVariables()
+        self.interface.createConstraints()
         # Initialize variable values
         self.interface.model.x.set_values({0 : 2, 1 : 1})
         result = self.interface.getCurrentEFValues()
@@ -263,11 +263,9 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.interface.data.grad_truth_model_output[...] = 0
         self.interface.data.value_of_ef_inputs[...] = 0
         feasibility = self.interface.calculateFeasibility()
-        # Because we initialized the param values to be 0,
-        # the feasibility should just be the initial value of
-        # the truth model
-        self.assertEqual(feasibility, sin(value(self.interface.model.x[0])
-                                          - value(self.interface.model.x[1])))
+        # The initial feasibility should be 0 because we haven't
+        # solved anything, so the truth model and ef_outputs are the same
+        self.assertEqual(feasibility, 0)
         # We update the surrogate model to get real parameters
         self.interface.updateSurrogateModel()
         feasibility = self.interface.calculateFeasibility()
@@ -276,7 +274,7 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.assertEqual(feasibility, 0)
         # TODO: Add a test for after the model is solved (12/15/2021)
 
-    def test_calculateStepSizeNorm(self):
+    def test_calculateStepSizeInfNorm(self):
         # Set up necessary data objects
         self.interface.replaceExternalFunctionsWithVariables()
         self.interface.createConstraints()
@@ -292,8 +290,8 @@ class TestTrustRegionInterface(unittest.TestCase):
         original_values = self.interface.getCurrentEFValues()
         self.interface.updateSurrogateModel()
         new_values = self.interface.getCurrentEFValues()
-        stepnorm = self.interface.calculateStepSizeNorm(original_values,
-                                                        new_values)
+        stepnorm = self.interface.calculateStepSizeInfNorm(original_values,
+                                                           new_values)
         # Currently, we have taken NO step.
         # Therefore, the norm should be 0.
         self.assertEqual(stepnorm, 0)
@@ -312,7 +310,17 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.interface.data.truth_model_output[:] = 0
         self.interface.data.grad_truth_model_output[...] = 0
         self.interface.data.value_of_ef_inputs[...] = 0
-        result, objective, step_norm, feasibility = self.interface.solveModel()
+        objective, step_norm, feasibility = self.interface.solveModel()
+        self.assertEqual(objective, 5.150744273013601)
+        self.assertEqual(step_norm, 0.9041534948101395)
+        self.assertEqual(feasibility, 0.09569982275514467)
+        self.interface.data.basis_constraint.deactivate()
+        self.interface.updateSurrogateModel()
+        self.interface.data.sm_constraint_basis.activate()
+        objective, step_norm, feasibility = self.interface.solveModel()
+        self.assertEqual(objective, 5.150674356202409)
+        self.assertEqual(step_norm, 0.13254909994294217)
+        self.assertEqual(feasibility, 0.09509735734117808)
 
 
 if __name__ == '__main__':

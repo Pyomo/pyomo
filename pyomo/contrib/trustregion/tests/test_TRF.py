@@ -11,16 +11,14 @@
 import logging
 
 import pyomo.common.unittest as unittest
-from pyomo.common.dependencies import numpy_available
 from pyomo.environ import (
     Var, ConcreteModel, Reals, ExternalFunction,
-    Objective, Constraint, sqrt, sin, SolverFactory
+    Objective, Constraint, sqrt, sin, cos, SolverFactory
     )
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
 @unittest.skipIf(not SolverFactory('ipopt').available(False), "The IPOPT solver is not available")
-@unittest.skipIf(not numpy_available, "Cannot test the trustregion solver without numpy")
 class TestTrustRegionConfig(unittest.TestCase):
 
     def setUp(self):
@@ -32,11 +30,14 @@ class TestTrustRegionConfig(unittest.TestCase):
 
         def blackbox(a,b):
             return sin(a-b)
-        self.bb = ExternalFunction(blackbox)
+        def grad_blackbox(args, fixed):
+            a, b = args[:2]
+            return [ cos(a - b), -cos(a - b) ]
+        self.bb = ExternalFunction(blackbox, grad_blackbox)
 
         m.obj = Objective(
             expr=(m.z[0]-1.0)**2 + (m.z[0]-m.z[1])**2 + (m.z[2]-1.0)**2 \
-                + (m.x[0]-1.0)**4 + (m.x[1]-1.0)**6 # + m.bb(m.x[0],m.x[1])
+                + (m.x[0]-1.0)**4 + (m.x[1]-1.0)**6
             )
         m.c1 = Constraint(expr=m.x[0] * m.z[0]**2 + self.bb(m.x[0],m.x[1]) == 2*sqrt(2.0))
         m.c2 = Constraint(expr=m.z[2]**4 * m.z[1]**2 + m.z[1] == 8+sqrt(2.0))

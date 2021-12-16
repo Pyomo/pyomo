@@ -10,12 +10,11 @@
 
 import logging
 
-from pyomo.common.dependencies import numpy as np
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import (
     Block, Param, VarList, Constraint,
-    Objective, value, Set
+    Objective, value, Set, ExternalFunction
     )
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.visitor import (identify_variables,
@@ -132,13 +131,18 @@ class TRFInterface(object):
                                                      active=True):
             self._remove_ef_from_expr(con)
 
-        objs = list(self.model.component_data_objects(Objective,
+        self.data.objs = list(self.model.component_data_objects(Objective,
                                                       active=True))
-        if len(objs) != 1:
+        # HACK: This is a hack that we will want to remove once the NL writer
+        # has been corrected to not send unused EFs to the solver
+        for ef in self.model.component_objects(ExternalFunction):
+            ef.parent_block().del_component(ef)
+
+        if len(self.data.objs) != 1:
             raise ValueError(
                 "transformForTrustRegion: "
                 "TrustRegion only supports models with a single active Objective.")
-        self._remove_ef_from_expr(objs[0])
+        self._remove_ef_from_expr(self.data.objs[0])
 
         for i in self.data.ef_outputs:
             self.data.ef_inputs[i] = \
@@ -187,7 +191,6 @@ class TRFInterface(object):
         b = self.data
         for i, y in b.ef_outputs.items():
             b.basis_model_output[i] = value(b.basis_expressions[y])
-            b.truth_model_output[i] = value(b.truth_models[y])
             # Basis functions are Pyomo expressions (in theory)
             gradBasis = differentiate(b.basis_expressions[y],
                                       wrt_list=b.ef_inputs[i])
@@ -203,11 +206,13 @@ class TRFInterface(object):
         """
         Return current variable values
         """
-        ans = ComponentMap()
+        ans = {}
         for i, v in self.data.ef_outputs.items():
             current_inputs = [value(input_var) for input_var in self.data.ef_inputs[i]]
-            current_outputs = value(v)
-            ans[i] = (current_inputs, current_outputs)
+            current_output = value(v)
+            ans[i] = (current_inputs, current_output)
+            # Update the truth model output Param as well (minimize cost)
+            self.data.truth_model_output[i] = current_output
         return ans
 
     def getCurrentModelState(self):
@@ -220,24 +225,26 @@ class TRFInterface(object):
         """
         Feasibility measure (theta(x)) is:
             || y - d(w) ||_1
+        # TODO: Add in the inverse of the step norm for each value
+        || S^{-1} (y-d(w)) || = sum_{i in {1..n}} ( abs( (y_i - d(w)_i)/(s_k)_i) )
         """
         b = self.data
-        return sum(abs(value(y) - value(b.truth_model_output[i])) for i, y in b.ef_outputs.items())
+        return sum(abs(value(y) - value(b.truth_models[y])) for i, y in b.ef_outputs.items())
 
-    def calculateStepSizeNorm(self, original_values, new_values):
+    def calculateStepSizeInfNorm(self, original_values, new_values):
         """
         Taking original and new values, calculate the step-size norm ||s_k||:
             || (w - w_k), (d(w) - d(w_k)) ||_inf
 
         The values are assumed to be of the output given by getCurrentEFValues.
         """
-        original_vals = new_vals = []
+        original_vals = []
+        new_vals = []
         for i, v in original_values.items():
             original_vals.extend(v[0])
             original_vals.append(v[1])
-        for i, v in new_values.items():
-            new_vals.extend(v[0])
-            new_vals.append(v[1])
+            new_vals.extend(new_values[i][0])
+            new_vals.append(new_values[i][1])
         return max([abs(old - new) for old, new in zip(original_vals, new_vals)])
 
     def initializeProblem(self):
@@ -259,7 +266,7 @@ class TRFInterface(object):
         self.replaceExternalFunctionsWithVariables()
         self.createConstraints()
         self.data.basis_constraint.activate()
-        result, objective_value, _, _ = self.solveModel()
+        objective_value, _, _ = self.solveModel()
         self.data.basis_constraint.deactivate()
         self.updateSurrogateModel()
         feasibility = self.calculateFeasibility()
@@ -278,20 +285,22 @@ class TRFInterface(object):
         results = self.solver.solve(self.model, keepfiles=self.config.keepfiles,
                                     tee=self.config.tee)
 
-        if ((results.solver.status == SolverStatus.ok)
-            and (results.solver.termination_condition ==
+        if ((results.solver.status != SolverStatus.ok)
+            or (results.solver.termination_condition !=
                  TerminationCondition.optimal)):
-            self.model.solutions.load_from(results)
-            newEFValues = self.getCurrentEFValues()
-            step_norm = self.calculateStepSizeNorm(currentEFValues,
-                                                   newEFValues)
-            feasibility = self.calculateFeasibility()
-            for obj in self.model.component_data_objects(Objective, active=True):
-                return True, obj(), step_norm, feasibility
-        else:
-            raise ArithmeticError('EXIT: Model solve failed with status {} and termination'
-                                  ' condition(s) {}.'.format(str(results.solver.status),
-                                                             str(results.solver.termination_condition)))
+            raise ArithmeticError(
+                'EXIT: Model solve failed with status {} and termination'
+                ' condition(s) {}.'.format(
+                    str(results.solver.status),
+                    str(results.solver.termination_condition))
+                )
+
+        self.model.solutions.load_from(results)
+        newEFValues = self.getCurrentEFValues()
+        step_norm = self.calculateStepSizeInfNorm(currentEFValues,
+                                                  newEFValues)
+        feasibility = self.calculateFeasibility()
+        return self.data.objs[0](), step_norm, feasibility
 
     def rejectStep(self):
         """

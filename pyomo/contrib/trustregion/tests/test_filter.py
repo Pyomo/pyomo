@@ -39,4 +39,4 @@ class TestFilter(unittest.TestCase):
         fe = FilterElement(15.0, 1.0)
         # A sufficiently infeasible element
         self.assertFalse(self.tmpFilter.isAcceptable(fe,
-                                                    self.theta_max))
+                                                     self.theta_max))

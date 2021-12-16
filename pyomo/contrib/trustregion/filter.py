@@ -34,8 +34,8 @@ class Filter:
     
     Based on original filter by Eason, Biegler (2016)
     """
-
-    TrustRegionFilter = []
+    def __init__(self):
+        self.TrustRegionFilter = []
 
     def addToFilter(self, filterElement):
         filterCopy = list(self.TrustRegionFilter)

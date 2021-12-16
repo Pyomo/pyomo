@@ -10,17 +10,13 @@
 
 import logging
 
-from pyomo.common.dependencies import (numpy as np, numpy_available)
-
 from pyomo.core.base.range import NumericRange
 from pyomo.common.config import (ConfigDict, ConfigValue,
                                  Bool, PositiveInt,
                                  PositiveFloat, In)
 from pyomo.contrib.trustregion.filter import Filter, FilterElement
 from pyomo.contrib.trustregion.interface import TRFInterface
-from pyomo.contrib.trustregion.util import (
-    copyVector, minIgnoreNone, maxIgnoreNone, IterationLogger
-    )
+from pyomo.contrib.trustregion.util import IterationLogger
 from pyomo.opt import SolverFactory
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
@@ -80,7 +76,7 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
             # the boolean subopt_flag
             subopt_flag = False
 
-        success, obj_val_k, step_norm_k, feasibility_k = interface.solveModel()
+        obj_val_k, step_norm_k, feasibility_k = interface.solveModel()
 
         TRFLogger.newIteration(iteration, feasibility_k, obj_val_k,
                                trust_radius, step_norm_k)
