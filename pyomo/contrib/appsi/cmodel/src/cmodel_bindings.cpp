@@ -19,6 +19,7 @@ PYBIND11_MODULE(appsi_cmodel, m)
   //m.def("ProfilerStart", &ProfilerStart);
   //m.def("ProfilerStop", &ProfilerStop);
   m.def("process_lp_constraints", &process_lp_constraints);
+  m.def("process_lp_objective", &process_lp_objective);
   m.def("process_nl_constraints", &process_nl_constraints);
   m.def("process_pyomo_vars", &process_pyomo_vars);
   m.def("create_vars", &create_vars);
@@ -94,20 +95,10 @@ PYBIND11_MODULE(appsi_cmodel, m)
     .def_readwrite("lb", &LPConstraint::lb)
     .def_readwrite("ub", &LPConstraint::ub)
     .def_readwrite("active", &LPConstraint::active)
-    .def(py::init<std::shared_ptr<ExpressionBase>,
-	 std::vector<std::shared_ptr<ExpressionBase> >,
-	 std::vector<std::shared_ptr<Var> >,
-	 std::vector<std::shared_ptr<ExpressionBase> >,
-	 std::vector<std::shared_ptr<Var> >,
-	 std::vector<std::shared_ptr<Var> > >());
+    .def(py::init<>());
   py::class_<LPObjective, LPBase, std::shared_ptr<LPObjective> >(m, "LPObjective")
     .def_readwrite("sense", &LPObjective::sense)
-    .def(py::init<std::shared_ptr<ExpressionBase>,
-	 std::vector<std::shared_ptr<ExpressionBase> >,
-	 std::vector<std::shared_ptr<Var> >,
-	 std::vector<std::shared_ptr<ExpressionBase> >,
-	 std::vector<std::shared_ptr<Var> >,
-	 std::vector<std::shared_ptr<Var> > >());
+    .def(py::init<>());
   py::class_<LPWriter>(m, "LPWriter")
     .def(py::init<>())
     .def("write", &LPWriter::write)

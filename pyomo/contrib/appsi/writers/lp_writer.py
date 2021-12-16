@@ -123,42 +123,18 @@ class LPWriter(PersistentBase):
             cp.value = p.value
 
     def _set_objective(self, obj: _GeneralObjectiveData):
+        cobj = cmodel.process_lp_objective(self._pyomo_expr_types, obj, self._pyomo_var_to_solver_var_map,
+                                           self._pyomo_param_to_solver_param_map)
         if obj is None:
-            const = cmodel.Constant(0)
-            lin_coef = list()
-            lin_vars = list()
-            quad_coef = list()
-            quad_vars_1 = list()
-            quad_vars_2 = list()
             sense = 0
+            cname = 'objective'
         else:
-            pyomo_expr_types = cmodel.PyomoExprTypes()
-            repn = generate_standard_repn(obj.expr, compute_values=False, quadratic=True)
-            const = cmodel.appsi_expr_from_pyomo_expr(repn.constant,
-                                                      self._pyomo_var_to_solver_var_map,
-                                                      self._pyomo_param_to_solver_param_map,
-                                                      pyomo_expr_types)
-            lin_coef = [cmodel.appsi_expr_from_pyomo_expr(i,
-                                                          self._pyomo_var_to_solver_var_map,
-                                                          self._pyomo_param_to_solver_param_map,
-                                                          pyomo_expr_types) for i in repn.linear_coefs]
-            lin_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in repn.linear_vars]
-            quad_coef = [cmodel.appsi_expr_from_pyomo_expr(i,
-                                                           self._pyomo_var_to_solver_var_map,
-                                                           self._pyomo_param_to_solver_param_map,
-                                                           pyomo_expr_types) for i in repn.quadratic_coefs]
-            quad_vars_1 = [self._pyomo_var_to_solver_var_map[id(i[0])] for i in repn.quadratic_vars]
-            quad_vars_2 = [self._pyomo_var_to_solver_var_map[id(i[1])] for i in repn.quadratic_vars]
+            cname = self._symbol_map.getSymbol(obj, self._obj_labeler)
             if obj.sense is minimize:
                 sense = 0
             else:
                 sense = 1
-        cobj = cmodel.LPObjective(const, lin_coef, lin_vars, quad_coef, quad_vars_1, quad_vars_2)
         cobj.sense = sense
-        if obj is None:
-            cname = 'objective'
-        else:
-            cname = self._symbol_map.getSymbol(obj, self._obj_labeler)
         cobj.name = cname
         self._writer.objective = cobj
 

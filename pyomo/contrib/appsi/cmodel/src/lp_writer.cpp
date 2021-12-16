@@ -1,33 +1,5 @@
 #include "lp_writer.hpp"
 
-LPBase::LPBase(std::shared_ptr<ExpressionBase> _constant_expr,
-	       std::vector<std::shared_ptr<ExpressionBase> > &_linear_coefficients,
-	       std::vector<std::shared_ptr<Var> > &_linear_vars,
-	       std::vector<std::shared_ptr<ExpressionBase> > &_quadratic_coefficients,
-	       std::vector<std::shared_ptr<Var> > &_quadratic_vars_1,
-	       std::vector<std::shared_ptr<Var> > &_quadratic_vars_2)
-{
-  constant_expr = _constant_expr;
-
-  linear_coefficients = std::make_shared<std::vector<std::shared_ptr<ExpressionBase> > >();
-  linear_vars = std::make_shared<std::vector<std::shared_ptr<Var> > >();
-  for (unsigned int ndx=0; ndx<_linear_vars.size(); ++ndx)
-    {
-      linear_coefficients->push_back(_linear_coefficients[ndx]);
-      linear_vars->push_back(_linear_vars[ndx]);
-    }
-
-  quadratic_coefficients = std::make_shared<std::vector<std::shared_ptr<ExpressionBase> > >();
-  quadratic_vars_1 = std::make_shared<std::vector<std::shared_ptr<Var> > >();
-  quadratic_vars_2 = std::make_shared<std::vector<std::shared_ptr<Var> > >();
-  for (unsigned int ndx=0; ndx<_quadratic_coefficients.size(); ++ndx)
-    {
-      quadratic_coefficients->push_back(_quadratic_coefficients[ndx]);
-      quadratic_vars_1->push_back(_quadratic_vars_1[ndx]);
-      quadratic_vars_2->push_back(_quadratic_vars_2[ndx]);
-    }
-}
-
 
 void LPWriter::add_constraint(std::shared_ptr<LPConstraint> con)
 {
@@ -368,9 +340,6 @@ void process_lp_constraints(py::list cons, py::object writer)
 {
   py::object generate_standard_repn = py::module_::import("pyomo.repn.standard_repn").attr("generate_standard_repn");
   py::object id = py::module_::import("builtins").attr("id");
-  py::object ScalarParam = py::module_::import("pyomo.core.base.param").attr("ScalarParam");
-  py::object _ParamData = py::module_::import("pyomo.core.base.param").attr("_ParamData");
-  py::object NumericConstant = py::module_::import("pyomo.core.expr.numvalue").attr("NumericConstant");
   py::str cname;
   py::object repn;
   py::object getSymbol = writer.attr("_symbol_map").attr("getSymbol");
@@ -380,20 +349,10 @@ void process_lp_constraints(py::list cons, py::object writer)
   py::dict param_map = writer.attr("_pyomo_param_to_solver_param_map");
   py::dict pyomo_con_to_solver_con_map = writer.attr("_pyomo_con_to_solver_con_map");
   py::dict solver_con_to_pyomo_con_map = writer.attr("_solver_con_to_pyomo_con_map");
-  py::int_ ione = 1;
-  py::float_ fone = 1.0;
-  py::type int_ = py::type::of(ione);
-  py::type float_ = py::type::of(fone);
-  py::type tmp_type = py::type::of(ione);
   std::shared_ptr<ExpressionBase> _const;
   py::object repn_constant;
-  std::vector<std::shared_ptr<ExpressionBase> > lin_coef;
-  std::vector<std::shared_ptr<Var> > lin_vars;
   py::list repn_linear_coefs;
   py::list repn_linear_vars;
-  std::vector<std::shared_ptr<ExpressionBase> > quad_coef;
-  std::vector<std::shared_ptr<Var> > quad_vars_1;
-  std::vector<std::shared_ptr<Var> > quad_vars_2;
   py::list repn_quad_coefs;
   py::list repn_quad_vars;
   std::shared_ptr<LPConstraint> lp_con;
@@ -415,118 +374,114 @@ void process_lp_constraints(py::list cons, py::object writer)
           throw py::value_error("cannot write an LP file with a nonlinear constraint");
         }
       repn_constant = repn.attr("constant");
-      tmp_type = py::type::of(repn_constant);
-      if (tmp_type.is(int_) || tmp_type.is(float_))
-        {
-          _const = std::make_shared<Constant>(repn_constant.cast<double>());
-        }
-      else if(tmp_type.is(ScalarParam) || tmp_type.is(_ParamData))
-        {
-          _const = param_map[id(repn_constant)].cast<std::shared_ptr<ExpressionBase> >();
-        }
-      else
-        {
-          _const = appsi_expr_from_pyomo_expr(repn_constant, var_map, param_map, expr_types);
-        }
-      lin_coef.clear();
+      _const = appsi_expr_from_pyomo_expr(repn_constant, var_map, param_map, expr_types);
+      std::shared_ptr<std::vector<std::shared_ptr<ExpressionBase> > > lin_coef = std::make_shared<std::vector<std::shared_ptr<ExpressionBase> > >();
+      std::shared_ptr<std::vector<std::shared_ptr<Var> > > lin_vars = std::make_shared<std::vector<std::shared_ptr<Var> > >();;
+      std::shared_ptr<std::vector<std::shared_ptr<ExpressionBase> > > quad_coef = std::make_shared<std::vector<std::shared_ptr<ExpressionBase> > >();;
+      std::shared_ptr<std::vector<std::shared_ptr<Var> > > quad_vars_1 = std::make_shared<std::vector<std::shared_ptr<Var> > >();;
+      std::shared_ptr<std::vector<std::shared_ptr<Var> > > quad_vars_2 = std::make_shared<std::vector<std::shared_ptr<Var> > >();;
       repn_linear_coefs = repn.attr("linear_coefs");
       for (py::handle coef : repn_linear_coefs)
         {
-          tmp_type = py::type::of(coef);
-          if (tmp_type.is(int_) || tmp_type.is(float_))
-            {
-              lin_coef.push_back(std::make_shared<Constant>(coef.cast<double>()));
-            }
-          else if(tmp_type.is(ScalarParam) || tmp_type.is(_ParamData))
-            {
-              lin_coef.push_back(param_map[id(coef)].cast<std::shared_ptr<ExpressionBase> >());
-            }
-          else
-            {
-              lin_coef.push_back(appsi_expr_from_pyomo_expr(coef, var_map, param_map, expr_types));
-            }
+	  lin_coef->push_back(appsi_expr_from_pyomo_expr(coef, var_map, param_map, expr_types));
         }
-      lin_vars.clear();
       repn_linear_vars = repn.attr("linear_vars");
       for (py::handle v : repn_linear_vars)
         {
-          lin_vars.push_back(var_map[id(v)].cast<std::shared_ptr<Var> >());
+          lin_vars->push_back(var_map[id(v)].cast<std::shared_ptr<Var> >());
         }
-      quad_coef.clear();
       repn_quad_coefs = repn.attr("quadratic_coefs");
       for (py::handle coef : repn_quad_coefs)
         {
-          tmp_type = py::type::of(coef);
-          if (tmp_type.is(int_) || tmp_type.is(float_))
-            {
-              quad_coef.push_back(std::make_shared<Constant>(coef.cast<double>()));
-            }
-          else if(tmp_type.is(ScalarParam) || tmp_type.is(_ParamData))
-            {
-              quad_coef.push_back(param_map[id(coef)].cast<std::shared_ptr<ExpressionBase> >());
-            }
-          else
-            {
-              quad_coef.push_back(appsi_expr_from_pyomo_expr(coef, var_map, param_map, expr_types));
-            }
+	  quad_coef->push_back(appsi_expr_from_pyomo_expr(coef, var_map, param_map, expr_types));
         }
-      quad_vars_1.clear();
-      quad_vars_2.clear();
       repn_quad_vars = repn.attr("quadratic_vars");
       for (py::handle v_tuple_handle : repn_quad_vars)
         {
           v_tuple = v_tuple_handle.cast<py::tuple>();
-          quad_vars_1.push_back(var_map[id(v_tuple[0])].cast<std::shared_ptr<Var> >());
-          quad_vars_2.push_back(var_map[id(v_tuple[1])].cast<std::shared_ptr<Var> >());
+          quad_vars_1->push_back(var_map[id(v_tuple[0])].cast<std::shared_ptr<Var> >());
+          quad_vars_2->push_back(var_map[id(v_tuple[1])].cast<std::shared_ptr<Var> >());
         }
 
-      lp_con = std::make_shared<LPConstraint>(_const, lin_coef, lin_vars, quad_coef, quad_vars_1, quad_vars_2);
+      lp_con = std::make_shared<LPConstraint>();
       lp_con->name = cname;
+      lp_con->constant_expr = _const;
+      lp_con->linear_coefficients = lin_coef;
+      lp_con->linear_vars = lin_vars;
+      lp_con->quadratic_coefficients = quad_coef;
+      lp_con->quadratic_vars_1 = quad_vars_1;
+      lp_con->quadratic_vars_2 = quad_vars_2;
 
       lb = lower_body_upper[0];
       ub = lower_body_upper[2];
       if (!lb.is(py::none()))
         {
-          tmp_type = py::type::of(lb);
-          if (tmp_type.is(NumericConstant))
-            {
-              lp_con->lb = std::make_shared<Constant>(lb.attr("value").cast<double>());
-            }
-          else if (tmp_type.is(int_) || tmp_type.is(float_))
-            {
-              lp_con->lb = std::make_shared<Constant>(lb.cast<double>());
-            }
-          else if(tmp_type.is(ScalarParam) || tmp_type.is(_ParamData))
-            {
-              lp_con->lb = param_map[id(lb)].cast<std::shared_ptr<ExpressionBase> >();
-            }
-          else
-            {
-              lp_con->lb = appsi_expr_from_pyomo_expr(lb, var_map, param_map, expr_types);
-            }
+	  lp_con->lb = appsi_expr_from_pyomo_expr(lb, var_map, param_map, expr_types);
         }
       if (!ub.is(py::none()))
         {
-          tmp_type = py::type::of(ub);
-          if (tmp_type.is(NumericConstant))
-            {
-              lp_con->ub = std::make_shared<Constant>(ub.attr("value").cast<double>());
-            }
-          else if (tmp_type.is(int_) || tmp_type.is(float_))
-            {
-              lp_con->ub = std::make_shared<Constant>(ub.cast<double>());
-            }
-          else if(tmp_type.is(ScalarParam) || tmp_type.is(_ParamData))
-            {
-              lp_con->ub = param_map[id(ub)].cast<std::shared_ptr<ExpressionBase> >();
-            }
-          else
-            {
-              lp_con->ub = appsi_expr_from_pyomo_expr(ub, var_map, param_map, expr_types);
-            }
+	  lp_con->ub = appsi_expr_from_pyomo_expr(ub, var_map, param_map, expr_types);
         }
       c_writer->add_constraint(lp_con);
       pyomo_con_to_solver_con_map[c] = py::cast(lp_con);
       solver_con_to_pyomo_con_map[py::cast(lp_con)] = c;
     }
+}
+
+
+std::shared_ptr<LPObjective> process_lp_objective(PyomoExprTypes& expr_types,
+						  py::object pyomo_obj,
+						  py::dict var_map,
+						  py::dict param_map)
+{
+  std::shared_ptr<std::vector<std::shared_ptr<ExpressionBase> > > lin_coef = std::make_shared<std::vector<std::shared_ptr<ExpressionBase> > >();
+  std::shared_ptr<std::vector<std::shared_ptr<Var> > > lin_vars = std::make_shared<std::vector<std::shared_ptr<Var> > >();;
+  std::shared_ptr<std::vector<std::shared_ptr<ExpressionBase> > > quad_coef = std::make_shared<std::vector<std::shared_ptr<ExpressionBase> > >();;
+  std::shared_ptr<std::vector<std::shared_ptr<Var> > > quad_vars_1 = std::make_shared<std::vector<std::shared_ptr<Var> > >();;
+  std::shared_ptr<std::vector<std::shared_ptr<Var> > > quad_vars_2 = std::make_shared<std::vector<std::shared_ptr<Var> > >();;
+  std::shared_ptr<ExpressionBase> _const;
+    
+  if (pyomo_obj.is(py::none()))
+    {
+      _const = std::make_shared<Constant>(0);
+    }
+  else
+    {
+      py::object generate_standard_repn = py::module_::import("pyomo.repn.standard_repn").attr("generate_standard_repn");
+      py::object repn = generate_standard_repn(pyomo_obj.attr("expr"), "compute_values"_a=false, "quadratic"_a=true);
+      _const = appsi_expr_from_pyomo_expr(repn.attr("constant"), var_map, param_map, expr_types);
+      py::handle repn_linear_coefs = repn.attr("linear_coefs");
+      for (py::handle coef : repn_linear_coefs)
+	{
+	  lin_coef->push_back(appsi_expr_from_pyomo_expr(coef, var_map, param_map, expr_types));
+	}
+      py::handle repn_linear_vars = repn.attr("linear_vars");
+      for (py::handle v : repn_linear_vars)
+	{
+	  lin_vars->push_back(var_map[expr_types.id(v)].cast<std::shared_ptr<Var> >());
+	}
+      py::handle repn_quad_coefs = repn.attr("quadratic_coefs");
+      for (py::handle coef : repn_quad_coefs)
+	{
+	  quad_coef->push_back(appsi_expr_from_pyomo_expr(coef, var_map, param_map, expr_types));
+	}
+      py::handle repn_quad_vars = repn.attr("quadratic_vars");
+      py::tuple v_tuple;
+      for (py::handle v_tuple_handle : repn_quad_vars)
+	{
+	  v_tuple = v_tuple_handle.cast<py::tuple>();
+	  quad_vars_1->push_back(var_map[expr_types.id(v_tuple[0])].cast<std::shared_ptr<Var> >());
+	  quad_vars_2->push_back(var_map[expr_types.id(v_tuple[1])].cast<std::shared_ptr<Var> >());
+	}
+    }
+
+  std::shared_ptr<LPObjective> lp_obj = std::make_shared<LPObjective>();
+  lp_obj->constant_expr = _const;
+  lp_obj->linear_coefficients = lin_coef;
+  lp_obj->linear_vars = lin_vars;
+  lp_obj->quadratic_coefficients = quad_coef;
+  lp_obj->quadratic_vars_1 = quad_vars_1;
+  lp_obj->quadratic_vars_2 = quad_vars_2;
+
+  return lp_obj;
 }

@@ -13,12 +13,7 @@ extern double inf;
 class LPBase
 {
 public:
-  LPBase(std::shared_ptr<ExpressionBase> _constant_expr,
-	 std::vector<std::shared_ptr<ExpressionBase> > &_linear_coefficients,
-	 std::vector<std::shared_ptr<Var> > &_linear_vars,
-	 std::vector<std::shared_ptr<ExpressionBase> > &_quadratic_coefficients,
-	 std::vector<std::shared_ptr<Var> > &_quadratic_vars_1,
-	 std::vector<std::shared_ptr<Var> > &_quadratic_vars_2);
+  LPBase() = default;
   virtual ~LPBase() = default;
   std::shared_ptr<ExpressionBase> constant_expr;
   std::shared_ptr<std::vector<std::shared_ptr<ExpressionBase> > > linear_coefficients;
@@ -33,17 +28,7 @@ public:
 class LPObjective: public LPBase
 {
 public:
-  LPObjective(std::shared_ptr<ExpressionBase> _constant_expr,
-	      std::vector<std::shared_ptr<ExpressionBase> > _linear_coefficients,
-	      std::vector<std::shared_ptr<Var> > _linear_vars,
-	      std::vector<std::shared_ptr<ExpressionBase> > _quadratic_coefficients,
-	      std::vector<std::shared_ptr<Var> > _quadratic_vars_1,
-	      std::vector<std::shared_ptr<Var> > _quadratic_vars_2) : LPBase(_constant_expr,
-									     _linear_coefficients,
-									     _linear_vars,
-									     _quadratic_coefficients,
-									     _quadratic_vars_1,
-									     _quadratic_vars_2) {}
+  LPObjective() = default;
   int sense = 0; // 0 means min; 1 means max
 };
 
@@ -51,17 +36,7 @@ public:
 class LPConstraint: public LPBase
 {
 public:
-  LPConstraint(std::shared_ptr<ExpressionBase> _constant_expr,
-	       std::vector<std::shared_ptr<ExpressionBase> > _linear_coefficients,
-	       std::vector<std::shared_ptr<Var> > _linear_vars,
-	       std::vector<std::shared_ptr<ExpressionBase> > _quadratic_coefficients,
-	       std::vector<std::shared_ptr<Var> > _quadratic_vars_1,
-	       std::vector<std::shared_ptr<Var> > _quadratic_vars_2) : LPBase(_constant_expr,
-									      _linear_coefficients,
-									      _linear_vars,
-									      _quadratic_coefficients,
-									      _quadratic_vars_1,
-									      _quadratic_vars_2) {}
+  LPConstraint() = default;
   std::shared_ptr<ExpressionBase> lb = std::make_shared<Constant>(-inf);
   std::shared_ptr<ExpressionBase> ub = std::make_shared<Constant>(inf);
   bool active = true;
@@ -86,3 +61,7 @@ public:
 };
 
 void process_lp_constraints(py::list, py::object);
+std::shared_ptr<LPObjective> process_lp_objective(PyomoExprTypes& expr_types,
+						  py::object pyomo_obj,
+						  py::dict var_map,
+						  py::dict param_map);
