@@ -11,7 +11,6 @@
 import logging
 
 import pyomo.common.unittest as unittest
-from pyomo.common.dependencies import numpy_available
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.environ import (
     Var, VarList, ConcreteModel, Reals, ExternalFunction, value,
@@ -26,8 +25,6 @@ from pyomo.contrib.trustregion.TRF import _trf_config
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
 
-@unittest.skipIf(not numpy_available,
-                 "Cannot test the trustregion solver without numpy")
 class TestTrustRegionInterface(unittest.TestCase):
 
     def setUp(self):
@@ -297,6 +294,8 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.assertEqual(stepnorm, 0)
         # TODO: Add a test for after the model is solved (12/15/2021)
 
+    @unittest.skipIf(not SolverFactory('ipopt').available(False),
+                     "The IPOPT solver is not available")
     def test_solveModel(self):
         # Set up initial data objects and Params
         self.interface.replaceExternalFunctionsWithVariables()
