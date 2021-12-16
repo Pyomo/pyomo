@@ -366,6 +366,7 @@ class UpdateConfig(ConfigDict):
         self.declare('update_vars', ConfigValue(domain=bool))
         self.declare('update_params', ConfigValue(domain=bool))
         self.declare('update_named_expressions', ConfigValue(domain=bool))
+        self.declare('treat_fixed_vars_as_params', ConfigValue(domain=bool))
 
         self.check_for_new_or_removed_constraints: bool = True
         self.check_for_new_or_removed_vars: bool = True
@@ -374,6 +375,7 @@ class UpdateConfig(ConfigDict):
         self.update_vars: bool = True
         self.update_params: bool = True
         self.update_named_expressions: bool = True
+        self.treat_fixed_vars_as_params: bool = True
 
 
 class Solver(abc.ABC):
@@ -667,7 +669,7 @@ class PersistentBase(abc.ABC):
         self._external_functions = ComponentMap()
         self._obj_named_expressions = list()
         self._update_config = UpdateConfig()
-        self._referenced_variables = dict()  # number of constraints/objectives each variable is used in
+        self._referenced_variables = dict()  # var_id: [dict[constraints, None], dict[sos constraints, None], None or objective]
         self._vars_referenced_by_con = dict()
         self._vars_referenced_by_obj = list()
 
@@ -696,7 +698,7 @@ class PersistentBase(abc.ABC):
         for v in variables:
             if id(v) in self._referenced_variables:
                 raise ValueError('variable {name} has already been added'.format(name=v.name))
-            self._referenced_variables[id(v)] = 0
+            self._referenced_variables[id(v)] = [dict(), dict(), None]
             self._vars[id(v)] = (v, v._lb, v._ub, v.fixed, v.domain, v.value)
         self._add_variables(variables)
 
@@ -726,10 +728,11 @@ class PersistentBase(abc.ABC):
                 self._external_functions[con] = external_functions
             self._vars_referenced_by_con[con] = variables
             for v in variables:
-                self._referenced_variables[id(v)] += 1
-            for v in fixed_vars:
-                v.unfix()
-                all_fixed_vars[id(v)] = v
+                self._referenced_variables[id(v)][0][con] = None
+            if not self.update_config.treat_fixed_vars_as_params:
+                for v in fixed_vars:
+                    v.unfix()
+                    all_fixed_vars[id(v)] = v
         self._add_constraints(cons)
         for v in all_fixed_vars.values():
             v.fix()
@@ -747,7 +750,7 @@ class PersistentBase(abc.ABC):
             self._named_expressions[con] = list()
             self._vars_referenced_by_con[con] = variables
             for v in variables:
-                self._referenced_variables[id(v)] += 1
+                self._referenced_variables[id(v)][1][con] = None
         self._add_sos_constraints(cons)
 
     @abc.abstractmethod
@@ -757,7 +760,7 @@ class PersistentBase(abc.ABC):
     def set_objective(self, obj: _GeneralObjectiveData):
         if self._objective is not None:
             for v in self._vars_referenced_by_obj:
-                self._referenced_variables[id(v)] -= 1
+                self._referenced_variables[id(v)][2] = None
             self._external_functions.pop(self._objective, None)
         if obj is not None:
             self._objective = obj
@@ -770,9 +773,10 @@ class PersistentBase(abc.ABC):
                 self._external_functions[obj] = external_functions
             self._vars_referenced_by_obj = variables
             for v in variables:
-                self._referenced_variables[id(v)] += 1
-            for v in fixed_vars:
-                v.unfix()
+                self._referenced_variables[id(v)][2] = obj
+            if not self.update_config.treat_fixed_vars_as_params:
+                for v in fixed_vars:
+                    v.unfix()
             self._set_objective(obj)
             for v in fixed_vars:
                 v.fix()
@@ -810,7 +814,7 @@ class PersistentBase(abc.ABC):
             if con not in self._named_expressions:
                 raise ValueError('cannot remove constraint {name} - it was not added'.format(name=con.name))
             for v in self._vars_referenced_by_con[con]:
-                self._referenced_variables[id(v)] -= 1
+                self._referenced_variables[id(v)][0].pop(con)
             del self._active_constraints[con]
             del self._named_expressions[con]
             self._external_functions.pop(con, None)
@@ -826,7 +830,7 @@ class PersistentBase(abc.ABC):
             if con not in self._vars_referenced_by_con:
                 raise ValueError('cannot remove constraint {name} - it was not added'.format(name=con.name))
             for v in self._vars_referenced_by_con[con]:
-                self._referenced_variables[id(v)] -= 1
+                self._referenced_variables[id(v)][1].pop(con)
             del self._active_constraints[con]
             del self._named_expressions[con]
             del self._vars_referenced_by_con[con]
@@ -838,12 +842,14 @@ class PersistentBase(abc.ABC):
     def remove_variables(self, variables: List[_GeneralVarData]):
         self._remove_variables(variables)
         for v in variables:
-            if id(v) not in self._referenced_variables:
+            v_id = id(v)
+            if v_id not in self._referenced_variables:
                 raise ValueError('cannot remove variable {name} - it has not been added'.format(name=v.name))
-            if self._referenced_variables[id(v)] != 0:
+            cons_using, sos_using, obj_using = self._referenced_variables[v_id]
+            if cons_using or sos_using or (obj_using is not None):
                 raise ValueError('cannot remove variable {name} - it is still being used by constraints or the objective'.format(name=v.name))
-            del self._referenced_variables[id(v)]
-            del self._vars[id(v)]
+            del self._referenced_variables[v_id]
+            del self._vars[v_id]
 
     @abc.abstractmethod
     def _remove_params(self, params: List[_ParamData]):
@@ -959,6 +965,8 @@ class PersistentBase(abc.ABC):
         new_cons_set = set(new_cons)
         new_sos_set = set(new_sos)
         new_vars_set = set(id(v) for v in new_vars)
+        cons_to_remove_and_add = dict()
+        need_to_set_objective = False
         if config.update_constraints:
             cons_to_update = list()
             sos_to_update = list()
@@ -968,13 +976,10 @@ class PersistentBase(abc.ABC):
             for c in current_sos_dict.keys():
                 if c not in new_sos_set:
                     sos_to_update.append(c)
-            cons_to_remove_and_add = list()
             for c in cons_to_update:
                 lower, body, upper = self._active_constraints[c]
                 if c.lower is not lower or c.body is not body or c.upper is not upper:
-                    cons_to_remove_and_add.append(c)
-            self.remove_constraints(cons_to_remove_and_add)
-            self.add_constraints(cons_to_remove_and_add)
+                    cons_to_remove_and_add[c] = None
             self.remove_sos_constraints(sos_to_update)
             self.add_sos_constraints(sos_to_update)
         timer.stop('cons')
@@ -993,12 +998,22 @@ class PersistentBase(abc.ABC):
                     vars_to_update.append(v)
                 elif fixed is not v.fixed:
                     vars_to_update.append(v)
+                    if self.update_config.treat_fixed_vars_as_params:
+                        for c in self._referenced_variables[id(v)][0]:
+                            cons_to_remove_and_add[c] = None
+                        if self._referenced_variables[id(v)][2] is not None:
+                            need_to_set_objective = True
                 elif domain is not v.domain:
                     vars_to_update.append(v)
                 elif fixed and (value is not v.value):
                     vars_to_update.append(v)
             self.update_variables(vars_to_update)
         timer.stop('vars')
+        timer.start('cons')
+        cons_to_remove_and_add = list(cons_to_remove_and_add.keys())
+        self.remove_constraints(cons_to_remove_and_add)
+        self.add_constraints(cons_to_remove_and_add)
+        timer.stop('cons')
         timer.start('named expressions')
         if config.update_named_expressions:
             cons_to_update = list()
@@ -1014,7 +1029,6 @@ class PersistentBase(abc.ABC):
         timer.stop('named expressions')
         timer.start('objective')
         pyomo_obj = get_objective(self._model)
-        need_to_set_objective = False
         if pyomo_obj is not self._objective:
             need_to_set_objective = True
         elif pyomo_obj is not None and pyomo_obj.expr is not self._objective_expr:

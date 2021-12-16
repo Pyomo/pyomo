@@ -841,7 +841,8 @@ class Gurobi(PersistentBase, PersistentSolver):
 
             res = ComponentMap()
             for var_id, val in zip(vars_to_load, vals):
-                if ref_vars[var_id] > 0:
+                using_cons, using_sos, using_obj = ref_vars[var_id]
+                if using_cons or using_sos or (using_obj is not None):
                     res[self._vars[var_id][0]] = val
             return res
 
@@ -859,7 +860,8 @@ class Gurobi(PersistentBase, PersistentSolver):
         vals = self._solver_model.getAttr("Rc", gurobi_vars_to_load)
 
         for var_id, val in zip(vars_to_load, vals):
-            if ref_vars[var_id] > 0:
+            using_cons, using_sos, using_obj = ref_vars[var_id]
+            if using_cons or using_sos or (using_obj is not None):
                 res[self._vars[var_id][0]] = val
 
         return res
