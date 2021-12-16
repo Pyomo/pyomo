@@ -12,7 +12,7 @@ from pyomo.common.dependencies import (
     numpy, numpy_available as has_numpy,
     scipy, scipy_available as has_scipy,
 )
-from pyomo.core.expr.numvalue import NumericValue
+from pyomo.core.expr.numvalue import NumericValue, value
 from pyomo.core.kernel.constraint import \
     (IConstraint,
      constraint_tuple)
