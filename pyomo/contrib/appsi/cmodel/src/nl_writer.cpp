@@ -511,10 +511,16 @@ void NLWriter::write(std::string filename)
   f << "b\n";
   double v_lb;
   double v_ub;
+  std::string v_domain;
   for (std::shared_ptr<Var> v : all_vars)
     {
-      v_lb = v->lb;
-      v_ub = v->ub;
+      v_lb = v->get_lb();
+      v_ub = v->get_ub();
+      v_domain = v->get_domain();
+      if (v_domain != "continuous")
+	{
+	  throw py::value_error("NLWriter currently only supports continuous variables.");
+	}
       if (v->fixed)
 	{
 	  f << "4 " << v->value << "\n";
@@ -619,4 +625,68 @@ std::vector<std::shared_ptr<Var> > NLWriter::get_solve_vars()
 std::vector<std::shared_ptr<NLConstraint> > NLWriter::get_solve_cons()
 {
   return solve_cons;
+}
+
+
+void process_nl_constraints(NLWriter* nl_writer,
+			    PyomoExprTypes& expr_types,
+			    py::list cons,
+			    py::dict var_map,
+			    py::dict param_map,
+			    py::dict active_constraints,
+			    py::dict con_map,
+			    py::dict rev_con_map)
+{
+  py::object generate_standard_repn = py::module_::import("pyomo.repn.standard_repn").attr("generate_standard_repn");
+  py::object repn;
+  std::shared_ptr<ExpressionBase> _const;
+  std::vector<std::shared_ptr<Var> > lin_vars;
+  std::vector<std::shared_ptr<ExpressionBase> > lin_coefs;
+  std::shared_ptr<ExpressionBase> nonlin_expr;
+  std::shared_ptr<NLConstraint> nl_con;
+  py::tuple lower_body_upper;
+  py::handle c_lb;
+  py::handle c_ub;
+  py::handle repn_nonlinear_expr;
+
+  for (py::handle c : cons)
+    {
+      lower_body_upper = active_constraints[c];
+      repn = generate_standard_repn(lower_body_upper[1], "compute_values"_a=false, "quadratic"_a=false);
+      _const = appsi_expr_from_pyomo_expr(repn.attr("constant"), var_map, param_map, expr_types);
+      lin_coefs.clear();
+      lin_vars.clear();
+      for (py::handle coef : repn.attr("linear_coefs"))
+	{
+	  lin_coefs.push_back(appsi_expr_from_pyomo_expr(coef, var_map, param_map, expr_types));
+	}
+      for (py::handle v : repn.attr("linear_vars"))
+	{
+	  lin_vars.push_back(var_map[expr_types.id(v)].cast<std::shared_ptr<Var> >());
+	}
+      repn_nonlinear_expr = repn.attr("nonlinear_expr");
+      if (repn_nonlinear_expr.is(py::none()))
+	{
+	  nonlin_expr = std::make_shared<Constant>(0);
+	}
+      else
+	{
+	  nonlin_expr = appsi_expr_from_pyomo_expr(repn_nonlinear_expr, var_map, param_map, expr_types);
+	}
+      nl_con = std::make_shared<NLConstraint>(_const, lin_coefs, lin_vars, nonlin_expr);
+
+      c_lb = lower_body_upper[0];
+      c_ub = lower_body_upper[2];
+      if (!(c_lb.is(py::none())))
+	{
+	  nl_con->lb = appsi_expr_from_pyomo_expr(c_lb, var_map, param_map, expr_types);
+	}
+      if (!(c_ub.is(py::none())))
+	{
+	  nl_con->ub = appsi_expr_from_pyomo_expr(c_ub, var_map, param_map, expr_types);
+	}
+      nl_writer->add_constraint(nl_con);
+      con_map[c] = py::cast(nl_con);
+      rev_con_map[py::cast(nl_con)] = c;
+    }
 }

@@ -30,6 +30,7 @@ class LPWriter(PersistentBase):
         self._solver_var_to_pyomo_var_map = dict()
         self._solver_con_to_pyomo_con_map = dict()
         self._pyomo_param_to_solver_param_map = dict()
+        self._pyomo_expr_types = cmodel.PyomoExprTypes()
 
     @property
     def config(self):
@@ -65,28 +66,10 @@ class LPWriter(PersistentBase):
             self.set_objective(None)
 
     def _add_variables(self, variables: List[_GeneralVarData]):
-        cvars = cmodel.create_vars(len(variables))
-        for ndx, v in enumerate(variables):
-            cv = cvars[ndx]
-            cv.name = self._symbol_map.getSymbol(v, self._var_labeler)
-            if v.is_binary():
-                cv.domain = 'binary'
-            elif v.is_integer():
-                cv.domain = 'integer'
-            else:
-                assert v.is_continuous(), 'LP writer only supports continuous, binary, and integer variables'
-                cv.domain = 'continuous'
-            _, lb, ub, v_is_fixed, v_domain, v_value = self._vars[id(v)]
-            if lb is not None:
-                cv.lb = lb
-            if ub is not None:
-                cv.ub = ub
-            if v_value is not None:
-                cv.value = v_value
-            if v_is_fixed:
-                cv.fixed = True
-            self._pyomo_var_to_solver_var_map[id(v)] = cv
-            self._solver_var_to_pyomo_var_map[cv] = v
+        cmodel.process_pyomo_vars(self._pyomo_expr_types, variables, self._pyomo_var_to_solver_var_map,
+                                  self._pyomo_param_to_solver_param_map, self._vars,
+                                  self._solver_var_to_pyomo_var_map, True, self._symbol_map,
+                                  self._var_labeler, False)
 
     def _add_params(self, params: List[_ParamData]):
         cparams = cmodel.create_params(len(params))
@@ -129,31 +112,10 @@ class LPWriter(PersistentBase):
             self._param_labeler.remove_obj(p)
 
     def _update_variables(self, variables: List[_GeneralVarData]):
-        for v in variables:
-            cv = self._pyomo_var_to_solver_var_map[id(v)]
-            if v.is_binary():
-                cv.domain = 'binary'
-            elif v.is_integer():
-                cv.domain = 'integer'
-            else:
-                assert v.is_continuous(), 'LP writer only supports continuous, binary, and integer variables'
-                cv.domain = 'continuous'
-            lb = value(v.lb)
-            ub = value(v.ub)
-            if lb is None:
-                cv.lb = -cmodel.inf
-            else:
-                cv.lb = lb
-            if ub is None:
-                cv.ub = cmodel.inf
-            else:
-                cv.ub = ub
-            if v.value is not None:
-                cv.value = v.value
-            if v.is_fixed():
-                cv.fixed = True
-            else:
-                cv.fixed = False
+        cmodel.process_pyomo_vars(self._pyomo_expr_types, variables, self._pyomo_var_to_solver_var_map,
+                                  self._pyomo_param_to_solver_param_map, self._vars,
+                                  self._solver_var_to_pyomo_var_map, False, None,
+                                  None, True)
 
     def update_params(self):
         for p_id, p in self._params.items():

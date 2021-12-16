@@ -280,13 +280,17 @@ void LPWriter::write(std::string filename)
   f << "Bounds\n";
   std::vector<std::shared_ptr<Var> > binaries;
   std::vector<std::shared_ptr<Var> > integers;
+  double v_lb;
+  double v_ub;
+  std::string v_domain;
   for (std::shared_ptr<Var> v : active_vars)
     {
-      if (v->domain == "binary")
+      v_domain = v->get_domain();
+      if (v_domain == "binary")
 	{
 	  binaries.push_back(v);
 	}
-      else if (v->domain == "integer")
+      else if (v_domain == "integers")
 	{
 	  integers.push_back(v);
 	}
@@ -296,23 +300,25 @@ void LPWriter::write(std::string filename)
 	}
       else
 	{
+	  v_lb = v->get_lb();
+	  v_ub = v->get_ub();
 	  f << "  ";
-	  if (v->lb <= -inf)
+	  if (v_lb <= -inf)
 	    {
 	      f << "-inf";
 	    }
 	  else
 	    {
-	      f << v->lb;
+	      f << v_lb;
 	    }
 	  f << " <= " << v->name << " <= ";
-	  if (v->ub >= inf)
+	  if (v_ub >= inf)
 	    {
 	      f << "+inf";
 	    }
 	  else
 	    {
-	      f << v->ub;
+	      f << v_ub;
 	    }
 	  f << " \n";
 	}

@@ -697,7 +697,7 @@ class PersistentBase(abc.ABC):
             if id(v) in self._referenced_variables:
                 raise ValueError('variable {name} has already been added'.format(name=v.name))
             self._referenced_variables[id(v)] = 0
-            self._vars[id(v)] = (v, v.lb, v.ub, v.is_fixed(), v.domain, v.value)
+            self._vars[id(v)] = (v, v._lb, v._ub, v.fixed, v.domain, v.value)
         self._add_variables(variables)
 
     @abc.abstractmethod
@@ -785,13 +785,13 @@ class PersistentBase(abc.ABC):
             self._set_objective(obj)
 
     def add_block(self, block):
-        self.add_variables(list(OrderedDict((id(var), var) for var in block.component_data_objects(Var, descend_into=True, sort=False)).values()))
         param_dict = OrderedDict()
         for p in block.component_objects(Param, descend_into=True, sort=False):
             if p.mutable:
                 for _p in p.values():
                     param_dict[id(_p)] = _p
         self.add_params(list(param_dict.values()))
+        self.add_variables(list(OrderedDict((id(var), var) for var in block.component_data_objects(Var, descend_into=True, sort=False)).values()))
         self.add_constraints([con for con in block.component_data_objects(Constraint, descend_into=True,
                                                                           active=True, sort=False)])
         self.add_sos_constraints([con for con in block.component_data_objects(SOSConstraint, descend_into=True,
@@ -868,7 +868,7 @@ class PersistentBase(abc.ABC):
 
     def update_variables(self, variables: List[_GeneralVarData]):
         for v in variables:
-            self._vars[id(v)] = (v, v.lb, v.ub, v.is_fixed(), v.domain, v.value)
+            self._vars[id(v)] = (v, v._lb, v._ub, v.fixed, v.domain, v.value)
         self._update_variables(variables)
 
     @abc.abstractmethod
@@ -987,11 +987,11 @@ class PersistentBase(abc.ABC):
             vars_to_update = list()
             for v in vars_to_check:
                 _v, lb, ub, fixed, domain, value = self._vars[id(v)]
-                if lb is not v.lb:
+                if lb is not v._lb:
                     vars_to_update.append(v)
-                elif ub is not v.ub:
+                elif ub is not v._ub:
                     vars_to_update.append(v)
-                elif fixed is not v.is_fixed():
+                elif fixed is not v.fixed:
                     vars_to_update.append(v)
                 elif domain is not v.domain:
                     vars_to_update.append(v)

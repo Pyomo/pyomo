@@ -135,17 +135,20 @@ public:
   Var(std::string _name, double val) : Leaf(val), name(_name) {}
   std::string name = "v";
   std::string __str__() override;
-  double lb = -inf;
-  double ub = inf;
+  std::shared_ptr<ExpressionBase> lb;
+  std::shared_ptr<ExpressionBase> ub;
   int index = -1;
   bool fixed = false;
-  std::string domain = "continuous";  // options are continuous, binary, or integer
+  std::string domain = "reals";  // options are reals, nonnegative_reals, nonpositive_reals, integers, nonnegative_integers, nonpositive_integers, binary, percent_fraction, unit_interval
   bool is_variable_type() override;
   int get_degree_from_array(int*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Var> > > identify_variables() override;
   std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > identify_external_operators() override;
   void write_nl_string(std::ofstream&) override;
   std::shared_ptr<Var> shared_from_this() {return std::static_pointer_cast<Var>(Node::shared_from_this());}
+  double get_lb();
+  double get_ub();
+  std::string get_domain();
 };
 
 
@@ -555,6 +558,16 @@ public:
   py::object ScalarExpression = expr_module.attr("ScalarExpression");
   py::object ScalarIntegral = py::module_::import("pyomo.dae.integral").attr("ScalarIntegral");
   py::object Integral = py::module_::import("pyomo.dae.integral").attr("Integral");
+  py::object set_module = py::module_::import("pyomo.core.base.set");
+  py::object reals = set_module.attr("Reals");
+  py::object nonnegative_reals = set_module.attr("NonNegativeReals");
+  py::object nonpositive_reals = set_module.attr("NonPositiveReals");
+  py::object integers = set_module.attr("Integers");
+  py::object nonnegative_integers = set_module.attr("NonNegativeIntegers");
+  py::object nonpositive_integers = set_module.attr("NonPositiveIntegers");
+  py::object binary = set_module.attr("Binary");
+  py::object percent_fraction = set_module.attr("PercentFraction");
+  py::object unit_interval = set_module.attr("UnitInterval");
   py::object builtins = py::module_::import("builtins");
   py::object id = builtins.attr("id");
   py::object len = builtins.attr("len");
@@ -568,3 +581,15 @@ std::vector<std::shared_ptr<Constant> > create_constants(int n_constants);
 std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::handle var_map, py::handle param_map, PyomoExprTypes& expr_types);
 std::vector<std::shared_ptr<ExpressionBase> > appsi_exprs_from_pyomo_exprs(py::list expr_list, py::dict var_map, py::dict param_map);
 py::tuple prep_for_repn(py::handle expr, PyomoExprTypes& expr_types);
+
+
+void process_pyomo_vars(PyomoExprTypes& expr_types,
+			py::list pyomo_vars,
+			py::dict var_map,
+			py::dict param_map,
+			py::dict var_attrs,
+			py::dict rev_var_map,
+			py::bool_ _set_name,
+			py::handle symbol_map,
+			py::handle labeler,
+			py::bool_ _update);

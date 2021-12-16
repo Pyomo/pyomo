@@ -20,7 +20,10 @@ from pyomo.core.expr.numvalue import (
     value, is_constant, is_fixed, native_numeric_types,
 )
 from pyomo.repn import generate_standard_repn
-
+from pyomo.core.base.set import (Reals, NonNegativeReals, NonPositiveReals,
+                                 Integers, NonNegativeIntegers, NonPositiveIntegers,
+                                 Binary, PercentFraction, UnitInterval)
+from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.contrib.appsi.base import (
     PersistentSolver, Results, TerminationCondition, MIPSolverConfig,
     PersistentBase, PersistentSolutionLoader
@@ -81,6 +84,24 @@ class GurobiResults(Results):
         super(GurobiResults, self).__init__()
         self.wallclock_time = None
         self.solution_loader = GurobiSolutionLoader(solver=solver)
+
+
+class _MutableLowerBound(object):
+    def __init__(self, expr):
+        self.var = None
+        self.expr = expr
+
+    def update(self):
+        self.var.setAttr('lb', value(self.expr))
+
+
+class _MutableUpperBound(object):
+    def __init__(self, expr):
+        self.var = None
+        self.expr = expr
+
+    def update(self):
+        self.var.setAttr('ub', value(self.expr))
 
 
 class _MutableLinearCoefficient(object):
@@ -200,6 +221,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._pyomo_sos_to_solver_sos_map = dict()
         self._range_constraints = OrderedSet()
         self._mutable_helpers = dict()
+        self._mutable_bounds = dict()
         self._mutable_quadratic_helpers = dict()
         self._mutable_objective = None
         self._needs_updated = True
@@ -208,6 +230,17 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._constraints_added_since_update = OrderedSet()
         self._vars_added_since_update = ComponentSet()
         self._last_results_object: Optional[GurobiResults] = None
+        self._domain_to_vtype_map = dict()
+        if gurobipy_available:
+            self._domain_to_vtype_map[id(Reals)] = (-gurobipy.GRB.INFINITY, gurobipy.GRB.INFINITY, gurobipy.GRB.CONTINUOUS)
+            self._domain_to_vtype_map[id(NonNegativeReals)] = (0, gurobipy.GRB.INFINITY, gurobipy.GRB.CONTINUOUS)
+            self._domain_to_vtype_map[id(NonPositiveReals)] = (-gurobipy.GRB.INFINITY, 0, gurobipy.GRB.CONTINUOUS)
+            self._domain_to_vtype_map[id(Integers)] = (-gurobipy.GRB.INFINITY, gurobipy.GRB.INFINITY, gurobipy.GRB.INTEGER)
+            self._domain_to_vtype_map[id(NonNegativeIntegers)] = (0, gurobipy.GRB.INFINITY, gurobipy.GRB.INTEGER)
+            self._domain_to_vtype_map[id(NonPositiveIntegers)] = (-gurobipy.GRB.INFINITY, 0, gurobipy.GRB.INTEGER)
+            self._domain_to_vtype_map[id(Binary)] = (0, 1, gurobipy.GRB.BINARY)
+            self._domain_to_vtype_map[id(PercentFraction)] = (0, 1, gurobipy.GRB.CONTINUOUS)
+            self._domain_to_vtype_map[id(UnitInterval)] = (0, 1, gurobipy.GRB.CONTINUOUS)
 
     def available(self):
         if self._available is None:
@@ -324,18 +357,28 @@ class Gurobi(PersistentBase, PersistentSolver):
         vtypes = list()
         lbs = list()
         ubs = list()
-        for var in variables:
+        mutable_lbs = dict()
+        mutable_ubs = dict()
+        for ndx, var in enumerate(variables):
             varname = self._symbol_map.getSymbol(var, self._labeler)
-            vtype = self._gurobi_vtype_from_var(var)
-            lb = value(var.lb)
-            ub = value(var.ub)
-            if lb is None:
-                lb = -gurobipy.GRB.INFINITY
-            if ub is None:
-                ub = gurobipy.GRB.INFINITY
-            if var.is_fixed():
-                lb = value(var.value)
-                ub = value(var.value)
+            _v, _lb, _ub, _fixed, _domain, _value = self._vars[id(var)]
+            lb, ub, vtype = self._domain_to_vtype_map[id(_domain)]
+            if _fixed:
+                lb = _value
+                ub = _value
+            else:
+                if _lb is not None:
+                    if not is_constant(_lb):
+                        mutable_bound = _MutableLowerBound(NPV_MaxExpression((_lb, lb)))
+                        mutable_lbs[ndx] = mutable_bound
+                        self._mutable_bounds[id(var), 'lb'] = (var, mutable_bound)
+                    lb = max(value(_lb), lb)
+                if _ub is not None:
+                    if not is_constant(_ub):
+                        mutable_bound = _MutableUpperBound(NPV_MinExpression((_ub, ub)))
+                        mutable_ubs[ndx] = mutable_bound
+                        self._mutable_bounds[id(var), 'ub'] = (var, mutable_bound)
+                    ub = min(value(_ub), ub)
             var_names.append(varname)
             vtypes.append(vtype)
             lbs.append(lb)
@@ -346,6 +389,10 @@ class Gurobi(PersistentBase, PersistentSolver):
         for ndx, pyomo_var in enumerate(variables):
             gurobi_var = gurobi_vars[ndx]
             self._pyomo_var_to_solver_var_map[id(pyomo_var)] = gurobi_var
+        for ndx, mutable_bound in mutable_lbs.items():
+            mutable_bound.var = gurobi_vars[ndx]
+        for ndx, mutable_bound in mutable_ubs.items():
+            mutable_bound.var = gurobi_vars[ndx]
         self._vars_added_since_update.update(variables)
         self._needs_updated = True
 
@@ -586,20 +633,27 @@ class Gurobi(PersistentBase, PersistentSolver):
             var_id = id(var)
             if var_id not in self._pyomo_var_to_solver_var_map:
                 raise ValueError('The Var provided to update_var needs to be added first: {0}'.format(var))
+            self._mutable_bounds.pop((var_id, 'lb'), None)
+            self._mutable_bounds.pop((var_id, 'ub'), None)
             gurobipy_var = self._pyomo_var_to_solver_var_map[var_id]
-            vtype = self._gurobi_vtype_from_var(var)
-            if var.is_fixed():
-                lb = var.value
-                ub = var.value
+            _v, _lb, _ub, _fixed, _domain, _value = self._vars[var_id]
+            lb, ub, vtype = self._domain_to_vtype_map[id(_domain)]
+            if _fixed:
+                lb = _value
+                ub = _value
             else:
-                lb = -gurobipy.GRB.INFINITY
-                ub = gurobipy.GRB.INFINITY
-                _lb = value(var.lb)
-                _ub = value(var.ub)
                 if _lb is not None:
-                    lb = _lb
+                    if not is_constant(_lb):
+                        mutable_bound = _MutableLowerBound(NPV_MaxExpression((_lb, lb)))
+                        mutable_bound.var = gurobipy_var
+                        self._mutable_bounds[var_id, 'lb'] = mutable_bound
+                    lb = max(value(_lb), lb)
                 if _ub is not None:
-                    ub = _ub
+                    if not is_constant(_ub):
+                        mutable_bound = _MutableUpperBound(NPV_MinExpression((_ub, ub)))
+                        mutable_bound.var = gurobipy_var
+                        self._mutable_bounds[var_id, 'ub'] = mutable_bound
+                    ub = min(value(_ub), ub)
             gurobipy_var.setAttr('lb', lb)
             gurobipy_var.setAttr('ub', ub)
             gurobipy_var.setAttr('vtype', vtype)
@@ -609,6 +663,8 @@ class Gurobi(PersistentBase, PersistentSolver):
         for con, helpers in self._mutable_helpers.items():
             for helper in helpers:
                 helper.update()
+        for k, (v, helper) in self._mutable_bounds.items():
+            helper.update()
 
         for con, helper in self._mutable_quadratic_helpers.items():
             if con in self._constraints_added_since_update:
@@ -636,22 +692,6 @@ class Gurobi(PersistentBase, PersistentSolver):
             else:
                 sense = gurobipy.GRB.MAXIMIZE
             self._solver_model.setObjective(new_gurobi_expr, sense=sense)
-
-    def _gurobi_vtype_from_var(self, var):
-        """
-        This function takes a pyomo variable and returns the appropriate gurobi variable type
-        :param var: pyomo.core.base.var.Var
-        :return: gurobipy.GRB.CONTINUOUS or gurobipy.GRB.BINARY or gurobipy.GRB.INTEGER
-        """
-        if var.is_binary():
-            vtype = gurobipy.GRB.BINARY
-        elif var.is_integer():
-            vtype = gurobipy.GRB.INTEGER
-        elif var.is_continuous():
-            vtype = gurobipy.GRB.CONTINUOUS
-        else:
-            raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
-        return vtype
 
     def _set_objective(self, obj):
         if obj is None:

@@ -19,6 +19,8 @@ PYBIND11_MODULE(appsi_cmodel, m)
   //m.def("ProfilerStart", &ProfilerStart);
   //m.def("ProfilerStop", &ProfilerStop);
   m.def("process_lp_constraints", &process_lp_constraints);
+  m.def("process_nl_constraints", &process_nl_constraints);
+  m.def("process_pyomo_vars", &process_pyomo_vars);
   m.def("create_vars", &create_vars);
   m.def("create_params", &create_params);
   m.def("create_constants", &create_constants);
