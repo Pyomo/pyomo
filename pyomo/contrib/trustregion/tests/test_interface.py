@@ -253,6 +253,8 @@ class TestTrustRegionInterface(unittest.TestCase):
         for var in self.interface.data.all_variables:
             self.assertIn(value(var), result)
 
+    @unittest.skipIf(not SolverFactory('ipopt').available(False),
+                     "The IPOPT solver is not available")
     def test_calculateFeasibility(self):
         # Set up necessary data objects
         self.interface.replaceExternalFunctionsWithVariables()
@@ -281,6 +283,8 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.assertEqual(feasibility, 0.09569982275514467)
         self.interface.data.basis_constraint.deactivate()
 
+    @unittest.skipIf(not SolverFactory('ipopt').available(False),
+                     "The IPOPT solver is not available")
     def test_calculateStepSizeInfNorm(self):
         # Set up necessary data objects
         self.interface.replaceExternalFunctionsWithVariables()
@@ -337,6 +341,8 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.assertEqual(step_norm, 0.13254909994294217)
         self.assertEqual(feasibility, 0.09509735734117808)
 
+    @unittest.skipIf(not SolverFactory('ipopt').available(False),
+                     "The IPOPT solver is not available")
     def test_initializeProblem(self):
         # Set starter values on the model
         self.interface.model.x[0] = 2.0
@@ -347,6 +353,8 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.assertTrue(self.interface.data.sm_constraint_basis.active)
         self.assertFalse(self.interface.data.basis_constraint.active)
 
+    @unittest.skipIf(not SolverFactory('ipopt').available(False),
+                     "The IPOPT solver is not available")
     def test_rejectStep(self):
         self.interface.model.x[1] = 1.5
         self.interface.model.x[0] = 2.0
