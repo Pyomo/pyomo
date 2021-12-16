@@ -646,13 +646,13 @@ class Gurobi(PersistentBase, PersistentSolver):
                     if not is_constant(_lb):
                         mutable_bound = _MutableLowerBound(NPV_MaxExpression((_lb, lb)))
                         mutable_bound.var = gurobipy_var
-                        self._mutable_bounds[var_id, 'lb'] = mutable_bound
+                        self._mutable_bounds[var_id, 'lb'] = (var, mutable_bound)
                     lb = max(value(_lb), lb)
                 if _ub is not None:
                     if not is_constant(_ub):
                         mutable_bound = _MutableUpperBound(NPV_MinExpression((_ub, ub)))
                         mutable_bound.var = gurobipy_var
-                        self._mutable_bounds[var_id, 'ub'] = mutable_bound
+                        self._mutable_bounds[var_id, 'ub'] = (var, mutable_bound)
                     ub = min(value(_ub), ub)
             gurobipy_var.setAttr('lb', lb)
             gurobipy_var.setAttr('ub', ub)
@@ -855,6 +855,8 @@ class Gurobi(PersistentBase, PersistentSolver):
         res = ComponentMap()
         if vars_to_load is None:
             vars_to_load = self._pyomo_var_to_solver_var_map.keys()
+        else:
+            vars_to_load = [id(v) for v in vars_to_load]
 
         gurobi_vars_to_load = [var_map[pyomo_var_id] for pyomo_var_id in vars_to_load]
         vals = self._solver_model.getAttr("Rc", gurobi_vars_to_load)

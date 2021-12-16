@@ -11,6 +11,7 @@ from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
 import os
+numpy, numpy_available = attempt_import('numpy')
 
 
 all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex), ('cbc', Cbc)]
@@ -54,6 +55,7 @@ fixed variables
 """
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
+@unittest.skipUnless(numpy_available, 'numpy is not available')
 class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
     def test_range_constraint(self, name: str, opt_class: Type[PersistentSolver]):
@@ -423,8 +425,9 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, 0.09227926676152151, 4)
 
     @parameterized.expand(input=all_solvers)
-    def test_fixed_vars(self, namee: str, opt_class: Type[PersistentSolver]):
+    def test_fixed_vars(self, name: str, opt_class: Type[PersistentSolver]):
         opt: PersistentSolver = opt_class()
+        opt.update_config.treat_fixed_vars_as_params = False
         if not opt.available():
             raise unittest.SkipTest
         m = pe.ConcreteModel()
@@ -457,6 +460,77 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 2)
+
+    @parameterized.expand(input=all_solvers)
+    def test_fixed_vars_2(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        opt.update_config.treat_fixed_vars_as_params = True
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.x.fix(0)
+        m.y = pe.Var()
+        a1 = 1
+        a2 = -1
+        b1 = 1
+        b2 = 2
+        m.obj = pe.Objective(expr=m.y)
+        m.c1 = pe.Constraint(expr=m.y >= a1 * m.x + b1)
+        m.c2 = pe.Constraint(expr=m.y >= a2 * m.x + b2)
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 2)
+        m.x.unfix()
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
+        self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
+        m.x.fix(0)
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 2)
+        m.x.value = 2
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 2)
+        self.assertAlmostEqual(m.y.value, 3)
+        m.x.value = 0
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 2)
+
+    @parameterized.expand(input=all_solvers)
+    def test_fixed_vars_3(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        opt.update_config.treat_fixed_vars_as_params = True
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.obj = pe.Objective(expr=m.x + m.y)
+        m.c1 = pe.Constraint(expr=m.x == 2 / m.y)
+        m.y.fix(1)
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 2)
+
+    @parameterized.expand(input=nlp_solvers)
+    def test_fixed_vars_4(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        opt.update_config.treat_fixed_vars_as_params = True
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.obj = pe.Objective(expr=m.x**2 + m.y**2)
+        m.c1 = pe.Constraint(expr=m.x == 2 / m.y)
+        m.y.fix(1)
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 2)
+        m.y.unfix()
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.x.value, 2**0.5)
+        self.assertAlmostEqual(m.y.value, 2**0.5)
 
     @parameterized.expand(input=all_solvers)
     def test_mutable_param_with_range(self, name: str, opt_class: Type[PersistentSolver]):
@@ -592,6 +666,131 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(m.x.value, 0.6529186341994245)
         self.assertAlmostEqual(m.y.value, -0.42630274815985264)
+
+    @parameterized.expand(input=all_solvers)
+    def test_with_numpy(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.obj = pe.Objective(expr=m.y)
+        a1 = 1
+        b1 = 3
+        a2 = -2
+        b2 = 1
+        m.c1 = pe.Constraint(expr=(numpy.float64(0), m.y - numpy.int64(1) * m.x - numpy.float32(3), None))
+        m.c2 = pe.Constraint(expr=(None, -m.y + numpy.int32(-2) * m.x + numpy.float64(1), numpy.float16(0)))
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
+        self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
+
+    @parameterized.expand(input=all_solvers)
+    def test_bounds_with_params(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.y = pe.Var()
+        m.p = pe.Param(mutable=True)
+        m.y.setlb(m.p)
+        m.p.value = 1
+        m.obj = pe.Objective(expr=m.y)
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.y.value, 1)
+        m.p.value = -1
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.y.value, -1)
+        m.y.setlb(None)
+        m.y.setub(m.p)
+        m.obj.sense = pe.maximize
+        m.p.value = 5
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.y.value, 5)
+        m.p.value = 4
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.y.value, 4)
+        m.y.setub(None)
+        m.y.setlb(m.p)
+        m.obj.sense = pe.minimize
+        m.p.value = 3
+        res = opt.solve(m)
+        self.assertAlmostEqual(m.y.value, 3)
+
+    @parameterized.expand(input=all_solvers)
+    def test_solution_loader(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(1, None))
+        m.y = pe.Var()
+        m.obj = pe.Objective(expr=m.y)
+        m.c1 = pe.Constraint(expr=(0, m.y - m.x, None))
+        m.c2 = pe.Constraint(expr=(0, m.y - m.x + 1, None))
+        opt.config.load_solution = False
+        res = opt.solve(m)
+        self.assertIsNone(m.x.value)
+        self.assertIsNone(m.y.value)
+        res.solution_loader.load_vars()
+        self.assertAlmostEqual(m.x.value, 1)
+        self.assertAlmostEqual(m.y.value, 1)
+        m.x.value = None
+        m.y.value = None
+        res.solution_loader.load_vars([m.y])
+        self.assertIsNone(m.x.value)
+        self.assertAlmostEqual(m.y.value, 1)
+        primals = res.solution_loader.get_primals()
+        self.assertIn(m.x, primals)
+        self.assertIn(m.y, primals)
+        self.assertAlmostEqual(primals[m.x], 1)
+        self.assertAlmostEqual(primals[m.y], 1)
+        primals = res.solution_loader.get_primals([m.y])
+        self.assertNotIn(m.x, primals)
+        self.assertIn(m.y, primals)
+        self.assertAlmostEqual(primals[m.y], 1)
+        reduced_costs = res.solution_loader.get_reduced_costs()
+        self.assertIn(m.x, reduced_costs)
+        self.assertIn(m.y, reduced_costs)
+        self.assertAlmostEqual(reduced_costs[m.x], 1)
+        self.assertAlmostEqual(reduced_costs[m.y], 0)
+        reduced_costs = res.solution_loader.get_reduced_costs([m.y])
+        self.assertNotIn(m.x, reduced_costs)
+        self.assertIn(m.y, reduced_costs)
+        self.assertAlmostEqual(reduced_costs[m.y], 0)
+        duals = res.solution_loader.get_duals()
+        self.assertIn(m.c1, duals)
+        self.assertIn(m.c2, duals)
+        self.assertAlmostEqual(duals[m.c1], 1)
+        self.assertAlmostEqual(duals[m.c2], 0)
+        duals = res.solution_loader.get_duals([m.c1])
+        self.assertNotIn(m.c2, duals)
+        self.assertIn(m.c1, duals)
+        self.assertAlmostEqual(duals[m.c1], 1)
+
+    @parameterized.expand(input=all_solvers)
+    def test_time_limit(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        if type(opt) is Cbc:
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.a = pe.Set(initialize=list(range(100)))
+        m.x = pe.Var(m.a)
+        m.y = pe.Var(m.a)
+        m.obj = pe.Objective(expr=sum(m.y.values()))
+        m.c1 = pe.Constraint(m.a)
+        m.c2 = pe.Constraint(m.a)
+        for i in m.a:
+            m.c1[i] = m.y[i] >= -m.x[i]
+            m.c2[i] = m.y[i] >= m.x[i]
+        opt.config.time_limit = 1e-6
+        opt.config.load_solution = False
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.maxTimeLimit)
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
