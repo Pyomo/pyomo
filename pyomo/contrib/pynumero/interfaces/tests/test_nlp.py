@@ -39,7 +39,7 @@ def create_pyomo_model1():
 
     xb = dict()
     xb[1] = (-1,1)
-    xb[2] = (-np.inf,2)
+    xb[2] = (2,2)
     xb[3] = (-3,np.inf)
     xb[4] = (-np.inf, np.inf)
     xb[5] = (-5,5)
@@ -104,7 +104,7 @@ def execute_extended_nlp_interface(self, anlp):
     self.assertEqual(anlp.nnz_jacobian_ineq(), 7*9)
     self.assertEqual(anlp.nnz_hessian_lag(), 9*9)
 
-    expected_primals_lb = np.asarray([-1, -np.inf, -3, -np.inf, -5, -np.inf, -7, -np.inf, -9], dtype=np.float64)
+    expected_primals_lb = np.asarray([-1, 2, -3, -np.inf, -5, -np.inf, -7, -np.inf, -9], dtype=np.float64)
     expected_primals_ub = np.asarray([1, 2, np.inf, np.inf, 5, 6, np.inf, np.inf, 9], dtype=np.float64)
     self.assertTrue(np.array_equal(expected_primals_lb, anlp.primals_lb()))
     self.assertTrue(np.array_equal(expected_primals_ub, anlp.primals_ub()))
@@ -625,6 +625,19 @@ class TestPyomoNLP(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             nlp = PyomoNLP(m)
 
+    def test_invalid_bounds(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var([1, 2, 3], domain=pyo.NonNegativeReals)
+        for i in m.x:
+            m.x[i].ub = i-2
+            m.x[i].value = i
+        m.i3 = pyo.Constraint(expr=m.x[2] + m.x[3] + m.x[1] >= -500.0)
+        m.obj = pyo.Objective(expr=m.x[2]**2)
+        with self.assertRaisesRegex(
+                RuntimeError, "Some variables have lower bounds that "
+                "are greater than the upper bounds"):
+            nlp = PyomoNLP(m)
+
 class TestUtils(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -645,7 +658,7 @@ class TestUtils(unittest.TestCase):
         # test build_bounds_mask - should be the same as above
         self.assertTrue(np.array_equal(full_to_compressed_mask, build_bounds_mask(anlp.primals_lb())))
 
-        expected_compressed_primals_lb = np.asarray([-1, -3, -5, -7, -9], dtype=np.float64)
+        expected_compressed_primals_lb = np.asarray([-1, 2, -3, -5, -7, -9], dtype=np.float64)
 
         # test build_compression_matrix
         C = build_compression_matrix(full_to_compressed_mask)
@@ -662,7 +675,7 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(np.array_equal(expected_compressed_primals_lb, compressed_primals_lb))
         
         # test compressed_to_full
-        expected_full_primals_lb = np.asarray([-1, -np.inf, -3, -np.inf, -5, -np.inf, -7, -np.inf, -9], dtype=np.float64)
+        expected_full_primals_lb = np.asarray([-1, 2, -3, -np.inf, -5, -np.inf, -7, -np.inf, -9], dtype=np.float64)
         full_primals_lb = compressed_to_full(compressed_primals_lb, full_to_compressed_mask, default=-np.inf)
         self.assertTrue(np.array_equal(expected_full_primals_lb, full_primals_lb))
         # test in place
@@ -672,13 +685,13 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(np.array_equal(expected_full_primals_lb, full_primals_lb))
 
         # test no default
-        expected_full_primals_lb = np.asarray([-1, np.nan, -3, np.nan, -5, np.nan, -7, np.nan, -9], dtype=np.float64)
+        expected_full_primals_lb = np.asarray([-1, 2, -3, np.nan, -5, np.nan, -7, np.nan, -9], dtype=np.float64)
         full_primals_lb = compressed_to_full(compressed_primals_lb, full_to_compressed_mask)
         print(expected_full_primals_lb)
         print(full_primals_lb)
         np.testing.assert_array_equal(expected_full_primals_lb, full_primals_lb)
         # test in place no default
-        expected_full_primals_lb = np.asarray([-1, 0.0, -3, 0.0, -5, 0.0, -7, 0.0, -9], dtype=np.float64)
+        expected_full_primals_lb = np.asarray([-1, 2, -3, 0.0, -5, 0.0, -7, 0.0, -9], dtype=np.float64)
         full_primals_lb.fill(0.0)
         ret = compressed_to_full(compressed_primals_lb, full_to_compressed_mask, out=full_primals_lb)
         self.assertTrue(ret is full_primals_lb)

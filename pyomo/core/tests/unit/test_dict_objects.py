@@ -357,8 +357,10 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
 
 class TestVarDict(_TestComponentDictBase,
                   unittest.TestCase):
+    # Note: the updated _GeneralVarData class only takes an optional
+    # parent argument (you no longer pass the domain in)
     _ctype = VarDict
-    _cdatatype = _GeneralVarData
+    _cdatatype = lambda self, arg: _GeneralVarData()
     def setUp(self):
         _TestComponentDictBase.setUp(self)
         self._arg = lambda: Reals

@@ -672,6 +672,19 @@ class SliceComponentDataAlongSets(unittest.TestCase):
         
         return m
 
+    def test_with_tuple_of_sets(self):
+        m = pyo.ConcreteModel()
+        m.s1 = pyo.Set(initialize=[1, 2, 3])
+        m.s2 = pyo.Set(initialize=[1, 2, 3])
+        m.v = pyo.Var(m.s1, m.s2)
+        sets = (m.s1,)
+        slice_ = slice_component_along_sets(m.v[1, 2], sets)
+
+        # These tests are essentially the same, but we run the CUID test
+        # first as it gives a nicer error message.
+        self.assertEqual(str(pyo.ComponentUID(slice_)), "v[*,2]")
+        self.assertEqual(slice_, m.v[:, 2])
+
     def test_no_context(self):
         m = self.model()
         
@@ -788,6 +801,26 @@ class SliceComponentDataAlongSets(unittest.TestCase):
         sets = ComponentSet((m.d_none,))
         _slice = slice_component_along_sets(comp, sets, context=context)
         self.assertEqual(_slice, m.b.bn[...,'a',1].vn[1,...,'b',2])
+
+
+class TestCUID(unittest.TestCase):
+
+    def test_cuid_of_slice(self):
+        m = pyo.ConcreteModel()
+        m.s1 = pyo.Set(initialize=["a", "b"])
+        m.s2 = pyo.Set(initialize=["c", "d"])
+        m.b = pyo.Block(m.s1)
+        for i in m.s1:
+            m.b[i].v = pyo.Var(m.s2)
+        slice_ = slice_component_along_sets(m.b["a"].v["c"], ComponentSet((m.s1,)))
+        cuid = pyo.ComponentUID(slice_)
+        self.assertEqual(str(cuid), "b[*].v[c]")
+
+        slice_ = slice_component_along_sets(
+            m.b["a"].v[("c",)], ComponentSet((m.s1,))
+        )
+        cuid = pyo.ComponentUID(slice_)
+        self.assertEqual(str(cuid), "b[*].v[c]")
 
 
 if __name__ == '__main__':

@@ -16,7 +16,7 @@ from pyomo.common.collections import (
 from pyomo.core.base.set import SetOf, OrderedSetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.indexed_component import (
-    IndexedComponent, UnindexedComponent_set
+    IndexedComponent, UnindexedComponent_set, normalize_index
 )
 from pyomo.core.base.indexed_component_slice import (
     IndexedComponent_slice, _IndexedComponent_slice_iter
@@ -199,8 +199,16 @@ class _ReferenceDict(MutableMapping):
                 if _iter.get_last_index_wildcards() == key:
                     return True
             return False
-        except (StopIteration, LookupError):
+        except StopIteration:
             return False
+        except LookupError as e:
+            if normalize_index.flatten:
+                return False
+            try:
+                next(self._get_iter(self._slice, (key,)))
+                return True
+            except LookupError:
+                return False
 
     def __getitem__(self, key):
         try:
@@ -339,10 +347,12 @@ class _ReferenceDict(MutableMapping):
         # This is how this object does lookups.
         if key.__class__ not in (tuple, list):
             key = (key,)
+        if normalize_index.flatten:
+            key = flatten_tuple(key)
         return _IndexedComponent_slice_iter(
             _slice,
-            _fill_in_known_wildcards(flatten_tuple(key),
-                                     get_if_not_present=get_if_not_present)
+            _fill_in_known_wildcards(
+                key, get_if_not_present=get_if_not_present)
         )
 
 
@@ -357,7 +367,7 @@ class _ReferenceDict_mapping(UserDict):
 class _ReferenceSet(collections_Set):
     """A set-like object whose values are defined by a slice.
 
-    This implements a dict-like object whose members are defined by a
+    This implements a set-like object whose members are defined by a
     component slice (:py:class:`IndexedComponent_slice`).
     :py:class:`_ReferenceSet` differs from the
     :py:class:`_ReferenceDict` above in that it looks in the underlying
@@ -398,11 +408,16 @@ class _ReferenceSet(collections_Set):
     def _get_iter(self, _slice, key):
         if key.__class__ not in (tuple, list):
             key = (key,)
+        if normalize_index.flatten:
+            key = flatten_tuple(key)
         return _IndexedComponent_slice_iter(
             _slice,
-            _fill_in_known_wildcards(flatten_tuple(key), look_in_index=True),
+            _fill_in_known_wildcards(key, look_in_index=True),
             iter_over_index=True
         )
+
+    def __str__(self):
+        return "ReferenceSet(%s)" % (self._slice,)
 
 
 def _identify_wildcard_sets(iter_stack, index):
@@ -430,7 +445,8 @@ def _identify_wildcard_sets(iter_stack, index):
             wildcard_sets = {}
             # `wildcard_sets` maps position in the current level's
             # "subsets list" to its set if that set is a wildcard.
-            for j, s in enumerate(level.component.index_set().subsets()):
+            for j, s in enumerate(level.component.index_set().subsets(
+                    expand_all_set_operators=False)):
                 # Iterate over the sets that could possibly be wildcards
                 if s is UnindexedComponent_set:
                     wildcard_sets[j] = s
@@ -556,7 +572,7 @@ def Reference(reference, ctype=_NotSpecified):
         ...
         >>> m.r1 = Reference(m.b[:,:].x)
         >>> m.r1.pprint()
-        r1 : Size=4, Index=r1_index
+        r1 : Size=4, Index=r1_index, ReferenceTo=b[:, :].x
             Key    : Lower : Value : Upper : Fixed : Stale : Domain
             (1, 3) :     1 :  None :     3 : False :  True :  Reals
             (1, 4) :     1 :  None :     4 : False :  True :  Reals
@@ -569,7 +585,7 @@ def Reference(reference, ctype=_NotSpecified):
 
         >>> m.r2 = Reference(m.b[:,3].x)
         >>> m.r2.pprint()
-        r2 : Size=2, Index=b_index_0
+        r2 : Size=2, Index=b_index_0, ReferenceTo=b[:, 3].x
             Key : Lower : Value : Upper : Fixed : Stale : Domain
               1 :     1 :  None :     3 : False :  True :  Reals
               2 :     2 :  None :     3 : False :  True :  Reals
@@ -579,7 +595,6 @@ def Reference(reference, ctype=_NotSpecified):
 
     .. doctest::
 
-        >>> from pyomo.environ import *
         >>> m = ConcreteModel()
         >>> @m.Block([1,2])
         ... def b(b,i):
@@ -587,7 +602,7 @@ def Reference(reference, ctype=_NotSpecified):
         ...
         >>> m.r3 = Reference(m.b[:].x[:])
         >>> m.r3.pprint()
-        r3 : Size=4, Index=r3_index
+        r3 : Size=4, Index=r3_index, ReferenceTo=b[:].x[:]
             Key    : Lower : Value : Upper : Fixed : Stale : Domain
             (1, 3) :     1 :  None :  None : False :  True :  Reals
             (1, 4) :     1 :  None :  None : False :  True :  Reals
@@ -616,6 +631,29 @@ def Reference(reference, ctype=_NotSpecified):
         index = None
     elif isinstance(reference, Component):
         reference = reference[...]
+        _data = _ReferenceDict(reference)
+        _iter = iter(reference)
+        slice_idx = []
+        index = None
+    elif isinstance(reference, ComponentData):
+        # Create a dummy IndexedComponent container with a "normal"
+        # Scalar interface.  This relies on the assumption that the
+        # Component uses a standard storage model.
+        _idx = next(iter(UnindexedComponent_set))
+        _parent = reference.parent_component()
+        comp = _parent.__class__(SetOf(UnindexedComponent_set))
+        comp.construct()
+        comp._data[_idx] = reference
+        #
+        # HACK: Set the _parent to match the ComponentData's container's
+        # parent so that block.clone() infers the correct block scope
+        # for this "hidden" component
+        #
+        # TODO: When Block supports proper "hidden" / "anonymous"
+        # components, switch this HACK over to that API
+        comp._parent = _parent._parent
+        #
+        reference = comp[...]
         _data = _ReferenceDict(reference)
         _iter = iter(reference)
         slice_idx = []

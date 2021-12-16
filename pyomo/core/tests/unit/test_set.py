@@ -39,7 +39,7 @@ from pyomo.core.base.set import (
     Integers, PositiveIntegers, NegativeIntegers,
     NonNegativeIntegers,
     Set,
-    SetOf, OrderedSetOf, UnorderedSetOf,
+    SetOf, OrderedSetOf, FiniteSetOf, InfiniteSetOf,
     RangeSet, _FiniteRangeSetData, _InfiniteRangeSetData,
     FiniteScalarRangeSet, InfiniteScalarRangeSet,
     AbstractFiniteScalarRangeSet,
@@ -829,9 +829,29 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(i, j)
 
         i = SetOf({1,2,3})
-        self.assertIs(type(i), UnorderedSetOf)
-        j = UnorderedSetOf([1,2,3])
-        self.assertIs(type(i), UnorderedSetOf)
+        self.assertIs(type(i), FiniteSetOf)
+        j = FiniteSetOf([1,2,3])
+        self.assertIs(type(i), FiniteSetOf)
+        self.assertEqual(i, j)
+
+        i = SetOf(NonNegativeReals)
+        self.assertIs(type(i), InfiniteSetOf)
+        j = InfiniteSetOf(NonNegativeReals)
+        self.assertIs(type(i), InfiniteSetOf)
+        self.assertEqual(i, j)
+
+        i = SetOf(Binary)
+        self.assertIs(type(i), OrderedSetOf)
+        j = OrderedSetOf(Binary)
+        self.assertIs(type(i), OrderedSetOf)
+        self.assertEqual(i, j)
+
+        I = Set(initialize={1,3,2}, ordered=False)
+        I.construct()
+        i = SetOf(I)
+        self.assertIs(type(i), FiniteSetOf)
+        j = FiniteSetOf(I)
+        self.assertIs(type(i), FiniteSetOf)
         self.assertEqual(i, j)
 
         i = RangeSet(3)
@@ -879,6 +899,21 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 ValueError, "RangeSet does not support unbounded ranges "
                 "with a non-integer step"):
             RangeSet(0,None,0.5)
+
+        with LoggingIntercept() as LOG:
+            m = ConcreteModel()
+            m.p = Param(initialize=5, mutable=False)
+            m.I = RangeSet(0, m.p)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(RangeSet(0,5,1), m.I)
+
+        with LoggingIntercept() as LOG:
+            m = ConcreteModel()
+            m.p = Param(initialize=5, mutable=True)
+            m.I = RangeSet(0, m.p)
+        self.assertIn("Constructing RangeSet 'I' from non-constant data",
+                      LOG.getvalue())
+        self.assertEqual(RangeSet(0,5,1), m.I)
 
         class _AlmostNumeric(object):
             def __init__(self, val):
@@ -1615,6 +1650,13 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(SetOf([1,2,3]).dimen, 1)
         self.assertEqual(SetOf([(1,2),(2,3),(4,5)]).dimen, 2)
         self.assertEqual(SetOf([1,(2,3)]).dimen, None)
+
+        self.assertEqual(SetOf(Integers).dimen, 1)
+        self.assertEqual(SetOf(Binary).dimen, 1)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[(1,2), (3,4)])
+        self.assertEqual(SetOf(m.I).dimen, 2)
 
         a = [1,2,3,'abc']
         SetOf_a = SetOf(a)
@@ -2857,7 +2899,7 @@ A : Size=1, Index=None, Ordered=True
         ref="""
 J : Size=1, Index=None, Ordered=False
     Key  : Dimen : Domain  : Size : Members
-    None :     2 : Reals*I :  Inf : <[None..None], ([1], [2], [3])>
+    None :     2 : Reals*I :  Inf : <[-inf..inf], ([1], [2], [3])>
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -3530,10 +3572,21 @@ class TestSet(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=(1,3,2,4))
+        self.assertTrue(m.I._init_values.constant())
         self.assertEqual(list(m.I), [1,3,2,4])
         self.assertEqual(list(reversed(m.I)), [4,2,3,1])
         self.assertEqual(m.I.data(), (1,3,2,4))
         self.assertEqual(m.I.dimen, 1)
+
+        m = ConcreteModel()
+        with self.assertRaisesRegex(
+                ValueError, 'Set rule or initializer returned None'):
+            m.I = Set(initialize=lambda m: None, dimen=2)
+        self.assertTrue(m.I._init_values.constant())
+        self.assertEqual(list(m.I), [])
+        self.assertEqual(list(reversed(m.I)), [])
+        self.assertEqual(m.I.data(), ())
+        self.assertIs(m.I.dimen, 2)
 
         def I_init(m):
             yield 1
@@ -3612,6 +3665,13 @@ class TestSet(unittest.TestCase):
             ref = ("Initializer for Set I returned non-iterable object "
                    "of type int.")
             self.assertIn(ref, output.getvalue())
+
+    def test_scalar_indexed_api(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=range(3))
+        self.assertEqual(list(m.I.keys()), [None])
+        self.assertEqual(list(m.I.values()), [m.I])
+        self.assertEqual(list(m.I.items()), [(None, m.I)])
 
     def test_insertion_deletion(self):
         def _verify(_s, _l):
@@ -4230,7 +4290,7 @@ class TestSet(unittest.TestCase):
         None :     2 :    Any :    2 : {(3, 4), (1, 2)}
     M : Size=1, Index=None, Ordered=False
         Key  : Dimen : Domain            : Size : Members
-        None :     1 : Reals - M_index_1 :  Inf : ([None..0) | (0..None])
+        None :     1 : Reals - M_index_1 :  Inf : ([-inf..0) | (0..inf])
     N : Size=1, Index=None, Ordered=False
         Key  : Dimen : Domain           : Size : Members
         None :     1 : Integers - Reals :  Inf :      []

@@ -25,7 +25,7 @@ import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import yaml_available
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr import current as EXPR
-from pyomo.environ import RangeSet, ConcreteModel, Var, Param, Block, AbstractModel, Set, Constraint, Objective, value, sum_product, SolverFactory, VarList, ObjectiveList, ConstraintList
+from pyomo.environ import RangeSet, ConcreteModel, Var, Param, Block, AbstractModel, Set, Constraint, Objective, value, sum_product, SolverFactory, VarList, ObjectiveList, ConstraintList, Model
 from pyomo.opt import check_available_solvers
 from pyomo.opt.parallel.local import SolverManager_Serial
 
@@ -879,10 +879,10 @@ class Test(unittest.TestCase):
                           ['y','I','x','c'] )
         self.assertEqual( len(list(EXPR.identify_variables(instance.c.body))), 3 )
 
-    def test_error1(self):
-        model = ConcreteModel()
-        model.x = Var()
-        instance = model.create_instance()
+    def test_error_creating_model_baseclass(self):
+        with self.assertRaisesRegex(
+                TypeError, "Directly creating the 'Model' class is not allowed.  Please use the AbstractModel or ConcreteModel class instead."):
+            m = Model()
 
 if __name__ == "__main__":
     unittest.main()

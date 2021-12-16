@@ -88,6 +88,9 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
                                       "No-good cuts are added and GOA algorithm doesn't converge within the time limit. "
                                       'No integer solution is found, so the cplex solver will report an error status. ')
         return None, None
+    if config.solution_pool:
+        main_mip_results._solver_model = mainopt._solver_model
+        main_mip_results._pyomo_var_to_solver_var_map = mainopt._pyomo_var_to_solver_var_map
     if main_mip_results.solver.termination_condition is tc.optimal:
         if config.single_tree and not config.add_no_good_cuts and not regularization_problem:
             if solve_data.objective_sense == minimize:
@@ -194,8 +197,9 @@ def handle_main_optimal(main_mip, solve_data, config, update_bound=True):
     for var in MindtPy.discrete_variable_list:
         if var.value is None:
             config.logger.warning(
-                "Integer variable {} not initialized. It is set to it's lower bound".format(var.name))
-            var.value = var.lb  # nlp_var.bounds[0]
+                f"Integer variable {var.name} not initialized.  "
+                "Setting it to its lower bound")
+            var.set_value(var.lb, skip_validation=True)  # nlp_var.bounds[0]
     # warm start for the nlp subproblem
     copy_var_list_values(
         main_mip.MindtPy_utils.variable_list,

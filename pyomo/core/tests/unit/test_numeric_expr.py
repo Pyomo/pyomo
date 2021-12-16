@@ -25,11 +25,19 @@ import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from io import StringIO
 
-from pyomo.environ import ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint, ConstraintList, Expression, Objective, Reals, ExternalFunction, PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos, asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value, quicksum, sum_product, is_fixed, is_constant
+from pyomo.environ import (
+    ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint,
+    ConstraintList, Expression, Objective, Reals, ExternalFunction,
+    PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos,
+    asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value,
+    quicksum, sum_product, is_fixed, is_constant
+)
 from pyomo.kernel import variable, expression, objective
-from pyomo.core.expr.numvalue import (NumericConstant, as_numeric,
-                                      native_numeric_types,
-                                      is_potentially_variable, polynomial_degree)
+
+from pyomo.core.expr.numvalue import (
+    NumericConstant, as_numeric, native_numeric_types,
+    is_potentially_variable, polynomial_degree
+)
 from pyomo.core.expr.numeric_expr import (
     ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
     ProductExpression, NegationExpression, linear_expression,
@@ -38,7 +46,7 @@ from pyomo.core.expr.numeric_expr import (
     NPV_PowExpression, NPV_DivisionExpression,
     decompose_term, clone_counter, nonlinear_expression,
     _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms,
-    LinearDecompositionError,
+    LinearDecompositionError, MaxExpression, MinExpression,
 )
 import pyomo.core.expr.logical_expr as logical_expr
 from pyomo.common.errors import PyomoException
@@ -2676,11 +2684,11 @@ class TestExprConditionalContext(unittest.TestCase):
         try:
             if expr:
                 if expectedValue != True:
-                    self.fail("__nonzero__ returned the wrong condition value"
+                    self.fail("__bool__ returned the wrong condition value"
                               " (expected %s)" % expectedValue)
             else:
                 if expectedValue != False:
-                    self.fail("__nonzero__ returned the wrong condition value"
+                    self.fail("__bool__ returned the wrong condition value"
                               " (expected %s)" % expectedValue)
             if expectedValue is None:
                 self.fail("Expected ValueError because component was undefined")
@@ -2691,12 +2699,13 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_immutable_paramConditional(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
-        #
-        try:
+        # Immutable Params appear mutable (non-constant) before they are
+        # constructed
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(model.p > 0, True)
-            self.fail("Expected PyomoException because the parameter is unconstructed.")
-        except PyomoException:
-            pass
         #self.checkCondition(model.p >= 0, True)
         #self.checkCondition(model.p < 1, True)
         #self.checkCondition(model.p <= 1, True)
@@ -2706,11 +2715,11 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         # Inequalities evaluate normally when the parameter is initialized
         #
-        try:
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(model.p > 0, True)
-            self.fail("Expected PyomoException because the parameter is unconstructed.")
-        except PyomoException:
-            pass
         #self.checkCondition(model.p >= 0, True)
         #self.checkCondition(model.p < 1, True)
         #self.checkCondition(model.p <= 1, True)
@@ -2731,18 +2740,32 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_immutable_paramConditional_reversed(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
-        #
-        # TODO: Inequalities evaluate True when the parameter is unconstructed?
-        #
-        with self.assertRaises(PyomoException):
+        # Immutable Params appear mutable (non-constant) before they are
+        # constructed
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(0 < model.p, True)
-        with self.assertRaises(PyomoException):
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <=  p\) to bool."):
             self.checkCondition(0 <= model.p, True)
-        with self.assertRaises(PyomoException):
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(p  <  1\) to bool."):
             self.checkCondition(1 > model.p, True)
-        with self.assertRaises(PyomoException):
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(p  <=  1\) to bool."):
             self.checkCondition(1 >= model.p, True)
-        with self.assertRaises(PyomoException):
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  ==  p\) to bool."):
             self.checkCondition(0 == model.p, None)
         self.checkCondition(0 < model.p, True, use_value=True)
         self.checkCondition(0 <= model.p, True, use_value=True)
@@ -2771,12 +2794,13 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_immutable_paramConditional_reversed(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
-        #
-        try:
+        # Immutable Params appear mutable (non-constant) before they are
+        # constructed
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(0 < model.p, True)
-            self.fail("Expected PyomoException because the parameter value is being accessed before it is constructed.")
-        except PyomoException:
-            pass
         #self.checkCondition(0 <= model.p, True)
         #self.checkCondition(1 > model.p, True)
         #self.checkCondition(1 >= model.p, True)
@@ -2801,11 +2825,11 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=True)
         #
-        try:
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(model.p > 0, True)
-            self.fail("Expected PyomoException because the parameter value is being accessed before it is constructed.")
-        except PyomoException:
-            pass
         #self.checkCondition(model.p >= 0, True)
         #self.checkCondition(model.p < 1, True)
         #self.checkCondition(model.p <= 1, True)
@@ -2847,11 +2871,11 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=True)
         #
-        try:
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(0 < model.p, True)
-            self.fail("Expected PyomoException because the parameter value is being accessed before it is constructed.")
-        except PyomoException:
-            pass
         #self.checkCondition(0 <= model.p, True)
         #self.checkCondition(1 > model.p, True)
         #self.checkCondition(1 >= model.p, True)
@@ -2893,11 +2917,11 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        try:
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  v\) to bool."):
             self.checkCondition(model.v > 0, True)
-            self.fail("Expected ValueError because the variable value is being accessed before it is constructed.")
-        except:
-            pass
         #self.checkCondition(model.v >= 0, True)
         #self.checkCondition(model.v < 1, True)
         #self.checkCondition(model.v <= 1, True)
@@ -2942,11 +2966,10 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        try:
+        with self.assertRaisesRegex(
+                PyomoException, r"Cannot convert non-constant Pyomo "
+                r"expression \(0  <  v\) to bool."):
             self.checkCondition(0 < model.v, True)
-            self.fail("Expected PyomoException because the variable value is being accessed before it is constructed.")
-        except:
-            pass
         #self.checkCondition(0 <= model.v, True)
         #self.checkCondition(1 > model.v, True)
         #self.checkCondition(1 >= model.v, True)
@@ -2991,33 +3014,29 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        # The value() function generates an exception when the variable is unconstructed!
+        # The value() function generates an exception when the variable
+        # is unconstructed!
         #
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v) > 0, None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v) >= 0, None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v) < 1, None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v) <= 1, None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v) == 0, None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
 
         instance = model.create_instance()
         #
@@ -3038,33 +3057,29 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        # The value() function generates an exception when the variable is unconstructed!
+        # The value() function generates an exception when the variable
+        # is unconstructed!
         #
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(0 < value(model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(0 <= value(model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(1 > value(model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(1 >= value(model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(0 == value(model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
 
         instance = model.create_instance()
         #
@@ -3085,23 +3100,21 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        # The value() function generates an exception when the variable is unconstructed!
+        # The value() function generates an exception when the variable
+        # is unconstructed!
         #
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v > 0), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v >= 0), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v == 0), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
 
         instance = model.create_instance()
         self.checkCondition(value(instance.v > 0), True)
@@ -3117,21 +3130,18 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         # The value() function generates an exception when the variable is unconstructed!
         #
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(0 < model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(0 <= model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(0 == model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
 
         instance = model.create_instance()
         #
@@ -3151,13 +3161,13 @@ class TestPolynomialDegree(unittest.TestCase):
         # This class tests the Pyomo 5.x expression trees
         def d_fn(model):
             return model.c+model.c
-        self.model = AbstractModel()
+        self.model = ConcreteModel()
         self.model.a = Var(initialize=1.0)
         self.model.b = Var(initialize=2.0)
         self.model.c = Param(initialize=0, mutable=True)
         self.model.d = Param(initialize=d_fn, mutable=True)
         self.model.e = Param(mutable=True)
-        self.instance = self.model.create_instance()
+        self.instance = self.model
 
     def tearDown(self):
         self.model = None
@@ -3451,7 +3461,7 @@ class TestPolynomialDegree(unittest.TestCase):
         expr = Expr_if(m.e,1,0)
         self.assertEqual(expr.polynomial_degree(), 0)
         #
-        # A nonconstant expression has degree if both arguments have the
+        # A non-constant expression has degree if both arguments have the
         # same degree, as long as the IF is fixed (even if it is not
         # defined)
         #
@@ -3460,7 +3470,7 @@ class TestPolynomialDegree(unittest.TestCase):
         expr = Expr_if(m.e,5*m.b,1+m.b)
         self.assertEqual(expr.polynomial_degree(), 1)
         #
-        # A nonconstant expression has degree None because
+        # A non-constant expression has degree None because
         # m.e is an uninitialized parameter
         #
         expr = Expr_if(m.e,m.b,0)
@@ -4790,6 +4800,43 @@ class TestNonlinearExpression(unittest.TestCase):
             e += e_
             self.assertIs(e.__class__, _MutableSumExpression)
             self.assertEqual(e.nargs(), 2)
+
+class TestMinMaxExpression(unittest.TestCase):
+    def test_max_expression(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=5)
+        m.y = Param(initialize=3)
+        e = MaxExpression((4, m.x, m.y))
+        self.assertTrue(e.is_potentially_variable())
+        self.assertEqual(e.nargs(), 3)
+        self.assertEqual(value(e), 5)
+        self.assertEqual(e.to_string(), "max(4, x, y)")
+        self.assertEqual(e.polynomial_degree(), None)
+
+        e = MaxExpression((MaxExpression((10, 20)), MaxExpression((m.x, m.y))))
+        self.assertTrue(e.is_potentially_variable())
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(value(e), 20)
+        self.assertEqual(e.to_string(), "max(max(10, 20), max(x, y))")
+        self.assertEqual(e.polynomial_degree(), None)
+
+    def test_min_expression(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=5)
+        m.y = Param(initialize=3)
+        e = MinExpression((4, m.x, m.y))
+        self.assertTrue(e.is_potentially_variable())
+        self.assertEqual(e.nargs(), 3)
+        self.assertEqual(value(e), 3)
+        self.assertEqual(e.to_string(), "min(4, x, y)")
+        self.assertEqual(e.polynomial_degree(), None)
+
+        e = MinExpression((MinExpression((10, 20)), MinExpression((m.x, m.y))))
+        self.assertTrue(e.is_potentially_variable())
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(value(e), 3)
+        self.assertEqual(e.to_string(), "min(min(10, 20), min(x, y))")
+        self.assertEqual(e.polynomial_degree(), None)
 
 
 #

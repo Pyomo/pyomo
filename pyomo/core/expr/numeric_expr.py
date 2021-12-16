@@ -18,7 +18,7 @@ from itertools import islice
 logger = logging.getLogger('pyomo.core')
 
 from math import isclose
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import deprecation_warning
 
 from .expr_common import (
     _add, _sub, _mul, _div,
@@ -32,6 +32,8 @@ from .numvalue import (
     native_numeric_types,
     as_numeric,
     value,
+    is_potentially_variable,
+    is_constant,
 )
 
 from .visitor import (
@@ -190,18 +192,6 @@ class ExpressionBase(NumericValue):
         for i in ExpressionBase.__slots__:
            state[i] = getattr(self,i)
         return state
-
-    def __nonzero__(self):      #pragma: no cover
-        """
-        Compute the value of the expression and convert it to
-        a boolean.
-
-        Returns:
-            A boolean value.
-        """
-        return bool(self())
-
-    __bool__ = __nonzero__
 
     def __call__(self, exception=True):
         """
@@ -493,7 +483,7 @@ class ExpressionBase(NumericValue):
         """
         return polynomial_degree(self)
 
-    def _compute_polynomial_degree(self, values):                          #pragma: no cover
+    def _compute_polynomial_degree(self, values):
         """
         Compute the polynomial degree of this expression given
         the degree values of its children.
@@ -740,6 +730,66 @@ class NPV_PowExpression(NPV_Mixin, PowExpression):
     __slots__ = ()
 
 
+class MaxExpression(ExpressionBase):
+    """
+    Maximum expressions::
+
+        max(x, y, ...)
+    """
+
+    __slots__ = ()
+
+    def nargs(self):
+        return len(self._args_)
+
+    def _apply_operation(self, result):
+        return max(result)
+
+    def getname(self, *args, **kwds):
+        return 'max'
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        return "%s(%s)" % (self.getname(), ', '.join(
+            arg[1:-1]
+            if (arg and arg[0] == '(' and arg[-1] == ')'
+                and _balanced_parens(arg[1:-1]))
+            else arg for arg in values))
+
+
+class NPV_MaxExpression(NPV_Mixin, MaxExpression):
+    __slots__ = ()
+
+
+class MinExpression(ExpressionBase):
+    """
+    Minimum expressions::
+
+        min(x, y, ...)
+    """
+
+    __slots__ = ()
+
+    def nargs(self):
+        return len(self._args_)
+
+    def _apply_operation(self, result):
+        return min(result)
+
+    def getname(self, *args, **kwds):
+        return 'min'
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        return "%s(%s)" % (self.getname(), ', '.join(
+            arg[1:-1]
+            if (arg and arg[0] == '(' and arg[-1] == ')'
+                and _balanced_parens(arg[1:-1]))
+            else arg for arg in values))
+
+
+class NPV_MinExpression(NPV_Mixin, MinExpression):
+    __slots__ = ()
+
+
 class ProductExpression(ExpressionBase):
     """
     Product expressions::
@@ -858,49 +908,6 @@ class NPV_DivisionExpression(NPV_Mixin, DivisionExpression):
     __slots__ = ()
 
 
-@deprecated("Use DivisionExpression", version='5.6.7')
-class ReciprocalExpression(ExpressionBase):
-    """
-    Reciprocal expressions::
-
-        1/x
-    """
-    __slots__ = ()
-    PRECEDENCE = 4
-
-    def __init__(self, args):
-        super(ReciprocalExpression, self).__init__(args)
-
-    def nargs(self):
-        return 1
-
-    def _precedence(self):
-        return ReciprocalExpression.PRECEDENCE
-
-    def _associativity(self):
-        return 0
-
-    def _compute_polynomial_degree(self, result):
-        if result[0] == 0:
-            return 0
-        return None
-
-    def getname(self, *args, **kwds):
-        return 'recip'
-
-    def _to_string(self, values, verbose, smap, compute_values):
-        if verbose:
-            return "{0}({1})".format(self.getname(), values[0])
-        return "1/{0}".format(values[0])
-
-    def _apply_operation(self, result):
-        return 1 / result[0]
-
-
-class NPV_ReciprocalExpression(NPV_Mixin, ReciprocalExpression):
-    __slots__ = ()
-
-
 class _LinearOperatorExpression(ExpressionBase):
     """
     An 'abstract' class that defines the polynomial degree for a simple
@@ -951,7 +958,7 @@ class SumExpressionBase(_LinearOperatorExpression):
         return 'sum'
 
 
-class NPV_SumExpression(SumExpressionBase):
+class NPV_SumExpression(NPV_Mixin, SumExpressionBase):
     __slots__ = ()
 
     def create_potentially_variable_object(self):
@@ -968,8 +975,22 @@ class NPV_SumExpression(SumExpressionBase):
             return "{0} {1}".format(values[0],values[1])
         return "{0} + {1}".format(values[0],values[1])
 
-    def is_potentially_variable(self):
-        return False
+    def create_node_with_local_data(self, args, classtype=None):
+        assert classtype is None
+        try:
+            npv_args = all(
+                type(arg) in native_types or not arg.is_potentially_variable()
+                for arg in args
+            )
+        except AttributeError:
+            # We can hit this during expression replacement when the new
+            # type is not a PyomoObject type, but is not in the
+            # native_types set.  We will play it safe and clear the NPV flag
+            npv_args = False
+        if npv_args:
+            return NPV_SumExpression(args)
+        else:
+            return SumExpression(args)
 
 
 class SumExpression(SumExpressionBase):
@@ -1140,19 +1161,16 @@ class Expr_ifExpression(ExpressionBase):
             return False
 
     def is_constant(self):
-        if self._if.__class__ in native_numeric_types or self._if.is_constant():
+        if is_constant(self._if):
             if value(self._if):
-                return (self._then.__class__ in native_numeric_types or self._then.is_constant())
+                return is_constant(self._then)
             else:
-                return (self._else.__class__ in native_numeric_types or self._else.is_constant())
+                return is_constant(self._else)
         else:
-            return (self._then.__class__ in native_numeric_types or self._then.is_constant()) and \
-                (self._else.__class__ in native_numeric_types or self._else.is_constant())
+            return False
 
     def is_potentially_variable(self):
-        return ((not self._if.__class__ in native_numeric_types) and self._if.is_potentially_variable()) or \
-            ((not self._then.__class__ in native_numeric_types) and self._then.is_potentially_variable()) or \
-            ((not self._else.__class__ in native_numeric_types) and self._else.is_potentially_variable())
+        return any(map(is_potentially_variable, self._args_))
 
     def _compute_polynomial_degree(self, result):
         _if, _then, _else = result
@@ -1228,11 +1246,8 @@ class UnaryFunctionExpression(ExpressionBase):
         return self._fcn(result[0])
 
 
-class NPV_UnaryFunctionExpression(UnaryFunctionExpression):
+class NPV_UnaryFunctionExpression(NPV_Mixin, UnaryFunctionExpression):
     __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
 
 
 # NOTE: This should be a special class, since the expression generation relies
@@ -1248,6 +1263,11 @@ class AbsExpression(UnaryFunctionExpression):
 
     def __init__(self, arg):
         super(AbsExpression, self).__init__(arg, 'abs', abs)
+
+    def create_node_with_local_data(self, args, classtype=None):
+        if classtype is None:
+            classtype = self.__class__
+        return classtype(args)
 
 
 class NPV_AbsExpression(NPV_Mixin, AbsExpression):
@@ -1295,7 +1315,7 @@ class LinearExpression(ExpressionBase):
                     "LinearExpression has been updated to expect args= to "
                     "be a constant followed by MonomialTermExpressions.  "
                     "The older format (`[const, coefficient_1, ..., "
-                    "variable_1, ...]`) is deprecated.", version='TBD')
+                    "variable_1, ...]`) is deprecated.", version='6.2')
                 args = args[:1] + list(map(
                     MonomialTermExpression,
                     zip(args[1:1+len(args)//2], args[1+len(args)//2:])))
@@ -1579,11 +1599,6 @@ def _decompose_linear_terms(expr, multiplier=1):
             yield from _decompose_linear_terms(expr._args_[0], multiplier/expr._args_[1])
         else:
             raise LinearDecompositionError("Unexpected nonlinear term (division)")
-    elif expr.__class__ is ReciprocalExpression:
-        # The argument is potentially variable, so this represents a nonlinear term
-        #
-        # NOTE: We're ignoring possible simplifications
-        raise LinearDecompositionError("Unexpected nonlinear term")
     elif expr.__class__ is SumExpression or expr.__class__ is _MutableSumExpression:
         for arg in expr.args:
             yield from _decompose_linear_terms(arg, multiplier)
@@ -2005,7 +2020,6 @@ NPV_expression_types = set(
     NPV_PowExpression,
     NPV_ProductExpression,
     NPV_DivisionExpression,
-    NPV_ReciprocalExpression,
     NPV_SumExpression,
     NPV_UnaryFunctionExpression,
     NPV_AbsExpression])

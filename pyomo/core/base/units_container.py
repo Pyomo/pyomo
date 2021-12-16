@@ -111,7 +111,11 @@ import logging
 import sys
 
 from pyomo.common.dependencies import attempt_import
-from pyomo.core.expr.numvalue import NumericValue, nonpyomo_leaf_types, value, native_types, native_numeric_types, pyomo_constant_types
+from pyomo.common.modeling import NOTSET
+from pyomo.core.expr.numvalue import (
+    NumericValue, nonpyomo_leaf_types, value, native_types,
+    native_numeric_types, pyomo_constant_types,
+)
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr import current as EXPR
 
@@ -296,37 +300,9 @@ class _PyomoUnit(NumericValue):
         # as outside the model scope and DO NOT duplicate them.
         return self
 
-    def __float__(self):
-        """
-        Coerce the value to a floating point
-
-        Raises:
-            TypeError
-        """
-        raise TypeError(
-            "Implicit conversion of Pyomo Unit `%s' to a float is "
-            "disabled. This error is often the result of treating a unit "
-            "as though it were a number (e.g., passing a unit to a built-in "
-            "math function). Avoid this error by using Pyomo-provided math "
-            "functions."
-            % self.name)
-
-    def __int__(self):
-        """
-        Coerce the value to an integer
-
-        Raises:
-            TypeError
-        """
-        raise TypeError(
-            "Implicit conversion of Pyomo Unit `%s' to an int is "
-            "disabled. This error is often the result of treating a unit "
-            "as though it were a number (e.g., passing a unit to a built-in "
-            "math function). Avoid this error by using Pyomo-provided math "
-            "math function). Avoid this error by using Pyomo-provided math "
-            "functions."
-            % self.name)
-
+    # __bool__ uses NumericValue base class implementation
+    # __float__ uses NumericValue base class implementation
+    # __int__ uses NumericValue base class implementation
     # __lt__ uses NumericValue base class implementation
     # __gt__ uses NumericValue base class implementation
     # __le__ uses NumericValue base class implementation
@@ -366,7 +342,7 @@ class _PyomoUnit(NumericValue):
         # delta temperatures).  So that things work cleanly in Python 2
         # and 3, we will generate the string as unicode, then explicitly
         # encode it to UTF-8 in Python 2
-        retstr = u'{:!~C}'.format(self._pint_unit)
+        retstr = u'{:~C}'.format(self._pint_unit)
         if retstr == '':
             retstr = 'dimensionless'
         return retstr
@@ -389,25 +365,6 @@ class _PyomoUnit(NumericValue):
         else:
             return str(self)
 
-    def __nonzero__(self):
-        """Unit is treated as a constant value of 1.0. Therefore, it is always nonzero
-        Returns
-        -------
-        : bool
-           Returns whether on not the object is non-zero
-        """
-        return self.__bool__()
-
-    def __bool__(self):
-        """Unit is treated as a constant value of 1.0. Therefore, it is always "True"
-
-        Returns
-        -------
-        : bool
-           Returns whether or not the object is "empty"
-        """
-        return True
-
     def __call__(self, exception=True):
         """Unit is treated as a constant value, and this method always returns 1.0
 
@@ -426,9 +383,9 @@ class _PyomoUnit(NumericValue):
         ostream.write(str(self))
         # There is also a long form, but the verbose flag is not really the correct indicator
         # if verbose:
-        #     ostream.write('{:!s}'.format(self._pint_unit))
+        #     ostream.write('{:s}'.format(self._pint_unit))
         # else:
-        #     ostream.write('{:!~s}'.format(self._pint_unit))
+        #     ostream.write('{:~s}'.format(self._pint_unit))
 
 
 class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
@@ -547,28 +504,6 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
         # this operation can create a quantity, but we want a pint unit object
         return child_units[0] / child_units[1]
-
-    def _get_unit_for_reciprocal(self, node, child_units):
-        """
-        Return (and test) the units corresponding to a reciprocal expression node
-        in the expression tree.
-
-        Parameters
-        ----------
-        node : Pyomo expression node
-            The parent node of the children
-
-        child_units : list
-           This is a list of pint units (one for each of the children)
-
-        Returns
-        -------
-        : pint unit
-        """
-        assert len(child_units) == 1
-
-        # this operation can create a quantity, but we want a pint unit object
-        return (1.0 / child_units).units
 
     def _get_unit_for_pow(self, node, child_units):
         """
@@ -868,8 +803,6 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         EXPR.NPV_ProductExpression: _get_unit_for_product,
         EXPR.DivisionExpression: _get_unit_for_division,
         EXPR.NPV_DivisionExpression: _get_unit_for_division,
-        EXPR.ReciprocalExpression: _get_unit_for_reciprocal,
-        EXPR.NPV_ReciprocalExpression: _get_unit_for_reciprocal,
         EXPR.PowExpression: _get_unit_for_pow,
         EXPR.NPV_PowExpression: _get_unit_for_pow,
         EXPR.NegationExpression: _get_unit_for_single_child,
@@ -965,11 +898,15 @@ class PyomoUnitsContainer(object):
         on the class until they are requested.
 
     """
-    def __init__(self):
+    def __init__(self, pint_registry=NOTSET):
         """Create a PyomoUnitsContainer instance."""
-        self._pint_registry = pint_module.UnitRegistry()
-        self._pint_dimensionless = self._pint_registry.dimensionless
-
+        if pint_registry is NOTSET:
+            pint_registry = pint_module.UnitRegistry()
+        self._pint_registry = pint_registry
+        if pint_registry is None:
+            self._pint_dimensionless = None
+        else:
+            self._pint_dimensionless = self._pint_registry.dimensionless
 
     def load_definitions_from_file(self, definition_file):
         """Load new units definitions from a file
@@ -990,7 +927,7 @@ class PyomoUnitsContainer(object):
             :skipif: not pint_available
             :hide:
 
-            # get a local units object (to avoid duplicate registration
+            # Get a local units object (to avoid duplicate registration
             # with the example in load_definitions_from_strings)
             >>> import pyomo.core.base.units_container as _units
             >>> u = _units.PyomoUnitsContainer()
@@ -1003,6 +940,14 @@ class PyomoUnitsContainer(object):
             >>> u.load_definitions_from_file('my_additional_units.txt')
             >>> print(u.USD)
             USD
+
+        .. doctest::
+            :skipif: not pint_available
+            :hide:
+
+            # Clean up the file we just created
+            >>> import os
+            >>> os.remove('my_additional_units.txt')
 
         """
         self._pint_registry.load_definitions(definition_file)
@@ -1025,6 +970,7 @@ class PyomoUnitsContainer(object):
 
             # get a local units object (to avoid duplicate registration
             # with the example in load_definitions_from_strings)
+            >>> import pint
             >>> import pyomo.core.base.units_container as _units
             >>> u = _units.PyomoUnitsContainer()
 
@@ -1337,6 +1283,22 @@ external
         to_quantity = from_quantity.to(to_pint_unit)
         return to_quantity.magnitude
 
+    def set_pint_registry(self, pint_registry):
+        if pint_registry is self._pint_registry:
+            return
+        if self._pint_registry is not None:
+            logger.warning(
+                "Changing the pint registry used by the Pyomo Units "
+                "system after the PyomoUnitsContainer was constructed.  "
+                "Pint requires that all units and dimensioned quantities "
+                "are generated by a single pint registry.")
+        self._pint_registry = pint_registry
+        self._pint_dimensionless = self._pint_registry.dimensionless
+
+    @property
+    def pint_registry(self):
+        return self._pint_registry
+
 
 class _DeferredUnitsSingleton(PyomoUnitsContainer):
     """A class supporting deferred interrogation of pint_available.
@@ -1356,9 +1318,22 @@ class _DeferredUnitsSingleton(PyomoUnitsContainer):
         pass
 
     def __getattribute__(self, attr):
+        # Note that this methos will only be called ONCE: either pint is
+        # present, at which point this instance __class__ will fall back
+        # to PyomoUnitsContainer (where this method is not declared, OR
+        # pint is not available and an ImportError will be raised.
         if pint_available:
+            # If the first thing that is being called is
+            # "units.set_pint_registry(...)", then we will call __init__
+            # with None so that the subsequent call to set_pint_registry
+            # will work cleanly.  In all other cases, we will initialize
+            # PyomoUnitsContainer with a new (default) pint registry.
+            if attr == 'set_pint_registry':
+                pint_registry = None
+            else:
+                pint_registry = pint_module.UnitRegistry()
             self.__class__ = PyomoUnitsContainer
-            self.__init__()
+            self.__init__(pint_registry)
             return getattr(self, attr)
         else:
             # Generate the ImportError

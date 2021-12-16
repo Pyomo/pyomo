@@ -21,7 +21,7 @@ model.atray = Param(initialize = 0.25)
 model.acond = Param(initialize = 0.5)
 model.areb = Param(initialize = 1.0)
 
-model.S_TRAYS = Set()  
+model.S_TRAYS = Set(dimen=1)
 model.S_RECTIFICATION = Set(within = model.S_TRAYS)  
 model.S_STRIPPING = Set(within = model.S_TRAYS)  
 model.x0 = Param(model.S_TRAYS)

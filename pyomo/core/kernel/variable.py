@@ -99,7 +99,23 @@ class IVariable(ICategorizedObject, NumericValue):
         return (self.lb, self.ub)
     @bounds.setter
     def bounds(self, bounds_tuple):
-        self.lb, self.ub = bounds_tuple
+        self.lower, self.upper = bounds_tuple
+
+    @property
+    def lb(self):
+        """Return the numeric value of the variable lower bound."""
+        return value(self.lower)
+    @lb.setter
+    def lb(self, val):
+        self.lower = val
+
+    @property
+    def ub(self):
+        """Return the numeric value of the variable upper bound."""
+        return value(self.upper)
+    @ub.setter
+    def ub(self, val):
+        self.upper = val
 
     def fix(self, value=NoArgumentGiven):
         """
@@ -123,15 +139,13 @@ class IVariable(ICategorizedObject, NumericValue):
         """Returns :const:`False` when the lower bound is
         :const:`None` or negative infinity"""
         lb = self.lb
-        return (lb is not None) and \
-            (value(lb) != _neg_inf)
+        return (lb is not None) and (lb != _neg_inf)
 
     def has_ub(self):
         """Returns :const:`False` when the upper bound is
         :const:`None` or positive infinity"""
         ub = self.ub
-        return (ub is not None) and \
-            (value(ub) != _pos_inf)
+        return (ub is not None) and (ub != _pos_inf)
 
     @property
     def lslack(self):
@@ -143,8 +157,6 @@ class IVariable(ICategorizedObject, NumericValue):
         lb = self.lb
         if lb is None:
             lb = _neg_inf
-        else:
-            lb = value(lb)
         return val - lb
 
     @property
@@ -157,8 +169,6 @@ class IVariable(ICategorizedObject, NumericValue):
         ub = self.ub
         if ub is None:
             ub = _pos_inf
-        else:
-            ub = value(ub)
         return ub - val
 
     @property
@@ -200,7 +210,7 @@ class IVariable(ICategorizedObject, NumericValue):
         :class:`IntegerSet` and the bounds are within
         [0,1]."""
         return self.domain_type.get_interval()[2] == 1 \
-            and (value(self.lb), value(self.ub)) in {(0,1), (0,0), (1,1)}
+            and (self.lb, self.ub) in {(0,1), (0,0), (1,1)}
 
 # TODO?
 #    def is_semicontinuous(self):
@@ -342,11 +352,11 @@ class variable(IVariable):
                                                 lb, ub)
 
     @property
-    def lb(self):
+    def lower(self):
         """The lower bound of the variable"""
         return self._lb
-    @lb.setter
-    def lb(self, lb):
+    @lower.setter
+    def lower(self, lb):
         if (lb is not None) and \
            (not is_numeric_data(lb)):
             raise ValueError(
@@ -355,11 +365,11 @@ class variable(IVariable):
         self._lb = lb
 
     @property
-    def ub(self):
+    def upper(self):
         """The upper bound of the variable"""
         return self._ub
-    @ub.setter
-    def ub(self, ub):
+    @upper.setter
+    def upper(self, ub):
         if (ub is not None) and \
            (not is_numeric_data(ub)):
             raise ValueError(
@@ -374,6 +384,9 @@ class variable(IVariable):
     @value.setter
     def value(self, value):
         self._value = value
+
+    def set_value(self, value, skip_validation=True):
+        self.value = value
 
     @property
     def fixed(self):

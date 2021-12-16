@@ -16,6 +16,7 @@ import sys
 import logging
 import math
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import DeveloperError
@@ -638,10 +639,10 @@ class Constraint(ActiveIndexedComponent):
             A Pyomo expression for this constraint
         rule
             A function that is used to construct constraint expressions
-        doc
-            A text string describing this component
         name
             A name for this component
+        doc
+            A text string describing this component
 
     Public class attributes:
         doc
@@ -685,7 +686,10 @@ class Constraint(ActiveIndexedComponent):
             return super(Constraint, cls).__new__(AbstractScalarConstraint)
         else:
             return super(Constraint, cls).__new__(IndexedConstraint)
-
+    
+    @overload
+    def __init__(self, *indexes, expr=None, rule=None, name=None, doc=None): ...
+    
     def __init__(self, *args, **kwargs):
         _init = self._pop_from_kwargs(
             'Constraint', kwargs, ('rule', 'expr'), None)
@@ -973,6 +977,7 @@ class ConstraintList(IndexedConstraint):
             raise ValueError(
                 "ConstraintList does not accept the 'expr' keyword")
         _rule = kwargs.pop('rule', None)
+        self._starting_index = kwargs.pop('starting_index', 1)
 
         args = (Set(dimen=1),)
         super(ConstraintList, self).__init__(*args, **kwargs)
@@ -984,7 +989,9 @@ class ConstraintList(IndexedConstraint):
         # after the base class is set up so that is_indexed() is
         # reliable.
         if self.rule is not None and type(self.rule) is IndexedCallInitializer:
-            self.rule = CountedCallInitializer(self, self.rule)
+            self.rule = CountedCallInitializer(
+                self, self.rule, self._starting_index
+            )
 
 
     def construct(self, data=None):
@@ -1013,7 +1020,7 @@ class ConstraintList(IndexedConstraint):
 
     def add(self, expr):
         """Add a constraint with an implicit index."""
-        next_idx = len(self._index) + 1
+        next_idx = len(self._index) + self._starting_index
         self._index.add(next_idx)
         return self.__setitem__(next_idx, expr)
 

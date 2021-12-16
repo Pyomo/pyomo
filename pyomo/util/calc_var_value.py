@@ -28,6 +28,12 @@ def calculate_variable_from_constraint(variable, constraint,
     residual, it falls back on Newton's method using exact (symbolic)
     derivatives.
 
+    Notes
+    -----
+    This is an unconstrained solver and is NOT guaranteed to respect the
+    variable bounds or domain.  The solver may leave the variable value
+    in an infeasible state (outside the declared bounds or domain bounds).
+
     Parameters:
     -----------
     variable: :py:class:`_VarData`
@@ -53,9 +59,6 @@ def calculate_variable_from_constraint(variable, constraint,
     --------
     None
 
-    Note: this is an unconstrained solver and is NOT guaranteed to
-    respect the variable bounds.
-
     """
     # Leverage all the Constraint logic to process the incoming tuple/expression
     if not isinstance(constraint, _ConstraintData):
@@ -70,27 +73,31 @@ def calculate_variable_from_constraint(variable, constraint,
         raise ValueError("Constraint must be an equality constraint")
 
     if variable.value is None:
+        # Note that we use "skip_validation=True" here as well, as the
+        # variable domain may not admit the calculated initial guesses,
+        # and we want to bypass that check.
         if variable.lb is None:
             if variable.ub is None:
                 # no variable values, and no lower or upper bound - set
                 # initial value to 0.0
-                variable.set_value(0)
+                variable.set_value(0, skip_validation=True)
             else:
                 # no variable value or lower bound - set to 0 or upper
                 # bound whichever is lower
-                variable.set_value(min(0, variable.ub))
+                variable.set_value(min(0, variable.ub), skip_validation=True)
         elif variable.ub is None:
             # no variable value or upper bound - set to 0 or lower
             # bound, whichever is higher
-            variable.set_value(max(0, variable.lb))
+            variable.set_value(max(0, variable.lb), skip_validation=True)
         else:
             # we have upper and lower bounds
             if variable.lb <= 0 and variable.ub >= 0:
                 # set the initial value to 0 if bounds bracket 0
-                variable.set_value(0)
+                variable.set_value(0, skip_validation=True)
             else:
                 # set the initial value to the midpoint of the bounds
-                variable.set_value((variable.lb+variable.ub)/2.0)
+                variable.set_value(
+                    (variable.lb+variable.ub)/2.0, skip_validation=True)
 
     # store the initial value to use later if necessary
     orig_initial_value = variable.value
@@ -110,7 +117,7 @@ def calculate_variable_from_constraint(variable, constraint,
             "initial guess.\n\tPlease provide a different initial guess.")
         raise
 
-    variable.set_value(x1 - (residual_1-upper))
+    variable.set_value(x1 - (residual_1 - upper), skip_validation=True)
     residual_2 = value(body, exception=False)
 
     # If we encounter an error while evaluating the expression at the
@@ -123,21 +130,29 @@ def calculate_variable_from_constraint(variable, constraint,
     if residual_2 is not None and type(residual_2) is not complex:
         # if the variable appears linearly with a coefficient of 1, then we
         # are done
-        if abs(residual_2-upper) < eps:
+        if abs(residual_2 - upper) < eps:
+            # Re-set the variable value to trigger any warnings WRT the
+            # final variable state
+            variable.set_value(variable.value)
             return
 
         # Assume the variable appears linearly and calculate the coefficient
         x2 = value(variable)
         slope = float(residual_1 - residual_2) / (x1 - x2)
-        intercept = (residual_1-upper) - slope*x1
+        intercept = (residual_1 - upper) - slope*x1
         if slope:
-            variable.set_value(-intercept/slope)
+            variable.set_value(-intercept/slope, skip_validation=True)
             body_val = value(body, exception=False)
-            if body_val is not None and abs(body_val-upper) < eps:
+            if body_val is not None and abs(body_val - upper) < eps:
+                # Re-set the variable value to trigger any warnings WRT
+                # the final variable state
+                variable.set_value(variable.value)
                 return
 
     # Variable appears nonlinearly; solve using Newton's method
-    variable.set_value(orig_initial_value) # restore initial value
+    #
+    # restore initial value
+    variable.set_value(orig_initial_value, skip_validation=True)
     expr = body - upper
     expr_deriv = differentiate(expr, wrt=variable,
                                mode=differentiate.Modes.sympy)
@@ -183,7 +198,7 @@ def calculate_variable_from_constraint(variable, constraint,
         pk = -fk/fpk
         alpha = 1.0
         xkp1 = xk + alpha * pk
-        variable.set_value(xkp1)
+        variable.set_value(xkp1, skip_validation=True)
 
         # perform line search
         if linesearch:
@@ -205,7 +220,7 @@ def calculate_variable_from_constraint(variable, constraint,
                     break
                 alpha /= 2.0
                 xkp1 = xk + alpha * pk
-                variable.set_value(xkp1)
+                variable.set_value(xkp1, skip_validation=True)
 
             if alpha <= alpha_min:
                 residual = value(expr, exception=False)
@@ -214,3 +229,7 @@ def calculate_variable_from_constraint(variable, constraint,
                 raise RuntimeError(
                     "Linesearch iteration limit reached; remaining "
                     "residual = %s." % (residual,))
+    #
+    # Re-set the variable value to trigger any warnings WRT the final
+    # variable state
+    variable.set_value(variable.value)

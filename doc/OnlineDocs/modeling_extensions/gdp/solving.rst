@@ -27,9 +27,17 @@ Reformulations
 Logical constraints
 -------------------
 
-At present, logical propositions must be converted to algebraic form
-prior to use of the MI(N)LP reformulations or the GDPopt solver.  This
-may be accomplished via transformation:
+.. note::
+
+    Historically it was required to convert logical propositions to
+    algebraic form prior to use of the MI(N)LP reformulations and the
+    GDPopt solver. However, this is mathematically incorrect since these
+    reformulations convert logical formulations to algebraic formulations.
+    It is therefore recommended to use both the MI(N)LP reformulations
+    and GDPopt directly to transform or solve GDPs that include logical
+    propositions.
+
+The following transforms logical propositions on the model to algebraic form:
 
 .. code::
 

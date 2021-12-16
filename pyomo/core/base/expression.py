@@ -13,6 +13,7 @@ __all__ = ['Expression', '_ExpressionData']
 import sys
 import logging
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecated, RenamedClass
@@ -185,23 +186,9 @@ class _GeneralExpressionDataImpl(_ExpressionData):
     def expr(self):
         """Return expression on this expression."""
         return self._expr
+    
     @expr.setter
     def expr(self, expr):
-        self.set_value(expr)
-
-    # for backwards compatibility reasons
-    @property
-    @deprecated("The .value property getter on _GeneralExpressionDataImpl "
-                "is deprecated. Use the .expr property getter instead",
-                version='4.3.11323')
-    def value(self):
-        return self._expr
-
-    @value.setter
-    @deprecated("The .value property setter on _GeneralExpressionDataImpl "
-                "is deprecated. Use the set_value(expr) method instead",
-                version='4.3.11323')
-    def value(self, expr):
         self.set_value(expr)
 
     def set_value(self, expr):
@@ -254,6 +241,8 @@ class Expression(IndexedComponent):
                         used to initialize this object.
         expr        A synonym for initialize.
         rule        A rule function used to initialize this object.
+        name        Name for this component.
+        doc         Text describing this component.
     """
 
     _ComponentDataClass = _GeneralExpressionData
@@ -267,6 +256,10 @@ class Expression(IndexedComponent):
             return ScalarExpression.__new__(ScalarExpression)
         else:
             return IndexedExpression.__new__(IndexedExpression)
+
+    @overload
+    def __init__(self, *indexes, rule=None, expr=None, initialize=None,
+                 name=None, doc=None): ...
 
     def __init__(self, *args, **kwds):
         _init = self._pop_from_kwargs(
@@ -409,21 +402,6 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     @expr.setter
     def expr(self, expr):
         """Set the expression on this expression."""
-        self.set_value(expr)
-
-    # for backwards compatibility reasons
-    @property
-    @deprecated("The .value property getter on ScalarExpression "
-                "is deprecated. Use the .expr property getter instead",
-                version='4.3.11323')
-    def value(self):
-        return self.expr
-
-    @value.setter
-    @deprecated("The .value property setter on ScalarExpression "
-                "is deprecated. Use the set_value(expr) method instead",
-                version='4.3.11323')
-    def value(self, expr):
         self.set_value(expr)
 
     def clear(self):

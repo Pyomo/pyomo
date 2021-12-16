@@ -11,7 +11,7 @@
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core.expr import current as _expr
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
-from pyomo.core.expr.numvalue import value
+from pyomo.core.expr.numvalue import value, is_constant
 from pyomo.core.expr.current import exp, log, sin, cos
 import math
 
@@ -97,21 +97,6 @@ def _diff_DivisionExpression(node, val_dict, der_dict):
     der = der_dict[node]
     der_dict[num] += der * (1/val_dict[den])
     der_dict[den] -= der * val_dict[num] / val_dict[den]**2
-
-
-def _diff_ReciprocalExpression(node, val_dict, der_dict):
-    """
-
-    Parameters
-    ----------
-    node: pyomo.core.expr.numeric_expr.ReciprocalExpression
-    val_dict: ComponentMap
-    der_dict: ComponentMap
-    """
-    assert len(node.args) == 1
-    arg = node.args[0]
-    der = der_dict[node]
-    der_dict[arg] -= der / val_dict[arg]**2
 
 
 def _diff_NegationExpression(node, val_dict, der_dict):
@@ -281,6 +266,31 @@ def _diff_sqrt(node, val_dict, der_dict):
     der_dict[arg] += der * 0.5 * val_dict[arg]**(-0.5)
 
 
+def _diff_abs(node, val_dict, der_dict):
+    """
+    Reverse automatic differentiation on the abs function.
+    This will raise an exception at 0.
+
+    Parameters
+    ----------
+    node: pyomo.core.expr.numeric_expr.UnaryFunctionExpression
+    val_dict: ComponentMap
+    der_dict: ComponentMap
+    """
+    assert len(node.args) == 1
+    arg = node.args[0]
+    der = der_dict[node]
+    val = val_dict[arg]
+    if not is_constant(val):
+        raise DifferentiationException('Cannot perform symbolic differentiation of abs(x). Please use numeric differentiation')
+    if val == 0:
+        raise DifferentiationException('Cannot differentiate abs(x) at x=0')
+    elif val < 0:
+        der_dict[arg] -= der
+    else:
+        der_dict[arg] += der
+
+
 _unary_map = dict()
 _unary_map['exp'] = _diff_exp
 _unary_map['log'] = _diff_log
@@ -292,6 +302,7 @@ _unary_map['asin'] = _diff_asin
 _unary_map['acos'] = _diff_acos
 _unary_map['atan'] = _diff_atan
 _unary_map['sqrt'] = _diff_sqrt
+_unary_map['abs'] = _diff_abs
 
 
 def _diff_UnaryFunctionExpression(node, val_dict, der_dict):
@@ -327,13 +338,13 @@ def _diff_ExternalFunctionExpression(node, val_dict, der_dict):
 
     Parameters
     ----------
-    node: pyomo.core.expr.numeric_expr.ProductExpression
+    node: pyomo.core.expr.numeric_expr.ExternalFunctionExpression
     val_dict: ComponentMap
     der_dict: ComponentMap
     """
     der = der_dict[node]
     vals = tuple(val_dict[i] for i in node.args)
-    derivs = node._fcn.evaluate_fgh(vals)[1]
+    derivs = node._fcn.evaluate_fgh(vals, fgh=1)[1]
     for ndx, arg in enumerate(node.args):
         der_dict[arg] += der * derivs[ndx]
 
@@ -341,7 +352,6 @@ def _diff_ExternalFunctionExpression(node, val_dict, der_dict):
 _diff_map = dict()
 _diff_map[_expr.ProductExpression] = _diff_ProductExpression
 _diff_map[_expr.DivisionExpression] = _diff_DivisionExpression
-_diff_map[_expr.ReciprocalExpression] = _diff_ReciprocalExpression
 _diff_map[_expr.PowExpression] = _diff_PowExpression
 _diff_map[_expr.SumExpression] = _diff_SumExpression
 _diff_map[_expr.MonomialTermExpression] = _diff_ProductExpression
@@ -349,15 +359,16 @@ _diff_map[_expr.NegationExpression] = _diff_NegationExpression
 _diff_map[_expr.UnaryFunctionExpression] = _diff_UnaryFunctionExpression
 _diff_map[_expr.ExternalFunctionExpression] = _diff_ExternalFunctionExpression
 _diff_map[_expr.LinearExpression] = _diff_SumExpression
+_diff_map[_expr.AbsExpression] = _diff_abs
 
 _diff_map[_expr.NPV_ProductExpression] = _diff_ProductExpression
 _diff_map[_expr.NPV_DivisionExpression] = _diff_DivisionExpression
-_diff_map[_expr.NPV_ReciprocalExpression] = _diff_ReciprocalExpression
 _diff_map[_expr.NPV_PowExpression] = _diff_PowExpression
 _diff_map[_expr.NPV_SumExpression] = _diff_SumExpression
 _diff_map[_expr.NPV_NegationExpression] = _diff_NegationExpression
 _diff_map[_expr.NPV_UnaryFunctionExpression] = _diff_UnaryFunctionExpression
 _diff_map[_expr.NPV_ExternalFunctionExpression] = _diff_ExternalFunctionExpression
+_diff_map[_expr.NPV_AbsExpression] = _diff_abs
 
 
 def _symbolic_value(x):

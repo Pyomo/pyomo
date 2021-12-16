@@ -13,6 +13,7 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 import inspect
 import logging
 import sys
+import textwrap
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import native_types, NumericNDArray
@@ -23,7 +24,7 @@ from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
 from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 
@@ -784,7 +785,7 @@ You can silence this warning by one of three ways:
         There are three basic ways to get here:
           1) the index contains one or more slices or ellipsis
           2) the index contains an unhashable type (e.g., a Pyomo
-             (Simple)Component
+             (Scalar)Component
           3) the index contains an IndexTemplate
         """
         from pyomo.core.expr import current as EXPR
@@ -806,16 +807,11 @@ You can silence this warning by one of three ways:
 
         for i,val in enumerate(idx):
             if type(val) is slice:
-                if val.start is not None or val.stop is not None:
+                if val.start is not None or val.stop is not None \
+                   or val.step is not None:
                     raise IndexError(
                         "Indexed components can only be indexed with simple "
                         "slices: start and stop values are not allowed.")
-                if val.step is not None:
-                    deprecation_warning(
-                        "The special wildcard slice (::0) is deprecated.  "
-                        "Please use an ellipsis (...) to indicate "
-                        "'0 or more' indices", version='4.4')
-                    val = Ellipsis
                 else:
                     if ellipsis is None:
                         sliced[i] = val
@@ -900,6 +896,8 @@ value() function.""" % ( self.name, i ))
             structurally_valid = False
             if slice_dim == set_dim or set_dim is None:
                 structurally_valid = True
+            elif type(set_dim) is type:
+                pass # UnknownSetDimen
             elif ellipsis is not None and slice_dim < set_dim:
                 structurally_valid = True
             elif set_dim == 0 and idx == (slice(None),):
@@ -913,10 +911,23 @@ value() function.""" % ( self.name, i ))
                 structurally_valid = True
 
             if not structurally_valid:
-                raise IndexError(
-                    "Index %s contains an invalid number of entries for "
-                    "component %s. Expected %s, got %s."
-                    % (idx, self.name, set_dim, slice_dim))
+                msg = ("Index %s contains an invalid number of entries for "
+                       "component '%s'. Expected %s, got %s.")
+                if type(set_dim) is type:
+                    set_dim = set_dim.__name__
+                    msg += '\n    ' + '\n    '.join(
+                        textwrap.wrap(textwrap.dedent("""
+                        Slicing components relies on knowing the
+                        underlying set dimensionality (even if the
+                        dimensionality is None).  The underlying
+                        component set ('%s') dimensionality has not been
+                        determined (likely because it is an empty Set).
+                        You can avoid this error by specifying the Set
+                        dimensionality (with the 'dimen=' keyword).""" % (
+                            self.index_set(), )).strip()))
+                raise IndexError(msg % (
+                    IndexedComponent_slice._getitem_args_to_str(list(idx)),
+                    self.name, set_dim, slice_dim))
             return IndexedComponent_slice(self, fixed, sliced, ellipsis)
         elif _found_numeric:
             if len(idx) == 1:

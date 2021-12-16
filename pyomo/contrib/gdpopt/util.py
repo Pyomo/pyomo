@@ -63,7 +63,8 @@ class SuppressInfeasibleWarning(object):
     class InfeasibleWarningFilter(logging.Filter):
         def filter(self, record):
             return not record.getMessage().startswith(
-                "Loading a SolverResults object with a warning status into model=")
+                "Loading a SolverResults object with a warning status into "
+                "model=")
 
     warning_filter = InfeasibleWarningFilter()
 
@@ -90,8 +91,9 @@ def presolve_lp_nlp(solve_data, config):
             prob.number_of_disjunctions == 0):
         config.logger.info('Problem has no discrete decisions.')
         obj = next(m.component_data_objects(Objective, active=True))
-        if (any(c.body.polynomial_degree() not in (1, 0) for c in GDPopt.constraint_list) or
-                obj.expr.polynomial_degree() not in (1, 0)):
+        if (any(c.body.polynomial_degree() not in (1, 0) for c in
+                GDPopt.constraint_list) or obj.expr.polynomial_degree() not in
+            (1, 0)):
             config.logger.info(
                 "Your model is an NLP (nonlinear program). "
                 "Using NLP solver %s to solve." % config.nlp_solver)
@@ -111,12 +113,14 @@ def presolve_lp_nlp(solve_data, config):
     return False, None
 
 
-def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=True, updata_var_con_list=True):
+def process_objective(solve_data, config, move_linear_objective=False,
+                      use_mcpp=True, updata_var_con_list=True):
     """Process model objective function.
 
     Check that the model has only 1 valid objective.
     If the objective is nonlinear, move it into the constraints.
-    If no objective function exists, emit a warning and create a dummy objective.
+    If no objective function exists, emit a warning and create a dummy 
+    objective.
 
     Parameters
     ----------
@@ -141,7 +145,9 @@ def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=
         raise ValueError('Model has multiple active objectives.')
     else:
         main_obj = active_objectives[0]
-    solve_data.results.problem.sense = ProblemSense.minimize if main_obj.sense == 1 else ProblemSense.maximize
+    solve_data.results.problem.sense = ProblemSense.minimize if \
+                                       main_obj.sense == 1 else \
+                                       ProblemSense.maximize
     solve_data.objective_sense = main_obj.sense
 
     # Move the objective to the constraints if it is nonlinear
@@ -177,13 +183,15 @@ def process_objective(solve_data, config, move_linear_objective=False, use_mcpp=
         util_blk.objective = Objective(
             expr=util_blk.objective_value, sense=main_obj.sense)
         # Add the new variable and constraint to the working lists
-        if main_obj.expr.polynomial_degree() not in (1, 0) or (move_linear_objective and updata_var_con_list):
+        if main_obj.expr.polynomial_degree() not in (1, 0) or \
+           (move_linear_objective and updata_var_con_list):
             util_blk.variable_list.append(util_blk.objective_value)
             util_blk.continuous_variable_list.append(util_blk.objective_value)
             util_blk.constraint_list.append(util_blk.objective_constr)
             util_blk.objective_list.append(util_blk.objective)
             if util_blk.objective_constr.body.polynomial_degree() in (0, 1):
-                util_blk.linear_constraint_list.append(util_blk.objective_constr)
+                util_blk.linear_constraint_list.append(
+                    util_blk.objective_constr)
             else:
                 util_blk.nonlinear_constraint_list.append(
                     util_blk.objective_constr)
@@ -202,8 +210,8 @@ def copy_var_list_values(from_list, to_list, config,
                          ignore_integrality=False):
     """Copy variable values from one list to another.
 
-    Rounds to Binary/Integer if neccessary
-    Sets to zero for NonNegativeReals if neccessary
+    Rounds to Binary/Integer if necessary
+    Sets to zero for NonNegativeReals if necessary
     """
     for v_from, v_to in zip(from_list, to_list):
         if skip_stale and v_from.stale:
@@ -211,6 +219,10 @@ def copy_var_list_values(from_list, to_list, config,
         if skip_fixed and v_to.is_fixed():
             continue  # Skip fixed variables.
         try:
+            # NOTE: PEP 2180 changes the var behavior so that domain /
+            # bounds violations no longer generate exceptions (and
+            # instead log warnings).  This means that the following will
+            # always succeed and the ValueError should never be raised.
             v_to.set_value(value(v_from, exception=False))
             if skip_stale:
                 v_to.stale = False
@@ -219,15 +231,16 @@ def copy_var_list_values(from_list, to_list, config,
             var_val = value(v_from)
             rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
-            if ignore_integrality \
-                    and v_to.is_integer():  # not v_to.is_continuous()
-                v_to.value = value(v_from, exception=False)
-            elif v_to.is_integer() and (fabs(var_val - rounded_val) <= config.integer_tolerance):  # not v_to.is_continuous()
+            if ignore_integrality and v_to.is_integer():
+                v_to.set_value(var_val, skip_validation=True)
+            elif v_to.is_integer() and (fabs(var_val - rounded_val) <=
+                                        config.integer_tolerance):
                 v_to.set_value(rounded_val)
-            elif 'is not in domain NonNegativeReals' in err_msg and (
-                    fabs(var_val) <= config.zero_tolerance):
+            elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
                 v_to.set_value(0)
             else:
+                config.logger.error(
+                    'Unknown validation domain error setting variable %s', (v_to.name,))
                 raise
 
 
@@ -298,17 +311,16 @@ def build_ordered_component_lists(model, solve_data):
             model.component_data_objects(
                 ctype=Constraint, active=True,
                 descend_into=(Block, Disjunct))))
-    # print(util_blk.constraint_list)
     setattr(
-        util_blk, 'linear_constraint_list', list(c for c in model.component_data_objects(
+        util_blk, 'linear_constraint_list', list(
+            c for c in model.component_data_objects(
             ctype=Constraint, active=True, descend_into=(Block, Disjunct))
             if c.body.polynomial_degree() in (0, 1)))
-    # print(util_blk.linear_constraint_list)
     setattr(
-        util_blk, 'nonlinear_constraint_list', list(c for c in model.component_data_objects(
+        util_blk, 'nonlinear_constraint_list', list(
+            c for c in model.component_data_objects(
             ctype=Constraint, active=True, descend_into=(Block, Disjunct))
             if c.body.polynomial_degree() not in (0, 1)))
-    # print(util_blk.nonlinear_constraint_list)
     setattr(
         util_blk, 'disjunct_list', list(
             model.component_data_objects(
@@ -419,7 +431,8 @@ def setup_results_object(solve_data, config):
 
 
 def constraints_in_True_disjuncts(model, config):
-    """Yield constraints in disjuncts where the indicator value is set or fixed to True."""
+    """Yield constraints in disjuncts where the indicator value is set or 
+    fixed to True."""
     for constr in model.component_data_objects(Constraint):
         yield constr
     observed_disjuncts = ComponentSet()
@@ -460,7 +473,8 @@ def get_main_elapsed_time(timing_data_obj):
     except AttributeError as e:
         if 'main_timer_start_time' in str(e):
             raise e from AttributeError(
-                "You need to be in a 'time_code' context to use `get_main_elapsed_time()`."
+                "You need to be in a 'time_code' context to use "
+                "`get_main_elapsed_time()`."
             )
 
 
@@ -555,11 +569,12 @@ def setup_solver_environment(model, config):
 
         yield solve_data  # yield setup solver environment
 
-        if (solve_data.best_solution_found is not None
-                and solve_data.best_solution_found is not solve_data.original_model):
+        if (solve_data.best_solution_found is not None and
+            solve_data.best_solution_found is not solve_data.original_model):
             # Update values on the original model
             copy_var_list_values(
-                from_list=solve_data.best_solution_found.GDPopt_utils.variable_list,
+                from_list=solve_data.best_solution_found.GDPopt_utils.\
+                variable_list,
                 to_list=solve_data.original_model.GDPopt_utils.variable_list,
                 config=config)
 
@@ -573,5 +588,6 @@ def setup_solver_environment(model, config):
 
 
 def indent(text, prefix):
-    """This should be replaced with textwrap.indent when we stop supporting python 2.7."""
+    """This should be replaced with textwrap.indent when we stop supporting 
+    python 2.7."""
     return ''.join(prefix + line for line in text.splitlines(True))

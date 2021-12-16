@@ -98,8 +98,8 @@ _intrinsic_function_operators = {
     'atanh':  'o47',
     'pow':    'o5',
     'abs':    'o15',
-    'ceil':   'o13',
-    'floor':  'o14'
+    'ceil':   'o14',
+    'floor':  'o13'
 }
 
 # build string templates
@@ -115,8 +115,6 @@ def _build_op_template():
     _op_comment[EXPR.ProductExpression] = prod_comment
     _op_template[EXPR.DivisionExpression] = div_template
     _op_comment[EXPR.DivisionExpression] = div_comment
-    _op_template[EXPR.ReciprocalExpression] = div_template
-    _op_comment[EXPR.ReciprocalExpression] = div_comment
 
     _op_template[EXPR.ExternalFunctionExpression] = ("f%d %d{C}\n", #function
                                                       "h%d:%s{C}\n") #string arg
@@ -352,6 +350,11 @@ class ProblemWriter_nl(AbstractProblemWriter):
         include_all_variable_bounds = \
             io_options.pop("include_all_variable_bounds", False)
 
+        # List of variables that don't appear in constraints to force into the
+        # nl-file
+        export_nonlinear_variables = \
+            io_options.pop("export_nonlinear_variables", False)
+
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_nl passed unrecognized io_options:\n\t" +
@@ -400,7 +403,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     show_section_timing=show_section_timing,
                     skip_trivial_constraints=skip_trivial_constraints,
                     file_determinism=file_determinism,
-                    include_all_variable_bounds=include_all_variable_bounds)
+                    include_all_variable_bounds=include_all_variable_bounds,
+                    export_nonlinear_variables=export_nonlinear_variables)
 
         self._symbolic_solver_labels = False
         self._output_fixed_variable_bounds = False
@@ -560,13 +564,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
 
-            elif exp_type is EXPR.ReciprocalExpression:
-                assert exp.nargs() == 1
-                div_str = self._op_string[EXPR.ReciprocalExpression]
-                OUTPUT.write(div_str)
-                self._print_nonlinear_terms_NL(1.0)
-                self._print_nonlinear_terms_NL(exp.arg(0))
-
             elif exp_type is EXPR.NegationExpression:
                 assert exp.nargs() == 1
                 OUTPUT.write(self._op_string[EXPR.NegationExpression])
@@ -701,7 +698,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         show_section_timing=False,
                         skip_trivial_constraints=False,
                         file_determinism=1,
-                        include_all_variable_bounds=False):
+                        include_all_variable_bounds=False,
+                        export_nonlinear_variables=False):
 
         output_fixed_variable_bounds = self._output_fixed_variable_bounds
         symbolic_solver_labels = self._symbolic_solver_labels
@@ -1136,6 +1134,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                           for vardata in Vars_dict.values())
             UnusedVars = AllVars.difference(UsedVars)
             LinearVars.update(UnusedVars)
+
+        if export_nonlinear_variables:
+            for v in export_nonlinear_variables:
+                v_iter = v.values() if v.is_indexed() else iter((v,))
+                for vi in v_iter:
+                    if self_varID_map[id(vi)] not in UsedVars:
+                        Vars_dict[id(vi)] = vi
+                        ConNonlinearVars.update([self_varID_map[id(vi)]])
+
 
         ### There used to be an if statement here for the following code block
         ### checking model.statistics.num_binary_vars was greater than zero.
