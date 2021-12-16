@@ -111,7 +111,11 @@ class TRFInterface(object):
         new_expr = self.replaceEF(expr)
         if new_expr is not expr:
             component.set_value(new_expr)
-            new_output_vars = list(self.data.ef_outputs[i+1] for i in range(next_ef_id, len(self.data.ef_outputs)))
+            new_output_vars = list(
+                self.data.ef_outputs[i+1] for i in range(
+                    next_ef_id, len(self.data.ef_outputs)
+                    )
+                )
             for v in new_output_vars:
                 self.data.basis_expressions[v] = \
                     self.basis_expression_rule(
@@ -146,8 +150,10 @@ class TRFInterface(object):
 
         for i in self.data.ef_outputs:
             self.data.ef_inputs[i] = \
-                list(identify_variables(self.data.truth_models[self.data.ef_outputs[i]],
-                                        include_fixed=False))
+                list(identify_variables(
+                    self.data.truth_models[self.data.ef_outputs[i]],
+                    include_fixed=False)
+                )
         self.data.all_variables.update(self.data.ef_outputs.values())
         self.data.all_variables = list(self.data.all_variables)
 
@@ -208,7 +214,8 @@ class TRFInterface(object):
         """
         ans = {}
         for i, v in self.data.ef_outputs.items():
-            current_inputs = [value(input_var) for input_var in self.data.ef_inputs[i]]
+            current_inputs = [value(input_var) for
+                              input_var in self.data.ef_inputs[i]]
             current_output = value(v)
             ans[i] = (current_inputs, current_output)
             # Update the truth model output Param as well (minimize cost)
@@ -219,7 +226,8 @@ class TRFInterface(object):
         """
         Return current state of model
         """
-        return list(value(v, exception=False) for v in self.data.all_variables)
+        return list(value(v, exception=False)
+                    for v in self.data.all_variables)
 
     def calculateFeasibility(self):
         """
@@ -229,7 +237,8 @@ class TRFInterface(object):
         || S^{-1} (y-d(w)) || = sum_{i in {1..n}} ( abs( (y_i - d(w)_i)/(s_k)_i) )
         """
         b = self.data
-        return sum(abs(value(y) - value(b.truth_models[y])) for i, y in b.ef_outputs.items())
+        return sum(abs(value(y) - value(b.truth_models[y]))
+                   for i, y in b.ef_outputs.items())
 
     def calculateStepSizeInfNorm(self, original_values, new_values):
         """
@@ -245,7 +254,8 @@ class TRFInterface(object):
             original_vals.append(v[1])
             new_vals.extend(new_values[i][0])
             new_vals.append(new_values[i][1])
-        return max([abs(old - new) for old, new in zip(original_vals, new_vals)])
+        return max([abs(old - new)
+                    for old, new in zip(original_vals, new_vals)])
 
     def initializeProblem(self):
         """
@@ -281,8 +291,9 @@ class TRFInterface(object):
         we need to access them later if a step is rejected
         """
         currentEFValues = self.getCurrentEFValues()
-        self.previous_model_state = self.getCurrentModelState()
-        results = self.solver.solve(self.model, keepfiles=self.config.keepfiles,
+        self.data.previous_model_state = self.getCurrentModelState()
+        results = self.solver.solve(self.model,
+                                    keepfiles=self.config.keepfiles,
                                     tee=self.config.tee)
 
         if ((results.solver.status != SolverStatus.ok)

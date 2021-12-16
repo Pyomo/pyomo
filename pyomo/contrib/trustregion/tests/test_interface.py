@@ -134,8 +134,14 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.assertEqual(self.interface.data.ef_inputs[1],
                          [self.interface.model.x[0],
                           self.interface.model.x[1]])
-        # TRF only supports one active Objective
-        # Make sure that it fails if there are multiple objs
+        # HACK: This was in response to a hack.
+        # Remove when NL writer re-write is complete.
+        # Make sure that EFs were removed from the cloned model.
+        self.assertEqual(
+            list(self.interface.model.component_objects(ExternalFunction)),
+            [])
+        # TRF only supports one active Objective.
+        # Make sure that it fails if there are multiple objs.
         self.m.obj2 = Objective(
             expr=(self.m.x[0]**2 - (self.m.z[1] - 3)**3))
         interface = TRFInterface(self.m,
@@ -226,7 +232,7 @@ class TestTrustRegionInterface(unittest.TestCase):
         # Initialize variable values
         self.interface.model.x.set_values({0 : 2, 1 : 1})
         result = self.interface.getCurrentEFValues()
-        # The initialized value for the output, calculated in line 228,
+        # The initialized value for the output
         self.assertEqual(result, { 1 : ([value(self.interface.model.x[0]),
                                          value(self.interface.model.x[1])],
                                         sin(1))})
@@ -269,7 +275,11 @@ class TestTrustRegionInterface(unittest.TestCase):
         # Because we have not solved the model, the output and truth model
         # should currently match
         self.assertEqual(feasibility, 0)
-        # TODO: Add a test for after the model is solved (12/15/2021)
+        # Check after a solve is completed
+        self.interface.data.basis_constraint.activate()
+        objective, step_norm, feasibility = self.interface.solveModel()
+        self.assertEqual(feasibility, 0.09569982275514467)
+        self.interface.data.basis_constraint.deactivate()
 
     def test_calculateStepSizeInfNorm(self):
         # Set up necessary data objects
@@ -292,7 +302,11 @@ class TestTrustRegionInterface(unittest.TestCase):
         # Currently, we have taken NO step.
         # Therefore, the norm should be 0.
         self.assertEqual(stepnorm, 0)
-        # TODO: Add a test for after the model is solved (12/15/2021)
+        # Check after a solve is completed
+        self.interface.data.basis_constraint.activate()
+        objective, step_norm, feasibility = self.interface.solveModel()
+        self.assertEqual(step_norm, 0.9041534948101395)
+        self.interface.data.basis_constraint.deactivate()
 
     @unittest.skipIf(not SolverFactory('ipopt').available(False),
                      "The IPOPT solver is not available")
@@ -309,11 +323,13 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.interface.data.truth_model_output[:] = 0
         self.interface.data.grad_truth_model_output[...] = 0
         self.interface.data.value_of_ef_inputs[...] = 0
+        # Run the solve
         objective, step_norm, feasibility = self.interface.solveModel()
         self.assertEqual(objective, 5.150744273013601)
         self.assertEqual(step_norm, 0.9041534948101395)
         self.assertEqual(feasibility, 0.09569982275514467)
         self.interface.data.basis_constraint.deactivate()
+        # Change the constraint and update the surrogate model
         self.interface.updateSurrogateModel()
         self.interface.data.sm_constraint_basis.activate()
         objective, step_norm, feasibility = self.interface.solveModel()
@@ -321,6 +337,44 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.assertEqual(step_norm, 0.13254909994294217)
         self.assertEqual(feasibility, 0.09509735734117808)
 
+    def test_initializeProblem(self):
+        # Set starter values on the model
+        self.interface.model.x[0] = 2.0
+        self.interface.model.z.set_values({0: 5.0, 1: 2.5, 2: -1.0})
+        objective, feasibility = self.interface.initializeProblem()
+        self.assertEqual(objective, 5.150744273013601)
+        self.assertEqual(feasibility, 0.09569982275514467)
+        self.assertTrue(self.interface.data.sm_constraint_basis.active)
+        self.assertFalse(self.interface.data.basis_constraint.active)
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_rejectStep(self):
+        self.interface.model.x[1] = 1.5
+        self.interface.model.x[0] = 2.0
+        self.interface.model.z.set_values({0: 5.0, 1: 2.5, 2: -1.0})
+        self.interface.replaceExternalFunctionsWithVariables()
+        self.interface.createConstraints()
+        ans = self.interface.getCurrentEFValues()
+        current_ef_output = ans[1][1]
+        self.interface.data.basis_constraint.activate()
+        _, _, _ = self.interface.solveModel()
+        ans = self.interface.getCurrentEFValues()
+        new_ef_output = ans[1][1]
+        self.assertEqual(len(self.interface.data.all_variables),
+                         len(self.interface.data.previous_model_state))
+        # Make sure the values changed from the original model
+        self.assertNotEqual(value(self.interface.model.x[0]), 2.0)
+        self.assertNotEqual(value(self.interface.model.x[1]), 1.5)
+        self.assertNotEqual(value(self.interface.model.z[0]), 5.0)
+        self.assertNotEqual(value(self.interface.model.z[1]), 2.5)
+        self.assertNotEqual(value(self.interface.model.z[2]), -1.0)
+        self.assertNotEqual(current_ef_output, new_ef_output)
+        self.interface.rejectStep()
+        # Make sure the values were reset
+        ans = self.interface.getCurrentEFValues()
+        new_ef_output = ans[1][1]
+        self.assertEqual(value(self.interface.model.x[0]), 2.0)
+        self.assertEqual(value(self.interface.model.x[1]), 1.5)
+        self.assertEqual(value(self.interface.model.z[0]), 5.0)
+        self.assertEqual(value(self.interface.model.z[1]), 2.5)
+        self.assertEqual(value(self.interface.model.z[2]), -1.0)
+        self.assertEqual(current_ef_output, new_ef_output)
