@@ -75,3 +75,13 @@ public:
   std::vector<std::shared_ptr<NLConstraint> > get_solve_cons();
   int current_cons_index = 0;
 };
+
+
+void process_nl_constraints(NLWriter* nl_writer,
+			    PyomoExprTypes& expr_types,
+			    py::list cons,
+			    py::dict var_map,
+			    py::dict param_map,
+			    py::dict active_constraints,
+			    py::dict con_map,
+			    py::dict rev_con_map);

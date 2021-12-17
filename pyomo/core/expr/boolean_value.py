@@ -1,7 +1,6 @@
 import sys
 import logging
 
-from pyomo.common.deprecation import deprecated
 from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.expr.expr_common import _and, _or, _equiv, _inv, _xor, _impl
 from pyomo.core.pyomoobject import PyomoObject
@@ -99,11 +98,6 @@ class BooleanValue(PyomoObject):
     def local_name(self):
         return self.getname(fully_qualified=False)
 
-    @deprecated("The cname() method has been renamed to getname().",
-                version='5.0')
-    def cname(self, *args, **kwds):
-        return self.getname(*args, **kwds)
-
     def is_constant(self):
         """Return True if this Logical value is a constant value"""
         return False
@@ -181,7 +175,7 @@ class BooleanValue(PyomoObject):
         Returns:
             A string representation for the expression tree.
         """
-        if compute_values:
+        if compute_values and self.is_fixed():
             try:
                 return str(self())
             except:
@@ -191,7 +185,7 @@ class BooleanValue(PyomoObject):
                 return smap.getSymbol(self, labeler)
             elif labeler is not None:
                 return labeler(self)
-        return self.__str__()
+        return str(self)
 
 
 class BooleanConstant(BooleanValue):

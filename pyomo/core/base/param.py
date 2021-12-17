@@ -14,6 +14,7 @@ import sys
 import types
 import logging
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
@@ -212,12 +213,6 @@ class _ParamData(ComponentData, NumericValue):
         """
         return 0
 
-    def __nonzero__(self):
-        """Return True if the value is defined and non-zero."""
-        return bool(self())
-
-    __bool__ = __nonzero__
-
 
 @ModelComponentFactory.register("Parameter data that is used to define a model instance.")
 class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
@@ -225,11 +220,6 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     A parameter value, which may be defined over an index.
 
     Constructor Arguments:
-        name        
-            The name of this parameter
-        index       
-            The index set that defines the distinct parameters. By default, 
-            this is None, indicating that there is a single parameter.
         domain      
             A set that defines the type of values that each parameter must be.
         within      
@@ -248,6 +238,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         mutable: `boolean`
             Flag indicating if the value of the parameter may change between
             calls to a solver. Defaults to `False`
+        name
+            Name for this component.
+        doc
+            Text describing this component.
     """
 
     DefaultMutable = False
@@ -265,12 +259,14 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         else:
             return super(Param, cls).__new__(IndexedParam)
 
+    @overload
+    def __init__(self, *indexes, rule=NOTSET, initialize=NOTSET,
+                 domain=None, within=None, validate=None, mutable=False, default=NoValue,
+                 initialize_as_dense=False, units=None, name=None, doc=None): ...
+
     def __init__(self, *args, **kwd):
         _init = self._pop_from_kwargs(
             'Param', kwd, ('rule', 'initialize'), NOTSET)
-        self._rule = Initializer(_init,
-                                 treat_sequences_as_mappings=False,
-                                 arg_not_specified=NOTSET)
         self.domain = self._pop_from_kwargs('Param', kwd, ('domain', 'within'))
         if self.domain is None:
             self.domain = _ImplicitAny(owner=self, name='Any')
@@ -286,6 +282,11 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
 
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
+
+        # After IndexedComponent.__init__ so we can call is_indexed().
+        self._rule = Initializer(_init,
+                                 treat_sequences_as_mappings=self.is_indexed(),
+                                 arg_not_specified=NOTSET)
 
     def __len__(self):
         """
@@ -306,14 +307,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             return idx in self._data
         return idx in self._index
 
-    def keys(self):
-        """
-        Iterate over the keys in the dictionary.  If the default value is
-        specified, then iterate over all keys in the component index.
-        """
-        if self._default_val is Param.NoValue:
-            return self._data.__iter__()
-        return self._index.__iter__()
+    # We do not need to override keys(), as the __len__ override will
+    # cause the base class keys() to correctly correctly handle default
+    # values
+    #def keys(self, ordered=False):
 
     @property
     def mutable(self):

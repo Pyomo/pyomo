@@ -167,26 +167,6 @@ def _prop_bnds_leaf_to_root_PowExpression(node, bnds_dict, feasibility_tol):
     bnds_dict[node] = interval.power(lb1, ub1, lb2, ub2, feasibility_tol=feasibility_tol)
 
 
-def _prop_bnds_leaf_to_root_ReciprocalExpression(node, bnds_dict, feasibility_tol):
-    """
-
-    Parameters
-    ----------
-    node: pyomo.core.expr.numeric_expr.ReciprocalExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
-    """
-    assert len(node.args) == 1
-    arg = node.args[0]
-    lb1, ub1 = bnds_dict[arg]
-    bnds_dict[node] = interval.inv(lb1, ub1, feasibility_tol)
-
-
 def _prop_bnds_leaf_to_root_NegationExpression(node, bnds_dict, feasibility_tol):
     """
 
@@ -462,7 +442,6 @@ def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict, feasibility_tol):
 _prop_bnds_leaf_to_root_map = dict()
 _prop_bnds_leaf_to_root_map[numeric_expr.ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.DivisionExpression] = _prop_bnds_leaf_to_root_DivisionExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.ReciprocalExpression] = _prop_bnds_leaf_to_root_ReciprocalExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.PowExpression] = _prop_bnds_leaf_to_root_PowExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.SumExpression] = _prop_bnds_leaf_to_root_SumExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.MonomialTermExpression] = _prop_bnds_leaf_to_root_ProductExpression
@@ -472,7 +451,6 @@ _prop_bnds_leaf_to_root_map[numeric_expr.LinearExpression] = _prop_bnds_leaf_to_
 
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_DivisionExpression] = _prop_bnds_leaf_to_root_DivisionExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.NPV_ReciprocalExpression] = _prop_bnds_leaf_to_root_ReciprocalExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_PowExpression] = _prop_bnds_leaf_to_root_PowExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_SumExpression] = _prop_bnds_leaf_to_root_SumExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
@@ -732,32 +710,6 @@ def _prop_bnds_root_to_leaf_sqrt(node, bnds_dict, feasibility_tol):
     if _ub1 < ub1:
         ub1 = _ub1
     bnds_dict[arg1] = (lb1, ub1)
-
-
-def _prop_bnds_root_to_leaf_ReciprocalExpression(node, bnds_dict, feasibility_tol):
-    """
-
-    Parameters
-    ----------
-    node: pyomo.core.expr.numeric_expr.ReciprocalExpression
-    bnds_dict: ComponentMap
-    feasibility_tol: float
-        If the bounds computed on the body of a constraint violate the bounds of the constraint by more than
-        feasibility_tol, then the constraint is considered infeasible and an exception is raised. This tolerance
-        is also used when performing certain interval arithmetic operations to ensure that none of the feasible
-        region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
-        is more conservative).
-    """
-    assert len(node.args) == 1
-    arg = node.args[0]
-    lb0, ub0 = bnds_dict[node]
-    lb1, ub1 = bnds_dict[arg]
-    _lb1, _ub1 = interval.inv(lb0, ub0, feasibility_tol)
-    if _lb1 > lb1:
-        lb1 = _lb1
-    if _ub1 < ub1:
-        ub1 = _ub1
-    bnds_dict[arg] = (lb1, ub1)
 
 
 def _prop_bnds_root_to_leaf_NegationExpression(node, bnds_dict, feasibility_tol):
@@ -1077,7 +1029,6 @@ def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict, feasibility_tol):
 _prop_bnds_root_to_leaf_map = dict()
 _prop_bnds_root_to_leaf_map[numeric_expr.ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.DivisionExpression] = _prop_bnds_root_to_leaf_DivisionExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.ReciprocalExpression] = _prop_bnds_root_to_leaf_ReciprocalExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.PowExpression] = _prop_bnds_root_to_leaf_PowExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.SumExpression] = _prop_bnds_root_to_leaf_SumExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.MonomialTermExpression] = _prop_bnds_root_to_leaf_ProductExpression
@@ -1087,7 +1038,6 @@ _prop_bnds_root_to_leaf_map[numeric_expr.LinearExpression] = _prop_bnds_root_to_
 
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_DivisionExpression] = _prop_bnds_root_to_leaf_DivisionExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.NPV_ReciprocalExpression] = _prop_bnds_root_to_leaf_ReciprocalExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_PowExpression] = _prop_bnds_root_to_leaf_PowExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_SumExpression] = _prop_bnds_root_to_leaf_SumExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression

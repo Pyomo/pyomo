@@ -869,7 +869,7 @@ class MOSEKDirect(DirectSolver):
         for var, val in zip(vars_to_load, var_vals):
             if ref_vars[var] > 0:
                 var.stale = False
-                var.value = val
+                var.set_value(val, skip_validation=True)
 
     def _load_rc(self, vars_to_load=None):
         if not hasattr(self._pyomo_model, 'rc'):

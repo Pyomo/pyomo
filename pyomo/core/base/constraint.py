@@ -16,6 +16,7 @@ import sys
 import logging
 import math
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import DeveloperError
@@ -496,7 +497,7 @@ class _GeneralConstraintData(_ConstraintData):
                     "    Inequality: (lower, expression, upper)"
                     % (self.name, len(expr)))
         #
-        # Ignore an 'empty' constraints
+        # Ignore an 'empty' constraint
         #
         elif _expr_type is type:
             del self.parent_component()[self.index()]
@@ -569,7 +570,8 @@ class _GeneralConstraintData(_ConstraintData):
                 # Error check: ensure equality does not have infinite RHS
                 raise ValueError(
                     "Equality constraint '%s' defined with "
-                    "non-finite term." % (self.name))
+                    "non-finite term (%sHS == None)." % (
+                        self.name, 'L' if args[0] is None else 'R'))
             if args[0].__class__ in native_numeric_types or \
                not args[0].is_potentially_variable():
                 self._lower = self._upper = args[0]
@@ -637,10 +639,10 @@ class Constraint(ActiveIndexedComponent):
             A Pyomo expression for this constraint
         rule
             A function that is used to construct constraint expressions
-        doc
-            A text string describing this component
         name
             A name for this component
+        doc
+            A text string describing this component
 
     Public class attributes:
         doc
@@ -684,27 +686,21 @@ class Constraint(ActiveIndexedComponent):
             return super(Constraint, cls).__new__(AbstractScalarConstraint)
         else:
             return super(Constraint, cls).__new__(IndexedConstraint)
-
+    
+    @overload
+    def __init__(self, *indexes, expr=None, rule=None, name=None, doc=None): ...
+    
     def __init__(self, *args, **kwargs):
-        _init = tuple( _arg for _arg in (
-            kwargs.pop('rule', None),
-            kwargs.pop('expr', None) ) if _arg is not None )
-        if len(_init) == 1:
-            _init = _init[0]
-        elif not _init:
-            _init = None
-        else:
-            raise ValueError("Duplicate initialization: Constraint() only "
-                             "accepts one of 'rule=' and 'expr='")
-
-        kwargs.setdefault('ctype', Constraint)
-        ActiveIndexedComponent.__init__(self, *args, **kwargs)
-
+        _init = self._pop_from_kwargs(
+            'Constraint', kwargs, ('rule', 'expr'), None)
         # Special case: we accept 2- and 3-tuples as constraints
         if type(_init) is tuple:
             self.rule = Initializer(_init, treat_sequences_as_mappings=False)
         else:
             self.rule = Initializer(_init)
+
+        kwargs.setdefault('ctype', Constraint)
+        ActiveIndexedComponent.__init__(self, *args, **kwargs)
 
     def construct(self, data=None):
         """
@@ -981,6 +977,7 @@ class ConstraintList(IndexedConstraint):
             raise ValueError(
                 "ConstraintList does not accept the 'expr' keyword")
         _rule = kwargs.pop('rule', None)
+        self._starting_index = kwargs.pop('starting_index', 1)
 
         args = (Set(dimen=1),)
         super(ConstraintList, self).__init__(*args, **kwargs)
@@ -992,7 +989,9 @@ class ConstraintList(IndexedConstraint):
         # after the base class is set up so that is_indexed() is
         # reliable.
         if self.rule is not None and type(self.rule) is IndexedCallInitializer:
-            self.rule = CountedCallInitializer(self, self.rule)
+            self.rule = CountedCallInitializer(
+                self, self.rule, self._starting_index
+            )
 
 
     def construct(self, data=None):
@@ -1021,7 +1020,7 @@ class ConstraintList(IndexedConstraint):
 
     def add(self, expr):
         """Add a constraint with an implicit index."""
-        next_idx = len(self._index) + 1
+        next_idx = len(self._index) + self._starting_index
         self._index.add(next_idx)
         return self.__setitem__(next_idx, expr)
 

@@ -15,7 +15,7 @@ discretizer.apply_to(instance,nfe=47,wrt=instance.TIME,scheme='BACKWARD')
 # What it should be to match description in paper
 #discretizer.apply_to(instance,nfe=48,wrt=instance.TIME,scheme='BACKWARD')
 
-TimeStep = instance.TIME[2]-instance.TIME[1]
+TimeStep = instance.TIME.at(2) - instance.TIME.at(1)
 
 def supcost_rule(m,k):
     return sum(m.cs*m.s[k,j,t]*(TimeStep) for j in m.SUP for t in m.TIME.get_finite_elements())

@@ -932,9 +932,9 @@ class CuttingPlane_Transformation(Transformation):
             logger.info("x* is:")
             for x_rbigm, x_hull, x_star in var_info:
                 if not x_rbigm.stale:
-                    x_star.value = x_rbigm.value
+                    x_star.set_value(x_rbigm.value)
                     # initialize the X values
-                    x_hull.value = x_rbigm.value    
+                    x_hull.set_value(x_rbigm.value, skip_validation=True)
                 if self.verbose:
                     logger.info("\t%s = %s" % 
                                 (x_rbigm.getname(fully_qualified=True,
@@ -1027,7 +1027,7 @@ class CuttingPlane_Transformation(Transformation):
 
             # Initialize rbigm with xhat (for the next iteration)
             for x_rbigm, x_hull, x_star in var_info:
-                x_rbigm.value = xhat[x_rbigm]
+                x_rbigm.set_value(xhat[x_rbigm], skip_validation=True)
 
     def _add_transformation_block(self, instance):
         # creates transformation block with a unique name based on name, adds it

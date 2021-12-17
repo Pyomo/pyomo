@@ -842,7 +842,7 @@ class CPLEXDirect(DirectSolver):
         for pyomo_var, val in zip(vars_to_load, vals):
             if self._referenced_variables[pyomo_var] > 0:
                 pyomo_var.stale = False
-                pyomo_var.value = val
+                pyomo_var.set_value(val, skip_validation=True)
 
     def _load_rc(self, vars_to_load=None):
         if not hasattr(self._pyomo_model, 'rc'):

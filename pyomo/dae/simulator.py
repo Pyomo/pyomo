@@ -99,8 +99,6 @@ def _check_productexpression(expr, i):
         elif curr.__class__ is EXPR.DivisionExpression:
             stack.append((curr.arg(0), e_))
             stack.append((curr.arg(1), - e_))
-        elif curr.__class__ is EXPR.ReciprocalExpression:
-            stack.append((curr.arg(0), - e_))
         elif type(curr) is EXPR.GetItemExpression and \
              type(curr.arg(0)) is DerivativeVar:
             dv = (curr, e_)
@@ -208,24 +206,27 @@ class Pyomo2Scipy_Visitor(EXPR.ExpressionReplacementVisitor):
     """
 
     def __init__(self, templatemap):
-        super(Pyomo2Scipy_Visitor, self).__init__()
+        # Note because we are creating a "nonPyomo" expression tree, we
+        # want to remove all Expression nodes (as opposed to replacing
+        # them in place)
+        super().__init__(descend_into_named_expressions=True,
+                         remove_named_expressions=True)
         self.templatemap = templatemap
 
-    def visiting_potential_leaf(self, node):
-        if type(node) is IndexTemplate:
-            return True, node
+    def beforeChild(self, node, child, child_idx):
+        if type(child) is IndexTemplate:
+            return False, child
 
-        if type(node) is EXPR.GetItemExpression:
-            _id = _GetItemIndexer(node)
+        if type(child) is EXPR.GetItemExpression:
+            _id = _GetItemIndexer(child)
             if _id not in self.templatemap:
                 self.templatemap[_id] = Param(mutable=True)
                 self.templatemap[_id].construct()
                 self.templatemap[_id]._name = "%s[%s]" % (
                     _id.base.name, ','.join(str(x) for x in _id.args))
-            return True, self.templatemap[_id]
+            return False, self.templatemap[_id]
 
-        return super(
-            Pyomo2Scipy_Visitor, self).visiting_potential_leaf(node)
+        return super().beforeChild(node, child, child_idx)
 
 
 def convert_pyomo2scipy(expr, templatemap):
@@ -245,7 +246,7 @@ def convert_pyomo2scipy(expr, templatemap):
         raise DAE_Error("SciPy is not installed. Cannot substitute SciPy "
                         "intrinsic functions.")
     visitor = Pyomo2Scipy_Visitor(templatemap)
-    return visitor.dfs_postorder_stack(expr)
+    return visitor.walk_expression(expr)
 
 
 class Substitute_Pyomo2Casadi_Visitor(EXPR.ExpressionReplacementVisitor):
@@ -260,34 +261,37 @@ class Substitute_Pyomo2Casadi_Visitor(EXPR.ExpressionReplacementVisitor):
     """
 
     def __init__(self, templatemap):
-        super(Substitute_Pyomo2Casadi_Visitor, self).__init__()
+        # Note because we are creating a "nonPyomo" expression tree, we
+        # want to remove all Expression nodes (as opposed to replacing
+        # them in place)
+        super().__init__(descend_into_named_expressions=True,
+                         remove_named_expressions=True)
         self.templatemap = templatemap
 
-    def visit(self, node, values):
+    def exitNode(self, node, data):
         """Replace a node if it's a unary function."""
-        if type(node) is EXPR.UnaryFunctionExpression:
+        ans = super().exitNode(node, data)
+        if type(ans) is EXPR.UnaryFunctionExpression:
             return EXPR.UnaryFunctionExpression(
-                            values[0],
-                            node._name,
-                            casadi_intrinsic[node._name])
-        return node
+                ans.args,
+                ans.getname(),
+                casadi_intrinsic[ans.getname()])
+        return ans
 
-    def visiting_potential_leaf(self, node):
+    def beforeChild(self, node, child, child_idx):
         """Replace a node if it's a _GetItemExpression."""
-        if type(node) is EXPR.GetItemExpression:
-            _id = _GetItemIndexer(node)
+        if type(child) is EXPR.GetItemExpression:
+            _id = _GetItemIndexer(child)
             if _id not in self.templatemap:
                 name = "%s[%s]" % (
                     _id.base.name, ','.join(str(x) for x in _id.args))
                 self.templatemap[_id] = casadi.SX.sym(name)
-            return True, self.templatemap[_id]
+            return False, self.templatemap[_id]
 
-        if type(node) in native_numeric_types or \
-           not node.is_expression_type() or \
-           type(node) is IndexTemplate:
-            return True, node
+        elif type(child) is IndexTemplate:
+            return False, child
 
-        return False, None
+        return super().beforeChild(node, child, child_idx)
 
 
 class Convert_Pyomo2Casadi_Visitor(EXPR.ExpressionValueVisitor):
@@ -345,7 +349,7 @@ def substitute_pyomo2casadi(expr, templatemap):
         raise DAE_Error("CASADI is not installed.  Cannot substitute CasADi "
                         "variables and intrinsic functions.")
     visitor = Substitute_Pyomo2Casadi_Visitor(templatemap)
-    return visitor.dfs_postorder_stack(expr)
+    return visitor.walk_expression(expr)
 
 
 def convert_pyomo2casadi(expr):
@@ -526,14 +530,12 @@ class Simulator:
                 # Case 3: m.p*m.dxdt[t] = RHS
                 if args is None:
                     if type(tempexp.arg(0)) is EXPR.ProductExpression or \
-                       type(tempexp.arg(0)) is EXPR.ReciprocalExpression or \
                        type(tempexp.arg(0)) is EXPR.DivisionExpression:
                         args = _check_productexpression(tempexp, 0)
 
                 # Case 4: RHS =  m.p*m.dxdt[t]
                 if args is None:
                     if type(tempexp.arg(1)) is EXPR.ProductExpression or \
-                       type(tempexp.arg(1)) is EXPR.ReciprocalExpression or \
                        type(tempexp.arg(1)) is EXPR.DivisionExpression:
                         args = _check_productexpression(tempexp, 1)
 

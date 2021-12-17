@@ -157,13 +157,13 @@ def init_rNLP(solve_data, config):
                 copy_var_list_values(m.MindtPy_utils.variable_list,
                                      solve_data.working_model.MindtPy_utils.variable_list,
                                      config, ignore_integrality=True)
-            if config.strategy == 'OA':
+            if config.strategy in {'OA', 'FP'}:
                 add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
             elif config.strategy == 'GOA':
                 add_affine_cuts(solve_data, config)
             # TODO check if value of the binary or integer varibles is 0/1 or integer value.
             for var in solve_data.mip.MindtPy_utils.discrete_variable_list:
-                var.value = int(round(var.value))
+                var.set_value(int(round(var.value)), skip_validation=True)
     elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
         # TODO fail? try something else?
         config.logger.info(
@@ -209,7 +209,7 @@ def init_max_binaries(solve_data, config):
         c.deactivate()
     objective = next(m.component_data_objects(Objective, active=True))
     objective.deactivate()
-    binary_vars = (v for v in m.component_data_objects(ctype=Var)
+    binary_vars = (v for v in m.MindtPy_utils.discrete_variable_list
                    if v.is_binary() and not v.fixed)
     MindtPy.MindtPy_max_binary_obj = Objective(
         expr=sum(v for v in binary_vars), sense=maximize)

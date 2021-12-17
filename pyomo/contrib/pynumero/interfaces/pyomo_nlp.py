@@ -89,11 +89,10 @@ class PyomoNLP(AslNLP):
             # The NL writer advertises the external function libraries
             # through the PYOMO_AMPLFUNC environment variable; merge it
             # with any preexisting AMPLFUNC definitions
-            amplfunc = "\n".join(
-                val for val in (
-                    os.environ.get('AMPLFUNC', ''),
-                    os.environ.get('PYOMO_AMPLFUNC', ''),
-                ) if val)
+            amplfunc = "\n".join(filter(None, (
+                os.environ.get('AMPLFUNC', None),
+                os.environ.get('PYOMO_AMPLFUNC', None),
+            )))
             with CtypesEnviron(AMPLFUNC=amplfunc):
                 super(PyomoNLP, self).__init__(nl_file)
 
@@ -181,7 +180,11 @@ class PyomoNLP(AslNLP):
         names in the order corresponding to the primals
         """
         pyomo_variables = self.get_pyomo_variables()
-        return [v.getname(fully_qualified=True) for v in pyomo_variables]
+        name_buffer = {}
+        return [
+            v.getname(fully_qualified=True, name_buffer=name_buffer)
+            for v in pyomo_variables
+        ]
 
     def constraint_names(self):
         """
@@ -189,7 +192,11 @@ class PyomoNLP(AslNLP):
         names in the order corresponding to internal constraint order
         """
         pyomo_constraints = self.get_pyomo_constraints()
-        return [v.getname(fully_qualified=True) for v in pyomo_constraints]
+        name_buffer = {}
+        return [
+            v.getname(fully_qualified=True, name_buffer=name_buffer)
+            for v in pyomo_constraints
+        ]
 
     def equality_constraint_names(self):
         """
@@ -197,7 +204,11 @@ class PyomoNLP(AslNLP):
         the order corresponding to the equality constraints.
         """
         equality_constraints = self.get_pyomo_equality_constraints()
-        return [v.getname(fully_qualified=True) for v in equality_constraints]
+        name_buffer = {}
+        return [
+            v.getname(fully_qualified=True, name_buffer=name_buffer)
+            for v in equality_constraints
+        ]
 
     def inequality_constraint_names(self):
         """
@@ -205,7 +216,11 @@ class PyomoNLP(AslNLP):
         the order corresponding to the inequality constraints.
         """
         inequality_constraints = self.get_pyomo_inequality_constraints()
-        return [v.getname(fully_qualified=True) for v in inequality_constraints]
+        name_buffer = {}
+        return [
+            v.getname(fully_qualified=True, name_buffer=name_buffer)
+            for v in inequality_constraints
+        ]
 
     def get_primal_indices(self, pyomo_variables):
         """

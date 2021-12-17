@@ -15,9 +15,10 @@ import pickle
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import Var, Block, ConcreteModel, RangeSet, Set
+from pyomo.environ import Var, Block, ConcreteModel, RangeSet, Set, Any
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
+from pyomo.core.base.set import normalize_index
 
 def _x_init(m, k):
     return k
@@ -155,6 +156,16 @@ class TestComponentSlices(unittest.TestCase):
         self.assertRaisesRegex(
             IndexError, 'wildcard slice .* can only appear once',
             self.m.b.__getitem__, (Ellipsis,Ellipsis) )
+
+    def test_any_slice(self):
+        m = ConcreteModel()
+        m.x = Var(Any, dense=False)
+        m.x[1] = 1
+        m.x[1,1] = 2
+        m.x[2] = 3
+        self.assertEqual(list(str(_) for _ in m.x[:]), ['x[1]', 'x[2]'])
+        self.assertEqual(list(str(_) for _ in m.x[:,:]), ['x[1,1]'])
+        self.assertEqual(list(str(_) for _ in m.x[...]), ['x[1]', 'x[1,1]', 'x[2]'])
 
 
     def test_nonterminal_slice(self):
@@ -601,7 +612,6 @@ class TestComponentSlices(unittest.TestCase):
         self.assertEqual(len(ref), 1)
         self.assertIs(ref[0], m.x[2,3])
 
-        from pyomo.core.base.set import normalize_index
         _old_flatten = normalize_index.flatten
         try:
             normalize_index.flatten = False
@@ -624,8 +634,19 @@ class TestComponentSlices(unittest.TestCase):
         finally:
             normalize_index.flatten = _old_flatten
 
+    def test_UnknownSetDimen(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=[1,2,3])
+        m.J = Set()
+        m.x = Var(m.I, m.J)
+
+        with self.assertRaisesRegex(
+                IndexError,
+                'Slicing components relies on knowing the underlying '
+                'set dimensionality'):
+            ref = list(m.x[:,:])
+
     def test_flatten_false(self):
-        from pyomo.core.base.set import normalize_index
         _old_flatten = normalize_index.flatten
         try:
             normalize_index.flatten = False
@@ -692,6 +713,27 @@ class TestComponentSlices(unittest.TestCase):
         self.assertEqual(m.b[0,:].v[:], m.b[0,:].v[:])
         self.assertNotEqual(m.b[0,:].v[:], m.b[0,:].v['a'])
 
+    def test_str(self):
+        m = ConcreteModel()
+        m.b = Block()
+        # Note that we are testing the string representation of a slice,
+        # not if the slice is valid
+        s = m.b[...].x[:, 1:2, 1:5:2, ::1, 5, 'a'].component('foo', kwarg=1)
+        self.assertEqual(
+            str(s),
+            "b[...].x[:, 1:2, 1:5:2, ::1, 5, 'a'].component('foo', kwarg=1)")
+
+        # To test set / del, we want to form the IndexedComponent_slice
+        # without evaluating it
+        s = m.b[...]
+        self.assertEqual(
+            str(IndexedComponent_slice(
+                s, (IndexedComponent_slice.del_attribute, 'bogus'))),
+            'del b[...].bogus')
+        self.assertEqual(
+            str(IndexedComponent_slice(
+                s, (IndexedComponent_slice.set_attribute, 'bogus', 10))),
+            'b[...].bogus = 10')
 
 if __name__ == "__main__":
     unittest.main()

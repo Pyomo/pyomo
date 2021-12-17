@@ -1,364 +1,6 @@
 #include "expression.hpp"
 
 
-std::shared_ptr<ExpressionBase> binary_helper(std::shared_ptr<ExpressionBase> n1, std::shared_ptr<ExpressionBase> n2, std::shared_ptr<BinaryOperator> oper)
-{
-  std::shared_ptr<Expression> expr = std::make_shared<Expression>();
-  if (n1->is_leaf() && n2->is_leaf())
-    {
-      oper->operand1 = n1;
-      oper->operand2 = n2;
-    }
-  else if (n1->is_leaf())
-    {
-      oper->operand1 = n1;
-      std::shared_ptr<Expression> n2_expr = std::dynamic_pointer_cast<Expression>(n2);
-      oper->operand2 = n2_expr->operators->back();
-      if (n2_expr->operators->size() == n2_expr->n_operators)
-	{
-	  expr->operators = n2_expr->operators;
-	}
-      else
-	{
-	  for (unsigned int i=0; i<n2_expr->n_operators; ++i)
-	    {
-	      expr->operators->push_back(n2_expr->operators->at(i));
-	    }
-	}
-    }
-  else if (n2->is_leaf())
-    {
-      std::shared_ptr<Expression> n1_expr = std::dynamic_pointer_cast<Expression>(n1);
-      oper->operand1 = n1_expr->operators->back();
-      oper->operand2 = n2;
-      if (n1_expr->operators->size() == n1_expr->n_operators)
-	{
-	  expr->operators = n1_expr->operators;
-	}
-      else
-	{
-	  for (unsigned int i=0; i<n1_expr->n_operators; ++i)
-	    {
-	      expr->operators->push_back(n1_expr->operators->at(i));
-	    }
-	}
-    }
-  else
-    {
-      std::shared_ptr<Expression> n1_expr = std::dynamic_pointer_cast<Expression>(n1);
-      std::shared_ptr<Expression> n2_expr = std::dynamic_pointer_cast<Expression>(n2);
-      oper->operand1 = n1_expr->operators->back();
-      oper->operand2 = n2_expr->operators->back();
-      if (n1_expr->operators->size() == n1_expr->n_operators)
-	{
-	  expr->operators = n1_expr->operators;
-	}
-      else
-	{
-	  for (unsigned int i=0; i<n1_expr->n_operators; ++i)
-	    {
-	      expr->operators->push_back(n1_expr->operators->at(i));
-	    }
-	}
-      for (unsigned int i=0; i<n2_expr->n_operators; ++i)
-	{
-	  expr->operators->push_back(n2_expr->operators->at(i));
-	}
-    }
-  expr->operators->push_back(oper);
-  expr->n_operators = expr->operators->size();
-  return expr;
-}
-
-
-std::shared_ptr<ExpressionBase> external_helper(std::string function_name, std::vector<std::shared_ptr<ExpressionBase> > operands)
-{
-  std::shared_ptr<ExternalOperator> oper = std::make_shared<ExternalOperator>();
-  oper->function_name = function_name;
-  std::shared_ptr<Expression> expr = std::make_shared<Expression>();
-  for (std::shared_ptr<Node> n : operands)
-    {
-      if (n->is_leaf())
-	{
-	  oper->operands->push_back(n);
-	}
-      else
-	{
-	  std::shared_ptr<Expression> n_expr = std::dynamic_pointer_cast<Expression>(n);
-	  oper->operands->push_back(n_expr->operators->back());
-	  for (unsigned int i=0; i<n_expr->n_operators; ++i)
-	    {
-	      expr->operators->push_back(n_expr->operators->at(i));
-	    }
-	}
-    }
-  expr->operators->push_back(oper);
-  expr->n_operators = expr->operators->size();
-  return expr;
-}
-
-
-std::shared_ptr<ExpressionBase> unary_helper(std::shared_ptr<ExpressionBase> n1, std::shared_ptr<UnaryOperator> oper)
-{
-  std::shared_ptr<Expression> expr = std::make_shared<Expression>();
-  if (n1->is_leaf())
-    {
-      oper->operand = n1;
-    }
-  else
-    {
-      std::shared_ptr<Expression> n1_expr = std::dynamic_pointer_cast<Expression>(n1);
-      oper->operand = n1_expr->operators->back();
-      if (n1_expr->operators->size() == n1_expr->n_operators)
-	{
-	  expr->operators = n1_expr->operators;
-	}
-      else
-	{
-	  for (unsigned int i=0; i<n1_expr->n_operators; ++i)
-	    {
-	      expr->operators->push_back(n1_expr->operators->at(i));
-	    }
-	}
-    }
-  expr->operators->push_back(oper);
-  expr->n_operators = expr->operators->size();
-  return expr;
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::operator+(ExpressionBase& other)
-{
-  if (other.is_constant_type() && other.evaluate() == 0.0)
-    {
-      return shared_from_this();
-    }
-  else if (is_constant_type() && evaluate() == 0.0)
-    {
-      return other.shared_from_this();
-    }
-  else
-    {
-      std::shared_ptr<AddOperator> oper = std::make_shared<AddOperator>();
-      return binary_helper(shared_from_this(), other.shared_from_this(), oper);
-    }
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::operator-(ExpressionBase& other)
-{
-  if (other.is_constant_type() && other.evaluate() == 0.0)
-    {
-      return shared_from_this();
-    }
-  else if (is_constant_type() && evaluate() == 0.0)
-    {
-      return -other;
-    }
-  else
-    {
-      std::shared_ptr<SubtractOperator> oper = std::make_shared<SubtractOperator>();
-      return binary_helper(shared_from_this(), other.shared_from_this(), oper);
-    }
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::operator*(ExpressionBase& other)
-{
-  if (other.is_constant_type() && other.evaluate() == 1.0)
-    {
-      return shared_from_this();
-    }
-  else if (other.is_constant_type() && other.evaluate() == 0.0)
-    {
-      return other.shared_from_this();
-    }
-  else if (is_constant_type() && evaluate() == 1.0)
-    {
-      return other.shared_from_this();
-    }
-  else if (is_constant_type() && evaluate() == 0.0)
-    {
-      return shared_from_this();
-    }
-  else
-    {
-      std::shared_ptr<MultiplyOperator> oper = std::make_shared<MultiplyOperator>();
-      return binary_helper(shared_from_this(), other.shared_from_this(), oper);
-    }
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::operator/(ExpressionBase& other)
-{
-  if (other.is_constant_type() && other.evaluate() == 1.0)
-    {
-      return shared_from_this();
-    }
-  else if (other.is_constant_type() && other.evaluate() == 0.0)
-    {
-      assert (false);
-    }
-  else if (is_constant_type() && evaluate() == 0.0)
-    {
-      return shared_from_this();
-    }
-  std::shared_ptr<DivideOperator> oper = std::make_shared<DivideOperator>();
-  return binary_helper(shared_from_this(), other.shared_from_this(), oper);
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::__pow__(ExpressionBase& other)
-{
-  if (other.is_constant_type() && other.evaluate() == 1.0)
-    {
-      return shared_from_this();
-    }
-  else if (other.is_constant_type() && other.evaluate() == 0.0)
-    {
-      return std::make_shared<Constant>(1.0);
-    }
-  else if (is_constant_type() && evaluate() == 1.0)
-    {
-      return shared_from_this();
-    }
-  else if (is_constant_type() && evaluate() == 0.0)
-    {
-      return shared_from_this();
-    }
-  else
-    {
-      std::shared_ptr<PowerOperator> oper = std::make_shared<PowerOperator>();
-      return binary_helper(shared_from_this(), other.shared_from_this(), oper);
-    }
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::operator-()
-{
-  if (is_constant_type())
-    {
-      return std::make_shared<Constant>(-evaluate());
-    }
-  else
-    {
-      std::shared_ptr<NegationOperator> oper = std::make_shared<NegationOperator>();
-      return unary_helper(shared_from_this(), oper);
-    }
-}
-
-
-std::shared_ptr<ExpressionBase> appsi_exp(std::shared_ptr<ExpressionBase> n)
-{
-  if (n->is_constant_type())
-    {
-      return std::make_shared<Constant>(std::exp(n->evaluate()));
-    }
-  else
-    {
-      std::shared_ptr<ExpOperator> oper = std::make_shared<ExpOperator>();
-      return unary_helper(n->shared_from_this(), oper);
-    }
-}
-
-
-std::shared_ptr<ExpressionBase> appsi_log(std::shared_ptr<ExpressionBase> n)
-{
-  if (n->is_constant_type())
-    {
-      return std::make_shared<Constant>(std::log(n->evaluate()));
-    }
-  else
-    {
-      std::shared_ptr<LogOperator> oper = std::make_shared<LogOperator>();
-      return unary_helper(n->shared_from_this(), oper);
-    }
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::operator+(double other)
-{
-  std::shared_ptr<Constant> other_const = std::make_shared<Constant>(other);
-  return (*this) + (*other_const);
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::operator*(double other)
-{
-  std::shared_ptr<Constant> other_const = std::make_shared<Constant>(other);
-  return (*this) * (*other_const);
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::operator-(double other)
-{
-  std::shared_ptr<Constant> other_const = std::make_shared<Constant>(other);
-  return (*this) - (*other_const);
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::operator/(double other)
-{
-  std::shared_ptr<Constant> other_const = std::make_shared<Constant>(other);
-  return (*this) / (*other_const);
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::__pow__(double other)
-{
-  std::shared_ptr<Constant> other_const = std::make_shared<Constant>(other);
-  return this->__pow__(*other_const);
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::__radd__(double other)
-{
-  std::shared_ptr<Constant> other_const = std::make_shared<Constant>(other);
-  return (*other_const) + (*this);
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::__rmul__(double other)
-{
-  std::shared_ptr<Constant> other_const = std::make_shared<Constant>(other);
-  return (*other_const) * (*this);
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::__rsub__(double other)
-{
-  std::shared_ptr<Constant> other_const = std::make_shared<Constant>(other);
-  return (*other_const) - (*this);
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::__rdiv__(double other)
-{
-  std::shared_ptr<Constant> other_const = std::make_shared<Constant>(other);
-  return (*other_const) / (*this);
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::__rtruediv__(double other)
-{
-  std::shared_ptr<Constant> other_const = std::make_shared<Constant>(other);
-  return (*other_const) / (*this);
-}
-
-
-std::shared_ptr<ExpressionBase> ExpressionBase::__rpow__(double other)
-{
-  std::shared_ptr<Constant> other_const = std::make_shared<Constant>(other);
-  return other_const->__pow__(*this);
-}
-
-
-bool ExternalOperator::is_external()
-{
-  return true;
-}
-
-
 bool Leaf::is_leaf()
 {
   return true;
@@ -395,15 +37,167 @@ double Leaf::evaluate()
 }
 
 
+double Var::get_lb()
+{
+  double lb1 = lb->evaluate();
+  double lb2;
+  if (domain == "reals")
+    {
+      lb2 = -inf;
+    }
+  else if (domain == "nonnegative_reals")
+    {
+      lb2 = 0;
+    }
+  else if (domain == "nonpositive_reals")
+    {
+      lb2 = -inf;
+    }
+  else if (domain == "integers")
+    {
+      lb2 = -inf;
+    }
+  else if (domain == "nonnegative_integers")
+    {
+      lb2 = 0;
+    }
+  else if (domain == "nonpositive_integers")
+    {
+      lb2 = -inf;
+    }
+  else if (domain == "binary")
+    {
+      lb2 = 0;
+    }
+  else if (domain == "percent_fraction")
+    {
+      lb2 = 0;
+    }
+  else if (domain == "unit_interval")
+    {
+      lb2 = 0;
+    }
+  else
+    {
+      throw py::value_error("Unrecognized domain: " + domain);
+    }
+  return std::max(lb1, lb2);
+}
+
+
+double Var::get_ub()
+{
+  double ub1 = ub->evaluate();
+  double ub2;
+  if (domain == "reals")
+    {
+      ub2 = inf;
+    }
+  else if (domain == "nonnegative_reals")
+    {
+      ub2 = inf;
+    }
+  else if (domain == "nonpositive_reals")
+    {
+      ub2 = 0;
+    }
+  else if (domain == "integers")
+    {
+      ub2 = inf;
+    }
+  else if (domain == "nonnegative_integers")
+    {
+      ub2 = inf;
+    }
+  else if (domain == "nonpositive_integers")
+    {
+      ub2 = 0;
+    }
+  else if (domain == "binary")
+    {
+      ub2 = 1;
+    }
+  else if (domain == "percent_fraction")
+    {
+      ub2 = 1;
+    }
+  else if (domain == "unit_interval")
+    {
+      ub2 = 1;
+    }
+  else
+    {
+      throw py::value_error("Unrecognized domain: " + domain);
+    }
+  return std::min(ub1, ub2);
+}
+
+
+std::string Var::get_domain()
+{
+  std::string res;
+  if (domain == "reals")
+    {
+      res = "continuous";
+    }
+  else if (domain == "nonnegative_reals")
+    {
+      res = "continuous";
+    }
+  else if (domain == "nonpositive_reals")
+    {
+      res = "continuous";
+    }
+  else if (domain == "integers")
+    {
+      res = "integers";
+    }
+  else if (domain == "nonnegative_integers")
+    {
+      res = "integers";
+    }
+  else if (domain == "nonpositive_integers")
+    {
+      res = "integers";
+    }
+  else if (domain == "binary")
+    {
+      res = "binary";
+    }
+  else if (domain == "percent_fraction")
+    {
+      res = "continuous";
+    }
+  else if (domain == "unit_interval")
+    {
+      res = "continuous";
+    }
+  else
+    {
+      throw py::value_error("Unrecognized domain: " + domain);
+    }
+  return res;
+}
+
+
 bool Operator::is_operator_type()
 {
   return true;
 }
 
 
+std::vector<std::shared_ptr<Operator> > Expression::get_operators()
+{
+  std::vector<std::shared_ptr<Operator> > res (n_operators);
+  for (unsigned int i=0; i<n_operators; ++i)
+    {
+      res[i] = operators[i];
+    }
+  return res;
+}
+
 double Leaf::get_value_from_array(double* val_array)
 {
-  der = 0.0;
   return value;
 }
 
@@ -430,13 +224,27 @@ void ExternalOperator::evaluate(double* values)
 {
   // It would be nice to implement this, but it will take some more work.
   // This would require dynamic linking to the external function.
-  assert (false);
+  throw std::runtime_error("cannot evaluate ExternalOperator yet");
 }
 
 
-void AddOperator::evaluate(double* values)
+void LinearOperator::evaluate(double* values)
 {
-  values[index] = operand1->get_value_from_array(values) + operand2->get_value_from_array(values);
+  values[index] = constant->evaluate();
+  for (unsigned int i=0; i<nterms; ++i)
+    {
+      values[index] += coefficients[i]->evaluate() * variables[i]->evaluate();
+    }
+}
+
+
+void SumOperator::evaluate(double* values)
+{
+  values[index] = 0.0;
+  for (unsigned int i=0; i<nargs; ++i)
+    {
+      values[index] += operands[i]->get_value_from_array(values);
+    }
 }
 
 
@@ -476,13 +284,55 @@ void LogOperator::evaluate(double* values)
 }
 
 
+void Log10Operator::evaluate(double* values)
+{
+  values[index] = std::log10(operand->get_value_from_array(values));
+}
+
+
+void SinOperator::evaluate(double* values)
+{
+  values[index] = std::sin(operand->get_value_from_array(values));
+}
+
+
+void CosOperator::evaluate(double* values)
+{
+  values[index] = std::cos(operand->get_value_from_array(values));
+}
+
+
+void TanOperator::evaluate(double* values)
+{
+  values[index] = std::tan(operand->get_value_from_array(values));
+}
+
+
+void AsinOperator::evaluate(double* values)
+{
+  values[index] = std::asin(operand->get_value_from_array(values));
+}
+
+
+void AcosOperator::evaluate(double* values)
+{
+  values[index] = std::acos(operand->get_value_from_array(values));
+}
+
+
+void AtanOperator::evaluate(double* values)
+{
+  values[index] = std::atan(operand->get_value_from_array(values));
+}
+
+
 double Expression::evaluate()
 {
   double* values = new double[n_operators];
   for (unsigned int i=0; i<n_operators; ++i)
     {
-      operators->at(i)->index = i;
-      operators->at(i)->evaluate(values);
+      operators[i]->index = i;
+      operators[i]->evaluate(values);
     }
   double res = get_value_from_array(values);
   delete[] values;
@@ -514,11 +364,32 @@ void BinaryOperator::identify_variables(std::set<std::shared_ptr<Node> > &var_se
 
 void ExternalOperator::identify_variables(std::set<std::shared_ptr<Node> > &var_set)
 {
-  for (unsigned int i=0; i<operands->size(); ++i)
+  for (unsigned int i=0; i<nargs; ++i)
     {
-      if (operands->at(i)->is_variable_type())
+      if (operands[i]->is_variable_type())
 	{
-	  var_set.insert(operands->at(i));
+	  var_set.insert(operands[i]);
+	}
+    }
+}
+
+
+void LinearOperator::identify_variables(std::set<std::shared_ptr<Node> > &var_set)
+{
+  for (unsigned int i=0; i<nterms; ++i)
+    {
+      var_set.insert(variables[i]);
+    }
+}
+
+
+void SumOperator::identify_variables(std::set<std::shared_ptr<Node> > &var_set)
+{
+  for (unsigned int i=0; i<nargs; ++i)
+    {
+      if (operands[i]->is_variable_type())
+	{
+	  var_set.insert(operands[i]);
 	}
     }
 }
@@ -529,12 +400,14 @@ std::shared_ptr<std::vector<std::shared_ptr<Var> > > Expression::identify_variab
   std::set<std::shared_ptr<Node> > var_set;
   for (unsigned int i=0; i<n_operators; ++i)
     {
-      operators->at(i)->identify_variables(var_set);
+      operators[i]->identify_variables(var_set);
     }
-  std::shared_ptr<std::vector<std::shared_ptr<Var> > > res = std::make_shared<std::vector<std::shared_ptr<Var> > >();
+  std::shared_ptr<std::vector<std::shared_ptr<Var> > > res = std::make_shared<std::vector<std::shared_ptr<Var> > >(var_set.size());
+  int ndx = 0;
   for (std::shared_ptr<Node> v : var_set)
     {
-      res->push_back(std::dynamic_pointer_cast<Var>(v));
+      (*res)[ndx] = std::dynamic_pointer_cast<Var>(v);
+      ndx += 1;
     }
   return res;
 }
@@ -567,15 +440,17 @@ std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > Expression::id
   std::set<std::shared_ptr<Node> > external_set;
   for (unsigned int i=0; i<n_operators; ++i)
     {
-      if (operators->at(i)->is_external())
+      if (operators[i]->is_external_operator())
 	{
-	  external_set.insert(operators->at(i));
+	  external_set.insert(operators[i]);
 	}
     }
-  std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > res = std::make_shared<std::vector<std::shared_ptr<ExternalOperator> > >();
+  std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > res = std::make_shared<std::vector<std::shared_ptr<ExternalOperator> > >(external_set.size());
+  int ndx = 0;
   for (std::shared_ptr<Node> n : external_set)
     {
-      res->push_back(std::dynamic_pointer_cast<ExternalOperator>(n));
+      (*res)[ndx] = std::dynamic_pointer_cast<ExternalOperator>(n);
+      ndx += 1;
     }
   return res;
 }
@@ -600,8 +475,6 @@ std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > Param::identif
   std::shared_ptr<std::vector<std::shared_ptr<ExternalOperator> > > res = std::make_shared<std::vector<std::shared_ptr<ExternalOperator> > >();
   return res;
 }
-
-
 
 
 int Var::get_degree_from_array(int* degree_array)
@@ -634,6 +507,28 @@ int Operator::get_degree_from_array(int* degree_array)
 }
 
 
+void LinearOperator::propagate_degree_forward(int* degrees, double* values)
+{
+  degrees[index] = 1;
+}
+
+
+void SumOperator::propagate_degree_forward(int* degrees, double* values)
+{
+  int deg = 0;
+  int _deg;
+  for (unsigned int i=0; i<nargs; ++i)
+    {
+      _deg = operands[i]->get_degree_from_array(degrees);
+      if (_deg > deg)
+	{
+	  deg = _deg;
+	}
+    }
+  degrees[index] = deg;
+}
+
+
 void MultiplyOperator::propagate_degree_forward(int* degrees, double* values)
 {
   degrees[index] = operand1->get_degree_from_array(degrees) + operand2->get_degree_from_array(degrees);
@@ -645,12 +540,6 @@ void ExternalOperator::propagate_degree_forward(int* degrees, double* values)
   // External functions are always considered nonlinear
   // Anything larger than 2 is nonlinear
   degrees[index] = 3;
-}
-
-
-void AddOperator::propagate_degree_forward(int* degrees, double* values)
-{
-  degrees[index] = std::max(operand1->get_degree_from_array(degrees), operand2->get_degree_from_array(degrees));
 }
 
 
@@ -695,20 +584,7 @@ void NegationOperator::propagate_degree_forward(int* degrees, double* values)
 }
 
 
-void ExpOperator::propagate_degree_forward(int* degrees, double* values)
-{
-  if (operand->get_degree_from_array(degrees) == 0)
-    {
-      degrees[index] = 0;
-    }
-  else
-    {
-      degrees[index] = 3;
-    }
-}
-
-
-void LogOperator::propagate_degree_forward(int* degrees, double* values)
+void UnaryOperator::propagate_degree_forward(int* degrees, double* values)
 {
   if (operand->get_degree_from_array(degrees) == 0)
     {
@@ -745,7 +621,7 @@ std::string Expression::__str__()
   std::shared_ptr<Operator> oper;
   for (unsigned int i=0; i<n_operators; ++i)
     {
-      oper = operators->at(i);
+      oper = operators[i];
       oper->index = i;
       oper->print(string_array);
     }
@@ -773,16 +649,6 @@ std::string Operator::get_string_from_array(std::string* string_array)
 }
 
 
-void AddOperator::print(std::string* string_array)
-{
-  string_array[index] = ("(" +
-			 operand1->get_string_from_array(string_array) +
-			 " + " +
-			 operand2->get_string_from_array(string_array) +
-			 ")");
-}
-
-
 void SubtractOperator::print(std::string* string_array)
 {
   string_array[index] = ("(" +
@@ -806,12 +672,12 @@ void MultiplyOperator::print(std::string* string_array)
 void ExternalOperator::print(std::string* string_array)
 {
   std::string res = function_name + "(";
-  for (unsigned int i=0; i<(operands->size() - 1); ++i)
+  for (unsigned int i=0; i<(nargs - 1); ++i)
     {
-      res += operands->at(i)->get_string_from_array(string_array);
+      res += operands[i]->get_string_from_array(string_array);
       res += ", ";
     }
-  res += operands->back()->get_string_from_array(string_array);
+  res += operands[nargs-1]->get_string_from_array(string_array);
   res += ")";
   string_array[index] = res;
 }
@@ -861,6 +727,86 @@ void LogOperator::print(std::string* string_array)
 }
 
 
+void Log10Operator::print(std::string* string_array)
+{
+  string_array[index] = ("log10(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void SinOperator::print(std::string* string_array)
+{
+  string_array[index] = ("sin(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void CosOperator::print(std::string* string_array)
+{
+  string_array[index] = ("cos(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void TanOperator::print(std::string* string_array)
+{
+  string_array[index] = ("tan(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void AsinOperator::print(std::string* string_array)
+{
+  string_array[index] = ("asin(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void AcosOperator::print(std::string* string_array)
+{
+  string_array[index] = ("acos(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void AtanOperator::print(std::string* string_array)
+{
+  string_array[index] = ("atan(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
+void LinearOperator::print(std::string* string_array)
+{
+  std::string res = "(" + constant->__str__();
+  for (unsigned int i=0; i<nterms; ++i)
+    {
+      res += " + " + coefficients[i]->__str__() + "*" + variables[i]->__str__();
+    }
+  res += ")";
+  string_array[index] = res;
+}
+
+
+void SumOperator::print(std::string* string_array)
+{
+  std::string res = "(" + operands[0]->get_string_from_array(string_array);
+  for (unsigned int i=1; i<nargs; ++ i)
+    {
+      res += " + " + operands[i]->get_string_from_array(string_array);
+    }
+  res += ")";
+  string_array[index] = res;
+}
+
+
 std::shared_ptr<std::vector<std::shared_ptr<Node> > > Leaf::get_prefix_notation()
 {
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > res = std::make_shared<std::vector<std::shared_ptr<Node> > >();
@@ -874,7 +820,7 @@ std::shared_ptr<std::vector<std::shared_ptr<Node> > > Expression::get_prefix_not
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > res = std::make_shared<std::vector<std::shared_ptr<Node> > >();
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack = std::make_shared<std::vector<std::shared_ptr<Node> > >();
   std::shared_ptr<Node> node;
-  stack->push_back(operators->at(n_operators - 1));
+  stack->push_back(operators[n_operators-1]);
   while (stack->size() > 0)
     {
       node = stack->back();
@@ -900,12 +846,29 @@ void UnaryOperator::fill_prefix_notation_stack(std::shared_ptr<std::vector<std::
 }
 
 
+void SumOperator::fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack)
+{
+  int ndx = nargs - 1;
+  while (ndx >= 0)
+    {
+      stack->push_back(operands[ndx]);
+      ndx -= 1;
+    }
+}
+
+
+void LinearOperator::fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack)
+{
+  ; // This is treated as a leaf in this context; write_nl_string will take care of it
+}
+
+
 void ExternalOperator::fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack)
 {
-  int i = operands->size() - 1;
+  int i = nargs - 1;
   while (i >= 0)
     {
-      stack->push_back(operands->at(i));
+      stack->push_back(operands[i]);
       i -= 1;
     }
 }
@@ -931,7 +894,11 @@ void Constant::write_nl_string(std::ofstream& f)
 
 void Expression::write_nl_string(std::ofstream& f)
 {
-  assert (false);
+  std::shared_ptr<std::vector<std::shared_ptr<Node> > > prefix_notation = get_prefix_notation();
+  for (std::shared_ptr<Node> &node : *(prefix_notation))
+    {
+      node->write_nl_string(f);
+    }
 }
 
 
@@ -943,13 +910,58 @@ void MultiplyOperator::write_nl_string(std::ofstream& f)
 
 void ExternalOperator::write_nl_string(std::ofstream& f)
 {
-  f << "f" << external_function_index << " " << operands->size() << "\n";
+  f << "f" << external_function_index << " " << nargs << "\n";
 }
 
 
-void AddOperator::write_nl_string(std::ofstream& f)
+void SumOperator::write_nl_string(std::ofstream& f)
 {
-  f << "o0\n";
+  if (nargs == 2)
+    {
+      f << "o0\n";
+    }
+  else
+    {
+      f << "o54\n";
+      f << nargs << "\n";
+    }
+}
+
+
+void LinearOperator::write_nl_string(std::ofstream& f)
+{
+  bool has_const = (!constant->is_constant_type()) || (constant->evaluate() != 0);
+  if (has_const)
+    {
+      if (nterms == 1)
+	{
+	  f << "o0\n";
+	}
+      else
+	{
+	  f << "o54\n";
+	  f << nterms + 1 << "\n";
+	}
+      f << "n" << constant->evaluate() << "\n";
+    }
+  else
+    {
+      if (nterms == 2)
+	{
+	  f << "o0\n";
+	}
+      else
+	{
+	  f << "o54\n";
+	  f << nterms << "\n";
+	}
+    }
+  for (unsigned int ndx=0; ndx<nterms; ++ndx)
+    {
+      f << "o2\n";
+      f << "n" <<  coefficients[ndx]->evaluate() << "\n";
+      variables[ndx]->write_nl_string(f);
+    }
 }
 
 
@@ -989,6 +1001,188 @@ void LogOperator::write_nl_string(std::ofstream& f)
 }
 
 
+void Log10Operator::write_nl_string(std::ofstream& f)
+{
+  f << "o42\n";
+}
+
+
+void SinOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o41\n";
+}
+
+
+void CosOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o46\n";
+}
+
+
+void TanOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o38\n";
+}
+
+
+void AsinOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o51\n";
+}
+
+
+void AcosOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o53\n";
+}
+
+
+void AtanOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o49\n";
+}
+
+
+bool BinaryOperator::is_binary_operator()
+{
+  return true;
+}
+
+
+bool UnaryOperator::is_unary_operator()
+{
+  return true;
+}
+
+
+bool LinearOperator::is_linear_operator()
+{
+  return true;
+}
+
+
+bool SumOperator::is_sum_operator()
+{
+  return true;
+}
+
+
+bool MultiplyOperator::is_multiply_operator()
+{
+  return true;
+}
+
+
+bool SubtractOperator::is_subtract_operator()
+{
+  return true;
+}
+
+
+bool DivideOperator::is_divide_operator()
+{
+  return true;
+}
+
+
+bool PowerOperator::is_power_operator()
+{
+  return true;
+}
+
+
+bool NegationOperator::is_negation_operator()
+{
+  return true;
+}
+
+
+bool ExpOperator::is_exp_operator()
+{
+  return true;
+}
+
+
+bool LogOperator::is_log_operator()
+{
+  return true;
+}
+
+
+bool ExternalOperator::is_external_operator()
+{
+  return true;
+}
+
+
+void Leaf::fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx)
+{
+  ;
+}
+
+
+void Expression::fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx)
+{
+  throw std::runtime_error("This should not happen");
+}
+
+
+void BinaryOperator::fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx)
+{
+  oper_ndx -= 1;
+  oper_array[oper_ndx] = shared_from_this();
+  // The order does not actually matter here. It
+  // will just be easier to debug this way.
+  operand2->fill_expression(oper_array, oper_ndx);
+  operand1->fill_expression(oper_array, oper_ndx);
+}
+
+
+void UnaryOperator::fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx)
+{
+  oper_ndx -= 1;
+  oper_array[oper_ndx] = shared_from_this();
+  operand->fill_expression(oper_array, oper_ndx);
+}
+
+
+void LinearOperator::fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx)
+{
+  oper_ndx -= 1;
+  oper_array[oper_ndx] = shared_from_this();
+}
+
+
+void SumOperator::fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx)
+{
+  oper_ndx -= 1;
+  oper_array[oper_ndx] = shared_from_this();
+  // The order does not actually matter here. It
+  // will just be easier to debug this way.
+  int arg_ndx = nargs - 1;
+  while (arg_ndx >= 0)
+    {
+      operands[arg_ndx]->fill_expression(oper_array, oper_ndx);
+      arg_ndx -= 1;
+    }
+}
+
+
+void ExternalOperator::fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx)
+{
+  oper_ndx -= 1;
+  oper_array[oper_ndx] = shared_from_this();
+  // The order does not actually matter here. It
+  // will just be easier to debug this way.
+  int arg_ndx = nargs - 1;
+  while (arg_ndx >= 0)
+    {
+      operands[arg_ndx]->fill_expression(oper_array, oper_ndx);
+      arg_ndx -= 1;
+    }
+}
+
+
 std::vector<std::shared_ptr<Var> > create_vars(int n_vars)
 {
   std::vector<std::shared_ptr<Var> > res;
@@ -1022,37 +1216,492 @@ std::vector<std::shared_ptr<Constant> > create_constants(int n_constants)
 }
 
 
-/*
-int main()
+std::shared_ptr<Node> appsi_operator_from_pyomo_expr(py::handle expr, py::handle var_map, py::handle param_map, PyomoExprTypes& expr_types)
 {
-  std::shared_ptr<Param> a = std::make_shared<Param>();
-  a->value = 2.0;
-  std::shared_ptr<Var> x = std::make_shared<Var>();
-  x->value = 3.0;
-  std::shared_ptr<ExpressionBase> expr;
-  double val;
-  std::shared_ptr<Repn> repn;
-  clock_t t0 = clock();
-  expr = (*a)*(*x);
-  for (int i=0; i<999; ++i)
+  std::shared_ptr<Node> res;
+  int tmp_type = expr_types.expr_type_map[py::type::of(expr)].cast<int>();
+  
+  switch (tmp_type)
     {
-      expr = *expr + *((*a)*(*x));
+    case 0 :
+      {
+	res = std::make_shared<Constant>(expr.cast<double>());
+	break;
+      }
+    case 1 :
+      {
+        res = var_map[expr_types.id(expr)].cast<std::shared_ptr<Node> >();
+	break;
+      }
+    case 2 :
+      {
+        res = param_map[expr_types.id(expr)].cast<std::shared_ptr<Node> >();
+	break;
+      }
+    case 3 :
+      {
+        res = std::make_shared<MultiplyOperator>();
+	break;
+      }
+    case 4 :
+      {
+        res = std::make_shared<SumOperator>(expr.attr("nargs")().cast<int>());
+	break;
+      }
+    case 5 :
+      {
+        res = std::make_shared<NegationOperator>();
+	break;
+      }
+    case 6 :
+      {
+        res = std::make_shared<ExternalOperator>(expr.attr("nargs")().cast<int>());
+	std::shared_ptr<ExternalOperator> oper = std::dynamic_pointer_cast<ExternalOperator>(res);
+	oper->function_name = expr.attr("_fcn").attr("_function").cast<std::string>();
+	break;
+      }
+    case 7 :
+      {
+        res = std::make_shared<PowerOperator>();
+	break;
+      }
+    case 8 :
+      {
+        res = std::make_shared<DivideOperator>();
+	break;
+      }
+    case 9 :
+      {
+        std::string function_name = expr.attr("getname")().cast<std::string>();
+	if (function_name == "exp")
+	  {
+	    res =  std::make_shared<ExpOperator>();
+	  }
+	else if (function_name == "log")
+	  {
+	    res =  std::make_shared<LogOperator>();
+	  }
+	else if (function_name == "log10")
+	  {
+	    res =  std::make_shared<Log10Operator>();
+	  }
+	else if (function_name == "sin")
+	  {
+	    res =  std::make_shared<SinOperator>();
+	  }
+	else if (function_name == "cos")
+	  {
+	    res =  std::make_shared<CosOperator>();
+	  }
+	else if (function_name == "tan")
+	  {
+	    res =  std::make_shared<TanOperator>();
+	  }
+	else if (function_name == "asin")
+	  {
+	    res =  std::make_shared<AsinOperator>();
+	  }
+	else if (function_name == "acos")
+	  {
+	    res =  std::make_shared<AcosOperator>();
+	  }
+	else if (function_name == "atan")
+	  {
+	    res =  std::make_shared<AtanOperator>();
+	  }
+	else
+	  {
+	    throw py::value_error("Unrecognized expression type");
+	  }
+	break;
+      }
+    case 10 :
+      {
+        res = std::make_shared<LinearOperator>(expr_types.len(expr.attr("linear_vars")).cast<int>());
+	break;
+      }
+    case 11 :
+      {
+	res = appsi_operator_from_pyomo_expr(expr.attr("expr"), var_map, param_map, expr_types);
+	break;
+      }
+    case 12 :
+      {
+	res = std::make_shared<Constant>(expr.attr("value").cast<double>());
+	break;
+      }
+    default :
+      {
+        throw py::value_error("Unrecognized expression type");
+	break;
+      }
     }
-  clock_t t1 = clock();
-  for (int i=0; i<1000; ++i)
+  return res;
+}
+
+
+void prep_for_repn_helper(py::handle expr, py::handle named_exprs, py::handle variables, py::handle fixed_vars, py::handle external_funcs, PyomoExprTypes& expr_types)
+{
+  int tmp_type = expr_types.expr_type_map[py::type::of(expr)].cast<int>();
+  
+  switch (tmp_type)
     {
-      val = expr->evaluate();
+    case 0 :
+      {
+	break;
+      }
+    case 1 :
+      {
+	variables[expr_types.id(expr)] = expr;
+	if (expr.attr("fixed").cast<bool>())
+	  {
+	    fixed_vars[expr_types.id(expr)] = expr;
+	  }
+	break;
+      }
+    case 2 :
+      {
+	break;
+      }
+    case 3 :
+      {
+	py::tuple args = expr.attr("_args_");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 4 :
+      {
+	py::tuple args = expr.attr("args");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 5 :
+      {
+	py::tuple args = expr.attr("_args_");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 6 :
+      {
+	external_funcs[expr_types.id(expr)] = expr;
+	py::tuple args = expr.attr("args");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 7 :
+      {
+	py::tuple args = expr.attr("_args_");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 8 :
+      {
+	py::tuple args = expr.attr("_args_");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 9 :
+      {
+	py::tuple args = expr.attr("_args_");
+	for (py::handle arg : args)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	break;
+      }
+    case 10 :
+      {
+	py::list linear_vars = expr.attr("linear_vars");
+	py::list linear_coefs = expr.attr("linear_coefs");
+	for (py::handle arg : linear_vars)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	for (py::handle arg : linear_coefs)
+	  {
+	    prep_for_repn_helper(arg, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	  }
+	prep_for_repn_helper(expr.attr("constant"), named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	break;
+      }
+    case 11 :
+      {
+	named_exprs[expr_types.id(expr)] = expr;
+	prep_for_repn_helper(expr.attr("expr"), named_exprs, variables, fixed_vars, external_funcs, expr_types);
+	break;
+      }
+    case 12 :
+      {
+	break;
+      }
+    default :
+      {
+        throw py::value_error("Unrecognized expression type");
+	break;
+      }
     }
-  clock_t t2 = clock();
-  std::shared_ptr<Expression> expr2 = std::dynamic_pointer_cast<Expression>(expr);
-  for (int i=0; i<1000; ++i)
+}
+
+
+py::tuple prep_for_repn(py::handle expr, PyomoExprTypes& expr_types)
+{
+  py::dict named_exprs;
+  py::dict variables;
+  py::dict fixed_vars;
+  py::dict external_funcs;
+
+  prep_for_repn_helper(expr, named_exprs, variables, fixed_vars, external_funcs, expr_types);
+
+  py::list named_expr_list = named_exprs.attr("values")();
+  py::list variable_list = variables.attr("values")();
+  py::list fixed_var_list = fixed_vars.attr("values")();
+  py::list external_func_list = external_funcs.attr("values")();
+
+  py::tuple res = py::make_tuple(named_expr_list, variable_list, fixed_var_list, external_func_list);
+  return res;
+}
+
+
+int build_expression_tree(py::handle pyomo_expr, std::shared_ptr<Node> appsi_expr, py::handle var_map, py::handle param_map, PyomoExprTypes& expr_types)
+{
+  int num_nodes = 0;
+
+  if (appsi_expr->is_leaf())
     {
-      repn = expr2->generate_repn();
+      ;
     }
-  clock_t t3 = clock();
-  std::cout << ((float)(t1-t0))/CLOCKS_PER_SEC << std::endl;
-  std::cout << ((float)(t2-t1))/CLOCKS_PER_SEC << std::endl;
-  std::cout << ((float)(t3-t2))/CLOCKS_PER_SEC << std::endl;
-  return 0;
-  }
-*/
+  else if (appsi_expr->is_binary_operator())
+    {
+      num_nodes += 1;
+      std::shared_ptr<BinaryOperator> oper = std::dynamic_pointer_cast<BinaryOperator>(appsi_expr);
+      py::list pyomo_args = pyomo_expr.attr("args");
+      oper->operand1 = appsi_operator_from_pyomo_expr(pyomo_args[0], var_map, param_map, expr_types);
+      oper->operand2 = appsi_operator_from_pyomo_expr(pyomo_args[1], var_map, param_map, expr_types);
+      num_nodes += build_expression_tree(pyomo_args[0], oper->operand1, var_map, param_map, expr_types);
+      num_nodes += build_expression_tree(pyomo_args[1], oper->operand2, var_map, param_map, expr_types);
+    }
+  else if (appsi_expr->is_unary_operator())
+    {
+      num_nodes += 1;
+      std::shared_ptr<UnaryOperator> oper = std::dynamic_pointer_cast<UnaryOperator>(appsi_expr);
+      py::list pyomo_args = pyomo_expr.attr("args");
+      oper->operand = appsi_operator_from_pyomo_expr(pyomo_args[0], var_map, param_map, expr_types);
+      num_nodes += build_expression_tree(pyomo_args[0], oper->operand, var_map, param_map, expr_types);
+    }
+  else if (appsi_expr->is_sum_operator())
+    {
+      num_nodes += 1;
+      std::shared_ptr<SumOperator> oper = std::dynamic_pointer_cast<SumOperator>(appsi_expr);
+      py::list pyomo_args = pyomo_expr.attr("args");
+      for (unsigned int arg_ndx=0; arg_ndx < oper->nargs; ++arg_ndx)
+	{
+	  oper->operands[arg_ndx] = appsi_operator_from_pyomo_expr(pyomo_args[arg_ndx], var_map, param_map, expr_types);
+	  num_nodes += build_expression_tree(pyomo_args[arg_ndx], oper->operands[arg_ndx], var_map, param_map, expr_types);
+	}
+    }
+  else if (appsi_expr->is_linear_operator())
+    {
+      num_nodes += 1;
+      std::shared_ptr<LinearOperator> oper = std::dynamic_pointer_cast<LinearOperator>(appsi_expr);
+      oper->constant = appsi_expr_from_pyomo_expr(pyomo_expr.attr("constant"), var_map, param_map, expr_types);
+      py::list pyomo_vars = pyomo_expr.attr("linear_vars");
+      py::list pyomo_coefs = pyomo_expr.attr("linear_coefs");
+      for (unsigned int arg_ndx=0; arg_ndx < oper->nterms; ++arg_ndx)
+	{
+	  oper->variables[arg_ndx] = var_map[expr_types.id(pyomo_vars[arg_ndx])].cast<std::shared_ptr<Var> >();
+	  oper->coefficients[arg_ndx] = appsi_expr_from_pyomo_expr(pyomo_coefs[arg_ndx], var_map, param_map, expr_types);
+	}
+    }
+  else if (appsi_expr->is_external_operator())
+    {
+      num_nodes += 1;
+      std::shared_ptr<ExternalOperator> oper = std::dynamic_pointer_cast<ExternalOperator>(appsi_expr);
+      py::list pyomo_args = pyomo_expr.attr("args");
+      for (unsigned int arg_ndx=0; arg_ndx < oper->nargs; ++arg_ndx)
+	{
+	  oper->operands[arg_ndx] = appsi_operator_from_pyomo_expr(pyomo_args[arg_ndx], var_map, param_map, expr_types);
+	  num_nodes += build_expression_tree(pyomo_args[arg_ndx], oper->operands[arg_ndx], var_map, param_map, expr_types);
+	}
+    }
+  else
+    {
+      throw py::value_error("Unrecognized expression type");
+    }
+  return num_nodes;
+}
+
+
+std::shared_ptr<ExpressionBase> appsi_expr_from_pyomo_expr(py::handle expr, py::handle var_map, py::handle param_map, PyomoExprTypes& expr_types)
+{
+  std::shared_ptr<Node> node = appsi_operator_from_pyomo_expr(expr, var_map, param_map, expr_types);
+  int num_nodes = build_expression_tree(expr, node, var_map, param_map, expr_types);
+  if (num_nodes == 0)
+    {
+      return std::dynamic_pointer_cast<ExpressionBase>(node);
+    }
+  else
+    {
+      std::shared_ptr<Expression> res = std::make_shared<Expression>(num_nodes);
+      node->fill_expression(res->operators, num_nodes);
+      return res;
+    }
+}
+
+
+std::vector<std::shared_ptr<ExpressionBase> > appsi_exprs_from_pyomo_exprs(py::list expr_list, py::dict var_map, py::dict param_map)
+{
+  PyomoExprTypes expr_types = PyomoExprTypes();
+  int num_exprs = expr_types.builtins.attr("len")(expr_list).cast<int>();
+  std::vector<std::shared_ptr<ExpressionBase> > res (num_exprs);  
+
+  int ndx = 0;
+  for (py::handle expr : expr_list)
+    {
+      res[ndx] = appsi_expr_from_pyomo_expr(expr, var_map, param_map, expr_types);
+      ndx += 1;
+    }
+  return res;
+}
+
+
+void process_pyomo_vars(PyomoExprTypes& expr_types,
+			py::list pyomo_vars,
+			py::dict var_map,
+			py::dict param_map,
+			py::dict var_attrs,
+			py::dict rev_var_map,
+			py::bool_ _set_name,
+			py::handle symbol_map,
+			py::handle labeler,
+			py::bool_ _update)
+{
+  py::tuple v_attrs;
+  std::shared_ptr<Var> cv;
+  py::handle v_lb;
+  py::handle v_ub;
+  py::handle v_val;
+  bool v_fixed;
+  py::handle v_domain;
+  bool set_name = _set_name.cast<bool>();
+  bool update = _update.cast<bool>();
+  
+  for (py::handle v : pyomo_vars)
+    {
+      v_attrs = var_attrs[expr_types.id(v)];
+      v_lb = v_attrs[1];
+      v_ub = v_attrs[2];
+      v_fixed = v_attrs[3].cast<bool>();
+      v_domain = v_attrs[4];
+      v_val = v_attrs[5];
+
+      if (update)
+	{
+	  cv = var_map[expr_types.id(v)].cast<std::shared_ptr<Var> >();
+	}
+      else
+	{
+	  cv = std::make_shared<Var>();
+	}
+
+      if (!(v_lb.is(py::none())))
+	{
+	  cv->lb = appsi_expr_from_pyomo_expr(v_lb, var_map, param_map, expr_types);
+	}
+      else
+	{
+	  cv->lb = std::make_shared<Constant>(-inf);
+	}
+      if (!(v_ub.is(py::none())))
+	{
+	  cv->ub = appsi_expr_from_pyomo_expr(v_ub, var_map, param_map, expr_types);
+	}
+      else
+	{
+	  cv->ub = std::make_shared<Constant>(inf);
+	}
+
+      if (!(v_val.is(py::none())))
+	{
+	  cv->value = v_val.cast<double>();
+	}
+
+      if (v_fixed)
+	{
+	  cv->fixed = true;
+	}
+      else
+	{
+	  cv->fixed = false;
+	}
+
+      if (set_name && !update)
+	{
+	  cv->name = symbol_map.attr("getSymbol")(v, labeler).cast<std::string>();
+	}
+
+      if (v_domain.is(expr_types.reals))
+	{
+	  cv->domain = "reals";
+	}
+      else if (v_domain.is(expr_types.nonnegative_reals))
+	{
+	  cv->domain = "nonnegative_reals";
+	}
+      else if (v_domain.is(expr_types.nonpositive_reals))
+	{
+	  cv->domain = "nonpositive_reals";
+	}
+      else if (v_domain.is(expr_types.percent_fraction))
+	{
+	  cv->domain = "percent_fraction";
+	}
+      else if (v_domain.is(expr_types.unit_interval))
+	{
+	  cv->domain = "unit_interval";
+	}
+      else if (v_domain.is(expr_types.integers))
+	{
+	  cv->domain = "integers";
+	}
+      else if (v_domain.is(expr_types.nonnegative_integers))
+	{
+	  cv->domain = "nonnegative_integers";
+	}
+      else if (v_domain.is(expr_types.nonpositive_integers))
+	{
+	  cv->domain = "nonpositive_integers";
+	}
+      else if (v_domain.is(expr_types.binary))
+	{
+	  cv->domain = "binary";
+	}
+      else
+	{
+	  throw py::value_error("Unrecognized domain");
+	}
+
+      if (!update)
+	{
+	  var_map[expr_types.id(v)] = py::cast(cv);
+	  rev_var_map[py::cast(cv)] = v;
+	}
+    }
+}

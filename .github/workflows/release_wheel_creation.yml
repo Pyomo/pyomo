@@ -33,7 +33,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install twine wheel setuptools
     - name: Build manylinux Python wheels
-      uses: RalfG/python-wheels-manylinux-build@v0.3.3-manylinux2010_x86_64
+      uses: RalfG/python-wheels-manylinux-build@v0.4.0-manylinux2010_x86_64
       with:
         python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39'
         build-requirements: 'cython'
@@ -51,6 +51,51 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         name: manylinux-wheels
+        path: dist
+
+  manylinuxaarch64:
+    if: ${{ false }}
+    name: ${{ matrix.TARGET }}/wheel_creation
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        include:
+        - os: ubuntu-latest
+          TARGET: manylinuxaarch64
+        python-version: [3.7]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: docker/setup-qemu-action@v1
+      name: Set up QEMU
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install twine wheel setuptools
+    - name: Build manylinux Python wheels
+      uses: RalfG/python-wheels-manylinux-build@v0.4.0-manylinux2014_aarch64
+      with:
+        python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39'
+        build-requirements: 'cython'
+        package-path: ''
+        pip-wheel-args: ''
+        # When locally testing, --no-deps flag is necessary (PyUtilib dependency will trigger an error otherwise)
+    - name: Consolidate wheels
+      run: |
+        sudo test -d dist || mkdir -v dist
+        sudo find . -name \*.whl | grep -v /dist/ | xargs -n1 -i mv -v "{}" dist/
+    - name: Delete linux wheels
+      run: |
+        sudo rm -rfv dist/*-linux_aarch64.whl
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: manylinux-aarch64-wheels
         path: dist
 
   generictarball:
