@@ -8,35 +8,36 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
 from pyomo.environ import (
     ConcreteModel, Var, Reals, ExternalFunction, sin, cos,
     sqrt, Constraint, Objective)
 from pyomo.opt import SolverFactory
 
 m = ConcreteModel()
-m.z = Var(range(3), domain=Reals, initialize=2.)
-m.x = Var(range(2), initialize=2.)
-m.x[1] = 1.0
 
-def blackbox(a, b):
-   return sin(a - b)
+m.x1 = Var(initialize=0)
+m.x2 = Var(bounds=(-2.0, None), initialize=0)
 
-def grad_blackbox(args, fixed):
-    a, b = args[:2]
-    return [ cos(a - b), -cos(a - b) ]
+def ext_fcn(x, y):
+    return x**2 + y**2
+def grad_ext_fcn(args, fixed):
+    x, y = args[:2]
+    return [ 2*x, 2*y ]
 
-m.ext_fcn = ExternalFunction(blackbox, grad_blackbox)
+m.EF = ExternalFunction(ext_fcn, grad_ext_fcn)
 
-m.obj = Objective(
-    expr=(m.z[0]-1.0)**2 + (m.z[0]-m.z[1])**2 + (m.z[2]-1.0)**2 \
-       + (m.x[0]-1.0)**4 + (m.x[1]-1.0)**6
-)
+@m.Constraint()
+def con(m):
+    return 2*m.x1 + m.x2 + 10.0 == 0
 
-m.c1 = Constraint(expr=m.x[0] * m.z[0]**2 + m.ext_fcn(m.x[0],m.x[1]) == 2*sqrt(2.0))
-m.c2 = Constraint(expr=m.z[2]**4 * m.z[1]**2 + m.z[1] == 8+sqrt(2.0))
+m.obj = Objective(expr = (m.x1 - 1)**2 + (m.x2 - 3)**2 + m.EF(m.x1, m.x2)**2)
+
+def basis_rule(component, ef_expr):
+    x1 = ef_expr.arg(0)
+    x2 = ef_expr.arg(1)
+    return x1**2 - x2 # This is the low fidelity model
 
 m.pprint()
 
-optTRF = SolverFactory('trustregion', maximum_iterations=10)
-optTRF.solve(m)
+optTRF = SolverFactory('trustregion')
+optTRF.solve(m, ext_fcn_surrogate_map_rule=basis_rule)
