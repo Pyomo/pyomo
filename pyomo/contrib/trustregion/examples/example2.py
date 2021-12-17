@@ -8,6 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+# This model is adapted from Noriyuki Yoshio's model for his and Biegler's
+# 2020 publication in AIChE
+
 from pyomo.environ import (
     ConcreteModel, Var, Reals, ExternalFunction, sin, cos,
     sqrt, Constraint, Objective)
