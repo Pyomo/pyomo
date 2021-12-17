@@ -68,7 +68,7 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertFalse(CONFIG.keepfiles)
         self.assertFalse(CONFIG.tee)
         self.assertEqual(CONFIG.trust_radius, 1.0)
-        self.assertEqual(CONFIG.minimum_radius, 0.5)
+        self.assertEqual(CONFIG.minimum_radius, 1e-6)
         self.assertEqual(CONFIG.maximum_radius, 1000.0)
         self.assertEqual(CONFIG.maximum_iterations, 50)
         self.assertEqual(CONFIG.feasibility_termination, 1e-5)
