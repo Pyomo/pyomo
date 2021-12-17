@@ -405,7 +405,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         ``deferred_submodules=['pyplot', 'pylab']`` for ``matplotlib``.
 
     catch_exceptions: Iterable[Exception], optional
-        If provide, this is the list of exceptions that will be caught
+        If provided, this is the list of exceptions that will be caught
         when importing the target module, resulting in
         ``attempt_import`` returning a :py:class:`ModuleUnavailable`
         instance.  The default is to only catch :py:class:`ImportError`.
@@ -455,8 +455,8 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
             # Ensures all names begin with '.'
             #
             # Fill in any missing submodules.  For example, if a user
-            # provides {'foo.bar.baz': ['bz']}, then expand the dict to
-            # {'.foo': None, '.foo.bar': None, '.foo.bar.baz': ['bz']}
+            # provides ['foo.bar.baz'], then expand the list to
+            # ['.foo', '.foo.bar', '.foo.bar.baz']
             deferred = []
             for _submod in deferred_submodules:
                 if _submod[0] != '.':
