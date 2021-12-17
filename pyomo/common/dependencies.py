@@ -46,6 +46,8 @@ class ModuleUnavailable(object):
         A string to add to the message documenting the Exception
         raised when the module failed to import.
 
+    package: str
+        The module name that originally attempted the import
     """
 
     # We need special handling for Sphinx here, as it will look for the
@@ -53,9 +55,11 @@ class ModuleUnavailable(object):
     # that to raise an AttributeError and not a DeferredImportError
     _getattr_raises_attributeerror = {'__sphinx_mock__',}
 
-    def __init__(self, name, message, version_error, import_error):
+    def __init__(self, name, message, version_error, import_error, package):
         self.__name__ = name
-        self._moduleunavailable_info_ = (message, version_error, import_error)
+        self._moduleunavailable_info_ = (
+            message, version_error, import_error, package,
+        )
 
     def __getattr__(self, attr):
         if attr in ModuleUnavailable._getattr_raises_attributeerror:
@@ -64,14 +68,18 @@ class ModuleUnavailable(object):
         raise DeferredImportError(self._moduleunavailable_message())
 
     def _moduleunavailable_message(self, msg=None):
-        _err, _ver, _imp = self._moduleunavailable_info_
+        _err, _ver, _imp, _package = self._moduleunavailable_info_
         if msg is None:
             msg = _err
         if _imp:
             if not msg or not str(msg):
                 msg = (
-                    "The %s module (an optional Pyomo dependency) " \
-                    "failed to import: %s" % (self.__name__, _imp)
+                    "The %s module (an optional %s dependency) " \
+                    "failed to import: %s" % (
+                        self.__name__,
+                        _package.split('.')[0].capitalize(),
+                        _imp,
+                    )
                 )
             else:
                 msg = "%s (import raised %s)" % (msg, _imp,)
@@ -194,15 +202,16 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
     def resolve(self):
         # Only attempt the import once, then cache some form of result
         if self._module is None:
+            package = self._original_globals['__name__']
             try:
-                self._module, self._available = attempt_import(
+                self._module, self._available = _perform_import(
                     name=self._names[0],
                     error_message=self._error_message,
-                    catch_exceptions=self._catch_exceptions,
                     minimum_version=self._minimum_version,
                     callback=self._callback,
                     importer=self._importer,
-                    defer_check=False,
+                    catch_exceptions=self._catch_exceptions,
+                    package=package,
                 )
             except Exception as e:
                 # make sure that we cache the result
@@ -211,6 +220,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                     "Exception raised when importing %s" % (self._names[0],),
                     None,
                     "%s: %s" % (type(e).__name__, e),
+                    package,
                 )
                 self._available = False
                 raise
@@ -325,7 +335,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
        ...     numpy_available = True
        ... except ImportError as e:
        ...     numpy = ModuleUnavailable('numpy', 'Numpy is not available',
-       ...                               '', str(e))
+       ...                               '', str(e), globals()['__name__'])
        ...     numpy_available = False
 
     The import can be "deferred" until the first time the code either
@@ -470,6 +480,14 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         raise ValueError(
             "deferred_submodules is only valid if defer_check==True")
 
+    return _perform_import(
+        name, error_message, minimum_version, callback, importer,
+        catch_exceptions, inspect.currentframe().f_back.f_globals['__name__']
+    )
+
+
+def _perform_import(name, error_message, minimum_version, callback,
+                    importer, catch_exceptions, package):
     import_error = None
     version_error = None
     try:
@@ -490,7 +508,9 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
     except catch_exceptions as e:
         import_error = "%s: %s" % (type(e).__name__, e)
 
-    module = ModuleUnavailable(name, error_message, version_error, import_error)
+    module = ModuleUnavailable(
+        name, error_message, version_error, import_error, package,
+    )
     if callback is not None:
         callback(module, False)
     return module, False
