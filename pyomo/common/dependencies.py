@@ -293,17 +293,23 @@ def check_min_version(module, min_version):
             module = indicator._module
         else:
             return False
-    try:
-        from packaging import version as _version
-        _parser = _version.parse
-    except ImportError:
-        # pkg_resources is an order of magnitude slower to import than
-        # packaging.  Only use it if the preferred (but optional)
-        # packaging library is not present
-        from pkg_resources import parse_version as _parser
+    if check_min_version._parser is None:
+        try:
+            from packaging import version as _version
+            _parser = _version.parse
+        except ImportError:
+            # pkg_resources is an order of magnitude slower to import than
+            # packaging.  Only use it if the preferred (but optional)
+            # packaging library is not present
+            from pkg_resources import parse_version as _parser
+        check_min_version._parser = _parser
+    else:
+        _parser = check_min_version._parser
 
     version = getattr(module, '__version__', '0.0.0')
     return _parser(min_version) <= _parser(version)
+
+check_min_version._parser = None
 
 
 def attempt_import(name, error_message=None, only_catch_importerror=None,
