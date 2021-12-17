@@ -73,13 +73,12 @@ class ModuleUnavailable(object):
             msg = _err
         if _imp:
             if not msg or not str(msg):
+                _pkg_str = _package.split('.')[0].capitalize()
+                if _pkg_str:
+                    _pkg_str += ' '
                 msg = (
-                    "The %s module (an optional %s dependency) " \
-                    "failed to import: %s" % (
-                        self.__name__,
-                        _package.split('.')[0].capitalize(),
-                        _imp,
-                    )
+                    "The %s module (an optional %sdependency) "
+                    "failed to import: %s" % (self.__name__, _pkg_str, _imp)
                 )
             else:
                 msg = "%s (import raised %s)" % (msg, _imp,)
@@ -202,7 +201,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
     def resolve(self):
         # Only attempt the import once, then cache some form of result
         if self._module is None:
-            package = self._original_globals['__name__']
+            package = self._original_globals.get('__name__', '')
             try:
                 self._module, self._available = _perform_import(
                     name=self._names[0],
@@ -487,8 +486,13 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
             "deferred_submodules is only valid if defer_check==True")
 
     return _perform_import(
-        name, error_message, minimum_version, callback, importer,
-        catch_exceptions, inspect.currentframe().f_back.f_globals['__name__']
+        name=name,
+        error_message=error_message,
+        minimum_version=minimum_version,
+        callback=callback,
+        importer=importer,
+        catch_exceptions=catch_exceptions,
+        package=inspect.currentframe().f_back.f_globals.get('__name__', ''),
     )
 
 
