@@ -12,6 +12,7 @@ import enum
 from collections import Counter, deque
 from operator import itemgetter, attrgetter
 
+from pyomo.common.backports import nullcontext
 from pyomo.common.config import ConfigBlock, ConfigValue, InEnum
 from pyomo.common.errors import DeveloperError
 
@@ -110,13 +111,25 @@ class NLWriter(object):
 
 
     def __init__(self):
-        self.config = NLWriter.CONFIG()
+        self.config = self.CONFIG()
 
     def __call__(self, model, filename, solver_capability, io_options):
         if filename is None:
             filename = model.name + ".nl"
-        with open(filename, 'w') as FILE:
-            symbol_map, amplfuncs = self.write(model, FILE, **io_options)
+        assert filename.lower().endswith('.nl')
+        row_fname = filename[:-2] + 'row'
+        col_fname = filename[:-2] + 'col'
+
+        config = self.config(io_options)
+        if config.symbolic_solver_labels:
+            _open = lambda fname: open(fname, 'w')
+        else:
+            _open = nullcontext
+        with open(filename, 'w') as FILE, \
+             _open(row_fname) as ROWFILE, \
+             _open(col_fname) as COLFILE:
+            symbol_map, amplfuncs = self.write(
+                model, FILE, ROWFILE, COLFILE, config=config)
         # Historically, the NL writer communicated the external function
         # libraries back to the ASL interface through the PYOMO_AMPLFUNC
         # environment variable.
@@ -125,8 +138,8 @@ class NLWriter(object):
         # was generated and the symbol_map
         return filename, symbol_map
 
-    def write(self, model, ostream, **options):
-        config = self.config(options)
+    def write(self, model, ostream, rowstream=None, colstream=None, **options):
+        config = options.pop('config', self.config)(options)
 
         unknown = identify_unrecognized_components(model, active=True, valid={
             Block, Objective, Constraint, Var, Param, Expression,
@@ -137,13 +150,14 @@ class NLWriter(object):
         })
         if unknown:
             raise ValueError(
-                "The model (%s) contains the following active components "
+                "The model ('%s') contains the following active components "
                 "that the NL writer does not know how to process:\n\t%s" %
                 (model.name, "\n\t".join("%s:\n\t\t%s" % (
                     k, "\n\t\t".join(map(attrgetter('name'), v)))
                     for k, v in unknown.items())))
 
-        return _NLWriter_impl(ostream, config).write(model)
+        _impl = _NLWriter_impl(ostream, rowstream, colstream, config)
+        return _impl.write(model)
 
 
 class _NLWriter_impl(object):
@@ -157,8 +171,10 @@ class _NLWriter_impl(object):
         # complementarity: 5,
     }
 
-    def __init__(self, ostream, config):
+    def __init__(self, ostream, rowstream, colstream, config):
         self.ostream = ostream
+        self.rowstream = rowstream
+        self.colstream = colstream
         self.config = config
         self.symbolic_solver_labels = config.symbolic_solver_labels
         if self.symbolic_solver_labels:
@@ -354,6 +370,13 @@ class _NLWriter_impl(object):
                 info[1]: '%d%s' % (var_idx, col_comments[var_idx])
                 for var_idx, info in enumerate(variables)
             }
+            # Write out the .row and .col data
+            if self.rowstream is not None:
+                self.rowstream.write('\n'.join(row_labels))
+                self.rowstream.write('\n')
+            if self.colstream is not None:
+                self.colstream.write('\n'.join(col_labels))
+                self.colstream.write('\n')
         else:
             row_labels = row_comments = [''] * (n_cons + n_objs)
             col_labels = col_comments = [''] * len(variables)
