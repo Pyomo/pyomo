@@ -248,12 +248,6 @@ void SumOperator::evaluate(double* values)
 }
 
 
-void SubtractOperator::evaluate(double* values)
-{
-  values[index] = operand1->get_value_from_array(values) - operand2->get_value_from_array(values);
-}
-
-
 void DivideOperator::evaluate(double* values)
 {
   values[index] = operand1->get_value_from_array(values) / operand2->get_value_from_array(values);
@@ -543,12 +537,6 @@ void ExternalOperator::propagate_degree_forward(int* degrees, double* values)
 }
 
 
-void SubtractOperator::propagate_degree_forward(int* degrees, double* values)
-{
-  degrees[index] = std::max(operand1->get_degree_from_array(degrees), operand2->get_degree_from_array(degrees));
-}
-
-
 void DivideOperator::propagate_degree_forward(int* degrees, double* values)
 {
   // anything larger than 2 is nonlinear
@@ -646,16 +634,6 @@ std::string Expression::get_string_from_array(std::string* string_array)
 std::string Operator::get_string_from_array(std::string* string_array)
 {
   return string_array[index];
-}
-
-
-void SubtractOperator::print(std::string* string_array)
-{
-  string_array[index] = ("(" +
-			 operand1->get_string_from_array(string_array) +
-			 " - " +
-			 operand2->get_string_from_array(string_array) +
-			 ")");
 }
 
 
@@ -965,12 +943,6 @@ void LinearOperator::write_nl_string(std::ofstream& f)
 }
 
 
-void SubtractOperator::write_nl_string(std::ofstream& f)
-{
-  f << "o1\n";
-}
-
-
 void DivideOperator::write_nl_string(std::ofstream& f)
 {
   f << "o3\n";
@@ -1068,12 +1040,6 @@ bool SumOperator::is_sum_operator()
 
 
 bool MultiplyOperator::is_multiply_operator()
-{
-  return true;
-}
-
-
-bool SubtractOperator::is_subtract_operator()
 {
   return true;
 }
@@ -1182,6 +1148,455 @@ void ExternalOperator::fill_expression(std::shared_ptr<Operator>* oper_array, in
     }
 }
 
+
+double Leaf::get_lb_from_array(double* lbs)
+{
+  return value;
+}
+
+
+double Leaf::get_ub_from_array(double* ubs)
+{
+  return value;
+}
+
+
+double Var::get_lb_from_array(double* lbs)
+{
+  return get_lb();
+}
+
+
+double Var::get_ub_from_array(double* ubs)
+{
+  return get_ub();
+}
+
+
+double Expression::get_lb_from_array(double* lbs)
+{
+  return lbs[n_operators-1];
+}
+
+
+double Expression::get_ub_from_array(double* ubs)
+{
+  return ubs[n_operators-1];
+}
+
+
+double Operator::get_lb_from_array(double* lbs)
+{
+  return lbs[index];
+}
+
+
+double Operator::get_ub_from_array(double* ubs)
+{
+  return ubs[index];
+}
+
+
+void Leaf::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  if (new_lb < value - feasibility_tol || new_lb > value + feasibility_tol)
+    {
+      throw py::value_error("Infeasible constraint");
+    }
+
+  if (new_ub < value - feasibility_tol || new_ub > value + feasibility_tol)
+    {
+      throw py::value_error("Infeasible constraint");
+    }
+}
+
+
+void Var::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  double orig_lb = get_lb();
+  double orig_ub = get_ub();
+  
+  if (new_lb > new_ub)
+    {
+      if (new_lb - feasibility_tol > new_ub)
+	{
+	  throw py::value_error("Infeasible constraint");
+	}
+      else
+	{
+	  new_lb -= feasibility_tol;
+	  new_ub += feasibility_tol;
+	}
+    }
+  if (new_lb >= inf)
+    {
+      throw py::value_error("Infeasible constraint");
+    }
+  if (new_ub <= -inf)
+    {
+      throw py::value_error("Infeasible constraint");
+    }
+
+  if (get_domain() == "integers" || get_domain() == "binary")
+    {
+      if (new_lb > -inf)
+	{
+	  double lb_floor = floor(new_lb);
+	  double lb_ceil = ceil(new_lb - integer_tol);
+	  if (lb_floor > lb_ceil)
+	    {
+	      new_lb = lb_floor;
+	    }
+	  else
+	    {
+	      new_lb = lb_ceil;
+	    }
+	}
+      if (new_ub < inf)
+	{
+	  double ub_ceil = ceil(new_ub);
+	  double ub_floor = floor(new_ub + integer_tol);
+	  if (ub_ceil < ub_floor)
+	    {
+	      new_ub = ub_ceil;
+	    }
+	  else
+	    {
+	      new_ub = ub_floor;
+	    }
+	}
+    }
+
+  if (new_lb > orig_lb)
+    {
+      if (lb->is_leaf())
+	{
+	  std::dynamic_pointer_cast<Leaf>(lb)->value = new_lb;
+	}
+      else
+	{
+	  throw py::value_error("variable bounds cannot be expressions when performing FBBT");
+	}
+    }
+
+  if (new_ub < orig_ub)
+    {
+      if (ub->is_leaf())
+	{
+	  std::dynamic_pointer_cast<Leaf>(ub)->value = new_ub;
+	}
+      else
+	{
+	  throw py::value_error("variable bounds cannot be expressions when performing FBBT");
+	}
+    }
+}
+
+
+void Expression::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  lbs[n_operators - 1] = new_lb;
+  ubs[n_operators - 1] = new_ub;
+}
+
+
+void Operator::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  lbs[index] = new_lb;
+  ubs[index] = new_ub;
+}
+
+
+void Expression::propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  for (unsigned int ndx=0; ndx < n_operators; ++ndx)
+    {
+      operators[ndx]->index = ndx;
+      operators[ndx]->propagate_bounds_forward(lbs, ubs, feasibility_tol, integer_tol);
+    }
+}
+
+
+void Expression::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  int ndx = n_operators - 1;
+  while (ndx >= 0)
+    {
+      operators[ndx]->propagate_bounds_backward(lbs, ubs, feasibility_tol, integer_tol);
+      ndx -= 1;
+    }
+}
+
+
+void Operator::propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  lbs[index] = -inf;
+  ubs[index] = inf;
+}
+
+
+void Operator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  ;
+}
+
+
+void MultiplyOperator::propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  if (operand1 == operand2)
+    {
+      throw py::value_error("this is not implemented yet");
+    }
+  else
+    {
+      mul(operand1->get_lb_from_array(lbs),
+	  operand1->get_ub_from_array(ubs),
+	  operand2->get_lb_from_array(lbs),
+	  operand2->get_ub_from_array(ubs),
+	  &lbs[index],
+	  &ubs[index]);
+    }
+}
+
+
+void MultiplyOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  double xl = operand1->get_lb_from_array(lbs);
+  double xu = operand1->get_ub_from_array(ubs);
+  double yl = operand2->get_lb_from_array(lbs);
+  double yu = operand2->get_ub_from_array(ubs);
+  double lb = get_lb_from_array(lbs);
+  double ub = get_ub_from_array(ubs);
+
+  double new_xl;
+  double new_xu;
+  double new_yl;
+  double new_yu;
+
+  if (operand1 == operand2)
+    {
+      throw py::value_error("this is not implemented yet");
+    }
+  else
+    {
+      div(lb, ub, yl, yu, &new_xl, &new_xu, feasibility_tol);
+      div(lb, ub, xl, xu, &new_yl, &new_yu, feasibility_tol);
+    }
+
+  if (new_xl > xl)
+    {
+      xl = new_xl;
+    }
+  if (new_xu < xu)
+    {
+      xu = new_xu;
+    }
+  operand1->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol);
+
+  if (new_yl > yl)
+    {
+      yl = new_yl;
+    }
+  if (new_yu < yu)
+    {
+      yu = new_yu;
+    }
+  operand2->set_bounds_in_array(yl, yu, lbs, ubs, feasibility_tol, integer_tol);
+}
+
+
+void SumOperator::propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  double lb = operands[0]->get_lb_from_array(lbs);
+  double ub = operands[0]->get_ub_from_array(ubs);
+  double tmp_lb;
+  double tmp_ub;
+
+  for (unsigned int ndx=1; ndx < nargs; ++ndx)
+    {
+      add(lb, ub, operands[ndx]->get_lb_from_array(lbs), operands[ndx]->get_ub_from_array(ubs), &tmp_lb, &tmp_ub);
+      lb = tmp_lb;
+      ub = tmp_ub;
+    }
+
+  lbs[index] = lb;
+  ubs[index] = ub;
+}
+
+
+void SumOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  double* accumulated_lbs = new double[nargs];
+  double* accumulated_ubs = new double[nargs];
+
+  accumulated_lbs[0] = operands[0]->get_lb_from_array(lbs);
+  accumulated_ubs[0] = operands[0]->get_ub_from_array(ubs);
+  for (unsigned int ndx=1; ndx < nargs; ++ndx)
+    {
+      add(accumulated_lbs[ndx-1],
+	  accumulated_ubs[ndx-1],
+	  operands[ndx]->get_lb_from_array(lbs),
+	  operands[ndx]->get_ub_from_array(ubs),
+	  &accumulated_lbs[ndx],
+	  &accumulated_ubs[ndx]);
+    }
+
+  double new_sum_lb = get_lb_from_array(lbs);
+  double new_sum_ub = get_ub_from_array(ubs);
+
+  if (new_sum_lb > accumulated_lbs[nargs-1])
+    {
+      accumulated_lbs[nargs-1] = new_sum_lb;
+    }
+  if (new_sum_ub < accumulated_ubs[nargs-1])
+    {
+      accumulated_ubs[nargs-1] = new_sum_ub;
+    }
+
+  double lb0;
+  double ub0;
+  double lb1;
+  double ub1;
+  double lb2;
+  double ub2;
+  double _lb1;
+  double _ub1;
+  double _lb2;
+  double _ub2;
+
+  int ndx = nargs - 1;
+  while (ndx >= 1)
+    {
+      lb0 = accumulated_lbs[ndx];
+      ub0 = accumulated_ubs[ndx];
+      lb1 = accumulated_lbs[ndx - 1];
+      ub1 = accumulated_ubs[ndx - 1];
+      lb2 = operands[ndx]->get_lb_from_array(lbs);
+      ub2 = operands[ndx]->get_ub_from_array(ubs);
+      sub(lb0, ub0, lb2, ub2, &_lb1, &_ub1);
+      sub(lb0, ub0, lb1, ub1, &_lb2, &_ub2);
+      if (_lb1 > lb1)
+	{
+	  lb1 = _lb1;
+	}
+      if (_ub1 < ub1)
+	{
+	  ub1 = _ub1;
+	}
+      if (_lb2 > lb2)
+	{
+	  lb2 = _lb2;
+	}
+      if (_ub2 < ub2)
+	{
+	  ub2 = _ub2;
+	}
+      accumulated_lbs[ndx-1] = lb1;
+      accumulated_ubs[ndx-1] = ub1;
+      operands[ndx]->set_bounds_in_array(lb2, ub2, lbs, ubs, feasibility_tol, integer_tol);
+      ndx -= 1;
+    }
+
+  // take care of ndx = 0
+  lb1 = operands[0]->get_lb_from_array(lbs);
+  ub1 = operands[0]->get_ub_from_array(ubs);
+  _lb1 = accumulated_lbs[0];
+  _ub1 = accumulated_ubs[0];
+  if (_lb1 > lb1)
+    {
+      lb1 = _lb1;
+    }
+  if (_ub1 < ub1)
+    {
+      ub1 = _ub1;
+    }
+  operands[0]->set_bounds_in_array(lb1, ub1, lbs, ubs, feasibility_tol, integer_tol);
+
+  delete[] accumulated_lbs;
+  delete[] accumulated_ubs;
+}
+
+
+void DivideOperator::propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  div(operand1->get_lb_from_array(lbs),
+      operand1->get_ub_from_array(ubs),
+      operand2->get_lb_from_array(lbs),
+      operand2->get_ub_from_array(ubs),
+      &lbs[index],
+      &ubs[index],
+      feasibility_tol);  
+}
+
+
+void DivideOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  double xl = operand1->get_lb_from_array(lbs);
+  double xu = operand1->get_ub_from_array(ubs);
+  double yl = operand2->get_lb_from_array(lbs);
+  double yu = operand2->get_ub_from_array(ubs);
+  double lb = get_lb_from_array(lbs);
+  double ub = get_ub_from_array(ubs);
+
+  double new_xl;
+  double new_xu;
+  double new_yl;
+  double new_yu;
+
+  mul(lb, ub, yl, yu, &new_xl, &new_xu);
+  div(xl, xu, lb, ub, &new_yl, &new_yu, feasibility_tol);
+
+  if (new_xl > xl)
+    {
+      xl = new_xl;
+    }
+  if (new_xu < xu)
+    {
+      xu = new_xu;
+    }
+  operand1->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol);
+
+  if (new_yl > yl)
+    {
+      yl = new_yl;
+    }
+  if (new_yu < yu)
+    {
+      yu = new_yu;
+    }
+  operand2->set_bounds_in_array(yl, yu, lbs, ubs, feasibility_tol, integer_tol);
+}
+
+void NegationOperator::propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  sub(0, 0, operand->get_lb_from_array(lbs),
+      operand->get_ub_from_array(ubs),
+      &lbs[index], &ubs[index]);  
+}
+
+
+void NegationOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  double xl = operand->get_lb_from_array(lbs);
+  double xu = operand->get_ub_from_array(ubs);
+  double lb = get_lb_from_array(lbs);
+  double ub = get_ub_from_array(ubs);
+
+  double new_xl;
+  double new_xu;
+
+  sub(0, 0, lb, ub, &new_xl, &new_xu);
+
+  if (new_xl > xl)
+    {
+      xl = new_xl;
+    }
+  if (new_xu < xu)
+    {
+      xu = new_xu;
+    }
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol);
+}
 
 std::vector<std::shared_ptr<Var> > create_vars(int n_vars)
 {

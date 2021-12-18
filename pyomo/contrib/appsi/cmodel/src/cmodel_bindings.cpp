@@ -9,7 +9,7 @@
  * ___________________________________________________________________________
 **/
 
-#include "lp_writer.hpp"
+#include "model.hpp"
 //#include "profiler.h"
 
 
@@ -21,6 +21,7 @@ PYBIND11_MODULE(appsi_cmodel, m)
   m.def("process_lp_constraints", &process_lp_constraints);
   m.def("process_lp_objective", &process_lp_objective);
   m.def("process_nl_constraints", &process_nl_constraints);
+  m.def("process_constraints", &process_constraints);
   m.def("process_pyomo_vars", &process_pyomo_vars);
   m.def("create_vars", &create_vars);
   m.def("create_params", &create_params);
@@ -45,6 +46,9 @@ PYBIND11_MODULE(appsi_cmodel, m)
     .def(py::init<double>())
     .def(py::init<std::string, double>())
     .def(py::init<std::string>())
+    .def("get_lb", &Var::get_lb)
+    .def("get_ub", &Var::get_ub)
+    .def("get_domain", &Var::get_domain)
     .def_readwrite("lb", &Var::lb)
     .def_readwrite("ub", &Var::ub)
     .def_readwrite("value", &Var::value)
@@ -106,4 +110,20 @@ PYBIND11_MODULE(appsi_cmodel, m)
     .def("remove_constraint", &LPWriter::remove_constraint)
     .def("get_solve_cons", &LPWriter::get_solve_cons)
     .def_readwrite("objective", &LPWriter::objective);
+  py::class_<Objective, std::shared_ptr<Objective> >(m, "Objective")
+    .def_readwrite("sense", &Objective::sense)
+    .def_readwrite("expr", &Objective::expr)
+    .def(py::init<std::shared_ptr<ExpressionBase> >());
+  py::class_<Constraint, std::shared_ptr<Constraint> >(m, "Constraint")
+    .def_readwrite("body", &Constraint::body)
+    .def_readwrite("lb", &Constraint::lb)
+    .def_readwrite("ub", &Constraint::ub)
+    .def("perform_fbbt", &Constraint::perform_fbbt)
+    .def(py::init<std::shared_ptr<ExpressionBase>,  std::shared_ptr<ExpressionBase>, std::shared_ptr<ExpressionBase>>());
+  py::class_<Model>(m, "Model")
+    .def_readwrite("constraints", &Model::constraints)
+    .def_readwrite("objective", &Model::objective)
+    .def("add_constraint", &Model::add_constraint)
+    .def("remove_constraint", &Model::remove_constraint)
+    .def(py::init<>());
 }

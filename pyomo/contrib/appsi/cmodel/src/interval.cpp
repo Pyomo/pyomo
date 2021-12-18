@@ -1,48 +1,199 @@
 #include "interval.hpp"
 
 
-std::pair<double, double> add(double xl, double xu, double yl, double yu)
+void add(double xl, double xu, double yl, double yu, double* res_lb, double* res_ub)
 {
-  return std::make_pair(xl + yl, xu + yu);
-}
-
-
-std::pair<double, double> sub(double xl, double xu, double yl, double yu)
-{
-  return std::make_pair(xl - yu, xu - yl);
-}
-
-
-std::pair<double, double> mul(double xl, double xu, double yl, double yu)
-{
-  std::vector<double> options;
-  std::vector<double> x_bnds = {xl, xu};
-  std::vector<double> y_bnds = {yl, yu};
-
-  for (double &_x : x_bnds)
+  if (xl <= -inf || yl <= -inf)
     {
-      for (double &_y : y_bnds)
-	{
-	  if ((_x <= -inf) || (_x >= inf) || (_y <= -inf) || (_y >= inf))
-	    {
-	      options.push_back(-inf);
-	      options.push_back(inf);
-	    }
-	  else
-	    {
-	      options.push_back(_x * _y);
-	    }
-	}
+      *res_lb = -inf;
+    }
+  else if (xl >= inf || yl >= inf)
+    {
+      *res_lb = inf;
+    }
+  else
+    {
+      *res_lb = xl + yl;
     }
 
-  double lb = *std::min_element(options.begin(), options.end());
-  double ub = *std::max_element(options.begin(), options.end());
-
-  return std::make_pair(lb, ub);
+  if (xu >= inf || yu >= inf)
+    {
+      *res_ub = inf;
+    }
+  else if (xu <= -inf || yu <= -inf)
+    {
+      *res_ub = -inf;
+    }
+  else
+    {
+      *res_ub = xu + yu;
+    }
 }
 
 
-std::pair<double, double> inv(double xl, double xu, double feasibility_tol)
+void sub(double xl, double xu, double yl, double yu, double* res_lb, double* res_ub)
+{
+  if (xl <= -inf || yu >= inf)
+    {
+      *res_lb = -inf;
+    }
+  else if (xl >= inf || yu <= -inf)
+    {
+      *res_lb = inf;
+    }
+  else
+    {
+      *res_lb = xl - yu;
+    }
+
+  if (xu >= inf || yl <= -inf)
+    {
+      *res_ub = inf;
+    }
+  else if (xu <= -inf || yl >= inf)
+    {
+      *res_ub = -inf;
+    }
+  else
+    {
+      *res_ub = xu - yl;
+    }
+}
+
+
+void _get_mul_option(double x, double y, double* option_lb, double* option_ub)
+{
+  if (x <= -inf)
+    {
+      if (y < 0)
+	{
+	  *option_lb = inf;
+	  *option_ub = inf;
+	}
+      else if (y > 0)
+	{
+	  *option_lb = -inf;
+	  *option_ub = -inf;
+	}
+      else
+	{
+	  *option_lb = -inf;
+	  *option_ub = inf;
+	}
+    }
+  else if (x >= inf)
+    {
+      if (y < 0)
+	{
+	  *option_lb = -inf;
+	  *option_ub = -inf;
+	}
+      else if (y > 0)
+	{
+	  *option_lb = inf;
+	  *option_ub = inf;
+	}
+      else
+	{
+	  *option_lb = -inf;
+	  *option_ub = inf;
+	}
+    }
+  else if (y <= -inf)
+    {
+      if (x < 0)
+	{
+	  *option_lb = inf;
+	  *option_ub = inf;
+	}
+      else if (x > 0)
+	{
+	  *option_lb = -inf;
+	  *option_ub = -inf;
+	}
+      else
+	{
+	  *option_lb = -inf;
+	  *option_ub = inf;
+	}
+    }
+  else if (y >= inf)
+    {
+      if (x < 0)
+	{
+	  *option_lb = -inf;
+	  *option_ub = -inf;
+	}
+      else if (x > 0)
+	{
+	  *option_lb = inf;
+	  *option_ub = inf;
+	}
+      else
+	{
+	  *option_lb = -inf;
+	  *option_ub = inf;
+	}      
+    }
+  else
+    {
+      *option_lb = x * y;
+      *option_ub = x * y;
+    }
+}
+
+
+void mul(double xl, double xu, double yl, double yu, double* res_lb, double* res_ub)
+{
+  double option1_lb;
+  double option2_lb;
+  double option3_lb;
+  double option4_lb;
+
+  double option1_ub;
+  double option2_ub;
+  double option3_ub;
+  double option4_ub;
+
+  _get_mul_option(xl, yl, &option1_lb, &option1_ub);
+  _get_mul_option(xl, yu, &option2_lb, &option2_ub);
+  _get_mul_option(xu, yl, &option3_lb, &option3_ub);
+  _get_mul_option(xu, yu, &option4_lb, &option4_ub);
+
+  double lb = option1_lb;
+  if (option2_lb < lb)
+    {
+      lb = option2_lb;
+    }
+  if (option3_lb < lb)
+    {
+      lb = option3_lb;
+    }
+  if (option4_lb < lb)
+    {
+      lb = option4_lb;
+    }
+
+  double ub = option1_ub;
+  if (option2_ub > ub)
+    {
+      ub = option2_ub;
+    }
+  if (option3_ub > ub)
+    {
+      ub = option3_ub;
+    }
+  if (option4_ub > ub)
+    {
+      ub = option4_ub;
+    }
+
+  *res_lb = lb;
+  *res_ub = ub;
+}
+
+
+void inv(double xl, double xu, double* res_lb, double* res_ub, double feasibility_tol)
 {
   /*
     The case where xl is very slightly positive but should be very slightly negative (or xu is very slightly negative
@@ -52,121 +203,58 @@ std::pair<double, double> inv(double xl, double xu, double feasibility_tol)
     should be acceptable. Additionally, it very important to return a non-negative interval when xl is non-negative.
   */
 
-  double lb;
-  double ub;
-  
   if (xu - xl <= -feasibility_tol)
     {
-      throw std::string("lower bound is greater than upper bound in inv; xl: " + std::to_string(xl) + "; xu: " + std::to_string(xu));
+      throw py::value_error("lower bound is greater than upper bound in inv; xl: " + std::to_string(xl) + "; xu: " + std::to_string(xu));
     }
   else if (xu <= 0 && 0 <= xl)
     {
       // This has to return -inf to inf because it could later be multiplied by 0
-      lb = -inf;
-      ub = inf;
+      *res_lb = -inf;
+      *res_ub = inf;
     }
   else if (xl < 0 && 0 < xu)
     {
-      lb = -inf;
-      ub = inf;
+      *res_lb = -inf;
+      *res_ub = inf;
     }
   else if (0 <= xl && xl <= feasibility_tol)
     {
       // xu must be strictly positive
-      ub = inf;
-      lb = 1.0 / xu;
+      *res_ub = inf;
+      *res_lb = 1.0 / xu;
     }
   else if (xl > feasibility_tol)
     {
       // xl and xu must be strictly positive
-      ub = 1.0 / xl;
-      lb = 1.0 / xu;
+      *res_ub = 1.0 / xl;
+      *res_lb = 1.0 / xu;
     }
   else if (-feasibility_tol <= xu && xu <= 0)
     {
       // xl must be strictly negative
-      lb = -inf;
-      ub = 1.0 / xl;
+      *res_lb = -inf;
+      *res_ub = 1.0 / xl;
     }
   else if (xu < -feasibility_tol)
     {
       // xl and xu must be strictly negative
-      ub = 1.0 / xl;
-      lb = 1.0 / xu;
+      *res_ub = 1.0 / xl;
+      *res_lb = 1.0 / xu;
     }
   else
     {
       // everything else
-      lb = -inf;
-      ub = inf;
+      *res_lb = -inf;
+      *res_ub = inf;
     }
-  return std::make_pari(lb, ub);
 }
 
 
-std::pair<double, double> div(double xl, double xu, double yl, double yu, double feasibility_tol)
+void div(double xl, double xu, double yl, double yu, double* res_lb, double* res_ub, double feasibility_tol)
 {
-  double lb;
-  double ub;
+  double inv_lb;
+  double inv_ub;
+  inv(yl, yu, &inv_lb, &inv_ub, feasibility_tol);
+  mul(xl, xu, inv_lb, inv_ub, res_lb, res_ub);
 }
-
-
-std::pair<double, double> power(double xl, double xu, double yl, double yu, double feasibility_tol)
-{
-}
-
-
-std::pair<double, double> inverse_power1(double zl, double zu, double yl, double yu, double orig_xl, double orig_xu, double feasibility_tol)
-{
-}
-
-
-std::pair<double, double> inverse_power2(double zl, double zu, double xl, double xu, double feasibility_tol)
-{
-}
-
-
-std::pair<double, double> exp(double xl, double xu)
-{
-}
-
-
-std::pair<double, double> log(double xl, double xu)
-{
-}
-
-
-std::pair<double, double> log10(double xl, double xu)
-{
-}
-
-
-std::pair<double, double> sin(double xl, double xu)
-{
-}
-
-
-std::pair<double, double> cos(double xl, double xu)
-{
-}
-
-
-std::pair<double, double> tan(double xl, double xu)
-{
-}
-
-
-std::pair<double, double> asin(double xl, double xu, double feasibility_tol)
-{
-}
-
-
-std::pair<double, double> acos(double xl, double xu, double feasibility_tol)
-{
-}
-
-
-std::pair<double, double> atan(double xl, double xu)
-{
-}
-

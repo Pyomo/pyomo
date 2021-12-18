@@ -1,29 +1,5 @@
-#include <iostream>
-#include <vector>
-#include <list>
-#include <cmath>
-#include <unordered_map>
-#include <stdexcept>
-#include <memory>
-#include <set>
-#include <unordered_set>
-#include <sstream>
-#include <iterator>
-#include <iostream>
-#include <cassert>
-#include <stdexcept>
-#include <iterator>
-#include <typeinfo>
-#include <fstream>
-#include <algorithm>
-#include <utility>
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
-#include <utility>
+#include "interval.hpp"
 
-
-namespace py = pybind11;
-using namespace pybind11::literals;
 
 class Node;
 class ExpressionBase;
@@ -38,7 +14,6 @@ class UnaryOperator;
 class LinearOperator;
 class SumOperator;
 class MultiplyOperator;
-class SubtractOperator;
 class DivideOperator;
 class PowerOperator;
 class NegationOperator;
@@ -67,7 +42,6 @@ public:
   virtual bool is_linear_operator() {return false;}
   virtual bool is_sum_operator() {return false;}
   virtual bool is_multiply_operator() {return false;}
-  virtual bool is_subtract_operator() {return false;}
   virtual bool is_divide_operator() {return false;}
   virtual bool is_power_operator() {return false;}
   virtual bool is_negation_operator() {return false;}
@@ -80,6 +54,9 @@ public:
   virtual void fill_prefix_notation_stack(std::shared_ptr<std::vector<std::shared_ptr<Node> > > stack) = 0;
   virtual void write_nl_string(std::ofstream&) = 0;
   virtual void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) = 0;
+  virtual double get_lb_from_array(double* lbs) = 0;
+  virtual double get_ub_from_array(double* ubs) = 0;
+  virtual void set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol) = 0;
 };
 
 
@@ -110,6 +87,9 @@ public:
   std::string get_string_from_array(std::string*) override;
   std::shared_ptr<std::vector<std::shared_ptr<Node> > > get_prefix_notation() override;
   void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
+  double get_lb_from_array(double* lbs) override;
+  double get_ub_from_array(double* ubs) override;
+  void set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -150,6 +130,9 @@ public:
   double get_lb();
   double get_ub();
   std::string get_domain();
+  double get_lb_from_array(double* lbs) override;
+  double get_ub_from_array(double* ubs) override;
+  void set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -196,6 +179,11 @@ public:
   std::shared_ptr<Operator>* operators;
   unsigned int n_operators;
   void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol);
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol);
+  double get_lb_from_array(double* lbs) override;
+  double get_ub_from_array(double* ubs) override;
+  void set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -214,6 +202,11 @@ public:
   std::string get_string_from_array(std::string*) override;
   virtual void print(std::string*) = 0;
   virtual std::string name() = 0;
+  virtual void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol);
+  virtual void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol);
+  double get_lb_from_array(double* lbs) override;
+  double get_ub_from_array(double* ubs) override;
+  void set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -298,6 +291,8 @@ public:
   std::shared_ptr<Node>* operands;
   unsigned int nargs;
   void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -311,6 +306,8 @@ public:
   std::string name() override {return "MultiplyOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_multiply_operator() override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -342,19 +339,6 @@ public:
 };
 
 
-class SubtractOperator: public BinaryOperator
-{
-public:
-  SubtractOperator() = default;
-  void evaluate(double* values) override;
-  void propagate_degree_forward(int* degrees, double* values) override;
-  void print(std::string*) override;
-  std::string name() override {return "SubtractOperator";};
-  void write_nl_string(std::ofstream&) override;
-  bool is_subtract_operator() override;
-};
-
-
 class DivideOperator: public BinaryOperator
 {
 public:
@@ -365,6 +349,8 @@ public:
   std::string name() override {return "DivideOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_divide_operator() override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -391,6 +377,8 @@ public:
   std::string name() override {return "NegationOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_negation_operator() override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
