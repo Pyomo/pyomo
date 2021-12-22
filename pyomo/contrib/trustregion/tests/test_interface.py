@@ -239,6 +239,8 @@ class TestTrustRegionInterface(unittest.TestCase):
             self.assertIn(var.name, list(current_values.keys()))
             self.assertEqual(current_values[var.name], value(var))
 
+    @unittest.skipIf(not SolverFactory('ipopt').available(False),
+                     "The IPOPT solver is not available")
     def test_updateDecisionVariableBounds(self):
         # Initialize the problem
         self.interface.initializeProblem()
