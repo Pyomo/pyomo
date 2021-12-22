@@ -198,10 +198,8 @@ class TestTrustRegionInterface(unittest.TestCase):
             self.assertEqual(value(val), 0)
         for key, val in self.interface.data.grad_basis_model_output.items():
             self.assertEqual(value(val), 0)
-        # We initialized the parameters here to 0, and we do not update
-        # this param as part of updateSurrogateModel
         for key, val in self.interface.data.truth_model_output.items():
-            self.assertEqual(value(val), 0)
+            self.assertEqual(value(val), 0.8414709848078965)
         # The truth gradients should equal the output of [cos(2-1), -cos(2-1)]
         truth_grads = []
         for key, val in self.interface.data.grad_truth_model_output.items():
@@ -229,35 +227,6 @@ class TestTrustRegionInterface(unittest.TestCase):
         # The inputs should be the values of x[0] and x[1]
         for key, val in self.interface.data.value_of_ef_inputs.items():
             self.assertEqual(value(self.interface.model.x[key[1]]), value(val))
-
-    def test_updateTruthModelParam(self):
-        # Set up necessary data objects
-        self.interface.replaceExternalFunctionsWithVariables()
-        self.interface.createConstraints()
-        # Initialize variable values
-        self.interface.model.x.set_values({0 : 2, 1 : 1})
-        self.interface.updateTruthModelParam()
-        # Check that the values are correct and were set correctly
-        for i, v in self.interface.data.ef_outputs.items():
-            self.assertEqual(value(v),
-                             sin(1))
-            self.assertEqual(value(self.interface.data.truth_model_output[i]),
-                             value(v))
-        self.interface.model.x.set_values({0 : 10, 1 : 0})
-        # We haven't actually changed the EF outputs in the model yet
-        # so this should be the same as before
-        self.interface.updateTruthModelParam()
-        for i, v in self.interface.data.ef_outputs.items():
-            self.assertEqual(value(v),
-                             sin(1))
-            self.assertEqual(value(self.interface.data.truth_model_output[i]),
-                             value(v))
-        self.interface.data.basis_constraint.activate()
-        objective, step_norm, feasibility = self.interface.solveModel()
-        self.interface.updateTruthModelParam()
-        for i, v in self.interface.data.ef_outputs.items():
-            self.assertEqual(value(self.interface.data.truth_model_output[i]),
-                             value(v))
 
     def test_getCurrentDecisionVariableValues(self):
         # Set up necessary data objects
@@ -379,9 +348,9 @@ class TestTrustRegionInterface(unittest.TestCase):
         self.interface.updateSurrogateModel()
         self.interface.data.sm_constraint_basis.activate()
         objective, step_norm, feasibility = self.interface.solveModel()
-        self.assertEqual(objective, 5.150674356202409)
-        self.assertEqual(step_norm, 0.0015042516172742992)
-        self.assertEqual(feasibility, 0.09509735734117808)
+        self.assertEqual(objective, 5.15065981284333)
+        self.assertEqual(step_norm, 0.0017225116628372117)
+        self.assertEqual(feasibility, 0.00014665023773327568)
 
     @unittest.skipIf(not SolverFactory('ipopt').available(False),
                      "The IPOPT solver is not available")

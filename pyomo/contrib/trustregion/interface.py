@@ -15,7 +15,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.trustregion.util import minIgnoreNone, maxIgnoreNone
 from pyomo.core import (
     Block, Param, VarList, Constraint,
-    Objective, value, Set, ExternalFunction
+    Objective, value, Set, ExternalFunction, Var
     )
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.visitor import (identify_variables,
@@ -239,6 +239,7 @@ class TRFInterface(object):
         b = self.data
         for i, y in b.ef_outputs.items():
             b.basis_model_output[i] = value(b.basis_expressions[y])
+            b.truth_model_output[i] = value(b.truth_models[y])
             # Basis functions are Pyomo expressions (in theory)
             gradBasis = differentiate(b.basis_expressions[y],
                                       wrt_list=b.ef_inputs[i])
@@ -249,13 +250,6 @@ class TRFInterface(object):
                 b.grad_basis_model_output[i, j] = gradBasis[j]
                 b.grad_truth_model_output[i, j] = gradTruth[j]
                 b.value_of_ef_inputs[i, j] = value(w)
-
-    def updateTruthModelParam(self):
-        """
-        Update truth model parameter values
-        """
-        for i, v in self.data.ef_outputs.items():
-            self.data.truth_model_output[i] = value(v)
 
     def getCurrentModelState(self):
         """
@@ -313,7 +307,6 @@ class TRFInterface(object):
         objective_value, _, _ = self.solveModel()
         self.data.basis_constraint.deactivate()
         self.updateSurrogateModel()
-        self.model.pprint()
         feasibility = self.calculateFeasibility()
         self.data.sm_constraint_basis.activate()
         return objective_value, feasibility
@@ -326,7 +319,6 @@ class TRFInterface(object):
         we need to access them later if a step is rejected
         """
         current_decision_values = self.getCurrentDecisionVariableValues()
-        self.updateTruthModelParam()
         self.data.previous_model_state = self.getCurrentModelState()
         results = self.solver.solve(self.model,
                                     keepfiles=self.config.keepfiles,
@@ -344,7 +336,6 @@ class TRFInterface(object):
 
         self.model.solutions.load_from(results)
         new_decision_values = self.getCurrentDecisionVariableValues()
-        self.updateTruthModelParam()
         step_norm = self.calculateStepSizeInfNorm(current_decision_values,
                                                   new_decision_values)
         feasibility = self.calculateFeasibility()

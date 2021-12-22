@@ -18,8 +18,8 @@ from pyomo.opt import SolverFactory
 
 m = ConcreteModel()
 
-m.x1 = Var(initialize=0)
-m.x2 = Var(bounds=(-2.0, None), initialize=0)
+m.x1 = Var()
+m.x2 = Var(bounds=(-2.0, None))
 
 def ext_fcn(x, y):
     return x**2 + y**2
@@ -31,7 +31,7 @@ m.EF = ExternalFunction(ext_fcn, grad_ext_fcn)
 
 @m.Constraint()
 def con(m):
-    return 2*m.x1 + m.x2 + 10.0 == 0
+    return 2*m.x1 + m.x2 + 10.0 == m.EF(m.x1, m.x2)
 
 m.obj = Objective(expr = (m.x1 - 1)**2 + (m.x2 - 3)**2 + m.EF(m.x1, m.x2)**2)
 
@@ -40,7 +40,5 @@ def basis_rule(component, ef_expr):
     x2 = ef_expr.arg(1)
     return x1**2 - x2 # This is the low fidelity model
 
-# m.pprint()
-
-optTRF = SolverFactory('trustregion')
-optTRF.solve(m, [m.x1], ext_fcn_surrogate_map_rule=basis_rule)
+optTRF = SolverFactory('trustregion', maximum_iterations=5)
+optTRF.solve(m, [m.x1])

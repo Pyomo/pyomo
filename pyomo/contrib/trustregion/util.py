@@ -64,10 +64,10 @@ class IterationRecord:
         """
         Print information about the iteration to the log.
         """
-        logger.info("**** Iteration %d ****" % self.iteration)
+        logger.info("****** Iteration %d ******" % self.iteration)
+        logger.info("trustRadius = %s" % self.trustRadius)
         logger.info("feasibility = %s" % self.feasibility)
         logger.info("objectiveValue = %s" % self.objectiveValue)
-        logger.info("trustRadius = %s" % self.trustRadius)
         logger.info("stepNorm = %s" % self.stepNorm)
         if self.fStep:
             logger.info("INFO: f-type step")
@@ -75,6 +75,23 @@ class IterationRecord:
             logger.info("INFO: theta-type step")
         if self.rejected:
             logger.info("INFO: step rejected")
+
+    def verboseLogger(self):
+        """
+        Print information about the iteration to the console
+        """
+        print("****** Iteration %d ******" % self.iteration)
+        print("trustRadius = %s" % self.trustRadius)
+        print("feasibility = %s" % self.feasibility)
+        print("objectiveValue = %s" % self.objectiveValue)
+        print("stepNorm = %s" % self.stepNorm)
+        if self.fStep:
+            print("INFO: f-type step")
+        if self.thetaStep:
+            print("INFO: theta-type step")
+        if self.rejected:
+            print("INFO: step rejected")
+        print(25*'*')
 
 
 class IterationLogger:
@@ -95,11 +112,15 @@ class IterationLogger:
                                           trustRadius=trustRadius,
                                           stepNorm=stepNorm)
         self.iterations.append(self.iterrecord)
-        print("**** Iteration %d ****" % iteration)
-        print("trustRadius = %s" % trustRadius)
 
     def logIteration(self):
         """
         Log detailed information about the iteration to the log
         """
         self.iterrecord.detailLogger()
+
+    def printIteration(self):
+        """
+        Print information to the screen
+        """
+        self.iterrecord.verboseLogger()

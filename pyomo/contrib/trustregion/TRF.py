@@ -11,7 +11,6 @@
 import logging
 
 from pyomo.core.base.range import NumericRange
-from pyomo.core import Var
 from pyomo.common.config import (ConfigDict, ConfigValue,
                                  Bool, PositiveInt,
                                  PositiveFloat, In)
@@ -40,7 +39,6 @@ def trust_region_method(model, decision_variables,
     # Initialize the problem
     rebuildSM = False
     obj_val, feasibility = interface.initializeProblem()
-    quit()
     # Initialize first iteration feasibility/objective value to enable
     # termination check
     feasibility_k = feasibility
@@ -53,10 +51,6 @@ def trust_region_method(model, decision_variables,
     iteration = 0
     while iteration < config.maximum_iterations:
         iteration += 1
-
-        for var in interface.model.component_data_objects(Var):
-            var.pprint()
-        quit()
 
         # Check termination conditions
         if ((feasibility_k <= 1e-5)
@@ -91,13 +85,6 @@ def trust_region_method(model, decision_variables,
 
         TRFLogger.newIteration(iteration, feasibility_k, obj_val_k,
                                trust_radius, step_norm_k)
-        # print(200*'*')
-        # interface.model.pprint()
-        print(100*'*')
-        print('Feasibility:', feasibility_k)
-        print('Objective:', obj_val_k)
-        print('Step norm:', step_norm_k)
-        print(100*'*')
 
         # Check filter acceptance
         filterElement = FilterElement(feasibility_k, obj_val_k)
@@ -145,15 +132,18 @@ def trust_region_method(model, decision_variables,
 
         # Log iteration information
         TRFLogger.logIteration()
+        if config.verbose:
+            TRFLogger.printIteration()
 
         # Accept step and reset for next iteration
         rebuildSM = True
         feasibility = feasibility_k
         obj_val = obj_val_k
 
-    interface.model.display()
     if iteration >= config.maximum_iterations:
         print('EXIT: Maximum iterations reached: {}.'.format(config.maximum_iterations))
+    else:
+        interface.model.display()
 
 
 def _trf_config():
@@ -180,6 +170,13 @@ def _trf_config():
     ))
 
     ### Trust Region specific options
+    CONFIG.declare('verbose', ConfigValue(
+        default=False,
+        domain=Bool,
+        description="Optional. Default = False. When True, print each "
+                    "iteration's relevant information to the console "
+                    "as well as to the log."
+    ))
     CONFIG.declare('trust radius', ConfigValue(
         default=1.0,
         domain=PositiveFloat,
