@@ -364,6 +364,8 @@ public:
   std::string name() override {return "PowerOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_power_operator() override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -391,6 +393,8 @@ public:
   std::string name() override {return "ExpOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_exp_operator() override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -403,6 +407,8 @@ public:
   std::string name() override {return "LogOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_log_operator() override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -414,6 +420,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "Log10Operator";};
   void write_nl_string(std::ofstream&) override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -425,6 +433,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "SinOperator";};
   void write_nl_string(std::ofstream&) override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -436,6 +446,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "CosOperator";};
   void write_nl_string(std::ofstream&) override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -447,6 +459,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "TanOperator";};
   void write_nl_string(std::ofstream&) override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -458,6 +472,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "AsinOperator";};
   void write_nl_string(std::ofstream&) override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -469,6 +485,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "AcosOperator";};
   void write_nl_string(std::ofstream&) override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
@@ -480,6 +498,8 @@ public:
   void print(std::string*) override;
   std::string name() override {return "AtanOperator";};
   void write_nl_string(std::ofstream&) override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
 };
 
 
