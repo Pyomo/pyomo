@@ -124,7 +124,8 @@ class NLWriter(object):
     def __call__(self, model, filename, solver_capability, io_options):
         if filename is None:
             filename = model.name + ".nl"
-        assert filename.lower().endswith('.nl')
+        elif not filename.lower().endswith('.nl'):
+            filename += '.nl'
         row_fname = filename[:-2] + 'row'
         col_fname = filename[:-2] + 'col'
 
@@ -867,10 +868,10 @@ class AMPLRepn(object):
                 self.nonlinear.append(other.nonlinear)
 
     def distribute_multiplicand(self, visitor, mult):
+        if not mult:
+            return AMPLRepn(None, None)
         if self.nl:
-            if not mult:
-                return AMPLRepn(None, None)
-            elif mult == 1:
+            if mult == 1:
                 return AMPLRepn(None, self.nl)
             return AMPLRepn(
                 None,
@@ -887,7 +888,7 @@ class AMPLRepn(object):
             if mult == -1:
                 ans.nonlinear = (
                     visitor.template.negation + nl,
-                    args
+                    args,
                 )
             else:
                 ans.nonlinear = (
