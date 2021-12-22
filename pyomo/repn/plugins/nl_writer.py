@@ -167,17 +167,20 @@ class NLWriter(object):
         _impl = _NLWriter_impl(ostream, rowstream, colstream, config)
         return _impl.write(model)
 
+def _RANGE_TYPE(lb, ub):
+    if lb == ub:
+        if lb is None:
+            return 3 # -inf <= c <= inf
+        else:
+            return 4 # L == c == U
+    elif lb is None:
+        return 1 # c <= U
+    elif ub is None:
+        return 2 # L <= c
+    else:
+        return 0 # L <= c <= U
 
 class _NLWriter_impl(object):
-    RANGE_TYPE = {
-        # has_lb, has_ub, lb == ub
-        (True, True, False): 0,   # L <= c <= U
-        (False, True, False): 1,  #      c <= U
-        (True, False, False): 2,  # L <= c
-        (False, False, True): 3,  # -inf <= c <= inf
-        (True, True, True): 4,    # L == c == U
-        # complementarity: 5,
-    }
 
     def __init__(self, ostream, rowstream, colstream, config):
         self.ostream = ostream
@@ -235,15 +238,16 @@ class _NLWriter_impl(object):
             (obj,
              visitor.walk_expression((obj.expr, obj, 1)),
          ) for obj in model.component_data_objects(
-             Objective, active=True, descend_into=True, sort=sorter)]
+             Objective, active=True, descend_into=True, sort=sorter
+         )]
 
         constraints = [(
             con,
             visitor.walk_expression((con.body, con, 0)),
-            self.RANGE_TYPE[con.has_lb(), con.has_ub(), con.lb == con.ub],
+            _RANGE_TYPE(con.lb, con.ub),
         ) for con in model.component_data_objects(
             Constraint, active=True, descend_into=True, sort=sorter
-        ) if con.has_lb() or con.has_ub() ]
+        )]
 
         #
         # Collect constraints and objectives into the groupings
