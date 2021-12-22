@@ -946,8 +946,8 @@ class text_nl_debug_template(object):
         'asinh':  'o50\t#asinh\n',
         'acosh':  'o52\t#acosh\n',
         'atanh':  'o47\t#atanh\n',
-        'ceil':   'o13\t#ceil\n',
-        'floor':  'o14\t#floor\n',
+        'ceil':   'o14\t#ceil\n',
+        'floor':  'o13\t#floor\n',
     }
 
     binary_sum = 'o0\t# +\n'
