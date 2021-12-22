@@ -17,6 +17,31 @@ import logging
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
 
+def minIgnoreNone(a, b):
+    """
+    Return the min of two numbers, ignoring None
+    """
+    if a is None:
+        return b
+    if b is None:
+        return a
+    if a < b:
+        return a
+    return b
+
+def maxIgnoreNone(a, b):
+    """
+    Return the max of two numbers, ignoring None
+    """
+    if a is None:
+        return b
+    if b is None:
+        return a
+    if a < b:
+        return b
+    return a
+
+
 class IterationRecord:
     """
     Record relevant information at each individual iteration

@@ -49,6 +49,7 @@ class TestTrustRegionConfig(unittest.TestCase):
             )
         self.m.c2 = Constraint(
             expr=self.m.z[2]**4 * self.m.z[1]**2 + self.m.z[1] == 8+sqrt(2.0))
+        self.decision_variables = [self.m.z[0], self.m.z[1], self.m.z[2]]
 
     def maprule(self, a, b):
         return a**2 + b**2
@@ -56,7 +57,7 @@ class TestTrustRegionConfig(unittest.TestCase):
     def try_solve(self, **kwds):
         status = True
         try:
-            self.TRF.solve(self.m, **kwds)
+            self.TRF.solve(self.m, self.decision_variables, **kwds)
         except Exception as e:
             print('error calling TRF.solve: %s' % str(e))
             status = False
@@ -69,7 +70,7 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertFalse(CONFIG.tee)
         self.assertEqual(CONFIG.trust_radius, 1.0)
         self.assertEqual(CONFIG.minimum_radius, 1e-6)
-        self.assertEqual(CONFIG.maximum_radius, 1000.0)
+        self.assertEqual(CONFIG.maximum_radius, 100.0)
         self.assertEqual(CONFIG.maximum_iterations, 50)
         self.assertEqual(CONFIG.feasibility_termination, 1e-5)
         self.assertEqual(CONFIG.step_size_termination, 1e-5)
@@ -79,7 +80,7 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertEqual(CONFIG.radius_update_param_gamma_c, 0.5)
         self.assertEqual(CONFIG.radius_update_param_gamma_e, 2.5)
         self.assertEqual(CONFIG.ratio_test_param_eta_1, 0.05)
-        self.assertEqual(CONFIG.ratio_test_param_eta_2, 0.25)
+        self.assertEqual(CONFIG.ratio_test_param_eta_2, 0.2)
         self.assertEqual(CONFIG.maximum_feasibility, 50.0)
         self.assertEqual(CONFIG.filter_param_gamma_theta, 0.01)
         self.assertEqual(CONFIG.filter_param_gamma_f, 0.01)
@@ -172,8 +173,10 @@ class TestTrustRegionMethod(unittest.TestCase):
             expr=self.m.z[2]**4 * self.m.z[1]**2 + self.m.z[1] == 8+sqrt(2.0))
         self.config = _trf_config()
         self.ext_fcn_surrogate_map_rule = lambda comp,ef: 0
+        self.decision_variables = [self.m.z[0], self.m.z[1], self.m.z[2]]
 
     def test_solver(self):
         trust_region_method(self.m,
-                            self.config,
-                            self.ext_fcn_surrogate_map_rule)
+                            self.decision_variables,
+                            self.ext_fcn_surrogate_map_rule,
+                            self.config)

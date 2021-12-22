@@ -13,7 +13,9 @@ import logging
 
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.trustregion.util import IterationLogger
+from pyomo.contrib.trustregion.util import (
+    IterationLogger, minIgnoreNone, maxIgnoreNone
+)
 from pyomo.common.log import LoggingIntercept
 
 
@@ -28,6 +30,30 @@ class TestLogger(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+    def test_minIgnoreNone(self):
+        a = 1
+        b = 2
+        self.assertEqual(minIgnoreNone(a, b), a)
+        a = None
+        self.assertEqual(minIgnoreNone(a, b), b)
+        a = 1
+        b = None
+        self.assertEqual(minIgnoreNone(a, b), a)
+        a = None
+        self.assertEqual(minIgnoreNone(a, b), None)
+
+    def test_maxIgnoreNone(self):
+        a = 1
+        b = 2
+        self.assertEqual(maxIgnoreNone(a, b), b)
+        a = None
+        self.assertEqual(maxIgnoreNone(a, b), b)
+        a = 1
+        b = None
+        self.assertEqual(maxIgnoreNone(a, b), a)
+        a = None
+        self.assertEqual(maxIgnoreNone(a, b), None)
 
     def test_IterationRecord(self):
         self.iterLogger.newIteration(self.iteration, self.thetak, self.objk,

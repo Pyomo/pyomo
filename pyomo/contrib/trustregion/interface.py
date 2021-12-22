@@ -12,6 +12,7 @@ import logging
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
+from pyomo.contrib.trustregion.util import minIgnoreNone, maxIgnoreNone
 from pyomo.core import (
     Block, Param, VarList, Constraint,
     Objective, value, Set, ExternalFunction
@@ -71,10 +72,15 @@ class TRFInterface(object):
     Pyomo interface for Trust Region algorithm.
     """
 
-    def __init__(self, model, ext_fcn_surrogate_map_rule, config):
+    def __init__(self, model, decision_variables,
+                 ext_fcn_surrogate_map_rule, config):
         self.original_model = model
+        tmp_name = unique_component_name(self.original_model, 'tmp')
+        setattr(self.original_model, tmp_name, decision_variables)
         self.config = config
         self.model = self.original_model.clone()
+        self.decision_variables = getattr(self.model, tmp_name)
+        delattr(self.original_model, tmp_name)
         self.data = Block()
         self.model.add_component(unique_component_name(self.model, 'trf_data'),
                                  self.data)
@@ -131,9 +137,24 @@ class TRFInterface(object):
         self.data.ef_inputs = {}
         self.data.ef_outputs = VarList()
 
+        number_of_equality_constraints = 0
         for con in self.model.component_data_objects(Constraint,
                                                      active=True):
+            if con.lb == con.ub and con.lb is not None:
+                number_of_equality_constraints += 1
             self._remove_ef_from_expr(con)
+
+        self.degrees_of_freedom = len(list(self.data.all_variables)) - number_of_equality_constraints
+        if self.degrees_of_freedom != len(self.decision_variables):
+            raise ValueError(
+                "replaceExternalFunctionsWithVariables: "
+                "The degrees of freedom %d do not match the number of decision variables supplied %d." % (self.degrees_of_freedom, len(self.decision_variables)))
+
+        for var in self.decision_variables:
+            if var not in self.data.all_variables:
+                raise ValueError(
+                    "replaceExternalFunctionsWithVariables: "
+                    f"The supplied decision variable {var.name} cannot be found in the model variables.")
 
         self.data.objs = list(self.model.component_data_objects(Objective,
                                                       active=True))
@@ -144,7 +165,7 @@ class TRFInterface(object):
 
         if len(self.data.objs) != 1:
             raise ValueError(
-                "transformForTrustRegion: "
+                "replaceExternalFunctionsWithVariables: "
                 "TrustRegion only supports models with a single active Objective.")
         self._remove_ef_from_expr(self.data.objs[0])
 
@@ -190,6 +211,27 @@ class TRFInterface(object):
                     for j, w in enumerate(b.ef_inputs[i]))
         b.sm_constraint_basis.deactivate()
 
+    def getCurrentDecisionVariableValues(self):
+        """
+        Return current decision variable values
+        """
+        decision_values = {}
+        for var in self.decision_variables:
+            decision_values[var.name] = value(var)
+        return decision_values
+
+    def updateDecisionVariableBounds(self, radius):
+        """
+        Update the TRSP_k decision variable bounds
+        """
+        for var in self.decision_variables:
+            var.setlb(
+                maxIgnoreNone(value(var) - radius,
+                              self.initial_decision_bounds[var.name][0]))
+            var.setub(
+                minIgnoreNone(value(var) + radius,
+                              self.initial_decision_bounds[var.name][1]))
+
     def updateSurrogateModel(self):
         """
         Update relevant parameters
@@ -208,19 +250,12 @@ class TRFInterface(object):
                 b.grad_truth_model_output[i, j] = gradTruth[j]
                 b.value_of_ef_inputs[i, j] = value(w)
 
-    def getCurrentEFValues(self):
+    def updateTruthModelParam(self):
         """
-        Return current variable values
+        Update truth model parameter values
         """
-        ans = {}
         for i, v in self.data.ef_outputs.items():
-            current_inputs = [value(input_var) for
-                              input_var in self.data.ef_inputs[i]]
-            current_output = value(v)
-            ans[i] = (current_inputs, current_output)
-            # Update the truth model output Param as well (minimize cost)
-            self.data.truth_model_output[i] = current_output
-        return ans
+            self.data.truth_model_output[i] = value(v)
 
     def getCurrentModelState(self):
         """
@@ -233,8 +268,6 @@ class TRFInterface(object):
         """
         Feasibility measure (theta(x)) is:
             || y - d(w) ||_1
-        # TODO: Add in the inverse of the step norm for each value
-        || S^{-1} (y-d(w)) || = sum_{i in {1..n}} ( abs( (y_i - d(w)_i)/(s_k)_i) )
         """
         b = self.data
         return sum(abs(value(y) - value(b.truth_models[y]))
@@ -243,17 +276,15 @@ class TRFInterface(object):
     def calculateStepSizeInfNorm(self, original_values, new_values):
         """
         Taking original and new values, calculate the step-size norm ||s_k||:
-            || (w - w_k), (d(w) - d(w_k)) ||_inf
+            || u - u_k ||_inf
 
-        The values are assumed to be of the output given by getCurrentEFValues.
+        We assume that the user has correctly scaled their variables.
         """
         original_vals = []
         new_vals = []
-        for i, v in original_values.items():
-            original_vals.extend(v[0])
-            original_vals.append(v[1])
-            new_vals.extend(new_values[i][0])
-            new_vals.append(new_values[i][1])
+        for var, val in original_values.items():
+            original_vals.append(val)
+            new_vals.append(new_values[var])
         return max([abs(old - new)
                     for old, new in zip(original_vals, new_vals)])
 
@@ -274,11 +305,15 @@ class TRFInterface(object):
 
         """
         self.replaceExternalFunctionsWithVariables()
+        self.initial_decision_bounds = {}
+        for var in self.decision_variables:
+            self.initial_decision_bounds[var.name] = [var.lb, var.ub]
         self.createConstraints()
         self.data.basis_constraint.activate()
         objective_value, _, _ = self.solveModel()
         self.data.basis_constraint.deactivate()
         self.updateSurrogateModel()
+        self.model.pprint()
         feasibility = self.calculateFeasibility()
         self.data.sm_constraint_basis.activate()
         return objective_value, feasibility
@@ -290,12 +325,13 @@ class TRFInterface(object):
         This also caches the previous values of the vars, just in case
         we need to access them later if a step is rejected
         """
-        currentEFValues = self.getCurrentEFValues()
+        current_decision_values = self.getCurrentDecisionVariableValues()
+        self.updateTruthModelParam()
         self.data.previous_model_state = self.getCurrentModelState()
         results = self.solver.solve(self.model,
                                     keepfiles=self.config.keepfiles,
                                     tee=self.config.tee)
-
+                                                    
         if ((results.solver.status != SolverStatus.ok)
             or (results.solver.termination_condition !=
                  TerminationCondition.optimal)):
@@ -307,9 +343,10 @@ class TRFInterface(object):
                 )
 
         self.model.solutions.load_from(results)
-        newEFValues = self.getCurrentEFValues()
-        step_norm = self.calculateStepSizeInfNorm(currentEFValues,
-                                                  newEFValues)
+        new_decision_values = self.getCurrentDecisionVariableValues()
+        self.updateTruthModelParam()
+        step_norm = self.calculateStepSizeInfNorm(current_decision_values,
+                                                  new_decision_values)
         feasibility = self.calculateFeasibility()
         return self.data.objs[0](), step_norm, feasibility
 
@@ -317,6 +354,8 @@ class TRFInterface(object):
         """
         If a step is rejected, we reset the model variables values back
         to their cached state - which we set in solveModel
+
+        TODO: Do we care about reverting the LB and UB on the decision vars?
         """
         for var, val in zip(self.data.all_variables,
                             self.data.previous_model_state):

@@ -39,4 +39,4 @@ m.c2 = Constraint(expr=m.z[2]**4 * m.z[1]**2 + m.z[1] == 8+sqrt(2.0))
 m.pprint()
 
 optTRF = SolverFactory('trustregion', maximum_iterations=10)
-optTRF.solve(m)
+optTRF.solve(m, [m.z[0], m.z[1], m.z[2]])

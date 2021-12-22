@@ -11,6 +11,7 @@
 import logging
 
 from pyomo.core.base.range import NumericRange
+from pyomo.core import Var
 from pyomo.common.config import (ConfigDict, ConfigValue,
                                  Bool, PositiveInt,
                                  PositiveFloat, In)
@@ -24,7 +25,8 @@ logger = logging.getLogger('pyomo.contrib.trustregion')
 __version__ = '0.2.0'
 
 
-def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
+def trust_region_method(model, decision_variables,
+                        ext_fcn_surrogate_map_rule, config):
     """
     Main driver of the Trust Region algorithm.
     """
@@ -32,11 +34,13 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
     # Initialize necessary TRF methods
     TRFLogger = IterationLogger()
     TRFilter = Filter()
-    interface = TRFInterface(model, ext_fcn_surrogate_map_rule, config)
+    interface = TRFInterface(model, decision_variables,
+                             ext_fcn_surrogate_map_rule, config)
 
     # Initialize the problem
     rebuildSM = False
     obj_val, feasibility = interface.initializeProblem()
+    quit()
     # Initialize first iteration feasibility/objective value to enable
     # termination check
     feasibility_k = feasibility
@@ -50,9 +54,9 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
     while iteration < config.maximum_iterations:
         iteration += 1
 
-        # Generate suggorate model r_k(w)
-        if rebuildSM:
-            interface.updateSurrogateModel()
+        for var in interface.model.component_data_objects(Var):
+            var.pprint()
+        quit()
 
         # Check termination conditions
         if ((feasibility_k <= 1e-5)
@@ -76,16 +80,24 @@ def trust_region_method(model, config, ext_fcn_surrogate_map_rule):
             # the boolean subopt_flag
             subopt_flag = False
 
+        # Set bounds to enforce the trust region
+        interface.updateDecisionVariableBounds(trust_radius)
+        # Generate suggorate model r_k(w)
+        if rebuildSM:
+            interface.updateSurrogateModel()
+
+        # Solve the Trust Region Subproblem (TRSP)
         obj_val_k, step_norm_k, feasibility_k = interface.solveModel()
 
         TRFLogger.newIteration(iteration, feasibility_k, obj_val_k,
                                trust_radius, step_norm_k)
+        # print(200*'*')
+        # interface.model.pprint()
+        print(100*'*')
         print('Feasibility:', feasibility_k)
         print('Objective:', obj_val_k)
         print('Step norm:', step_norm_k)
-        print(200*'*')
-        interface.model.pprint()
-        print(200*'*')
+        print(100*'*')
 
         # Check filter acceptance
         filterElement = FilterElement(feasibility_k, obj_val_k)
@@ -181,11 +193,11 @@ def _trf_config():
                     "Default = 1e-6."
     ))
     CONFIG.declare('maximum radius', ConfigValue(
-        default=CONFIG.trust_radius * 1000,
+        default=CONFIG.trust_radius * 100,
         domain=PositiveFloat,
         description="Maximum allowed trust region radius. If trust region "
                     "radius reaches maximum allowed, solver will exit. "
-                    "Default = 1000 * trust_radius."
+                    "Default = 100 * trust_radius."
     ))
     CONFIG.declare('maximum iterations', ConfigValue(
         default=50,
@@ -249,11 +261,11 @@ def _trf_config():
                     "Default = 0.05."
     ))
     CONFIG.declare('ratio test param eta_2', ConfigValue(
-        default = 0.25,
+        default = 0.2,
         domain=In(NumericRange(0, 1, 0, (False, False))),
         description="Lower ratio test parameter (eta_2). "
                     "Must satisfy: 0 < eta_1 <= eta_2 < 1. "
-                    "Default = 0.25."
+                    "Default = 0.2."
     ))
     ### Filter
     CONFIG.declare('maximum feasibility', ConfigValue(
@@ -316,11 +328,19 @@ class TrustRegionSolver(object):
     def __exit__(self, et, ev, tb):
         pass
 
-    def solve(self, model, ext_fcn_surrogate_map_rule=None, **kwds):
+    def solve(self, model, degrees_of_freedom_variables,
+              ext_fcn_surrogate_map_rule=None, **kwds):
+        """
+        ext_fcn_surrogate_map_rule - Documentation needed
+        degrees_of_freedom_variables : List of var datas that represent u_k from
+                             2020 Yoshio/Biegler paper (we assume that the user has scaled all of the values appropriately in order to remove the E^{-1} and S^{-1} scaling values.)
+        """
         self.config = self._CONFIG(kwds.pop('options', {}))
         self.config.set_value(kwds)
         if ext_fcn_surrogate_map_rule is None:
             # If the user does not pass us a "basis" function,
             # we default to 0.
             ext_fcn_surrogate_map_rule = lambda comp,ef: 0
-        trust_region_method(model, self.config, ext_fcn_surrogate_map_rule)
+        
+        trust_region_method(model, degrees_of_freedom_variables,
+                            ext_fcn_surrogate_map_rule, self.config)
