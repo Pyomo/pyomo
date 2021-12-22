@@ -68,6 +68,7 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertEqual(CONFIG.solver, 'ipopt')
         self.assertFalse(CONFIG.keepfiles)
         self.assertFalse(CONFIG.tee)
+        self.assertFalse(CONFIG.verbose)
         self.assertEqual(CONFIG.trust_radius, 1.0)
         self.assertEqual(CONFIG.minimum_radius, 1e-6)
         self.assertEqual(CONFIG.maximum_radius, 100.0)
