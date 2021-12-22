@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import enum
+import sys
 from collections import Counter, deque
 from operator import itemgetter, attrgetter
 
@@ -36,6 +37,12 @@ import pyomo.core.kernel as kernel
 from pyomo.opt import WriterFactory
 
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
+
+if sys.version_info[:2] >= (3,7):
+    _deterministic_dict = dict
+else:
+    from pyomo.common.collections import OrderedDict
+    _deterministic_dict = OrderedDict
 
 ### FIXME: Remove the following as soon as non-active components no
 ### longer report active==True
@@ -185,14 +192,15 @@ class _NLWriter_impl(object):
         self.subexpression_cache = {}
         self.subexpression_order = []
         self.external_functions = {}
+        self.var_map = _deterministic_dict()
         self.visitor = AMPLRepnVisitor(
             self.template,
             self.subexpression_cache,
             self.subexpression_order,
             self.external_functions,
+            self.var_map,
         )
         self.next_V_line_id = 0
-        self.var_map = {}
 
     def write(self, model):
         sorter = SortComponents.unsorted
@@ -213,9 +221,11 @@ class _NLWriter_impl(object):
             # for consistency with the original NL writer.  Note that
             # Vars that appear twice (e.g., through a Reference) will be
             # sorted with the LAST occurance.
-            self.var_map = {id(var): (var, i) for i, var in enumerate(
-                model.component_data_objects(
-                    Var, descend_into=True, sort=sorter))}
+            self.var_map = {
+                id(var): var
+                for var in model.component_data_objects(
+                        Var, descend_into=True, sort=sorter)
+            }
 
         #
         # Tabulate the model expressions
@@ -285,11 +295,11 @@ class _NLWriter_impl(object):
         n_vars = len(all_vars)
 
         binary_vars = set(
-            _id for _id in all_vars if self.var_map[_id][0].is_binary()
+            _id for _id in all_vars if self.var_map[_id].is_binary()
         )
         integer_vars = set(
             _id for _id in all_vars - binary_vars
-            if self.var_map[_id][0].is_integer()
+            if self.var_map[_id].is_integer()
         )
         discrete_vars = binary_vars.union(integer_vars)
         continuous_vars = all_vars - discrete_vars
@@ -298,66 +308,61 @@ class _NLWriter_impl(object):
         linear_only_vars = con_vars_linear.union(obj_vars_linear) \
                            - nonlinear_vars
 
-        column_order = lambda _id: self.var_map[_id][1]
+        column_order = {_id: i for i, _id in enumerate(self.var_map)}
         variables = []
         #
         both_vars_nonlinear = con_vars_nonlinear.intersection(
             obj_vars_nonlinear)
         variables.extend(sorted(
             both_vars_nonlinear.intersection(continuous_vars),
-            key=column_order))
+            key=column_order.__getitem__))
         variables.extend(sorted(
             both_vars_nonlinear.intersection(discrete_vars),
-            key=column_order))
+            key=column_order.__getitem__))
         #
         con_only_nonlinear_vars = con_vars_nonlinear - both_vars_nonlinear
         variables.extend(sorted(
             con_only_nonlinear_vars.intersection(continuous_vars),
-            key=column_order))
+            key=column_order.__getitem__))
         variables.extend(sorted(
             con_only_nonlinear_vars.intersection(discrete_vars),
-            key=column_order))
+            key=column_order.__getitem__))
         #
         obj_only_nonlinear_vars = obj_vars_nonlinear - both_vars_nonlinear
         variables.extend(sorted(
             obj_only_nonlinear_vars.intersection(continuous_vars),
-            key=column_order))
+            key=column_order.__getitem__))
         variables.extend(sorted(
             obj_only_nonlinear_vars.intersection(discrete_vars),
-            key=column_order))
+            key=column_order.__getitem__))
         #
         variables.extend(sorted(
             linear_only_vars - discrete_vars,
-            key=column_order))
+            key=column_order.__getitem__))
         variables.extend(sorted(
             linear_only_vars.intersection(binary_vars),
-            key=column_order))
+            key=column_order.__getitem__))
         variables.extend(sorted(
             linear_only_vars.intersection(integer_vars),
-            key=column_order))
+            key=column_order.__getitem__))
         assert len(variables) == n_vars
-        for var_idx, _id in enumerate(variables):
-            v = self.var_map[_id][0]
-            bnds = v.bounds
-            variables[var_idx] = (v, _id, self.RANGE_TYPE[
-                bnds[0] is not None,
-                bnds[1] is not None,
-                bnds[0] == bnds[1]])
-        # Update the variable ID to reflect the new ordering
-        self.var_map = {
-            info[1]: (info[0], idx) for idx, info in enumerate(variables)
-        }
+        # Compute variable id to position (given the new ordering)
+        self.var_idx = {_id: idx for idx, _id in enumerate(variables)}
+        # Fill in the variable list
+        for idx, _id in enumerate(variables):
+            v = self.var_map[_id]
+            variables[idx] = (v, _id, _RANGE_TYPE(*v.bounds))
 
         # Now that the row/column ordering is resolved, create the labels
         symbol_map = SymbolMap()
         symbol_map.addSymbols(
-            (info[0], "v"+str(idx)) for idx, info in enumerate(variables)
+            (info[0], f"v{idx}") for idx, info in enumerate(variables)
         )
         symbol_map.addSymbols(
-            (info[0], "c"+str(idx)) for idx, info in enumerate(constraints)
+            (info[0], f"c{idx}") for idx, info in enumerate(constraints)
         )
         symbol_map.addSymbols(
-            (info[0], "o"+str(idx)) for idx, info in enumerate(objectives)
+            (info[0], f"o{idx}") for idx, info in enumerate(objectives)
         )
 
         if symbolic_solver_labels:
@@ -610,7 +615,7 @@ class _NLWriter_impl(object):
             ostream.write('J%d %d%s\n'
                           % (row_idx, len(nz), row_comments[row_idx]))
             linear = info[1].linear or {}
-            for entry in sorted((self.var_map[_id][1], linear.get(_id, 0))
+            for entry in sorted((self.var_idx[_id], linear.get(_id, 0))
                                 for _id in nz):
                 ostream.write('%d %r\n' % entry)
 
@@ -624,7 +629,7 @@ class _NLWriter_impl(object):
             nz = nz_by_comp[id(info[0])][2]
             linear = info[1].linear or {}
             ostream.write('G%d %d%s\n' % (obj_idx, len(nz), lbl))
-            for entry in sorted((self.var_map[_id][1], linear.get(_id, 0))
+            for entry in sorted((self.var_idx[_id], linear.get(_id, 0))
                                 for _id in nz):
                 ostream.write('%d %r\n' % entry)
 
@@ -640,9 +645,6 @@ class _NLWriter_impl(object):
 
         This routine has a number of side effects:
 
-          - the ``var_map`` is updated with any new variables
-            encountered in the expressions.
-
           - the ``nnz_by_var`` counter is updated with the count of
             components that each var appears in.
 
@@ -653,41 +655,35 @@ class _NLWriter_impl(object):
 
           - the expr_info (the second element in each tuple in
             ``comp_list``) is "compiled": the ``linear`` attribute is
-            converted from a list of var, coef terms (potentially with
+            converted from a list of coef, var_id terms (potentially with
             duplicate entries) into a dict that maps var id to
-            coefficients, and the nonlinear args (the second entry in
-            the ``nonlinear`` tuple) are converted from variables to
-            ids)
+            coefficients
 
         """
-        var_map = self.var_map
         all_linear_vars = set()
         all_nonlinear_vars = set()
         nnz_by_var = Counter()
-        next_var_num = len(var_map)
 
         for comp_info in comp_list:
             expr_info = comp_info[1]
             nz_by_comp[id(comp_info[0])] \
                 = linear_vars, nonlinear_vars, nz = set(), set(), set()
             if expr_info.linear:
-                coefs, vars_ = expr_info.collect_linear()
-                for _id, v in vars_:
-                    if _id not in var_map:
-                        var_map[_id] = (v, next_var_num)
-                        next_var_num += 1
-                linear_vars.update(coefs)
-                expr_info.linear = coefs
+                if expr_info.linear.__class__ is not dict:
+                    coefs = {}
+                    for c, v in expr_info.linear:
+                        if v in coefs:
+                            coefs[v] += c
+                        elif c:
+                            coefs[v] = c
+                    expr_info.linear = coefs
+                linear_vars.update(expr_info.linear)
             if expr_info.nonlinear:
-                args = expr_info.nonlinear[1]
-                ids = tuple(map(id, args))
-                for v, _id in zip(args, ids):
+                for _id in expr_info.nonlinear[1]:
                     if _id in nz:
                        continue
                     nz.add(_id)
-                    if _id in var_map:
-                        nonlinear_vars.add(_id)
-                    elif _id in nz_by_comp:
+                    if _id in nz_by_comp:
                         # This is a defined variable (Expression node)
                         #
                         # ... as this subexpression appears in the
@@ -697,10 +693,8 @@ class _NLWriter_impl(object):
                         nonlinear_vars.update(nz_by_comp[_id][0]) # linear
                         nonlinear_vars.update(nz_by_comp[_id][1]) # nonlinear
                     else:
-                        var_map[_id] = (v, next_var_num)
-                        next_var_num += 1
+                        # Regular variable
                         nonlinear_vars.add(_id)
-                expr_info.nonlinear = (expr_info.nonlinear[0], ids)
             nz.clear()
             nz.update(linear_vars)
             nz.update(nonlinear_vars)
@@ -804,7 +798,7 @@ class _NLWriter_impl(object):
         ostream.write('V%d %d %d%s\n' %
                       (self.next_V_line_id, len(linear), k, lbl))
         for entry in sorted(map(
-                lambda _id: (self.var_map[_id][1], linear.get(_id, 0)),
+                lambda _id: (self.var_idx[_id], linear.get(_id, 0)),
                 linear)):
             ostream.write('%d %r\n' % entry)
         self._write_nl_expression(info[1])
@@ -830,15 +824,13 @@ class AMPLRepn(object):
             nterms += 1
             nl += visitor.template.const % self.const
         if self.linear:
-            coefs, vars_ = self.collect_linear()
-            for _id, v in vars_:
-                c = coefs[_id]
+            for c, v in self.linear:
                 if c != 1:
                     nl += visitor.template.product + (
                         visitor.template.const % c)
                 nl += visitor.template.var
-            args = list(map(itemgetter(1), vars_))
-            nterms += len(vars_)
+            args.extend(map(itemgetter(1), self.linear))
+            nterms += len(self.linear)
         if self.nonlinear:
             if self.nonlinear.__class__ is list:
                 nterms += len(self.nonlinear)
@@ -869,20 +861,6 @@ class AMPLRepn(object):
                 self.nonlinear.extend(other.nonlinear)
             else:
                 self.nonlinear.append(other.nonlinear)
-
-    def collect_linear(self):
-        coef = {}
-        vars_ = []
-        for c, v in self.linear:
-            if not c:
-                continue
-            _id = id(v)
-            if _id in coef:
-                coef[_id] += c
-            else:
-                coef[_id] = c
-                vars_.append((_id, v))
-        return coef, vars_
 
     def distribute_multiplicand(self, visitor, mult):
         if self.nl:
@@ -1139,7 +1117,7 @@ def handle_expression_node(visitor, node, arg1):
     repn = node_result_to_amplrepn(visitor, arg1)
     # When converting this shared subexpression to a (nonlinear) node,
     # we want to just reference this subexpression:
-    repn.nl = (visitor.template.var, (node,))
+    repn.nl = (visitor.template.var, (_id,))
 
     # A local copy of the expression source list.  This will be updated
     # later if the same Expression node is encountered in another
@@ -1157,7 +1135,7 @@ def handle_expression_node(visitor, node, arg1):
             # named subexpressions when appropriate.
             subid = id(repn)
             sub_repn = AMPLRepn(None, repn.nonlinear)
-            sub_repn.nl = (visitor.template.var, (repn,))
+            sub_repn.nl = (visitor.template.var, (subid,))
             # See below for the meaning of this tuple
             visitor.subexpression_cache[subid] = (
                 repn, sub_repn, list(expression_source),
@@ -1254,13 +1232,14 @@ _operator_handles = {
 class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def __init__(self, template, subexpression_cache, subexpression_order,
-                 external_functions):
+                 external_functions, var_map):
         super().__init__()
         self.template = template
         self.subexpression_cache = subexpression_cache
         self.subexpression_order = subexpression_order
         self.external_functions = external_functions
         self.active_expression_source = None
+        self.var_map = var_map
         self.value_cache = {}
 
     def initializeWalker(self, expr):
@@ -1281,7 +1260,10 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             if child.is_fixed():
                 return False, (_CONSTANT, child())
             else:
-                return False, (_MONOMIAL, 1, child)
+                _id = id(child)
+                if _id not in self.var_map:
+                    self.var_map[_id] = child
+                return False, (_MONOMIAL, 1, _id)
         if not child.is_potentially_variable():
             _id = id(child)
             if _id in self.value_cache:
@@ -1306,14 +1288,17 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             if arg2.is_fixed():
                 return False, (_CONSTANT, arg1 * arg2())
             else:
-                return False, (_MONOMIAL, arg1, arg2)
+                _id = id(arg2)
+                if _id not in self.var_map:
+                    self.var_map[_id] = arg2
+                return False, (_MONOMIAL, arg1, _id)
 
         if child_type is LinearExpression:
             # Because we are going to modify the LinearExpression in this
             # walker, we need to make a copy of the LinearExpression from
             # the original expression tree.
             data = AMPLRepn(list(zip(map(value, child.linear_coefs),
-                                     child.linear_vars)),
+                                     map(id, child.linear_vars))),
                             None)
             data.const = child.constant
             return False, (_GENERAL, data)
