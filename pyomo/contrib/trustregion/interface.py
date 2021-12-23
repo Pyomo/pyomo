@@ -279,8 +279,8 @@ class TRFInterface(object):
         for var, val in original_values.items():
             original_vals.append(val)
             new_vals.append(new_values[var])
-        return max([abs(old - new)
-                    for old, new in zip(original_vals, new_vals)])
+        return max([abs(new - old) for new, old in
+                    zip(new_vals, original_vals)])
 
     def initializeProblem(self):
         """

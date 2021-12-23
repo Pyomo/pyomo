@@ -17,9 +17,10 @@ from pyomo.environ import (
 from pyomo.opt import SolverFactory
 
 m = ConcreteModel()
+m.name = 'Example 2: Yoshio'
 
-m.x1 = Var()
-m.x2 = Var(bounds=(-2.0, None))
+m.x1 = Var(initialize=0)
+m.x2 = Var(bounds=(-2.0, None), initialize=0)
 
 def ext_fcn(x, y):
     return x**2 + y**2
@@ -40,5 +41,7 @@ def basis_rule(component, ef_expr):
     x2 = ef_expr.arg(1)
     return x1**2 - x2 # This is the low fidelity model
 
-optTRF = SolverFactory('trustregion', maximum_iterations=5)
-optTRF.solve(m, [m.x1])
+optTRF = SolverFactory('trustregion',
+                       maximum_iterations=50,
+                       verbose=True)
+optTRF.solve(m, [m.x1], ext_fcn_surrogate_map_rule=basis_rule)

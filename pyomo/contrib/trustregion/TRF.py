@@ -10,6 +10,7 @@
 
 import logging
 
+from pyomo.core import Var, value
 from pyomo.core.base.range import NumericRange
 from pyomo.common.config import (ConfigDict, ConfigValue,
                                  Bool, PositiveInt,
@@ -24,8 +25,10 @@ logger = logging.getLogger('pyomo.contrib.trustregion')
 __version__ = '0.2.0'
 
 
-def trust_region_method(model, decision_variables,
-                        ext_fcn_surrogate_map_rule, config):
+def trust_region_method(model,
+                        decision_variables,
+                        ext_fcn_surrogate_map_rule,
+                        config):
     """
     Main driver of the Trust Region algorithm.
     """
@@ -53,16 +56,17 @@ def trust_region_method(model, decision_variables,
         iteration += 1
 
         # Check termination conditions
-        if ((feasibility_k <= 1e-5)
-            and (step_norm_k <= 1e-5)):
+        if ((feasibility_k <= config.feasibility_termination)
+            and (step_norm_k <= config.step_size_termination)):
             print('EXIT: Optimal solution found.')
+            interface.model.display()
             break
 
         # If trust region very small and no progress is being made,
         # terminate. The following condition must hold for two
         # consecutive iterations.
         if ((trust_radius <= config.minimum_radius) and
-            (feasibility_k < config.feasibility_termination)):
+            (abs(feasibility_k - feasibility) < config.feasibility_termination)):
             if subopt_flag:
                 print('WARNING: Insufficient progress.')
                 print('EXIT: Feasible solution found.')
@@ -95,13 +99,17 @@ def trust_region_method(model, decision_variables,
                                step_norm_k*config.radius_update_param_gamma_c)
             rebuildSM = False
             interface.rejectStep()
+            # Log iteration information
+            TRFLogger.logIteration()
+            if config.verbose:
+                TRFLogger.printIteration()
             continue
 
         # Switching condition: Eq. (7) in Yoshio/Biegler (2020)
         if ((obj_val - obj_val_k >=
              config.switch_condition_kappa_theta
-             * pow(feasibility, config.switch_condition_gamma_s))
-            and (feasibility <= config.minimum_feasibility)):
+             * pow(feasibility_k, config.switch_condition_gamma_s))
+            and (feasibility_k <= config.minimum_feasibility)):
             # f-type step
             TRFLogger.iterrecord.fStep = True
             trust_radius = min(max(step_norm_k*config.radius_update_param_gamma_e,
@@ -123,27 +131,23 @@ def trust_region_method(model, decision_variables,
                 trust_radius = max(config.minimum_radius,
                                    config.radius_update_param_gamma_c
                                    * step_norm_k)
-            elif ((rho_k >= config.ratio_test_param_eta_2) and
-                  (feasibility <= config.minimum_feasibility)):
-                trust_radius = max(trust_radius,
-                                   config.maximum_radius,
-                                   config.radius_update_param_gamma_e
-                                   * step_norm_k)
-
-        # Log iteration information
-        TRFLogger.logIteration()
-        if config.verbose:
-            TRFLogger.printIteration()
+            elif (rho_k >= config.ratio_test_param_eta_2):
+                trust_radius = min(trust_radius,
+                                   max(config.maximum_radius,
+                                       config.radius_update_param_gamma_e
+                                       * step_norm_k))
 
         # Accept step and reset for next iteration
         rebuildSM = True
         feasibility = feasibility_k
         obj_val = obj_val_k
+        # Log iteration information
+        TRFLogger.logIteration()
+        if config.verbose:
+            TRFLogger.printIteration()
 
     if iteration >= config.maximum_iterations:
         print('EXIT: Maximum iterations reached: {}.'.format(config.maximum_iterations))
-    else:
-        interface.model.display()
 
 
 def _trf_config():
@@ -338,6 +342,7 @@ class TrustRegionSolver(object):
             # If the user does not pass us a "basis" function,
             # we default to 0.
             ext_fcn_surrogate_map_rule = lambda comp,ef: 0
-        
-        trust_region_method(model, degrees_of_freedom_variables,
-                            ext_fcn_surrogate_map_rule, self.config)
+        trust_region_method(model,
+                            degrees_of_freedom_variables,
+                            ext_fcn_surrogate_map_rule,
+                            self.config)

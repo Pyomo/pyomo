@@ -352,7 +352,7 @@ class TestTrustRegionInterface(unittest.TestCase):
         objective, step_norm, feasibility = self.interface.solveModel()
         self.assertEqual(objective, 5.15065981284333)
         self.assertEqual(step_norm, 0.0017225116628372117)
-        self.assertEqual(feasibility, 0.00014665023773327568)
+        self.assertEqual(feasibility, 0.00014665023773349772)
 
     @unittest.skipIf(not SolverFactory('ipopt').available(False),
                      "The IPOPT solver is not available")
