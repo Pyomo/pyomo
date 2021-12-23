@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests deactivation of trivial constraints."""
 import pyomo.common.unittest as unittest
+from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.environ import (Constraint, ConcreteModel, TransformationFactory,
                            Var)
 
@@ -69,7 +70,10 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
 
     def test_trivial_constraints_lb_conflict(self):
         """Test for violated trivial constraint lower bound."""
-        self.assertRaises(ValueError, self._trivial_constraints_lb_conflict)
+        with self.assertRaisesRegex(
+                InfeasibleConstraintException, 
+                "Trivial constraint c violates LB 2.0 ≤ BODY 1."):
+            self._trivial_constraints_lb_conflict()
 
     def _trivial_constraints_lb_conflict(self):
         m = ConcreteModel()
@@ -81,7 +85,10 @@ class TestTrivialConstraintDeactivator(unittest.TestCase):
 
     def test_trivial_constraints_ub_conflict(self):
         """Test for violated trivial constraint upper bound."""
-        self.assertRaises(ValueError, self._trivial_constraints_ub_conflict)
+        with self.assertRaisesRegex(
+                InfeasibleConstraintException, 
+                "Trivial constraint c violates BODY 1 ≤ UB 0.0."):
+            self._trivial_constraints_ub_conflict()
 
     def _trivial_constraints_ub_conflict(self):
         m = ConcreteModel()
