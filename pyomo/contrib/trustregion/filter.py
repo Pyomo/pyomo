@@ -10,20 +10,17 @@
 
 
 class FilterElement:
-    """
-    Filter element for comparison of feasibility
-    """
 
-    def __init__(self, infeasible, objective):
+    def __init__(self, objective, feasible):
         self.objective = objective
-        self.infeasible = infeasible
+        self.feasible = feasible
 
-    def compare(self, element):
-        if (element.objective >= self.objective and
-            element.infeasible >= self.infeasible):
+    def compare(self, filterElement):
+        if (filterElement.objective >= self.objective
+            and filterElement.feasible >= self.feasible):
             return -1
-        if (element.objective <= self.objective and
-            element.infeasible <= self.infeasible):
+        if (filterElement.objective <= self.objective
+            and filterElement.feasible <= self.feasible):
             return 1
         return 0
 
@@ -38,18 +35,19 @@ class Filter:
         self.TrustRegionFilter = []
 
     def addToFilter(self, filterElement):
-        filterCopy = list(self.TrustRegionFilter)
-        for i in filterCopy:
-            if (i.compare(filterElement) == 1):
-                self.TrustRegionFilter.remove(i)
-            elif (i.compare(filterElement) == -1):
+        filtercopy = list(self.TrustRegionFilter)
+        for fe in filtercopy:
+            acceptableMeasure = fe.compare(filterElement)
+            if (acceptableMeasure == 1):
+                self.TrustRegionFilter.remove(fe)
+            elif (acceptableMeasure == -1):
                 return
         self.TrustRegionFilter.append(filterElement)
 
-    def isAcceptable(self, filterElement, theta_max):
-        if (filterElement.infeasible > theta_max):
+    def isAcceptable(self, filterElement, maximum_feasibility):
+        if (filterElement.feasible > maximum_feasibility):
             return False
-        for element in self.TrustRegionFilter:
-            if (element.compare(filterElement) == -1):
+        for fe in self.TrustRegionFilter:
+            if (fe.compare(filterElement) == -1):
                 return False
         return True

@@ -264,8 +264,9 @@ class TRFInterface(object):
             || y - d(w) ||_1
         """
         b = self.data
+        number_of_efs = len(b.ef_outputs)
         return sum(abs(value(y) - value(b.truth_models[y]))
-                   for i, y in b.ef_outputs.items())
+                   for i, y in b.ef_outputs.items()) / number_of_efs
 
     def calculateStepSizeInfNorm(self, original_values, new_values):
         """

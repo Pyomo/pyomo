@@ -14,7 +14,7 @@ from pyomo.contrib.trustregion.filter import Filter, FilterElement
 class TestFilter(unittest.TestCase):
     def setUp(self):
         self.objective = 1.0
-        self.infeasible = 0.5
+        self.feasible = 0.5
         self.theta_max = 10.0
         self.tmpFilter = Filter()
 
@@ -22,21 +22,21 @@ class TestFilter(unittest.TestCase):
         pass
 
     def test_FilterElement(self):
-        fe = FilterElement(self.infeasible, self.objective)
+        fe = FilterElement(self.objective, self.feasible)
         self.assertEqual(fe.objective, self.objective)
-        self.assertEqual(fe.infeasible, self.infeasible)
+        self.assertEqual(fe.feasible, self.feasible)
 
     def test_addToFilter(self):
-        fe = FilterElement(self.infeasible, self.objective)
+        fe = FilterElement(self.objective, self.feasible)
         self.tmpFilter.addToFilter(fe)
         self.assertIn(fe, self.tmpFilter.TrustRegionFilter)
 
     def test_isAcceptable(self):
-        fe = FilterElement(0.25, 0.5)
+        fe = FilterElement(0.5, 0.25)
         # A sufficiently feasible element
         self.assertTrue(self.tmpFilter.isAcceptable(fe,
                                                     self.theta_max))
-        fe = FilterElement(15.0, 1.0)
+        fe = FilterElement(10.0, 15.0)
         # A sufficiently infeasible element
         self.assertFalse(self.tmpFilter.isAcceptable(fe,
                                                      self.theta_max))

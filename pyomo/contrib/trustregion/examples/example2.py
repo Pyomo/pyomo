@@ -42,6 +42,6 @@ def basis_rule(component, ef_expr):
     return x1**2 - x2 # This is the low fidelity model
 
 optTRF = SolverFactory('trustregion',
-                       maximum_iterations=10,
+                       maximum_iterations=200,
                        verbose=True)
 optTRF.solve(m, [m.x1], ext_fcn_surrogate_map_rule=basis_rule)

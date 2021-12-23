@@ -81,9 +81,9 @@ class IterationRecord:
         Print information about the iteration to the console
         """
         print("****** Iteration %d ******" % self.iteration)
-        print("trustRadius = %s" % self.trustRadius)
-        print("feasibility = %s" % self.feasibility)
         print("objectiveValue = %s" % self.objectiveValue)
+        print("feasibility = %s" % self.feasibility)
+        print("trustRadius = %s" % self.trustRadius)
         print("stepNorm = %s" % self.stepNorm)
         if self.fStep:
             print("INFO: f-type step")
@@ -112,6 +112,20 @@ class IterationLogger:
                                           trustRadius=trustRadius,
                                           stepNorm=stepNorm)
         self.iterations.append(self.iterrecord)
+
+    def updateIteration(self, feasibility=None, objectiveValue=None,
+                        trustRadius=None, stepNorm=None):
+        """
+        Update values in current record
+        """
+        if feasibility is not None:
+            self.iterrecord.feasibility = feasibility
+        if objectiveValue is not None:
+            self.iterrecord.objectiveValue = objectiveValue
+        if trustRadius is not None:
+            self.iterrecord.trustRadius = trustRadius
+        if stepNorm is not None:
+            self.iterrecord.stepNorm = stepNorm
 
     def logIteration(self):
         """

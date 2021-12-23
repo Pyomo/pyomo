@@ -47,11 +47,17 @@ def trust_region_method(model,
     feasibility_k = feasibility
     obj_val_k = obj_val
     # Initialize step_norm_k to a bogus value to enable termination check
-    step_norm_k = 1
+    step_norm_k = 0
     # Initialize trust region radius
     trust_radius = config.trust_radius
 
     iteration = 0
+
+    TRFLogger.newIteration(iteration, feasibility_k, obj_val_k,
+                           trust_radius, step_norm_k)
+    TRFLogger.logIteration()
+    if config.verbose:
+        TRFLogger.printIteration()
     while iteration < config.maximum_iterations:
         iteration += 1
 
@@ -91,7 +97,7 @@ def trust_region_method(model,
                                trust_radius, step_norm_k)
 
         # Check filter acceptance
-        filterElement = FilterElement(feasibility_k, obj_val_k)
+        filterElement = FilterElement(obj_val_k, feasibility_k)
         if not TRFilter.isAcceptable(filterElement, config.maximum_feasibility):
             # Reject the step
             TRFLogger.iterrecord.rejected = True
@@ -106,19 +112,15 @@ def trust_region_method(model,
             continue
 
         # Switching condition: Eq. (7) in Yoshio/Biegler (2020)
-        if ((obj_val - obj_val_k >=
-             config.switch_condition_kappa_theta
-             * pow(feasibility_k, config.switch_condition_gamma_s))
-            and (feasibility_k <= config.minimum_feasibility)):
+        if ((obj_val - obj_val_k) >=
+             (config.switch_condition_kappa_theta
+             * pow(feasibility, config.switch_condition_gamma_s))
+            and (feasibility <= config.minimum_feasibility)):
             # f-type step
             TRFLogger.iterrecord.fStep = True
             trust_radius = min(max(step_norm_k*config.radius_update_param_gamma_e,
                                    trust_radius),
                                config.maximum_radius)
-            print(obj_val_k, step_norm_k, feasibility_k)
-            for var in interface.decision_variables:
-                print(var, value(var), var.lb, var.ub)
-                quit()
         else:
             # theta-type step
             TRFLogger.iterrecord.thetaStep = True
@@ -133,14 +135,15 @@ def trust_region_method(model,
             if ((rho_k < config.ratio_test_param_eta_1) or
                 (feasibility > config.minimum_feasibility)):
                 trust_radius = max(config.minimum_radius,
-                                   config.radius_update_param_gamma_c
-                                   * step_norm_k)
+                                   (config.radius_update_param_gamma_c
+                                   * step_norm_k))
             elif (rho_k >= config.ratio_test_param_eta_2):
-                trust_radius = min(trust_radius,
-                                   max(config.maximum_radius,
-                                       config.radius_update_param_gamma_e
-                                       * step_norm_k))
+                trust_radius = min(config.maximum_radius,
+                                   max(trust_radius,
+                                       (config.radius_update_param_gamma_e
+                                       * step_norm_k)))
 
+        TRFLogger.updateIteration(trustRadius=trust_radius)
         # Accept step and reset for next iteration
         rebuildSM = True
         feasibility = feasibility_k
