@@ -185,7 +185,7 @@ class PartitionDisjuncts_Transformation(Transformation):
         being transformed (or such a partition for each Disjunction being
         transformed. All the constraints being transformed must be additively
         separable with respect to this partition. [default: None]
-    P : (integer, or dictionary mapping Disjunctions to integers)
+    num_partitions : (integer, or dictionary mapping Disjunctions to integers)
         The number of partitions to automatically generate, if
         'variable_partitions' are not specified for a Disjunction.
     variable_partitioning_method : (function, or dictionary mapping Disjunctions
@@ -230,9 +230,8 @@ class PartitionDisjuncts_Transformation(Transformation):
     CONFIG.declare('targets', ConfigValue(
         default=None,
         domain=target_list,
-        description="target or list of targets that will be relaxed",
+        description="""target or list of targets that will be relaxed""",
         doc="""
-
         This specifies the target or list of targets to relax as either a
         component or a list of components. If None (default), the entire model
         is transformed. Note that if the transformation is done out of place,
@@ -264,10 +263,10 @@ class PartitionDisjuncts_Transformation(Transformation):
         the variable parition(s).
         """
     ))
-    CONFIG.declare('P', ConfigValue(
+    CONFIG.declare('num_partitions', ConfigValue(
         default=None,
         domain=_to_dict,
-        description="""Number of partitions of variables, if variable_paritions
+        description="""Number of partitions of variables, if variable_partitions
         is not specifed. Can be specified separately for specific Disjunctions
         if desired.""",
         doc="""
@@ -297,15 +296,16 @@ class PartitionDisjuncts_Transformation(Transformation):
 
         Note that if any constraints contain partially additively separable
         functions, the partitions for the Disjunctions cannot be calculated
-        automatically. Please specify the paritions for the Disjunctions with
+        automatically. Please specify the partitions for the Disjunctions with
         these Constraints in the variable_partitions argument.
         """
     ))
     CONFIG.declare('assume_fixed_vars_permanent', ConfigValue(
         default=False,
         domain=bool,
-        description="Boolean indicating whether or not to transform so that the"
-        "transformed model will still be valid when fixed Vars are unfixed.",
+        description="""Boolean indicating whether or not to transform so that
+        the transformed model will still be valid when fixed Vars are
+        unfixed.""",
         doc="""
         If True, the transformation will create a correct model even if fixed
         variables are later unfixed. That is, bounds will be calculated based
@@ -326,8 +326,8 @@ class PartitionDisjuncts_Transformation(Transformation):
         doc="""Callback for computing bounds on expressions, in order to bound
         the auxilary variables created by the transformation. Some
         pre-implemented options include
-            * compute_optimal_bounds, and
-            * compute_fbbt_bounds (the default),
+            * compute_fbbt_bounds (the default), and
+            * compute_optimal_bounds
         or you can write your own callback which accepts an Expression object,
         a model containing the variables and global constraints of the original
         instance, and a configured solver and returns a tuple (LB, UB) where
@@ -539,15 +539,15 @@ class PartitionDisjuncts_Transformation(Transformation):
                 method = method if method is not None else arbitrary_partition
 
                 # now figure out P
-                if self._config.P is None:
+                if self._config.num_partitions is None:
                     # This will just end in failure below. (We're checking here
                     # because we don't need a value of P if the partitions were
                     # specified for every Disjunction.)
                     P = None
                 else:
-                    P = self._config.P.get(obj)
+                    P = self._config.num_partitions.get(obj)
                     if P is None:
-                        P = self._config.P.get(None)
+                        P = self._config.num_partitions.get(None)
                 if P is None:
                     raise GDP_Error("No value for P was given for disjunction "
                                     "%s! Please specify a value of P "
