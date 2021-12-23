@@ -37,11 +37,14 @@ def con(m):
 m.obj = Objective(expr = (m.x1 - 1)**2 + (m.x2 - 3)**2 + m.EF(m.x1, m.x2)**2)
 
 def basis_rule(component, ef_expr):
-    x1 = ef_expr.arg(0)
-    x2 = ef_expr.arg(1)
-    return x1**2 - x2 # This is the low fidelity model
+    x = ef_expr.arg(0)
+    y = ef_expr.arg(1)
+    return x**2 - y # This is the low fidelity model
 
+# This problem takes more than the default maximum iterations (50) to solve.
+# In testing (Mac 10.15/ipopt version 3.12.12 from conda),
+# it took 70 iterations.
 optTRF = SolverFactory('trustregion',
-                       maximum_iterations=200,
+                       maximum_iterations=100,
                        verbose=True)
 optTRF.solve(m, [m.x1], ext_fcn_surrogate_map_rule=basis_rule)
