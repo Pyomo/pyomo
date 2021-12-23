@@ -16,6 +16,11 @@ class FilterElement:
         self.feasible = feasible
 
     def compare(self, filterElement):
+        """
+        This method compares the objective and feasibility values
+        of the filter element to determine whether or not the filter element
+        should be added to the filter
+        """
         if (filterElement.objective >= self.objective
             and filterElement.feasible >= self.feasible):
             return -1
@@ -35,6 +40,9 @@ class Filter:
         self.TrustRegionFilter = []
 
     def addToFilter(self, filterElement):
+        """
+        Method to add, remove, or skip a filter element
+        """
         filtercopy = list(self.TrustRegionFilter)
         for fe in filtercopy:
             acceptableMeasure = fe.compare(filterElement)
@@ -45,6 +53,10 @@ class Filter:
         self.TrustRegionFilter.append(filterElement)
 
     def isAcceptable(self, filterElement, maximum_feasibility):
+        """
+        Check whether a step is acceptable to the filter.
+        If not, we reject the step.
+        """
         if (filterElement.feasible > maximum_feasibility):
             return False
         for fe in self.TrustRegionFilter:

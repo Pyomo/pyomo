@@ -10,7 +10,6 @@
 
 import logging
 
-from pyomo.core import Var, value
 from pyomo.core.base.range import NumericRange
 from pyomo.common.config import (ConfigDict, ConfigValue,
                                  Bool, PositiveInt,
@@ -30,7 +29,26 @@ def trust_region_method(model,
                         ext_fcn_surrogate_map_rule,
                         config):
     """
-    Main driver of the Trust Region algorithm.
+    The main driver of the Trust Region algorithm method.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        The user's model to be solved.
+    degrees_of_freedom_variables : List of Vars
+        User-supplied input. The user must provide a list of vars which
+        are the degrees of freedom or decision variables within
+        the model.
+    ext_fcn_surrogate_map_rule : Function, optional
+        In the 2020 Yoshio/Biegler paper, this is refered to as
+        the basis function `b(w)`.
+        This is the low-fidelity model with which to solve the original
+        process model problem and which is integrated into the
+        surrogate model.
+        The default is 0 (i.e., no basis function rule.)
+    config : ConfigDict
+        This holds the solver and TRF-specific configuration options.
+
     """
 
     # Initialize necessary TRF methods
@@ -158,6 +176,29 @@ def trust_region_method(model,
 
 
 def _trf_config():
+    """
+    Generate the configuration dictionary.
+    The user may change the configuration options during the instantiation
+    of the trustregion solver:
+        >>> optTRF = SolverFactory('trustregion',
+        ...                        solver='ipopt',
+        ...                        maximum_iterations=50,
+        ...                        minimum_radius=1e-5,
+        ...                        verbose=True)
+
+    The user may also update the configuration after instantiation:
+        >>> optTRF = SolverFactory('trustregion')
+        >>> optTRF.config.trust_radius = 0.5
+
+    The user may also update the configuration as part of the solve call:
+        >>> optTRF = SolverFactory('trustregion')
+        >>> optTRF.solve(model, decision_variables, trust_radius=0.5)
+    Returns
+    -------
+    CONFIG : ConfigDict
+        This holds all configuration options to be passed to the TRF solver.
+
+    """
     CONFIG = ConfigDict('TrustRegion')
 
     ### Solver options
@@ -306,6 +347,7 @@ class TrustRegionSolver(object):
     """
     The Trust Region Solver is a 'solver' based on the 2016/2018/2020 AiChE
     papers by Eason (2016/2018), Yoshio (2020), and Biegler.
+
     """
 
     def __init__(self, **kwds):
@@ -339,9 +381,22 @@ class TrustRegionSolver(object):
     def solve(self, model, degrees_of_freedom_variables,
               ext_fcn_surrogate_map_rule=None, **kwds):
         """
-        ext_fcn_surrogate_map_rule - Documentation needed
-        degrees_of_freedom_variables : List of var datas that represent u_k from
-                             2020 Yoshio/Biegler paper (we assume that the user has scaled all of the values appropriately in order to remove the E^{-1} and S^{-1} scaling values.)
+        This method calls the TRF algorithm.
+
+        Parameters
+        ----------
+        degrees_of_freedom_variables : List of Vars
+            User-supplied input. The user must provide a list of vars which
+            are the degrees of freedom or decision variables within
+            the model.
+        ext_fcn_surrogate_map_rule : Function, optional
+            In the 2020 Yoshio/Biegler paper, this is refered to as
+            the basis function `b(w)`.
+            This is the low-fidelity model with which to solve the original
+            process model problem and which is integrated into the
+            surrogate model.
+            The default is 0 (i.e., no basis function rule.)
+
         """
         self.config = self._CONFIG(kwds.pop('options', {}))
         self.config.set_value(kwds)

@@ -15,7 +15,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.trustregion.util import minIgnoreNone, maxIgnoreNone
 from pyomo.core import (
     Block, Param, VarList, Constraint,
-    Objective, value, Set, ExternalFunction, Var
+    Objective, value, Set, ExternalFunction
     )
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.visitor import (identify_variables,
@@ -30,6 +30,11 @@ logger = logging.getLogger('pyomo.contrib.trustregion')
 
 class EFReplacement(ExpressionReplacementVisitor):
     """
+    This class is a subclass of ExpressionReplacementVisitor.
+    It replaces an external function expression in an expression tree with a
+    "holder" variable (recorded in a ComponentMap) and sets the initial value
+    of the new node on the tree to that of the original node, if it can.
+
     NOTE: We use an empty substitution map. The EFs to be substituted are
           identified as part of exitNode.
     """
@@ -40,15 +45,15 @@ class EFReplacement(ExpressionReplacementVisitor):
         self.efSet = efSet
 
     def beforeChild(self, node, child, child_idx):
-        # We want to capture all of the variables on the model
-        # If we reject a step, we need to know all the vars to reset
+        # We want to capture all of the variables on the model.
+        # If we reject a step, we need to know all the vars to reset.
         descend, result = super().beforeChild(node, child, child_idx)
         if not descend and result.__class__ not in native_types and result.is_variable_type():
             self.trfData.all_variables.add(result)
         return descend, result
 
     def exitNode(self, node, data):
-        # This is where the replacement happens
+        # This is where the replacement happens.
         new_node = super().exitNode(node, data)
         if new_node.__class__ is not ExternalFunctionExpression:
             return new_node
@@ -57,12 +62,14 @@ class EFReplacement(ExpressionReplacementVisitor):
             return new_node
 
         _output = self.trfData.ef_outputs.add()
+        # Set the value for the new node to the evaluated value of the
+        # original node, if possible.
         try:
             _output.set_value(value(node))
         except:
             _output.set_value(0)
-        # Preserve the new node as a truth model
-        # self.TRF.truth_models is a ComponentMap
+        # Preserve the new node as a truth model.
+        # self.TRF.truth_models is a ComponentMap.
         self.trfData.truth_models[_output] = new_node
         return _output
 
@@ -112,6 +119,12 @@ class TRFInterface(object):
         return EFReplacement(self.data, self.efSet).walk_expression(expr)
 
     def _remove_ef_from_expr(self, component):
+        """
+        This method takes a component and looks at its expression.
+        If the expression contains an external function (EF), a new expression
+        with the EF replaced with a "holder" variable is added to the component
+        and the basis expression for the new "holder" variable is updated.
+        """
         expr = component.expr
         next_ef_id = len(self.data.ef_outputs)
         new_expr = self.replaceEF(expr)
@@ -129,7 +142,25 @@ class TRFInterface(object):
 
     def replaceExternalFunctionsWithVariables(self):
         """
-        Triggers the replacement of EFs with variables in expression trees
+        This method sets up essential data objects on the new trf_data block
+        on the model as well as triggers the replacement of external functions
+        in expressions trees.
+
+        Data objects created:
+            self.data.all_variables : ComponentSet
+                A set of all variables on the model, including "holder"
+                variables from the EF replacement
+            self.data.truth_models : ComponentMap
+                A component map for replaced nodes that keeps track of
+                the truth model for that replacement.
+            self.data.basis_expressions : ComponentMap
+                A component map for the Pyomo expressions for basis functions
+                as they apply to each variable
+            self.data.ef_inputs : Dict
+                A dictionary that tracks the input variables for each EF
+            self.data.ef_outputs : VarList
+                A list of the "holder" variables which replaced the original
+                External Function expressions
         """
         self.data.all_variables = ComponentSet()
         self.data.truth_models = ComponentMap()
@@ -144,17 +175,21 @@ class TRFInterface(object):
                 number_of_equality_constraints += 1
             self._remove_ef_from_expr(con)
 
-        self.degrees_of_freedom = len(list(self.data.all_variables)) - number_of_equality_constraints
+        self.degrees_of_freedom = (len(list(self.data.all_variables)) 
+                                   - number_of_equality_constraints)
         if self.degrees_of_freedom != len(self.decision_variables):
             raise ValueError(
                 "replaceExternalFunctionsWithVariables: "
-                "The degrees of freedom %d do not match the number of decision variables supplied %d." % (self.degrees_of_freedom, len(self.decision_variables)))
+                "The degrees of freedom %d do not match the number of decision "
+                "variables supplied %d." 
+                % (self.degrees_of_freedom, len(self.decision_variables)))
 
         for var in self.decision_variables:
             if var not in self.data.all_variables:
                 raise ValueError(
                     "replaceExternalFunctionsWithVariables: "
-                    f"The supplied decision variable {var.name} cannot be found in the model variables.")
+                    f"The supplied decision variable {var.name} cannot "
+                    "be found in the model variables.")
 
         self.data.objs = list(self.model.component_data_objects(Objective,
                                                       active=True))
@@ -180,7 +215,11 @@ class TRFInterface(object):
 
     def createConstraints(self):
         """
-        Create constraints
+        Create the basis constraint y = b(w) (equation 3) and the
+        surrogate model constraint y = r_k(w) (equation 5)
+
+        Both constraints are immediately deactivated after creation and
+        are activated later as necessary.
         """
         b = self.data
         # This implements: y = b(w) from Yoshio/Biegler (2020)
@@ -223,6 +262,11 @@ class TRFInterface(object):
     def updateDecisionVariableBounds(self, radius):
         """
         Update the TRSP_k decision variable bounds
+
+        This corresponds to:
+            || E^{-1} (u - u_k) || <= trust_radius
+        We omit E^{-1} because we assume that the users have correctly scaled
+        their variables.
         """
         for var in self.decision_variables:
             var.setlb(
@@ -234,7 +278,11 @@ class TRFInterface(object):
 
     def updateSurrogateModel(self):
         """
-        Update relevant parameters
+        The parameters needed for the surrogate model are the values of:
+            b(w_k)      : basis_model_output
+            d(w_k)      : truth_model_output
+            grad b(w_k) : grad_basis_model_output
+            grad d(w_k) : grad_truth_model_output
         """
         b = self.data
         for i, y in b.ef_outputs.items():
@@ -253,7 +301,8 @@ class TRFInterface(object):
 
     def getCurrentModelState(self):
         """
-        Return current state of model
+        Return current state of all model variables.
+        This is necessary if we need to reject a step and move backwards.
         """
         return list(value(v, exception=False)
                     for v in self.data.all_variables)
@@ -264,9 +313,8 @@ class TRFInterface(object):
             || y - d(w) ||_1
         """
         b = self.data
-        number_of_efs = len(b.ef_outputs)
         return sum(abs(value(y) - value(b.truth_models[y]))
-                   for i, y in b.ef_outputs.items()) / number_of_efs
+                   for i, y in b.ef_outputs.items())
 
     def calculateStepSizeInfNorm(self, original_values, new_values):
         """
@@ -290,7 +338,7 @@ class TRFInterface(object):
         Returns
         -------
             objective_value : Initial objective
-            feasibility : Initial feasibility measure
+            feasibility     : Initial feasibility measure
 
         STEPS:
             1. Create and solve PMP (eq. 3) and set equal to "x_0"
@@ -314,7 +362,13 @@ class TRFInterface(object):
 
     def solveModel(self):
         """
-        Call the specified solver to solve the problem
+        Call the specified solver to solve the problem.
+
+        Returns
+        -------
+            self.data.objs[0] : Current objective value
+            step_norm         : Current step size inf norm
+            feasibility       : Current feasibility measure
 
         This also caches the previous values of the vars, just in case
         we need to access them later if a step is rejected
@@ -346,8 +400,6 @@ class TRFInterface(object):
         """
         If a step is rejected, we reset the model variables values back
         to their cached state - which we set in solveModel
-
-        TODO: Do we care about reverting the LB and UB on the decision vars?
         """
         for var, val in zip(self.data.all_variables,
                             self.data.previous_model_state):
