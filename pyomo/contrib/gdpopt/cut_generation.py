@@ -45,7 +45,7 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
         # copy values over
         for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
             if val is not None and not var.fixed:
-                var.value = val
+                var.set_value(val, skip_validation=True)
 
         # TODO some kind of special handling if the dual is phenomenally small?
         config.logger.debug('Adding OA cuts.')
@@ -156,7 +156,7 @@ def add_affine_cuts(nlp_result, solve_data, config):
         counter = 0
         for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
             if val is not None and not var.fixed:
-                var.value = val
+                var.set_value(val, skip_validation=True)
 
         for constr in constraints_in_True_disjuncts(m, config):
             # Note: this includes constraints that are deactivated in the

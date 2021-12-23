@@ -40,6 +40,7 @@ from pyomo.core import (Block, ConstraintList, NonNegativeReals,
                         Set, Suffix, Var, VarList, TransformationFactory, Objective, RangeSet)
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
+from pyomo.common.config import add_docstring_list
 
 logger = logging.getLogger('pyomo.contrib.mindtpy')
 
@@ -50,7 +51,21 @@ __version__ = (0, 1, 0)
     'mindtpy',
     doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo')
 class MindtPySolver(object):
-    """A decomposition-based MINLP solver.
+    """
+    Decomposition solver for Mixed-Integer Nonlinear Programming (MINLP) problems.
+
+    The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver applies a variety of decomposition-based approaches to solve Mixed-Integer Nonlinear Programming (MINLP) problems. 
+    These approaches include:
+
+    - Outer approximation (OA)
+    - Global outer approximation (GOA)
+    - Regularized outer approximation (ROA)
+    - LP/NLP based branch-and-bound (LP/NLP)
+    - Global LP/NLP based branch-and-bound (GLP/NLP)
+    - Regularized LP/NLP based branch-and-bound (RLP/NLP)
+    - Feasibility pump (FP)
+
+    This solver implementation has been developed by David Bernal (@bernalde) and Zedong Peng (@ZedongPeng) as part of research efforts at the Grossmann Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at Carnegie Mellon University.
     """
     CONFIG = _get_MindtPy_config()
 
@@ -75,7 +90,7 @@ class MindtPySolver(object):
         Args:
             model (Block): a Pyomo model or block to be solved
         """
-        config = self.CONFIG(kwds.pop('options', {}))
+        config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)  # TODO: do we need to set preserve_implicit=True?
         config.set_value(kwds)
         check_config(config)
 
@@ -206,3 +221,8 @@ class MindtPySolver(object):
 
     def __exit__(self, t, v, traceback):
         pass
+
+
+# Add the CONFIG arguments to the solve method docstring
+MindtPySolver.solve.__doc__ = add_docstring_list(
+    MindtPySolver.solve.__doc__, MindtPySolver.CONFIG, indent_by=8)

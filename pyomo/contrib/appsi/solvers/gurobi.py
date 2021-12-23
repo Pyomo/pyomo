@@ -781,7 +781,7 @@ class Gurobi(PersistentBase, PersistentSolver):
 
     def load_vars(self, vars_to_load=None, solution_number=0):
         for v, val in self.get_primals(vars_to_load=vars_to_load, solution_number=solution_number).items():
-            v.value = val
+            v.set_value(val, skip_validation=True)
 
     def get_primals(self, vars_to_load=None, solution_number=0):
         if self._needs_updated:
@@ -1202,7 +1202,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in vars]
         var_values = self._solver_model.cbGetNodeRel(gurobi_vars)
         for i, v in enumerate(vars):
-            v.value = var_values[i]
+            v.set_value(var_values[i], skip_validation=True)
 
     def cbGetSolution(self, vars):
         """
@@ -1215,7 +1215,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         gurobi_vars = [self._pyomo_var_to_solver_var_map[id(i)] for i in vars]
         var_values = self._solver_model.cbGetSolution(gurobi_vars)
         for i, v in enumerate(vars):
-            v.value = var_values[i]
+            v.set_value(var_values[i], skip_validation=True)
 
     def cbLazy(self, con):
         """

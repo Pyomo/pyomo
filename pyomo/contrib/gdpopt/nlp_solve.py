@@ -401,7 +401,7 @@ def solve_local_NLP(mip_var_values, solve_data, config):
         if val is None:
             continue
         if var.is_continuous():
-            var.value = val
+            var.set_value(val, skip_validation=True)
         elif ((fabs(val) > config.integer_tolerance and
                fabs(val - 1) > config.integer_tolerance)):
             raise ValueError(
@@ -413,7 +413,7 @@ def solve_local_NLP(mip_var_values, solve_data, config):
             if config.round_discrete_vars:
                 var.fix(int(round(val)))
             else:
-                var.fix(val)
+                var.fix(val, skip_validation=True)
     TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
 
     nlp_result = solve_NLP(nlp_model, solve_data, config)

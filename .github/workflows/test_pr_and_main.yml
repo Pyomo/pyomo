@@ -312,6 +312,17 @@ jobs:
                 | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
         done
 
+    #############################################################
+    # TODO: Delete this once Python 3.6 is deprecated - 12/2021 #
+    #############################################################
+    - name: Windows Python 3.6 Temporary Fix (conda)
+      if: |
+        (matrix.PYENV == 'conda' &&
+        matrix.TARGET == 'win' &&
+        matrix.python == '3.6')
+      run: |
+        conda install tomli==1.2.2 --force-reinstall
+
     - name: Setup TPL package directories
       run: |
         TPL_DIR="${GITHUB_WORKSPACE}/cache/tpl"
@@ -702,7 +713,7 @@ jobs:
             exit 1
         fi
 
-    - name: Upload codecov reports
+    - name: Combine coverage reports
       if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
       run: |
         set +e
@@ -711,71 +722,47 @@ jobs:
         else
             SHA=$GITHUB_SHA
         fi
-        function upload {
-            echo ""
-            echo "Build group: $1"
-            export CODECOV_NAME=$1
-            export TAG=$1
-            export GHA_OS_NAME=${{matrix.TARGET}}
-            shift
-            rm -vf .coverage coverage.xml
-            echo "    $@" | sed 's/ /\n    /'
-            coverage combine --debug=dataio $@
-            if test ! -e .coverage; then
-                echo "No coverage to upload."
-                return
-            fi
-            coverage xml || coverage xml -i
-            i=0
-            while : ; do
-                ((i+=1))
-                rm -f codecov.log
-                echo "Uploading coverage to codecov (attempt ${i})"
-                bash $CODECOV -Z -e TAG,GHA_OS_NAME -X gcov -X s3 \
-                    -f coverage.xml -C $SHA | tee codecov.log
-                if test $? == 0; then
-                    echo "PASS $CODECOV_NAME" >> codecov.result
-                    break
-                elif test $i -ge 2; then
-                    if test `grep successfully codecov.log | wc -l` -gt 0; then
-                        echo "PASS $CODECOV_NAME (implied)" >> codecov.result
-                    else
-                        # Do not fail the build (yet) just because the
-                        # codecov upload fails
-                        echo "FAIL $CODECOV_NAME" >> codecov.result
-                        break
-                    fi
-                fi
-                DELAY=$(( RANDOM % 30 + 30))
-                echo "Pausing $DELAY seconds before re-attempting upload"
-                sleep $DELAY
-            done
-        }
         for ARTIFACT in artifacts/*_*${{matrix.TARGET}}_*; do
             NAME=`echo $ARTIFACT | cut -d/ -f2`
             cp -v $ARTIFACT/.coverage .coverage-$NAME
         done
-        upload ${{matrix.TARGET}} .coverage-*_${{matrix.TARGET}}-*
-        if compgen -G ".coverage-*" > /dev/null; then
-            upload ${{matrix.TARGET}}/other .coverage-*
+        rm -vf .coverage coverage.xml
+        echo "Build: ${{ matrix.TARGET }}/other"
+        echo ""
+        FILES=.coverage-*_other-*
+        coverage combine --debug=dataio $FILES
+        if test ! -e .coverage; then
+            echo "No coverage to upload."
+        else
+            coverage xml || coverage xml -i
+            mv -v coverage.xml coverage-other.xml
         fi
-        # Legacy builds that don't support coverage 5.x
-        if compgen -G ".coverage-*" > /dev/null; then
-            echo ""
-            echo "Installing coverage 4.x for legacy builds"
-            pip install --cache-dir cache/pip 'coverage<5'
-            upload ${{matrix.TARGET}}/legacy .coverage-*
+        echo ""
+        echo "Build: ${{ matrix.TARGET }}"
+        echo ""
+        FILES=.coverage-*_${{matrix.TARGET}}-*
+        coverage combine --debug=dataio $FILES
+        rm -vf artifacts/*/*.xml
+        if test ! -e .coverage; then
+            echo "No coverage to upload."
+        else
+            coverage xml || coverage xml -i
         fi
 
-    - name: Check codecov upload success
-      run: |
-        FAIL=`grep FAIL codecov.result | wc -l`
-        ALL=`cat codecov.result | wc -l`
-        echo "$FAIL of $ALL codecov uploads failed"
-        if test $FAIL -gt 0; then
-            grep FAIL codecov.result | sed 's/^/    /'
-            if test $FAIL -gt 1; then
-                echo "More than 1 codecov upload failed."
-                exit 1
-            fi
-        fi
+    - name: Upload codecov reports
+      if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
+      uses: codecov/codecov-action@v2
+      with:
+        files: coverage.xml
+        name: ${{ matrix.TARGET }}
+        flags: ${{ matrix.TARGET }}
+
+    - name: Upload other coverage reports
+      if: |
+        hashFiles('coverage-other.xml') != '' &&
+        (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
+      uses: codecov/codecov-action@v2
+      with:
+        files: coverage-other.xml
+        name: ${{ matrix.TARGET }}/other
+        flags: ${{ matrix.TARGET }},other
