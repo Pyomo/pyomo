@@ -115,6 +115,10 @@ def trust_region_method(model,
             trust_radius = min(max(step_norm_k*config.radius_update_param_gamma_e,
                                    trust_radius),
                                config.maximum_radius)
+            print(obj_val_k, step_norm_k, feasibility_k)
+            for var in interface.decision_variables:
+                print(var, value(var), var.lb, var.ub)
+                quit()
         else:
             # theta-type step
             TRFLogger.iterrecord.thetaStep = True
