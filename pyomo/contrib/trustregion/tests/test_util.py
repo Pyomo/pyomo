@@ -20,7 +20,7 @@ from pyomo.contrib.trustregion.util import (
 from pyomo.common.log import LoggingIntercept
 
 
-class TestLogger(unittest.TestCase):
+class TestUtil(unittest.TestCase):
     def setUp(self):
         self.iterLogger = IterationLogger()
         self.iteration = 0
