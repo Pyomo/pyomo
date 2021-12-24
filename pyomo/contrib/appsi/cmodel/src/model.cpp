@@ -12,6 +12,7 @@ Constraint::Constraint(std::shared_ptr<ExpressionBase> _lb, std::shared_ptr<Expr
   lb = _lb;
   body = _body;
   ub = _ub;
+  variables = body->identify_variables();
 }
 
 
@@ -74,6 +75,112 @@ void Model::add_constraint(std::shared_ptr<Constraint> con)
 void Model::remove_constraint(std::shared_ptr<Constraint> con)
 {
   constraints.erase(con);
+}
+
+
+void _fbbt_thread(std::vector<std::shared_ptr<Constraint> >* con_vector, int thread_ndx, int num_threads, double feasibility_tol, double integer_tol)
+{
+  unsigned int con_ndx = thread_ndx;
+  while (con_ndx < con_vector->size())
+    {
+      (*con_vector)[con_ndx]->perform_fbbt(feasibility_tol, integer_tol);
+      con_ndx += num_threads;
+    }
+}
+
+
+void _fbbt_iter(std::vector<std::shared_ptr<Constraint> >& cons, double feasibility_tol, double integer_tol, int num_threads)
+{
+  std::vector<std::thread> thread_vec(num_threads);
+  for (int thread_ndx=0; thread_ndx < num_threads; ++thread_ndx)
+    {
+      thread_vec[thread_ndx] = std::thread(_fbbt_thread, &cons, thread_ndx, num_threads, feasibility_tol, integer_tol);
+    }
+
+  for (int thread_ndx=0; thread_ndx < num_threads; ++thread_ndx)
+    {
+      thread_vec[thread_ndx].join();
+    }
+}
+
+
+void perform_fbbt_on_cons(std::vector<std::shared_ptr<Constraint> >& cons, double feasibility_tol, double integer_tol, double improvement_tol, int max_iter, int num_threads)
+{
+  std::vector<std::shared_ptr<Var> > all_variables;
+  std::set<std::shared_ptr<Var> > var_set;
+  std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<Constraint> > > var_to_con_map;
+
+  for (std::shared_ptr<Constraint>& c : cons)
+    {
+      for (std::shared_ptr<Var>& v : *(c->variables))
+	{
+	  if (var_set.count(v) == 0)
+	    {
+	      var_set.insert(v);
+	      all_variables.push_back(v);
+	    }
+	  var_to_con_map[v].push_back(c);
+	}
+    }
+
+  int n_vars = all_variables.size();
+  double* start_lbs = new double[n_vars];
+  double* start_ubs = new double[n_vars];
+
+  std::vector<std::shared_ptr<Constraint> > cons_to_fbbt = cons;
+  std::set<std::shared_ptr<Var> > improved_vars;
+  std::set<std::shared_ptr<Constraint> > cons_to_fbbt_set;
+  unsigned int _iter = 0;
+  while (_iter < max_iter*cons.size())
+    {
+      _iter += cons_to_fbbt.size();
+      for (int v_ndx=0; v_ndx<n_vars; ++v_ndx)
+	{
+	  start_lbs[v_ndx] = all_variables[v_ndx]->get_lb();
+	  start_ubs[v_ndx] = all_variables[v_ndx]->get_ub();
+	}
+      _fbbt_iter(cons_to_fbbt, feasibility_tol, integer_tol, num_threads);
+      cons_to_fbbt.clear();
+      improved_vars.clear();
+      cons_to_fbbt_set.clear();
+      for (int v_ndx=0; v_ndx<n_vars; ++v_ndx)
+	{
+	  if (all_variables[v_ndx]->get_lb() > start_lbs[v_ndx] + improvement_tol
+	      || all_variables[v_ndx]->get_ub() < start_ubs[v_ndx] - improvement_tol)
+	    {
+	      improved_vars.insert(all_variables[v_ndx]);
+	      start_lbs[v_ndx] = all_variables[v_ndx]->get_lb();
+	      start_ubs[v_ndx] = all_variables[v_ndx]->get_ub();
+	    }
+	}
+      for (const std::shared_ptr<Var>& v : improved_vars)
+	{
+	  for (std::shared_ptr<Constraint>& c : var_to_con_map[v])
+	    {
+	      if (cons_to_fbbt_set.count(c) == 0)
+		{
+		  cons_to_fbbt_set.insert(c);
+		  cons_to_fbbt.push_back(c);
+		}
+	    }
+	}
+    }
+}
+
+
+void Model::perform_fbbt(double feasibility_tol, double integer_tol, double improvement_tol, int max_iter, int num_threads)
+{
+  int n_cons = constraints.size();
+  std::vector<std::shared_ptr<Constraint> > con_vector(n_cons);
+
+  unsigned int ndx = 0;
+  for (std::shared_ptr<Constraint> c : constraints)
+    {
+      con_vector[ndx] = c;
+      ndx += 1;
+    }
+
+  perform_fbbt_on_cons(con_vector, feasibility_tol, integer_tol, improvement_tol, max_iter, num_threads);
 }
 
 

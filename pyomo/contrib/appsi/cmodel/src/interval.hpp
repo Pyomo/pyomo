@@ -17,6 +17,7 @@
 #include <fstream>
 #include <algorithm>
 #include <utility>
+#include <thread>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 

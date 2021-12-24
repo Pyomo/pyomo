@@ -1213,9 +1213,6 @@ void Leaf::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double
 
 void Var::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol)
 {
-  double orig_lb = get_lb();
-  double orig_ub = get_ub();
-  
   if (new_lb > new_ub)
     {
       if (new_lb - feasibility_tol > new_ub)
@@ -1267,7 +1264,7 @@ void Var::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double*
 	}
     }
 
-  if (new_lb > orig_lb)
+  if (new_lb > get_lb())
     {
       if (lb->is_leaf())
 	{
@@ -1279,7 +1276,7 @@ void Var::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double*
 	}
     }
 
-  if (new_ub < orig_ub)
+  if (new_ub < get_ub())
     {
       if (ub->is_leaf())
 	{

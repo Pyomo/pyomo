@@ -28,6 +28,7 @@ public:
   std::shared_ptr<ExpressionBase> lb;
   std::shared_ptr<ExpressionBase> ub;
   bool active = true;
+  std::shared_ptr<std::vector<std::shared_ptr<Var> > > variables;
   void perform_fbbt(double feasibility_tol, double integer_tol);
 };
 
@@ -41,6 +42,7 @@ public:
   std::shared_ptr<Objective> objective;
   void add_constraint(std::shared_ptr<Constraint>);
   void remove_constraint(std::shared_ptr<Constraint>);
+  void perform_fbbt(double feasibility_tol, double integer_tol, double improvement_tol, int max_iter, int num_threads);
 };
 
 
