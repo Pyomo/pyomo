@@ -131,7 +131,7 @@ void perform_fbbt_on_cons(std::vector<std::shared_ptr<Constraint> >& cons, doubl
   std::set<std::shared_ptr<Var> > improved_vars;
   std::set<std::shared_ptr<Constraint> > cons_to_fbbt_set;
   unsigned int _iter = 0;
-  while (_iter < max_iter*cons.size())
+  while (_iter < max_iter*cons.size() && cons_to_fbbt.size() > 0)
     {
       _iter += cons_to_fbbt.size();
       for (int v_ndx=0; v_ndx<n_vars; ++v_ndx)
