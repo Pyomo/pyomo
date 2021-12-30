@@ -346,3 +346,42 @@ class IncidenceGraphInterface(object):
         # Switch the order of the maps here to match the method call.
         # Hopefully this does not get too confusing...
         return var_partition, con_partition
+
+    def remove(self, variables, constraints):
+        """
+        Removes the specified variables and constraints (columns and
+        rows) from the cached incidence matrix.
+
+        Arguments:
+        ----------
+        variables: List
+            VarData objects whose columns will be removed from the
+            incidence matrix.
+        constraints: List
+            ConstraintData objects whose rows will be removed from the
+            incidence matrix.
+
+        """
+        if self.cached is IncidenceMatrixType.NONE:
+            raise RuntimeError(
+                "Attempting to remove variables and constraints from cached "
+                "incidence matrix,\nbut no incidence matrix has been cached."
+            )
+        to_exclude = ComponentSet(variables + constraints)
+        vars_to_include = [v for v in self.variables if v not in to_exclude]
+        cons_to_include = [c for c in self.constraints if c not in to_exclude]
+        incidence_matrix = self._extract_submatrix(
+            vars_to_include, cons_to_include
+        )
+        # update attributes
+        self.variables = vars_to_include
+        self.constraints = cons_to_include
+        self.incidence_matrix = incidence_matrix
+        self.var_index_map = ComponentMap(
+            (var, i) for i, var in enumerate(self.variables)
+        )
+        self.con_index_map = ComponentMap(
+            (con, i) for i, con in enumerate(self.constraints)
+        )
+        self.row_block_map = None
+        self.col_block_map = None
