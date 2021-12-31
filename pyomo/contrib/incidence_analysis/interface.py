@@ -350,7 +350,9 @@ class IncidenceGraphInterface(object):
     def remove(self, variables, constraints):
         """
         Removes the specified variables and constraints (columns and
-        rows) from the cached incidence matrix.
+        rows) from the cached incidence matrix. This is a "projection"
+        of the variable and constraint vectors, rather than something
+        like a vertex elimination.
 
         Arguments:
         ----------
