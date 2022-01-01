@@ -143,5 +143,6 @@ PYBIND11_MODULE(appsi_cmodel, m)
     .def("add_constraint", &Model::add_constraint)
     .def("remove_constraint", &Model::remove_constraint)
     .def(py::init<>())
+    .def("perform_fbbt_with_seed", &Model::perform_fbbt_with_seed)
     .def("perform_fbbt", &Model::perform_fbbt);
 }
