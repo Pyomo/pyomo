@@ -1198,8 +1198,7 @@ double Operator::get_ub_from_array(double* ubs)
 
 
 void Leaf::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol,
-			       double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update,
-			       bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+			       double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   if (new_lb < value - feasibility_tol || new_lb > value + feasibility_tol)
     {
@@ -1214,8 +1213,7 @@ void Leaf::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double
 
 
 void Var::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol,
-			      double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update,
-			      bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+			      double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   if (new_lb > new_ub)
     {
@@ -1232,7 +1230,9 @@ void Var::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double*
   if (new_ub <= -inf)
     throw py::value_error("Infeasible constraint");
 
-  if (get_domain() == "integers" || get_domain() == "binary")
+  std::string dom = get_domain();
+
+  if (dom == "integers" || dom == "binary")
     {
       if (new_lb > -inf)
 	{
@@ -1254,70 +1254,38 @@ void Var::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double*
 	}
     }
 
-  if (multiple_threads)
-    mtx[index].lock();
-
-  double current_lb;
-  double current_ub;
-  if (immediate_update || improved_vars.count(shared_from_this()) == 0)
-    {
-      current_lb = get_lb();
-      current_ub = get_ub();
-    }
-  else
-    {
-      current_lb = var_lbs[index];
-      current_ub = var_ubs[index];
-    }
+  double current_lb = get_lb();
+  double current_ub = get_ub();
 
   if (new_lb > current_lb + improvement_tol || new_ub < current_ub - improvement_tol)
     improved_vars.insert(shared_from_this());
 
   if (new_lb > current_lb)
     {
-      if (immediate_update)
-	{
-	  if (lb->is_leaf())
-	    std::dynamic_pointer_cast<Leaf>(lb)->value = new_lb;
-	  else
-	    throw py::value_error("variable bounds cannot be expressions when performing FBBT");
-	}
+      if (lb->is_leaf())
+	std::dynamic_pointer_cast<Leaf>(lb)->value = new_lb;
       else
-	  var_lbs[index] = new_lb;
+	throw py::value_error("variable bounds cannot be expressions when performing FBBT");
     }
-  else if (!immediate_update)
-    var_lbs[index] = current_lb;
 
   if (new_ub < current_ub)
     {
-      if (immediate_update)
-	{
-	  if (ub->is_leaf())
-	    std::dynamic_pointer_cast<Leaf>(ub)->value = new_ub;
-	  else
-	    throw py::value_error("variable bounds cannot be expressions when performing FBBT");
-	}
+      if (ub->is_leaf())
+	std::dynamic_pointer_cast<Leaf>(ub)->value = new_ub;
       else
-	  var_ubs[index] = new_ub;
+	throw py::value_error("variable bounds cannot be expressions when performing FBBT");
     }
-  else if (!immediate_update)
-    {
-      var_ubs[index] = current_ub;
-    }
-
-  if (multiple_threads)
-    mtx[index].unlock();
 }
 
 
-void Expression::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> > & improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void Expression::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> > & improved_vars)
 {
   lbs[n_operators - 1] = new_lb;
   ubs[n_operators - 1] = new_ub;
 }
 
 
-void Operator::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> > & improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void Operator::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> > & improved_vars)
 {
   lbs[index] = new_lb;
   ubs[index] = new_ub;
@@ -1335,13 +1303,12 @@ void Expression::propagate_bounds_forward(double* lbs, double* ubs, double feasi
 
 
 void Expression::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol,
-					   double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update,
-					   bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+					   double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   int ndx = n_operators - 1;
   while (ndx >= 0)
     {
-      operators[ndx]->propagate_bounds_backward(lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+      operators[ndx]->propagate_bounds_backward(lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
       ndx -= 1;
     }
 }
@@ -1354,7 +1321,7 @@ void Operator::propagate_bounds_forward(double* lbs, double* ubs, double feasibi
 }
 
 
-void Operator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void Operator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   ;
 }
@@ -1381,7 +1348,7 @@ void MultiplyOperator::propagate_bounds_forward(double* lbs, double* ubs, double
 }
 
 
-void MultiplyOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void MultiplyOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand1->get_lb_from_array(lbs);
   double xu = operand1->get_ub_from_array(ubs);
@@ -1408,13 +1375,13 @@ void MultiplyOperator::propagate_bounds_backward(double* lbs, double* ubs, doubl
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand1->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand1->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 
   if (new_yl > yl)
     yl = new_yl;
   if (new_yu < yu)
     yu = new_yu;
-  operand2->set_bounds_in_array(yl, yu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand2->set_bounds_in_array(yl, yu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 
@@ -1437,7 +1404,7 @@ void SumOperator::propagate_bounds_forward(double* lbs, double* ubs, double feas
 }
 
 
-void SumOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void SumOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double* accumulated_lbs = new double[nargs];
   double* accumulated_ubs = new double[nargs];
@@ -1485,7 +1452,7 @@ void SumOperator::propagate_bounds_backward(double* lbs, double* ubs, double fea
 	ub2 = _ub2;
       accumulated_lbs[ndx-1] = lb1;
       accumulated_ubs[ndx-1] = ub1;
-      operands[ndx]->set_bounds_in_array(lb2, ub2, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+      operands[ndx]->set_bounds_in_array(lb2, ub2, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
       ndx -= 1;
     }
 
@@ -1498,7 +1465,7 @@ void SumOperator::propagate_bounds_backward(double* lbs, double* ubs, double fea
     lb1 = _lb1;
   if (_ub1 < ub1)
     ub1 = _ub1;
-  operands[0]->set_bounds_in_array(lb1, ub1, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operands[0]->set_bounds_in_array(lb1, ub1, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 
   delete[] accumulated_lbs;
   delete[] accumulated_ubs;
@@ -1517,7 +1484,7 @@ void DivideOperator::propagate_bounds_forward(double* lbs, double* ubs, double f
 }
 
 
-void DivideOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void DivideOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand1->get_lb_from_array(lbs);
   double xu = operand1->get_ub_from_array(ubs);
@@ -1538,13 +1505,13 @@ void DivideOperator::propagate_bounds_backward(double* lbs, double* ubs, double 
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand1->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand1->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 
   if (new_yl > yl)
     yl = new_yl;
   if (new_yu < yu)
     yu = new_yu;
-  operand2->set_bounds_in_array(yl, yu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand2->set_bounds_in_array(yl, yu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 void NegationOperator::propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
@@ -1555,7 +1522,7 @@ void NegationOperator::propagate_bounds_forward(double* lbs, double* ubs, double
 }
 
 
-void NegationOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void NegationOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand->get_lb_from_array(lbs);
   double xu = operand->get_ub_from_array(ubs);
@@ -1571,7 +1538,7 @@ void NegationOperator::propagate_bounds_backward(double* lbs, double* ubs, doubl
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 
@@ -1587,7 +1554,7 @@ void PowerOperator::propagate_bounds_forward(double* lbs, double* ubs, double fe
 }
 
 
-void PowerOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void PowerOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand1->get_lb_from_array(lbs);
   double xu = operand1->get_ub_from_array(ubs);
@@ -1610,13 +1577,13 @@ void PowerOperator::propagate_bounds_backward(double* lbs, double* ubs, double f
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand1->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand1->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 
   if (new_yl > yl)
     yl = new_yl;
   if (new_yu < yu)
     yu = new_yu;
-  operand2->set_bounds_in_array(yl, yu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand2->set_bounds_in_array(yl, yu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 
@@ -1629,7 +1596,7 @@ void ExpOperator::propagate_bounds_forward(double* lbs, double* ubs, double feas
 }
 
 
-void ExpOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void ExpOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand->get_lb_from_array(lbs);
   double xu = operand->get_ub_from_array(ubs);
@@ -1643,7 +1610,7 @@ void ExpOperator::propagate_bounds_backward(double* lbs, double* ubs, double fea
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 
@@ -1656,7 +1623,7 @@ void LogOperator::propagate_bounds_forward(double* lbs, double* ubs, double feas
 }
 
 
-void LogOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void LogOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand->get_lb_from_array(lbs);
   double xu = operand->get_ub_from_array(ubs);
@@ -1670,7 +1637,7 @@ void LogOperator::propagate_bounds_backward(double* lbs, double* ubs, double fea
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 
@@ -1683,7 +1650,7 @@ void Log10Operator::propagate_bounds_forward(double* lbs, double* ubs, double fe
 }
 
 
-void Log10Operator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void Log10Operator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand->get_lb_from_array(lbs);
   double xu = operand->get_ub_from_array(ubs);
@@ -1697,7 +1664,7 @@ void Log10Operator::propagate_bounds_backward(double* lbs, double* ubs, double f
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 
@@ -1710,7 +1677,7 @@ void SinOperator::propagate_bounds_forward(double* lbs, double* ubs, double feas
 }
 
 
-void SinOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void SinOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand->get_lb_from_array(lbs);
   double xu = operand->get_ub_from_array(ubs);
@@ -1724,7 +1691,7 @@ void SinOperator::propagate_bounds_backward(double* lbs, double* ubs, double fea
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 
@@ -1737,7 +1704,7 @@ void CosOperator::propagate_bounds_forward(double* lbs, double* ubs, double feas
 }
 
 
-void CosOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void CosOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand->get_lb_from_array(lbs);
   double xu = operand->get_ub_from_array(ubs);
@@ -1751,7 +1718,7 @@ void CosOperator::propagate_bounds_backward(double* lbs, double* ubs, double fea
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 
@@ -1764,7 +1731,7 @@ void TanOperator::propagate_bounds_forward(double* lbs, double* ubs, double feas
 }
 
 
-void TanOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void TanOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand->get_lb_from_array(lbs);
   double xu = operand->get_ub_from_array(ubs);
@@ -1778,7 +1745,7 @@ void TanOperator::propagate_bounds_backward(double* lbs, double* ubs, double fea
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 
@@ -1794,7 +1761,7 @@ void AsinOperator::propagate_bounds_forward(double* lbs, double* ubs, double fea
 }
 
 
-void AsinOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void AsinOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand->get_lb_from_array(lbs);
   double xu = operand->get_ub_from_array(ubs);
@@ -1808,7 +1775,7 @@ void AsinOperator::propagate_bounds_backward(double* lbs, double* ubs, double fe
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 
@@ -1824,7 +1791,7 @@ void AcosOperator::propagate_bounds_forward(double* lbs, double* ubs, double fea
 }
 
 
-void AcosOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void AcosOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand->get_lb_from_array(lbs);
   double xu = operand->get_ub_from_array(ubs);
@@ -1838,7 +1805,7 @@ void AcosOperator::propagate_bounds_backward(double* lbs, double* ubs, double fe
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 
@@ -1853,7 +1820,7 @@ void AtanOperator::propagate_bounds_forward(double* lbs, double* ubs, double fea
 }
 
 
-void AtanOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
+void AtanOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double xl = operand->get_lb_from_array(lbs);
   double xu = operand->get_ub_from_array(ubs);
@@ -1867,7 +1834,7 @@ void AtanOperator::propagate_bounds_backward(double* lbs, double* ubs, double fe
     xl = new_xl;
   if (new_xu < xu)
     xu = new_xu;
-  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars, immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 

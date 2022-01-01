@@ -7,12 +7,6 @@ bool constraint_sorter(std::shared_ptr<Constraint> c1, std::shared_ptr<Constrain
 }
 
 
-bool var_sorter(std::shared_ptr<Var> v1, std::shared_ptr<Var> v2)
-{
-  return v1->index < v2->index;
-}
-
-
 Objective::Objective(std::shared_ptr<ExpressionBase> _expr)
 {
   expr = _expr;
@@ -29,8 +23,7 @@ Constraint::Constraint(std::shared_ptr<ExpressionBase> _lb, std::shared_ptr<Expr
 
 
 void Constraint::perform_fbbt(double feasibility_tol, double integer_tol, double improvement_tol,
-		    std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads,
-		    double* var_lbs, double* var_ubs, std::mutex* mtx)
+		    std::set<std::shared_ptr<Var> >& improved_vars)
 {
   double body_lb;
   double body_ub;
@@ -68,13 +61,11 @@ void Constraint::perform_fbbt(double feasibility_tol, double integer_tol, double
 	{
 	  body_ub = con_ub;
 	}
-      body->set_bounds_in_array(body_lb, body_ub, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars,
-				immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+      body->set_bounds_in_array(body_lb, body_ub, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
       if (body->is_expression_type())
 	{
 	  std::shared_ptr<Expression> e = std::dynamic_pointer_cast<Expression>(body);
-	  e->propagate_bounds_backward(lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars,
-				       immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
+	  e->propagate_bounds_backward(lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 	}
     }
   delete[] lbs;
@@ -85,9 +76,23 @@ void Constraint::perform_fbbt(double feasibility_tol, double integer_tol, double
 Model::Model()
 {
   constraints = std::set<std::shared_ptr<Constraint>, decltype(constraint_sorter)*>(constraint_sorter);
-  var_to_con_map = std::map<std::shared_ptr<Var>,
-			    std::set<std::shared_ptr<Constraint>, decltype(constraint_sorter)*>,
-			    decltype(var_sorter)*>(var_sorter);
+}
+
+
+std::shared_ptr<std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<Constraint> > > > Model::get_var_to_con_map()
+{
+  std::shared_ptr<std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<Constraint> > > > var_to_con_map = std::make_shared<std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<Constraint> > > >();
+  current_con_ndx = 0;
+  for (const std::shared_ptr<Constraint>& c : constraints)
+    {
+      c->index = current_con_ndx;
+      current_con_ndx += 1;
+      for (const std::shared_ptr<Var>& v : *(c->variables))
+	{
+	  (*var_to_con_map)[v].push_back(c);
+	}
+    }
+  return var_to_con_map;
 }
 
 
@@ -96,118 +101,21 @@ void Model::add_constraint(std::shared_ptr<Constraint> con)
   con->index = current_con_ndx;
   current_con_ndx += 1;
   constraints.insert(con);
-  for (std::shared_ptr<Var>& v : *(con->variables))
-    {
-      if (var_to_con_map.count(v) == 0)
-	{
-	  v->index = current_var_ndx;
-	  current_var_ndx += 1;
-	  var_to_con_map.insert(std::pair<std::shared_ptr<Var>, std::set<std::shared_ptr<Constraint>, decltype(constraint_sorter)*> >(v, std::set<std::shared_ptr<Constraint>, decltype(constraint_sorter)*>(constraint_sorter)));
-	}
-      var_to_con_map[v].insert(con);
-    }
-  needs_update = true;
 }
 
 
 void Model::remove_constraint(std::shared_ptr<Constraint> con)
 {
-  for (std::shared_ptr<Var>& v : *(con->variables))
-    {
-      var_to_con_map[v].erase(con);
-      if (var_to_con_map[v].size() == 0)
-	{
-	  var_to_con_map.erase(v);
-	  v->index = -1;
-	}
-    }
   constraints.erase(con);
   con->index = -1;
-  needs_update = true;
-}
-
-
-void Model::update()
-{
-  current_con_ndx = 0;
-  for (const std::shared_ptr<Constraint>& c : constraints)
-    {
-      c->index = current_con_ndx;
-      current_con_ndx += 1;
-    }
-
-  current_var_ndx = 0;
-  for (auto const& p : var_to_con_map)
-    {
-      p.first->index = current_var_ndx;
-      current_var_ndx += 1;
-    }
-  
-  needs_update = false;
-}
-
-
-void _fbbt_thread(std::vector<std::shared_ptr<Constraint> >* con_vector, int thread_ndx, int num_threads, double feasibility_tol,
-		  double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >* improved_vars,
-		  bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx)
-{
-  unsigned int con_ndx = thread_ndx;
-  while (con_ndx < con_vector->size())
-    {
-      (*con_vector)[con_ndx]->perform_fbbt(feasibility_tol, integer_tol, improvement_tol, *improved_vars,
-					   immediate_update, multiple_threads, var_lbs, var_ubs, mtx);
-      con_ndx += num_threads;
-    }
-}
-
-
-void _fbbt_iter(std::vector<std::shared_ptr<Constraint> >& cons, double feasibility_tol, double integer_tol,
-		int num_threads, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars,
-		bool immediate_update, double* var_lbs, double* var_ubs, std::mutex* mtx)
-{
-  bool multiple_threads;
-  if (num_threads > 1)
-    multiple_threads = true;
-  else
-    multiple_threads = false;
-
-  std::vector<std::thread> thread_vec(num_threads);
-  for (int thread_ndx=0; thread_ndx < num_threads; ++thread_ndx)
-    {
-      thread_vec[thread_ndx] = std::thread(_fbbt_thread, &cons, thread_ndx, num_threads, feasibility_tol, integer_tol,
-					   improvement_tol, &improved_vars, immediate_update, multiple_threads, var_lbs,
-					   var_ubs, mtx);
-    }
-
-  for (int thread_ndx=0; thread_ndx < num_threads; ++thread_ndx)
-    {
-      thread_vec[thread_ndx].join();
-    }
 }
 
 
 unsigned int Model::perform_fbbt_on_cons(std::vector<std::shared_ptr<Constraint> >& seed_cons, double feasibility_tol, double integer_tol,
-					 double improvement_tol, int max_iter, int num_threads, bool immediate_update)
+					 double improvement_tol, int max_iter,
+					 std::shared_ptr<std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<Constraint> > > > var_to_con_map)
 {
-  if (needs_update)
-    update();
-
   std::set<std::shared_ptr<Var> > improved_vars_set;
-  std::vector<std::shared_ptr<Var> > improved_vars_vec;
-  int n_vars = var_to_con_map.size();
-  double* var_lbs = new double[n_vars];
-  double* var_ubs = new double[n_vars];
-  std::mutex* mtx = new std::mutex[n_vars];
-
-  if (!immediate_update)
-    {
-      for (auto const& p : var_to_con_map)
-	{
-	  assert (p.first->lb->is_leaf());
-	  var_lbs[p.first->index] = p.first->get_lb();
-	  var_ubs[p.first->index] = p.first->get_ub();
-	}
-    }
 
   std::vector<std::shared_ptr<Constraint> > cons_to_fbbt = seed_cons;
   std::set<std::shared_ptr<Constraint> > cons_to_fbbt_set;
@@ -215,31 +123,15 @@ unsigned int Model::perform_fbbt_on_cons(std::vector<std::shared_ptr<Constraint>
   while (_iter < max_iter*constraints.size() && cons_to_fbbt.size() > 0)
     {
       _iter += cons_to_fbbt.size();
-      _fbbt_iter(cons_to_fbbt, feasibility_tol, integer_tol, num_threads, improvement_tol, improved_vars_set,
-		 immediate_update, var_lbs, var_ubs, mtx);
+      for (const std::shared_ptr<Constraint>& c : cons_to_fbbt)
+	c->perform_fbbt(feasibility_tol, integer_tol, improvement_tol, improved_vars_set);
 
-      if (!immediate_update)
-	{
-	  for (auto const& p : var_to_con_map)
-	    {
-	      assert (p.first->lb->is_leaf());
-	      std::dynamic_pointer_cast<Leaf>(p.first->lb)->value = var_lbs[p.first->index];
-	      std::dynamic_pointer_cast<Leaf>(p.first->ub)->value = var_ubs[p.first->index];
-	    }
-	}
-      
       cons_to_fbbt.clear();
       cons_to_fbbt_set.clear();
 
-      improved_vars_vec.clear();
       for (const std::shared_ptr<Var>& v : improved_vars_set)
-	improved_vars_vec.push_back(v);
-      std::sort(improved_vars_vec.begin(), improved_vars_vec.end(), var_sorter);
-      improved_vars_set.clear();
-
-      for (const std::shared_ptr<Var>& v : improved_vars_vec)
 	{
-	  for (const std::shared_ptr<Constraint>& c : var_to_con_map[v])
+	  for (const std::shared_ptr<Constraint>& c : var_to_con_map->at(v))
 	    {
 	      if (cons_to_fbbt_set.count(c) == 0)
 		{
@@ -248,42 +140,29 @@ unsigned int Model::perform_fbbt_on_cons(std::vector<std::shared_ptr<Constraint>
 		}
 	    }
 	}
+      std::sort(cons_to_fbbt.begin(), cons_to_fbbt.end(), constraint_sorter);
+      improved_vars_set.clear();
     }
-
-  delete[] var_lbs;
-  delete[] var_ubs;
-  delete[] mtx;
 
   return _iter;
 }
 
 
 unsigned int Model::perform_fbbt_with_seed(std::shared_ptr<Var> seed_var, double feasibility_tol, double integer_tol, double improvement_tol,
-					   int max_iter, int num_threads, bool immediate_update)
+					   int max_iter)
 {
-  if (needs_update)
-    update();
+  std::shared_ptr<std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<Constraint> > > > var_to_con_map = get_var_to_con_map();
 
-  std::set<std::shared_ptr<Constraint>, decltype(constraint_sorter)*>& seed_con_set = var_to_con_map[seed_var];
-  int n_cons = seed_con_set.size();
-  std::vector<std::shared_ptr<Constraint> > con_vector(n_cons);
+  std::vector<std::shared_ptr<Constraint> >& seed_cons = var_to_con_map->at(seed_var);
 
-  unsigned int ndx = 0;
-  for (const std::shared_ptr<Constraint>& c : seed_con_set)
-    {
-      con_vector[ndx] = c;
-      ndx += 1;
-    }
-
-  return perform_fbbt_on_cons(con_vector, feasibility_tol, integer_tol, improvement_tol, max_iter, num_threads, immediate_update);
+  return perform_fbbt_on_cons(seed_cons, feasibility_tol, integer_tol, improvement_tol, max_iter, var_to_con_map);
 }
 
 
 unsigned int Model::perform_fbbt(double feasibility_tol, double integer_tol, double improvement_tol,
-				 int max_iter, int num_threads, bool immediate_update)
+				 int max_iter)
 {
-  if (needs_update)
-    update();
+  std::shared_ptr<std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<Constraint> > > > var_to_con_map = get_var_to_con_map();
 
   int n_cons = constraints.size();
   std::vector<std::shared_ptr<Constraint> > con_vector(n_cons);
@@ -295,7 +174,7 @@ unsigned int Model::perform_fbbt(double feasibility_tol, double integer_tol, dou
       ndx += 1;
     }
 
-  return perform_fbbt_on_cons(con_vector, feasibility_tol, integer_tol, improvement_tol, max_iter, num_threads, immediate_update);
+  return perform_fbbt_on_cons(con_vector, feasibility_tol, integer_tol, improvement_tol, max_iter, var_to_con_map);
 }
 
 

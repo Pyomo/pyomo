@@ -58,8 +58,7 @@ public:
   virtual double get_lb_from_array(double* lbs) = 0;
   virtual double get_ub_from_array(double* ubs) = 0;
   virtual void set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol,
-				   double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update,
-				   bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) = 0;
+				   double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) = 0;
 };
 
 
@@ -93,8 +92,7 @@ public:
   double get_lb_from_array(double* lbs) override;
   double get_ub_from_array(double* ubs) override;
   void set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol,
-			   double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update,
-			   bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+			   double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -138,8 +136,7 @@ public:
   double get_lb_from_array(double* lbs) override;
   double get_ub_from_array(double* ubs) override;
   void set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol,
-			   double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update,
-			   bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+			   double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -187,12 +184,11 @@ public:
   unsigned int n_operators;
   void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol);
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx);
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars);
   double get_lb_from_array(double* lbs) override;
   double get_ub_from_array(double* ubs) override;
   void set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol,
-			   double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update,
-			   bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+			   double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -212,12 +208,11 @@ public:
   virtual void print(std::string*) = 0;
   virtual std::string name() = 0;
   virtual void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol);
-  virtual void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx);
+  virtual void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars);
   double get_lb_from_array(double* lbs) override;
   double get_ub_from_array(double* ubs) override;
   void set_bounds_in_array(double new_lb, double new_ub, double* lbs, double* ubs, double feasibility_tol, double integer_tol,
-			   double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update,
-			   bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+			   double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -303,7 +298,7 @@ public:
   unsigned int nargs;
   void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -318,7 +313,7 @@ public:
   void write_nl_string(std::ofstream&) override;
   bool is_multiply_operator() override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -361,7 +356,7 @@ public:
   void write_nl_string(std::ofstream&) override;
   bool is_divide_operator() override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -376,7 +371,7 @@ public:
   void write_nl_string(std::ofstream&) override;
   bool is_power_operator() override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -391,7 +386,7 @@ public:
   void write_nl_string(std::ofstream&) override;
   bool is_negation_operator() override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -405,7 +400,7 @@ public:
   void write_nl_string(std::ofstream&) override;
   bool is_exp_operator() override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -419,7 +414,7 @@ public:
   void write_nl_string(std::ofstream&) override;
   bool is_log_operator() override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -432,7 +427,7 @@ public:
   std::string name() override {return "Log10Operator";};
   void write_nl_string(std::ofstream&) override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -445,7 +440,7 @@ public:
   std::string name() override {return "SinOperator";};
   void write_nl_string(std::ofstream&) override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -458,7 +453,7 @@ public:
   std::string name() override {return "CosOperator";};
   void write_nl_string(std::ofstream&) override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -471,7 +466,7 @@ public:
   std::string name() override {return "TanOperator";};
   void write_nl_string(std::ofstream&) override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -484,7 +479,7 @@ public:
   std::string name() override {return "AsinOperator";};
   void write_nl_string(std::ofstream&) override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -497,7 +492,7 @@ public:
   std::string name() override {return "AcosOperator";};
   void write_nl_string(std::ofstream&) override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -510,7 +505,7 @@ public:
   std::string name() override {return "AtanOperator";};
   void write_nl_string(std::ofstream&) override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
-  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars, bool immediate_update, bool multiple_threads, double* var_lbs, double* var_ubs, std::mutex* mtx) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
