@@ -385,7 +385,16 @@ double _tan_with_inf(double x)
 double _pow_with_inf(double x, double y)
 {
   double res;
-  if (x <= -inf)
+  if (x == 0)
+    {
+      if (y < 0)
+	throw py::value_error("0 cannot be raised to a negative power");
+      else if (y == 0)
+	res = 1;
+      else
+	res = 0;
+    }
+  else if (x <= -inf)
     {
       if (y == 0)
 	res = 1;
@@ -481,7 +490,7 @@ void interval_power(double xl, double xu, double yl, double yu, double* res_lb, 
 	  interval_power(xl, xu, 0, yu, &lb1, &ub1, feasibility_tol);
 	  interval_power(xl, xu, yl, 0, &lb2, &ub2, feasibility_tol);
 	  *res_lb = std::min(lb1, lb2);
-	  *res_ub = std::min(ub1, ub2);
+	  *res_ub = std::max(ub1, ub2);
 	}
     }
   else if (yl == yu && yl == round(yl))

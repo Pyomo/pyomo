@@ -28,6 +28,7 @@ using namespace pybind11::literals;
 
 extern double inf;
 
+double _pow_with_inf(double x, double y);
 
 void interval_add(double xl, double xu, double yl, double yu, double* res_lb, double* res_ub);
 void interval_sub(double xl, double xu, double yl, double yu, double* res_lb, double* res_ub);

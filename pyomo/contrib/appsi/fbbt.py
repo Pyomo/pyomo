@@ -134,6 +134,15 @@ class IntervalTightener(PersistentBase):
         cobj.sense = sense
         self._cmodel.objective = cobj
 
+    def _update_pyomo_var_bounds(self):
+        for cv, v in self._rvar_map.items():
+            cv_lb = cv.get_lb()
+            cv_ub = cv.get_ub()
+            if -cmodel.inf < cv_lb:
+                v.setlb(cv_lb)
+            if cv_ub < cmodel.inf:
+                v.setub(cv_ub)
+
     def perform_fbbt(self, model: _BlockData):
         if model is not self._model:
             self.set_instance(model)
@@ -141,9 +150,7 @@ class IntervalTightener(PersistentBase):
             self.update()
         n_iter = self._cmodel.perform_fbbt(self.config.feasibility_tol, self.config.integer_tol,
                                            self.config.improvement_tol, self.config.max_iter)
-        for cv, v in self._rvar_map.items():
-            v.setlb(cv.get_lb())
-            v.setub(cv.get_ub())
+        self._update_pyomo_var_bounds()
         return n_iter
 
     def perform_fbbt_with_seed(self, model: _BlockData, seed_var: _GeneralVarData):
@@ -154,7 +161,5 @@ class IntervalTightener(PersistentBase):
         n_iter = self._cmodel.perform_fbbt_with_seed(self._var_map[id(seed_var)], self.config.feasibility_tol,
                                                      self.config.integer_tol, self.config.improvement_tol,
                                                      self.config.max_iter)
-        for cv, v in self._rvar_map.items():
-            v.setlb(cv.get_lb())
-            v.setub(cv.get_ub())
+        self._update_pyomo_var_bounds()
         return n_iter

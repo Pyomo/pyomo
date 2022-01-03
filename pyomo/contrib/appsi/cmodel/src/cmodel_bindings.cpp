@@ -18,6 +18,7 @@ PYBIND11_MODULE(appsi_cmodel, m)
   m.attr("inf") = inf;
   //m.def("ProfilerStart", &ProfilerStart);
   //m.def("ProfilerStop", &ProfilerStop);
+  m.def("_pow_with_inf", &_pow_with_inf);
   m.def("py_interval_add", &py_interval_add);
   m.def("py_interval_sub", &py_interval_sub);
   m.def("py_interval_mul", &py_interval_mul);
