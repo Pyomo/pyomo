@@ -881,9 +881,6 @@ class PersistentBase(abc.ABC):
     def update_params(self):
         pass
 
-    def solve_sub_block(self, block):
-        raise NotImplementedError('This is just an idea right now')
-
     def update(self, timer: HierarchicalTimer = None):
         if timer is None:
             timer = HierarchicalTimer()
