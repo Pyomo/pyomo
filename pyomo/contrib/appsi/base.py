@@ -385,6 +385,7 @@ class Solver(abc.ABC):
         BadLicense = -2
         FullLicense = 1
         LimitedLicense = 2
+        NeedsCompiledExtension = -3
 
         def __bool__(self):
             return self._value_ > 0

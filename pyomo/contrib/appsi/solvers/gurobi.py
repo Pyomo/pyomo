@@ -28,6 +28,7 @@ from pyomo.contrib.appsi.base import (
     PersistentSolver, Results, TerminationCondition, MIPSolverConfig,
     PersistentBase, PersistentSolutionLoader
 )
+from pyomo.contrib.appsi.cmodel import cmodel_available
 
 logger = logging.getLogger(__name__)
 
@@ -262,18 +263,24 @@ class Gurobi(PersistentBase, PersistentSolver):
         except gurobipy.GurobiError:
             cls._available = Gurobi.Availability.BadLicense
             return
-        m.setParam('OutputFlag', 0)
-        try:
-            # As of 3/2021, the limited-size Gurobi license was limited
-            # to 2000 variables.
-            m.addVars(range(2001))
-            m.setParam('OutputFlag', 0)
-            m.optimize()
-            cls._available = Gurobi.Availability.FullLicense
-        except gurobipy.GurobiError:
-            cls._available = Gurobi.Availability.LimitedLicense
         finally:
             m.dispose()
+        if not cmodel_available:
+            cls._available = Gurobi.Availability.NeedsCompiledExtension
+        else:
+            m = gurobipy.Model()
+            m.setParam('OutputFlag', 0)
+            try:
+                # As of 3/2021, the limited-size Gurobi license was limited
+                # to 2000 variables.
+                m.addVars(range(2001))
+                m.setParam('OutputFlag', 0)
+                m.optimize()
+                cls._available = Gurobi.Availability.FullLicense
+            except gurobipy.GurobiError:
+                cls._available = Gurobi.Availability.LimitedLicense
+            finally:
+                m.dispose()
 
     def version(self):
         version = (gurobipy.GRB.VERSION_MAJOR,

@@ -30,7 +30,7 @@ class LPWriter(PersistentBase):
         self._solver_var_to_pyomo_var_map = dict()
         self._solver_con_to_pyomo_con_map = dict()
         self._pyomo_param_to_solver_param_map = dict()
-        self._pyomo_expr_types = cmodel.PyomoExprTypes()
+        self._pyomo_expr_types = None
 
     @property
     def config(self):
@@ -47,6 +47,7 @@ class LPWriter(PersistentBase):
         self.config = saved_config
         self.update_config = saved_update_config
         self._model = model
+        self._pyomo_expr_types = cmodel.PyomoExprTypes()
 
         if self.config.symbolic_solver_labels:
             self._var_labeler = TextLabeler()

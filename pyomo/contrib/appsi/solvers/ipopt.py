@@ -23,6 +23,7 @@ from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
 import os
+from pyomo.contrib.appsi.cmodel import cmodel_available
 
 
 logger = logging.getLogger(__name__)
@@ -126,6 +127,8 @@ class Ipopt(PersistentSolver):
     def available(self):
         if self.config.executable.path() is None:
             return self.Availability.NotFound
+        elif not cmodel_available:
+            return self.Availability.NeedsCompiledExtension
         return self.Availability.FullLicense
 
     def version(self):
