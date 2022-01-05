@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <list>
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include <unordered_map>
 #include <stdexcept>
