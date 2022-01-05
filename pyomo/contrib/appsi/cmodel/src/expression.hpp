@@ -543,7 +543,6 @@ public:
     expr_type_map[np_float16] = 0;
     expr_type_map[np_float32] = 0;
     expr_type_map[np_float64] = 0;
-    expr_type_map[np_float128] = 0;
     expr_type_map[ScalarVar] = 1;
     expr_type_map[_GeneralVarData] = 1;
     expr_type_map[ScalarParam] = 2;
@@ -587,7 +586,6 @@ public:
   py::type np_float16 = np.attr("float16");
   py::type np_float32 = np.attr("float32");
   py::type np_float64 = np.attr("float64");
-  py::type np_float128 = np.attr("float128");
   py::object ScalarParam = py::module_::import("pyomo.core.base.param").attr("ScalarParam");
   py::object _ParamData = py::module_::import("pyomo.core.base.param").attr("_ParamData");
   py::object ScalarVar = py::module_::import("pyomo.core.base.var").attr("ScalarVar");
