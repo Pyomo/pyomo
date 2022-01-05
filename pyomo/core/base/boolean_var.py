@@ -16,6 +16,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.common.modeling import unique_component_name, NOTSET
 from pyomo.common.deprecation import deprecation_warning
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
@@ -114,7 +115,7 @@ class _BooleanVarData(ComponentData, BooleanValue):
                                % (self.name, val))
             val = bool(val)
         self._value = val
-        self.stale = False
+        self._stale = StaleFlagManager.get_flag()
 
     def clear(self):
         self.value = None
@@ -192,7 +193,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
     these attributes in certain cases.
     """
 
-    __slots__ = ('_value', 'fixed', 'stale', '_associated_binary')
+    __slots__ = ('_value', 'fixed', '_stale', '_associated_binary')
 
     def __init__(self, component=None):
         #
@@ -205,7 +206,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
                           else None
         self._value = None
         self.fixed = False
-        self.stale = True
+        self._stale = 0 # True
 
         self._associated_binary = None
 
@@ -247,6 +248,16 @@ class _GeneralBooleanVarData(_BooleanVarData):
     def domain(self):
         """Return the domain for this variable."""
         return BooleanSet
+
+    @property
+    def stale(self):
+        return StaleFlagManager.is_stale(self._stale)
+    @stale.setter
+    def stale(self, val):
+        if val:
+            self._stale = 0
+        else:
+            self._stale = StaleFlagManager.get_flag()
 
     def get_associated_binary(self):
         """Get the binary _VarData associated with this 
@@ -323,7 +334,7 @@ class BooleanVar(IndexedComponent):
         Set the 'stale' attribute of every variable data object to True.
         """
         for boolvar_data in self._data.values():
-            boolvar_data.stale = True
+            boolvar_data._stale = 0
 
     def get_values(self, include_fixed_values=True):
         """

@@ -21,6 +21,7 @@ from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven, NOTSET
 from pyomo.common.timing import ConstructionTimer
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
     NumericValue, value, is_potentially_variable, native_numeric_types,
@@ -311,7 +312,7 @@ class _GeneralVarData(_VarData):
     these attributes in certain cases.
     """
 
-    __slots__ = ('_value', '_lb', '_ub', '_domain', 'fixed', 'stale')
+    __slots__ = ('_value', '_lb', '_ub', '_domain', 'fixed', '_stale')
 
     def __init__(self, component=None):
         #
@@ -333,7 +334,7 @@ class _GeneralVarData(_VarData):
         self._ub = None
         self._domain = None
         self.fixed = False
-        self.stale = True
+        self._stale = 0 # True
 
     @classmethod
     def copy(cls, src):
@@ -344,7 +345,7 @@ class _GeneralVarData(_VarData):
         self._ub = src._ub
         self._domain = src._domain
         self.fixed = src.fixed
-        self.stale = src.stale
+        self._stale = src._stale
         return self
 
     def __getstate__(self):
@@ -377,7 +378,7 @@ class _GeneralVarData(_VarData):
         # Special case: setting a variable to None "clears" the variable.
         if val is None:
             self._value = None
-            self.stale = True
+            self._stale = 0 # True
             return
         # TODO: generate a warning/error:
         #
@@ -409,7 +410,7 @@ class _GeneralVarData(_VarData):
                 )
 
         self._value = val
-        self.stale = False
+        self._stale = StaleFlagManager.get_flag()
 
     @property
     def value(self):
@@ -534,7 +535,15 @@ class _GeneralVarData(_VarData):
 
     # fixed is an attribute
 
-    # stale is an attribute
+    @property
+    def stale(self):
+        return StaleFlagManager.is_stale(self._stale)
+    @stale.setter
+    def stale(self, val):
+        if val:
+            self._stale = 0
+        else:
+            self._stale = StaleFlagManager.get_flag()
 
     def _process_bound(self, val, bound_type):
         if type(val) in native_numeric_types or val is None:
