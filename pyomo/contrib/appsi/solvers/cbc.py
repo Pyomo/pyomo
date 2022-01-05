@@ -69,7 +69,7 @@ class Cbc(PersistentSolver):
 
     def version(self):
         results = subprocess.run([str(self.config.executable), '-stop'],
-                                 timeout=1,
+                                 timeout=5,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT,
                                  universal_newlines=True)
