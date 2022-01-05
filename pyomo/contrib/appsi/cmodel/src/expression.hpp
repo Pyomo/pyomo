@@ -48,6 +48,7 @@ public:
   virtual bool is_negation_operator() {return false;}
   virtual bool is_exp_operator() {return false;}
   virtual bool is_log_operator() {return false;}
+  virtual bool is_sqrt_operator() {return false;}
   virtual bool is_external_operator() {return false;}
   virtual double get_value_from_array(double*) = 0;
   virtual int get_degree_from_array(int*) = 0;
@@ -271,6 +272,8 @@ public:
   bool is_linear_operator() override;
   unsigned int nterms;
   void fill_expression(std::shared_ptr<Operator>* oper_array, int& oper_ndx) override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };
 
 
@@ -413,6 +416,20 @@ public:
   std::string name() override {return "LogOperator";};
   void write_nl_string(std::ofstream&) override;
   bool is_log_operator() override;
+  void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
+  void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
+};
+
+
+class SqrtOperator: public UnaryOperator
+{
+public:
+  SqrtOperator() = default;
+  void evaluate(double* values) override;
+  void print(std::string*) override;
+  std::string name() override {return "SqrtOperator";};
+  void write_nl_string(std::ofstream&) override;
+  bool is_sqrt_operator() override;
   void propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol) override;
   void propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars) override;
 };

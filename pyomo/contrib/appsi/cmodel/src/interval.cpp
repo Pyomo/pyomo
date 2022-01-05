@@ -213,7 +213,7 @@ void interval_inv(double xl, double xu, double* res_lb, double* res_ub, double f
 
   if (xu - xl <= -feasibility_tol)
     {
-      throw py::value_error("lower bound is greater than upper bound in interval_inv; xl: " + std::to_string(xl) + "; xu: " + std::to_string(xu));
+      throw InfeasibleConstraintException("lower bound is greater than upper bound in interval_inv; xl: " + std::to_string(xl) + "; xu: " + std::to_string(xu));
     }
   else if (xu <= 0 && 0 <= xl)
     {
@@ -322,7 +322,7 @@ double _log10_with_inf(double x)
   else if (x >= inf)
     res = inf;
   else
-    res = _log10_with_inf(x);
+    res = std::log10(x);
   return res;
 }
 
@@ -387,7 +387,9 @@ double _pow_with_inf(double x, double y)
   double res;
   if (x == 0)
     {
-      if (y < 0)
+      if (y <= -inf)
+	res = inf;
+      else if (y < 0)
 	throw py::value_error("0 cannot be raised to a negative power");
       else if (y == 0)
 	res = 1;
@@ -396,10 +398,20 @@ double _pow_with_inf(double x, double y)
     }
   else if (x <= -inf)
     {
-      if (y == 0)
+      if (y >= inf)
+	res = inf;
+      else if (y == 0)
 	res = 1;
       else if (y < 0)
 	res = 0;
+      else if (y == round(y))
+	{
+	  int y_int = static_cast<int>(y);
+	  if (y_int % 2 == 0)
+	    res = inf;
+	  else
+	    res = -inf;
+	}
       else
 	res = inf;
     }
@@ -438,8 +450,15 @@ double _pow_with_inf(double x, double y)
       else
 	res = inf;
     }
-  else if (x == 0 && y == y)
-    res = 1;
+  else if (x < 0)
+    {
+      if (y == 0)
+	res = 1;
+      else if (y == round(y))
+	res = std::pow(x, y);
+      else
+	throw py::value_error("cannot raise a negative number to a fractional power");
+    }
   else
     res = std::pow(x, y);
   return res;
@@ -579,7 +598,7 @@ void interval_power(double xl, double xu, double yl, double yu, double* res_lb, 
   else if (yl == yu)
     {
       if (xu < 0)
-	throw py::value_error("Cannot raise a negative number to a fractional power.");
+	throw InfeasibleConstraintException("Cannot raise a negative number to a fractional power.");
       interval_power(0, xu, yl, yu, res_lb, res_ub, feasibility_tol);
     }
   else
@@ -652,7 +671,7 @@ void _inverse_power1(double zl, double zu, double yl, double yu, double orig_xl,
 	      The ideas are similar to case 1.
 	  */
 	  if (zu + feasibility_tol < 0)
-	    throw py::value_error("Infeasible. Anything to the power of an even integer must be positive.");
+	    throw InfeasibleConstraintException("Infeasible. Anything to the power of an even integer must be positive.");
 	  if (y > 0)
 	    {
 	      double _xl, _xu;
@@ -684,7 +703,7 @@ void _inverse_power1(double zl, double zu, double yl, double yu, double orig_xl,
 	    {
 	      double _xl, _xu;
 	      if (zu == 0)
-		throw py::value_error("Infeasible. Anything to the power of an even integer must be positive.");
+		throw InfeasibleConstraintException("Infeasible. Anything to the power of an even integer must be positive.");
 	      else if (zl <= 0)
 		{
 		  _xl = -inf;
@@ -763,9 +782,9 @@ void _inverse_power2(double zl, double zu, double xl, double xu, double* yl, dou
     if the exponent is an integer.
   */
   if (xu <= 0)
-    throw py::value_error("Cannot raise a negative variable to a fractional power.");
+    throw IntervalException("Cannot raise a negative variable to a fractional power.");
   if ((xl > 0 && zu <= 0) || (xl >= 0 && zu < 0))
-    throw py::value_error("A positive variable raised to the power of anything must be positive.");
+    throw InfeasibleConstraintException("A positive variable raised to the power of anything must be positive.");
   double lba, uba, lbb, ubb;
   interval_log(zl, zu, &lba, &uba);
   interval_log(xl, xu, &lbb, &ubb);
@@ -800,7 +819,7 @@ void interval_sin(double xl, double xu, double* res_lb, double* res_ub)
   else
     {
       if (_is_inf(xl) || _is_inf(xu))
-	throw py::value_error("xl is inf or xu is -inf.");
+	throw InfeasibleConstraintException("xl is inf or xu is -inf.");
 
       double pi = M_PI;
       double i = (xl + pi / 2) / (2 * pi);
@@ -837,7 +856,7 @@ void interval_cos(double xl, double xu, double* res_lb, double* res_ub)
   else
     {
       if (_is_inf(xl) || _is_inf(xu))
-	throw py::value_error("xl is inf or xu is -inf.");
+	throw InfeasibleConstraintException("xl is inf or xu is -inf.");
 
       double pi = M_PI;
       double i = (xl + pi) / (2 * pi);
@@ -872,7 +891,7 @@ void interval_tan(double xl, double xu, double* res_lb, double* res_ub)
       *res_ub = inf;
     }
   else if (_is_inf(xl) || _is_inf(xu))
-    throw py::value_error("xl is inf or xu is -inf.");
+    throw InfeasibleConstraintException("xl is inf or xu is -inf.");
   else
     {
       double pi = M_PI;

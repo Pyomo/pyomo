@@ -278,6 +278,12 @@ void LogOperator::evaluate(double* values)
 }
 
 
+void SqrtOperator::evaluate(double* values)
+{
+  values[index] = std::pow(operand->get_value_from_array(values), 0.5);
+}
+
+
 void Log10Operator::evaluate(double* values)
 {
   values[index] = std::log10(operand->get_value_from_array(values));
@@ -705,6 +711,14 @@ void LogOperator::print(std::string* string_array)
 }
 
 
+void SqrtOperator::print(std::string* string_array)
+{
+  string_array[index] = ("sqrt(" +
+			 operand->get_string_from_array(string_array) +
+			 ")");
+}
+
+
 void Log10Operator::print(std::string* string_array)
 {
   string_array[index] = ("log10(" +
@@ -973,6 +987,12 @@ void LogOperator::write_nl_string(std::ofstream& f)
 }
 
 
+void SqrtOperator::write_nl_string(std::ofstream& f)
+{
+  f << "o39\n";
+}
+
+
 void Log10Operator::write_nl_string(std::ofstream& f)
 {
   f << "o42\n";
@@ -1070,6 +1090,12 @@ bool ExpOperator::is_exp_operator()
 
 
 bool LogOperator::is_log_operator()
+{
+  return true;
+}
+
+
+bool SqrtOperator::is_sqrt_operator()
 {
   return true;
 }
@@ -1202,12 +1228,16 @@ void Leaf::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double
 {
   if (new_lb < value - feasibility_tol || new_lb > value + feasibility_tol)
     {
-      throw py::value_error("Infeasible constraint");
+      throw InfeasibleConstraintException("Infeasible constraint; bounds computed on parameter or constant disagree with the value of the parameter or constant\n  value: "
+					  + std::to_string(value) + "\n  computed LB: " + std::to_string(new_lb)
+					  + "\n computed UB: " + std::to_string(new_ub));
     }
 
   if (new_ub < value - feasibility_tol || new_ub > value + feasibility_tol)
     {
-      throw py::value_error("Infeasible constraint");
+      throw InfeasibleConstraintException("Infeasible constraint; bounds computed on parameter or constant disagree with the value of the parameter or constant\n  value: "
+					  + std::to_string(value) + "\n  computed LB: " + std::to_string(new_lb)
+					  + "\n computed UB: " + std::to_string(new_ub));
     }
 }
 
@@ -1218,7 +1248,7 @@ void Var::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double*
   if (new_lb > new_ub)
     {
       if (new_lb - feasibility_tol > new_ub)
-	throw py::value_error("Infeasible constraint");
+	throw InfeasibleConstraintException("Infeasible constraint; The computed lower bound for a variable is larger than the computed upper bound.\n  computed LB: " + std::to_string(new_lb) + "\n  computed UB: " + std::to_string(new_ub));
       else
 	{
 	  new_lb -= feasibility_tol;
@@ -1226,9 +1256,9 @@ void Var::set_bounds_in_array(double new_lb, double new_ub, double* lbs, double*
 	}
     }
   if (new_lb >= inf)
-    throw py::value_error("Infeasible constraint");
+    throw InfeasibleConstraintException("Infeasible constraint; The compute lower bound for " + name + " is inf");
   if (new_ub <= -inf)
-    throw py::value_error("Infeasible constraint");
+    throw InfeasibleConstraintException("Infeasible constraint; The computed upper bound for " + name + " is -inf");
 
   std::string dom = get_domain();
 
@@ -1472,6 +1502,88 @@ void SumOperator::propagate_bounds_backward(double* lbs, double* ubs, double fea
 }
 
 
+void LinearOperator::propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  double lb = constant->evaluate();
+  double ub = lb;
+  double tmp_lb;
+  double tmp_ub;
+  double coef;
+
+  for (unsigned int ndx=0; ndx < nterms; ++ndx)
+    {
+      coef = coefficients[ndx]->evaluate();
+      interval_mul(coef, coef, variables[ndx]->get_lb(), variables[ndx]->get_ub(), &tmp_lb, &tmp_ub);
+      interval_add(lb, ub, tmp_lb, tmp_ub, &lb, &ub);
+    }
+
+  lbs[index] = lb;
+  ubs[index] = ub;
+}
+
+
+void LinearOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
+{
+  double* accumulated_lbs = new double[nterms+1];
+  double* accumulated_ubs = new double[nterms+1];
+
+  double coef;
+
+  accumulated_lbs[0] = constant->evaluate();
+  accumulated_ubs[0] = constant->evaluate();
+  for (unsigned int ndx=0; ndx < nterms; ++ndx)
+    {
+      coef = coefficients[ndx]->evaluate();
+      interval_mul(coef, coef, variables[ndx]->get_lb(), variables[ndx]->get_ub(), &accumulated_lbs[ndx+1], &accumulated_ubs[ndx+1]);
+      interval_add(accumulated_lbs[ndx],
+		   accumulated_ubs[ndx],
+		   accumulated_lbs[ndx+1],
+		   accumulated_ubs[ndx+1],
+		   &accumulated_lbs[ndx+1],
+		   &accumulated_ubs[ndx+1]);
+    }
+
+  double new_sum_lb = get_lb_from_array(lbs);
+  double new_sum_ub = get_ub_from_array(ubs);
+
+  if (new_sum_lb > accumulated_lbs[nterms])
+    accumulated_lbs[nterms] = new_sum_lb;
+  if (new_sum_ub < accumulated_ubs[nterms])
+    accumulated_ubs[nterms] = new_sum_ub;
+
+  double lb0, ub0, lb1, ub1, lb2, ub2, _lb1, _ub1, _lb2, _ub2, new_v_lb, new_v_ub;
+
+  int ndx = nterms - 1;
+  while (ndx >= 0)
+    {
+      lb0 = accumulated_lbs[ndx+1];
+      ub0 = accumulated_ubs[ndx+1];
+      lb1 = accumulated_lbs[ndx];
+      ub1 = accumulated_ubs[ndx];
+      coef = coefficients[ndx]->evaluate();
+      interval_mul(coef, coef, variables[ndx]->get_lb(), variables[ndx]->get_ub(), &lb2, &ub2);
+      interval_sub(lb0, ub0, lb2, ub2, &_lb1, &_ub1);
+      interval_sub(lb0, ub0, lb1, ub1, &_lb2, &_ub2);
+      if (_lb1 > lb1)
+	lb1 = _lb1;
+      if (_ub1 < ub1)
+	ub1 = _ub1;
+      if (_lb2 > lb2)
+	lb2 = _lb2;
+      if (_ub2 < ub2)
+	ub2 = _ub2;
+      accumulated_lbs[ndx] = lb1;
+      accumulated_ubs[ndx] = ub1;
+      interval_div(lb2, ub2, coef, coef, &new_v_lb, &new_v_ub, feasibility_tol);
+      variables[ndx]->set_bounds_in_array(new_v_lb, new_v_ub, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
+      ndx -= 1;
+    }
+
+  delete[] accumulated_lbs;
+  delete[] accumulated_ubs;
+}
+
+
 void DivideOperator::propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
 {
   interval_div(operand1->get_lb_from_array(lbs),
@@ -1584,6 +1696,38 @@ void PowerOperator::propagate_bounds_backward(double* lbs, double* ubs, double f
   if (new_yu < yu)
     yu = new_yu;
   operand2->set_bounds_in_array(yl, yu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
+}
+
+
+void SqrtOperator::propagate_bounds_forward(double* lbs, double* ubs, double feasibility_tol, double integer_tol)
+{
+  interval_power(operand->get_lb_from_array(lbs),
+		 operand->get_ub_from_array(ubs),
+		 0.5,
+		 0.5,
+		 &lbs[index],
+		 &ubs[index],
+		 feasibility_tol);
+}
+
+
+void SqrtOperator::propagate_bounds_backward(double* lbs, double* ubs, double feasibility_tol, double integer_tol, double improvement_tol, std::set<std::shared_ptr<Var> >& improved_vars)
+{
+  double xl = operand->get_lb_from_array(lbs);
+  double xu = operand->get_ub_from_array(ubs);
+  double yl = 0.5;
+  double yu = 0.5;
+  double lb = get_lb_from_array(lbs);
+  double ub = get_ub_from_array(ubs);
+
+  double new_xl, new_xu;
+  _inverse_power1(lb, ub, yl, yu, xl, xu, &new_xl, &new_xu, feasibility_tol);
+
+  if (new_xl > xl)
+    xl = new_xl;
+  if (new_xu < xu)
+    xu = new_xu;
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol, improvement_tol, improved_vars);
 }
 
 
@@ -1929,45 +2073,27 @@ std::shared_ptr<Node> appsi_operator_from_pyomo_expr(py::handle expr, py::handle
       {
         std::string function_name = expr.attr("getname")().cast<std::string>();
 	if (function_name == "exp")
-	  {
 	    res =  std::make_shared<ExpOperator>();
-	  }
 	else if (function_name == "log")
-	  {
 	    res =  std::make_shared<LogOperator>();
-	  }
 	else if (function_name == "log10")
-	  {
 	    res =  std::make_shared<Log10Operator>();
-	  }
 	else if (function_name == "sin")
-	  {
 	    res =  std::make_shared<SinOperator>();
-	  }
 	else if (function_name == "cos")
-	  {
 	    res =  std::make_shared<CosOperator>();
-	  }
 	else if (function_name == "tan")
-	  {
 	    res =  std::make_shared<TanOperator>();
-	  }
 	else if (function_name == "asin")
-	  {
 	    res =  std::make_shared<AsinOperator>();
-	  }
 	else if (function_name == "acos")
-	  {
 	    res =  std::make_shared<AcosOperator>();
-	  }
 	else if (function_name == "atan")
-	  {
 	    res =  std::make_shared<AtanOperator>();
-	  }
+	else if (function_name == "sqrt")
+	  res = std::make_shared<SqrtOperator>();
 	else
-	  {
-	    throw py::value_error("Unrecognized expression type");
-	  }
+	    throw py::value_error("Unrecognized expression type: " + function_name);
 	break;
       }
     case 10 :

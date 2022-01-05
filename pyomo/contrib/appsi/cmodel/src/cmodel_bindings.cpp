@@ -18,6 +18,8 @@ PYBIND11_MODULE(appsi_cmodel, m)
   m.attr("inf") = inf;
   //m.def("ProfilerStart", &ProfilerStart);
   //m.def("ProfilerStop", &ProfilerStop);
+  py::register_exception<IntervalException>(m, "IntervalException", py::module_::import("pyomo.common.errors").attr("IntervalException"));
+  py::register_exception<InfeasibleConstraintException>(m, "InfeasibleConstraintException", py::module_::import("pyomo.common.errors").attr("InfeasibleConstraintException"));
   m.def("_pow_with_inf", &_pow_with_inf);
   m.def("py_interval_add", &py_interval_add);
   m.def("py_interval_sub", &py_interval_sub);
@@ -131,11 +133,14 @@ PYBIND11_MODULE(appsi_cmodel, m)
   py::class_<Objective, std::shared_ptr<Objective> >(m, "Objective")
     .def_readwrite("sense", &Objective::sense)
     .def_readwrite("expr", &Objective::expr)
+    .def_readwrite("name", &Objective::name)
     .def(py::init<std::shared_ptr<ExpressionBase> >());
   py::class_<Constraint, std::shared_ptr<Constraint> >(m, "Constraint")
     .def_readwrite("body", &Constraint::body)
     .def_readwrite("lb", &Constraint::lb)
     .def_readwrite("ub", &Constraint::ub)
+    .def_readwrite("active", &Constraint::active)
+    .def_readwrite("name", &Constraint::name)
     .def("perform_fbbt", &Constraint::perform_fbbt)
     .def(py::init<std::shared_ptr<ExpressionBase>,  std::shared_ptr<ExpressionBase>, std::shared_ptr<ExpressionBase>>());
   py::class_<Model>(m, "Model")

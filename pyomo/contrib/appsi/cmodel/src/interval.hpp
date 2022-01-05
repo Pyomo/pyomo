@@ -11,7 +11,6 @@
 #include <iterator>
 #include <iostream>
 #include <cassert>
-#include <stdexcept>
 #include <iterator>
 #include <typeinfo>
 #include <fstream>
@@ -59,3 +58,21 @@ std::pair<double, double> py_interval_tan(double xl, double xu);
 std::pair<double, double> py_interval_asin(double xl, double xu, double yl, double yu, double feasibility_tol);
 std::pair<double, double> py_interval_acos(double xl, double xu, double yl, double yu, double feasibility_tol);
 std::pair<double, double> py_interval_atan(double xl, double xu, double yl, double yu);
+
+
+class IntervalException: public std::exception
+{
+public:
+  explicit IntervalException(std::string m) : message{m} {}
+  const char* what() const noexcept override {return message.c_str();}
+  std::string message = "";
+};
+
+
+class InfeasibleConstraintException: public std::exception
+{
+public:
+  explicit InfeasibleConstraintException(std::string m) : message{m} {}
+  const char* what() const noexcept override {return message.c_str();}
+  std::string message = "";
+};

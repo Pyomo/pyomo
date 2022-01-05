@@ -23,7 +23,7 @@ Constraint::Constraint(std::shared_ptr<ExpressionBase> _lb, std::shared_ptr<Expr
 
 
 void Constraint::perform_fbbt(double feasibility_tol, double integer_tol, double improvement_tol,
-		    std::set<std::shared_ptr<Var> >& improved_vars)
+			      std::set<std::shared_ptr<Var> >& improved_vars, bool deactivate_satisfied_constraints)
 {
   double body_lb;
   double body_ub;
@@ -46,9 +46,17 @@ void Constraint::perform_fbbt(double feasibility_tol, double integer_tol, double
   double con_lb = lb->evaluate();
   double con_ub = ub->evaluate();
 
-  if (body_lb > con_ub + feasibility_tol || body_ub < con_ub - feasibility_tol)
+  if (body_lb > con_ub + feasibility_tol || body_ub < con_lb - feasibility_tol)
     {
-      throw py::value_error("Infeasible constraint");
+      throw InfeasibleConstraintException("Infeasible constraint; the bounds computed on the body of the constraint violate the constraint bounds:\n  con LB: "
+					  + std::to_string(con_lb) + "\n  con UB: " + std::to_string(con_ub) + "\n  body LB: "
+					  + std::to_string(body_lb) + "\n body UB: " + std::to_string(body_ub) + "\n");
+    }
+
+  if (deactivate_satisfied_constraints)
+    {
+      if (body_lb >= con_lb - feasibility_tol && body_ub <= con_ub + feasibility_tol)
+	active = false;
     }
 
   if (con_lb > body_lb || con_ub < body_ub) // otherwise the constraint is always satisfied
@@ -112,7 +120,7 @@ void Model::remove_constraint(std::shared_ptr<Constraint> con)
 
 
 unsigned int Model::perform_fbbt_on_cons(std::vector<std::shared_ptr<Constraint> >& seed_cons, double feasibility_tol, double integer_tol,
-					 double improvement_tol, int max_iter,
+					 double improvement_tol, int max_iter, bool deactivate_satisfied_constraints,
 					 std::shared_ptr<std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<Constraint> > > > var_to_con_map)
 {
   std::set<std::shared_ptr<Var> > improved_vars_set;
@@ -124,7 +132,7 @@ unsigned int Model::perform_fbbt_on_cons(std::vector<std::shared_ptr<Constraint>
     {
       _iter += cons_to_fbbt.size();
       for (const std::shared_ptr<Constraint>& c : cons_to_fbbt)
-	c->perform_fbbt(feasibility_tol, integer_tol, improvement_tol, improved_vars_set);
+	c->perform_fbbt(feasibility_tol, integer_tol, improvement_tol, improved_vars_set, deactivate_satisfied_constraints);
 
       cons_to_fbbt.clear();
       cons_to_fbbt_set.clear();
@@ -149,18 +157,18 @@ unsigned int Model::perform_fbbt_on_cons(std::vector<std::shared_ptr<Constraint>
 
 
 unsigned int Model::perform_fbbt_with_seed(std::shared_ptr<Var> seed_var, double feasibility_tol, double integer_tol, double improvement_tol,
-					   int max_iter)
+					   int max_iter, bool deactivate_satisfied_constraints)
 {
   std::shared_ptr<std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<Constraint> > > > var_to_con_map = get_var_to_con_map();
 
   std::vector<std::shared_ptr<Constraint> >& seed_cons = var_to_con_map->at(seed_var);
 
-  return perform_fbbt_on_cons(seed_cons, feasibility_tol, integer_tol, improvement_tol, max_iter, var_to_con_map);
+  return perform_fbbt_on_cons(seed_cons, feasibility_tol, integer_tol, improvement_tol, max_iter, deactivate_satisfied_constraints, var_to_con_map);
 }
 
 
 unsigned int Model::perform_fbbt(double feasibility_tol, double integer_tol, double improvement_tol,
-				 int max_iter)
+				 int max_iter, bool deactivate_satisfied_constraints)
 {
   std::shared_ptr<std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<Constraint> > > > var_to_con_map = get_var_to_con_map();
 
@@ -174,7 +182,7 @@ unsigned int Model::perform_fbbt(double feasibility_tol, double integer_tol, dou
       ndx += 1;
     }
 
-  return perform_fbbt_on_cons(con_vector, feasibility_tol, integer_tol, improvement_tol, max_iter, var_to_con_map);
+  return perform_fbbt_on_cons(con_vector, feasibility_tol, integer_tol, improvement_tol, max_iter, deactivate_satisfied_constraints, var_to_con_map);
 }
 
 
@@ -207,7 +215,7 @@ void process_constraints(Model* model,
 
       if (con_lb.is(py::none()))
 	{
-	  ccon_lb = std::make_shared<Constant>(0);
+	  ccon_lb = std::make_shared<Constant>(-inf);
 	}
       else
 	{
@@ -216,7 +224,7 @@ void process_constraints(Model* model,
 
       if (con_ub.is(py::none()))
 	{
-	  ccon_ub = std::make_shared<Constant>(0);
+	  ccon_ub = std::make_shared<Constant>(inf);
 	}
       else
 	{

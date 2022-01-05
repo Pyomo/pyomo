@@ -3,7 +3,7 @@ from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 import pyomo.common.unittest as unittest
 import math
 from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.errors import InfeasibleConstraintException
+from pyomo.common.errors import InfeasibleConstraintException, IntervalException
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
@@ -11,6 +11,28 @@ class TestInterval(unittest.TestCase):
     def setUp(self) -> None:
         if numpy_available:
             np.random.seed(0)
+
+    def test_pow_with_inf(self):
+        x_list = [0, -math.inf, math.inf, -3, 3, -2, 2, -1, 1, -2.5, 2.5, -0.5, 0.5, -1.5, 1.5]
+        y_list = list(x_list)
+        for x in x_list:
+            for y in y_list:
+                try:
+                    expected = x**y
+                    if type(expected) is complex:
+                        expect_error = True
+                        expected = None
+                    else:
+                        expect_error = False
+                except ZeroDivisionError as e:
+                    expected = None
+                    expect_error = True
+                if expect_error:
+                    with self.assertRaises(ValueError):
+                        cmodel._pow_with_inf(x, y)
+                else:
+                    got = cmodel._pow_with_inf(x, y)
+                    self.assertAlmostEqual(expected, got)
 
     def assertAlmostEqual(self, first, second, **kwargs):
         if math.isfinite(first) and math.isfinite(second):
@@ -180,9 +202,9 @@ class TestInterval(unittest.TestCase):
                             self.assertAlmostEqual(lb1, lb2)
                             self.assertAlmostEqual(ub1, ub2)
                         elif _yl == _yu and _yl != round(_yl) and (_xu < 0 or (_xu < 0 and _yu < 0)):
-                            with self.assertRaises((InfeasibleConstraintException, interval.IntervalException)):
+                            with self.assertRaises((InfeasibleConstraintException, IntervalException)):
                                 lb, ub = interval.power(_xl, _xu, _yl, _yu, feasibility_tol=1e-8)
-                            with self.assertRaises(ValueError):
+                            with self.assertRaises((InfeasibleConstraintException, IntervalException)):
                                 lb, ub = cmodel.py_interval_power(_xl, _xu, _yl, _yu, 1e-8)
                         else:
                             lb1, ub1 = interval.power(_xl, _xu, _yl, _yu, feasibility_tol=1e-8)
