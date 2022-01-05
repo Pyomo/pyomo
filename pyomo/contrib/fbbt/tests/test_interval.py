@@ -262,6 +262,14 @@ class TestInterval(unittest.TestCase):
                     zl, zu = interval.tan(xl, xu)
                     x = np.linspace(xl, xu, 100)
                     _z = np.tan(x)
+                    if np.any(zl > _z) or np.any(zu < _z):
+                        print('failed test_tan')
+                        print(f'    xl: {xl}')
+                        print(f'    xu: {xu}')
+                        print(f'    zl: {zl}')
+                        print(f'    zu: {zu}')
+                        print(f'    minimum of _z: {np.min(_z)}')
+                        print(f'    maximum of _z: {np.max(_z)}')
                     self.assertTrue(np.all(zl <= _z))
                     self.assertTrue(np.all(zu >= _z))
 
