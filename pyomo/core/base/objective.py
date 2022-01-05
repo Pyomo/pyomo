@@ -261,7 +261,7 @@ class Objective(ActiveIndexedComponent):
             return IndexedObjective.__new__(IndexedObjective)
 
     @overload
-    def __init__(self, expr=None, rule=None, sense=minimize,
+    def __init__(self, *indexes, expr=None, rule=None, sense=minimize,
                  name=None, doc=None): ...
 
     def __init__(self, *args, **kwargs):
