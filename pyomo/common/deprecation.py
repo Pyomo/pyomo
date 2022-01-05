@@ -58,7 +58,7 @@ def _default_msg(obj, user_msg, version, remove_in):
     if version:
         comment.append('deprecated in %s' % (version,))
     if remove_in:
-        comment.append('will be removed in %s' % (remove_in))
+        comment.append('will be removed in (or after) %s' % (remove_in))
     if comment:
         return user_msg + "  (%s)" % (', '.join(comment),)
     else:
