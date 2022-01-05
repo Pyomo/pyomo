@@ -203,6 +203,8 @@ def filter(line):
                    'Function',
                    'File',
                    'Matplotlib',
+                   '-------',
+                   '=======',
                    '    ^'):
         if line.startswith(field):
             return True
