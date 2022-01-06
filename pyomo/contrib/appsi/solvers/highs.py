@@ -268,8 +268,16 @@ class Highs(PersistentBase, PersistentSolver):
             else:
                 if _lb is not None or _ub is not None:
                     if not is_constant(_lb) or not is_constant(_ub):
-                        mutable_bound = _MutableVarBounds(lower_expr=NPV_MaxExpression((_lb, lb)),
-                                                          upper_expr=NPV_MinExpression((_ub, ub)),
+                        if _lb is None:
+                            tmp_lb = -pyhighs.kHighsInf
+                        else:
+                            tmp_lb = _lb
+                        if _ub is None:
+                            tmp_ub = pyhighs.kHighsInf
+                        else:
+                            tmp_ub = _ub
+                        mutable_bound = _MutableVarBounds(lower_expr=NPV_MaxExpression((tmp_lb, lb)),
+                                                          upper_expr=NPV_MinExpression((tmp_ub, ub)),
                                                           pyomo_var_id=v_id,
                                                           var_map=self._pyomo_var_to_solver_var_map,
                                                           highs=self._solver_model)
@@ -288,10 +296,10 @@ class Highs(PersistentBase, PersistentSolver):
         pyhighs.highs_addVars(self._solver_model, len(lbs),
                               np.array(lbs, dtype=np.double),
                               np.array(ubs, dtype=np.double))
-        pyhighs.highs_changeColIntegrality(self._solver_model,
-                                           len(vtypes),
-                                           np.array(indices),
-                                           np.array(vtypes))
+        pyhighs.highs_changeColsIntegrality(self._solver_model,
+                                            len(vtypes),
+                                            np.array(indices),
+                                            np.array(vtypes))
 
     def _add_params(self, params: List[_ParamData]):
         pass
@@ -309,7 +317,7 @@ class Highs(PersistentBase, PersistentSolver):
         self.highs_options = saved_options
         self.update_config = saved_update_config
         self._model = model
-
+        self._solver_model = pyhighs.Highs()
         self.add_block(model)
         if self._objective is None:
             self.set_objective(None)
@@ -373,6 +381,7 @@ class Highs(PersistentBase, PersistentSolver):
             current_num_cons += 1
 
         pyhighs.highs_addRows(self._solver_model,
+                              len(lbs),
                               np.array(lbs, dtype=np.double),
                               np.array(ubs, dtype=np.double),
                               len(coef_values),
@@ -381,7 +390,8 @@ class Highs(PersistentBase, PersistentSolver):
                               np.array(coef_values, dtype=np.double))
 
     def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
-        raise NotImplementedError('Highs interface does not support SOS constraints')
+        if cons:
+            raise NotImplementedError('Highs interface does not support SOS constraints')
 
     def _remove_constraints(self, cons: List[_GeneralConstraintData]):
         self._sol = None
@@ -403,7 +413,8 @@ class Highs(PersistentBase, PersistentSolver):
         self._solver_con_to_pyomo_con_map = {v: k for k, v in self._pyomo_con_to_solver_con_map.items()}
 
     def _remove_sos_constraints(self, cons: List[_SOSConstraintData]):
-        raise NotImplementedError('Highs interface does not support SOS constraints')
+        if cons:
+            raise NotImplementedError('Highs interface does not support SOS constraints')
 
     def _remove_variables(self, variables: List[_GeneralVarData]):
         self._sol = None
@@ -447,8 +458,16 @@ class Highs(PersistentBase, PersistentSolver):
             else:
                 if _lb is not None or _ub is not None:
                     if not is_constant(_lb) or not is_constant(_ub):
-                        mutable_bound = _MutableVarBounds(lower_expr=NPV_MaxExpression((_lb, lb)),
-                                                          upper_expr=NPV_MinExpression((_ub, ub)),
+                        if _lb is None:
+                            tmp_lb = -pyhighs.kHighsInf
+                        else:
+                            tmp_lb = _lb
+                        if _ub is None:
+                            tmp_ub = pyhighs.kHighsInf
+                        else:
+                            tmp_ub = _ub
+                        mutable_bound = _MutableVarBounds(lower_expr=NPV_MaxExpression((tmp_lb, lb)),
+                                                          upper_expr=NPV_MinExpression((tmp_ub, ub)),
                                                           pyomo_var_id=v_id,
                                                           var_map=self._pyomo_var_to_solver_var_map,
                                                           highs=self._solver_model)
@@ -530,7 +549,7 @@ class Highs(PersistentBase, PersistentSolver):
         config = self.config
 
         highs = self._solver_model
-        status = highs.getModelStatus()
+        status = highs.getModelStatus(False)
 
         results = HighsResults(self)
         results.wallclock_time = highs.getRunTime()
@@ -599,6 +618,10 @@ class Highs(PersistentBase, PersistentSolver):
         results.best_objective_bound = None
         results.best_feasible_objective = None
         if self._objective is not None:
+            if self._objective.sense == minimize:
+                results.best_objective_bound = -math.inf
+            else:
+                results.best_objective_bound = math.inf
             if results.termination_condition == TerminationCondition.optimal:
                 results.best_feasible_objective = highs.getObjectiveValue()
             elif has_feasible_solution:
