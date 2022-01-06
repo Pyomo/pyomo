@@ -407,6 +407,8 @@ class Gurobi(PersistentBase, PersistentSolver):
         pass
 
     def set_instance(self, model):
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
         if not self.available():
             raise ImportError('Could not import gurobipy')
         saved_config = self.config
@@ -623,13 +625,15 @@ class Gurobi(PersistentBase, PersistentSolver):
 
     def _remove_variables(self, variables: List[_GeneralVarData]):
         for var in variables:
+            v_id = id(var)
             if var in self._vars_added_since_update:
                 self._update_gurobi_model()
-            solver_var = self._pyomo_var_to_solver_var_map[id(var)]
+            solver_var = self._pyomo_var_to_solver_var_map[v_id]
             self._solver_model.remove(solver_var)
             self._symbol_map.removeSymbol(var)
             self._labeler.remove_obj(var)
-            del self._pyomo_var_to_solver_var_map[id(var)]
+            del self._pyomo_var_to_solver_var_map[v_id]
+            self._mutable_bounds.pop(v_id, None)
         self._needs_updated = True
 
     def _remove_params(self, params: List[_ParamData]):

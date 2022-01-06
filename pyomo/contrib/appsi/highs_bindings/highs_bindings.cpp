@@ -169,6 +169,9 @@ void highs_deleteRows(Highs* h, int num_set_entries, py::array_t<int> indices)
 
 PYBIND11_MODULE(appsi_highs, m)
 {
+  py::enum_<ObjSense>(m, "ObjSense")
+    .value("kMinimize", ObjSense::kMinimize)
+    .value("kMaximize", ObjSense::kMaximize);
   py::enum_<HighsModelStatus>(m, "HighsModelStatus")
     .value("kNotset", HighsModelStatus::kNotset)
     .value("kLoadError", HighsModelStatus::kLoadError)
@@ -229,4 +232,7 @@ PYBIND11_MODULE(appsi_highs, m)
   m.def("highs_deleteVars", &highs_deleteVars);
   m.def("highs_deleteRows", &highs_deleteRows);
   m.attr("kHighsInf") = kHighsInf;
+  m.attr("HIGHS_VERSION_MAJOR") = HIGHS_VERSION_MAJOR;
+  m.attr("HIGHS_VERSION_MINOR") = HIGHS_VERSION_MINOR;
+  m.attr("HIGHS_VERSION_PATCH") = HIGHS_VERSION_PATCH;
 }
