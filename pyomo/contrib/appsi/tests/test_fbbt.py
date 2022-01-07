@@ -10,6 +10,7 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.var import _GeneralVarData
 from typing import Sequence
 from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
+pe = pyo
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
@@ -584,3 +585,56 @@ class TestFBBT(unittest.TestCase):
         m.x = pyo.Var([1, 2], bounds=(-2, 6))
         m.c = pyo.Constraint(expr=m.x[1]*m.x[1] + m.x[2]*m.x[2] == 0)
         self.run_fbbt_and_compare(m, [m.x[1], m.x[2]])
+
+    def test_persistent(self):
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.w = pe.Var()
+        m.xl = pe.Param(mutable=True)
+        m.xu = pe.Param(mutable=True)
+        m.yl = pe.Param(mutable=True)
+        m.yu = pe.Param(mutable=True)
+        m.c1 = pe.Constraint(expr=m.w >= m.xl * m.y + m.x * m.yl - m.xl * m.yl)
+        m.c2 = pe.Constraint(expr=m.w >= m.xu * m.y + m.x * m.yu - m.xu * m.yu)
+        m.c3 = pe.Constraint(expr=m.w <= m.xu * m.y + m.x * m.yl - m.xu * m.yl)
+        m.c4 = pe.Constraint(expr=m.w <= m.x * m.yu + m.xl * m.y - m.xl * m.yu)
+
+        m.xl.value = -2
+        m.xu.value = 2
+        m.yl.value = -2
+        m.yu.value = 2
+        m.x.setlb(m.xl.value)
+        m.x.setub(m.xu.value)
+        m.y.setlb(m.yl.value)
+        m.y.setub(m.yu.value)
+        it = appsi.fbbt.IntervalTightener()
+        it.perform_fbbt(m, symbolic_solver_labels=True)
+        self.assertAlmostEqual(m.w.lb, -12)
+        self.assertAlmostEqual(m.w.ub, 12)
+
+        m.xl.value = -1
+        m.xu.value = 1
+        m.x.setlb(m.xl.value)
+        m.x.setub(m.xu.value)
+        it.perform_fbbt_with_seed(m, m.x)
+        self.assertAlmostEqual(m.w.lb, -6)
+        self.assertAlmostEqual(m.w.ub, 6)
+
+        m.xl.value = -0.5
+        m.xu.value = 0.5
+        m.x.setlb(m.xl.value)
+        m.x.setub(m.xu.value)
+        it.perform_fbbt(m)
+        self.assertAlmostEqual(m.w.lb, -3)
+        self.assertAlmostEqual(m.w.ub, 3)
+
+        m.yl.value = -1
+        m.yu.value = 1
+        m.y.setlb(m.yl.value)
+        m.y.setub(m.yu.value)
+        del m.c1
+        del m.c2
+        it.perform_fbbt(m)
+        self.assertAlmostEqual(m.w.lb, -3)
+        self.assertAlmostEqual(m.w.ub, 1.5)

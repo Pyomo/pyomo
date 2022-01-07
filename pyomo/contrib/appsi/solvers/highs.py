@@ -203,7 +203,7 @@ class Highs(PersistentBase, PersistentSolver):
 
     @property
     def symbol_map(self):
-        raise NotImplementedError('Highs does not use a symbol map')
+        return SymbolMap()
 
     def _solve(self, timer: HierarchicalTimer):
         config = self.config

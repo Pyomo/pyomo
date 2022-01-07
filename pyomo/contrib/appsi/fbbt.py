@@ -1,7 +1,7 @@
 from pyomo.contrib.appsi.base import PersistentBase
 from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat, NonNegativeInt
 from .cmodel import cmodel, cmodel_available
-from typing import List
+from typing import List, Optional
 from pyomo.core.base.var import _GeneralVarData
 from pyomo.core.base.param import _ParamData
 from pyomo.core.base.constraint import _GeneralConstraintData
@@ -71,7 +71,7 @@ class IntervalTightener(PersistentBase):
     def config(self, val: IntervalConfig):
         self._config = val
 
-    def set_instance(self, model, symbolic_solver_labels: bool = False):
+    def set_instance(self, model, symbolic_solver_labels: Optional[bool] = None):
         saved_config = self.config
         saved_update_config = self.update_config
 
@@ -79,7 +79,8 @@ class IntervalTightener(PersistentBase):
         self.config = saved_config
         self.update_config = saved_update_config
 
-        self._symbolic_solver_labels = symbolic_solver_labels
+        if symbolic_solver_labels is not None:
+            self._symbolic_solver_labels = symbolic_solver_labels
         if self._symbolic_solver_labels:
             self._var_labeler = TextLabeler()
             self._con_labeler = TextLabeler()
@@ -202,11 +203,11 @@ class IntervalTightener(PersistentBase):
                 if not cc.active:
                     c.deactivate()
 
-    def perform_fbbt(self, model: _BlockData, symbolic_solver_labels: bool = False):
+    def perform_fbbt(self, model: _BlockData, symbolic_solver_labels: Optional[bool] = None):
         if model is not self._model:
             self.set_instance(model, symbolic_solver_labels=symbolic_solver_labels)
         else:
-            if symbolic_solver_labels != self._symbolic_solver_labels:
+            if symbolic_solver_labels is not None and symbolic_solver_labels != self._symbolic_solver_labels:
                 raise RuntimeError('symbolic_solver_labels can only be changed through the set_instance method. '
                                    'Please either use set_instance or create a new instance of IntervalTightener.')
             self.update()
