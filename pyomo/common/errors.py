@@ -43,13 +43,6 @@ class DeveloperError(PyomoException, NotImplementedError):
                  % ( repr(self.parameter), ) )
 
 
-class IntervalException(PyomoException):
-    """
-    Exception class used for errors in interval arithmetic.
-    """
-    pass
-
-
 class InfeasibleConstraintException(PyomoException):
     """
     Exception class used by Pyomo transformations to indicate

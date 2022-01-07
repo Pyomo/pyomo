@@ -7,15 +7,15 @@ if not param_available:
 parameterized = parameterized.parameterized
 from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
 from pyomo.contrib.appsi.cmodel import cmodel_available
-from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs
+from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
 import os
 numpy, numpy_available = attempt_import('numpy')
 
 
-all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex), ('cbc', Cbc), ('highs', Highs)]
-mip_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('cbc', Cbc), ('highs', Highs)]
+all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex), ('cbc', Cbc)]
+mip_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('cbc', Cbc)]
 nlp_solvers = [('ipopt', Ipopt)]
 qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex)]
 miqcqp_solvers = [('gurobi', Gurobi), ('cplex', Cplex)]
