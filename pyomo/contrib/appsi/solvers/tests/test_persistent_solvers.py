@@ -778,7 +778,7 @@ class TestSolvers(unittest.TestCase):
         if type(opt) is Cbc:
             raise unittest.SkipTest
         m = pe.ConcreteModel()
-        m.a = pe.Set(initialize=list(range(100)))
+        m.a = pe.Set(initialize=list(range(900)))
         m.x = pe.Var(m.a)
         m.y = pe.Var(m.a)
         m.obj = pe.Objective(expr=sum(m.y.values()))
