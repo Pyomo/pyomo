@@ -56,8 +56,7 @@ _VARDATA_API = (
     'bounds', 'lower', 'upper', 'lb', 'ub', 'has_lb', 'has_ub',
     'setlb', 'setub', 'get_units',
     'is_integer', 'is_binary', 'is_continuous', 'is_fixed',
-    'fix', 'unfix', 'free', 'set_value', 'value',
-    # Note: we can't disable fixed / stale as they are public attributes
+    'fix', 'unfix', 'free', 'set_value', 'value', 'stale', 'fixed',
 )
 
 
