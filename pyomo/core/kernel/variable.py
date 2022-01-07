@@ -385,7 +385,7 @@ class variable(IVariable):
     @value.setter
     def value(self, value):
         self._value = value
-        self._stale = StaleFlagManager.get_flag()
+        self._stale = StaleFlagManager.get_flag(self._stale)
 
     def set_value(self, value, skip_validation=True):
         self.value = value
@@ -407,7 +407,7 @@ class variable(IVariable):
         if stale:
             self._stale = 0
         else:
-            self._stale = StaleFlagManager.get_flag()
+            self._stale = StaleFlagManager.get_flag(0)
 
     @property
     def domain_type(self):
