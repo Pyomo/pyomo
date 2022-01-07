@@ -324,7 +324,7 @@ class _GeneralVarData(_VarData):
         state = super(_GeneralVarData, self).__getstate__()
         for i in _GeneralVarData.__slots__:
             state[i] = getattr(self, i)
-        state['_stale'] = self.stale
+        state['_stale'] = StaleFlagManager.is_stale(self._stale)
         return state
 
     def __setstate__(self, state):

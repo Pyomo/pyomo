@@ -220,7 +220,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
             state[i] = getattr(self, i)
         if isinstance(self._associated_binary, ReferenceType):
             state['_associated_binary'] = self._associated_binary()
-        state['_stale'] = self.stale
+        state['_stale'] = StaleFlagManager.is_stale(self._stale)
         return state
 
     def __setstate__(self, state):
