@@ -312,7 +312,7 @@ class _GeneralVarData(_VarData):
     these attributes in certain cases.
     """
 
-    __slots__ = ('_value', '_lb', '_ub', '_domain', 'fixed', '_stale')
+    __slots__ = ('_value', '_lb', '_ub', '_domain', '_fixed', '_stale')
 
     def __init__(self, component=None):
         #
@@ -333,7 +333,7 @@ class _GeneralVarData(_VarData):
         self._lb = None
         self._ub = None
         self._domain = None
-        self.fixed = False
+        self._fixed = False
         self._stale = 0 # True
 
     @classmethod
@@ -344,7 +344,7 @@ class _GeneralVarData(_VarData):
         self._lb = src._lb
         self._ub = src._ub
         self._domain = src._domain
-        self.fixed = src.fixed
+        self._fixed = src._fixed
         self._stale = src._stale
         return self
 
@@ -533,7 +533,12 @@ class _GeneralVarData(_VarData):
         # component if not scalar
         return self.parent_component()._units
 
-    # fixed is an attribute
+    @property
+    def fixed(self):
+        return self._fixed
+    @fixed.setter
+    def fixed(self, val):
+        self._fixed = bool(val)
 
     @property
     def stale(self):
