@@ -15,8 +15,7 @@ import sys
 import tempfile
 import warnings
 from pyomo.common.envvar import PYOMO_CONFIG_DIR
-from pyomo.common.fileutils import this_file_dir
-from ctypes.util import find_library
+from pyomo.common.fileutils import this_file_dir, find_library
 
 
 def handleReadonly(function, path, excinfo):
