@@ -85,11 +85,11 @@ def build_appsi(args=[]):
         # search for Highs; if found, add an extension
         highs_lib = find_library('highs')
         if highs_lib is not None:
-            print('found Highs library')
+            print(f'found Highs library: {highs_lib}')
             highs_lib_dir = os.path.dirname(highs_lib)
             highs_build_dir = os.path.dirname(highs_lib_dir)
             highs_include_dir = os.path.join(highs_build_dir, 'include')
-            if os.path.exists(highs_include_dir):
+            if os.path.exists(os.path.join(highs_include_dir, 'Highs.h')):
                 print('found Highs include dir')
                 highs_ext = Pybind11Extension('appsi_highs',
                                               sources=[os.path.join(appsi_root, 'highs_bindings', 'highs_bindings.cpp')],
@@ -99,7 +99,7 @@ def build_appsi(args=[]):
                                               libraries=['highs'])
                 extensions.append(highs_ext)
             else:
-                print('Found HiGHS library, but could not find HiGHS include directory. Skipping HiGHS Python bindings.')
+                print(f'Found HiGHS library, but could not find HiGHS include directory ({highs_include_dir}). Skipping HiGHS Python bindings.')
         else:
             print('Could not find HiGHS library; Skipping HiGHS Python bindings')
 
