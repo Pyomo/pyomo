@@ -194,8 +194,14 @@ class IntervalTightener(PersistentBase):
             cv_ub = cv.get_ub()
             if -cmodel.inf < cv_lb:
                 v.setlb(cv_lb)
+                v_id = id(v)
+                _v, _lb, _ub, _fixed, _domain, _value = self._vars[v_id]
+                self._vars[v_id] = (_v, cv_lb, _ub, _fixed, _domain, _value)
             if cv_ub < cmodel.inf:
                 v.setub(cv_ub)
+                v_id = id(v)
+                _v, _lb, _ub, _fixed, _domain, _value = self._vars[v_id]
+                self._vars[v_id] = (_v, _lb, cv_ub, _fixed, _domain, _value)
 
     def _deactivate_satisfied_cons(self):
         if self.config.deactivate_satisfied_constraints:
