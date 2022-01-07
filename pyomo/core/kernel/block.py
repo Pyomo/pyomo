@@ -516,9 +516,9 @@ class block(IBlock):
                            var.value))
                 var.set_value(default_variable_value, skip_validation=True)
 
-        # Advance the stale flag again so that any subsequent variable
-        # updates will "set" the stale flag for these variables
-        StaleFlagManager.advance_flag()
+        # Set the state flag to "delayed advance": it will auto-advance
+        # if a non-stale variable is updated.
+        StaleFlagManager.advance_flag(delayed=True)
 
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module

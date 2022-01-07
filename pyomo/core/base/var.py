@@ -235,7 +235,7 @@ class _VarData(ComponentData, NumericValue):
         Variables are "stale" if their current value was not updated as
         part of the most recent model update.  A "model update" can be
         one of several things: a solver invocation, loading a previous
-        solution, or manually updating a :class:`Var` value.
+        solution, or manually updating a non-stale :class:`Var` value.
 
         Returns
         -------
@@ -245,6 +245,11 @@ class _VarData(ComponentData, NumericValue):
         -----
         Fixed :class:`Var` objects will be stale after invoking a solver
         (as their value was not updated by the solver).
+
+        Updating a stale :class:`Var` value will not cause other
+        variable values to be come stale.  However, updating the first
+        non-stale :class:`Var` value adter a solve or solution load
+        *will* cause all other variables to be marked as stale
 
         """
         raise NotImplementedError
@@ -376,8 +381,12 @@ class _GeneralVarData(_VarData):
                     extra={'id':'W1002'},
                 )
 
+        if self._value == val and not self.stale:
+            # do not update the value / set the stale flag if we are not
+            # changing the value and the variable is currently not stale
+            return
         self._value = val
-        self._stale = StaleFlagManager.get_flag()
+        self._stale = StaleFlagManager.get_flag(self._stale)
 
     @property
     def value(self):
@@ -513,9 +522,9 @@ class _GeneralVarData(_VarData):
     @stale.setter
     def stale(self, val):
         if val:
-            self._stale = 0
+            self._stale = 0 # True
         else:
-            self._stale = StaleFlagManager.get_flag()
+            self._stale = StaleFlagManager.get_flag(self._stale)
 
     def _process_bound(self, val, bound_type):
         if type(val) in native_numeric_types or val is None:

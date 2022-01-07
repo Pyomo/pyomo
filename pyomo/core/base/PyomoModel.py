@@ -541,9 +541,9 @@ class ModelSolutions(object):
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][cdata] = attr_value
 
-        # Advance the stale flag again so that any subsequent variable
-        # updates will "set" the stale flag for these variables
-        StaleFlagManager.advance_flag()
+        # Set the state flag to "delayed advance": it will auto-advance
+        # if a non-stale variable is updated.
+        StaleFlagManager.advance_flag(delayed=True)
 
 @ModelComponentFactory.register('Model objects can be used as a component of other models.')
 class Model(ScalarBlock):
