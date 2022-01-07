@@ -313,6 +313,40 @@ jobs:
         echo "TPL_DIR=$TPL_DIR" >> $GITHUB_ENV
         echo "DOWNLOAD_DIR=$DOWNLOAD_DIR" >> $GITHUB_ENV
 
+    - name: Install HiGHS
+      if: ${{ ! matrix.slim }}
+      run: |
+        if test "${{matrix.TARGET}}" == linux; then
+            HIGHS_DIR=$TPL_DIR/highs
+            echo "$HIGHS_DIR" >> $GITHUB_PATH
+            mkdir -p $HIGHS_DIR
+            HIGHS_TAR=${DOWNLOAD_DIR}/highs.tar.gz
+            if test ! -e $HIGHS_TAR; then
+                echo "...downloading Highs"
+                URL=https://github.com/ERGO-Code/HiGHS/archive/refs/tags/v1.1.1.tar.gz
+                curl --max-time 150 --retry 8 \
+                    -L $URL > $HIGHS_TAR
+            fi
+            HIGHS_BUILD_DIR=$TPL_DIR/highs_build
+            echo "$HIGHS_BUILD_DIR" >> $GITHUB_PATH
+            mkdir -p $HIGHS_BUILD_DIR
+            cd $HIGHS_DIR
+            tar -xzi < $HIGHS_TAR
+            echo ""
+            echo "$HIGHS_DIR"
+            ls -l $HIGHS_DIR
+            mkdir build
+            cd build
+            cmake -DCMAKE_INSTALL_PREFIX=$HIGHS_BUILD_DIR ..
+            make
+            make install
+            HIGHS_LIB_DIR=$HIGHS_BUILD_DIR/lib
+            echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
+            echo ""
+            echo "$HIGHS_LIB_DIR"
+            ls -l $HIGHS_LIB_DIR
+        fi
+
     - name: Install Ipopt
       if: ${{ ! matrix.slim }}
       run: |

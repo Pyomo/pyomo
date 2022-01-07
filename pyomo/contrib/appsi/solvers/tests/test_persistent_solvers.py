@@ -778,7 +778,7 @@ class TestSolvers(unittest.TestCase):
         if type(opt) is Cbc:
             raise unittest.SkipTest
         m = pe.ConcreteModel()
-        m.a = pe.Set(initialize=list(range(900)))
+        m.a = pe.Set(initialize=list(range(100)))
         m.x = pe.Var(m.a)
         m.y = pe.Var(m.a)
         m.obj = pe.Objective(expr=sum(m.y.values()))
@@ -787,7 +787,10 @@ class TestSolvers(unittest.TestCase):
         for i in m.a:
             m.c1[i] = m.y[i] >= -m.x[i]
             m.c2[i] = m.y[i] >= m.x[i]
-        opt.config.time_limit = 1e-6
+        if type(opt) is Ipopt:
+            opt.config.time_limit = 1e-6
+        else:
+            opt.config.time_limit = 0
         opt.config.load_solution = False
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.maxTimeLimit)
