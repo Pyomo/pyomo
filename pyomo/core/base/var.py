@@ -88,15 +88,6 @@ class _VarData(ComponentData, NumericValue):
 
     __slots__ = ()
 
-    def __init__(self, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - ComponentData
-        #   - NumericValue
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
-
     #
     # Interface
     #
