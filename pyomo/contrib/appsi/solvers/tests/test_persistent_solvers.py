@@ -777,6 +777,10 @@ class TestSolvers(unittest.TestCase):
             raise unittest.SkipTest
         if type(opt) is Cbc:
             raise unittest.SkipTest
+        if type(opt) is Cplex:
+            from sys import platform
+            if platform == 'win32':
+                raise unittest.SkipTest
         m = pe.ConcreteModel()
         m.a = pe.Set(initialize=list(range(100)))
         m.x = pe.Var(m.a)
