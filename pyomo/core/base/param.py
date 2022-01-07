@@ -14,6 +14,7 @@ import sys
 import types
 import logging
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
@@ -28,7 +29,7 @@ from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed
 from pyomo.core.base.numvalue import (
     NumericValue, native_types, value as expr_value
 )
-from pyomo.core.base.set_types import Any, Reals
+from pyomo.core.base.set import Any, GlobalSetBase, Reals
 from pyomo.core.base.units_container import units
 
 logger = logging.getLogger('pyomo.core')
@@ -45,6 +46,7 @@ def _raise_modifying_immutable_error(obj, index):
         "declare the parameter as mutable [i.e., Param(mutable=True)]"
         % (name,))
 
+
 class _ImplicitAny(Any.__class__):
     """An Any that issues a deprecation warning for non-Real values.
 
@@ -52,39 +54,65 @@ class _ImplicitAny(Any.__class__):
     change of Param's implicit domain from Any to Reals.
 
     """
-    def __new__(cls, **kwds):
-        return super(_ImplicitAny, cls).__new__(cls)
+    def __new__(cls, **kwargs):
+        # Strip off owner / kwargs before calling base __new__
+        return super().__new__(cls)
 
-    def __init__(self, owner, **kwds):
-        super(_ImplicitAny, self).__init__(**kwds)
+    def __init__(self, owner, **kwargs):
         self._owner = weakref_ref(owner)
+        super().__init__(**kwargs)
         self._component = weakref_ref(self)
         self.construct()
 
     def __getstate__(self):
-        state = super(_ImplicitAny, self).__getstate__()
+        state = super().__getstate__()
         state['_owner'] = None if self._owner is None else self._owner()
         return state
 
     def __setstate__(self, state):
         _owner = state.pop('_owner')
-        super(_ImplicitAny, self).__setstate__(state)
+        super().__setstate__(state)
         self._owner = None if _owner is None else weakref_ref(_owner)
 
     def __deepcopy__(self, memo):
-        return super(Any.__class__, self).__deepcopy__(memo)
+        # Note: we need to start super() at GlobalSetBase to actually
+        # copy this object
+        return super(GlobalSetBase, self).__deepcopy__(memo)
 
     def __contains__(self, val):
         if val not in Reals:
+            if self._owner is None or self._owner() is None:
+                name = 'Unknown'
+            else:
+                name = self._owner().name
             deprecation_warning(
+                f"Param '{name}' declared with an implicit domain of 'Any'. "
                 "The default domain for Param objects is 'Any'.  However, "
                 "we will be changing that default to 'Reals' in the "
-                "future.  If you really intend the domain of this Param (%s) "
+                "future.  If you really intend the domain of this Param"
                 "to be 'Any', you can suppress this warning by explicitly "
-                "specifying 'within=Any' to the Param constructor."
-                % ('Unknown' if self._owner is None else self._owner().name,),
+                "specifying 'within=Any' to the Param constructor.",
                 version='5.6.9', remove_in='6.0')
         return True
+
+    # This should "mock up" a global set, so the "name" should always be
+    # the local name (without block scope)
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
+        return super().getname(False, name_buffer, relative_to)
+
+    # The parent tracks the parent of the owner.  We can't set it
+    # directly here because the owner has not been assigned to a block
+    # when we create the _ImplicitAny
+    @property
+    def _parent(self):
+        if self._owner is None or self._owner() is None:
+            return None
+        return self._owner()._parent
+    # This is not settable.  However the base classes assume that it is,
+    # so we need to define the setter and just ignore the incoming value
+    @_parent.setter
+    def _parent(self, val):
+        pass
 
 
 class _ParamData(ComponentData, NumericValue):
@@ -212,12 +240,6 @@ class _ParamData(ComponentData, NumericValue):
         """
         return 0
 
-    def __nonzero__(self):
-        """Return True if the value is defined and non-zero."""
-        return bool(self())
-
-    __bool__ = __nonzero__
-
 
 @ModelComponentFactory.register("Parameter data that is used to define a model instance.")
 class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
@@ -225,11 +247,6 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     A parameter value, which may be defined over an index.
 
     Constructor Arguments:
-        name        
-            The name of this parameter
-        index       
-            The index set that defines the distinct parameters. By default, 
-            this is None, indicating that there is a single parameter.
         domain      
             A set that defines the type of values that each parameter must be.
         within      
@@ -248,6 +265,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         mutable: `boolean`
             Flag indicating if the value of the parameter may change between
             calls to a solver. Defaults to `False`
+        name
+            Name for this component.
+        doc
+            Text describing this component.
     """
 
     DefaultMutable = False
@@ -265,13 +286,15 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         else:
             return super(Param, cls).__new__(IndexedParam)
 
+    @overload
+    def __init__(self, *indexes, rule=NOTSET, initialize=NOTSET,
+                 domain=None, within=None, validate=None, mutable=False, default=NoValue,
+                 initialize_as_dense=False, units=None, name=None, doc=None): ...
+
     def __init__(self, *args, **kwd):
         _init = self._pop_from_kwargs(
             'Param', kwd, ('rule', 'initialize'), NOTSET)
         self.domain = self._pop_from_kwargs('Param', kwd, ('domain', 'within'))
-        if self.domain is None:
-            self.domain = _ImplicitAny(owner=self, name='Any')
-
         self._validate      = kwd.pop('validate', None )
         self._mutable       = kwd.pop('mutable', Param.DefaultMutable )
         self._default_val   = kwd.pop('default', Param.NoValue )
@@ -284,6 +307,8 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
 
+        if self.domain is None:
+            self.domain = _ImplicitAny(owner=self, name='Any')
         # After IndexedComponent.__init__ so we can call is_indexed().
         self._rule = Initializer(_init,
                                  treat_sequences_as_mappings=self.is_indexed(),

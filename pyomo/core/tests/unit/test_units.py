@@ -12,6 +12,7 @@
 #
 import pickle
 
+from pyomo.common.errors import PyomoException
 import pyomo.common.unittest as unittest
 from pyomo.environ import (
     ConcreteModel, Var, Param, Set, Constraint, Objective, Expression,
@@ -160,7 +161,10 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual(kg.to_string(), 'kg')
 
         # check __nonzero__ / __bool__
-        self.assertEqual(bool(kg), True)
+        with self.assertRaisesRegex(
+                PyomoException, r"Cannot convert non-constant Pyomo "
+                r"numeric value \(kg\) to bool."):
+            bool(kg)
 
         # __call__ returns 1.0
         self.assertEqual(kg(), 1.0)

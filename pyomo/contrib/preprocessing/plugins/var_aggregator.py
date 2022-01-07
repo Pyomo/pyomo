@@ -265,16 +265,14 @@ class VariableAggregator(IsomorphicTransformation):
                 # bounds only if the value is not already fixed.
                 values_within_bounds = [
                     v.value for v in eq_set if (
-                        v.value is not None and
-                        ((z_agg.has_lb() and v.value >= value(z_agg.lb))
-                         or not z_agg.has_lb()) and
-                        ((z_agg.has_ub() and v.value <= value(z_agg.ub))
-                         or not z_agg.has_ub())
+                        v.value is not None
+                        and (not z_agg.has_lb() or v.value >= value(z_agg.lb))
+                        and (not z_agg.has_ub() or v.value <= value(z_agg.ub))
                     )]
-                num_vals = len(values_within_bounds)
-                z_agg.value = (
-                    sum(val for val in values_within_bounds) / num_vals) \
-                    if num_vals > 0 else None
+                if values_within_bounds:
+                    z_agg.set_value(sum(values_within_bounds) /
+                                    len(values_within_bounds),
+                                    skip_validation=True)
 
             processed_vars.update(eq_set)
 
@@ -312,5 +310,5 @@ class VariableAggregator(IsomorphicTransformation):
         for agg_var in datablock.z.itervalues():
             if not agg_var.stale:
                 for var in datablock.z_to_vars[agg_var]:
-                    var.value = agg_var.value
+                    var.set_value(agg_var.value,skip_validation=True)
                     var.stale = False

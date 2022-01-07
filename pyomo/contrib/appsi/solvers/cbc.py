@@ -286,7 +286,7 @@ class Cbc(PersistentSolver):
 
         if results.termination_condition == TerminationCondition.optimal and self.config.load_solution:
             for v_id, (v, val) in self._primal_sol.items():
-                v.value = val
+                v.set_value(val, skip_validation=True)
             if self._writer.get_active_objective() is None:
                 results.best_feasible_objective = None
             else:
@@ -341,7 +341,7 @@ class Cbc(PersistentSolver):
             cmd.extend(['-timeMode', 'elapsed'])
         for key, val in _check_and_escape_options():
             if val.strip() != '':
-                cmd.append('-'+key, val)
+                cmd.extend(['-'+key, val])
             else:
                 action_options.append('-'+key)
         cmd.extend(['-printingOptions', 'all'])

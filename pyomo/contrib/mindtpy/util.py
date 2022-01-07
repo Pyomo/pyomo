@@ -212,8 +212,8 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
               'MindtPy_utils.feas_opt.slack_var' not in v[1].name)
 
     model_vars, setpoint_vars = zip(*filter(var_filter,
-                                            zip(model.component_data_objects(Var),
-                                                setpoint_model.component_data_objects(Var))))
+                                            zip(model.MindtPy_utils.variable_list,
+                                                setpoint_model.MindtPy_utils.variable_list)))
     assert len(model_vars) == len(
         setpoint_vars), 'Trying to generate Squared Norm2 objective function for models with different number of variables'
 
@@ -241,9 +241,9 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: v.name != 'MindtPy_utils.objective_value' and
               'MindtPy_utils.feas_opt.slack_var' not in v.name)
-    model_vars = list(filter(var_filter, model.component_data_objects(Var)))
+    model_vars = list(filter(var_filter, model.MindtPy_utils.variable_list))
     setpoint_vars = list(
-        filter(var_filter, setpoint_model.component_data_objects(Var)))
+        filter(var_filter, setpoint_model.MindtPy_utils.variable_list))
     assert len(model_vars) == len(
         setpoint_vars), 'Trying to generate Norm1 objective function for models with different number of variables'
     model.MindtPy_utils.del_component('L1_obj')
@@ -280,9 +280,9 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: v.name != 'MindtPy_utils.objective_value' and
               'MindtPy_utils.feas_opt.slack_var' not in v.name)
-    model_vars = list(filter(var_filter, model.component_data_objects(Var)))
+    model_vars = list(filter(var_filter, model.MindtPy_utils.variable_list))
     setpoint_vars = list(
-        filter(var_filter, setpoint_model.component_data_objects(Var)))
+        filter(var_filter, setpoint_model.MindtPy_utils.variable_list))
     assert len(model_vars) == len(
         setpoint_vars), 'Trying to generate Norm Infinity objective function for models with different number of variables'
     model.MindtPy_utils.del_component('L_infinity_obj')
@@ -356,8 +356,8 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
                       'MindtPy_utils.feas_opt.slack_var' not in v[1].name)
 
             model_vars, setpoint_vars = zip(*filter(var_filter,
-                                                    zip(model.component_data_objects(Var),
-                                                        setpoint_model.component_data_objects(Var))))
+                                                    zip(model.MindtPy_utils.variable_list,
+                                                        setpoint_model.MindtPy_utils.variable_list)))
             assert len(model_vars) == len(
                 setpoint_vars), 'Trying to generate Squared Norm2 objective function for models with different number of variables'
             if config.sqp_lag_scaling_coef is None:
@@ -392,9 +392,9 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
 
     var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: True)
-    model_vars = list(filter(var_filter, model.component_data_objects(Var)))
+    model_vars = list(filter(var_filter, model.MindtPy_utils.variable_list))
     setpoint_vars = list(
-        filter(var_filter, setpoint_model.component_data_objects(Var)))
+        filter(var_filter, setpoint_model.MindtPy_utils.variable_list))
     assert len(model_vars) == len(
         setpoint_vars), 'Trying to generate Norm1 norm constraint for models with different number of variables'
     norm_constraint_blk = model.MindtPy_utils.L1_norm_constraint = Block()
@@ -541,16 +541,15 @@ def get_integer_solution(model, string_zero=False):
             whether to store zero as string
     """
     temp = []
-    for var in model.component_data_objects(ctype=Var):
-        if var.is_integer():
-            if string_zero:
-                if var.value == 0:
+    for var in model.MindtPy_utils.discrete_variable_list:
+        if string_zero:
+            if var.value == 0:
                     # In cplex, negative zero is different from zero, so we use string to denote this(Only in singletree)
-                    temp.append(str(var.value))
-                else:
-                    temp.append(int(round(var.value)))
+                temp.append(str(var.value))
             else:
                 temp.append(int(round(var.value)))
+        else:
+            temp.append(int(round(var.value)))
     return tuple(temp)
 
 
@@ -648,21 +647,27 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
                 solver_model.setParam(
                     gurobipy.GRB.Param.SolutionNumber, solution_name)
                 var_val = var_map[v_from].Xn
+            # NOTE: PEP 2180 changes the var behavior so that domain /
+            # bounds violations no longer generate exceptions (and
+            # instead log warnings).  This means that the following will
+            # always succeed and the ValueError should never be raised.
             v_to.set_value(var_val)
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
-            if ignore_integrality \
-                    and v_to.is_integer():
-                v_to.value = var_val
-            elif v_to.is_integer() and (abs(var_val - rounded_val) <= config.integer_tolerance):
+            if ignore_integrality and v_to.is_integer():
+                v_to.set_value(var_val, skip_validation=True)
+            elif v_to.is_integer() and (
+                    abs(var_val - rounded_val) <= config.integer_tolerance):
                 v_to.set_value(rounded_val)
             elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
                 v_to.set_value(0)
             else:
                 config.logger.error(
-                    'Unknown validation domain error setting variable %s', (v_to.name,))
+                    'Unknown validation domain error setting variable %s' %
+                    (v_to.name,)
+                )
                 raise
 
 

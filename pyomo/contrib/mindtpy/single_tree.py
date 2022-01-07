@@ -276,7 +276,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             for var, val in zip(MindtPy.variable_list, var_values):
                 if not var.is_binary():
                     continue
-                var.value = val
+                var.set_value(val, skip_validation=True)
 
             # check to make sure that binary variables are all 0 or 1
             for v in binary_vars:
@@ -423,7 +423,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         config.logger.info('NLP subproblem was locally infeasible.')
         solve_data.nlp_infeasible_counter += 1
         if config.calculate_dual:
-            for c in fixed_nlp.component_data_objects(ctype=Constraint):
+            for c in fixed_nlp.MindtPy_utils.constraint_list:
                 rhs = ((0 if c.upper is None else c.upper)
                        + (0 if c.lower is None else c.lower))
                 sign_adjust = 1 if c.upper is None else -1

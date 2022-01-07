@@ -24,13 +24,14 @@ import sys
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (Set, RangeSet, Param, ConcreteModel,
-                           AbstractModel, Constraint, Var,
-                           NonNegativeIntegers, Integers,
-                           NonNegativeReals, Boolean, Reals, Any, display,
-                           value, set_options, sin, cos, tan, log, log10,
-                           exp, sqrt, ceil, floor, asin, acos, atan, sinh,
-                           cosh, tanh, asinh, acosh, atanh)
+from pyomo.environ import (
+    Set, RangeSet, Param, ConcreteModel, AbstractModel, Block, Constraint, Var,
+    NonNegativeIntegers, Integers, NonNegativeReals, Boolean, Reals, Any,
+    display, value, set_options,
+    sin, cos, tan, log, log10, exp, sqrt, ceil, floor, asin, acos, atan,
+    sinh, cosh, tanh, asinh, acosh, atanh,
+)
+from pyomo.common.errors import PyomoException
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.param import _ParamData 
@@ -1128,28 +1129,26 @@ class TestParamConditional(unittest.TestCase):
     def tearDown(self):
         self.model = None
 
-    def test1(self):
+    def test_if_const_param_1value(self):
         self.model.p = Param(initialize=1.0)
-        try:
+        with self.assertRaisesRegex(
+                PyomoException, r"Cannot convert non-constant Pyomo "
+                r"numeric value \(p\) to bool"):
             if self.model.p:
                 pass
-            self.fail("Expected ValueError because parameter was undefined")
-        except ValueError:
-            pass
         instance = self.model.create_instance()
         if instance.p:
             pass
         else:
             self.fail("Wrong condition value")
 
-    def test2(self):
+    def test_if_const_param_0value(self):
         self.model.p = Param(initialize=0.0)
-        try:
+        with self.assertRaisesRegex(
+                PyomoException, r"Cannot convert non-constant Pyomo "
+                r"numeric value \(p\) to bool"):
             if self.model.p:
                 pass
-            self.fail("Expected ValueError because parameter was undefined")
-        except ValueError:
-            pass
         instance = self.model.create_instance()
         if instance.p:
             self.fail("Wrong condition value")
@@ -1412,12 +1411,28 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
         with LoggingIntercept(log, 'pyomo.core'):
             m.p = 'a'
         self.assertIn(
-            "DEPRECATED: The default domain for Param objects is 'Any'",
-            log.getvalue())
+            "The default domain for Param objects is 'Any'",
+            log.getvalue().replace('\n', ' '))
         self.assertIn(
-            "domain of this Param (p) to be 'Any'",
-            log.getvalue())
+            "DEPRECATED: Param 'p' declared with an implicit domain of 'Any'",
+            log.getvalue().replace('\n', ' '))
         self.assertEqual(value(m.p), 'a')
+
+        m.b = Block()
+        m.b.q = Param()
+        buf = StringIO()
+        m.b.q.pprint(ostream=buf)
+        self.assertEqual(
+            buf.getvalue().strip(),
+            """
+q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
+    Key : Value
+            """.strip())
+
+        i = m.clone()
+        self.assertIsNot(m.p.domain, i.p.domain)
+        self.assertIs(m.p.domain._owner(), m.p)
+        self.assertIs(i.p.domain._owner(), i.p)
 
     @unittest.skipUnless(pint_available, "units test requires pint module")
     def test_set_value_units(self):

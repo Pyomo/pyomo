@@ -14,8 +14,11 @@ import logging
 import math
 import sys
 import weakref
+from typing import overload
 
-from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
+from pyomo.common.deprecation import (
+    deprecated, deprecation_warning, RenamedClass,
+)
 from pyomo.common.errors import DeveloperError, PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
@@ -34,7 +37,7 @@ from pyomo.core.base.range import (
     RangeDifferenceError,
 )
 from pyomo.core.base.component import (
-    Component, ComponentData, ModelComponentFactory,
+    _ComponentBase, Component, ComponentData, ModelComponentFactory,
 )
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
@@ -108,17 +111,18 @@ implemented) through Mixin classes.
 def process_setarg(arg):
     if isinstance(arg, _SetDataBase):
         return arg
-    elif isinstance(arg, IndexedComponent) and arg.is_indexed():
-        raise TypeError("Cannot apply a Set operator to an "
-                        "indexed %s component (%s)"
-                        % (arg.ctype.__name__, arg.name,))
-    elif isinstance(arg, Component):
-        raise TypeError("Cannot apply a Set operator to a non-Set "
-                        "%s component (%s)"
-                        % (arg.__class__.__name__, arg.name,))
-    elif isinstance(arg, ComponentData):
-        raise TypeError("Cannot apply a Set operator to a non-Set "
-                        "component data (%s)" % (arg.name,))
+    elif isinstance(arg, _ComponentBase):
+        if isinstance(arg, IndexedComponent) and arg.is_indexed():
+            raise TypeError("Cannot apply a Set operator to an "
+                            "indexed %s component (%s)"
+                            % (arg.ctype.__name__, arg.name,))
+        if isinstance(arg, Component):
+            raise TypeError("Cannot apply a Set operator to a non-Set "
+                            "%s component (%s)"
+                            % (arg.__class__.__name__, arg.name,))
+        if isinstance(arg, ComponentData):
+            raise TypeError("Cannot apply a Set operator to a non-Set "
+                            "component data (%s)" % (arg.name,))
 
     # DEPRECATED: This functionality has never been documented,
     # and I don't know of a use of it in the wild.
@@ -165,6 +169,15 @@ def process_setarg(arg):
     elif inspect.isfunction(arg):
         _ordered = True
         _defer_construct = True
+    elif not hasattr(arg, '__contains__'):
+        raise TypeError(
+            "Cannot create a Set from data that does not support "
+            "__contains__.  Expected set-like object supporting "
+            "collections.abc.Collection interface, but received '%s'."
+            % (type(arg).__name__,))
+    elif arg.__class__ is type:
+        # This catches the (deprecated) RealSet API.
+        return process_setarg(arg())
     else:
         arg = SetOf(arg)
         _ordered = arg.isordered()
@@ -346,7 +359,7 @@ class BoundsInitializer(InitializerBase):
                 val = (1, val[0], self.default_step)
             elif len(val) == 0:
                 val = (None, None, self.default_step)
-        ans = RangeSet(*tuple(val))
+        ans = RangeSet(*val)
         # We don't need to construct here, as the RangeSet will
         # automatically construct itself if it can
         #ans.construct()
@@ -1370,6 +1383,7 @@ class _ScalarOrderedSetMixin(object):
 
 class _OrderedSetMixin(object):
     __slots__ = ()
+    _valid_getitem_keys = {None, (None,), Ellipsis}
 
     def at(self, index):
         raise DeveloperError("Derived ordered set class (%s) failed to "
@@ -1380,8 +1394,15 @@ class _OrderedSetMixin(object):
                              "implement ord" % (type(self).__name__,))
 
     def __getitem__(self, key):
-        if key is None and not self.is_indexed():
-            return self
+        # If key looks like the valid key for UnindexedComponent_set, or
+        # is an Ellipsis/slice (because someone is generating a
+        # component slice), then treat this like a regular Scalar
+        # component and defer to the IndexedComponent implementation.
+        # In any other case, defer to the deprecated OrderedScalarSet
+        # functionality
+        if not self.is_indexed() and (
+                key in self._valid_getitem_keys or type(key) is slice):
+            return super().__getitem__(key)
         deprecation_warning(
             "Using __getitem__ to return a set value from its (ordered) "
             "position is deprecated.  Please use at()",
@@ -1768,12 +1789,6 @@ class Set(IndexedComponent):
 
     Parameters
     ----------
-    name : str, optional
-        The name of the set
-
-    doc : str, optional
-        A text string describing this component
-
     initialize : initializer(iterable), optional
         The initial values to store in the Set when it is
         constructed.  Values passed to ``initialize`` may be
@@ -1822,6 +1837,12 @@ class Set(IndexedComponent):
         and returns True if the data belongs in the set.  Set will
         raise a ``ValueError`` for any values where `validate`
         returns False.
+
+    name : str, optional
+        The name of the set
+
+    doc : str, optional
+        A text string describing this component
 
     Notes
     -----
@@ -1896,6 +1917,11 @@ class Set(IndexedComponent):
             else:
                 newObj._ComponentDataClass = _FiniteSetData
             return newObj
+
+    @overload
+    def __init__(self, *indexes, initialize=None, dimen=UnknownSetDimen,
+                 ordered=InsertionOrder, within=None, domain=None,
+                 bounds=None, filter=None, validate=None, name=None, doc=None): ...
 
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', Set)
@@ -2284,7 +2310,7 @@ class SetOf(_SetData, Component):
         if cls is not SetOf:
             return super(SetOf, cls).__new__(cls)
         reference, = args
-        if isinstance(reference, _SetData):
+        if isinstance(reference, (_SetData, GlobalSetBase)):
             if reference.isfinite():
                 if reference.isordered():
                     return super(SetOf, cls).__new__(OrderedSetOf)
@@ -2385,7 +2411,7 @@ class FiniteSetOf(_FiniteSetMixin, SetOf):
 
 class UnorderedSetOf(metaclass=RenamedClass):
     __renamed__new_class__ = FiniteSetOf
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.2'
 
 
 class OrderedSetOf(_ScalarOrderedSetMixin, _OrderedSetMixin, FiniteSetOf):
@@ -2657,6 +2683,11 @@ class RangeSet(Component):
         for every data member of the set, and if it returns False, a
         ValueError will be raised.
 
+    name: str, optional
+        Name for this component.
+
+    doc: str, optional
+        Text describing this component.        
     """
 
     def __new__(cls, *args, **kwds):
@@ -2697,6 +2728,20 @@ class RangeSet(Component):
         else:
             return super(RangeSet, cls).__new__(AbstractInfiniteScalarRangeSet)
 
+    # `start`, `end`, `step` in `*args` are positional-only that cannot be filled with keywords.
+    # But positional-only params syntax are not supported before python 3.8.
+    # To emphasize they are positional-only, an underscore is added before their name.
+    @overload
+    def __init__(self, _end, *, finite=None, ranges=(), bounds=None,
+                 filter=None, validate=None, name=None, doc=None): ...
+
+    @overload
+    def __init__(self, _start, _end, _step=1, *, finite=None, ranges=(), bounds=None,
+                 filter=None, validate=None, name=None, doc=None): ...
+
+    @overload
+    def __init__(self, *, finite=None, ranges=(), bounds=None,
+                 filter=None, validate=None, name=None, doc=None): ...
 
     def __init__(self, *args, **kwds):
         # Finite was processed by __new__
@@ -3953,7 +3998,7 @@ class _AnySet(_SetData, Set):
         Set.__init__(self, **kwds)
 
     def get(self, val, default=None):
-        return val
+        return val if val is not Ellipsis else default
 
     def ranges(self):
         yield AnyRange()
@@ -4237,6 +4282,15 @@ DeclareGlobalSet(RangeSet(
 #     doc='A global Pyomo Set for unindexed (scalar) IndexedComponent objects',
 # ), globals())
 
+
+real_global_set_ids = set(id(_) for _ in (
+    Reals, NonNegativeReals, NonPositiveReals, NegativeReals, PositiveReals,
+    PercentFraction, UnitInterval,
+))
+integer_global_set_ids = set(id(_) for _ in (
+    Integers, NonNegativeIntegers, NonPositiveIntegers, NegativeIntegers,
+    PositiveIntegers, Binary,
+))
 
 RealSet = Reals.__class__
 IntegerSet = Integers.__class__

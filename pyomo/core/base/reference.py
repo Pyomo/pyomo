@@ -367,7 +367,7 @@ class _ReferenceDict_mapping(UserDict):
 class _ReferenceSet(collections_Set):
     """A set-like object whose values are defined by a slice.
 
-    This implements a dict-like object whose members are defined by a
+    This implements a set-like object whose members are defined by a
     component slice (:py:class:`IndexedComponent_slice`).
     :py:class:`_ReferenceSet` differs from the
     :py:class:`_ReferenceDict` above in that it looks in the underlying

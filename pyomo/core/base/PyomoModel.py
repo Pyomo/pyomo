@@ -427,7 +427,7 @@ class ModelSolutions(object):
         for vdata in instance.component_data_objects(Var):
             id_ = id(vdata)
             if vdata.fixed:
-                tmp[id_] = (weakref_ref(vdata), {'Value':value(vdata)})
+                tmp[id_] = (weakref_ref(vdata), {'Value': vdata.value})
             elif (default_variable_value is not None) and \
                  (smap_id is not None) and \
                  (id_ in smap.byObject) and \
@@ -520,7 +520,7 @@ class ModelSolutions(object):
                                        str(comparison_tolerance_for_fixed_vars),
                                        str(vdata.value)))
 
-            vdata.value = val
+            vdata.set_value(val, skip_validation=True)
             vdata.stale = False
 
             for _attr_key, attr_value in entry.items():

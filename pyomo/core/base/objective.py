@@ -19,6 +19,7 @@ __all__ = ('Objective',
 import sys
 import logging
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import RenamedClass
@@ -213,10 +214,10 @@ class Objective(ActiveIndexedComponent):
             A function that is used to construct objective expressions
         sense
             Indicate whether minimizing (the default) or maximizing
-        doc
-            A text string describing this component
         name
             A name for this component
+        doc
+            A text string describing this component
 
     Public class attributes:
         doc
@@ -258,6 +259,10 @@ class Objective(ActiveIndexedComponent):
             return ScalarObjective.__new__(ScalarObjective)
         else:
             return IndexedObjective.__new__(IndexedObjective)
+
+    @overload
+    def __init__(self, *indexes, expr=None, rule=None, sense=minimize,
+                 name=None, doc=None): ...
 
     def __init__(self, *args, **kwargs):
         _sense = kwargs.pop('sense', minimize)
@@ -546,6 +551,7 @@ class ObjectiveList(IndexedObjective):
             raise ValueError(
                 "ObjectiveList does not accept the 'expr' keyword")
         _rule = kwargs.pop('rule', None)
+        self._starting_index = kwargs.pop('starting_index', 1)
 
         args = (Set(dimen=1),)
         super().__init__(*args, **kwargs)
@@ -555,7 +561,9 @@ class ObjectiveList(IndexedObjective):
         # after the base class is set up so that is_indexed() is
         # reliable.
         if self.rule is not None and type(self.rule) is IndexedCallInitializer:
-            self.rule = CountedCallInitializer(self, self.rule)
+            self.rule = CountedCallInitializer(
+                self, self.rule, self._starting_index
+            )
 
     def construct(self, data=None):
         """
@@ -582,7 +590,7 @@ class ObjectiveList(IndexedObjective):
 
     def add(self, expr, sense=minimize):
         """Add an objective to the list."""
-        next_idx = len(self._index) + 1
+        next_idx = len(self._index) + self._starting_index
         self._index.add(next_idx)
         ans = self.__setitem__(next_idx, expr)
         if ans is not None:

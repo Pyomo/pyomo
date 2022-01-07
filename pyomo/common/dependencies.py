@@ -46,6 +46,8 @@ class ModuleUnavailable(object):
         A string to add to the message documenting the Exception
         raised when the module failed to import.
 
+    package: str
+        The module name that originally attempted the import
     """
 
     # We need special handling for Sphinx here, as it will look for the
@@ -53,9 +55,11 @@ class ModuleUnavailable(object):
     # that to raise an AttributeError and not a DeferredImportError
     _getattr_raises_attributeerror = {'__sphinx_mock__',}
 
-    def __init__(self, name, message, version_error, import_error):
+    def __init__(self, name, message, version_error, import_error, package):
         self.__name__ = name
-        self._moduleunavailable_info_ = (message, version_error, import_error)
+        self._moduleunavailable_info_ = (
+            message, version_error, import_error, package,
+        )
 
     def __getattr__(self, attr):
         if attr in ModuleUnavailable._getattr_raises_attributeerror:
@@ -64,14 +68,17 @@ class ModuleUnavailable(object):
         raise DeferredImportError(self._moduleunavailable_message())
 
     def _moduleunavailable_message(self, msg=None):
-        _err, _ver, _imp = self._moduleunavailable_info_
+        _err, _ver, _imp, _package = self._moduleunavailable_info_
         if msg is None:
             msg = _err
         if _imp:
             if not msg or not str(msg):
+                _pkg_str = _package.split('.')[0].capitalize()
+                if _pkg_str:
+                    _pkg_str += ' '
                 msg = (
-                    "The %s module (an optional Pyomo dependency) " \
-                    "failed to import: %s" % (self.__name__, _imp)
+                    "The %s module (an optional %sdependency) "
+                    "failed to import: %s" % (self.__name__, _pkg_str, _imp)
                 )
             else:
                 msg = "%s (import raised %s)" % (msg, _imp,)
@@ -194,15 +201,16 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
     def resolve(self):
         # Only attempt the import once, then cache some form of result
         if self._module is None:
+            package = self._original_globals.get('__name__', '')
             try:
-                self._module, self._available = attempt_import(
+                self._module, self._available = _perform_import(
                     name=self._names[0],
                     error_message=self._error_message,
-                    catch_exceptions=self._catch_exceptions,
                     minimum_version=self._minimum_version,
                     callback=self._callback,
                     importer=self._importer,
-                    defer_check=False,
+                    catch_exceptions=self._catch_exceptions,
+                    package=package,
                 )
             except Exception as e:
                 # make sure that we cache the result
@@ -211,6 +219,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                     "Exception raised when importing %s" % (self._names[0],),
                     None,
                     "%s: %s" % (type(e).__name__, e),
+                    package,
                 )
                 self._available = False
                 raise
@@ -283,17 +292,23 @@ def check_min_version(module, min_version):
             module = indicator._module
         else:
             return False
-    try:
-        from packaging import version as _version
-        _parser = _version.parse
-    except ImportError:
-        # pkg_resources is an order of magnitude slower to import than
-        # packaging.  Only use it if the preferred (but optional)
-        # packaging library is not present
-        from pkg_resources import parse_version as _parser
+    if check_min_version._parser is None:
+        try:
+            from packaging import version as _version
+            _parser = _version.parse
+        except ImportError:
+            # pkg_resources is an order of magnitude slower to import than
+            # packaging.  Only use it if the preferred (but optional)
+            # packaging library is not present
+            from pkg_resources import parse_version as _parser
+        check_min_version._parser = _parser
+    else:
+        _parser = check_min_version._parser
 
     version = getattr(module, '__version__', '0.0.0')
     return _parser(min_version) <= _parser(version)
+
+check_min_version._parser = None
 
 
 def attempt_import(name, error_message=None, only_catch_importerror=None,
@@ -325,7 +340,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
        ...     numpy_available = True
        ... except ImportError as e:
        ...     numpy = ModuleUnavailable('numpy', 'Numpy is not available',
-       ...                               '', str(e))
+       ...                               '', str(e), globals()['__name__'])
        ...     numpy_available = False
 
     The import can be "deferred" until the first time the code either
@@ -389,7 +404,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         ``deferred_submodules=['pyplot', 'pylab']`` for ``matplotlib``.
 
     catch_exceptions: Iterable[Exception], optional
-        If provide, this is the list of exceptions that will be caught
+        If provided, this is the list of exceptions that will be caught
         when importing the target module, resulting in
         ``attempt_import`` returning a :py:class:`ModuleUnavailable`
         instance.  The default is to only catch :py:class:`ImportError`.
@@ -439,8 +454,8 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
             # Ensures all names begin with '.'
             #
             # Fill in any missing submodules.  For example, if a user
-            # provides {'foo.bar.baz': ['bz']}, then expand the dict to
-            # {'.foo': None, '.foo.bar': None, '.foo.bar.baz': ['bz']}
+            # provides ['foo.bar.baz'], then expand the list to
+            # ['.foo', '.foo.bar', '.foo.bar.baz']
             deferred = []
             for _submod in deferred_submodules:
                 if _submod[0] != '.':
@@ -470,6 +485,19 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         raise ValueError(
             "deferred_submodules is only valid if defer_check==True")
 
+    return _perform_import(
+        name=name,
+        error_message=error_message,
+        minimum_version=minimum_version,
+        callback=callback,
+        importer=importer,
+        catch_exceptions=catch_exceptions,
+        package=inspect.currentframe().f_back.f_globals.get('__name__', ''),
+    )
+
+
+def _perform_import(name, error_message, minimum_version, callback,
+                    importer, catch_exceptions, package):
     import_error = None
     version_error = None
     try:
@@ -490,7 +518,9 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
     except catch_exceptions as e:
         import_error = "%s: %s" % (type(e).__name__, e)
 
-    module = ModuleUnavailable(name, error_message, version_error, import_error)
+    module = ModuleUnavailable(
+        name, error_message, version_error, import_error, package,
+    )
     if callback is not None:
         callback(module, False)
     return module, False

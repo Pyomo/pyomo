@@ -10,7 +10,8 @@
 
 import logging
 
-import numpy as np
+from pyomo.common.dependencies import numpy as np
+
 from math import inf
 from pyomo.common.collections import ComponentSet
 from pyomo.common.modeling import unique_component_name
@@ -54,16 +55,16 @@ class ReplaceEFVisitor(EXPR.ExpressionReplacementVisitor):
         # TODO: support more than PythonCallbackFunctions
         assert isinstance(node._fcn, PythonCallbackFunction)
         #
-        # Note: the first argument to PythonCallbackFunction is the
+        # Note: the last argument to PythonCallbackFunction is the
         # function ID.  Since we are going to complain about constant
-        # parameters, we need to skip the first argument when processing
+        # parameters, we need to skip the last argument when processing
         # the argument list.  This is really not good: we should allow
         # for constant arguments to the functions, and we should relax
         # the restriction that the external functions implement the
         # PythonCallbackFunction API (that restriction leads unfortunate
         # things later; i.e., accessing the private _fcn attribute
         # below).
-        for arg in values[1][1:]:
+        for arg in values[1][:-1]:
             if type(arg) in nonpyomo_leaf_types or arg.is_fixed():
                 # We currently do not allow constants or parameters for
                 # the external functions.

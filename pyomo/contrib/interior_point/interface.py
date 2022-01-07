@@ -609,7 +609,7 @@ class InteriorPointInterface(BaseInteriorPointInterface):
         pyomo_variables = self._nlp.get_pyomo_variables()
         primals = self._nlp.get_primals()
         for i, v in enumerate(pyomo_variables):
-            v.value = primals[i]
+            v.set_value(primals[i], skip_validation=True)
 
     def pyomo_model(self):
         return self._nlp.pyomo_model()

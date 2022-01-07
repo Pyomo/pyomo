@@ -233,7 +233,8 @@ def add_bounds_for_uncertain_parameters(model, config):
     bounding_model.util = Block()
     bounding_model.util.uncertain_param_vars = IndexedVar(model.util.uncertain_param_vars.index_set())
     for tup in model.util.uncertain_param_vars.items():
-        bounding_model.util.uncertain_param_vars[tup[0]].value = tup[1].value
+        bounding_model.util.uncertain_param_vars[tup[0]].set_value(
+            tup[1].value, skip_validation=True)
 
     bounding_model.add_component("uncertainty_set_constraint",
                                  config.uncertainty_set.set_as_constraint(
@@ -266,19 +267,55 @@ def add_bounds_for_uncertain_parameters(model, config):
 
 
 def transform_to_standard_form(model):
-    '''
-    Make all inequality constraints of the form g(x) <= 0
-    :param model: the optimization model
-    :return: void
-    '''
-    for constraint in model.component_data_objects(Constraint, descend_into=True, active=True):
-        if not constraint.equality:
-            if constraint.lower is not None:
-                temp = constraint
-                model.del_component(constraint)
-                model.add_component(temp.name, Constraint(expr= - (temp.body) + (temp.lower) <= 0 ))
+    """
+    Recast all model inequality constraints of the form `a <= g(v)` (`<= b`)
+    to the 'standard' form `a - g(v) <= 0` (and `g(v) - b <= 0`),
+    in which `v` denotes all model variables and `a` and `b` are
+    contingent on model parameters.
 
-    return
+    Parameters
+    ----------
+    model : ConcreteModel
+        The model to search for constraints. This will descend into all
+        active Blocks and sub-Blocks as well.
+
+    Note
+    ----
+    If `a` and `b` are identical and the constraint is not classified as an
+    equality (i.e. the `equality` attribute of the constraint object
+    is `False`), then the constraint is recast to the equality `g(v) == a`.
+    """
+    # Note: because we will be adding / modifying the number of
+    # constraints, we want to resolve the generator to a list before
+    # starting.
+    cons = list(model.component_data_objects(
+        Constraint, descend_into=True, active=True))
+    for con in cons:
+        if not con.equality:
+            has_lb = con.lower is not None
+            has_ub = con.upper is not None
+
+            if has_lb and has_ub:
+                if con.lower is con.upper:
+                    # recast as equality Constraint
+                    con.set_value(con.lower == con.body)
+                else:
+                    # range inequality; split into two Constraints.
+                    uniq_name = unique_component_name(model, con.name + '_lb')
+                    model.add_component(
+                        uniq_name,
+                        Constraint(expr=con.lower - con.body <= 0)
+                    )
+                    con.set_value(con.body - con.upper <= 0)
+            elif has_lb:
+                # not in standard form; recast.
+                con.set_value(con.lower - con.body <= 0)
+            elif has_ub:
+                # move upper bound to body.
+                con.set_value(con.body - con.upper <= 0)
+            else:
+                # unbounded constraint: deactivate
+                con.deactivate()
 
 
 def get_vars_from_component(block, ctype):
@@ -684,7 +721,7 @@ def add_decision_rule_variables(model_data, config):
                         bounds=bounds,
                         domain=Reals))#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
             # === For affine drs, the [0]th constant term is initialized to the control variable values, all other terms are initialized to 0
-            getattr(model_data.working_model, "decision_rule_var_" + str(i))[0].value = value(second_stage_variables[i])
+            getattr(model_data.working_model, "decision_rule_var_" + str(i))[0].set_value(value(second_stage_variables[i]), skip_validation=True)
             first_stage_variables.extend(list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values()))
             decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
     elif degree == 2 or degree == 3 or degree == 4:
@@ -879,7 +916,7 @@ def load_final_solution(model_data, master_soln, config):
     varMap = list(zip(src_vars, local_vars))
 
     for src, local in varMap:
-        src.value = local.value
+        src.set_value(local.value, skip_validation=True)
 
     return
 
