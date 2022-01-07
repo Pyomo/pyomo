@@ -13,6 +13,18 @@ except AttributeError:
 
 
 class IntervalTestBase(object):
+    """
+    These tests are set up weird, but it is for a good reason.
+    The interval arithmetic code is duplicated in pyomo.contrib.appsi for
+    improved performance. We want to keep this version because
+    it does not require building an extension. However, when we
+    fix a bug in one module, we want to ensure we fix that bug
+    in the other module. Therefore, we use this base class
+    for testing both modules. The only difference in the
+    derived classes is in the self.add, self.sub,
+    self.mul, etc. atrributes.
+    """
+
     def setUp(self):
         if numpy_available:
             np.random.seed(0)

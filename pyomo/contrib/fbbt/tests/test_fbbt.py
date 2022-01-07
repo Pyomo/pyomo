@@ -26,6 +26,17 @@ class DummyExpr(ProductExpression):
 
 
 class FbbtTestBase(object):
+    """
+    These tests are set up weird, but it is for a good reason.
+    The FBBT code is duplicated in pyomo.contrib.appsi for
+    improved performance. We want to keep this version because
+    it does not require building an extension. However, when we
+    fix a bug in one module, we want to ensure we fix that bug
+    in the other module. Therefore, we use this base class
+    for testing both modules. The only difference in the
+    derived classes is self.tightener attribute.
+    """
+
     def test_add(self):
         if not numpy_available:
             raise unittest.SkipTest('Numpy is not available')
