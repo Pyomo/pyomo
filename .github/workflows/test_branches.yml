@@ -335,7 +335,7 @@ jobs:
             echo ""
             echo "$HIGHS_DIR"
             ls -l $HIGHS_DIR
-            cd highs
+            cd HIGHS-1.1.1
             ls -l
             mkdir build
             cd build
