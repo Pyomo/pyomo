@@ -187,7 +187,7 @@ def create_model_dae_measure(scena, const=False, controls={0: 300, 0.125: 300, 0
     def obj_rule(m):
         return 0
     
-    m.Obj = Objective(rule=obj_rule, sense=maximize)
+    m.obj = Objective(rule=obj_rule, sense=maximize)
         
         
     # Control time
@@ -397,7 +397,7 @@ def create_model_dae(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300
     def obj_rule(m):
         return 0
     
-    m.Obj = Objective(rule=obj_rule, sense=maximize)
+    #m.Obj = Objective(rule=obj_rule, sense=maximize)
         
         
     # Control time
@@ -605,7 +605,7 @@ def create_model_dae_const(scena, const=True, controls={0: 300}, t_range=[0.0,1]
     def obj_rule(m):
         return 0
     
-    m.Obj = Objective(rule=obj_rule, sense=maximize)
+    #m.Obj = Objective(rule=obj_rule, sense=maximize)
         
         
     # Control time

@@ -588,7 +588,7 @@ def add_variables(m,tf=3200, timesteps=None, start=0):
         m.dTdt = DerivativeVar(m.temp, wrt=m.t)
         
         # add external heat
-        m.Q = Var(m.t, initialize=1, within=Reals)
+        m.Q = Var(m.t, initialize=1, bounds=(0,80000), within=Reals)
 
         # W/m3/K, value 0.2839 from [Dowling, 2012]
         # Estimated value 1.4E7 W/m3/K (DOE run2)
@@ -3150,3 +3150,293 @@ def get_fco2(con_s, vel_s):
         #RHS: mol/m3 * cm/s * m2 * 60*1000/100
         FCO2[i] = (outlet[i]*outlet_velo[i]*3.1415926*rbed*rbed*600)
     return FCO2
+
+def extract3_v2(m,result):
+    ''' 
+    Extract results from Pyomo model for brute force DoE problem. 
+    Compared to extract2: less options kept, add the design variable values 
+    
+    Arguments:
+        m: the model
+    
+    Return: a single pandas dataframe storing all results
+    '''
+    nTime = len(m.t)
+    nGrid = len(m.zgrid)
+    n = nTime*nGrid
+    
+    ### Variables to be extracted
+    
+    # Two 3D variables, for COMPS(N2, CO2, He)
+    
+    FCO2_1, FCO2_2, FCO2_3, FCO2_4 = extract2d(m, m.FCO2)
+    
+    FCO21 = np.reshape(FCO2_1, n)
+    FCO22 = np.reshape(FCO2_2, n)
+    FCO23 = np.reshape(FCO2_3, n)
+    FCO24 = np.reshape(FCO2_4, n)
+    
+    C_N2_1, C_N2_2, C_N2_3, C_N2_4 = extract3d(m,m.C,'N2')
+    C_CO2_1, C_CO2_2, C_CO2_3, C_CO2_4 = extract3d(m,m.C,'CO2')
+    
+    C_N21 = np.reshape(C_N2_1, n)
+    C_CO21 = np.reshape(C_CO2_1, n)
+    
+    C_N22 = np.reshape(C_N2_2, n)
+    C_CO22 = np.reshape(C_CO2_2, n)
+    
+    C_N23 = np.reshape(C_N2_3, n)
+    C_CO23 = np.reshape(C_CO2_3, n)
+    
+    C_N24 = np.reshape(C_N2_4, n)
+    C_CO24 = np.reshape(C_CO2_4, n)
+    
+    
+    dcdt_N2_1, dcdt_N2_2, dcdt_N2_3, dcdt_N2_4 = extract3d(m,m.dCdt,'N2')
+    dcdt_CO2_1, dcdt_CO2_2, dcdt_CO2_3, dcdt_CO2_4 = extract3d(m,m.dCdt,'CO2')
+    
+    dcdt_N21 = np.reshape(dcdt_N2_1,n)
+    dcdt_CO21 = np.reshape(dcdt_CO2_1,n)
+    
+    dcdt_N22 = np.reshape(dcdt_N2_2,n)
+    dcdt_CO22 = np.reshape(dcdt_CO2_2,n)
+    
+    dcdt_N23 = np.reshape(dcdt_N2_3,n)
+    dcdt_CO23 = np.reshape(dcdt_CO2_3,n)
+    
+    dcdt_N24 = np.reshape(dcdt_N2_4,n)
+    dcdt_CO24 = np.reshape(dcdt_CO2_4,n)
+    
+    # Three 2D variables
+    vel_1, vel_2, vel_3, vel_4 = extract2d(m, m.v)
+    
+    vel1 = np.reshape(vel_1, n)
+    vel2 = np.reshape(vel_2,n)
+    vel3 = np.reshape(vel_3,n)
+    vel4 = np.reshape(vel_4,n)
+    
+    P_1, P_2, P_3, P_4 = extract2d(m,m.P)
+    P1 = np.reshape(P_1,n)
+    P2 = np.reshape(P_2, n)
+    P3 = np.reshape(P_3, n)
+    P4 = np.reshape(P_4, n)
+    
+    total_den_1, total_den_2, total_den_3, total_den_4 = extract2d(m,m.total_den)
+    total_den1 = np.reshape(total_den_1, n)
+    total_den2 = np.reshape(total_den_2, n)
+    total_den3 = np.reshape(total_den_3, n)
+    total_den4 = np.reshape(total_den_4, n)
+    
+    if m.energy:
+        T_1, T_2, T_3, T_4 = extract2d(m,m.temp)
+        T1 = np.reshape(T_1, n)
+        T2 = np.reshape(T_2, n)
+        T3 = np.reshape(T_3, n)
+        T4 = np.reshape(T_4, n)
+        
+        dTdt_1, dTdt_2, dTdt_3, dTdt_4 = extract2d(m,m.dTdt)
+        dTdt1 = np.reshape(dTdt_1,n)
+        dTdt2 = np.reshape(dTdt_2,n)
+        dTdt3 = np.reshape(dTdt_3,n)
+        dTdt4 = np.reshape(dTdt_4,n)
+        
+        nplin_1, nplin_2, nplin_3, nplin_4 = extract2d(m, m.nplin)
+        nplin1 = np.reshape(nplin_1, n)
+        nplin2 = np.reshape(nplin_2, n)
+        nplin3 = np.reshape(nplin_3, n)
+        nplin4 = np.reshape(nplin_4, n)
+        
+    
+    # Seven 3D variables, for SCOMPS(CO2)
+    spp_1, spp_2, spp_3, spp_4 = extract3d(m, m.spp, 'CO2') 
+
+    spp1 = np.reshape(spp_1,n)
+    spp2 = np.reshape(spp_2,n)
+    spp3 = np.reshape(spp_3,n)
+    spp4 = np.reshape(spp_4,n)
+
+    nchemstar_1, nchemstar_2, nchemstar_3, nchemstar_4 = extract3d(m, m.nchemstar,'CO2')
+
+    nchemstar1 = np.reshape(nchemstar_1, n)
+    nchemstar2 = np.reshape(nchemstar_2, n)
+    nchemstar3 = np.reshape(nchemstar_3, n)
+    nchemstar4 = np.reshape(nchemstar_4, n)
+    
+
+    dnchemdt_1, dnchemdt_2, dnchemdt_3, dnchemdt_4 = extract3d(m, m.dnchemdt,'CO2')
+    dnchemdt1 = np.reshape(dnchemdt_1, n)
+    dnchemdt2 = np.reshape(dnchemdt_2, n)
+    dnchemdt3 = np.reshape(dnchemdt_3, n)
+    dnchemdt4 = np.reshape(dnchemdt_4, n)
+    
+
+    nchem_1, nchem_2, nchem_3, nchem_4 = extract3d(m, m.nchem,'CO2')
+    nchem1 = np.reshape(nchem_1, n)
+    nchem2 = np.reshape(nchem_2, n)
+    nchem3 = np.reshape(nchem_3, n)
+    nchem4 = np.reshape(nchem_4, n)
+
+
+    nphysstar_1, nphysstar_2, nphysstar_3, nphysstar_4 = extract3d(m, m.nphysstar,'CO2')
+    nphysstar1 = np.reshape(nphysstar_1, n)
+    nphysstar2 = np.reshape(nphysstar_2, n)
+    nphysstar3 = np.reshape(nphysstar_3, n)
+    nphysstar4 = np.reshape(nphysstar_4, n)
+
+    dnphysdt_1, dnphysdt_2, dnphysdt_3, dnphysdt_4 = extract3d(m, m.dnphysdt,'CO2')
+    dnphysdt1 = np.reshape(dnphysdt_1, n)
+    dnphysdt2 = np.reshape(dnphysdt_2, n)
+    dnphysdt3 = np.reshape(dnphysdt_3, n)
+    dnphysdt4 = np.reshape(dnphysdt_4, n)
+
+    nphys_1, nphys_2, nphys_3, nphys_4 = extract3d(m, m.nphys,'CO2')
+    nphys1 = np.reshape(nphys_1, n)
+    nphys2 = np.reshape(nphys_2, n)
+    nphys3 = np.reshape(nphys_3, n)
+    nphys4 = np.reshape(nphys_4, n)
+    
+    
+    if (result.solver.status == SolverStatus.ok) and (result.solver.termination_condition == TerminationCondition.optimal):
+        status = 'converged'
+    elif (result.solver.termination_condition==TerminationCondition.infeasible):
+        status = 'infeasible solution'
+    else: 
+        status = 'other'
+    
+
+    
+    # Meshgrid
+    x = []
+    for t in m.t:
+        x.append(value(t))
+    
+    y = []
+    for z in m.zgrid:
+        y.append(value(z))
+        
+    model_q = []
+    for i in x:
+        model_q.append(value(m.Q[i]))
+
+    
+    [X,Y] = np.meshgrid(x,y)
+    time = np.reshape(X,n)
+    space = np.reshape(Y,n)
+   
+    if m.chemsorb and m.physsorb:
+        if m.energy:
+            store = pd.DataFrame({'time': time,
+                              'position':space,
+                              #'T_inlet': m.temp_feed,
+                              #'y_inlet': m.yfeed,
+                              #'status': 0,
+                              #'fco2': FCO21, 
+                              'den_N2': C_N21,
+                              'den_CO2': C_CO21,
+                              'dcdt_N2':dcdt_N21,
+                              'dcdt_CO2':dcdt_CO21,
+                              'vel': vel1,
+                              'pressure':P1,
+                              'temp': T1,
+                              'dTdt': dTdt1, 
+                              'nplin': nplin1, 
+                              'total_den':total_den1,
+                              'solid_pres':spp1,
+                              'nchem_eq': nchemstar1,
+                              'nphys_eq': nphysstar1,
+                              'dndt_chem': dnchemdt1,
+                              'dndt_phys': dnphysdt1,
+                              'nchem': nchem1,
+                              'nphys':nphys1,
+                              'fco2_k': FCO22, 
+                              'den_N2_k': C_N22,
+                              'den_CO2_k': C_CO22,
+                              'dcdt_N2_k':dcdt_N22,
+                              'dcdt_CO2_k':dcdt_CO22,
+                              'vel_k': vel2,
+                              'pressure_k':P2,
+                              'temp_k': T2,
+                              'total_den_k':total_den2,
+                              'solid_pres_k':spp2,
+                              'nchem_eq_k': nchemstar2,
+                              'nphys_eq_k': nphysstar2,
+                              'dndt_chem_k': dnchemdt2,
+                              'dndt_phys_k': dnphysdt2,
+                              'nchem_k': nchem2,
+                              'nphys_k': nphys2,
+                              'fco2_u': FCO23, 
+                              'den_N2_u': C_N23,
+                              'den_CO2_u': C_CO23,
+                              'dcdt_N2_u':dcdt_N23,
+                              'dcdt_CO2_u':dcdt_CO23,
+                              'vel_u': vel3,
+                              'pressure_u':P3,
+                              'temp_u': T3,
+                              'total_den_u':total_den3,
+                              'solid_pres_u':spp3,
+                              'nchem_eq_u': nchemstar3,
+                              'nphys_eq_u': nphysstar3,
+                              'dndt_chem_u': dnchemdt3,
+                              'dndt_phys_u': dnphysdt3,
+                              'nchem_u': nchem3,
+                              'nphys_u': nphys3,
+                              'fco2_f': FCO24, 
+                              'den_N2_f': C_N24,
+                              'den_CO2_f': C_CO24,
+                              'dcdt_N2_f':dcdt_N24,
+                              'dcdt_CO2_f':dcdt_CO24,
+                              'vel_f': vel4,
+                              'pressure_f':P4,
+                              'temp_f': T4,
+                              'total_den_f':total_den4,
+                              'solid_pres_f':spp4,
+                              'nchem_eq_f': nchemstar4,
+                              'nphys_eq_f': nphysstar4,
+                              'dndt_chem_f': dnchemdt4,
+                              'dndt_phys_f': dnphysdt4,
+                              'nchem_f': nchem4,
+                              'nphys_f': nphys4
+                             })
+            
+        else:
+        # save the arrays into the data frame
+        # TODO: add the third set 
+            store = pd.DataFrame({'time': time,
+                              'position':space,
+                              'T_inlet': m.temp_feed,
+                              'y_inlet': m.yfeed['CO2'],
+                              'fco2': FCO21, 
+                              'den_N2': C_N21,
+                              'den_CO2': C_CO21,
+                              'dcdt_N2':dcdt_N21,
+                              'dcdt_CO2':dcdt_CO21,
+                              'vel': vel1,
+                              'pressure':P1,
+                              'total_den':total_den1,
+                              'solid_pres':spp1,
+                              'nchem_eq': nchemstar1,
+                              'nphys_eq': nphysstar1,
+                              'dndt_chem': dnchemdt1,
+                              'dndt_phys': dnphysdt1,
+                              'nchem': nchem1,
+                              'nphys':nphys1,
+                              'den_N2_u': C_N22,
+                              'den_CO2_u': C_CO22,
+                              'dcdt_N2_u':dcdt_N22,
+                              'dcdt_CO2_u':dcdt_CO22,
+                              'vel_u': vel2,
+                              'pressure_u':P2,
+                              'total_den_u':total_den2,
+                              'solid_pres_u':spp2,
+                              'nchem_eq_u': nchemstar2,
+                              'nphys_eq_u': nphysstar2,
+                              'dndt_chem_u': dnchemdt2,
+                              'dndt_phys_u': dnphysdt2,
+                              'nchem_u': nchem2,
+                              'nphys_u': nphys2
+                             })
+    
+    else:
+        print('check the adsorption options!!! not a square problem')
+    
+    return store
