@@ -82,7 +82,7 @@ def build_appsi(args=[]):
         extensions.append(Pybind11Extension("appsi_cmodel", sources))
 
         # search for Highs; if found, add an extension
-        highs_lib = find_library('highs')
+        highs_lib = find_library('highs', include_PATH=False)
         if highs_lib is not None:
             print(f'found Highs library: {highs_lib}')
             highs_lib_dir = os.path.dirname(highs_lib)
