@@ -463,7 +463,7 @@ class ModelSolutions(object):
         # loading the solution, so you known which variables have "real"
         # values and which ones don't.
         #
-        StaleFlagManager.advance_flag()
+        StaleFlagManager.mark_all_as_stale()
 
         if index is not None:
             self.index = index
@@ -542,8 +542,9 @@ class ModelSolutions(object):
                     valid_import_suffixes[attr_key][cdata] = attr_value
 
         # Set the state flag to "delayed advance": it will auto-advance
-        # if a non-stale variable is updated.
-        StaleFlagManager.advance_flag(delayed=True)
+        # if a non-stale variable is updated (causing all non-stale
+        # variables to be marked as stale).
+        StaleFlagManager.mark_all_as_stale(delayed=True)
 
 @ModelComponentFactory.register('Model objects can be used as a component of other models.')
 class Model(ScalarBlock):

@@ -11,7 +11,7 @@
 class _StaleFlagManager(object):
     def __init__(self):
         self._current = 0
-        self.advance_flag()
+        self.mark_all_as_stale()
 
     def _get_flag(self, current_flag):
         """Return the current global stale flag value"""
@@ -38,19 +38,19 @@ class _StaleFlagManager(object):
         """Return ``True`` if the passed value indicated a stale variable"""
         return val != self._current
 
-    def advance_flag(self, delayed=False):
+    def mark_all_as_stale(self, delayed=False):
         """Advance the global stale flag, marking all variables as stale
 
         This is generally called immediately before and after a batch
         variable update (i.e. loading values from a solver result or
-        stored solution).  Before the batch update :meth:`advance_flag`
-        is called with ``delayed=False``, which immediately marks all
-        variables as stale.  After the batch update,
-        :meth:`advance_flag` is typically called with ``delayed=True``.
-        This allows additional stale variables to be updated without
-        advancing the global flag, but as soon as any non-stale variable
-        has its value changed, then the flag is advanced and all other
-        variables become stale.
+        stored solution).  Before the batch update
+        :meth:`mark_all_as_stale` is called with ``delayed=False``,
+        which immediately marks all variables as stale.  After the batch
+        update, :meth:`mark_all_as_stale` is typically called with
+        ``delayed=True``.  This allows additional stale variables to be
+        updated without advancing the global flag, but as soon as any
+        non-stale variable has its value changed, then the flag is
+        advanced and all other variables become stale.
 
         """
         if delayed:

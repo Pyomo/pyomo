@@ -386,7 +386,7 @@ class block(IBlock):
         # loading the solution, so you known which variables have "real"
         # values and which ones don't.
         #
-        StaleFlagManager.advance_flag()
+        StaleFlagManager.mark_all_as_stale()
          #
         # Load variable data
         #
@@ -517,8 +517,9 @@ class block(IBlock):
                 var.set_value(default_variable_value, skip_validation=True)
 
         # Set the state flag to "delayed advance": it will auto-advance
-        # if a non-stale variable is updated.
-        StaleFlagManager.advance_flag(delayed=True)
+        # if a non-stale variable is updated (causing all non-stale
+        # variables to be marked as stale).
+        StaleFlagManager.mark_all_as_stale(delayed=True)
 
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module
