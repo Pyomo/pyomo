@@ -220,6 +220,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
             state[i] = getattr(self, i)
         if isinstance(self._associated_binary, ReferenceType):
             state['_associated_binary'] = self._associated_binary()
+        state['_stale'] = self.stale
         return state
 
     def __setstate__(self, state):
@@ -228,6 +229,10 @@ class _GeneralBooleanVarData(_BooleanVarData):
         Note: adapted from class ComponentData in pyomo.core.base.component
 
         """
+        if state.pop('_stale', True):
+            state['_stale'] = 0
+        else:
+            state['_stale'] = StaleFlagManager.get_flag(0)
         super().__setstate__(state)
         if self._associated_binary is not None and \
            type(self._associated_binary) is not \

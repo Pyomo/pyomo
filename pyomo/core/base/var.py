@@ -324,11 +324,15 @@ class _GeneralVarData(_VarData):
         state = super(_GeneralVarData, self).__getstate__()
         for i in _GeneralVarData.__slots__:
             state[i] = getattr(self, i)
+        state['_stale'] = self.stale
         return state
 
-    # Note: None of the slots on this class need to be edited, so we
-    # don't need to implement a specialized __setstate__ method, and
-    # can quietly rely on the super() class's implementation.
+    def __setstate__(self, state):
+        if state.pop('_stale', True):
+            state['_stale'] = 0
+        else:
+            state['_stale'] = StaleFlagManager.get_flag(0)
+        super().__setstate__(state)
 
     #
     # Abstract Interface
