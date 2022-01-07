@@ -38,12 +38,12 @@ def build_appsi(args=[]):
     sources = [
         os.path.join(appsi_root, 'cmodel', 'src', file_)
         for file_ in (
-                'interval.cpp',
+                #'interval.cpp',
                 'expression.cpp',
                 'common.cpp',
                 'nl_writer.cpp',
                 'lp_writer.cpp',
-                'model.cpp',
+                #'model.cpp',
                 'cmodel_bindings.cpp',
         )
     ]
