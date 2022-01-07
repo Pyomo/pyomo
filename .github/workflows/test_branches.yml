@@ -335,7 +335,7 @@ jobs:
             echo ""
             echo "$HIGHS_DIR"
             ls -l $HIGHS_DIR
-            HIGHS_SRC_DIR=$HIGHS_DIR/HIGHS-1.1.1
+            HIGHS_SRC_DIR=$HIGHS_DIR/HiGHS-1.1.1
             cd $HIGHS_SRC_DIR
             ls -l $HIGHS_SRC_DIR
             HIGHS_SRC_BUILD_DIR=$HIGHS_SRC_DIR/build
