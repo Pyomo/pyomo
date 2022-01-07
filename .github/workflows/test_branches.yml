@@ -345,10 +345,16 @@ jobs:
             make
             make install
             HIGHS_LIB_DIR=$HIGHS_BUILD_DIR/lib
+            HIGHS_INCLUDE_DIR=$HIGHS_BULD_DIR/include
+            echo "$HIGHS_LIB_DIR" >> $GITHUB_PATH
+            echo "$HIGHS_INCLUDE_DIR" >> $GITHUB_PATH
             echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HIGHS_LIB_DIR" >> $GITHUB_ENV
             echo ""
             echo "$HIGHS_LIB_DIR"
             ls -l $HIGHS_LIB_DIR
+            echo ""
+            echo "$HIGHS_INCLUDE_DIR"
+            ls -l $HIGHS_INCLUDE_DIR
         fi
 
     - name: Install Ipopt
