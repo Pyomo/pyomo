@@ -335,11 +335,13 @@ jobs:
             echo ""
             echo "$HIGHS_DIR"
             ls -l $HIGHS_DIR
-            cd HIGHS-1.1.1
-            ls -l
-            mkdir build
-            cd build
-            cmake -DCMAKE_INSTALL_PREFIX=$HIGHS_BUILD_DIR ..
+            HIGHS_SRC_DIR=$HIGHS_DIR/HIGHS-1.1.1
+            cd $HIGHS_SRC_DIR
+            ls -l $HIGHS_SRC_DIR
+            HIGHS_SRC_BUILD_DIR=$HIGHS_SRC_DIR/build
+            mkdir -p $HIGHS_SRC_BUILD_DIR
+            cd $HIGHS_SRC_BUILD_DIR
+            cmake -DCMAKE_INSTALL_PREFIX=$HIGHS_BUILD_DIR $HIGHS_SRC_DIR
             make
             make install
             HIGHS_LIB_DIR=$HIGHS_BUILD_DIR/lib
