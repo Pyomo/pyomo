@@ -212,7 +212,8 @@ class Highs(PersistentBase, PersistentSolver):
             self._solver_model.setOptionValue('log_to_console', True)
         else:
             self._solver_model.setOptionValue('log_to_console', False)
-        self._solver_model.setOptionValue('log_file', config.logfile)
+        if config.logfile != '':
+            self._solver_model.setOptionValue('log_file', config.logfile)
 
         if config.time_limit is not None:
             self._solver_model.setOptionValue('time_limit', config.time_limit)
