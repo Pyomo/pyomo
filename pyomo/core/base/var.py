@@ -528,7 +528,7 @@ class _GeneralVarData(_VarData):
         if val:
             self._stale = 0 # True
         else:
-            self._stale = StaleFlagManager.get_flag(self._stale)
+            self._stale = StaleFlagManager.get_flag(0)
 
     def _process_bound(self, val, bound_type):
         if type(val) in native_numeric_types or val is None:

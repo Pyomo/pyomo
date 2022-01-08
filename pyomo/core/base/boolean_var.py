@@ -266,7 +266,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         if val:
             self._stale = 0
         else:
-            self._stale = StaleFlagManager.get_flag(self._stale)
+            self._stale = StaleFlagManager.get_flag(0)
 
     def get_associated_binary(self):
         """Get the binary _VarData associated with this 
