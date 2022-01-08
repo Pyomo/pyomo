@@ -224,8 +224,6 @@ def copy_var_list_values(from_list, to_list, config,
             # instead log warnings).  This means that the following will
             # always succeed and the ValueError should never be raised.
             v_to.set_value(value(v_from, exception=False))
-            if skip_stale:
-                v_to.stale = False
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             var_val = value(v_from)

@@ -59,9 +59,17 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             v_val = self.get_values(
                 opt._pyomo_var_to_solver_var_map[v_from])
             try:
+                # We don't want to trigger the reset of the global stale
+                # indicator, so we will set this variable to be "stale",
+                # knowing that set_value will switch it back to "not
+                # stale"
+                v_to.stale = True
+                # NOTE: PEP 2180 changes the var behavior so that domain
+                # / bounds violations no longer generate exceptions (and
+                # instead log warnings).  This means that the following
+                # will always succeed and the ValueError should never be
+                # raised.
                 v_to.set_value(v_val)
-                if skip_stale:
-                    v_to.stale = False
             except ValueError:
                 # Snap the value to the bounds
                 if v_to.has_lb() and v_val < v_to.lb and v_to.lb - v_val <= config.variable_tolerance:
