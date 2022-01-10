@@ -12,15 +12,8 @@
 # 2020 publication in AIChE
 
 from pyomo.environ import (
-    ConcreteModel, Var, Reals, ExternalFunction, sin, cos,
-    sqrt, Constraint, Objective)
+    ConcreteModel, Var, ExternalFunction, Constraint, Objective)
 from pyomo.opt import SolverFactory
-
-m = ConcreteModel()
-m.name = 'Example 2: Yoshio'
-
-m.x1 = Var(initialize=0)
-m.x2 = Var(bounds=(-2.0, None), initialize=0)
 
 def ext_fcn(x, y):
     return x**2 + y**2
@@ -28,23 +21,39 @@ def grad_ext_fcn(args, fixed):
     x, y = args[:2]
     return [ 2*x, 2*y ]
 
-m.EF = ExternalFunction(ext_fcn, grad_ext_fcn)
+def create_model():
+    m = ConcreteModel()
+    m.name = 'Example 2: Yoshio'
 
-@m.Constraint()
-def con(m):
-    return 2*m.x1 + m.x2 + 10.0 == m.EF(m.x1, m.x2)
+    m.x1 = Var(initialize=0)
+    m.x2 = Var(bounds=(-2.0, None), initialize=0)
 
-m.obj = Objective(expr = (m.x1 - 1)**2 + (m.x2 - 3)**2 + m.EF(m.x1, m.x2)**2)
+    m.EF = ExternalFunction(ext_fcn, grad_ext_fcn)
+
+    @m.Constraint()
+    def con(m):
+        return 2*m.x1 + m.x2 + 10.0 == m.EF(m.x1, m.x2)
+
+    m.obj = Objective(
+        expr = (m.x1 - 1)**2 + (m.x2 - 3)**2 + m.EF(m.x1, m.x2)**2
+    )
+    return m
 
 def basis_rule(component, ef_expr):
     x = ef_expr.arg(0)
     y = ef_expr.arg(1)
     return x**2 - y # This is the low fidelity model
 
+
 # This problem takes more than the default maximum iterations (50) to solve.
 # In testing (Mac 10.15/ipopt version 3.12.12 from conda),
 # it took 70 iterations.
-optTRF = SolverFactory('trustregion',
-                       maximum_iterations=100,
-                       verbose=True)
-optTRF.solve(m, [m.x1], ext_fcn_surrogate_map_rule=basis_rule)
+def main():
+    m = create_model()
+    optTRF = SolverFactory('trustregion',
+                           maximum_iterations=100,
+                           verbose=True)
+    optTRF.solve(m, [m.x1], ext_fcn_surrogate_map_rule=basis_rule)
+
+if __name__ == '__main__':
+    main()

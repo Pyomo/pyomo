@@ -14,11 +14,6 @@ from pyomo.environ import (
     sqrt, Constraint, Objective)
 from pyomo.opt import SolverFactory
 
-m = ConcreteModel()
-m.z = Var(range(3), domain=Reals, initialize=2.)
-m.x = Var(range(2), initialize=2.)
-m.x[1] = 1.0
-
 def blackbox(a, b):
    return sin(a - b)
 
@@ -26,17 +21,31 @@ def grad_blackbox(args, fixed):
     a, b = args[:2]
     return [ cos(a - b), -cos(a - b) ]
 
-m.ext_fcn = ExternalFunction(blackbox, grad_blackbox)
+def create_model():
+    m = ConcreteModel()
+    m.name = 'Example 1: Eason'
+    m.z = Var(range(3), domain=Reals, initialize=2.)
+    m.x = Var(range(2), initialize=2.)
+    m.x[1] = 1.0
 
-m.obj = Objective(
-    expr=(m.z[0]-1.0)**2 + (m.z[0]-m.z[1])**2 + (m.z[2]-1.0)**2 \
-       + (m.x[0]-1.0)**4 + (m.x[1]-1.0)**6
-)
+    m.ext_fcn = ExternalFunction(blackbox, grad_blackbox)
 
-m.c1 = Constraint(
-    expr=m.x[0] * m.z[0]**2 + m.ext_fcn(m.x[0], m.x[1]) == 2*sqrt(2.0)
+    m.obj = Objective(
+        expr=(m.z[0]-1.0)**2 + (m.z[0]-m.z[1])**2 + (m.z[2]-1.0)**2 \
+           + (m.x[0]-1.0)**4 + (m.x[1]-1.0)**6
     )
-m.c2 = Constraint(expr=m.z[2]**4 * m.z[1]**2 + m.z[1] == 8+sqrt(2.0))
 
-optTRF = SolverFactory('trustregion', maximum_iterations=10, verbose=True)
-optTRF.solve(m, [m.z[0], m.z[1], m.z[2]])
+    m.c1 = Constraint(
+        expr=m.x[0] * m.z[0]**2 + m.ext_fcn(m.x[0], m.x[1]) == 2*sqrt(2.0)
+        )
+    m.c2 = Constraint(expr=m.z[2]**4 * m.z[1]**2 + m.z[1] == 8+sqrt(2.0))
+    return m
+
+def main():
+    m = create_model()
+    optTRF = SolverFactory('trustregion', maximum_iterations=10, verbose=True)
+    optTRF.solve(m, [m.z[0], m.z[1], m.z[2]])
+
+
+if __name__ == '__main__':
+    main()
