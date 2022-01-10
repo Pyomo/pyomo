@@ -188,7 +188,7 @@ def _trf_config():
 
     The user may also update the configuration after instantiation:
         >>> optTRF = SolverFactory('trustregion')
-        >>> optTRF.config.trust_radius = 0.5
+        >>> optTRF._CONFIG.trust_radius = 0.5
 
     The user may also update the configuration as part of the solve call:
         >>> optTRF = SolverFactory('trustregion')

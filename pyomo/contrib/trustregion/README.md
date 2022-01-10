@@ -43,7 +43,7 @@ The arguments required for the `solve` method are:
 Optionally, the user can also supply `ext_fcn_surrogate_map_rule`, which is the
 low-fidelity model used as the 'basis function' `b(w)` in the surrogate model. 
 Examples with and without `ext_fcn_surrogate_map_rule` can be found in 
-the `examples` directory. 
+the `examples` directory.
 
 A sample model is shown below:
 
