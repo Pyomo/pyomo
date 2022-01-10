@@ -91,5 +91,5 @@ class TestTrustRegionMethod(unittest.TestCase):
         self.assertIn('step rejected', print_OUTPUT.getvalue())
         self.assertIn('EXIT: Optimal solution found.',
                       print_OUTPUT.getvalue())
-        self.assertIn('None :   True : 48.38311693694908',
+        self.assertIn('None :   True : 48.383116936949',
                       print_OUTPUT.getvalue())
