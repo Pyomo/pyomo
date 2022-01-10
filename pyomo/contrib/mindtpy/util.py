@@ -37,7 +37,7 @@ class MindtPySolveData(object):
 
 
 def model_is_valid(solve_data, config):
-    """Determines whether the model is solveable by MindtPy.
+    """Determines whether the model is solvable by MindtPy.
 
     Parameters
     ----------
@@ -49,7 +49,7 @@ def model_is_valid(solve_data, config):
     Returns
     -------
     bool
-        True if model is solveable in MindtPy, False otherwise.
+        True if model is solvable in MindtPy, False otherwise.
     """
     m = solve_data.working_model
     MindtPy = m.MindtPy_utils
@@ -195,7 +195,7 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
     setpoint_model : Pyomo model
         The model that provides the base point for us to calculate the distance.
     discrete_only : bool, optional
-        Whether only optimize on distance between the discrete variables, by default False.
+        Whether to only optimize on distance between the discrete variables, by default False.
 
     Returns
     -------
@@ -231,7 +231,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     setpoint_model : Pyomo model
         The model that provides the base point for us to calculate the distance.
     discrete_only : bool, optional
-        Whether only optimize on distance between the discrete variables, by default False.
+        Whether to only optimize on distance between the discrete variables, by default False.
 
     Returns
     -------
@@ -275,7 +275,7 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     setpoint_model : Pyomo model
         The model that provides the base point for us to calculate the distance.
     discrete_only : bool, optional
-        Whether only optimize on distance between the discrete variables, by default False.
+        Whether to only optimize on distance between the discrete variables, by default False.
 
     Returns
     -------
@@ -319,7 +319,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
     solve_data : MindtPySolveData
         Data container that holds solve-instance data.
     discrete_only : bool, optional
-        Whether only optimize on distance between the discrete variables, by default False.
+        Whether to only optimize on distance between the discrete variables, by default False.
 
     Returns
     -------
@@ -408,7 +408,7 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
     config : ConfigBlock
         The specific configurations for MindtPy.
     discrete_only : bool, optional
-        Whether only optimize on distance between the discrete variables, by default True.
+        Whether to only optimize on distance between the discrete variables, by default True.
     """
     var_filter = (lambda v: v.is_integer()) if discrete_only \
         else (lambda v: True)
@@ -674,13 +674,13 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
     config : ConfigBlock
         The specific configurations for MindtPy.
     solver_model : solver model
-        The solver model derive from pyomo model.
+        The solver model derived from pyomo model.
     var_map : dict
         The map of pyomo variables to solver variables.
     solution_name : int or str
         The name of the solution in the solution pool.
     ignore_integrality : bool, optional
-        Whether ignore the integrality of integer variables, by default False.
+        Whether to ignore the integrality of integer variables, by default False.
     """
     for v_from, v_to in zip(from_list, to_list):
         try:
@@ -751,7 +751,7 @@ def update_gap(solve_data):
 def update_dual_bound(solve_data, bound_value):
     """Update the dual bound.
 
-    Call after solve relaxed problem, including relaxed NLP and MIP master problem.
+    Call after solving relaxed problem, including relaxed NLP and MIP master problem.
     Use the optimal primal bound of the relaxed problem to update the dual bound.
 
     Parameters
@@ -775,7 +775,7 @@ def update_dual_bound(solve_data, bound_value):
         update_gap(solve_data)
 
 
-def uptade_suboptimal_dual_bound(solve_data, results):
+def update_suboptimal_dual_bound(solve_data, results):
     """If the relaxed problem is not solved to optimality, the dual bound is updated 
     according to the dual bound of relaxed problem.
 

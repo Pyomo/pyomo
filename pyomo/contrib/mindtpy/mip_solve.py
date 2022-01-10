@@ -18,7 +18,7 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWa
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy, update_dual_bound, uptade_suboptimal_dual_bound
+from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy, update_dual_bound, update_suboptimal_dual_bound
 
 
 single_tree, single_tree_available = attempt_import(
@@ -81,7 +81,7 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
         main_mip_results._pyomo_var_to_solver_var_map = mainopt._pyomo_var_to_solver_var_map
     if main_mip_results.solver.termination_condition is tc.optimal:
         if config.single_tree and not config.add_no_good_cuts and not regularization_problem:
-            uptade_suboptimal_dual_bound(solve_data, main_mip_results)
+            update_suboptimal_dual_bound(solve_data, main_mip_results)
         if regularization_problem:
             config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'Reg '+solve_data.regularization_mip_type,
                                                                value(
@@ -192,8 +192,8 @@ def handle_main_optimal(main_mip, solve_data, config, update_bound=True):
     config : ConfigBlock
         The specific configurations for MindtPy.
     update_bound : bool, optional
-        Whether update the bound, by default True.
-        Bound will not be updated when handle regularization problem.
+        Whether to update the bound, by default True.
+        Bound will not be updated when handling regularization problem.
     """
     # proceed. Just need integer values
     MindtPy = main_mip.MindtPy_utils
@@ -261,7 +261,7 @@ def handle_main_other_conditions(main_mip, main_mip_results, solve_data, config)
             main_mip.MindtPy_utils.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
-        uptade_suboptimal_dual_bound(solve_data, main_mip_results)
+        update_suboptimal_dual_bound(solve_data, main_mip_results)
         config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'MILP', value(MindtPy.mip_obj.expr),
                                                            solve_data.LB, solve_data.UB, solve_data.rel_gap,
                                                            get_main_elapsed_time(solve_data.timing)))
@@ -333,7 +333,7 @@ def handle_main_max_timelimit(main_mip, main_mip_results, solve_data, config):
         main_mip.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config)
-    uptade_suboptimal_dual_bound(solve_data, main_mip_results)
+    update_suboptimal_dual_bound(solve_data, main_mip_results)
     config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'MILP', value(MindtPy.mip_obj.expr),
                                                        solve_data.LB, solve_data.UB, solve_data.rel_gap,
                                                        get_main_elapsed_time(solve_data.timing)))

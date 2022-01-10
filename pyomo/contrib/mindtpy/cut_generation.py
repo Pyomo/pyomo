@@ -40,9 +40,9 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
     cb_opt : SolverFactory, optional
         Gurobi_persistent solver, by default None.
     linearize_active : bool, optional
-        Whether linearize the active nonlinear constraints, by default True.
+        Whether to linearize the active nonlinear constraints, by default True.
     linearize_violated : bool, optional
-        Whether linearize the violated nonlinear constraints, by default True.
+        Whether to linearize the violated nonlinear constraints, by default True.
     """
     with time_code(solve_data.timing, 'OA cut generation'):
         for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
@@ -120,9 +120,9 @@ def add_ecp_cuts(target_model, solve_data, config,
     config : ConfigBlock
         The specific configurations for MindtPy.
     linearize_active : bool, optional
-        Whether linearize the active nonlinear constraints, by default True.
+        Whether to linearize the active nonlinear constraints, by default True.
     linearize_violated : bool, optional
-        Whether linearize the violated nonlinear constraints, by default True.
+        Whether to linearize the violated nonlinear constraints, by default True.
     """
     with time_code(solve_data.timing, 'ECP cut generation'):
         for constr in target_model.MindtPy_utils.nonlinear_constraint_list:

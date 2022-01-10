@@ -10,7 +10,7 @@
 
 """Iteration loop for MindtPy."""
 from __future__ import division
-from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, uptade_suboptimal_dual_bound, copy_var_list_values_from_solution_pool
+from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, update_suboptimal_dual_bound, copy_var_list_values_from_solution_pool
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, handle_main_infeasible, handle_main_other_conditions, handle_regularization_main_tc
@@ -232,12 +232,12 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
     config : ConfigBlock
         The specific configurations for MindtPy.
     check_cycling : bool
-        Whether check for a special case that causes the discrete variables to loop through the same values.
+        Whether to check for a special case that causes the discrete variables to loop through the same values.
 
     Returns
     -------
     bool
-        True if the algorithm should terminate, Flase otherwise.
+        True if the algorithm should terminate, False otherwise.
     """
     if solve_data.should_terminate:
         if solve_data.objective_sense == minimize:
@@ -473,7 +473,7 @@ def fix_dual_bound(solve_data, config, last_iter_cuts):
             config.logger.info(
                 'Bound fix failed. The bound fix problem is infeasible')
         else:
-            uptade_suboptimal_dual_bound(solve_data, main_mip_results)
+            update_suboptimal_dual_bound(solve_data, main_mip_results)
             config.logger.info(
                 'Fixed bound values: LB: {}  UB: {}'.
                 format(solve_data.LB, solve_data.UB))

@@ -29,7 +29,7 @@ def fp_converged(solve_data, config, discrete_only=True):
     config : ConfigBlock
         The specific configurations for MindtPy.
     discrete_only : bool, optional
-        Whether only optimize on distance between the discrete variables, by default True.
+        Whether to only optimize on distance between the discrete variables, by default True.
 
     Returns
     -------

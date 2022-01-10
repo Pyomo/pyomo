@@ -341,7 +341,7 @@ def _add_tolerance_configs(CONFIG):
 
 
 def _add_bound_configs(CONFIG):
-    """Adds the bound related configurations.
+    """Adds the bound-related configurations.
 
     Parameters
     ----------

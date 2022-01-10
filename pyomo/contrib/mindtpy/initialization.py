@@ -14,7 +14,7 @@ from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
                                        copy_var_list_values, get_main_elapsed_time)
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_affine_cuts
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
-from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, update_dual_bound, add_var_bound, get_integer_solution, uptade_suboptimal_dual_bound
+from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, update_dual_bound, add_var_bound, get_integer_solution, update_suboptimal_dual_bound
 from pyomo.core import (ConstraintList, Objective,
                         TransformationFactory, maximize, minimize,
                         value, Var)
@@ -138,7 +138,7 @@ def init_rNLP(solve_data, config):
         else:
             config.logger.info(
                 'relaxed NLP is not solved to optimality.')
-            uptade_suboptimal_dual_bound(solve_data, results)
+            update_suboptimal_dual_bound(solve_data, results)
         dual_values = list(
             m.dual[c] for c in MindtPy.constraint_list) if config.calculate_dual else None
         config.logger.info(solve_data.log_formatter.format('-', 'Relaxed NLP', value(main_objective.expr),

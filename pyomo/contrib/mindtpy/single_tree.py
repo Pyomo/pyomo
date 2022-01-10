@@ -50,11 +50,11 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         config : ConfigBlock
             The specific configurations for MindtPy.
         skip_stale : bool, optional
-            Whether skip the stale variables, by default False.
+            Whether to skip the stale variables, by default False.
         skip_fixed : bool, optional
-            Whether skip the fixed variables, by default True.
+            Whether to skip the fixed variables, by default True.
         ignore_integrality : bool, optional
-            Whether ignore the integrality of integer variables, by default False.
+            Whether to ignore the integrality of integer variables, by default False.
         """
         for v_from, v_to in zip(from_list, to_list):
             if skip_stale and v_from.stale:
@@ -102,9 +102,9 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         opt : SolverFactory
             The cplex_persistent solver.
         linearize_active : bool, optional
-            Whether linearize the active nonlinear constraints, by default True.
+            Whether to linearize the active nonlinear constraints, by default True.
         linearize_violated : bool, optional
-            Whether linearize the violated nonlinear constraints, by default True.
+            Whether to linearize the violated nonlinear constraints, by default True.
         """
         config.logger.debug('Adding OA cuts')
         with time_code(solve_data.timing, 'OA cut generation'):
@@ -338,7 +338,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
 
     def handle_lazy_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
         """This function copies the optimal solution of the fixed NLP subproblem to the MIP
-        main problem(explaination see below), updates bound, adds OA and no-good cuts, 
+        main problem(explanation see below), updates bound, adds OA and no-good cuts, 
         stores incumbent solution if it has been improved.
 
         Parameters
