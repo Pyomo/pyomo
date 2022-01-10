@@ -341,7 +341,7 @@ class Cbc(PersistentSolver):
             cmd.extend(['-timeMode', 'elapsed'])
         for key, val in _check_and_escape_options():
             if val.strip() != '':
-                cmd.append('-'+key, val)
+                cmd.extend(['-'+key, val])
             else:
                 action_options.append('-'+key)
         cmd.extend(['-printingOptions', 'all'])
