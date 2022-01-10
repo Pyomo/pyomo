@@ -80,7 +80,7 @@ class TestTrustRegionMethod(unittest.TestCase):
         # These two pieces of information are only printed, not logged
         self.assertNotIn('EXIT: Optimal solution found.',
                          log_OUTPUT.getvalue())
-        self.assertNotIn('None :   True : 48.38311693694908',
+        self.assertNotIn('None :   True : 48.383116936949',
                          log_OUTPUT.getvalue())
         # All of this should be printed
         self.assertIn('Iteration 0', print_OUTPUT.getvalue())

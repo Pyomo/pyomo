@@ -14,10 +14,10 @@ from pyomo.environ import (
     sqrt, Constraint, Objective)
 from pyomo.opt import SolverFactory
 
-def blackbox(a, b):
+def ext_fcn(a, b):
    return sin(a - b)
 
-def grad_blackbox(args, fixed):
+def grad_ext_fcn(args, fixed):
     a, b = args[:2]
     return [ cos(a - b), -cos(a - b) ]
 
@@ -28,7 +28,7 @@ def create_model():
     m.x = Var(range(2), initialize=2.)
     m.x[1] = 1.0
 
-    m.ext_fcn = ExternalFunction(blackbox, grad_blackbox)
+    m.ext_fcn = ExternalFunction(ext_fcn, grad_ext_fcn)
 
     m.obj = Objective(
         expr=(m.z[0]-1.0)**2 + (m.z[0]-m.z[1])**2 + (m.z[2]-1.0)**2 \

@@ -12,14 +12,15 @@
 # 2020 publication in AIChE
 
 from pyomo.environ import (
-    ConcreteModel, Var, ExternalFunction, Constraint, Objective)
+    ConcreteModel, Var, ExternalFunction, Objective)
 from pyomo.opt import SolverFactory
 
-def ext_fcn(x, y):
-    return x**2 + y**2
+def ext_fcn(a, b):
+    return a**2 + b**2
+
 def grad_ext_fcn(args, fixed):
-    x, y = args[:2]
-    return [ 2*x, 2*y ]
+    a, b = args[:2]
+    return [ 2*a, 2*b ]
 
 def create_model():
     m = ConcreteModel()
