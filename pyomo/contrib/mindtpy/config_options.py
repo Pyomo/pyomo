@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, In, PositiveFloat, PositiveInt, NonNegativeInt)
 from pyomo.contrib.gdpopt.util import _DoNothing, a_logger
