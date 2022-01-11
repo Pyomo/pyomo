@@ -104,7 +104,7 @@ def _get_MindtPy_config():
         domain=a_logger
     ))
     CONFIG.declare('logging_level', ConfigValue(
-        default=20,
+        default=logging.INFO,
         domain=NonNegativeInt,
         description='The logging level for MindtPy.'
                     'CRITICAL = 50, ERROR = 40, WARNING = 30, INFO = 20, DEBUG = 10, NOTSET = 0',
