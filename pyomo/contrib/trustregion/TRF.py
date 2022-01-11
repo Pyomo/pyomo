@@ -174,6 +174,8 @@ def trust_region_method(model,
     if iteration >= config.maximum_iterations:
         print('EXIT: Maximum iterations reached: {}.'.format(config.maximum_iterations))
 
+    return interface.model
+
 
 def _trf_config():
     """
@@ -404,7 +406,8 @@ class TrustRegionSolver(object):
             # If the user does not pass us a "basis" function,
             # we default to 0.
             ext_fcn_surrogate_map_rule = lambda comp,ef: 0
-        trust_region_method(model,
+        result = trust_region_method(model,
                             degrees_of_freedom_variables,
                             ext_fcn_surrogate_map_rule,
                             self.config)
+        return result

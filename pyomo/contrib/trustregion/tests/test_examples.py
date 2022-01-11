@@ -13,7 +13,6 @@ from io import StringIO
 import sys
 
 import pyomo.common.unittest as unittest
-from pyomo.common.fileutils import this_file_dir
 from pyomo.common.log import LoggingIntercept
 from pyomo.contrib.trustregion.examples import example1, example2
 from pyomo.environ import (

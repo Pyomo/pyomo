@@ -9,11 +9,14 @@
 #  ___________________________________________________________________________
 
 import logging
+import sys
+from io import StringIO
 
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
 from pyomo.environ import (
     Var, ConcreteModel, Reals, ExternalFunction,
-    Objective, Constraint, sqrt, sin, cos, SolverFactory
+    Objective, Constraint, sqrt, sin, cos, SolverFactory, value
     )
 from pyomo.contrib.trustregion.TRF import trust_region_method, _trf_config
 
@@ -177,7 +180,24 @@ class TestTrustRegionMethod(unittest.TestCase):
         self.decision_variables = [self.m.z[0], self.m.z[1], self.m.z[2]]
 
     def test_solver(self):
-        trust_region_method(self.m,
+        # Check the log contents
+        log_OUTPUT = StringIO()
+        # Check the printed contents
+        print_OUTPUT = StringIO()
+        sys.stdout = print_OUTPUT
+        with LoggingIntercept(log_OUTPUT,
+                              'pyomo.contrib.trustregion', logging.INFO):
+            result = trust_region_method(self.m,
                             self.decision_variables,
                             self.ext_fcn_surrogate_map_rule,
                             self.config)
+        sys.stdout = sys.__stdout__
+        # Check the log to make sure it is capturing
+        self.assertIn('Iteration 0', log_OUTPUT.getvalue())
+        # Check the printed output
+        self.assertIn('EXIT: Optimal solution found.',
+                      print_OUTPUT.getvalue())
+        # The names of both models should be the same
+        self.assertEqual(result.name, self.m.name)
+        # The values should not be the same
+        self.assertNotEqual(value(result.obj), value(self.m.obj))
