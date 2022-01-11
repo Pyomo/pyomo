@@ -347,29 +347,35 @@ class IncidenceGraphInterface(object):
         # Hopefully this does not get too confusing...
         return var_partition, con_partition
 
-    def remove(self, variables, constraints):
+    def remove_nodes(self, nodes, constraints=None):
         """
         Removes the specified variables and constraints (columns and
         rows) from the cached incidence matrix. This is a "projection"
         of the variable and constraint vectors, rather than something
         like a vertex elimination.
+        For the puropse of this method, there is not need to distinguish
+        between variables and constraints. However, we provide the
+        "constraints" argument so a call signature similar to other methods
+        in this class is still valid.
 
         Arguments:
         ----------
-        variables: List
-            VarData objects whose columns will be removed from the
-            incidence matrix.
+        nodes: List
+            VarData or ConData objects whose columns or rows will be
+            removed from the incidence matrix.
         constraints: List
             ConstraintData objects whose rows will be removed from the
             incidence matrix.
 
         """
+        if constraints is None:
+            constraints = []
         if self.cached is IncidenceMatrixType.NONE:
             raise RuntimeError(
                 "Attempting to remove variables and constraints from cached "
                 "incidence matrix,\nbut no incidence matrix has been cached."
             )
-        to_exclude = ComponentSet(variables)
+        to_exclude = ComponentSet(nodes)
         to_exclude.update(constraints)
         vars_to_include = [v for v in self.variables if v not in to_exclude]
         cons_to_include = [c for c in self.constraints if c not in to_exclude]
