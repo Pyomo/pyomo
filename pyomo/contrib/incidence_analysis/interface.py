@@ -353,7 +353,7 @@ class IncidenceGraphInterface(object):
         rows) from the cached incidence matrix. This is a "projection"
         of the variable and constraint vectors, rather than something
         like a vertex elimination.
-        For the puropse of this method, there is not need to distinguish
+        For the puropse of this method, there is no need to distinguish
         between variables and constraints. However, we provide the
         "constraints" argument so a call signature similar to other methods
         in this class is still valid.
@@ -364,8 +364,8 @@ class IncidenceGraphInterface(object):
             VarData or ConData objects whose columns or rows will be
             removed from the incidence matrix.
         constraints: List
-            ConstraintData objects whose rows will be removed from the
-            incidence matrix.
+            VarData or ConData objects whose columns or rows will be
+            removed from the incidence matrix.
 
         """
         if constraints is None:
