@@ -9,6 +9,7 @@ from pyomo.core.base.sos import _SOSConstraintData
 from pyomo.core.base.objective import _GeneralObjectiveData, minimize, maximize
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base import SymbolMap, TextLabeler
+from pyomo.common.errors import InfeasibleConstraintException
 
 
 class IntervalConfig(ConfigDict):
@@ -217,11 +218,15 @@ class IntervalTightener(PersistentBase):
                 raise RuntimeError('symbolic_solver_labels can only be changed through the set_instance method. '
                                    'Please either use set_instance or create a new instance of IntervalTightener.')
             self.update()
-        n_iter = self._cmodel.perform_fbbt(self.config.feasibility_tol, self.config.integer_tol,
-                                           self.config.improvement_tol, self.config.max_iter,
-                                           self.config.deactivate_satisfied_constraints)
-        self._update_pyomo_var_bounds()
-        self._deactivate_satisfied_cons()
+        try:
+            n_iter = self._cmodel.perform_fbbt(self.config.feasibility_tol, self.config.integer_tol,
+                                               self.config.improvement_tol, self.config.max_iter,
+                                               self.config.deactivate_satisfied_constraints)
+        finally:
+            # we want to make sure the pyomo model and cmodel stay in sync
+            # even if an exception is raised and caught
+            self._update_pyomo_var_bounds()
+            self._deactivate_satisfied_cons()
         return n_iter
 
     def perform_fbbt_with_seed(self, model: _BlockData, seed_var: _GeneralVarData):
@@ -229,9 +234,14 @@ class IntervalTightener(PersistentBase):
             self.set_instance(model)
         else:
             self.update()
-        n_iter = self._cmodel.perform_fbbt_with_seed(self._var_map[id(seed_var)], self.config.feasibility_tol,
-                                                     self.config.integer_tol, self.config.improvement_tol,
-                                                     self.config.max_iter, self.config.deactivate_satisfied_constraints)
-        self._update_pyomo_var_bounds()
-        self._deactivate_satisfied_cons()
+        try:
+            n_iter = self._cmodel.perform_fbbt_with_seed(self._var_map[id(seed_var)], self.config.feasibility_tol,
+                                                         self.config.integer_tol, self.config.improvement_tol,
+                                                         self.config.max_iter,
+                                                         self.config.deactivate_satisfied_constraints)
+        finally:
+            # we want to make sure the pyomo model and cmodel stay in sync
+            # even if an exception is raised and caught
+            self._update_pyomo_var_bounds()
+            self._deactivate_satisfied_cons()
         return n_iter
