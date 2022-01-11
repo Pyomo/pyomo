@@ -134,7 +134,7 @@ implemented here:
    >>> model = create_model()
 
 .. doctest::
-   :skipif: not (ipopt.available())
+   :skipif: not ipopt_available
 
    >>> # === Solve with TRF ===
    >>> trf_solver.solve(model, [model.z[0], model.z[1], model.z[2]])
