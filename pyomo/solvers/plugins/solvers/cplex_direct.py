@@ -787,7 +787,7 @@ class CPLEXDirect(DirectSolver):
                         soln_constraints[con_name]["Slack"] = qudratic_slacks[i]
         elif self._load_solutions:
             if cpxprob.solution.get_solution_type() > 0:
-                self._load_vars()
+                self.load_vars()
 
                 if extract_reduced_costs:
                     self._load_rc()

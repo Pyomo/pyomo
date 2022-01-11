@@ -724,7 +724,7 @@ class XpressDirect(DirectSolver):
             if xprob_attrs.lpstatus == xp.lp_optimal and \
                     ((not is_mip) or (xprob_attrs.mipsols > 0)):
 
-                self._load_vars()
+                self.load_vars()
 
                 if extract_reduced_costs:
                     self._load_rc()
