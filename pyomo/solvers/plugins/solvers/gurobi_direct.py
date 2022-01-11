@@ -727,7 +727,7 @@ class GurobiDirect(DirectSolver):
         elif self._load_solutions:
             if gprob.SolCount > 0:
 
-                self._load_vars()
+                self.load_vars()
 
                 if extract_reduced_costs:
                     self._load_rc()
