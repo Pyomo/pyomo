@@ -35,14 +35,12 @@ from pyomo.contrib.gdpopt.util import (copy_var_list_values, create_utility_bloc
                                        time_code, setup_results_object, process_objective, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
-from pyomo.contrib.mindtpy.util import model_is_valid, setup_solve_data
+from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
                         Set, Suffix, Var, VarList, TransformationFactory, Objective, RangeSet)
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
 from pyomo.common.config import add_docstring_list
-
-logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 __version__ = (0, 1, 0)
 
@@ -84,17 +82,22 @@ class MindtPySolver(object):
     def solve(self, model, **kwds):
         """Solve the model.
 
-        Warning: this solver is still in beta. Keyword arguments subject to
-        change. Undocumented keyword arguments definitely subject to change.
+        Parameters
+        ----------
+        model : Pyomo model
+            The MINLP model to be solved.
 
-        Args:
-            model (Block): a Pyomo model or block to be solved
+        Returns
+        -------
+        results : SolverResults
+            Results from solving the MINLP problem by MindtPy.
         """
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)  # TODO: do we need to set preserve_implicit=True?
         config.set_value(kwds)
+        set_up_logger(config)
         check_config(config)
 
-        solve_data = setup_solve_data(model, config)
+        solve_data = set_up_solve_data(model, config)
 
         if config.integer_to_binary:
             TransformationFactory('contrib.integer_to_binary'). \
@@ -104,7 +107,11 @@ class MindtPySolver(object):
         with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 lower_logger_level_to(config.logger, new_logging_level), \
                 create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
-            config.logger.info('---Starting MindtPy---')
+            config.logger.info(
+                '---------------------------------------------------------------------------------------------\n'
+                '              Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo (MindtPy)               \n'
+                '---------------------------------------------------------------------------------------------\n'
+                'For more information, please visit https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html')
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
