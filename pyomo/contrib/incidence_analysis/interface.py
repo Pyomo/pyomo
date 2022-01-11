@@ -369,7 +369,8 @@ class IncidenceGraphInterface(object):
                 "Attempting to remove variables and constraints from cached "
                 "incidence matrix,\nbut no incidence matrix has been cached."
             )
-        to_exclude = ComponentSet(variables + constraints)
+        to_exclude = ComponentSet(variables)
+        to_exclude.update(constraints)
         vars_to_include = [v for v in self.variables if v not in to_exclude]
         cons_to_include = [c for c in self.constraints if c not in to_exclude]
         incidence_matrix = self._extract_submatrix(

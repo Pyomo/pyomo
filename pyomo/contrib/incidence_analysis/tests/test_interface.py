@@ -700,7 +700,7 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
         # Say we know that these variables and constraints should
         # be matched...
         vars_to_remove = [model.F[0], model.F[2]]
-        cons_to_remove = [model.mbal[1], model.mbal[2]]
+        cons_to_remove = (model.mbal[1], model.mbal[2])
         igraph.remove(vars_to_remove, cons_to_remove)
         variable_set = ComponentSet(igraph.variables)
         self.assertNotIn(model.F[0], variable_set)
