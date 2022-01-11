@@ -2,9 +2,18 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
+#
+#  The Institute for the Design of Advanced Energy Systems Integrated Platform
+#  Framework (IDAES IP) was produced under the DOE Institute for the
+#  Design of Advanced Energy Systems (IDAES), and is copyright (c) 2018-2021
+#  by the software owners: The Regents of the University of California, through
+#  Lawrence Berkeley National Laboratory,  National Technology & Engineering
+#  Solutions of Sandia, LLC, Carnegie Mellon University, West Virginia University
+#  Research Corporation, et al.  All rights reserved.
+#
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
@@ -19,7 +28,8 @@ from pyomo.contrib.trustregion.TRF import trust_region_method, _trf_config
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
-@unittest.skipIf(not SolverFactory('ipopt').available(False), "The IPOPT solver is not available")
+@unittest.skipIf(not SolverFactory('ipopt').available(False),
+                 "The IPOPT solver is not available")
 class TestTrustRegionConfig(unittest.TestCase):
 
     def setUp(self):
@@ -83,8 +93,8 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertEqual(CONFIG.ratio_test_param_eta_1, 0.05)
         self.assertEqual(CONFIG.ratio_test_param_eta_2, 0.2)
         self.assertEqual(CONFIG.maximum_feasibility, 50.0)
-        self.assertEqual(CONFIG.filter_param_gamma_theta, 0.01)
-        self.assertEqual(CONFIG.filter_param_gamma_f, 0.01)
+        self.assertEqual(CONFIG.param_filter_gamma_theta, 0.01)
+        self.assertEqual(CONFIG.param_filter_gamma_f, 0.01)
 
     def test_config_vars(self):
         self.TRF = SolverFactory('trustregion')
@@ -142,7 +152,8 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertEqual(self.TRF.config.trust_radius, 2.0)
 
 
-@unittest.skipIf(not SolverFactory('ipopt').available(False), "The IPOPT solver is not available")
+@unittest.skipIf(not SolverFactory('ipopt').available(False),
+                 "The IPOPT solver is not available")
 class TestTrustRegionMethod(unittest.TestCase):
 
     def setUp(self):

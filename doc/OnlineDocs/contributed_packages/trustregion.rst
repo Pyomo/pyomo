@@ -62,7 +62,7 @@ where:
 * :math:`y \in \mathbb{R}^p` are the outputs of the external functions
 * :math:`x^T = [w^T, y^T, z^T]` is a set of all inputs and outputs
 
-Using this formulation and a user-supplied low-fidelity basis function
+Using this formulation and a user-supplied low-fidelity/ideal model basis function
 :math:`b\left(w\right)`, the algoritm iteratively solves subproblems using
 the surrogate model:
 
@@ -71,14 +71,19 @@ the surrogate model:
     r_k\left(w\right) = b\left(w\right) + \left( d\left(w_k\right) - b\left(w_k\right) \right) + \left( \nabla d\left(w_k\right) - \nabla b\left(w_k\right) \right)^T \left( w - w_k \right)
     \end{align*}
 
+This acts similarly to Newton's method in that small, incremental steps are taken
+towards an optimal solution. At each iteration, the current solution of the
+subproblem is compared to the previous solution to ensure that
+the iteration has moved in a direction towards an optimal solution. If not true,
+the step is rejected. If true, the step is accepted and the surrogate
+model is updated for the next iteration.
+
 When using TRF, please consider citing the above papers.
 
 TRF Inputs
 -----------------------------
-The solver instantiation provides default configuration settings for all
-available configuration options.
 
-The required inputs to the TRF solve method are the following:
+The required inputs to the TRF ``solve`` method are the following:
 
 * The optimization model
 * List of degree of freedom variables within the model
@@ -89,26 +94,44 @@ The optional input to the TRF solve method is the following:
 
 
 TRF Solver Interface
------------------------------
+---------------------
+
+.. note::
+    The keyword arguments can be updated at solver instantiation or later when the ``solve`` method is called.
 
 .. autoclass:: pyomo.contrib.trustregion.TRF.TrustRegionSolver
     :members: solve
 
 TRF Usage Example
------------------------------
+------------------
 Two examples can be found in the ``examples`` subdirectory. One of them is 
-implemented here:
+implemented below.
+
+Step 0: Import Pyomo
+^^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
 
    >>> # === Required imports ===
    >>> import pyomo.environ as pyo
+
+Step 1: Define the external function and its gradient
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. doctest::
+
    >>> # === Define a 'black box' function and its gradient ===
    >>> def ext_fcn(a, b):
    ...     return pyo.sin(a - b)
    >>> def grad_ext_fcn(args, fixed):
    ...     a, b = args[:2]
    ...     return [ pyo.cos(a - b), -pyo.cos(a - b) ]
+
+Step 2: Create the model
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. doctest::
+
    >>> # === Construct the Pyomo model object ===
    >>> def create_model():
    ...     m = pyo.ConcreteModel()
@@ -129,17 +152,29 @@ implemented here:
    ...         )
    ...     m.c2 = pyo.Constraint(expr=m.z[2]**4 * m.z[1]**2 + m.z[1] == 8+pyo.sqrt(2.0))
    ...     return m
-   >>> # === Instantiate the TRF solver object ===
-   >>> trf_solver = pyo.SolverFactory('trustregion')
    >>> model = create_model()
+
+Step 3: Solve with TRF
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The solve method requires the user pass the model and a list of variables
+which represent the degrees of freedom in the model. The user may also pass
+a low-fidelity/ideal model (or "basis function") to this method to improve
+convergence.
 
 .. doctest::
    :skipif: not ipopt_available
 
+   >>> # === Instantiate the TRF solver object ===
+   >>> trf_solver = pyo.SolverFactory('trustregion')
    >>> # === Solve with TRF ===
-   >>> trf_solver.solve(model, [model.z[0], model.z[1], model.z[2]])
+   >>> result = trf_solver.solve(model, [model.z[0], model.z[1], model.z[2]])
    EXIT: Optimal solution found.
    ...
+
+The solve method returns a clone of the original model which has been run
+through TRF algorithm, thus leaving the original model intact.
+
 
 .. warning::
 
