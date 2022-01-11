@@ -25,6 +25,7 @@ from pyomo.contrib.appsi.base import (
     PersistentSolver, Results, TerminationCondition, MIPSolverConfig,
     PersistentBase, PersistentSolutionLoader
 )
+from pyomo.core.staleflag import StaleFlagManager
 
 logger = logging.getLogger(__name__)
 
@@ -298,6 +299,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         return self._postsolve(timer)
 
     def solve(self, model, timer: HierarchicalTimer = None) -> Results:
+        StaleFlagManager.mark_all_as_stale()
         avail = self.available()
         if not avail:
             raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')
@@ -782,6 +784,7 @@ class Gurobi(PersistentBase, PersistentSolver):
     def load_vars(self, vars_to_load=None, solution_number=0):
         for v, val in self.get_primals(vars_to_load=vars_to_load, solution_number=solution_number).items():
             v.set_value(val, skip_validation=True)
+        StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def get_primals(self, vars_to_load=None, solution_number=0):
         if self._needs_updated:
