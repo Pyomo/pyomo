@@ -1113,6 +1113,13 @@ class TestExceptions(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "inactive constraints"):
             igraph = IncidenceGraphInterface(nlp, active=False)
 
+    def test_remove_no_matrix(self):
+        m = pyo.ConcreteModel()
+        m.v1 = pyo.Var()
+        igraph = IncidenceGraphInterface()
+        with self.assertRaisesRegex(RuntimeError, "no incidence matrix"):
+            igraph.remove_nodes([m.v1])
+
 
 if __name__ == "__main__":
     unittest.main()
