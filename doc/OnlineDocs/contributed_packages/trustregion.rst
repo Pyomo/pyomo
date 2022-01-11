@@ -140,7 +140,6 @@ implemented here:
    >>> trf_solver.solve(model, [model.z[0], model.z[1], model.z[2]])
    EXIT: Optimal solution found.
    ...
-                 1 :   0.0 : -1.1102230246251565e-16 :   0.0
 
 .. warning::
 
