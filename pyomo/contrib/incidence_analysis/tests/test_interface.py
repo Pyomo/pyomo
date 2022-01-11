@@ -1051,7 +1051,7 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         # matrix.
         vars_to_remove = [m.flow_comp[1]]
         cons_to_remove = [m.flow_eqn[1]]
-        igraph.remove_nodes(vars_to_remove, cons_to_remove)
+        igraph.remove_nodes(vars_to_remove + cons_to_remove)
         var_dmp, con_dmp = igraph.dulmage_mendelsohn()
         var_con_set = ComponentSet(igraph.variables + igraph.constraints)
         underconstrained_set = ComponentSet(
