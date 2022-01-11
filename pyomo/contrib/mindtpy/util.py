@@ -647,6 +647,11 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
                 solver_model.setParam(
                     gurobipy.GRB.Param.SolutionNumber, solution_name)
                 var_val = var_map[v_from].Xn
+            # We don't want to trigger the reset of the global stale
+            # indicator, so we will set this variable to be "stale",
+            # knowing that set_value will switch it back to "not
+            # stale"
+            v_to.stale = True
             # NOTE: PEP 2180 changes the var behavior so that domain /
             # bounds violations no longer generate exceptions (and
             # instead log warnings).  This means that the following will

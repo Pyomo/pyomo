@@ -284,6 +284,11 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             for var, val in zip(MindtPy.variable_list, var_values):
                 if not var.is_binary():
                     continue
+                # We don't want to trigger the reset of the global stale
+                # indicator, so we will set this variable to be "stale",
+                # knowing that set_value will switch it back to "not
+                # stale"
+                var.stale = True
                 var.set_value(val, skip_validation=True)
 
             # check to make sure that binary variables are all 0 or 1
