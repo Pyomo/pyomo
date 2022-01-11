@@ -28,10 +28,9 @@ class _StaleFlagManager(object):
         non-stale variable value is changed.
 
         """
-        if current_flag < self._current:
-            return self._current
-        self._current += 1
-        setattr(self, 'get_flag', getattr(self, '_get_flag'))
+        if current_flag == self._current:
+            self._current += 1
+            setattr(self, 'get_flag', getattr(self, '_get_flag'))
         return self._current
 
     def is_stale(self, val):
