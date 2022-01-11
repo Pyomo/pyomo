@@ -88,7 +88,7 @@ The required inputs to the TRF ``solve`` method are the following:
 * The optimization model
 * List of degree of freedom variables within the model
 
-The optional input to the TRF solve method is the following:
+The optional input to the TRF ``solve`` method is the following:
 
 * The external function surrogate model rule ("basis function")
 
@@ -157,10 +157,11 @@ Step 2: Create the model
 Step 3: Solve with TRF
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The solve method requires the user pass the model and a list of variables
-which represent the degrees of freedom in the model. The user may also pass
-a low-fidelity/ideal model (or "basis function") to this method to improve
-convergence.
+.. note::
+    Reminder from earlier that the ``solve`` method requires the user pass the model and a list of variables
+    which represent the degrees of freedom in the model. The user may also pass
+    a low-fidelity/ideal model (or "basis function") to this method to improve
+    convergence.
 
 .. doctest::
    :skipif: not ipopt_available
@@ -172,7 +173,7 @@ convergence.
    EXIT: Optimal solution found.
    ...
 
-The solve method returns a clone of the original model which has been run
+The ``solve`` method returns a clone of the original model which has been run
 through TRF algorithm, thus leaving the original model intact.
 
 
