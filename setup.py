@@ -201,6 +201,7 @@ setup_kwargs = dict(
             'ipython',   # contrib.viewer
             'matplotlib',
             'networkx',  # network, incidence_analysis, community_detection
+            'plotly',    # pyomo.util.graph.plot_pyomo_model
             'numpy',
             'openpyxl',  # dataportals
             #'pathos',   # requested for #963, but PR currently closed
