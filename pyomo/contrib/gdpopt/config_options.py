@@ -212,7 +212,11 @@ def _add_tolerance_configs(CONFIG):
     ))
     CONFIG.declare("constraint_tolerance", ConfigValue(
         default=1E-6,
-        description="Tolerance on constraint satisfaction."
+        description="""Tolerance on constraint satisfaction.
+
+        Increasing this tolerance corresponds to being more conservative in
+        declaring the model or an NLP subproblem to be infeasible.
+        """
     ))
     CONFIG.declare("variable_tolerance", ConfigValue(
         default=1E-8,
