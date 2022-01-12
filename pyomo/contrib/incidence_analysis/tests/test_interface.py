@@ -675,6 +675,47 @@ class TestGasExpansionModelInterfaceClassStructural(unittest.TestCase):
             igraph.block_triangularize(variables, constraints)
         self.assertIn('must be unindexed', str(exc.exception))
 
+    def test_remove(self):
+        model = make_gas_expansion_model()
+        igraph = IncidenceGraphInterface(model)
+
+        n_eqn = len(list(model.component_data_objects(pyo.Constraint)))
+        matching = igraph.maximum_matching()
+        values = ComponentSet(matching.values())
+        self.assertEqual(len(matching), n_eqn)
+        self.assertEqual(len(values), n_eqn)
+
+        variable_set = ComponentSet(igraph.variables)
+        self.assertIn(model.F[0], variable_set)
+        self.assertIn(model.F[2], variable_set)
+        var_dmp, con_dmp = igraph.dulmage_mendelsohn()
+        underconstrained_set = ComponentSet(
+            var_dmp.unmatched + var_dmp.underconstrained
+        )
+        self.assertIn(model.F[0], underconstrained_set)
+        self.assertIn(model.F[2], underconstrained_set)
+
+        N, M = igraph.incidence_matrix.shape
+
+        # Say we know that these variables and constraints should
+        # be matched...
+        vars_to_remove = [model.F[0], model.F[2]]
+        cons_to_remove = (model.mbal[1], model.mbal[2])
+        igraph.remove_nodes(vars_to_remove, cons_to_remove)
+        variable_set = ComponentSet(igraph.variables)
+        self.assertNotIn(model.F[0], variable_set)
+        self.assertNotIn(model.F[2], variable_set)
+        var_dmp, con_dmp = igraph.dulmage_mendelsohn()
+        underconstrained_set = ComponentSet(
+            var_dmp.unmatched + var_dmp.underconstrained
+        )
+        self.assertNotIn(model.F[0], underconstrained_set)
+        self.assertNotIn(model.F[2], underconstrained_set)
+
+        N_new, M_new = igraph.incidence_matrix.shape
+        self.assertEqual(N_new, N - len(cons_to_remove))
+        self.assertEqual(M_new, M - len(vars_to_remove))
+
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
@@ -988,6 +1029,42 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         for con in con_dmp[0]+con_dmp[1]:
             self.assertIn(con, overconstrained_cons)
 
+    def test_remove(self):
+        m = make_degenerate_solid_phase_model()
+        variables = list(m.component_data_objects(pyo.Var))
+        constraints = list(m.component_data_objects(pyo.Constraint))
+
+        igraph = IncidenceGraphInterface(m)
+        var_dmp, con_dmp = igraph.dulmage_mendelsohn()
+        var_con_set = ComponentSet(igraph.variables + igraph.constraints)
+        underconstrained_set = ComponentSet(
+            var_dmp.unmatched + var_dmp.underconstrained
+        )
+        self.assertIn(m.flow_comp[1], var_con_set)
+        self.assertIn(m.flow_eqn[1], var_con_set)
+        self.assertIn(m.flow_comp[1], underconstrained_set)
+
+        N, M = igraph.incidence_matrix.shape
+
+        # flow_comp[1] is underconstrained, but we think it should be
+        # specified by flow_eqn[1], so we remove these from the incidence
+        # matrix.
+        vars_to_remove = [m.flow_comp[1]]
+        cons_to_remove = [m.flow_eqn[1]]
+        igraph.remove_nodes(vars_to_remove + cons_to_remove)
+        var_dmp, con_dmp = igraph.dulmage_mendelsohn()
+        var_con_set = ComponentSet(igraph.variables + igraph.constraints)
+        underconstrained_set = ComponentSet(
+            var_dmp.unmatched + var_dmp.underconstrained
+        )
+        self.assertNotIn(m.flow_comp[1], var_con_set)
+        self.assertNotIn(m.flow_eqn[1], var_con_set)
+        self.assertNotIn(m.flow_comp[1], underconstrained_set)
+
+        N_new, M_new = igraph.incidence_matrix.shape
+        self.assertEqual(N_new, N - len(cons_to_remove))
+        self.assertEqual(M_new, M - len(vars_to_remove))
+
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
 @unittest.skipUnless(scipy_available, "scipy is not available.")
@@ -1035,6 +1112,13 @@ class TestExceptions(unittest.TestCase):
         nlp = PyomoNLP(m)
         with self.assertRaisesRegex(ValueError, "inactive constraints"):
             igraph = IncidenceGraphInterface(nlp, active=False)
+
+    def test_remove_no_matrix(self):
+        m = pyo.ConcreteModel()
+        m.v1 = pyo.Var()
+        igraph = IncidenceGraphInterface()
+        with self.assertRaisesRegex(RuntimeError, "no incidence matrix"):
+            igraph.remove_nodes([m.v1])
 
 
 if __name__ == "__main__":

@@ -236,8 +236,8 @@ class TestInterval(unittest.TestCase):
                     zl, zu = interval.cos(xl, xu)
                     x = np.linspace(xl, xu, 100)
                     _z = np.cos(x)
-                    self.assertTrue(np.all(zl <= _z))
-                    self.assertTrue(np.all(zu >= _z))
+                    self.assertTrue(np.all(zl <= _z + 1e-14))
+                    self.assertTrue(np.all(zu >= _z - 1e-14))
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_sin(self):
@@ -249,8 +249,8 @@ class TestInterval(unittest.TestCase):
                     zl, zu = interval.sin(xl, xu)
                     x = np.linspace(xl, xu, 100)
                     _z = np.sin(x)
-                    self.assertTrue(np.all(zl <= _z))
-                    self.assertTrue(np.all(zu >= _z))
+                    self.assertTrue(np.all(zl <= _z + 1e-14))
+                    self.assertTrue(np.all(zu >= _z - 1e-14))
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_tan(self):
@@ -262,8 +262,8 @@ class TestInterval(unittest.TestCase):
                     zl, zu = interval.tan(xl, xu)
                     x = np.linspace(xl, xu, 100)
                     _z = np.tan(x)
-                    self.assertTrue(np.all(zl <= _z))
-                    self.assertTrue(np.all(zu >= _z))
+                    self.assertTrue(np.all(zl <= _z + 1e-14))
+                    self.assertTrue(np.all(zu >= _z - 1e-14))
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_asin(self):
