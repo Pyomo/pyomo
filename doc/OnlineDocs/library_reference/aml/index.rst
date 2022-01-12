@@ -18,6 +18,7 @@ through the `pyomo.environ` namespace.
    Var
    Objective
    Constraint
+   ExternalFunction
    Reference
 
 
@@ -40,6 +41,12 @@ AML Component Documentation
 
 .. autoclass:: Constraint
    :show-inheritance:
+   :members:
+   :inherited-members:
+
+.. autoclass:: ExternalFunction
+   :show-inheritance:
+   :special-members: __init__
    :members:
    :inherited-members:
 

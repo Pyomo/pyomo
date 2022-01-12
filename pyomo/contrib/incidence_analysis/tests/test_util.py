@@ -439,6 +439,29 @@ class TestSolveSCC(unittest.TestCase):
             self.assertFalse(m.dhdt[t].fixed)
             self.assertTrue(m.flow_in[t].fixed)
 
+    def test_with_calc_var_kwds(self):
+        m = pyo.ConcreteModel()
+        m.v0 = pyo.Var()
+        m.v1 = pyo.Var()
+        m.v2 = pyo.Var(initialize=79703634.05074187)
+        m.v2.fix()
+        m.p0 = pyo.Param(initialize=3e5)
+        m.p1 = pyo.Param(initialize=1.296e12)
+        m.con0 = pyo.Constraint(expr=m.v0 == m.p0)
+        m.con1 = pyo.Constraint(expr=0.0 == m.p1*m.v1/m.v0 + m.v2)
+        calc_var_kwds = {"eps": 1e-7}
+        # This solve fails to converge without raising the tolerance.
+        # The secant method used to converge a linear variable-constraint
+        # pair (such as con0, v0 and con1, v1) leaves us with a residual of
+        # 1.48e-8 due to roundoff error.
+        results = solve_strongly_connected_components(
+            m, calc_var_kwds=calc_var_kwds
+        )
+        self.assertEqual(len(results), 2)
+        self.assertAlmostEqual(m.v0.value, m.p0.value)
+        self.assertAlmostEqual(m.v1.value, -18.4499152895)
+        # -18.4499 ~= -v2*v0/p1
+
 
 if __name__ == "__main__":
     unittest.main()
