@@ -49,9 +49,16 @@ def graph_from_pyomo(m: _BlockData,
 def plot_pyomo_model(m: _BlockData,
                      include_objective: bool = True,
                      active: bool = True,
-                     plot_title: Optional[str] = None):
+                     plot_title: Optional[str] = None,
+                     bipartite_plot: bool = False,
+                     show_plot: bool = True):
     graph = graph_from_pyomo(m, include_objective=include_objective, active=active)
-    pos_dict = nx.drawing.spring_layout(graph, seed=0)
+    if bipartite_plot:
+        left_nodes = [c for c in OrderedSet(m.component_data_objects(pe.Constraint, descend_into=True, active=active))]
+        left_nodes.extend(_CompNode(obj) for obj in ComponentSet(m.component_data_objects(pe.Objective, descend_into=True, active=active)))
+        pos_dict = nx.drawing.bipartite_layout(graph, nodes=left_nodes)
+    else:
+        pos_dict = nx.drawing.spring_layout(graph, seed=0)
 
     edge_x = list()
     edge_y = list()
@@ -99,4 +106,5 @@ def plot_pyomo_model(m: _BlockData,
     fig = go.Figure(data=[edge_trace, node_trace])
     if plot_title is not None:
         fig.update_layout(title=dict(text=plot_title))
-    fig.show()
+    if show_plot:  # this option is mostly for unit tests
+        fig.show()
