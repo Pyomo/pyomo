@@ -35,6 +35,7 @@ def read(*rnames):
 
 def import_pyomo_module(*path):
     _module_globals = dict(globals())
+    _module_globals['__name__'] = None
     _source = os.path.join(os.path.dirname(__file__), *path)
     with open(_source) as _FILE:
         exec(_FILE.read(), _module_globals)

@@ -44,7 +44,7 @@ def get_appsi_extension(in_setup=False, appsi_root=None):
         package_name = 'pyomo.contrib.appsi.cmodel.appsi_cmodel'
     else:
         package_name = 'appsi_cmodel'
-    return Pybind11Extension(package_name, sources)
+    return Pybind11Extension(package_name, sources, extra_compile_args=['-std=c++11'])
 
 def build_appsi(args=[]):
     print('\n\n**** Building APPSI ****')
