@@ -28,7 +28,7 @@ Department of Energy’s Office of Fossil Energy and Carbon Management.
 .. _Yoshio & Biegler, 2021: https://doi.org/10.1016/j.compchemeng.2021.107447
 
 Methodology Overview
------------------------------
+---------------------
 
 The formulation of the original hybrid problem is:
 
@@ -81,7 +81,7 @@ model is updated for the next iteration.
 When using TRF, please consider citing the above papers.
 
 TRF Inputs
------------------------------
+-----------
 
 The required inputs to the TRF ``solve`` method are the following:
 
@@ -128,7 +128,7 @@ Step 1: Define the external function and its gradient
    ...     return [ pyo.cos(a - b), -pyo.cos(a - b) ]
 
 Step 2: Create the model
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
 
@@ -155,7 +155,7 @@ Step 2: Create the model
    >>> model = create_model()
 
 Step 3: Solve with TRF
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. note::
     Reminder from earlier that the ``solve`` method requires the user pass the model and a list of variables
