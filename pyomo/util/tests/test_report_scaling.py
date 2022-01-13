@@ -43,15 +43,59 @@ class TestReportScaling(unittest.TestCase):
         with LoggingIntercept(out, 'pyomo.util.report_scaling', level=logging.INFO):
             report_scaling(m)
 
-        s = out.getvalue()
-        match = re.search('\n\nThe following variables are not bounded.*\s*Var\s*LB\s*UB\s*x\[4\]\s*-inf\s*inf\s*The '
-                          'following variables have large bounds.*\s*Var\s*LB\s*UB\s*x\[1\]\s*.*\s*x\[2\]\s*.*\s*.*\s*'
-                          'The following objectives have potentially large coefficients.*\s*obj1\s*Var\s*Coef LB\s*Coef '
-                          'UB\s*x\[3\]\s*.*\s*.*\s*x\[1\]\s*.*\s*.*\s*x\[2\]\s*.*\s*.*\s*obj2\s*Var\s*Coef LB\s*Coef '
-                          'UB\s*x\[1\]\s*.*\s*.*\s*The following objectives have small coefficients.*\s*obj1\s*Var\s*'
-                          'Coef LB\s*Coef UB\s*x\[0\]\s*.*\s*.*\s*The following constraints have potentially large '
-                          'coefficients.*\s*c\[2\]\s*Var\s*Coef LB\s*Coef UB\s*x\[3\]\s*.*\s*.*\s*The following '
-                          'constraints have small coefficients.*\s*c\[1\]\s*Var\s*Coef LB\s*Coef UB\s*x\[1\]\s*.*'
-                          '\s*.*\s*The following constraints have bodies with large bounds.*\s*Constraint\s*LB\s*UB\s*'
-                          'c\[2\]\s*.*\s*.*\s*', s)
-        self.assertEqual(match.span(), (0, len(s)))
+        expected = """
+
+The following variables are not bounded. Please add bounds.
+LB          UB          Var
+-inf        inf         x[4]
+
+The following variables have large bounds. Please scale them.
+LB          UB          Var
+1.00e+05    1.00e+07    x[1]
+-1.00e+05   0.00e+00    x[2]
+
+The following objectives have potentially large coefficients. Please scale them.
+obj1
+    Coef LB     Coef UB     Var
+    2.06e-09    4.85e+08    x[3]
+    -1.00e+05   0.00e+00    x[1]
+    1.00e+05    1.00e+07    x[2]
+
+obj2
+    Coef LB     Coef UB     Var
+    2.00e+05    2.00e+07    x[1]
+
+The following objectives have small coefficients.
+obj1
+    Coef LB     Coef UB     Var
+    1.00e-08    1.00e-08    x[0]
+
+The following constraints have potentially large coefficients. Please scale them.
+c[2]
+    Coef LB     Coef UB     Var
+    1.00e+05    1.00e+07    x[3]
+
+The following constraints have small coefficients.
+c[1]
+    Coef LB     Coef UB     Var
+    -1.00e-10   -1.00e-14   x[1]
+
+The following constraints have bodies with large bounds. Please scale them.
+LB          UB          Constraint
+-2.00e+08   2.00e+08    c[2]
+
+"""
+
+        self.assertEqual(out.getvalue(), expected)
+        #s = out.getvalue()
+        #match = re.search('\n\nThe following variables are not bounded.*\s*Var\s*LB\s*UB\s*x\[4\]\s*-inf\s*inf\s*The '
+        #                  'following variables have large bounds.*\s*Var\s*LB\s*UB\s*x\[1\]\s*.*\s*x\[2\]\s*.*\s*.*\s*'
+        #                  'The following objectives have potentially large coefficients.*\s*obj1\s*Var\s*Coef LB\s*Coef '
+        #                  'UB\s*x\[3\]\s*.*\s*.*\s*x\[1\]\s*.*\s*.*\s*x\[2\]\s*.*\s*.*\s*obj2\s*Var\s*Coef LB\s*Coef '
+        #                  'UB\s*x\[1\]\s*.*\s*.*\s*The following objectives have small coefficients.*\s*obj1\s*Var\s*'
+        #                  'Coef LB\s*Coef UB\s*x\[0\]\s*.*\s*.*\s*The following constraints have potentially large '
+        #                  'coefficients.*\s*c\[2\]\s*Var\s*Coef LB\s*Coef UB\s*x\[3\]\s*.*\s*.*\s*The following '
+        #                  'constraints have small coefficients.*\s*c\[1\]\s*Var\s*Coef LB\s*Coef UB\s*x\[1\]\s*.*'
+        #                  '\s*.*\s*The following constraints have bodies with large bounds.*\s*Constraint\s*LB\s*UB\s*'
+        #                  'c\[2\]\s*.*\s*.*\s*', s)
+        #self.assertEqual(match.span(), (0, len(s)))

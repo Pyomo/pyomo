@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.environ as pe
+import pyomo.environ as pyo
 import math
 from pyomo.core.base.block import _BlockData
 from pyomo.common.collections import ComponentSet
@@ -21,37 +21,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def _get_longest_name(comps):
-    longest_name = 0
-
-    for i in comps:
-        i_len = len(str(i))
-        if i_len > longest_name:
-            longest_name = i_len
-
-    if longest_name > 195:
-        longest_name = 195
-    if longest_name < 12:
-        longest_name = 12
-
-    return longest_name
+def _bounds_to_float(lb, ub):
+    if lb is None:
+        lb = -math.inf
+    if ub is None:
+        ub = math.inf
+    return lb, ub
 
 
 def _print_var_set(var_set):
-    longest_varname = _get_longest_name(var_set)
-
-    s = f'{"Var":<{longest_varname + 5}}{"LB":>12}{"UB":>12}\n'
+    s = f'{"LB":<12}{"UB":<12}Var\n'
 
     for v in var_set:
-        if v.lb is None:
-            v_lb = -math.inf
-        else:
-            v_lb = v.lb
-        if v.ub is None:
-            v_ub = math.inf
-        else:
-            v_ub = v.ub
-        s += f'{str(v):<{longest_varname + 5}}{v_lb:>12.2e}{v_ub:>12.2e}\n'
+        v_lb, v_ub = _bounds_to_float(*v.bounds)
+        s += f'{v_lb:<12.2e}{v_ub:<12.2e}{str(v)}\n'
 
     s += '\n'
 
@@ -61,7 +44,7 @@ def _print_var_set(var_set):
 def _check_var_bounds(m: _BlockData, too_large: float):
     vars_without_bounds = ComponentSet()
     vars_with_large_bounds = ComponentSet()
-    for v in m.component_data_objects(pe.Var, descend_into=True):
+    for v in m.component_data_objects(pyo.Var, descend_into=True):
         if v.is_fixed():
             continue
         if v.lb is None or v.ub is None:
@@ -77,10 +60,9 @@ def _print_coefficients(comp_map):
     for c, der_bounds in comp_map.items():
         s += str(c)
         s += '\n'
-        longest_vname = _get_longest_name([i[0] for i in der_bounds])
-        s += f'    {"Var":<{longest_vname + 5}}{"Coef LB":>12}{"Coef UB":>12}\n'
+        s += f'    {"Coef LB":<12}{"Coef UB":<12}Var\n'
         for v, der_lb, der_ub in der_bounds:
-            s += f'    {str(v):<{longest_vname + 5}}{der_lb:>12.2e}{der_ub:>12.2e}\n'
+            s += f'    {der_lb:<12.2e}{der_ub:<12.2e}{str(v)}\n'
         s += '\n'
     return s
 
@@ -89,11 +71,10 @@ def _check_coefficents(comp, expr, too_large, too_small, largs_coef_map, small_c
     ders = reverse_sd(expr)
     for _v, _der in ders.items():
         if isinstance(_v, _GeneralVarData):
+            if _v.is_fixed():
+                continue
             der_lb, der_ub = compute_bounds_on_expr(_der)
-            if der_lb is None:
-                der_lb = -math.inf
-            if der_ub is None:
-                der_ub = math.inf
+            der_lb, der_ub = _bounds_to_float(der_lb, der_ub)
             if der_lb <= -too_large or der_ub >= too_large:
                 if comp not in largs_coef_map:
                     largs_coef_map[comp] = list()
@@ -138,22 +119,19 @@ def report_scaling(m: _BlockData, too_large: float = 5e4, too_small: float = 1e-
     cons_with_large_coefficients = dict()
     cons_with_small_coefficients = dict()
 
-    objs_with_large_coefficients = pe.ComponentMap()
-    objs_with_small_coefficients = pe.ComponentMap()
+    objs_with_large_coefficients = pyo.ComponentMap()
+    objs_with_small_coefficients = pyo.ComponentMap()
 
-    for c in m.component_data_objects(pe.Constraint, active=True, descend_into=True):
+    for c in m.component_data_objects(pyo.Constraint, active=True, descend_into=True):
         _check_coefficents(c, c.body, too_large, too_small, cons_with_large_coefficients, cons_with_small_coefficients)
 
-    for c in m.component_data_objects(pe.Constraint, active=True, descend_into=True):
+    for c in m.component_data_objects(pyo.Constraint, active=True, descend_into=True):
         c_lb, c_ub = compute_bounds_on_expr(c.body)
-        if c_lb is None:
-            c_lb = -math.inf
-        if c_ub is None:
-            c_ub = math.inf
+        c_lb, c_ub = _bounds_to_float(c_lb, c_ub)
         if c_lb <= -too_large or c_ub >= too_large:
             cons_with_large_bounds[c] = (c_lb, c_ub)
 
-    for c in m.component_data_objects(pe.Objective, active=True, descend_into=True):
+    for c in m.component_data_objects(pyo.Objective, active=True, descend_into=True):
         _check_coefficents(c, c.expr, too_large, too_small, objs_with_large_coefficients, objs_with_small_coefficients)
 
     s = '\n\n'
@@ -184,10 +162,9 @@ def report_scaling(m: _BlockData, too_large: float = 5e4, too_small: float = 1e-
 
     if len(cons_with_large_bounds) > 0:
         s += 'The following constraints have bodies with large bounds. Please scale them.\n'
-        longest_cname = _get_longest_name(cons_with_large_bounds)
-        s += f'{"Constraint":<{longest_cname + 5}}{"LB":>12}{"UB":>12}\n'
+        s += f'{"LB":<12}{"UB":<12}Constraint\n'
         for c, (c_lb, c_ub) in cons_with_large_bounds.items():
-            s += f'{str(c):<{longest_cname + 5}}{c_lb:>12.2e}{c_ub:>12.2e}\n'
+            s += f'{c_lb:<12.2e}{c_ub:<12.2e}{str(c)}\n'
 
     if (len(vars_without_bounds) > 0
             or len(vars_with_large_bounds) > 0
