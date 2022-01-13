@@ -95,8 +95,12 @@ ERROR: Cython was explicitly requested with --with-cython, but cythonization
             raise
         using_cython = False
 
-if '--with-distributable-extensions' in sys.argv:
-    sys.argv.remove('--with-distributable-extensions')
+if ('--with-distributable-extensions' in sys.argv
+    or os.environ['PYOMO_SETUP_ARGS']):
+    try:
+        sys.argv.remove('--with-distributable-extensions')
+    except:
+        pass
     #
     # Import the APPSI extension builder
     #

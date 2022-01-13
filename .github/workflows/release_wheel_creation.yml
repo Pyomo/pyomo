@@ -10,6 +10,9 @@ on:
         description: Git Hash (Optional)
         required: false
 
+env:
+  PYOMO_SETUP_ARGS: --with-distributable-extensions
+
 jobs:
   manylinux:
     name: ${{ matrix.TARGET }}/wheel_creation
@@ -151,7 +154,7 @@ jobs:
         pip install twine wheel setuptools cython
     - name: Build OSX Python wheels
       run: |
-        python setup.py  --with-cython sdist --format=gztar bdist_wheel
+        python setup.py  --with-cython --with-distributable-extensions sdist --format=gztar bdist_wheel
 
     - name: Upload artifact
       uses: actions/upload-artifact@v1
@@ -186,7 +189,7 @@ jobs:
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
-        Invoke-Expression "python setup.py  --with-cython sdist --format=gztar bdist_wheel"
+        Invoke-Expression "python setup.py  --with-cython --with-distributable-extensions sdist --format=gztar bdist_wheel"
     - name: Upload artifact
       uses: actions/upload-artifact@v1
       with:
