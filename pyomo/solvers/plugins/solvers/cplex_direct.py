@@ -156,6 +156,8 @@ class CPLEXDirect(DirectSolver):
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
 
+        self.paramsets = None
+
     def _apply_solver(self):
         if not self._save_results:
             for block in self._pyomo_model.block_data_objects(descend_into=True, active=True):
@@ -260,7 +262,7 @@ class CPLEXDirect(DirectSolver):
             det0 = self._solver_model.get_dettime()
 
             try:
-                self._solver_model.solve()
+                self._solver_model.solve(paramsets=self.paramsets)
             except self._cplex.exceptions.CplexSolverError as e:
                 self._error_code = e.args[2]  # See cplex.exceptions.error_codes
 
