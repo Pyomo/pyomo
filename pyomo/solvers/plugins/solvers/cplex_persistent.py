@@ -47,6 +47,10 @@ class CPLEXPersistent(PersistentSolver, CPLEXDirect):
         if self._pyomo_model is not None:
             self.set_instance(self._pyomo_model, **kwds)
 
+    def _presolve(self, **kwds):
+        self.paramsets = kwds.pop('paramsets', None)
+        PersistentSolver._presolve(self, **kwds)
+
     def _remove_constraint(self, solver_con):
         try:
             self._solver_model.linear_constraints.delete(solver_con)

@@ -158,6 +158,8 @@ class CPLEXDirect(DirectSolver):
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
 
+        self.paramsets = None
+
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
 
@@ -260,7 +262,7 @@ class CPLEXDirect(DirectSolver):
             det0 = self._solver_model.get_dettime()
 
             try:
-                self._solver_model.solve()
+                self._solver_model.solve(paramsets=self.paramsets)
             except self._cplex.exceptions.CplexSolverError as e:
                 self._error_code = e.args[2]  # See cplex.exceptions.error_codes
 

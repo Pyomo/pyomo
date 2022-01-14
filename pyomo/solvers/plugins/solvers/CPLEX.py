@@ -309,6 +309,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             self, kwds.pop('warmstart_file', None), "warm start")
         user_warmstart = self._warm_start_file_name is not None
         self._integer_only_warmstarts = kwds.pop('integer_only_warmstarts', False)
+        kwds.pop('paramsets', None)
 
         # the input argument can currently be one of two things: an instance or a filename.
         # if a filename is provided and a warm-start is indicated, we go ahead and
