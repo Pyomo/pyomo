@@ -84,8 +84,8 @@ if using_cython:
         ]
         for f in files:
             shutil.copyfile(f[:-1], f)
-        ext_modules = cythonize(files, compiler_directives={
-            "language_level": 3 if sys.version_info >= (3, ) else 2})
+        ext_modules = cythonize(files,
+                                compiler_directives={"language_level": 3})
     except:
         if using_cython == CYTHON_REQUIRED:
             print("""
@@ -96,7 +96,8 @@ ERROR: Cython was explicitly requested with --with-cython, but cythonization
         using_cython = False
 
 if (('--with-distributable-extensions' in sys.argv)
-    or ('--with-distributable-extensions' in os.getenv('PYOMO_SETUP_ARGS'))):
+    or (os.getenv('PYOMO_SETUP_ARGS') is not None and
+        '--with-distributable-extensions' in os.getenv('PYOMO_SETUP_ARGS'))):
     try:
         sys.argv.remove('--with-distributable-extensions')
     except:
