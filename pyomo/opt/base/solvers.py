@@ -658,6 +658,7 @@ class OptSolver(object):
         self._tee                     = kwds.pop("tee", False)
         self._assert_available        = kwds.pop("available", True)
         self._suffixes                = kwds.pop("suffixes", [])
+        kwds.pop('paramsets', None)
 
         self.available()
 
