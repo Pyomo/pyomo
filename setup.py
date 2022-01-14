@@ -95,8 +95,8 @@ ERROR: Cython was explicitly requested with --with-cython, but cythonization
             raise
         using_cython = False
 
-if ('--with-distributable-extensions' in sys.argv
-    or os.environ['PYOMO_SETUP_ARGS']):
+if (('--with-distributable-extensions' in sys.argv)
+    or ('--with-distributable-extensions' in os.getenv('PYOMO_SETUP_ARGS'))):
     try:
         sys.argv.remove('--with-distributable-extensions')
     except:
