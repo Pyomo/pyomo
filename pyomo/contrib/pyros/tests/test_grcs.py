@@ -2147,7 +2147,7 @@ class testBypassingSeparation(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
-        local_subsolver = SolverFactory('baron')
+        local_subsolver = SolverFactory('ipopt')
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
