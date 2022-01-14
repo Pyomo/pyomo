@@ -423,6 +423,7 @@ class TrustRegionSolver(object):
                             ext_fcn_surrogate_map_rule,
                             self.config)
 
+
 def _generate_filtered_docstring():
     cfg = _trf_config()
     return add_docstring_list(TrustRegionSolver.solve.__doc__, cfg, indent_by=8)

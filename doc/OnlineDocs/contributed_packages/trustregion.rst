@@ -63,7 +63,7 @@ where:
 * :math:`x^T = [w^T, y^T, z^T]` is a set of all inputs and outputs
 
 Using this formulation and a user-supplied low-fidelity/ideal model basis function
-:math:`b\left(w\right)`, the algoritm iteratively solves subproblems using
+:math:`b\left(w\right)`, the algorithm iteratively solves subproblems using
 the surrogate model:
 
 .. math::
