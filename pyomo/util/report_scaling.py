@@ -30,11 +30,11 @@ def _bounds_to_float(lb, ub):
 
 
 def _print_var_set(var_set):
-    s = f'{"LB":<12}{"UB":<12}Var\n'
+    s = f'{"LB":>12}{"UB":>12}    Var\n'
 
     for v in var_set:
         v_lb, v_ub = _bounds_to_float(*v.bounds)
-        s += f'{v_lb:<12.2e}{v_ub:<12.2e}{str(v)}\n'
+        s += f'{v_lb:>12.2e}{v_ub:>12.2e}    {str(v)}\n'
 
     s += '\n'
 
@@ -60,9 +60,9 @@ def _print_coefficients(comp_map):
     for c, der_bounds in comp_map.items():
         s += str(c)
         s += '\n'
-        s += f'    {"Coef LB":<12}{"Coef UB":<12}Var\n'
+        s += f'    {"Coef LB":>12}{"Coef UB":>12}    Var\n'
         for v, der_lb, der_ub in der_bounds:
-            s += f'    {der_lb:<12.2e}{der_ub:<12.2e}{str(v)}\n'
+            s += f'    {der_lb:>12.2e}{der_ub:>12.2e}    {str(v)}\n'
         s += '\n'
     return s
 
@@ -162,9 +162,9 @@ def report_scaling(m: _BlockData, too_large: float = 5e4, too_small: float = 1e-
 
     if len(cons_with_large_bounds) > 0:
         s += 'The following constraints have bodies with large bounds. Please scale them.\n'
-        s += f'{"LB":<12}{"UB":<12}Constraint\n'
+        s += f'{"LB":>12}{"UB":>12}    Constraint\n'
         for c, (c_lb, c_ub) in cons_with_large_bounds.items():
-            s += f'{c_lb:<12.2e}{c_ub:<12.2e}{str(c)}\n'
+            s += f'{c_lb:>12.2e}{c_ub:>12.2e}    {str(c)}\n'
 
     if (len(vars_without_bounds) > 0
             or len(vars_with_large_bounds) > 0
