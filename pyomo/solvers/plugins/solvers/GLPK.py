@@ -88,12 +88,6 @@ class GLPK(OptSolver):
                 opt = SolverFactory('_glpk_shell_old', **kwds)
             opt.set_problem_format(ProblemFormat.mps)
             return opt
-        if mode == 'python':
-            opt = SolverFactory('_glpk_direct', **kwds)
-            if opt is None:
-                logger.error('Python API for GLPK is not installed')
-                return
-            return opt
         #
         if mode == 'os':
             opt = SolverFactory('_ossolver', **kwds)
