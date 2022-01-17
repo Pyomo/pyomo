@@ -70,31 +70,22 @@ class GLPK(OptSolver):
         except KeyError:
             mode = 'lp'
         #
-        if mode  == 'lp':
-            if (_glpk_version is None) or \
-               (_glpk_version >= (4,58,0,0)):
-                return SolverFactory('_glpk_shell', **kwds)
-            elif _glpk_version >= (4,42,0,0):
-                return SolverFactory('_glpk_shell_4_42', **kwds)
-            else:
-                return SolverFactory('_glpk_shell_old', **kwds)
-        if mode == 'mps':
-            if (_glpk_version is None) or \
-               (_glpk_version >= (4,58,0,0)):
-                opt = SolverFactory('_glpk_shell', **kwds)
-            elif _glpk_version >= (4,42,0,0):
-                opt = SolverFactory('_glpk_shell_4_42', **kwds)
-            else:
-                opt = SolverFactory('_glpk_shell_old', **kwds)
-            opt.set_problem_format(ProblemFormat.mps)
-            return opt
-        #
-        if mode == 'os':
+        if mode in {'lp', 'mps'}:
+            if _glpk_version is not None and _glpk_version < (4, 58):
+                raise RuntimeError(
+                    "Pyomo only supports versions of GLPK since 4.58; "
+                    "found version %s.  Please upgrade your installation "
+                    "of GLPK" % ('.'.join(map(str, _glpk_version)),)
+                )
+            opt = SolverFactory('_glpk_shell', **kwds)
+            if mode == 'mps':
+                opt.set_problem_format(ProblemFormat.mps)
+        elif mode == 'os':
             opt = SolverFactory('_ossolver', **kwds)
+            opt.set_options('solver=glpsol')
         else:
             logger.error('Unknown IO type: %s' % mode)
-            return
-        opt.set_options('solver=glpsol')
+            return None
         return opt
 
 
