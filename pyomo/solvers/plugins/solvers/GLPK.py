@@ -28,20 +28,6 @@ from pyomo.solvers.mockmip import MockMIP
 
 logger = logging.getLogger('pyomo.solvers')
 
-_glpk_version = None
-def configure_glpk():
-    global _glpk_version
-    if _glpk_version is not None:
-        return
-    _glpk_version = _extract_version("")
-    if not Executable("glpsol"):
-        return
-    result = subprocess.run([Executable('glpsol').path(), "--version"],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            timeout=1, universal_newlines=True)
-    if not result.returncode:
-        _glpk_version = _extract_version(result.stdout)
-
 # Not sure how better to get these constants, but pulled from GLPK
 # documentation and source code (include/glpk.h)
 
@@ -65,22 +51,9 @@ class GLPK(OptSolver):
     """The GLPK LP/MIP solver"""
 
     def __new__(cls, *args, **kwds):
-        configure_glpk()
-        try:
-            mode = kwds['solver_io']
-            if mode is None:
-                mode = 'lp'
-            del kwds['solver_io']
-        except KeyError:
-            mode = 'lp'
+        mode = kwds.pop('solver_io', 'lp')
         #
-        if mode in {'lp', 'mps'}:
-            if _glpk_version is not None and _glpk_version < (4, 58):
-                raise RuntimeError(
-                    "Pyomo only supports versions of GLPK since 4.58; "
-                    "found version %s.  Please upgrade your installation "
-                    "of GLPK" % ('.'.join(map(str, _glpk_version)),)
-                )
+        if mode in {None, 'lp', 'mps'}:
             opt = SolverFactory('_glpk_shell', **kwds)
             if mode == 'mps':
                 opt.set_problem_format(ProblemFormat.mps)
@@ -99,8 +72,11 @@ class GLPK(OptSolver):
 class GLPKSHELL(SystemCallSolver):
     """Shell interface to the GLPK LP/MIP solver"""
 
+    # Cache known versions so we do not need to repeatedly query the
+    # version every time we run the solver.
+    _known_versions = {}
+
     def __init__ (self, **kwargs):
-        configure_glpk()
         #
         # Call base constructor
         #
@@ -140,15 +116,36 @@ class GLPKSHELL(SystemCallSolver):
             return None
         return executable.path()
 
-    def _get_version(self):
+    def _get_version(self, executable=None):
         """
         Returns a tuple describing the solver executable version.
         """
-        if _glpk_version is None:
-            return _extract_version('')
-        return _glpk_version
+        if executable is None:
+            executable = self.executable()
+        result = subprocess.run(
+            [executable, "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=1,
+            universal_newlines=True,
+        )
+        return _extract_version(result.stdout)
 
     def create_command_line(self, executable, problem_files):
+        #
+        # Not the best place to catch this, but we want to make sure
+        # that we have done the version check somewhere
+        #
+        if executable not in self._known_versions:
+            self._known_versions[executable] = self._get_version(executable)
+        _ver = self._known_versions[executable]
+        if not _ver or _ver < (4, 58):
+            raise RuntimeError(
+                "Pyomo only supports versions of GLPK since 4.58; "
+                "found version %s.  Please upgrade your installation "
+                "of GLPK" % ('.'.join(map(str, _glpk_version)),)
+            )
+
         #
         # Define log file
         #
