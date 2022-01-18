@@ -16,13 +16,16 @@ logger = logging.getLogger('pyomo.gdp.fix_disjuncts')
 
 @TransformationFactory.register(
     'gdp.fix_disjuncts',
-    doc="Fix disjuncts to their current Boolean values.")
+    doc="""Fix disjuncts to their current Boolean values and transforms any
+    LogicalConstraints and BooleanVars so that the resulting model is a
+    MI(N)LP.""")
 class GDP_Disjunct_Fixer(Transformation):
     """Fix disjuncts to their current Boolean values.
 
     This reclassifies all disjuncts in the passed model instance as ctype Block
     and deactivates the constraints and disjunctions within inactive disjuncts.
-
+    In addition, it transforms relvant LogicalConstraints and BooleanVars so
+    that the resulting model is a MI(N)LP.
     """
 
     def __init__(self, **kwargs):
@@ -52,11 +55,19 @@ class GDP_Disjunct_Fixer(Transformation):
             disjunct_object.parent_block().reclassify_component_type(
                 disjunct_object, Block)
 
+        # Transform any remaining logical stuff
+        TransformationFactory('core.logical_to_linear').apply_to(model)
+
     def _transformContainer(self, obj):
         """Find all disjuncts in the container and transform them."""
         for disjunct in obj.component_data_objects(ctype=Disjunct, active=True,
                                                    descend_into=True):
             _binary = disjunct.binary_indicator_var
+            if _binary.value is None:
+                raise GDP_Error("The value of the binary_indicator_var of "
+                                "Disjunct '%s' is None. All indicator_vars "
+                                "must have values before calling "
+                                "'fix_disjuncts'." % disjunct.name)
             if fabs(value(_binary) - 1) <= self.config.integer_tolerance:
                 disjunct.indicator_var.fix(True)
                 self._transformContainer(disjunct)

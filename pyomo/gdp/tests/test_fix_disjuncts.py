@@ -12,11 +12,14 @@
 # -*- coding: UTF-8 -*-
 """Tests disjunct fixing."""
 import pyomo.common.unittest as unittest
-from pyomo.environ import (Block,
-                           Constraint, ConcreteModel, TransformationFactory,
-                           NonNegativeReals)
+from pyomo.environ import (
+    Block, Constraint, ConcreteModel, TransformationFactory, NonNegativeReals,
+    BooleanVar, LogicalConstraint, SolverFactory, Objective, value, Var,
+    implies)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.opt import check_available_solvers
 
+solvers = check_available_solvers('gurobi')
 
 class TestFixDisjuncts(unittest.TestCase):
     """Tests fixing of disjuncts."""
@@ -28,8 +31,8 @@ class TestFixDisjuncts(unittest.TestCase):
         m.d2 = Disjunct()
         m.d2.c = Constraint()
         m.d = Disjunction(expr=[m.d1, m.d2])
-        m.d1.indicator_var.set_value(1)
-        m.d2.indicator_var.set_value(0)
+        m.d1.indicator_var.set_value(True)
+        m.d2.indicator_var.set_value(False)
 
         TransformationFactory('gdp.fix_disjuncts').apply_to(m)
         self.assertTrue(m.d1.indicator_var.fixed)
@@ -73,6 +76,64 @@ class TestFixDisjuncts(unittest.TestCase):
                 ValueError, "Non-binary indicator variable value"):
             TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
+    def test_disjuncts_partially_fixed(self):
+        m = ConcreteModel()
+        m.d1 = Disjunct()
+        m.d2 = Disjunct()
+        m.d = Disjunction(expr=[m.d1, m.d2])
+        m.another1 = Disjunct()
+        m.another2 = Disjunct()
+        m.another = Disjunction(expr=[m.another1, m.another2])
+
+        m.d1.indicator_var.set_value(True)
+        m.d2.indicator_var.set_value(False)
+
+        with self.assertRaisesRegex(
+                GDP_Error,
+                "The value of the binary_indicator_var of "
+                "Disjunct 'another1' is None. All indicator_vars "
+                "must have values before calling "
+                "'fix_disjuncts'."):
+            TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+
+    @unittest.skipIf('gurobi' not in solvers, "Gurobi solver not available")
+    def test_logical_constraints_transformed(self):
+        """It is expected that the result of this transformation is a MI(N)LP,
+        so check that LogicalConstraints are handeled correctly"""
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        m.d1 = Disjunct()
+        m.d2 = Disjunct()
+        m.d2.c = Constraint()
+        m.d = Disjunction(expr=[m.d1, m.d2])
+        m.another = Disjunction(expr=[[m.x == 3], [m.x == 0]])
+        m.Y = BooleanVar()
+        m.global_logical = LogicalConstraint(expr=m.Y.xor(m.d1.indicator_var))
+        m.d1.logical = LogicalConstraint(
+            expr=implies(~m.Y, m.another.disjuncts[0].indicator_var))
+        m.obj = Objective(expr=m.x)
+
+        m.d1.indicator_var.set_value(True)
+        m.d2.indicator_var.set_value(False)
+        m.another.disjuncts[0].indicator_var.set_value(True)
+        m.another.disjuncts[1].indicator_var.set_value(False)
+
+        TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+
+        # Make sure there are no active LogicalConstraints
+        self.assertEqual(
+            len(list(m.component_data_objects(LogicalConstraint,
+                                              active=True,
+                                              descend_into=(Block,
+                                                            Disjunct)))), 0)
+        # See that it solves as expected
+        SolverFactory('gurobi').solve(m)
+        self.assertTrue(value(m.d1.indicator_var))
+        self.assertFalse(value(m.d2.indicator_var))
+        self.assertTrue(value(m.another.disjuncts[0].indicator_var))
+        self.assertFalse(value(m.another.disjuncts[1].indicator_var))
+        self.assertEqual(value(m.Y.get_associated_binary()), 0)
+        self.assertEqual(value(m.x), 3)
 
 if __name__ == '__main__':
     unittest.main()
