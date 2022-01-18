@@ -156,6 +156,8 @@ class CPLEXDirect(DirectSolver):
         self._capabilities.sos1 = True
         self._capabilities.sos2 = True
 
+        self.paramsets = None
+
     def _apply_solver(self):
         if not self._save_results:
             for block in self._pyomo_model.block_data_objects(descend_into=True, active=True):
@@ -260,7 +262,7 @@ class CPLEXDirect(DirectSolver):
             det0 = self._solver_model.get_dettime()
 
             try:
-                self._solver_model.solve()
+                self._solver_model.solve(paramsets=self.paramsets)
             except self._cplex.exceptions.CplexSolverError as e:
                 self._error_code = e.args[2]  # See cplex.exceptions.error_codes
 
@@ -670,6 +672,7 @@ class CPLEXDirect(DirectSolver):
             rtn_codes.optimal,
             rtn_codes.MIP_optimal,
             rtn_codes.optimal_tolerance,
+            rtn_codes.multiobj_optimal,
         }:
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_condition = TerminationCondition.optimal
@@ -680,6 +683,7 @@ class CPLEXDirect(DirectSolver):
             rtn_codes.MIP_unbounded,
             rtn_codes.relaxation_unbounded,
             134,
+            rtn_codes.multiobj_unbounded,
         }:
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.unbounded
@@ -688,6 +692,7 @@ class CPLEXDirect(DirectSolver):
             rtn_codes.infeasible_or_unbounded,
             rtn_codes.MIP_infeasible_or_unbounded,
             134,
+            rtn_codes.multiobj_inforunbd,
         }:
             # Note: status of 4 means infeasible or unbounded
             #       and 119 means MIP infeasible or unbounded
@@ -695,7 +700,7 @@ class CPLEXDirect(DirectSolver):
             self.results.solver.termination_condition = \
                 TerminationCondition.infeasibleOrUnbounded
             soln.status = SolutionStatus.unsure
-        elif status in {rtn_codes.infeasible, rtn_codes.MIP_infeasible}:
+        elif status in {rtn_codes.infeasible, rtn_codes.MIP_infeasible, rtn_codes.multiobj_infeasible}:
             self.results.solver.status = SolverStatus.warning
             self.results.solver.termination_condition = TerminationCondition.infeasible
             soln.status = SolutionStatus.infeasible
@@ -720,7 +725,9 @@ class CPLEXDirect(DirectSolver):
             rtn_codes.abort_dettime_limit,
             rtn_codes.MIP_time_limit_feasible,
             rtn_codes.MIP_dettime_limit_feasible,
-        }:
+            rtn_codes.multiobj_stopped,
+            rtn_codes.multiobj_non_optimal,
+        } and cpxprob.solution.get_solution_type() != cpxprob.solution.type.none:
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_condition = TerminationCondition.maxTimeLimit
             soln.status = SolutionStatus.stoppedByLimit
@@ -730,6 +737,7 @@ class CPLEXDirect(DirectSolver):
             rtn_codes.node_limit_infeasible,
             rtn_codes.mem_limit_infeasible,
             rtn_codes.MIP_abort_infeasible,
+            rtn_codes.multiobj_stopped,
         } or self._error_code == self._cplex.exceptions.error_codes.CPXERR_NO_SOLN:
             # CPLEX doesn't have a solution status for `noSolution` so we assume this from the combination of
             # maxTimeLimit + infeasible (instead of a generic `TerminationCondition.error`).
