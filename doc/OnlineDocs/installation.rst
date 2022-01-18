@@ -43,12 +43,23 @@ Conditional Dependencies
 
 Extensions to Pyomo, and many of the contributions in `pyomo.contrib`,
 also have conditional dependencies on a variety of third-party Python
-packages including but not limited to: numpy, scipy, sympy, networkx,
-openpxl, pyodbc, xlrd, pandas, matplotlib, pymysql, pyro4, and
-pint. Pyomo extensions that require any of these packages will generate
+packages including but not limited to: matplotlib, networkx, numpy,
+openpyxl, pandas, pint, pymysql, pyodbc, pyro4, scipy, sympy, and
+xlrd. (A full list of conditional dependencies can be found in Pyomo's
+`setup.py`)
+
+Pyomo extensions that require any of these packages will generate
 an error message for missing dependencies upon use.
 
 Many of the conditional dependencies are already distributed with
 Anaconda. You can check which Python packages you already have installed
 using the command ``conda list`` or ``pip list``. Additional Python
 packages may be installed as needed.
+
+Alternatively, you can install all conditional dependencies using pip:
+
+::
+
+   pip install 'pyomo[optional]'
+
+
