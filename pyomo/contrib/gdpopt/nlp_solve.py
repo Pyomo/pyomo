@@ -132,7 +132,7 @@ def solve_NLP(nlp_model, solve_data, config):
                 nlp_args['time_limit'] = min(nlp_args.get('time_limit', 
                                                           float('inf')), 
                                              remaining)
-            results = nlp_solver.solve(nlp_model, **nlp_args)
+            results = nlp_solver.solve(nlp_model, tee=True, **nlp_args)
         except ValueError as err:
             if 'Cannot load a SolverResults object with bad status: error' in \
                str(err):
