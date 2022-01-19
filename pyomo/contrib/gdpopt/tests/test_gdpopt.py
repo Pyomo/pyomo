@@ -1007,6 +1007,8 @@ class TestGLOA(unittest.TestCase):
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)
 
+    @unittest.skipUnless(license_available,
+                         "Global NLP solver license not available.")
     def test_GLOA_nonconvex_HENS(self):
         exfile = import_file(join(exdir, 'small_lit', 'nonconvex_HEN.py'))
         model = exfile.build_gdp_model()
@@ -1015,10 +1017,12 @@ class TestGLOA(unittest.TestCase):
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
-            tee=True)
+            tee=False)
         objective_value = value(model.objective.expr)
         self.assertAlmostEqual(objective_value * 1E-5, 1.14385, 2)
 
+    @unittest.skipUnless(license_available,
+                         "Global NLP solver license not available.")
     def test_GLOA_disjunctive_bounds(self):
         exfile = import_file(join(exdir, 'small_lit', 'nonconvex_HEN.py'))
         model = exfile.build_gdp_model()
@@ -1028,7 +1032,7 @@ class TestGLOA(unittest.TestCase):
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
             calc_disjunctive_bounds=True,
-            tee=True)
+            tee=False)
         objective_value = value(model.objective.expr)
         self.assertAlmostEqual(objective_value * 1E-5, 1.14385, 2)
 
