@@ -162,12 +162,6 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
     def warm_start_capable(self):
         return True
 
-    def available(self, exception_flag=False):
-        val = ILMLicensedSystemCallSolver.available(self, exception_flag)
-        if not val:
-            return False
-        return True
-
     #
     # write a warm-start file in the GUROBI MST format, which is *not*
     # the same as the CPLEX MST format.
@@ -382,13 +376,8 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         return Bunch(cmd=cmd, script=script,
                                    log_file=self._log_file, env=None)
 
-    def process_logfile(self):
-
-        return ILMLicensedSystemCallSolver.process_logfile(self)
 
     def process_soln_file(self, results):
-
-
         # the only suffixes that we extract from CPLEX are
         # constraint duals, constraint slacks, and variable
         # reduced-costs. scan through the solver suffix list
