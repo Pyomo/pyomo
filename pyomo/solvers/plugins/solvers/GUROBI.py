@@ -28,6 +28,8 @@ from pyomo.opt.results import (
 from pyomo.opt.solver import ILMLicensedSystemCallSolver
 from pyomo.core.kernel.block import IBlock
 
+from .gurobi_direct import gurobipy_available
+
 logger = logging.getLogger('pyomo.solvers')
 
 
@@ -130,23 +132,24 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         else:
             executable = os.path.join(
                 os.path.dirname(solver_exec), 'gurobi_cl')
-
             try:
-                rc = subprocess.call([executable, "--license"],
-                                     stdout=subprocess.PIPE,
-                                     stderr=subprocess.STDOUT)
+                rc = subprocess.call(
+                    [executable, "--license"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                )
             except OSError:
-                rc = 1
-                if rc:
-                    #
-                    # Try the --status flag if --license is not available
-                    #
-                    try:
-                        rc = subprocess.call([executable, "--status"],
-                                             stdout=subprocess.PIPE,
-                                             stderr=subprocess.STDOUT)
-                    except OSError:
-                        rc = 1
+                try:
+                    rc = subprocess.run(
+                        [solver_exec],
+                        input=('import gurobipy; '
+                               'gurobipy.Env().dispose(); quit()'),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        universal_newlines=True,
+                    ).returncode
+                except OSError:
+                    rc = 1
             licensed = not rc
 
         self._solver_info_cache[(solver_exec, 'licensed')] = licensed
@@ -254,12 +257,14 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
             executable = Executable("gurobi.bat")
         else:
             executable = Executable("gurobi.sh")
-        if not executable:
-            logger.warning("Could not locate the 'gurobi' executable, "
-                           "which is required for solver %s" % self.name)
-            self.enable = False
-            return None
-        return executable.path()
+        if executable:
+            return executable.path()
+        if gurobipy_available:
+            return sys.executable
+        logger.warning("Could not locate the 'gurobi' executable, "
+                       "which is required for solver %s" % self.name)
+        self.enable = False
+        return None
 
     def _get_version(self):
         """
@@ -274,7 +279,8 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         else:
             results = subprocess.run(
                 [solver_exec],
-                input='from gurobipy import *; print(gurobi.version()); exit()',
+                input=('import gurobipy; '
+                       'print(gurobipy.gurobi.version()); quit()'),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
