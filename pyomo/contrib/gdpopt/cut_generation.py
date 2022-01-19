@@ -9,8 +9,6 @@
 #  ___________________________________________________________________________
 
 """This module provides functions for cut generation."""
-from __future__ import division
-
 from collections import namedtuple
 from math import copysign, fabs
 from pyomo.common.collections import ComponentMap, ComponentSet

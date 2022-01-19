@@ -9,8 +9,6 @@
 #  ___________________________________________________________________________
 """Utility functions and classes for the GDPopt solver."""
 
-from __future__ import division
-
 import logging
 from contextlib import contextmanager
 from math import fabs
@@ -585,9 +583,3 @@ def setup_solver_environment(model, config):
     solve_data.results.solver.timing = solve_data.timing
     solve_data.results.solver.user_time = solve_data.timing.total
     solve_data.results.solver.wallclock_time = solve_data.timing.total
-
-
-def indent(text, prefix):
-    """This should be replaced with textwrap.indent when we stop supporting 
-    python 2.7."""
-    return ''.join(prefix + line for line in text.splitlines(True))

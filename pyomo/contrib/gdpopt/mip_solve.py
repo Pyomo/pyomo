@@ -1,7 +1,4 @@
 """Functions for solving the master problem."""
-
-from __future__ import division
-
 from copy import deepcopy
 
 from pyomo.common.errors import InfeasibleConstraintException

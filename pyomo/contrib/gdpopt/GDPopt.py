@@ -30,8 +30,6 @@
 - start keeping basic changelog
 
 """
-from __future__ import division
-
 from io import StringIO
 
 from pyomo.common.config import (
@@ -44,9 +42,8 @@ from pyomo.contrib.gdpopt.master_initialize import (
     GDPopt_initialize_master
 )
 from pyomo.contrib.gdpopt.util import (
-    presolve_lp_nlp, process_objective,
-    time_code, indent,
-    setup_solver_environment)
+    presolve_lp_nlp, process_objective, time_code, setup_solver_environment)
+from textwrap import indent
 from pyomo.opt.base import SolverFactory
 
 __version__ = (20, 2, 28)  # Note: date-based version number

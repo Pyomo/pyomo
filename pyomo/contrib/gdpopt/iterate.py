@@ -1,6 +1,4 @@
 """Iteration code."""
-from __future__ import division
-
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts,
                                                  add_affine_cuts)

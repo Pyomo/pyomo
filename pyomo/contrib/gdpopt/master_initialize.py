@@ -1,9 +1,6 @@
 """Functions for initializing the master problem
 in Logic-based outer approximation.
 """
-
-from __future__ import division
-
 from math import fabs
 
 from pyomo.contrib.gdpopt.cut_generation import (

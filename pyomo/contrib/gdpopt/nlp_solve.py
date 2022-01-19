@@ -9,8 +9,6 @@
 #  ___________________________________________________________________________
 
 """Functions for solving the nonlinear subproblem."""
-from __future__ import division
-
 from math import fabs
 
 from pyomo.common.collections import ComponentSet
