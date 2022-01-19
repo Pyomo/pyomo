@@ -1015,7 +1015,7 @@ class TestGLOA(unittest.TestCase):
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
-            tee=False)
+            tee=True)
         objective_value = value(model.objective.expr)
         self.assertAlmostEqual(objective_value * 1E-5, 1.14385, 2)
 
@@ -1028,7 +1028,7 @@ class TestGLOA(unittest.TestCase):
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
             calc_disjunctive_bounds=True,
-            tee=False)
+            tee=True)
         objective_value = value(model.objective.expr)
         self.assertAlmostEqual(objective_value * 1E-5, 1.14385, 2)
 
