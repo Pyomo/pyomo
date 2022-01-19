@@ -18,14 +18,16 @@ logger = logging.getLogger('pyomo.gdp.fix_disjuncts')
     'gdp.fix_disjuncts',
     doc="""Fix disjuncts to their current Boolean values and transforms any
     LogicalConstraints and BooleanVars so that the resulting model is a
-    MI(N)LP.""")
+    (MI)(N)LP.""")
 class GDP_Disjunct_Fixer(Transformation):
     """Fix disjuncts to their current Boolean values.
 
     This reclassifies all disjuncts in the passed model instance as ctype Block
     and deactivates the constraints and disjunctions within inactive disjuncts.
     In addition, it transforms relvant LogicalConstraints and BooleanVars so
-    that the resulting model is a MI(N)LP.
+    that the resulting model is a (MI)(N)LP (where it is only mixed-integer
+    if the model contains integer-domain Vars or BooleanVars which were not
+    indicator_vars of Disjuncs.
     """
 
     def __init__(self, **kwargs):
