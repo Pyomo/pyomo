@@ -17,6 +17,7 @@ import subprocess
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
+from pyomo.common.fileutils import this_file_dir
 from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat, OptSolver
@@ -336,7 +337,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
         #       the same directory.
         script  = "import sys\n"
         script += "from gurobipy import *\n"
-        script += "sys.path.append(%r)\n" % os.path.dirname(__file__)
+        script += "sys.path.append(%r)\n" % (this_file_dir(),)
         script += "from GUROBI_RUN import *\n"
         script += "gurobi_run("
         mipgap = float(self.options.mipgap) if \
