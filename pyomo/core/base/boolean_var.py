@@ -114,10 +114,6 @@ class _BooleanVarData(ComponentData, BooleanValue):
                 logger.warning("implicitly casting '%s' value %s to bool"
                                % (self.name, val))
             val = bool(val)
-        if self._value == val and not self.stale:
-            # do not update the value / set the stale flag if we are not
-            # changing the value and the variable is currently not stale
-            return
         self._value = val
         self._stale = StaleFlagManager.get_flag(self._stale)
 
