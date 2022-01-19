@@ -36,12 +36,8 @@ class GUROBI(OptSolver):
     """The GUROBI LP/MIP solver
     """
     def __new__(cls, *args, **kwds):
-        try:
-            mode = kwds['solver_io']
-            if mode is None:
-                mode = 'lp'
-            del kwds['solver_io']
-        except KeyError:
+        mode = kwds.pop('solver_io', 'lp')
+        if mode is None:
             mode = 'lp'
         #
         if mode  == 'lp':
