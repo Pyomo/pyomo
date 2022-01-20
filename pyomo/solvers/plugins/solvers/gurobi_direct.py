@@ -19,6 +19,7 @@ from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.tee import capture_output
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
@@ -147,14 +148,8 @@ class GurobiDirect(DirectSolver):
         return self._verified_license
 
     def _apply_solver(self):
-        if not self._save_results:
-            for block in self._pyomo_model.block_data_objects(descend_into=True,
-                                                              active=True):
-                for var in block.component_data_objects(ctype=pyomo.core.base.var.Var,
-                                                        descend_into=False,
-                                                        active=True,
-                                                        sort=False):
-                    var.stale = True
+        StaleFlagManager.mark_all_as_stale()
+
         if self._tee:
             self._solver_model.setParam('OutputFlag', 1)
         else:
@@ -671,7 +666,6 @@ class GurobiDirect(DirectSolver):
                 for gurobi_var, val, name in zip(gurobi_vars, var_vals, names):
                     pyomo_var = self._solver_var_to_pyomo_var_map[gurobi_var]
                     if self._referenced_variables[pyomo_var] > 0:
-                        pyomo_var.stale = False
                         soln_variables[name] = {"Value": val}
 
                 if extract_reduced_costs:
@@ -727,7 +721,7 @@ class GurobiDirect(DirectSolver):
         elif self._load_solutions:
             if gprob.SolCount > 0:
 
-                self._load_vars()
+                self.load_vars()
 
                 if extract_reduced_costs:
                     self._load_rc()
@@ -766,7 +760,6 @@ class GurobiDirect(DirectSolver):
 
         for var, val in zip(vars_to_load, vals):
             if ref_vars[var] > 0:
-                var.stale = False
                 var.set_value(val, skip_validation=True)
 
     def _load_rc(self, vars_to_load=None):
