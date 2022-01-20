@@ -22,6 +22,7 @@ from pyomo.common.dependencies import pympler, pympler_available
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.var import Var
@@ -458,11 +459,13 @@ class ModelSolutions(object):
         """
         instance = self._instance()
         #
-        # Set the "stale" flag of each variable in the model prior to loading the
-        # solution, so you known which variables have "real" values and which ones don't.
+        # Set the "stale" flag of each variable in the model prior to
+        # loading the solution, so you known which variables have "real"
+        # values and which ones don't.
         #
-        instance._flag_vars_as_stale()
-        if not index is None:
+        StaleFlagManager.mark_all_as_stale()
+
+        if index is not None:
             self.index = index
         soln = self.solutions[self.index]
 
@@ -521,7 +524,6 @@ class ModelSolutions(object):
                                        str(vdata.value)))
 
             vdata.set_value(val, skip_validation=True)
-            vdata.stale = False
 
             for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
@@ -539,6 +541,10 @@ class ModelSolutions(object):
                 if attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][cdata] = attr_value
 
+        # Set the state flag to "delayed advance": it will auto-advance
+        # if a non-stale variable is updated (causing all non-stale
+        # variables to be marked as stale).
+        StaleFlagManager.mark_all_as_stale(delayed=True)
 
 @ModelComponentFactory.register('Model objects can be used as a component of other models.')
 class Model(ScalarBlock):
