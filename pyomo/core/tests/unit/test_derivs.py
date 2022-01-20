@@ -18,6 +18,7 @@ from pyomo.core.expr.calculus.diff_with_pyomo import (
 from pyomo.core.expr.numeric_expr import (
     LinearExpression, MonomialTermExpression,
 )
+from pyomo.core.expr.compare import compare_expressions
 from pyomo.core.expr.sympy_tools import sympy_available
 
 tol = 6
@@ -314,7 +315,7 @@ class TestDifferentiate(unittest.TestCase):
         m.y = pyo.Var(initialize=0.88)
         ddx = differentiate(m.x**2, wrt=m.x, mode='sympy')
         self.assertIsInstance(ddx, MonomialTermExpression)
-        self.assertEqual(str(ddx), '2.0*x')
+        self.assertTrue(compare_expressions(ddx, 2*m.x))
         self.assertAlmostEqual(ddx(), 0.46)
         ddy = differentiate(m.x**2, wrt=m.y, mode='sympy')
         self.assertEqual(ddy, 0)
@@ -323,7 +324,7 @@ class TestDifferentiate(unittest.TestCase):
         self.assertIsInstance(ddx, list)
         self.assertEqual(len(ddx), 2)
         self.assertIsInstance(ddx[0], MonomialTermExpression)
-        self.assertEqual(str(ddx[0]), '2.0*x')
+        self.assertTrue(compare_expressions(ddx[0], 2*m.x))
         self.assertAlmostEqual(ddx[0](), 0.46)
         self.assertEqual(ddx[1], 0)
 
@@ -333,7 +334,7 @@ class TestDifferentiate(unittest.TestCase):
         m.y = pyo.Var(initialize=0.88)
         ddx = differentiate(m.x**2, wrt=m.x, mode='reverse_symbolic')
         self.assertIsInstance(ddx, MonomialTermExpression)
-        self.assertEqual(str(ddx), '2*x')
+        self.assertTrue(compare_expressions(ddx, 2*m.x))
         self.assertAlmostEqual(ddx(), 0.46)
         ddy = differentiate(m.x**2, wrt=m.y, mode='reverse_symbolic')
         self.assertEqual(ddy, 0)
@@ -343,7 +344,7 @@ class TestDifferentiate(unittest.TestCase):
         self.assertIsInstance(ddx, list)
         self.assertEqual(len(ddx), 2)
         self.assertIsInstance(ddx[0], MonomialTermExpression)
-        self.assertEqual(str(ddx[0]), '2*x')
+        self.assertTrue(compare_expressions(ddx[0], 2*m.x))
         self.assertAlmostEqual(ddx[0](), 0.46)
         self.assertEqual(ddx[1], 0)
 
