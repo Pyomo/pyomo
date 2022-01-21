@@ -615,7 +615,7 @@ class _NLWriter_impl(object):
         ktot = 0
         for var_idx, info in enumerate(variables[:-1]):
             ktot += con_nnz_by_var[info[1]]
-            ostream.write("%d\n" % ktot)
+            ostream.write(f"{ktot}\n")
 
         #
         # "J" lines (non-empty terms in the Jacobian)
@@ -1295,7 +1295,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 if _id in self.value_cache:
                     arg1 = self.value_cache[_id]
                 else:
-                    arg1 = self.value_cache[_id] = value(arg1)
+                    arg1 = self.value_cache[_id] = arg1()
             if arg2.is_fixed():
                 return False, (_CONSTANT, arg1 * arg2())
             else:
