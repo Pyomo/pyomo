@@ -16,6 +16,7 @@ from operator import itemgetter, attrgetter
 from pyomo.common.backports import nullcontext
 from pyomo.common.config import ConfigBlock, ConfigValue, InEnum
 from pyomo.common.errors import DeveloperError
+from pyomo.common.gc_manager import PauseGC
 
 from pyomo.core.expr.current import (
     NegationExpression, ProductExpression, DivisionExpression,
@@ -49,6 +50,7 @@ else:
 from pyomo.core.base import Set, RangeSet
 from pyomo.network import Port
 ###
+
 
 class _CONSTANT(object): pass
 class _MONOMIAL(object): pass
@@ -166,7 +168,11 @@ class NLWriter(object):
                     for k, v in unknown.items())))
 
         _impl = _NLWriter_impl(ostream, rowstream, colstream, config)
-        return _impl.write(model)
+        # Pause the GC, as the walker that generates the compiled NL
+        # representation generates (and disposes of) a large number of
+        # small objects.
+        with PauseGC():
+            return _impl.write(model)
 
 def _RANGE_TYPE(lb, ub):
     if lb == ub:
