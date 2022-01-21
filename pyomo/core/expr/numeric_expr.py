@@ -1052,14 +1052,6 @@ class SumExpression(SumExpressionBase):
         #
         return False
 
-    def is_potentially_variable(self):
-        for v in islice(self._args_, self._nargs):
-            if v.__class__ in nonpyomo_leaf_types:
-                continue
-            if v.is_variable_type() or v.is_potentially_variable():
-                return True
-        return False
-
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             tmp = [values[0]]
