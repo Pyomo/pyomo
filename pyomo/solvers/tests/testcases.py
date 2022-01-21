@@ -278,6 +278,28 @@ ExpectedFailures['scip', 'nl', 'SOS1_simple'] = \
 #
 # BARON
 #
+SkipTests['baron', 'bar', 'LP_trivial_constraints'] = (
+    lambda v: v[:3] == (22, 1, 19),
+    'BARON 22.1.19 hits an infinite loop for this test case'
+)
+
+for prob in ('QP_simple_nosuffixes', 'QP_simple_nosuffixes_kernel',
+             'QP_simple', 'QP_simple_kernel',
+             'MIQP_simple', 'MIQP_simple_kernel',
+             'MILP_simple', 'MILP_simple_kernel',
+             'LP_simple', 'LP_simple_kernel',
+             'LP_block', 'LP_block_kernel'):
+    ExpectedFailures['baron', 'bar', prob] = (
+        lambda v: v[:3] == (22, 1, 19),
+        'BARON 22.1.19 reports model as infeasible'
+    )
+
+for prob in ('LP_unbounded', 'LP_unbounded_kernel'):
+    ExpectedFailures['baron', 'bar', prob] = (
+        lambda v: v[:3] == (22, 1, 19),
+        'BARON 22.1.19 reports model as optimal'
+    )
+
 #
 # The following were necessary before we started adding the 'WantDual'
 # option when a user explicitly defines a 'dual' or 'rc' suffix to
