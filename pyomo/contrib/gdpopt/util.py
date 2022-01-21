@@ -219,19 +219,25 @@ def copy_var_list_values(from_list, to_list, config,
         if skip_fixed and v_to.is_fixed():
             continue  # Skip fixed variables.
         try:
+            # We don't want to trigger the reset of the global stale
+            # indicator, so we will set this variable to be "stale",
+            # knowing that set_value will switch it back to "not
+            # stale"
+            v_to.stale = True
+            # NOTE: PEP 2180 changes the var behavior so that domain /
+            # bounds violations no longer generate exceptions (and
+            # instead log warnings).  This means that the following will
+            # always succeed and the ValueError should never be raised.
             v_to.set_value(value(v_from, exception=False))
-            if skip_stale:
-                v_to.stale = False
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             var_val = value(v_from)
             rounded_val = int(round(var_val))
             # Check to see if this is just a tolerance issue
-            if ignore_integrality \
-                    and v_to.is_integer():  # not v_to.is_continuous()
-                v_to.value = value(v_from, exception=False)
+            if ignore_integrality and v_to.is_integer():
+                v_to.set_value(var_val, skip_validation=True)
             elif v_to.is_integer() and (fabs(var_val - rounded_val) <=
-                                        config.integer_tolerance): # not v_to.is_continuous()
+                                        config.integer_tolerance):
                 v_to.set_value(rounded_val)
             elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
                 v_to.set_value(0)

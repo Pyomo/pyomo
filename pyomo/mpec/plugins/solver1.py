@@ -53,7 +53,7 @@ class MPEC_Solver1(pyomo.opt.OptSolver):
             epsilon_final = self.options.get('epsilon_final', 1e-7)
             epsilon = self.options.get('epsilon_initial', epsilon_final)
             while (True):
-                self._instance.mpec_bound.value = epsilon
+                self._instance.mpec_bound.set_value(epsilon)
                 #
                 # **NOTE: It would be better to override _presolve on the
                 #         base class of this solver as you might be

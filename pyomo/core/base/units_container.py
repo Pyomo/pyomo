@@ -117,6 +117,7 @@ from pyomo.core.expr.numvalue import (
     native_numeric_types, pyomo_constant_types,
 )
 from pyomo.core.expr.template_expr import IndexTemplate
+from pyomo.core.expr.visitor import ExpressionValueVisitor
 from pyomo.core.expr import current as EXPR
 
 pint_module, pint_available = attempt_import(
@@ -359,11 +360,11 @@ class _PyomoUnit(NumericValue):
         : bool
            A string representation for the expression tree.
         """
-        if len(self._pint_unit.dimensionality) > 1 or any(
-                i < 0 for i in self._pint_unit.dimensionality.values()):
-            return "("+str(self)+")"
+        _str = str(self)
+        if any(map(_str.__contains__, ' */')):
+            return "(" + _str + ")"
         else:
-            return str(self)
+            return _str
 
     def __call__(self, exception=True):
         """Unit is treated as a constant value, and this method always returns 1.0
@@ -1298,6 +1299,87 @@ external
     @property
     def pint_registry(self):
         return self._pint_registry
+
+
+class _QuantityVisitor(ExpressionValueVisitor):
+
+    def __init__(self):
+        self.native_types = set(nonpyomo_leaf_types)
+        self.native_types.add(units._pint_registry.Quantity)
+        self._unary_inverse_trig = {
+            'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh',
+        }
+
+    def visit(self, node, values):
+        """ Visit nodes that have been expanded """
+        if node.__class__ in self.handlers:
+            return self.handlers[node.__class__](self, node, values)
+        return node._apply_operation(values)
+
+    def visiting_potential_leaf(self, node):
+        """
+        Visiting a potential leaf.
+
+        Return True if the node is not expanded.
+        """
+        if node.__class__ in self.native_types:
+            return True, node
+
+        if node.is_expression_type():
+            return False, None
+
+        if node.is_numeric_type():
+            if hasattr(node, 'get_units'):
+                unit = node.get_units()
+                if unit is not None:
+                    return True, value(node) * unit._pint_unit
+                else:
+                    return True, value(node)
+            elif node.__class__ is _PyomoUnit:
+                return True, node._pint_unit
+            else:
+                return True, value(node)
+        elif node.is_logical_type():
+            return True, value(node)
+        else:
+            return True, node
+
+    def finalize(self, val):
+        if val.__class__ is units._pint_registry.Quantity:
+            return val
+        elif val.__class__ is units._pint_registry.Unit:
+            return 1. * val
+        # else
+        try:
+            return val * units._pint_dimensionless
+        except:
+            return val
+
+    def _handle_unary_function(self, node, values):
+        ans = node._apply_operation(values)
+        if node.getname() in self._unary_inverse_trig:
+            ans = ans * units._pint_registry.radian
+        return ans
+
+    def _handle_external(self, node, values):
+        # External functions are units-unaware
+        ans = node._apply_operation([
+            val.magnitude if val.__class__ is units._pint_registry.Quantity
+            else val for val in values])
+        unit = node.get_units()
+        if unit is not None:
+            ans = ans * unit._pint_unit
+        return ans
+
+_QuantityVisitor.handlers = {
+    EXPR.UnaryFunctionExpression: _QuantityVisitor._handle_unary_function,
+    EXPR.NPV_UnaryFunctionExpression: _QuantityVisitor._handle_unary_function,
+    EXPR.ExternalFunctionExpression: _QuantityVisitor._handle_external,
+    EXPR.NPV_ExternalFunctionExpression: _QuantityVisitor._handle_external,
+}
+
+def as_quantity(expr):
+    return _QuantityVisitor().dfs_postorder_stack(expr)
 
 
 class _DeferredUnitsSingleton(PyomoUnitsContainer):

@@ -19,6 +19,7 @@ else:
     import collections
     _ordered_dict_ = collections.OrderedDict
 
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.base import \
     (_no_ctype,
@@ -381,11 +382,15 @@ class block(IBlock):
                 valid_import_suffixes[attr_key][self] = attr_value
 
         #
+        # Set the "stale" flag of each variable in the model prior to
+        # loading the solution, so you known which variables have "real"
+        # values and which ones don't.
+        #
+        StaleFlagManager.mark_all_as_stale()
+         #
         # Load variable data
         #
         from pyomo.core.kernel.variable import IVariable
-        for var in self.components(ctype=IVariable):
-            var.stale = True
         var_skip_attrs = ['id','canonical_label']
         seen_var_ids = set()
         for label, entry in solution.variable.items():
@@ -429,8 +434,7 @@ class block(IBlock):
                             % (var.name, attr_value,
                                comparison_tolerance_for_fixed_vars,
                                var.value))
-                    var.value = attr_value
-                    var.stale = False
+                    var.set_value(attr_value, skip_validation=True)
                 elif attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][var] = attr_value
 
@@ -510,8 +514,12 @@ class block(IBlock):
                         % (var.name, default_variable_value,
                            comparison_tolerance_for_fixed_vars,
                            var.value))
-                var.value = default_variable_value
-                var.stale = False
+                var.set_value(default_variable_value, skip_validation=True)
+
+        # Set the state flag to "delayed advance": it will auto-advance
+        # if a non-stale variable is updated (causing all non-stale
+        # variables to be marked as stale).
+        StaleFlagManager.mark_all_as_stale(delayed=True)
 
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module

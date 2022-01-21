@@ -14,6 +14,7 @@ import logging
 import math
 import sys
 import weakref
+from typing import overload
 
 from pyomo.common.deprecation import (
     deprecated, deprecation_warning, RenamedClass,
@@ -1382,6 +1383,7 @@ class _ScalarOrderedSetMixin(object):
 
 class _OrderedSetMixin(object):
     __slots__ = ()
+    _valid_getitem_keys = {None, (None,), Ellipsis}
 
     def at(self, index):
         raise DeveloperError("Derived ordered set class (%s) failed to "
@@ -1392,8 +1394,15 @@ class _OrderedSetMixin(object):
                              "implement ord" % (type(self).__name__,))
 
     def __getitem__(self, key):
-        if key is None and not self.is_indexed():
-            return self
+        # If key looks like the valid key for UnindexedComponent_set, or
+        # is an Ellipsis/slice (because someone is generating a
+        # component slice), then treat this like a regular Scalar
+        # component and defer to the IndexedComponent implementation.
+        # In any other case, defer to the deprecated OrderedScalarSet
+        # functionality
+        if not self.is_indexed() and (
+                key in self._valid_getitem_keys or type(key) is slice):
+            return super().__getitem__(key)
         deprecation_warning(
             "Using __getitem__ to return a set value from its (ordered) "
             "position is deprecated.  Please use at()",
@@ -1780,12 +1789,6 @@ class Set(IndexedComponent):
 
     Parameters
     ----------
-    name : str, optional
-        The name of the set
-
-    doc : str, optional
-        A text string describing this component
-
     initialize : initializer(iterable), optional
         The initial values to store in the Set when it is
         constructed.  Values passed to ``initialize`` may be
@@ -1834,6 +1837,12 @@ class Set(IndexedComponent):
         and returns True if the data belongs in the set.  Set will
         raise a ``ValueError`` for any values where `validate`
         returns False.
+
+    name : str, optional
+        The name of the set
+
+    doc : str, optional
+        A text string describing this component
 
     Notes
     -----
@@ -1908,6 +1917,11 @@ class Set(IndexedComponent):
             else:
                 newObj._ComponentDataClass = _FiniteSetData
             return newObj
+
+    @overload
+    def __init__(self, *indexes, initialize=None, dimen=UnknownSetDimen,
+                 ordered=InsertionOrder, within=None, domain=None,
+                 bounds=None, filter=None, validate=None, name=None, doc=None): ...
 
     def __init__(self, *args, **kwds):
         kwds.setdefault('ctype', Set)
@@ -2296,7 +2310,7 @@ class SetOf(_SetData, Component):
         if cls is not SetOf:
             return super(SetOf, cls).__new__(cls)
         reference, = args
-        if isinstance(reference, _SetData):
+        if isinstance(reference, (_SetData, GlobalSetBase)):
             if reference.isfinite():
                 if reference.isordered():
                     return super(SetOf, cls).__new__(OrderedSetOf)
@@ -2669,6 +2683,11 @@ class RangeSet(Component):
         for every data member of the set, and if it returns False, a
         ValueError will be raised.
 
+    name: str, optional
+        Name for this component.
+
+    doc: str, optional
+        Text describing this component.        
     """
 
     def __new__(cls, *args, **kwds):
@@ -2709,6 +2728,20 @@ class RangeSet(Component):
         else:
             return super(RangeSet, cls).__new__(AbstractInfiniteScalarRangeSet)
 
+    # `start`, `end`, `step` in `*args` are positional-only that cannot be filled with keywords.
+    # But positional-only params syntax are not supported before python 3.8.
+    # To emphasize they are positional-only, an underscore is added before their name.
+    @overload
+    def __init__(self, _end, *, finite=None, ranges=(), bounds=None,
+                 filter=None, validate=None, name=None, doc=None): ...
+
+    @overload
+    def __init__(self, _start, _end, _step=1, *, finite=None, ranges=(), bounds=None,
+                 filter=None, validate=None, name=None, doc=None): ...
+
+    @overload
+    def __init__(self, *, finite=None, ranges=(), bounds=None,
+                 filter=None, validate=None, name=None, doc=None): ...
 
     def __init__(self, *args, **kwds):
         # Finite was processed by __new__

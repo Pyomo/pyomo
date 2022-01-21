@@ -21,6 +21,7 @@ import textwrap
 from inspect import isclass
 from operator import itemgetter
 from io import StringIO
+from typing import overload
 
 from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
@@ -813,23 +814,6 @@ class _BlockData(ActiveComponentData):
                 and val.domain.parent_block() is None \
                 and not isinstance(val.domain, GlobalSetBase):
             self.add_component("%s_domain" % (val.local_name,), val.domain)
-
-    def _flag_vars_as_stale(self):
-        """
-        Configure *all* variables (on active blocks) and
-        their composite _VarData objects as stale. This
-        method is used prior to loading solver
-        results. Variable that did not particpate in the
-        solution are flagged as stale.  E.g., it most cases
-        fixed variables will be flagged as stale since they
-        are compiled out of expressions; however, many
-        solver plugins support including fixed variables in
-        the output problem by overriding bounds in order to
-        minimize preprocessing requirements, meaning fixed
-        variables are not necessarily always stale.
-        """
-        for variable in self.component_objects(Var, active=True):
-            variable.flag_as_stale()
 
     def collect_ctypes(self,
                        active=None,
@@ -1866,6 +1850,11 @@ class Block(ActiveIndexedComponent):
             return ScalarBlock.__new__(ScalarBlock)
         else:
             return IndexedBlock.__new__(IndexedBlock)
+
+    # `options` is ignored since it is deprecated
+    @overload
+    def __init__(self, *indexes, rule=None, concrete=False, dense=True,
+                 name=None, doc=None): ...
 
     def __init__(self, *args, **kwargs):
         """Constructor"""
