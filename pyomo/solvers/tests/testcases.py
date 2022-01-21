@@ -41,7 +41,7 @@ ExpectedFailures = {}
 # the solver is inconsistent in returning duals.
 MissingSuffixFailures = {}
 
-# These are tests that must be skipped for cersain solvers / versions
+# These are tests that must be skipped for certain solvers / versions
 # because attempting the solve will break the test suite (usually due to
 # infinite loops / timeouts)
 SkipTests = {}
