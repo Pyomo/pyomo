@@ -293,15 +293,15 @@ def create_model_dae(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300
     m.R = 8.31446261815324 # J / K / mole
        
     # Define parameters
-    m.A1 = Param(m.scena, initialize=scena['A1'],mutable=True)
-    m.A2 = Param(m.scena, initialize=scena['A2'],mutable=True)
-    m.E1 = Param(m.scena, initialize=scena['E1'],mutable=True)
-    m.E2 = Param(m.scena, initialize=scena['E2'],mutable=True)
+    #m.A1 = Param(m.scena, initialize=scena['A1'],mutable=True)
+    #m.A2 = Param(m.scena, initialize=scena['A2'],mutable=True)
+    #m.E1 = Param(m.scena, initialize=scena['E1'],mutable=True)
+    #m.E2 = Param(m.scena, initialize=scena['E2'],mutable=True)
     
-    #m.A1 = Var(m.scena, initialize = m.scena_all['A1'])
-    #m.A2 = Var(m.scena, initialize = m.scena_all['A2'])
-    #m.E1 = Var(m.scena, initialize = m.scena_all['E1'])
-    #m.E2 = Var(m.scena, initialize = m.scena_all['E2'])
+    m.A1 = Var(m.scena, initialize = m.scena_all['A1'])
+    m.A2 = Var(m.scena, initialize = m.scena_all['A2'])
+    m.E1 = Var(m.scena, initialize = m.scena_all['E1'])
+    m.E2 = Var(m.scena, initialize = m.scena_all['E2'])
     
     # Concentration variables under perturbation
     m.CA = Var(m.scena, m.t, initialize=C_init, within=NonNegativeReals)
@@ -397,7 +397,7 @@ def create_model_dae(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300
     def obj_rule(m):
         return 0
     
-    #m.Obj = Objective(rule=obj_rule, sense=maximize)
+    m.Obj = Objective(rule=obj_rule, sense=maximize)
         
         
     # Control time
