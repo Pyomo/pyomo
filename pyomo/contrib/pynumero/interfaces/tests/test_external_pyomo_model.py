@@ -1174,5 +1174,6 @@ class TestScaling(unittest.TestCase):
         )
         cyipopt.solve(x0=x0)
 
+
 if __name__ == '__main__':
     unittest.main()
