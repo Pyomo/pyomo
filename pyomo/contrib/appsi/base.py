@@ -25,6 +25,7 @@ from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap
 import weakref
 from io import StringIO
+from pyomo.core.staleflag import StaleFlagManager
 
 
 class TerminationCondition(enum.Enum):
@@ -154,6 +155,8 @@ class SolutionLoaderBase(abc.ABC):
         """
         for v, val in self.get_primals(vars_to_load=vars_to_load).items():
             v.set_value(val, skip_validation=True)
+        StaleFlagManager.mark_all_as_stale(delayed=True)
+        
 
     @abc.abstractmethod
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
@@ -486,6 +489,7 @@ class PersistentSolver(Solver):
         """
         for v, val in self.get_primals(vars_to_load=vars_to_load).items():
             v.set_value(val, skip_validation=True)
+        StaleFlagManager.mark_all_as_stale(delayed=True)
 
     @abc.abstractmethod
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:

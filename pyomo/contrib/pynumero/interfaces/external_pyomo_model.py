@@ -451,7 +451,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return sps.tril(sparse)
 
     def set_equality_constraint_scaling_factors(self, scaling_factors):
-        """ 
+        """
         """
         self.residual_scaling_factors = np.array(scaling_factors)
 

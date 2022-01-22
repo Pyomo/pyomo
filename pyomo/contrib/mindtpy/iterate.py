@@ -10,8 +10,7 @@
 
 """Iteration loop for MindtPy."""
 from __future__ import division
-import logging
-from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, copy_var_list_values_from_solution_pool
+from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, update_suboptimal_dual_bound, copy_var_list_values_from_solution_pool
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, handle_main_infeasible, handle_main_other_conditions, handle_regularization_main_tc
@@ -29,29 +28,27 @@ from operator import itemgetter
 tabu_list, tabu_list_available = attempt_import(
     'pyomo.contrib.mindtpy.tabu_list')
 
-logger = logging.getLogger('pyomo.contrib.mindtpy')
-
 
 def MindtPy_iteration_loop(solve_data, config):
-    """
-    Main loop for MindtPy Algorithms
+    """Main loop for MindtPy Algorithms.
 
     This is the outermost function for the algorithms in this package; this function controls the progression of
     solving the model.
 
     Parameters
     ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+
+    Raises
+    ------
+    ValueError
+        The strategy value is not correct or not included.
     """
     last_iter_cuts = False
     while solve_data.mip_iter < config.iteration_limit:
-
-        config.logger.info(
-            '---MindtPy main Iteration %s---'
-            % (solve_data.mip_iter+1))
 
         solve_data.mip_subiter = 0
         # solve MILP main problem
@@ -75,7 +72,7 @@ def MindtPy_iteration_loop(solve_data, config):
                 config.logger.info('Algorithm should terminate here.')
                 break
         else:
-            raise NotImplementedError()
+            raise ValueError()
 
         # regularization is activated after the first feasible solution is found.
         if config.add_regularization is not None and solve_data.best_solution_found is not None and not config.single_tree:
@@ -216,30 +213,31 @@ def MindtPy_iteration_loop(solve_data, config):
     # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
     # we correct it after the iteration.
     if (config.add_no_good_cuts or config.use_tabu_list) and config.strategy != 'FP' and not solve_data.should_terminate and config.add_regularization is None:
-        bound_fix(solve_data, config, last_iter_cuts)
+        fix_dual_bound(solve_data, config, last_iter_cuts)
+    config.logger.info(
+        ' =============================================================================================')
 
 
 def algorithm_should_terminate(solve_data, config, check_cycling):
-    """
-    Checks if the algorithm should terminate at the given point
+    """Checks if the algorithm should terminate at the given point.
 
     This function determines whether the algorithm should terminate based on the solver options and progress.
     (Sets the solve_data.results.solver.termination_condition to the appropriate condition, i.e. optimal,
-    maxIterations, maxTimeLimit)
+    maxIterations, maxTimeLimit).
 
     Parameters
     ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
-    check_cycling: bool
-        check for a special case that causes a binary variable to loop through the same values
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    check_cycling : bool
+        Whether to check for a special case that causes the discrete variables to loop through the same values.
 
     Returns
     -------
-    boolean
-        True if the algorithm should terminate else returns False
+    bool
+        True if the algorithm should terminate, False otherwise.
     """
     if solve_data.should_terminate:
         if solve_data.objective_sense == minimize:
@@ -255,7 +253,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         return True
 
     # Check bound convergence
-    if solve_data.LB + config.bound_tolerance >= solve_data.UB:
+    if solve_data.abs_gap <= config.bound_tolerance:
         config.logger.info(
             'MindtPy exiting on bound convergence. '
             'LB: {} + (tol {}) >= UB: {}\n'.format(
@@ -264,7 +262,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         return True
     # Check relative bound convergence
     if solve_data.best_solution_found is not None:
-        if solve_data.UB - solve_data.LB <= config.relative_bound_tolerance * (abs(solve_data.UB if solve_data.objective_sense == minimize else solve_data.LB) + 1E-10):
+        if solve_data.rel_gap <= config.relative_bound_tolerance:
             config.logger.info(
                 'MindtPy exiting on bound convergence. '
                 '(UB: {} - LB: {})/ (1e-10+|bestinteger|:{}) <= relative tolerance: {}'.format(solve_data.UB, solve_data.LB, abs(solve_data.UB if solve_data.objective_sense == minimize else solve_data.LB), config.relative_bound_tolerance))
@@ -299,8 +297,10 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         return True
 
     # Check if algorithm is stalling
-    if len(solve_data.LB_progress) >= config.stalling_limit:
-        if abs(solve_data.LB_progress[-1] - solve_data.LB_progress[-config.stalling_limit]) <= config.zero_tolerance:
+    if (len(solve_data.LB_progress) >= config.stalling_limit and solve_data.objective_sense == maximize) or \
+        (len(solve_data.UB_progress) >= config.stalling_limit and solve_data.objective_sense == minimize):
+        if (abs(solve_data.LB_progress[-1] - solve_data.LB_progress[-config.stalling_limit]) <= config.zero_tolerance and solve_data.objective_sense == maximize) or \
+            (abs(solve_data.UB_progress[-1] - solve_data.UB_progress[-config.stalling_limit]) <= config.zero_tolerance and solve_data.objective_sense == minimize):
             config.logger.info(
                 'Algorithm is not making enough progress. '
                 'Exiting iteration loop.')
@@ -329,10 +329,10 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                 try:
                     lower_slack = nlc.lslack()
                 except (ValueError, OverflowError):
-                    lower_slack = -10
-                    # Use not fixed numbers in this case. Try some factor of ecp_tolerance
+                    # Set lower_slack (upper_slack below) less than -config.ecp_tolerance in this case.
+                    lower_slack = -10*config.ecp_tolerance
                 if lower_slack < -config.ecp_tolerance:
-                    config.logger.info(
+                    config.logger.debug(
                         'MindtPy-ECP continuing as {} has not met the '
                         'nonlinear constraints satisfaction.'
                         '\n'.format(nlc))
@@ -341,9 +341,9 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                 try:
                     upper_slack = nlc.uslack()
                 except (ValueError, OverflowError):
-                    upper_slack = -10
+                    upper_slack = -10*config.ecp_tolerance
                 if upper_slack < -config.ecp_tolerance:
-                    config.logger.info(
+                    config.logger.debug(
                         'MindtPy-ECP continuing as {} has not met the '
                         'nonlinear constraints satisfaction.'
                         '\n'.format(nlc))
@@ -389,7 +389,18 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
     return False
 
 
-def bound_fix(solve_data, config, last_iter_cuts):
+def fix_dual_bound(solve_data, config, last_iter_cuts):
+    """Fix the dual bound when no-good cuts or tabu list is activated.
+
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    last_iter_cuts : bool
+        Whether the cuts in the last iteration have been added.
+    """
     if config.single_tree:
         config.logger.info(
             'Fix the bound to the value of one iteration before optimal solution is found.')
@@ -462,16 +473,7 @@ def bound_fix(solve_data, config, last_iter_cuts):
             config.logger.info(
                 'Bound fix failed. The bound fix problem is infeasible')
         else:
-            if solve_data.objective_sense == minimize:
-                solve_data.LB = max(
-                    [main_mip_results.problem.lower_bound] + solve_data.LB_progress[:-1])
-                solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-                solve_data.LB_progress.append(solve_data.LB)
-            else:
-                solve_data.UB = min(
-                    [main_mip_results.problem.upper_bound] + solve_data.UB_progress[:-1])
-                solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-                solve_data.UB_progress.append(solve_data.UB)
+            update_suboptimal_dual_bound(solve_data, main_mip_results)
             config.logger.info(
                 'Fixed bound values: LB: {}  UB: {}'.
                 format(solve_data.LB, solve_data.UB))

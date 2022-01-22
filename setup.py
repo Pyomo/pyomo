@@ -33,14 +33,17 @@ def read(*rnames):
                 break
         return line + README.read()
 
+def import_pyomo_module(*path):
+    _module_globals = dict(globals())
+    _module_globals['__name__'] = None
+    _source = os.path.join(os.path.dirname(__file__), *path)
+    with open(_source) as _FILE:
+        exec(_FILE.read(), _module_globals)
+    return _module_globals
+
 def get_version():
     # Source pyomo/version/info.py to get the version number
-    _verInfo = dict(globals())
-    _verFile = os.path.join(os.path.dirname(__file__),
-                            'pyomo','version','info.py')
-    with open(_verFile) as _FILE:
-        exec(_FILE.read(), _verInfo)
-    return _verInfo['__version__']
+    return import_pyomo_module('pyomo','version','info.py')['__version__']
 
 CYTHON_REQUIRED = "required"
 if not any(arg.startswith(cmd)
@@ -81,8 +84,8 @@ if using_cython:
         ]
         for f in files:
             shutil.copyfile(f[:-1], f)
-        ext_modules = cythonize(files, compiler_directives={
-            "language_level": 3 if sys.version_info >= (3, ) else 2})
+        ext_modules = cythonize(files,
+                                compiler_directives={"language_level": 3})
     except:
         if using_cython == CYTHON_REQUIRED:
             print("""
@@ -91,6 +94,22 @@ ERROR: Cython was explicitly requested with --with-cython, but cythonization
 """)
             raise
         using_cython = False
+
+if (('--with-distributable-extensions' in sys.argv)
+    or (os.getenv('PYOMO_SETUP_ARGS') is not None and
+        '--with-distributable-extensions' in os.getenv('PYOMO_SETUP_ARGS'))):
+    try:
+        sys.argv.remove('--with-distributable-extensions')
+    except:
+        pass
+    #
+    # Import the APPSI extension builder
+    #
+    appsi_extension = import_pyomo_module(
+        'pyomo', 'contrib', 'appsi', 'build.py')['get_appsi_extension'](
+            in_setup=True, appsi_root=os.path.join(
+                os.path.dirname(__file__), 'pyomo', 'contrib', 'appsi'))
+    ext_modules.append(appsi_extension)
 
 
 class DependenciesCommand(Command):
