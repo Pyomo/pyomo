@@ -1118,6 +1118,7 @@ class TestScaling(unittest.TestCase):
         obj_scaling, x_scaling, g_scaling = cyipopt_nlp.scaling_factors()
         np.testing.assert_array_equal(scaling_factors, g_scaling)
 
+    @unittest.skipUnless(cyipopt_available, "cyipopt is not available")
     def test_cyipopt_callback(self):
         # Use a callback to check that the reported infeasibility is
         # due to the scaled equality constraints.
