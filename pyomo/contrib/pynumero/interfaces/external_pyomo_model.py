@@ -452,8 +452,14 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
     def set_equality_constraint_scaling_factors(self, scaling_factors):
         """
+        Set scaling factors for the equality constraints that are exposed
+        to a solver. These are the "residual equations" in this class.
         """
         self.residual_scaling_factors = np.array(scaling_factors)
 
     def get_equality_constraint_scaling_factors(self):
+        """
+        Get scaling factors for the equality constraints that are exposed
+        to a solver. These are the "residual equations" in this class.
+        """
         return self.residual_scaling_factors
