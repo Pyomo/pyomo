@@ -526,6 +526,11 @@ class _GeneralVarData(_VarData):
         else:
             self._stale = StaleFlagManager.get_flag(0)
 
+    # Note: override the base class definition to avoid a call through a
+    # property
+    def is_fixed(self):
+        return self._fixed
+
     def _process_bound(self, val, bound_type):
         if type(val) in native_numeric_types or val is None:
             # TODO: warn/error: check if this Var has units: assigning
