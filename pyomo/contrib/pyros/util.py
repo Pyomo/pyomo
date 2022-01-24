@@ -19,6 +19,7 @@ from pyomo.core.expr.visitor import identify_variables, identify_mutable_paramet
 from pyomo.core.expr.sympy_tools import sympyify_expression, sympy2pyomo_expression
 from pyomo.common.dependencies import scipy as sp
 from pyomo.core.expr.numvalue import native_types
+from pyomo.util.vars_from_expressions import get_vars_from_components
 import itertools as it
 import timeit
 from contextlib import contextmanager
@@ -332,15 +333,8 @@ def get_vars_from_component(block, ctype):
 
     """
 
-    seen = set()
-    for compdata in block.component_data_objects(
-            ctype,
-            descend_into=True,
-            active=True):
-        for var in EXPR.identify_variables(compdata.expr):
-            if id(var) not in seen:
-                seen.add(id(var))
-                yield var
+    return get_vars_from_components(block, ctype, active=True,
+                                    descend_into=True)
 
 
 def replace_uncertain_bounds_with_constraints(model, uncertain_params):
