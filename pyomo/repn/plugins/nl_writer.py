@@ -666,10 +666,8 @@ class _NLWriter_impl(object):
           - the ``nnz_by_var`` counter is updated with the count of
             components that each var appears in.
 
-          - the ``nz_by_comp`` dict is updates to contain a tuple of
-            three sets, containing the id() of variables appearing
-            linearly, nonlinearly, and the union of those two sets for
-            each component in the ``comp_list``
+          - the ``nz_by_comp`` dict is updated to contain the set of
+            nonzeros for each component in the ``comp_list``
 
           - the expr_info (the second element in each tuple in
             ``comp_list``) is "compiled": the ``linear`` attribute is
@@ -684,8 +682,7 @@ class _NLWriter_impl(object):
 
         for comp_info in comp_list:
             expr_info = comp_info[1]
-            nz_by_comp[id(comp_info[0])] \
-                = linear_vars, nonlinear_vars, nz = set(), set(), set()
+            # Process the linear portion of this component
             if expr_info.linear:
                 if expr_info.linear.__class__ is not dict:
                     coefs = {}
@@ -695,32 +692,52 @@ class _NLWriter_impl(object):
                         elif c:
                             coefs[v] = c
                     expr_info.linear = coefs
-                linear_vars.update(expr_info.linear)
+                linear_vars = set(expr_info.linear)
+                all_linear_vars.update(linear_vars)
+                # Start off assuming that this is a linear expression.
+                # if we end up with nonlinear terms, we will create a
+                # new nz set
+                nz = linear_vars
+            else:
+                expr_info.linear = {}
+                linear_vars = set()
+            # Process the nonlinear portion of this component
             if expr_info.nonlinear:
+                nonlinear_vars = set()
+                seen = set()
                 for _id in expr_info.nonlinear[1]:
-                    if _id in nz:
-                       continue
-                    nz.add(_id)
                     if _id in nz_by_comp:
+                        if _id in seen:
+                            continue
+                        seen.add(_id)
                         # This is a defined variable (Expression node)
                         #
                         # ... as this subexpression appears in the
                         # "nonlinear" expression tree, all variables in
                         # it are nonlinear in the context of this
                         # expression
-                        nonlinear_vars.update(nz_by_comp[_id][0]) # linear
-                        nonlinear_vars.update(nz_by_comp[_id][1]) # nonlinear
+                        nonlinear_vars.update(nz_by_comp[_id]) # all nz
                     else:
                         # Regular variable
                         nonlinear_vars.add(_id)
-            nz.clear()
-            nz.update(linear_vars)
-            nz.update(nonlinear_vars)
+                # Recreate nz if this component has both linear and
+                # nonlinear components.
+                if expr_info.linear:
+                    nz = linear_vars | nonlinear_vars
+                else:
+                    nz = nonlinear_vars
+                all_nonlinear_vars.update(nonlinear_vars)
+
+            # Update the count of components that each variable appears in
             nnz_by_var.update(nz)
-            all_linear_vars.update(linear_vars)
-            all_nonlinear_vars.update(nonlinear_vars)
+            # Record all nonzero variable ids for this component
+            nz_by_comp[id(comp_info[0])] = nz
+        # Linear models (or objectives) are common.  Aviod the set
+        # difference if possible
+        if all_nonlinear_vars:
+            all_linear_vars -= all_nonlinear_vars
         return (
-            all_linear_vars - all_nonlinear_vars,
+            all_linear_vars,
             all_nonlinear_vars,
             nnz_by_var,
         )
