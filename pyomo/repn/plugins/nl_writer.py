@@ -65,7 +65,7 @@ def _activate_nl_writer_version(n):
     """DEBUGGING TOOL to switch the "default" NL writer"""
     doc = WriterFactory.doc('nl')
     WriterFactory.unregister('nl')
-    WriterFactory.register('nl', doc)(WriterFactory.get_class('nl_v%s' % n))
+    WriterFactory.register('nl', doc)(WriterFactory.get_class(f'nl_v{n}'))
 
 def identify_unrecognized_components(model, active=True, valid=set()):
     assert active in (True, None)
@@ -390,11 +390,11 @@ class _NLWriter_impl(object):
             labeler = NameLabeler()
             row_labels = [labeler(info[0]) for info in constraints] \
                          + [labeler(info[0]) for info in objectives]
-            row_comments = ['\t#%s' % lbl for lbl in row_labels]
+            row_comments = [f'\t#{lbl}' for lbl in row_labels]
             col_labels = [labeler(info[0]) for info in variables]
-            col_comments = ['\t#%s' % lbl for lbl in col_labels]
+            col_comments = [f'\t#{lbl}' for lbl in col_labels]
             self.var_id_to_nl = {
-                info[1]: '%d%s' % (var_idx, col_comments[var_idx])
+                info[1]: f'{var_idx}{col_comments[var_idx]}'
                 for var_idx, info in enumerate(variables)
             }
             # Write out the .row and .col data
@@ -544,7 +544,7 @@ class _NLWriter_impl(object):
         for row_idx, info in enumerate(constraints):
             for _id in single_use_subexpressions.get(id(info[0]), ()):
                 self._write_v_line(_id, row_idx)
-            ostream.write('C%d%s\n' % (row_idx, row_comments[row_idx]))
+            ostream.write(f'C{row_idx}{row_comments[row_idx]}\n')
             self._write_nl_expression(info[1], 0)
 
         #
@@ -568,7 +568,7 @@ class _NLWriter_impl(object):
         # "x" lines (variable initialization)
         #
         _init_lines = [
-            '%d %r%s\n' % (var_idx, info[0].value, col_comments[var_idx])
+            f'{var_idx} {info[0].value!r}{col_comments[var_idx]}\n'
             for var_idx, info in enumerate(variables)
             if info[0].value is not None
         ]
@@ -628,13 +628,13 @@ class _NLWriter_impl(object):
         #
         lbl = ''
         for row_idx, info in enumerate(constraints):
-            nz = nz_by_comp[id(info[0])][2]
-            ostream.write('J%d %d%s\n'
-                          % (row_idx, len(nz), row_comments[row_idx]))
-            linear = info[1].linear or {}
-            for entry in sorted((self.var_idx[_id], linear.get(_id, 0))
-                                for _id in nz):
-                ostream.write('%d %r\n' % entry)
+            nz = nz_by_comp[id(info[0])]
+            linear = info[1].linear
+            ostream.write(f'J{row_idx} {len(nz)}{row_comments[row_idx]}\n')
+            for _id in sorted(nz, key=self.var_idx.__getitem__):
+                ostream.write(
+                    f'{self.var_idx[_id]} {linear.get(_id, 0)!r}\n'
+                )
 
         #
         # "G" lines (non-empty terms in the Objective)
@@ -643,12 +643,13 @@ class _NLWriter_impl(object):
         for obj_idx, info in enumerate(objectives):
             if symbolic_solver_labels:
                 lbl = '\t#%s' % info[0].name
-            nz = nz_by_comp[id(info[0])][2]
-            linear = info[1].linear or {}
-            ostream.write('G%d %d%s\n' % (obj_idx, len(nz), lbl))
-            for entry in sorted((self.var_idx[_id], linear.get(_id, 0))
-                                for _id in nz):
-                ostream.write('%d %r\n' % entry)
+            nz = nz_by_comp[id(info[0])]
+            linear = info[1].linear
+            ostream.write(f'G{obj_idx} {len(nz)}{lbl}\n')
+            for _id in sorted(nz, key=self.var_idx.__getitem__):
+                ostream.write(
+                    f'{self.var_idx[_id]} {linear.get(_id, 0)!r}\n'
+                )
 
         return symbol_map, sorted(amplfunc_libraries)
 
@@ -810,14 +811,11 @@ class _NLWriter_impl(object):
             lbl = '\t#%s' % info[0].name
         else:
             lbl = ''
-        self.var_id_to_nl[expr_id] = "%d%s" % (self.next_V_line_id, lbl)
-        linear = info[1].linear or {}
-        ostream.write('V%d %d %d%s\n' %
-                      (self.next_V_line_id, len(linear), k, lbl))
-        for entry in sorted(map(
-                lambda _id: (self.var_idx[_id], linear.get(_id, 0)),
-                linear)):
-            ostream.write('%d %r\n' % entry)
+        self.var_id_to_nl[expr_id] = f"{self.next_V_line_id}{lbl}"
+        linear = info[1].linear
+        ostream.write(f'V{self.next_V_line_id} {len(linear)} {k}{lbl}\n')
+        for _id in sorted(linear, key=self.var_idx.__getitem__):
+            ostream.write(f'{self.var_idx[_id]} {repr(linear.get(_id, 0))}\n')
         self._write_nl_expression(info[1])
         self.next_V_line_id += 1
 
