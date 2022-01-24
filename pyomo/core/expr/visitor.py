@@ -886,13 +886,20 @@ def evaluate_expression(exp, exception=True, constant=False):
         and is caught.
 
     """
+    clear_active = False
     if constant:
         visitor = _EvaluateConstantExpressionVisitor()
     else:
-        visitor = _EvaluationVisitor(exception=exception)
+        if evaluate_expression.visitor_active:
+            visitor = _EvaluationVisitor(exception=exception)
+        else:
+            visitor = evaluate_expression.visitor_cache
+            visitor.exception = exception
+            evaluate_expression.visitor_active = True
+            clear_active = True
+
     try:
         return visitor.dfs_postorder_stack(exp)
-
     except ( TemplateExpressionError, ValueError, TypeError,
              NonConstantExpressionError, FixedExpressionError ):
         # Errors that we want to be able to suppress:
@@ -908,7 +915,12 @@ def evaluate_expression(exp, exception=True, constant=False):
         if exception:
             raise
         return None
+    finally:
+        if clear_active:
+           evaluate_expression.visitor_active = False
 
+evaluate_expression.visitor_cache = _EvaluationVisitor(True)
+evaluate_expression.visitor_active = False
 
 # =====================================================
 #  identify_components
