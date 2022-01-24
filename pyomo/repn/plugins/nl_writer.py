@@ -832,7 +832,7 @@ class _NLWriter_impl(object):
         linear = info[1].linear
         ostream.write(f'V{self.next_V_line_id} {len(linear)} {k}{lbl}\n')
         for _id in sorted(linear, key=self.var_idx.__getitem__):
-            ostream.write(f'{self.var_idx[_id]} {repr(linear.get(_id, 0))}\n')
+            ostream.write(f'{self.var_idx[_id]} {linear[_id]!r}\n')
         self._write_nl_expression(info[1])
         self.next_V_line_id += 1
 
@@ -1272,7 +1272,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.external_functions = external_functions
         self.active_expression_source = None
         self.var_map = var_map
-        self.value_cache = {}
+        #self.value_cache = {}
 
     def initializeWalker(self, expr):
         expr, src, src_idx = expr
@@ -1297,12 +1297,12 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                     self.var_map[_id] = child
                 return False, (_MONOMIAL, 1, _id)
         if not child.is_potentially_variable():
-            _id = id(child)
-            if _id in self.value_cache:
-                child = self.value_cache[_id]
-            else:
-                child = self.value_cache[_id] = child()
-            return False, (_CONSTANT, child)
+            # _id = id(child)
+            # if _id in self.value_cache:
+            #     child = self.value_cache[_id]
+            # else:
+            #     child = self.value_cache[_id] = child()
+            return False, (_CONSTANT, child())
 
         #
         # The following are performance optimizations for common
@@ -1312,11 +1312,12 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         if child_type is MonomialTermExpression:
             arg1, arg2 = child._args_
             if arg1.__class__ not in native_types:
-                _id = id(arg1)
-                if _id in self.value_cache:
-                    arg1 = self.value_cache[_id]
-                else:
-                    arg1 = self.value_cache[_id] = arg1()
+                # _id = id(arg1)
+                # if _id in self.value_cache:
+                #     arg1 = self.value_cache[_id]
+                # else:
+                #     arg1 = self.value_cache[_id] = arg1()
+                arg1 = arg1()
             if arg2.is_fixed():
                 return False, (_CONSTANT, arg1 * arg2())
             else:
