@@ -248,13 +248,22 @@ class _NLWriter_impl(object):
              Objective, active=True, descend_into=True, sort=sorter
          )]
 
-        constraints = [(
-            con,
-            visitor.walk_expression((con.body, con, 0)),
-            _RANGE_TYPE(con.lb, con.ub),
-        ) for con in model.component_data_objects(
-            Constraint, active=True, descend_into=True, sort=sorter
-        )]
+        constraints = []
+        for con_comp in model.component_objects(
+                Constraint, active=True, descend_into=True, sort=sorter):
+            for con in con_comp.values():
+                if not con.active:
+                    continue
+                expr = visitor.walk_expression((con.body, con, 0))
+                lb = con.lb
+                if lb is not None:
+                    lb = repr(lb - expr.const)
+                ub = con.ub
+                if ub is not None:
+                    ub = repr(ub - expr.const)
+                constraints.append((
+                    con, expr, _RANGE_TYPE(lb, ub), lb, ub,
+                ))
 
         #
         # Collect constraints and objectives into the groupings
@@ -362,7 +371,8 @@ class _NLWriter_impl(object):
         # Fill in the variable list
         for idx, _id in enumerate(variables):
             v = self.var_map[_id]
-            variables[idx] = (v, _id, _RANGE_TYPE(*v.bounds))
+            lb, ub = v.bounds
+            variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), repr(lb), repr(ub))
 
         # Now that the row/column ordering is resolved, create the labels
         symbol_map = SymbolMap()
@@ -577,16 +587,13 @@ class _NLWriter_impl(object):
         ))
         _include_lb = {0, 2, 4}
         _include_ub = {0, 1}
-        ostream.writelines(
-            str(info[2])
-            + (' %r' % (info[0].lb - info[1].const)
-               if info[2] in _include_lb else '')
-            + (' %r' % (info[0].ub - info[1].const)
-               if info[2] in _include_ub else '')
-            + row_comments[row_idx]
-            + '\n'
-            for row_idx, info in enumerate(constraints)
-        )
+        for row_idx, info in enumerate(constraints):
+            ostream.write(f"{info[2]}")
+            if info[2] in _include_lb:
+                ostream.write(f" {info[3]}") # Note: already cast to repn
+            if info[2] in _include_ub:
+                ostream.write(f" {info[4]}") # Note: already cast to repn
+            ostream.write(f"{row_comments[row_idx]}\n")
 
         #
         # "b" lines (variable bounds)
@@ -595,14 +602,13 @@ class _NLWriter_impl(object):
             "\t#%d bounds (on variables)" % len(variables)
             if symbolic_solver_labels else '',
         ))
-        ostream.writelines(
-            str(info[2])
-            + (' %r' % info[0].lb if info[2] in _include_lb else '')
-            + (' %r' % info[0].ub if info[2] in _include_ub else '')
-            + col_comments[var_idx]
-            + '\n'
-            for var_idx, info in enumerate(variables)
-        )
+        for var_idx, info in enumerate(variables):
+            ostream.write(f"{info[2]}")
+            if info[2] in _include_lb:
+                ostream.write(f" {info[3]}") # Note: already cast to repn
+            if info[2] in _include_ub:
+                ostream.write(f" {info[4]}") # Note: already cast to repn
+            ostream.write(f"{col_comments[var_idx]}\n")
 
         #
         # "k" lines (column offsets in Jacobian NNZ)
