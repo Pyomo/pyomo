@@ -26,6 +26,7 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
 from pyomo.core.expr.numvalue import (
     NumericValue, value, as_numeric, is_fixed, native_numeric_types,
+    native_types,
 )
 from pyomo.core.base.component import (
     ActiveComponentData, ModelComponentFactory,
@@ -383,7 +384,9 @@ class _GeneralConstraintData(_ConstraintData):
     @property
     def lb(self):
         """Access the value of the lower bound of a constraint expression."""
-        bound = value(self._lb())
+        bound = self._lb()
+        if bound.__class__ not in native_types:
+            bound = value(bound)
         if bound is not None and not math.isfinite(bound):
             if bound == -_inf:
                 bound = None
@@ -396,7 +399,9 @@ class _GeneralConstraintData(_ConstraintData):
     @property
     def ub(self):
         """Access the value of the upper bound of a constraint expression."""
-        bound = value(self._ub())
+        bound = self._ub()
+        if bound.__class__ not in native_types:
+            bound = value(bound)
         if bound is not None and not math.isfinite(bound):
             if bound == _inf:
                 bound = None
