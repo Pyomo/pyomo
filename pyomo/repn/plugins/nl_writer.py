@@ -21,7 +21,7 @@ from pyomo.common.gc_manager import PauseGC
 from pyomo.core.expr.current import (
     NegationExpression, ProductExpression, DivisionExpression,
     PowExpression, AbsExpression, UnaryFunctionExpression,
-    MonomialTermExpression, LinearExpression, SumExpressionBase,
+    MonomialTermExpression, LinearExpression, SumExpression,
     EqualityExpression, InequalityExpression, RangedExpression,
     Expr_ifExpression, ExternalFunctionExpression,
     native_types, value,
@@ -884,6 +884,25 @@ class AMPLRepn(object):
             self.nl = visitor.template.const % 0, ()
         return self.nl
 
+    def append(self, other):
+        """Append a child result from acceptChildResult
+
+        Notes
+        -----
+        This method assumes that the operator was "+". It is implemented
+        so that we can directly use an AMPLRepn() as a data object in
+        the expression walker (thereby avoiding the function call for a
+        custom callback)
+
+        """
+        _type = other[0]
+        if _type is _MONOMIAL:
+            self.linear.append(other[1:])
+        elif _type is _CONSTANT:
+            self.const += other[1]
+        else: # _type is _GENERAL:
+            self.accumulate(other[1])
+
     def accumulate(self, other):
         self.const += other.const
         if other.linear:
@@ -955,6 +974,7 @@ def _create_strict_inequality_map(vars_):
         (False, False): (vars_['less_equal'], vars_['less_equal']),
     }
 
+
 class text_nl_debug_template(object):
     unary = {
         'log':    'o43\t#log\n',
@@ -1002,6 +1022,7 @@ def _strip_template_comments(vars_, base_):
     for k, v in base_.__dict__.items():
         if type(v) is str and '\t#' in v:
             vars_[k] = '\n'.join(l[:l.find('\t#')] for l in v.split('\n'))
+
 
 # The "standard" text mode template is the debugging template with the
 # comments removed
@@ -1273,6 +1294,22 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.active_expression_source = None
         self.var_map = var_map
         #self.value_cache = {}
+        # Dictionary to register expression node type-specific handlers
+        self._before_child_handlers = {
+            _type: self._before_native for _type in native_types
+        }
+        self._before_child_handlers.update({
+            _type: self._before_general_expression
+            for _type in _operator_handles
+        })
+        self._before_child_handlers.update({
+            _GeneralExpressionData: self._before_named_expression,
+            ScalarExpression: self._before_named_expression,
+            kernel.expression.expression: self._before_named_expression,
+            MonomialTermExpression: self._before_monomial,
+            LinearExpression: self._before_linear,
+            SumExpression: self._before_general_expression,
+        })
 
     def initializeWalker(self, expr):
         expr, src, src_idx = expr
@@ -1285,87 +1322,21 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
-        child_type = child.__class__
-        if child_type in native_types:
-            return False, (_CONSTANT, child)
-        if not child.is_expression_type():
-            if child.is_fixed():
-                return False, (_CONSTANT, child())
-            else:
-                _id = id(child)
-                if _id not in self.var_map:
-                    self.var_map[_id] = child
-                return False, (_MONOMIAL, 1, _id)
-        if not child.is_potentially_variable():
-            # _id = id(child)
-            # if _id in self.value_cache:
-            #     child = self.value_cache[_id]
-            # else:
-            #     child = self.value_cache[_id] = child()
-            return False, (_CONSTANT, child())
-
-        #
-        # The following are performance optimizations for common
-        # situations (Monomial terms and Linear expressions)
-        #
-
-        if child_type is MonomialTermExpression:
-            arg1, arg2 = child._args_
-            if arg1.__class__ not in native_types:
-                # _id = id(arg1)
-                # if _id in self.value_cache:
-                #     arg1 = self.value_cache[_id]
-                # else:
-                #     arg1 = self.value_cache[_id] = arg1()
-                arg1 = arg1()
-            if arg2.is_fixed():
-                return False, (_CONSTANT, arg1 * arg2())
-            else:
-                _id = id(arg2)
-                if _id not in self.var_map:
-                    self.var_map[_id] = arg2
-                return False, (_MONOMIAL, arg1, _id)
-
-        if child_type is LinearExpression:
-            # Because we are going to modify the LinearExpression in this
-            # walker, we need to make a copy of the LinearExpression from
-            # the original expression tree.
-            data = AMPLRepn(list(zip(map(value, child.linear_coefs),
-                                     map(id, child.linear_vars))),
-                            None)
-            data.const = child.constant
-            return False, (_GENERAL, data)
-
-        _id = id(child)
-        if _id in self.subexpression_cache:
-            cache = self.subexpression_cache[_id]
-            cache[2][self.active_expression_source_idx] = 0
-            return False, (_GENERAL, cache[1])
-
-        return True, None
+        try:
+            return self._before_child_handlers[child.__class__](
+                node, child, child_idx)
+        except KeyError:
+            self._register_new_before_child_processor(node, child, child_idx)
+        return self._before_child_handlers[child.__class__](
+            node, child, child_idx)
 
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
-        if isinstance(node, SumExpressionBase):
+        if node.__class__ is SumExpression:
             return node.args, AMPLRepn([], [])
         else:
             return node.args, []
-
-    def acceptChildResult(self, node, data, child_result, child_idx):
-        if data.__class__ is list:
-            # General expression... cache the child result until the end
-            data.append(child_result)
-        else:
-            # Sum Expression
-            child_type = child_result[0]
-            if child_type is _MONOMIAL:
-                data.linear.append(child_result[1:])
-            elif child_type is _CONSTANT:
-                data.const += child_result[1]
-            elif child_type is _GENERAL:
-                data.accumulate(child_result[1])
-        return data
 
     def exitNode(self, node, data):
         if data.__class__ is AMPLRepn:
@@ -1384,3 +1355,80 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         ans = node_result_to_amplrepn(self, result)
         self.active_expression_source = None
         return ans
+
+    def _before_native(self, node, child, child_idx):
+        return False, (_CONSTANT, child)
+
+    def _before_non_expression(self, node, child, child_idx):
+        if child.is_fixed():
+            return False, (_CONSTANT, child())
+        else:
+            _id = id(child)
+            if _id not in self.var_map:
+                self.var_map[_id] = child
+            return False, (_MONOMIAL, 1, _id)
+
+    def _before_npv(self, node, child, child_idx):
+        # _id = id(child)
+        # if _id in self.value_cache:
+        #     child = self.value_cache[_id]
+        # else:
+        #     child = self.value_cache[_id] = child()
+        return False, (_CONSTANT, child())
+
+    def _before_monomial(self, node, child, child_idx):
+        #
+        # The following are performance optimizations for common
+        # situations (Monomial terms and Linear expressions)
+        #
+        arg1, arg2 = child._args_
+        if arg1.__class__ not in native_types:
+            # _id = id(arg1)
+            # if _id in self.value_cache:
+            #     arg1 = self.value_cache[_id]
+            # else:
+            #     arg1 = self.value_cache[_id] = arg1()
+            arg1 = arg1()
+        if arg2.is_fixed():
+            return False, (_CONSTANT, arg1 * arg2())
+        else:
+            _id = id(arg2)
+            if _id not in self.var_map:
+                self.var_map[_id] = arg2
+            return False, (_MONOMIAL, arg1, _id)
+
+    def _before_linear(self, node, child, child_idx):
+        # Because we are going to modify the LinearExpression in this
+        # walker, we need to make a copy of the LinearExpression from
+        # the original expression tree.
+        data = AMPLRepn(list(zip(map(value, child.linear_coefs),
+                                 map(id, child.linear_vars))),
+                        None)
+        data.const = child.constant
+        return False, (_GENERAL, data)
+
+    def _before_named_expression(self, node, child, child_idx):
+        _id = id(child)
+        if _id in self.subexpression_cache:
+            cache = self.subexpression_cache[_id]
+            cache[2][self.active_expression_source_idx] = 0
+            return False, (_GENERAL, cache[1])
+        else:
+            return True, None
+
+    def _before_general_expression(self, node, child, child_idx):
+        return True, None
+
+    def _register_new_before_child_processor(self, node, child, child_idx):
+        handlers = self._before_child_handlers
+        child_type = child.__class__
+        if child_type in native_types:
+            handlers[child_type] = self._before_native
+        elif not child.is_expression_type():
+            handlers[child_type] = self._before_non_expression
+        elif not child.is_potentially_variable():
+            handlers[child_type] = self._before_npv
+        elif id(child) in self.subexpression_cache:
+            handlers[child_type] = self._before_named_expression
+        else:
+            handlers[child_type] = self._before_general_expression
