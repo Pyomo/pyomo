@@ -14,7 +14,7 @@ from itertools import product
 import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model
 
-def parameter_estimation(pest):
+def parameter_estimation_with_covariance(pest):
     # Estimate parameter values and return the covariance
     obj, theta, cov = pest.theta_est(calc_cov=True)
     
@@ -46,7 +46,7 @@ def likelihood_ratio_test(pest):
     # Find the objective value at each theta estimate
     asym = np.arange(10, 30, 2)
     rate = np.arange(0, 1.5, 0.1)
-    theta_vals = pd.DataFrame(list(product(asym, rate)), columns=theta_names)
+    theta_vals = pd.DataFrame(list(product(asym, rate)), columns=['asymptote', 'rate_constant'])
     obj, theta = pest.theta_est()
     obj_at_theta = pest.objective_at_theta(theta_vals)
     
@@ -59,9 +59,7 @@ def likelihood_ratio_test(pest):
     
     return obj_at_theta, LR
 
-    
-if __name__ == "__main__":
-    
+def main():
     # Vars to estimate
     theta_names = ['asymptote', 'rate_constant']
     
@@ -79,7 +77,7 @@ if __name__ == "__main__":
     pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE)
     
     # Parameter estimation and covariance
-    theta, cov = parameter_estimation(pest)
+    theta, cov = parameter_estimation_with_covariance(pest)
     print(theta)
     print(cov)
     
@@ -90,5 +88,9 @@ if __name__ == "__main__":
     # Likelihood ratio test
     obj_at_theta, LR = likelihood_ratio_test(pest)
     print(LR.head())
+    
+
+if __name__ == "__main__":
+    main()
     
     

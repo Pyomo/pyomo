@@ -23,7 +23,6 @@ from os.path import abspath, dirname, isfile, join
 testdir = dirname(abspath(str(__file__)))
 examplesdir = join(testdir, "..", "examples")
 
-
 class TestExamples(unittest.TestCase):
     @classmethod
     def setUpClass(self):
@@ -32,7 +31,16 @@ class TestExamples(unittest.TestCase):
     @classmethod
     def tearDownClass(self):
         pass
-
+    
+    def test_rooney_biegler(self):
+        from pyomo.contrib.parmest.examples.rooney_biegler import parmest_example
+        parmest_example.main()
+    
+    #def test_reaction_kinetics(self):
+    #    from pyomo.contrib.parmest.examples.reaction_kinetics import simple_reaction_parmest_example
+    #    simple_reaction_parmest_example.main()
+    
+    """
     def test_examples(self):
         cwd = os.getcwd()
         os.chdir(examplesdir)
@@ -57,7 +65,7 @@ class TestExamples(unittest.TestCase):
         if len(failed_examples) > 0:
             print("failed examples: {0}".format(failed_examples))
         self.assertEqual(len(failed_examples), 0)
-
+    """
 
 if __name__ == "__main__":
     unittest.main()
