@@ -38,7 +38,7 @@ parmest.graphics.pairwise_plot((theta, cov, 1000), theta_star=theta, alpha=0.8,
                                distributions=['MVN'])
 
 # Assert statements compare parameter estimation (theta) to an expected value 
-# (within 1% tolerance). Additional tests for parmest functionality is included 
+# (within 1% tolerance). Additional tests for parmest functionality are included 
 # in the parmest/tests folder.
 relative_error = abs(theta['asymptote'] - 19.1426)/19.1426
 assert relative_error < 0.01

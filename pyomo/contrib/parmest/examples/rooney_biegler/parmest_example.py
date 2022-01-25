@@ -60,7 +60,7 @@ parmest.graphics.pairwise_plot(LR, theta, 0.8,
                       title='LR results within 80% confidence region')
 
 # Assert statements compare parameter estimation (theta) to an expected value 
-# (within 1% tolerance). Additional tests for parmest functionality is included 
+# (within 1% tolerance). Additional tests for parmest functionality are included 
 # in the parmest/tests folder.
 relative_error = abs(theta['asymptote'] - 19.1426)/19.1426
 assert relative_error < 0.01

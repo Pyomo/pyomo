@@ -13,9 +13,7 @@ examplesdir = join(testdir, "..", "examples")
 class TestExamples(unittest.TestCase):
     @classmethod
     def setUpClass(self):
-        import wntr
-
-        self.wntr = wntr
+        pass
 
     @classmethod
     def tearDownClass(self):
