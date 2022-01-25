@@ -37,8 +37,8 @@ class TestExamples(unittest.TestCase):
         cwd = os.getcwd()
         os.chdir(examplesdir)
         failed_examples = []
-        for folder in ['rooney_biegler', 'reaction_kinetics']:
-            subdir = join(examplesdir, folder)
+        for folder in ['rooney_biegler', 'reaction_kinetics']: # add semibatch and reactor_design
+            subdir = abspath(join(examplesdir, folder))
             os.chdir(subdir)
             example_files = [
                 f
@@ -50,7 +50,7 @@ class TestExamples(unittest.TestCase):
                 file_abspath = abspath(join(subdir, f))
                 ret = subprocess.run([sys.executable, file_abspath])
                 retcode = ret.returncode
-                print(folder, f, retcode)
+                print(file_abspath, retcode)
                 if retcode == 1:
                     failed_examples.append(file_abspath)
         os.chdir(cwd)
