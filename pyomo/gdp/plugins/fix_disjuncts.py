@@ -64,21 +64,18 @@ class GDP_Disjunct_Fixer(Transformation):
         """Find all disjuncts in the container and transform them."""
         for disjunct in obj.component_data_objects(ctype=Disjunct, active=True,
                                                    descend_into=True):
-            _binary = disjunct.binary_indicator_var
-            if _binary.value is None:
-                raise GDP_Error("The value of the binary_indicator_var of "
+            _bool = disjunct.indicator_var
+            if _bool.value is None:
+                raise GDP_Error("The value of the indicator_var of "
                                 "Disjunct '%s' is None. All indicator_vars "
                                 "must have values before calling "
                                 "'fix_disjuncts'." % disjunct.name)
-            if fabs(value(_binary) - 1) <= self.config.integer_tolerance:
+            elif _bool.value:
                 disjunct.indicator_var.fix(True)
                 self._transformContainer(disjunct)
-            elif fabs(value(_binary)) <= self.config.integer_tolerance:
-                disjunct.deactivate()
             else:
-                raise ValueError(
-                    'Non-binary indicator variable value %s for disjunct %s'
-                    % (disjunct.name, value(_binary)))
+                # Deactivating fixes the indicator_var to False
+                disjunct.deactivate()
 
         for disjunction in obj.component_data_objects(ctype=Disjunction,
                                                       active=True,
