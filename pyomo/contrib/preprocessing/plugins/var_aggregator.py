@@ -310,5 +310,11 @@ class VariableAggregator(IsomorphicTransformation):
         for agg_var in datablock.z.itervalues():
             if not agg_var.stale:
                 for var in datablock.z_to_vars[agg_var]:
-                    var.set_value(agg_var.value,skip_validation=True)
-                    var.stale = False
+                    # We don't want to accidentally trigger the reset of
+                    # the global stale indicator, so we will set this
+                    # variable to be "stale", knowing that set_value
+                    # will switch it back to "not stale".  In normal
+                    # situations, we would expect var to already be
+                    # stale.
+                    var.stale = True
+                    var.set_value(agg_var.value, skip_validation=True)

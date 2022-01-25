@@ -10,6 +10,9 @@ on:
         description: Git Hash (Optional)
         required: false
 
+env:
+  PYOMO_SETUP_ARGS: --with-distributable-extensions
+
 jobs:
   manylinux:
     name: ${{ matrix.TARGET }}/wheel_creation
@@ -25,18 +28,18 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install twine wheel setuptools
+        pip install twine wheel setuptools pybind11
     - name: Build manylinux Python wheels
       uses: RalfG/python-wheels-manylinux-build@v0.4.0-manylinux2010_x86_64
       with:
         python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39'
-        build-requirements: 'cython'
+        build-requirements: 'cython pybind11'
         package-path: ''
         pip-wheel-args: ''
         # When locally testing, --no-deps flag is necessary (PyUtilib dependency will trigger an error otherwise)
@@ -48,7 +51,7 @@ jobs:
       run: |
         sudo rm -rfv dist/*-linux_x86_64.whl
     - name: Upload artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
         name: manylinux-wheels
         path: dist
@@ -68,7 +71,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - uses: docker/setup-qemu-action@v1
@@ -76,7 +79,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install twine wheel setuptools
+        pip install twine wheel setuptools pybind11
     - name: Build manylinux Python wheels
       uses: RalfG/python-wheels-manylinux-build@v0.4.0-manylinux2014_aarch64
       with:
@@ -93,7 +96,7 @@ jobs:
       run: |
         sudo rm -rfv dist/*-linux_aarch64.whl
     - name: Upload artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
         name: manylinux-aarch64-wheels
         path: dist
@@ -112,18 +115,18 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install twine wheel setuptools
+        pip install twine wheel setuptools pybind11
     - name: Build generic tarball
       run: |
         python setup.py --without-cython sdist --format=gztar
     - name: Upload artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
         name: generictarball
         path: dist
@@ -142,19 +145,19 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install twine wheel setuptools cython
+        pip install twine wheel setuptools cython pybind11
     - name: Build OSX Python wheels
       run: |
-        python setup.py  --with-cython sdist --format=gztar bdist_wheel
+        python setup.py  --with-cython --with-distributable-extensions sdist --format=gztar bdist_wheel
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
         name: osx-wheels
         path: dist
@@ -173,7 +176,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -181,14 +184,14 @@ jobs:
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Invoke-Expression "python -m pip install --upgrade pip"
-        Invoke-Expression "pip install setuptools twine wheel cython"
+        Invoke-Expression "pip install setuptools twine wheel cython pybind11"
     - name: Build Windows Python wheels
       shell: pwsh
       run: |
         $env:PYTHONWARNINGS="ignore::UserWarning"
-        Invoke-Expression "python setup.py  --with-cython sdist --format=gztar bdist_wheel"
+        Invoke-Expression "python setup.py  --with-cython --with-distributable-extensions sdist --format=gztar bdist_wheel"
     - name: Upload artifact
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v2
       with:
         name: win-wheels
         path: dist
