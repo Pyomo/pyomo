@@ -37,7 +37,7 @@ class TestExamples(unittest.TestCase):
         cwd = os.getcwd()
         os.chdir(examplesdir)
         failed_examples = []
-        for folder in ['rooney_biegler']:
+        for folder in ['rooney_biegler', 'reaction_kinetics']:
             subdir = join(examplesdir, folder)
             os.chdir(subdir)
             example_files = [

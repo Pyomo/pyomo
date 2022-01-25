@@ -439,7 +439,7 @@ class TestReactorDesign(unittest.TestCase):
         solver_options = {"max_iter": 6000}
 
         self.pest = parmest.Estimator(reactor_design_model, data,
-                                      theta_names, SSE, solver_options)
+                                      theta_names, SSE, solver_options=solver_options)
 
     def test_theta_est(self):
         # used in data reconciliation
