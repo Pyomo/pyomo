@@ -19,7 +19,6 @@ import pyomo.solvers.plugins.solvers.ASL
 import pyomo.solvers.plugins.solvers.pywrapper
 import pyomo.solvers.plugins.solvers.SCIPAMPL
 import pyomo.solvers.plugins.solvers.CONOPT
-import pyomo.solvers.plugins.solvers.XPRESS
 import pyomo.solvers.plugins.solvers.IPOPT
 import pyomo.solvers.plugins.solvers.gurobi_direct
 import pyomo.solvers.plugins.solvers.gurobi_persistent
