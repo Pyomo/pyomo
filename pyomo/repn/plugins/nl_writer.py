@@ -219,9 +219,11 @@ class _NLWriter_impl(object):
             if self.config.file_determinism  >= FileDeterminism.SORT_SYMBOLS:
                 sorter = sorter | SortComponents.alphabetical
 
+        # Caching some frequently-used objects into the locals()
         symbolic_solver_labels = self.symbolic_solver_labels
         visitor = self.visitor
         ostream = self.ostream
+        var_map = self.var_map
 
         if self.config.file_determinism > FileDeterminism.NONE:
             # We will pre-gather the variables so that their order
@@ -231,24 +233,29 @@ class _NLWriter_impl(object):
             # for consistency with the original NL writer.  Note that
             # Vars that appear twice (e.g., through a Reference) will be
             # sorted with the LAST occurance.
-            self.var_map = {
-                id(var): var
-                for var in model.component_data_objects(
-                        Var, descend_into=True, sort=sorter)
-            }
+            for var in model.component_data_objects(
+                    Var, descend_into=True, sort=sorter):
+                var_map[id(var)] = var
 
         #
         # Tabulate the model expressions
         #
+        n_nonlinear_objs = 0
+        objectives = []
+        for obj_comp in model.component_objects(
+                Objective, active=True, descend_into=True, sort=sorter):
+            for obj in obj_comp.values():
+                if not obj.active:
+                    continue
+                expr = visitor.walk_expression((obj.expr, obj, 1))
+                if expr.nonlinear:
+                    n_nonlinear_objs += 1
+                objectives.append((obj, expr))
 
-        objectives = [
-            (obj,
-             visitor.walk_expression((obj.expr, obj, 1)),
-         ) for obj in model.component_data_objects(
-             Objective, active=True, descend_into=True, sort=sorter
-         )]
-
-        constraints = []
+        linear_cons = []
+        nonlinear_cons = []
+        n_ranges = 0
+        n_equality = 0
         for con_comp in model.component_objects(
                 Constraint, active=True, descend_into=True, sort=sorter):
             for con in con_comp.values():
@@ -261,8 +268,13 @@ class _NLWriter_impl(object):
                 ub = con.ub
                 if ub is not None:
                     ub = repr(ub - expr.const)
-                constraints.append((
-                    con, expr, _RANGE_TYPE(lb, ub), lb, ub,
+                _type = _RANGE_TYPE(lb, ub)
+                if _type == 4:
+                    n_equality += 1
+                elif _type == 0:
+                    n_ranges += 1
+                (nonlinear_cons if expr.nonlinear else linear_cons).append((
+                    con, expr, _type, lb, ub,
                 ))
 
         #
@@ -273,14 +285,9 @@ class _NLWriter_impl(object):
         # var objects themselves)
         #
 
-        # Reorder the constraints, moving all nonlinear constraints to
+        # Order the constraints, moving all nonlinear constraints to
         # the beginning
-        nonlinear_cons = [con for con in constraints if con[1].nonlinear]
-        linear_cons = [con for con in constraints if not con[1].nonlinear]
         constraints = nonlinear_cons + linear_cons
-
-        n_ranges = sum(1 for con in constraints if con[2] == 0)
-        n_equality = sum(1 for con in constraints if con[2] == 4)
 
         # nonzeros by (constraint, objective) component.  Keys are
         # component id(), Values are tuples with three sets:
@@ -292,13 +299,14 @@ class _NLWriter_impl(object):
         # We need to categorize the named subexpressions first so that
         # we know their linear / nonlinear vars when we encounter them
         # in constraints / objectives
-        subexpressions = map(self.subexpression_cache.__getitem__,
-                             self.subexpression_order)
-        self._categorize_vars(subexpressions, nz_by_comp)
+        self._categorize_vars(
+            map(self.subexpression_cache.__getitem__,
+                self.subexpression_order),
+            nz_by_comp
+        )
         n_subexpressions = self._count_subexpression_occurances()
 
         n_objs = len(objectives)
-        n_nonlinear_objs = sum(1 for obj in objectives if obj[1].nonlinear)
         obj_vars_linear, obj_vars_nonlinear, obj_nnz_by_var \
             = self._categorize_vars(objectives, nz_by_comp)
 
@@ -309,70 +317,87 @@ class _NLWriter_impl(object):
 
         n_lcons = 0 # We do not yet support logical constraints
 
-        obj_vars = obj_vars_linear.union(obj_vars_nonlinear)
-        con_vars = con_vars_linear.union(con_vars_nonlinear)
-        all_vars = con_vars.union(obj_vars)
+        # obj_vars = obj_vars_linear.union(obj_vars_nonlinear)
+        # con_vars = con_vars_linear.union(con_vars_nonlinear)
+        # all_vars = con_vars.union(obj_vars)
+        obj_vars = obj_vars_linear | obj_vars_nonlinear
+        con_vars = con_vars_linear | con_vars_nonlinear
+        all_vars = con_vars | obj_vars
         n_vars = len(all_vars)
 
-        binary_vars = set(
-            _id for _id in all_vars if self.var_map[_id].is_binary()
-        )
-        integer_vars = set(
-            _id for _id in all_vars - binary_vars
-            if self.var_map[_id].is_integer()
-        )
-        discrete_vars = binary_vars.union(integer_vars)
-        continuous_vars = all_vars - discrete_vars
+        continuous_vars = set()
+        binary_vars = set()
+        integer_vars = set()
+        for _id in all_vars:
+            v = var_map[_id]
+            if v.is_continuous():
+                continuous_vars.add(_id)
+            elif v.is_binary():
+                binary_vars.add(_id)
+            elif v.is_integer():
+                integer_vars.add(_id)
+            else:
+                raise ValueError(
+                    f"Variable '{v.name}' has a domain that is not Real, "
+                    f"Integer, or Binary: Cannot write a legal NL file.")
+        discrete_vars = binary_vars | integer_vars
 
-        nonlinear_vars = con_vars_nonlinear.union(obj_vars_nonlinear)
-        linear_only_vars = con_vars_linear.union(obj_vars_linear) \
-                           - nonlinear_vars
+        nonlinear_vars = con_vars_nonlinear | obj_vars_nonlinear
+        linear_only_vars = (con_vars_linear | obj_vars_linear) - nonlinear_vars
 
-        column_order = {_id: i for i, _id in enumerate(self.var_map)}
+        self.column_order = column_order = {
+            _id: i for i, _id in enumerate(var_map)
+        }
         variables = []
         #
-        both_vars_nonlinear = con_vars_nonlinear.intersection(
-            obj_vars_nonlinear)
-        variables.extend(sorted(
-            both_vars_nonlinear.intersection(continuous_vars),
-            key=column_order.__getitem__))
-        variables.extend(sorted(
-            both_vars_nonlinear.intersection(discrete_vars),
-            key=column_order.__getitem__))
+        both_vars_nonlinear = con_vars_nonlinear & obj_vars_nonlinear
+        if both_vars_nonlinear:
+            variables.extend(sorted(
+                both_vars_nonlinear & continuous_vars,
+                key=column_order.__getitem__))
+            variables.extend(sorted(
+                both_vars_nonlinear & discrete_vars,
+                key=column_order.__getitem__))
         #
         con_only_nonlinear_vars = con_vars_nonlinear - both_vars_nonlinear
-        variables.extend(sorted(
-            con_only_nonlinear_vars.intersection(continuous_vars),
-            key=column_order.__getitem__))
-        variables.extend(sorted(
-            con_only_nonlinear_vars.intersection(discrete_vars),
-            key=column_order.__getitem__))
+        if con_only_nonlinear_vars:
+            variables.extend(sorted(
+                con_only_nonlinear_vars & continuous_vars,
+                key=column_order.__getitem__))
+            variables.extend(sorted(
+                con_only_nonlinear_vars & discrete_vars,
+                key=column_order.__getitem__))
         #
         obj_only_nonlinear_vars = obj_vars_nonlinear - both_vars_nonlinear
-        variables.extend(sorted(
-            obj_only_nonlinear_vars.intersection(continuous_vars),
-            key=column_order.__getitem__))
-        variables.extend(sorted(
-            obj_only_nonlinear_vars.intersection(discrete_vars),
-            key=column_order.__getitem__))
+        if obj_vars_nonlinear:
+            variables.extend(sorted(
+                obj_only_nonlinear_vars & continuous_vars,
+                key=column_order.__getitem__))
+            variables.extend(sorted(
+                obj_only_nonlinear_vars & discrete_vars,
+                key=column_order.__getitem__))
         #
-        variables.extend(sorted(
-            linear_only_vars - discrete_vars,
-            key=column_order.__getitem__))
-        variables.extend(sorted(
-            linear_only_vars.intersection(binary_vars),
-            key=column_order.__getitem__))
-        variables.extend(sorted(
-            linear_only_vars.intersection(integer_vars),
-            key=column_order.__getitem__))
+        if linear_only_vars:
+            variables.extend(sorted(
+                linear_only_vars - discrete_vars,
+                key=column_order.__getitem__))
+            variables.extend(sorted(
+                linear_only_vars & binary_vars,
+                key=column_order.__getitem__))
+            variables.extend(sorted(
+                linear_only_vars & integer_vars,
+                key=column_order.__getitem__))
         assert len(variables) == n_vars
-        # Compute variable id to position (given the new ordering)
-        self.var_idx = {_id: idx for idx, _id in enumerate(variables)}
-        # Fill in the variable list
+        # Fill in the variable list and update the new column order
         for idx, _id in enumerate(variables):
-            v = self.var_map[_id]
+            v = var_map[_id]
+            column_order[_id] = idx
             lb, ub = v.bounds
-            variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), repr(lb), repr(ub))
+            if lb is not None:
+                lb = repr(lb)
+            if ub is not None:
+                ub = repr(ub)
+            variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
 
         # Now that the row/column ordering is resolved, create the labels
         symbol_map = SymbolMap()
@@ -408,7 +433,7 @@ class _NLWriter_impl(object):
             row_labels = row_comments = [''] * (n_cons + n_objs)
             col_labels = col_comments = [''] * len(variables)
             self.var_id_to_nl = {
-                info[1]: str(var_idx) for var_idx, info in enumerate(variables)
+                info[1]: var_idx for var_idx, info in enumerate(variables)
             }
 
         #
@@ -524,7 +549,7 @@ class _NLWriter_impl(object):
         # before the C/O line that references it.
         single_use_subexpressions = {}
         self.next_V_line_id = n_vars
-        for i, _id in enumerate(self.subexpression_order):
+        for _id in self.subexpression_order:
             cache = self.subexpression_cache[_id]
             if cache[2][2]:
                 # substitute expression directly into expression trees
@@ -540,7 +565,6 @@ class _NLWriter_impl(object):
         #
         # "C" lines (constraints: nonlinear expression)
         #
-        lbl = ''
         for row_idx, info in enumerate(constraints):
             for _id in single_use_subexpressions.get(id(info[0]), ()):
                 self._write_v_line(_id, row_idx)
@@ -550,14 +574,12 @@ class _NLWriter_impl(object):
         #
         # "O" lines (objectives: nonlinear expression)
         #
-        lbl = ''
         for obj_idx, info in enumerate(objectives):
             for _id in single_use_subexpressions.get(id(info[0]), ()):
                 self._write_v_line(_id, n_cons + n_lcons + obj_idx)
-            if symbolic_solver_labels:
-                lbl = '\t#%s' % info[0].name
+            lbl = row_comments[n_cons + obj_idx]
             sense = 0 if info[0].sense == minimize else 1
-            ostream.write('O%d %d%s\n' % (obj_idx, sense, lbl))
+            ostream.write(f'O{obj_idx} {sense}{lbl}\n')
             self._write_nl_expression(info[1])
 
         #
@@ -631,9 +653,9 @@ class _NLWriter_impl(object):
             nz = nz_by_comp[id(info[0])]
             linear = info[1].linear
             ostream.write(f'J{row_idx} {len(nz)}{row_comments[row_idx]}\n')
-            for _id in sorted(nz, key=self.var_idx.__getitem__):
+            for _id in sorted(nz, key=column_order.__getitem__):
                 ostream.write(
-                    f'{self.var_idx[_id]} {linear.get(_id, 0)!r}\n'
+                    f'{column_order[_id]} {linear.get(_id, 0)!r}\n'
                 )
 
         #
@@ -646,9 +668,9 @@ class _NLWriter_impl(object):
             nz = nz_by_comp[id(info[0])]
             linear = info[1].linear
             ostream.write(f'G{obj_idx} {len(nz)}{lbl}\n')
-            for _id in sorted(nz, key=self.var_idx.__getitem__):
+            for _id in sorted(nz, key=column_order.__getitem__):
                 ostream.write(
-                    f'{self.var_idx[_id]} {linear.get(_id, 0)!r}\n'
+                    f'{column_order[_id]} {linear.get(_id, 0)!r}\n'
                 )
 
         return symbol_map, sorted(amplfunc_libraries)
@@ -732,15 +754,11 @@ class _NLWriter_impl(object):
             nnz_by_var.update(nz)
             # Record all nonzero variable ids for this component
             nz_by_comp[id(comp_info[0])] = nz
-        # Linear models (or objectives) are common.  Aviod the set
+        # Linear models (or objectives) are common.  Avoid the set
         # difference if possible
         if all_nonlinear_vars:
             all_linear_vars -= all_nonlinear_vars
-        return (
-            all_linear_vars,
-            all_nonlinear_vars,
-            nnz_by_var,
-        )
+        return all_linear_vars, all_nonlinear_vars, nnz_by_var
 
     def _count_subexpression_occurances(self):
         # We now need to go through the subexpression cache and update
@@ -823,6 +841,7 @@ class _NLWriter_impl(object):
 
     def _write_v_line(self, expr_id, k):
         ostream = self.ostream
+        column_order = self.column_order
         info = self.subexpression_cache[expr_id]
         if self.symbolic_solver_labels and info[0].__class__ is not AMPLRepn:
             lbl = '\t#%s' % info[0].name
@@ -831,8 +850,8 @@ class _NLWriter_impl(object):
         self.var_id_to_nl[expr_id] = f"{self.next_V_line_id}{lbl}"
         linear = info[1].linear
         ostream.write(f'V{self.next_V_line_id} {len(linear)} {k}{lbl}\n')
-        for _id in sorted(linear, key=self.var_idx.__getitem__):
-            ostream.write(f'{self.var_idx[_id]} {linear[_id]!r}\n')
+        for _id in sorted(linear, key=column_order.__getitem__):
+            ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
         self._write_nl_expression(info[1])
         self.next_V_line_id += 1
 
