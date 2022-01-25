@@ -130,6 +130,18 @@ def _add_OA_configs(CONFIG):
         "Default=True.",
         domain=bool
     ))
+    CONFIG.declare("max_fbbt_iterations", ConfigValue(
+        default=3,
+        description="Maximum number of feasibility-based bounds tightening "
+        "iterations to do during NLP subproblem preprocessing.",
+        domain=PositiveInt
+    ))
+    CONFIG.declare("tighten_nlp_var_bounds", ConfigValue(
+        default=False,
+        description="Whether or not to do feasibility-based bounds tightening "
+        "on the variables in the NLP subproblem before solving it.",
+        domain=bool
+    ))
     CONFIG.declare("calc_disjunctive_bounds", ConfigValue(
         default=False,
         description="Calculate special disjunctive variable bounds for GLOA. "

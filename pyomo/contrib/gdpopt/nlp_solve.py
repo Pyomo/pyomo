@@ -13,13 +13,13 @@ from __future__ import division
 
 from math import fabs
 
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.gdpopt.data_class import SubproblemResult
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
                                        is_feasible, get_main_elapsed_time)
 from pyomo.core import (Constraint, TransformationFactory, minimize, value,
-                        Objective)
+                        Objective, Block)
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt import TerminationCondition as tc
@@ -312,9 +312,23 @@ def detect_unfixed_discrete_vars(model):
 
 def preprocess_subproblem(m, config):
     """Applies preprocessing transformations to the model."""
+    if not config.tighten_nlp_var_bounds:
+        original_bounds = ComponentMap()
+        # TODO: Switch this to the general utility function, but I hid it in
+        # #2221
+        for cons in m.component_data_objects(Constraint, active=True,
+                                             descend_into=Block):
+            for v in EXPR.identify_variables(cons.expr):
+                if v not in original_bounds.keys():
+                    original_bounds[v] = (v.lb, v.ub)
+        # We could miss if there is a variable that only appears in the
+        # objective, but its bounds are not going to get changed anyway if
+        # that's the case.
+
     # First do FBBT
     fbbt(m, integer_tol=config.integer_tolerance,
-         feasibility_tol=config.constraint_tolerance)
+         feasibility_tol=config.constraint_tolerance,
+         max_iter=config.max_fbbt_iterations)
     xfrm = TransformationFactory
     # Now that we've tightened bounds, see if any variables are fixed because
     # their lb is equal to the ub (within tolerance)
@@ -326,6 +340,11 @@ def preprocess_subproblem(m, config):
     xfrm('contrib.deactivate_trivial_constraints').apply_to(
         m, tolerance=config.constraint_tolerance)
 
+    # Restore the original bounds because the NLP solver might like that better
+    if not config.tighten_nlp_var_bounds:
+        for v, (lb, ub) in original_bounds.items():
+            v.setlb(lb)
+            v.setub(ub)
 
 def initialize_subproblem(model, solve_data):
     """Perform initialization of the subproblem.
