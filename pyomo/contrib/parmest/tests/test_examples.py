@@ -20,9 +20,18 @@ import os
 import subprocess
 from os.path import abspath, dirname, isfile, join
 
+import pyomo.contrib.parmest.parmest as parmest
+
+from pyomo.opt import SolverFactory
+ipopt_available = SolverFactory('ipopt').available()
+
 testdir = dirname(abspath(str(__file__)))
 examplesdir = join(testdir, "..", "examples")
 
+@unittest.skipIf(not parmest.parmest_available,
+                 "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not ipopt_available,
+                 "The 'ipopt' solver is not available")
 class TestExamples(unittest.TestCase):
     @classmethod
     def setUpClass(self):
@@ -36,9 +45,13 @@ class TestExamples(unittest.TestCase):
         from pyomo.contrib.parmest.examples.rooney_biegler import parmest_example
         parmest_example.main()
     
-    #def test_reaction_kinetics(self):
-    #    from pyomo.contrib.parmest.examples.reaction_kinetics import simple_reaction_parmest_example
-    #    simple_reaction_parmest_example.main()
+    def test_reaction_kinetics(self):
+        from pyomo.contrib.parmest.examples.reaction_kinetics import simple_reaction_parmest_example
+        simple_reaction_parmest_example.main()
+        
+    #def test_semibatch(self):
+    #    from pyomo.contrib.parmest.examples.semibatch import parmest_example
+    #    parmest_example.main()
     
     """
     def test_examples(self):

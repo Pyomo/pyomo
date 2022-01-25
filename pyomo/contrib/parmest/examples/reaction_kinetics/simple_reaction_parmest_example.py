@@ -16,9 +16,6 @@ This example shows:
 
 Code provided by Paul Akula.
 '''
-import pandas as pd
-from pandas import DataFrame
-from os import path
 
 from pyomo.environ import (ConcreteModel, Param, Var, PositiveReals, Objective,
                            Constraint, RangeSet, Expression, minimize, exp, value)
@@ -26,27 +23,6 @@ from pyomo.environ import (ConcreteModel, Param, Var, PositiveReals, Objective,
 #from idaes.core.util import get_default_solver
 import pyomo.contrib.parmest.parmest as parmest
 
-# =======================================================================
-''' Data from Table 5.2 in  Y. Bard, "Nonlinear Parameter Estimation", (pg. 124)
-'''
-
-data = [{'experiment': 1, 'x1': 0.1, 'x2': 100, 'y': 0.98},
-        {'experiment': 2, 'x1': 0.2, 'x2': 100, 'y': 0.983},
-        {'experiment': 3, 'x1': 0.3, 'x2': 100, 'y': 0.955},
-        {'experiment': 4, 'x1': 0.4, 'x2': 100, 'y': 0.979},
-        {'experiment': 5, 'x1': 0.5, 'x2': 100, 'y': 0.993},
-        {'experiment': 6, 'x1': 0.05, 'x2': 200, 'y': 0.626},
-        {'experiment': 7, 'x1': 0.1, 'x2': 200, 'y': 0.544},
-        {'experiment': 8, 'x1': 0.15, 'x2': 200, 'y': 0.455},
-        {'experiment': 9, 'x1': 0.2, 'x2': 200, 'y': 0.225},
-        {'experiment': 10, 'x1': 0.25, 'x2': 200, 'y': 0.167},
-        {'experiment': 11, 'x1': 0.02, 'x2': 300, 'y': 0.566},
-        {'experiment': 12, 'x1': 0.04, 'x2': 300, 'y': 0.317},
-        {'experiment': 13, 'x1': 0.06, 'x2': 300, 'y': 0.034},
-        {'experiment': 14, 'x1': 0.08, 'x2': 300, 'y': 0.016},
-        {'experiment': 15, 'x1': 0.1, 'x2': 300, 'y': 0.006}]
-
-# =======================================================================
 
 def simple_reaction_model(data):
 
@@ -86,7 +62,23 @@ def simple_reaction_model(data):
 
     return model
 
-if __name__ == "__main__":
+def main():
+    # Data from Table 5.2 in  Y. Bard, "Nonlinear Parameter Estimation", (pg. 124)
+    data = [{'experiment': 1, 'x1': 0.1, 'x2': 100, 'y': 0.98},
+            {'experiment': 2, 'x1': 0.2, 'x2': 100, 'y': 0.983},
+            {'experiment': 3, 'x1': 0.3, 'x2': 100, 'y': 0.955},
+            {'experiment': 4, 'x1': 0.4, 'x2': 100, 'y': 0.979},
+            {'experiment': 5, 'x1': 0.5, 'x2': 100, 'y': 0.993},
+            {'experiment': 6, 'x1': 0.05, 'x2': 200, 'y': 0.626},
+            {'experiment': 7, 'x1': 0.1, 'x2': 200, 'y': 0.544},
+            {'experiment': 8, 'x1': 0.15, 'x2': 200, 'y': 0.455},
+            {'experiment': 9, 'x1': 0.2, 'x2': 200, 'y': 0.225},
+            {'experiment': 10, 'x1': 0.25, 'x2': 200, 'y': 0.167},
+            {'experiment': 11, 'x1': 0.02, 'x2': 300, 'y': 0.566},
+            {'experiment': 12, 'x1': 0.04, 'x2': 300, 'y': 0.317},
+            {'experiment': 13, 'x1': 0.06, 'x2': 300, 'y': 0.034},
+            {'experiment': 14, 'x1': 0.08, 'x2': 300, 'y': 0.016},
+            {'experiment': 15, 'x1': 0.1, 'x2': 300, 'y': 0.006}]
 
     # =======================================================================
     # Parameter estimation without covariance estimate
@@ -106,3 +98,6 @@ if __name__ == "__main__":
     print(obj)
     print(theta)
     print(cov)
+
+if __name__ == "__main__":
+    main()
