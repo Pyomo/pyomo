@@ -4,7 +4,7 @@
 import logging
 from math import fabs
 
-from pyomo.common.config import ConfigBlock, ConfigValue, NonNegativeFloat
+from pyomo.common.config import ConfigBlock, NonNegativeFloat
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.block import Block
 from pyomo.core.expr.numvalue import value
@@ -36,12 +36,6 @@ class GDP_Disjunct_Fixer(Transformation):
         super(GDP_Disjunct_Fixer, self).__init__(**kwargs)
 
     CONFIG = ConfigBlock("gdp.fix_disjuncts")
-    CONFIG.declare('integer_tolerance', ConfigValue(
-        default=1E-6,
-        domain=NonNegativeFloat,
-        description="tolerance on binary variable 0, 1 values"
-    ))
-
     def _apply_to(self, model, **kwds):
         """Fix all disjuncts in the given model and reclassify them to 
         Blocks."""
