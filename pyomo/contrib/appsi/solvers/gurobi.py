@@ -256,6 +256,7 @@ class Gurobi(PersistentBase, PersistentSolver):
             # the environment
             with capture_output(capture_fd=True):
                 m = gurobipy.Model()
+                m.dispose()
         except ImportError:
             # Triggered if this is the first time the deferred import of
             # gurobipy is resolved. _import_gurobipy will have already
@@ -264,8 +265,6 @@ class Gurobi(PersistentBase, PersistentSolver):
         except gurobipy.GurobiError:
             cls._available = Gurobi.Availability.BadLicense
             return
-        finally:
-            m.dispose()
         if not cmodel_available:
             cls._available = Gurobi.Availability.NeedsCompiledExtension
         else:
