@@ -66,7 +66,7 @@ elif releaselevel == 'invalid':
 
 version_info = (major, minor, micro, releaselevel, serial)
 
-version = '.'.join(str(x) for x in version_info[:(3 if micro else 2)])
+version = '.'.join(str(x) for x in version_info[:3])
 __version__ = version
 if releaselevel != 'final':
     version += ' ('+releaselevel+')'

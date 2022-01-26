@@ -71,7 +71,7 @@ class MILP_unused_vars(_BaseTestModel):
         model.c.add( model.X_initialy_stale[1] >= 0 )
         model.c.add( model.X_initialy_stale[2] >= 1 )
 
-        # Test that stale flags do not get updated
+        # Test that stale flags get set
         # on inactive blocks (where "inactive blocks" mean blocks
         # that do NOT follow a path of all active parent blocks
         # up to the top-level model)
@@ -99,15 +99,19 @@ class MILP_unused_vars(_BaseTestModel):
         model = self.model
         model.x_unused.value = -1
         model.x_unused_initialy_stale.value = -1
+        model.x_unused_initialy_stale.stale = True
         for i in model.s:
             model.X_unused[i].value = -1
             model.X_unused_initialy_stale[i].value = -1
+            model.X_unused_initialy_stale[i].stale = True
 
         model.x.value = -1
         model.x_initialy_stale.value = -1
+        model.x_initialy_stale.stale = True
         for i in model.s:
             model.X[i].value = -1
             model.X_initialy_stale[i].value = -1
+            model.X_initialy_stale[i].stale = True
 
 @register_model
 class MILP_unused_vars_kernel(MILP_unused_vars):

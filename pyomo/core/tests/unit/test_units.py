@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 #
 #
+import math
 import pickle
 
 from pyomo.common.errors import PyomoException
@@ -19,16 +20,18 @@ from pyomo.environ import (
     ExternalFunction, value, sum_product, maximize, units,
     log, log10, exp, sqrt, cos, sin, tan, asin, acos, atan, cosh, sinh,
     tanh, asinh, acosh, atanh, ceil, floor,
+    BooleanVar
 )
 from pyomo.common.log import LoggingIntercept
 from pyomo.util.check_units import (
     assert_units_consistent, check_units_equivalent,
 )
 from pyomo.core.expr import inequality
+from pyomo.core.expr.numvalue import NumericConstant
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.units_container import (
     pint_available, pint_module, _DeferredUnitsSingleton,
-    InconsistentUnitsError, UnitsError, PyomoUnitsContainer,
+    InconsistentUnitsError, UnitsError, PyomoUnitsContainer, as_quantity
 )
 from io import StringIO
 
@@ -157,8 +160,12 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual(kg.to_string(), 'kg')
         # ToDo: is this really the correct behavior for verbose?
         self.assertEqual(kg.to_string(verbose=True), 'kg')
-        self.assertEqual(kg.to_string(), 'kg')
-        self.assertEqual(kg.to_string(), 'kg')
+        self.assertEqual((kg/uc.s).to_string(), 'kg/s')
+        self.assertEqual((kg*uc.m**2/uc.s).to_string(), 'kg*m**2/s')
+
+        m.v = Var(initialize=3, units=uc.J)
+        e = uc.convert(m.v, uc.g*uc.m**2/uc.s**2)
+        self.assertEqual(e.to_string(), '1000.0*(g*m**2/J/s**2)*v')
 
         # check __nonzero__ / __bool__
         with self.assertRaisesRegex(
@@ -180,7 +187,8 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual('dimensionless', str(dless))
 
 
-    def _get_check_units_ok(self, x, pyomo_units_container, str_check=None, expected_type=None):
+    def _get_check_units_ok(self, x, pyomo_units_container, str_check=None,
+                            expected_type=None):
         if expected_type is not None:
             self.assertEqual(expected_type, type(x))
 
@@ -191,7 +199,9 @@ class TestPyomoUnit(unittest.TestCase):
             # if str_check is None, then we expect the units to be None
             self.assertIsNone(pyomo_units_container.get_units(x))
 
-    def _get_check_units_fail(self, x, pyomo_units_container, expected_type=None, expected_error=InconsistentUnitsError):
+    def _get_check_units_fail(self, x, pyomo_units_container,
+                              expected_type=None,
+                              expected_error=InconsistentUnitsError):
         if expected_type is not None:
             self.assertEqual(expected_type, type(x))
 
@@ -262,8 +272,10 @@ class TestPyomoUnit(unittest.TestCase):
         # I don't think that there are combinations that can "fail" for products
 
         # test PowExpression, NPV_PowExpression
-        # ToDo: fix the str representation to combine the powers or the expression system
-        self._get_check_units_ok((model.x*kg**2)**3, uc, 'kg**6', EXPR.PowExpression) # would want this to be kg**6
+        self._get_check_units_ok(kg**2, uc, 'kg**2', EXPR.NPV_PowExpression)
+        self._get_check_units_ok(model.p**model.p, uc, 'None', EXPR.NPV_PowExpression)
+        self._get_check_units_ok(kg**model.p, uc, 'kg**42', EXPR.NPV_PowExpression)
+        self._get_check_units_ok((model.x*kg**2)**3, uc, 'kg**6', EXPR.PowExpression)
         self._get_check_units_fail(kg**model.x, uc, EXPR.PowExpression, UnitsError)
         self._get_check_units_fail(model.x**kg, uc, EXPR.PowExpression, UnitsError)
         self._get_check_units_ok(kg**2, uc, 'kg**2', EXPR.NPV_PowExpression)
@@ -291,6 +303,7 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_ok(log10(3.0*model.p), uc, None, EXPR.NPV_UnaryFunctionExpression)
         self._get_check_units_fail(log10(3.0*kg), uc, EXPR.NPV_UnaryFunctionExpression, UnitsError)
         # sin
+        self._get_check_units_ok(sin(3.0*model.x), uc, None, EXPR.UnaryFunctionExpression)
         self._get_check_units_ok(sin(3.0*model.x*uc.radians), uc, None, EXPR.UnaryFunctionExpression)
         self._get_check_units_fail(sin(3.0*kg*model.x), uc, EXPR.UnaryFunctionExpression, UnitsError)
         self._get_check_units_fail(sin(3.0*kg*model.x*uc.kg), uc, EXPR.UnaryFunctionExpression, UnitsError)
@@ -449,6 +462,12 @@ class TestPyomoUnit(unittest.TestCase):
         linex2 = sum_product(model.vv, {'A': kg, 'B': m, 'C':kg}, index=['A', 'B', 'C'])
         self._get_check_units_fail(linex2, uc, EXPR.LinearExpression)
 
+    def test_bad_units(self):
+        uc = units
+        with self.assertRaisesRegex(
+                AttributeError, "Attribute unknown_bogus_unit not found."):
+            uc.unknown_bogus_unit
+
     def test_named_expression(self):
         uc = units
         m = ConcreteModel()
@@ -521,10 +540,16 @@ class TestPyomoUnit(unittest.TestCase):
         u = units
         x = 0.4535923
         expected_lb_value = 1.0
-        actual_lb_value = u.convert_value(num_value=x, from_units=u.kg, to_units=u.lb)
+        actual_lb_value = u.convert_value(
+            num_value=x, from_units=u.kg, to_units=u.lb)
         self.assertAlmostEqual(expected_lb_value, actual_lb_value, places=5)
-        actual_lb_value = u.convert_value(num_value=value(x*u.kg), from_units=u.kg, to_units=u.lb)
+        actual_lb_value = u.convert_value(
+            num_value=value(x*u.kg), from_units=u.kg, to_units=u.lb)
         self.assertAlmostEqual(expected_lb_value, actual_lb_value, places=5)
+
+        src = 5
+        ans = u.convert_value(src, u.m/u.s, u.m/u.s)
+        self.assertIs(src, ans)
 
         with self.assertRaises(UnitsError):
             # cannot convert from meters to pounds
@@ -665,6 +690,147 @@ class TestPyomoUnit(unittest.TestCase):
             "system after the PyomoUnitsContainer was constructed",
             LOG.getvalue()
         )
+
+    def test_as_quantity_scalar(self):
+        _pint = units._pint_registry
+        Quantity = _pint.Quantity
+        m = ConcreteModel()
+        m.x = Var(initialize=1)
+        m.y = Var(initialize=2, units=units.g)
+        m.p = Param(initialize=3)
+        m.q = Param(initialize=4, units=1/units.s)
+        m.b = BooleanVar(initialize=True)
+
+        q = as_quantity(0)
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 0 * _pint.dimensionless)
+
+        q = as_quantity(None)
+        self.assertIs(q.__class__, None.__class__)
+        self.assertEqual(q, None)
+
+        q = as_quantity(str('aaa'))
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 'aaa' * _pint.dimensionless)
+
+        q = as_quantity(True)
+        self.assertIs(q.__class__, bool)
+        self.assertEqual(q, True)
+
+        q = as_quantity(units.kg)
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 1 * _pint.kg)
+
+        q = as_quantity(NumericConstant(5))
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 5 * _pint.dimensionless)
+
+        q = as_quantity(m.x)
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 1 * _pint.dimensionless)
+
+        q = as_quantity(m.y)
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 2 * _pint.g)
+
+        q = as_quantity(m.p)
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 3 * _pint.dimensionless)
+
+        q = as_quantity(m.q)
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 4 / _pint.s)
+
+        q = as_quantity(m.b)
+        self.assertIs(q.__class__, bool)
+        self.assertEqual(q, True)
+
+        class UnknownPyomoType(object):
+            def is_expression_type(self):
+                return False
+
+            def is_numeric_type(self):
+                return False
+
+            def is_logical_type(self):
+                return False
+
+        other = UnknownPyomoType()
+        q = as_quantity(other)
+        self.assertIs(q.__class__, UnknownPyomoType)
+        self.assertIs(q, other)
+
+    def test_as_quantity_expression(self):
+        _pint = units._pint_registry
+        Quantity = _pint.Quantity
+        m = ConcreteModel()
+        m.x = Var(initialize=1)
+        m.y = Var(initialize=2, units=units.g)
+        m.p = Param(initialize=3)
+        m.q = Param(initialize=4, units=1/units.s)
+
+        q = as_quantity(m.x * m.p)
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 3 * _pint.dimensionless)
+
+        q = as_quantity(m.x * m.q)
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 4 / _pint.s)
+
+        q = as_quantity(m.y * m.p)
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 6 * _pint.g)
+
+        q = as_quantity(m.y * m.q)
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 8 * _pint.g / _pint.s)
+
+        q = as_quantity(m.y <= 2*m.y)
+        self.assertIs(q.__class__, bool)
+        self.assertEqual(q, True)
+
+        q = as_quantity(m.y >= 2*m.y)
+        self.assertIs(q.__class__, bool)
+        self.assertEqual(q, False)
+
+        q = as_quantity(EXPR.Expr_if(IF=m.y <= 2*m.y, THEN=m.x, ELSE=m.p))
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 1 * _pint.dimensionless)
+
+        q = as_quantity(EXPR.Expr_if(IF=m.y >= 2*m.y, THEN=m.x, ELSE=m.p))
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 3 * _pint.dimensionless)
+
+        # NOTE: The following two tests are not unit consistent (but can
+        # be evaluated)
+
+        q = as_quantity(EXPR.Expr_if(IF=m.x <= 2*m.x, THEN=m.y, ELSE=m.q))
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 2 * _pint.g)
+
+        q = as_quantity(EXPR.Expr_if(IF=m.x >= 2*m.x, THEN=m.y, ELSE=m.q))
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q, 4 / _pint.s)
+
+        # Note: check the units explicitly, as
+        #   Quantity(x, radian) == Quantity(x, dimensionless)
+        q = as_quantity(acos(m.x))
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q.units, _pint.radian)
+        self.assertEqual(q, 0 * _pint.radian)
+
+        q = as_quantity(cos(m.x*math.pi))
+        self.assertIs(q.__class__, Quantity)
+        self.assertEqual(q.units, _pint.dimensionless)
+        self.assertAlmostEqual(q, -1 * _pint.dimensionless)
+
+        def MyAdder(x, y):
+            return x + y
+        m.EF = ExternalFunction(MyAdder, units=units.kg)
+        ef = m.EF(m.x, m.y)
+        q = as_quantity(ef)
+        self.assertIs(q.__class__, Quantity)
+        self.assertAlmostEqual(q, 3 * _pint.kg)
 
 
 if __name__ == "__main__":

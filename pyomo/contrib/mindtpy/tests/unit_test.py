@@ -17,13 +17,13 @@ from pyomo.environ import SolverFactory, maximize
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QCP_simple import QCP_simple
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
-from pyomo.contrib.mindtpy.util import setup_solve_data, add_feas_slacks, set_solver_options
+from pyomo.contrib.mindtpy.util import set_up_solve_data, add_feas_slacks, set_solver_options
 from pyomo.contrib.mindtpy.nlp_solve import handle_subproblem_other_termination, handle_feasibility_subproblem_tc, solve_subproblem, handle_nlp_subproblem_tc
 from pyomo.core.base import TransformationFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import create_utility_block, time_code, process_objective, setup_results_object
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main, init_rNLP
-from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, handle_feas_main_tc
+from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, handle_fp_main_tc
 from pyomo.core import Block, ConstraintList
 from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_other_conditions
 from pyomo.opt import SolutionStatus, SolverStatus
@@ -58,7 +58,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         model = SimpleMINLP()
         config = _get_MindtPy_config()
-        solve_data = setup_solve_data(model, config)
+        solve_data = set_up_solve_data(model, config)
         with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
 
@@ -108,7 +108,6 @@ class TestMindtPy(unittest.TestCase):
             # test handle_main_other_conditions
             main_mip, main_mip_results = solve_main(solve_data, config)
             main_mip_results.solver.termination_condition = tc.infeasible
-            print(solve_data.results.solver.termination_condition)
             handle_main_other_conditions(
                 solve_data.mip, main_mip_results, solve_data, config)
             self.assertIs(
@@ -210,42 +209,42 @@ class TestMindtPy(unittest.TestCase):
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.maxEvaluations)
 
-            # test handle_feas_main_tc
+            # test handle_fp_main_tc
             config.init_strategy = 'FP'
             solve_data.fp_iter = 1
             init_rNLP(solve_data, config)
             feas_main, feas_main_results = solve_main(
                 solve_data, config, fp=True)
             feas_main_results.solver.termination_condition = tc.optimal
-            fp_should_terminate = handle_feas_main_tc(
+            fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
             self.assertIs(fp_should_terminate, False)
 
             feas_main_results.solver.termination_condition = tc.maxTimeLimit
-            fp_should_terminate = handle_feas_main_tc(
+            fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
             self.assertIs(fp_should_terminate, True)
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.maxTimeLimit)
 
             feas_main_results.solver.termination_condition = tc.infeasible
-            fp_should_terminate = handle_feas_main_tc(
+            fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
             self.assertIs(fp_should_terminate, True)
 
             feas_main_results.solver.termination_condition = tc.unbounded
-            fp_should_terminate = handle_feas_main_tc(
+            fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
             self.assertIs(fp_should_terminate, True)
 
             feas_main_results.solver.termination_condition = tc.other
             feas_main_results.solution.status = SolutionStatus.feasible
-            fp_should_terminate = handle_feas_main_tc(
+            fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
             self.assertIs(fp_should_terminate, False)
 
             feas_main_results.solver.termination_condition = tc.solverFailure
-            fp_should_terminate = handle_feas_main_tc(
+            fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
             self.assertIs(fp_should_terminate, True)
 

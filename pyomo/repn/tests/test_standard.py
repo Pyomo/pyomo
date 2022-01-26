@@ -176,7 +176,7 @@ class Test(unittest.TestCase):
 
     def test_simplesum(self):
         # a + b
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         m.b = Var()
         e = m.a + m.b
@@ -205,7 +205,7 @@ class Test(unittest.TestCase):
 
     def test_constsum(self):
         # a + 5
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         e = m.a + 5
  
@@ -232,7 +232,7 @@ class Test(unittest.TestCase):
         self.assertEqual(baseline, repn_to_dict(rep))
 
         # 5 + a
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         e = 5 + m.a
  
@@ -857,7 +857,7 @@ class Test(unittest.TestCase):
         #
         # Check the structure of nested sums
         #
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
@@ -1018,7 +1018,7 @@ class Test(unittest.TestCase):
         #
         # Check sums with nested products
         #
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
@@ -1176,7 +1176,7 @@ class Test(unittest.TestCase):
         #    -
         #     \
         #      a
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         e = - m.a
 
@@ -1206,7 +1206,7 @@ class Test(unittest.TestCase):
         #    -
         #   / \
         #  a   b
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         m.b = Var()
         e = m.a - m.b
@@ -1263,7 +1263,7 @@ class Test(unittest.TestCase):
         #    -
         #   / \
         #  a   5
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         e = m.a - 5
 
@@ -1320,7 +1320,7 @@ class Test(unittest.TestCase):
         #
         # Check the structure of nested differences
         #
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
@@ -1512,7 +1512,7 @@ class Test(unittest.TestCase):
         #
         # Check the structure of sum of products
         #
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
@@ -1722,7 +1722,7 @@ class Test(unittest.TestCase):
         #    *
         #   / \
         #  a   5
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         e = m.a * 5
 
@@ -2057,7 +2057,7 @@ class Test(unittest.TestCase):
         #     +   5
         #    / \
         #   a   b
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()
@@ -2176,7 +2176,7 @@ class Test(unittest.TestCase):
         self.assertEqual(baseline, repn_to_dict(rep))
 
     def test_quadratic1(self):
-        m = AbstractModel()
+        m = ConcreteModel()
         m.a = Var()
         m.b = Var()
         m.c = Var()

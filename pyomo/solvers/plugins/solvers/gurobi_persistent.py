@@ -12,6 +12,7 @@ from collections.abc import Iterable
 
 from pyomo.solvers.plugins.solvers.gurobi_direct import GurobiDirect, gurobipy
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numvalue import value, is_fixed
 from pyomo.opt.base import SolverFactory
 
@@ -583,6 +584,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         ----------
         vars: Var or iterable of Var
         """
+        StaleFlagManager.mark_all_as_stale()
         if not isinstance(vars, Iterable):
             vars = [vars]
         gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in vars]
@@ -596,6 +598,7 @@ class GurobiPersistent(PersistentSolver, GurobiDirect):
         ----------
         vars: iterable of vars
         """
+        StaleFlagManager.mark_all_as_stale()
         if not isinstance(vars, Iterable):
             vars = [vars]
         gurobi_vars = [self._pyomo_var_to_solver_var_map[i] for i in vars]

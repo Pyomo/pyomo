@@ -73,6 +73,9 @@ class SystemCallSolver(OptSolver):
         within the directories assigned to the PATH
         environment variable.
         """
+        # Clear any previously cached version number
+        self._version = None
+
         if name is None:
             self._user_executable = None
             if validate:
