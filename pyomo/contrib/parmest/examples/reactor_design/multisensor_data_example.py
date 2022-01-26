@@ -22,8 +22,8 @@ def main():
     
     # Data, includes multiple sensors for ca and cc
     file_dirname = dirname(abspath(str(__file__)))
-    file_name = abspath(join(file_dirname, 'reactor_data_multisensor.xlsx'))
-    data = pd.read_excel(file_name)  
+    file_name = abspath(join(file_dirname, 'reactor_data_multisensor.csv'))
+    data = pd.read_csv(file_name)  
     
     # Sum of squared error function
     def SSE_multisensor(model, data): 

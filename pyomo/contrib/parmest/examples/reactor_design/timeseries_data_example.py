@@ -23,8 +23,8 @@ def main():
     
     # Data, includes multiple sensors for ca and cc
     file_dirname = dirname(abspath(str(__file__)))
-    file_name = abspath(join(file_dirname, 'reactor_data_timeseries.xlsx'))
-    data = pd.read_excel(file_name)  
+    file_name = abspath(join(file_dirname, 'reactor_data_timeseries.csv'))
+    data = pd.read_csv(file_name)  
     
     # Group time series data into experiments, return the mean value for sv and caf
     # Returns a list of dictionaries
