@@ -121,7 +121,7 @@ class TestRooneyBiegler(unittest.TestCase):
         lNo_theta = self.pest.theta_est_leaveNout(1)
         self.assertTrue(lNo_theta.shape == (6,2))
 
-        results = self.pest.leaveNout_bootstrap_test(1, None, 3, 'Rect', [0.5, 1.0])
+        results = self.pest.leaveNout_bootstrap_test(1, None, 3, 'Rect', [0.5, 1.0], seed=5436)
         self.assertTrue(len(results) == 6) # 6 lNo samples
         i = 1
         samples = results[i][0] # list of N samples that are left out

@@ -206,9 +206,7 @@ def generate_model(data):
     disc.apply_to(m, nfe=20, ncp=4)
     return m
 
-
-if __name__ == '__main__':
-    
+def main():
     # Data loaded from files
     fname = 'exp2.out'
     with open(fname,'r') as infile:
@@ -220,3 +218,7 @@ if __name__ == '__main__':
     solver.solve(model)
     print('k1 = ', model.k1())
     print('E1 = ', model.E1())
+    
+if __name__ == '__main__':
+    main()
+    

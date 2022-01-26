@@ -6,7 +6,7 @@ import pyomo.contrib.parmest.parmest as parmest
 from pyomo.contrib.parmest.examples.semibatch.semibatch import generate_model
 import pyomo.contrib.parmest.scenariocreator as sc
 
-def main(dirname):
+def main():
     """ dirname gives the location of the experiment input files"""
     # Semibatch Vars to estimate in parmest
     theta_names = ['k1', 'k2', 'E1', 'E2']
@@ -39,4 +39,4 @@ def main(dirname):
             print("   {}={}".format(n, v))
 
 if __name__ == "__main__":
-    main(".")
+    main()

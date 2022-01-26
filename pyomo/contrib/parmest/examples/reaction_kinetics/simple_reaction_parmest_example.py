@@ -90,6 +90,7 @@ def main():
     print(obj)
     print(theta)
     print()
+    
     #=======================================================================
     # Estimate both k1 and k2 and compute the covariance matrix
     theta_names = ['k']
