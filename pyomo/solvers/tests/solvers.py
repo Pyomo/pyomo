@@ -309,10 +309,10 @@ def test_solver_cases(*args):
                                    'sos2'])
 
         _test_solver_cases['xpress_direct', 'python'] = initialize(
-            name='xpress',
+            name='xpress_direct',
             io='python',
             capabilities=_xpress_capabilities,
-            import_suffixes=['dual','rc','slack'],
+            import_suffixes=['dual', 'rc', 'slack'],
             options={'bargapstop':1e-9,})
 
         #
