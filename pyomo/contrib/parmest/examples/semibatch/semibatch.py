@@ -14,6 +14,7 @@ erential and
 algebraic equations. Mathematical Programming Computation, 10(2), 187-223.
 """
 import json
+from os.path import join, abspath, dirname
 from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, ConstraintList, Expression, Objective, TransformationFactory, SolverFactory, exp, minimize
 from pyomo.dae import ContinuousSet, DerivativeVar
 
@@ -208,8 +209,9 @@ def generate_model(data):
 
 def main():
     # Data loaded from files
-    fname = 'exp2.out'
-    with open(fname,'r') as infile:
+    file_dirname = dirname(abspath(str(__file__)))
+    file_name = abspath(join(file_dirname, 'exp2.out'))
+    with open(file_name,'r') as infile:
         data = json.load(infile)
     data['experiment'] = 2
         
