@@ -147,22 +147,6 @@ class TestRooneyBiegler(unittest.TestCase):
 
         self.pest.diagnostic_mode = False
 
-    # def test_rb_main(self):
-    #     """ test __main__ for rooney biegler """
-    #     p = str(parmestbase.__path__)
-    #     l = p.find("'")
-    #     r = p.find("'", l+1)
-    #     parmestpath = p[l+1:r]
-    #     rbpath = parmestpath + os.sep + "examples" + os.sep + \
-    #                "rooney_biegler" + os.sep + "rooney_biegler.py"
-    #     rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
-    #     if sys.version_info >= (3,5):
-    #         ret = subprocess.run([sys.executable, rbpath])
-    #         retcode = ret.returncode
-    #     else:
-    #         retcode = subprocess.call([sys.executable, rbpath])
-    #     assert(retcode == 0)
-
     @unittest.skip("Presently having trouble with mpiexec on appveyor")
     def test_parallel_parmest(self):
         """ use mpiexec and mpi4py """

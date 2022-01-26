@@ -31,7 +31,7 @@ included for easy testing of the model declaration.
 
 The file **parameter_estimation_example.py** uses parmest to estimate values of `k1`,
 `k2`, and `k3` by minimizing the sum of squared error between model and
-observed values of `ca`, `cb`, `cc`, and `cd`.  Additional example files also uses
+observed values of `ca`, `cb`, `cc`, and `cd`.  Additional example files use
 parmest to run parameter estimation with bootstrap resampling and
 perform a likelihood ratio test over a range of theta values.
 

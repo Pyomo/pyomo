@@ -19,13 +19,9 @@ import platform
 is_osx = platform.mac_ver()[0] != ''
 
 import pyomo.common.unittest as unittest
-import sys
 import os
-import subprocess
-from itertools import product
 
 import pyomo.contrib.parmest.parmest as parmest
-import pyomo.contrib.parmest.graphics as graphics
 import pyomo.contrib.parmest as parmestbase
 import pyomo.environ as pyo
 
