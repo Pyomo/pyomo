@@ -18,10 +18,7 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWa
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy
-
-
-logger = logging.getLogger('pyomo.contrib.mindtpy')
+from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy, update_dual_bound, update_suboptimal_dual_bound
 
 
 single_tree, single_tree_available = attempt_import(
@@ -31,41 +28,32 @@ tabu_list, tabu_list_available = attempt_import(
 
 
 def solve_main(solve_data, config, fp=False, regularization_problem=False):
-    """
-    This function solves the MIP main problem
+    """This function solves the MIP main problem.
 
     Parameters
     ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    fp : bool, optional
+        Whether it is in the loop of feasibility pump, by default False.
+    regularization_problem : bool, optional
+        Whether it is solving a regularization problem, by default False.
 
     Returns
     -------
-    solve_data.mip: Pyomo model
-        the MIP stored in solve_data
-    main_mip_results: Pyomo results object
-        result from solving the main MIP
-    fp: Bool
-        generate the feasibility pump regularization main problem
-    regularization_problem: Bool
-        generate the ROA regularization main problem
+    solve_data.mip : Pyomo model
+        The MIP stored in solve_data.
+    main_mip_results : SolverResults
+        Results from solving the main MIP.
     """
-    if fp:
-        config.logger.info('FP-MIP %s: Solve main problem.' %
-                           (solve_data.fp_iter,))
-    elif regularization_problem:
-        config.logger.info('Regularization-MIP %s: Solve main regularization problem.' %
-                           (solve_data.mip_iter,))
-    else:
+    if not fp and not regularization_problem:
         solve_data.mip_iter += 1
-        config.logger.info('MIP %s: Solve main problem.' %
-                           (solve_data.mip_iter,))
 
     # setup main problem
     setup_main(solve_data, config, fp, regularization_problem)
-    mainopt = setup_mip_solver(solve_data, config, regularization_problem)
+    mainopt = set_up_mip_solver(solve_data, config, regularization_problem)
 
     mip_args = dict(config.mip_solver_args)
     if config.mip_solver in {'cplex', 'cplex_persistent', 'gurobi', 'gurobi_persistent'}:
@@ -93,16 +81,13 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
         main_mip_results._pyomo_var_to_solver_var_map = mainopt._pyomo_var_to_solver_var_map
     if main_mip_results.solver.termination_condition is tc.optimal:
         if config.single_tree and not config.add_no_good_cuts and not regularization_problem:
-            if solve_data.objective_sense == minimize:
-                solve_data.LB = max(
-                    main_mip_results.problem.lower_bound, solve_data.LB)
-                solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-                solve_data.LB_progress.append(solve_data.LB)
-            else:
-                solve_data.UB = min(
-                    main_mip_results.problem.upper_bound, solve_data.UB)
-                solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-                solve_data.UB_progress.append(solve_data.UB)
+            update_suboptimal_dual_bound(solve_data, main_mip_results)
+        if regularization_problem:
+            config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'Reg '+solve_data.regularization_mip_type,
+                                                               value(
+                                                                   solve_data.mip.MindtPy_utils.loa_proj_mip_obj),
+                                                               solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                               get_main_elapsed_time(solve_data.timing)))
 
     elif main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or
@@ -125,7 +110,23 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
     return solve_data.mip, main_mip_results
 
 
-def setup_mip_solver(solve_data, config, regularization_problem):
+def set_up_mip_solver(solve_data, config, regularization_problem):
+    """Set up the MIP solver.
+
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    regularization_problem : bool
+        Whether it is solving a regularization problem.
+
+    Returns
+    -------
+    mainopt : SolverFactory
+        The customized MIP solver.
+    """
     # Deactivate extraneous IMPORT/EXPORT suffixes
     if config.nlp_solver == 'ipopt':
         getattr(solve_data.mip, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -178,18 +179,21 @@ def setup_mip_solver(solve_data, config, regularization_problem):
 
 
 def handle_main_optimal(main_mip, solve_data, config, update_bound=True):
-    """
-    This function copies the result from 'solve_main' to the working model and updates the upper/lower bound. This
-    function is called after an optimal solution is found for the main problem.
+    """This function copies the results from 'solve_main' to the working model and updates
+    the upper/lower bound. This function is called after an optimal solution is found for 
+    the main problem.
 
     Parameters
     ----------
-    main_mip: Pyomo model
-        the MIP main problem
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    main_mip : Pyomo model
+        The MIP main problem.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    update_bound : bool, optional
+        Whether to update the bound, by default True.
+        Bound will not be updated when handling regularization problem.
     """
     # proceed. Just need integer values
     MindtPy = main_mip.MindtPy_utils
@@ -207,37 +211,31 @@ def handle_main_optimal(main_mip, solve_data, config, update_bound=True):
         config)
 
     if update_bound:
-        if solve_data.objective_sense == minimize:
-            solve_data.LB = max(
-                value(MindtPy.mip_obj.expr), solve_data.LB)
-            solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-            solve_data.LB_progress.append(solve_data.LB)
-        else:
-            solve_data.UB = min(
-                value(MindtPy.mip_obj.expr), solve_data.UB)
-            solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-            solve_data.UB_progress.append(solve_data.UB)
-        config.logger.info(
-            'MIP %s: OBJ: %s  LB: %s  UB: %s  TIME: %ss'
-            % (solve_data.mip_iter, value(MindtPy.mip_obj.expr),
-               solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing), 2)))
+        update_dual_bound(solve_data, value(MindtPy.mip_obj.expr))
+        config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'MILP', value(MindtPy.mip_obj.expr),
+                                                           solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                           get_main_elapsed_time(solve_data.timing)))
 
 
 def handle_main_other_conditions(main_mip, main_mip_results, solve_data, config):
-    """
-    This function handles the result of the latest iteration of solving the MIP problem (given any of a few
+    """This function handles the result of the latest iteration of solving the MIP problem (given any of a few
     edge conditions, such as if the solution is neither infeasible nor optimal).
 
     Parameters
     ----------
-    main_mip: Pyomo model
-        the MIP main problem
-    main_mip_results: Pyomo results object
-        result from solving the MIP problem
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    main_mip : Pyomo model
+        The MIP main problem.
+    main_mip_results : SolverResults
+        Results from solving the MIP problem.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+
+    Raises
+    ------
+    ValueError
+        MindtPy unable to handle MILP main termination condition.
     """
     if main_mip_results.solver.termination_condition is tc.infeasible:
         handle_main_infeasible(main_mip, solve_data, config)
@@ -263,20 +261,10 @@ def handle_main_other_conditions(main_mip, main_mip_results, solve_data, config)
             main_mip.MindtPy_utils.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
-        if solve_data.objective_sense == minimize:
-            solve_data.LB = max(
-                main_mip_results.problem.lower_bound, solve_data.LB)
-            solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-            solve_data.LB_progress.append(solve_data.LB)
-        else:
-            solve_data.UB = min(
-                main_mip_results.problem.upper_bound, solve_data.UB)
-            solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-            solve_data.UB_progress.append(solve_data.UB)
-        config.logger.info(
-            'MIP %s: OBJ: %s  LB: %s  UB: %s'
-            % (solve_data.mip_iter, value(MindtPy.mip_obj.expr),
-               solve_data.LB, solve_data.UB))
+        update_suboptimal_dual_bound(solve_data, main_mip_results)
+        config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'MILP', value(MindtPy.mip_obj.expr),
+                                                           solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                           get_main_elapsed_time(solve_data.timing)))
     else:
         raise ValueError(
             'MindtPy unable to handle MILP main termination condition '
@@ -285,17 +273,17 @@ def handle_main_other_conditions(main_mip, main_mip_results, solve_data, config)
 
 
 def handle_main_infeasible(main_mip, solve_data, config):
-    """
-    This function handles the result of the latest iteration of solving the MIP problem given an infeasible solution.
+    """This function handles the result of the latest iteration of solving
+    the MIP problem given an infeasible solution.
 
     Parameters
     ----------
-    main_mip: Pyomo model
-        the MIP main problem
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    main_mip : Pyomo model
+        The MIP main problem.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
     """
     config.logger.info(
         'MILP main problem is infeasible. '
@@ -321,20 +309,21 @@ def handle_main_infeasible(main_mip, solve_data, config):
 
 
 def handle_main_max_timelimit(main_mip, main_mip_results, solve_data, config):
-    """
-    This function handles the result of the latest iteration of solving the MIP problem given that solving the
-    MIP takes too long.
+    """This function handles the result of the latest iteration of solving the MIP problem
+    given that solving the MIP takes too long.
 
     Parameters
     ----------
-    main_mip: Pyomo model
-        the MIP main problem
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    main_mip : Pyomo model
+        The MIP main problem.
+    main_mip_results : [type]
+        Results from solving the MIP main subproblem.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
     """
-    # TODO check that status is actually ok and everything is feasible
+    # TODO if we have found a valid feasible solution, we take that, if not, we can at least use the dual bound
     MindtPy = main_mip.MindtPy_utils
     config.logger.info(
         'Unable to optimize MILP main problem '
@@ -344,35 +333,29 @@ def handle_main_max_timelimit(main_mip, main_mip_results, solve_data, config):
         main_mip.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config)
-    if solve_data.objective_sense == minimize:
-        solve_data.LB = max(
-            main_mip_results.problem.lower_bound, solve_data.LB)
-        solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-        solve_data.LB_progress.append(solve_data.LB)
-    else:
-        solve_data.UB = min(
-            main_mip_results.problem.upper_bound, solve_data.UB)
-        solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-        solve_data.UB_progress.append(solve_data.UB)
-    config.logger.info(
-        'MIP %s: OBJ: %s  LB: %s  UB: %s'
-        % (solve_data.mip_iter, value(MindtPy.mip_obj.expr),
-           solve_data.LB, solve_data.UB))
+    update_suboptimal_dual_bound(solve_data, main_mip_results)
+    config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'MILP', value(MindtPy.mip_obj.expr),
+                                                       solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                       get_main_elapsed_time(solve_data.timing)))
 
 
 def handle_main_unbounded(main_mip, solve_data, config):
-    """
-    This function handles the result of the latest iteration of solving the MIP problem given an unbounded solution
-    due to the relaxation.
+    """This function handles the result of the latest iteration of solving the MIP 
+    problem given an unbounded solution due to the relaxation.
 
     Parameters
     ----------
-    main_mip: Pyomo model
-        the MIP main problem
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    main_mip : Pyomo model
+        The MIP main problem.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+
+    Returns
+    -------
+    main_mip_results : SolverResults
+        The results of the bounded main problem.
     """
     # Solution is unbounded. Add an arbitrary bound to the objective and resolve.
     # This occurs when the objective is nonlinear. The nonlinear objective is moved
@@ -395,6 +378,24 @@ def handle_main_unbounded(main_mip, solve_data, config):
 
 
 def handle_regularization_main_tc(main_mip, main_mip_results, solve_data, config):
+    """Handles the result of the latest FP iteration of solving the regularization main problem.
+
+    Parameters
+    ----------
+    main_mip : Pyomo model
+        The MIP main problem.
+    main_mip_results : SolverResults
+        Results from solving the regularization main subproblem.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+
+    Raises
+    ------
+    ValueError
+        MindtPy unable to handle the regularization problem termination condition.
+    """
     if main_mip_results is None:
         config.logger.info(
             'Failed to solve the regularization problem.'
@@ -433,19 +434,18 @@ def handle_regularization_main_tc(main_mip, main_mip_results, solve_data, config
 
 
 def setup_main(solve_data, config, fp, regularization_problem):
-    """
-    Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
+    """Set up main problem/main regularization problem for OA, ECP, Feasibility Pump and ROA methods.
 
     Parameters
     ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
-    fp: Bool
-        generate the feasibility pump regularization main problem
-    regularization_problem: Bool
-        generate the ROA regularization main problem
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+    fp : bool
+        Whether it is in the loop of feasibility pump.
+    regularization_problem : bool
+        Whether it is solving a regularization problem.
     """
     MindtPy = solve_data.mip.MindtPy_utils
 
