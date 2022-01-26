@@ -19,8 +19,6 @@ Code provided by Paul Akula.
 
 from pyomo.environ import (ConcreteModel, Param, Var, PositiveReals, Objective,
                            Constraint, RangeSet, Expression, minimize, exp, value)
-
-#from idaes.core.util import get_default_solver
 import pyomo.contrib.parmest.parmest as parmest
 
 
