@@ -43,6 +43,7 @@ def main():
     model = rooney_biegler_model(data)
     solver = pyo.SolverFactory('ipopt')
     solver.solve(model)
+
     print('asymptote = ', model.asymptote())
     print('rate constant = ', model.rate_constant())
     
