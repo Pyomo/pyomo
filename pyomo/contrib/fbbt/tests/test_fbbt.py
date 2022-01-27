@@ -949,6 +949,21 @@ class FbbtTestBase(object):
             self.assertAlmostEqual(m.x[n].lb, -29)
             self.assertAlmostEqual(m.x[n].ub, 0)
 
+    def test_fixed_var(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var()
+        m.y = pyo.Var()
+        m.z = pyo.Var(bounds=(1, 2))
+        m.x.fix(1)
+        m.c = pyo.Constraint(expr=m.z == m.x * m.y)
+
+        self.tightener(m)
+
+        self.assertAlmostEqual(m.x.lb, 1)
+        self.assertAlmostEqual(m.x.ub, 1)
+        self.assertAlmostEqual(m.y.lb, 1)
+        self.assertAlmostEqual(m.y.ub, 2)
+
 
 class TestFBBT(FbbtTestBase, unittest.TestCase):
     def setUp(self) -> None:

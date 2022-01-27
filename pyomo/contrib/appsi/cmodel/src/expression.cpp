@@ -39,6 +39,9 @@ double Leaf::evaluate()
 
 double Var::get_lb()
 {
+  if (fixed)
+    return value;
+
   double lb1 = lb->evaluate();
   double lb2;
   if (domain == "reals")
@@ -87,6 +90,9 @@ double Var::get_lb()
 
 double Var::get_ub()
 {
+  if (fixed)
+    return value;
+
   double ub1 = ub->evaluate();
   double ub2;
   if (domain == "reals")
