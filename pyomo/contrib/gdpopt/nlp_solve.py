@@ -334,17 +334,20 @@ def preprocess_subproblem(m, config):
     # their lb is equal to the ub (within tolerance)
     xfrm('contrib.detect_fixed_vars').apply_to(
          m, tolerance=config.variable_tolerance)
+
+    # Restore the original bounds because the NLP solver might like that better
+    # and because, if deactivate_trivial_constraints ever gets fancier, this
+    # could change what is and is not trivial.
+    if not config.tighten_nlp_var_bounds:
+        for v, (lb, ub) in original_bounds.items():
+            v.setlb(lb)
+            v.setub(ub)
+
     # Now, if something got fixed to 0, we might have 0*var terms to remove
     xfrm('contrib.remove_zero_terms').apply_to(m)
     # Last, check if any constraints are now trivial and deactivate them
     xfrm('contrib.deactivate_trivial_constraints').apply_to(
         m, tolerance=config.constraint_tolerance)
-
-    # Restore the original bounds because the NLP solver might like that better
-    if not config.tighten_nlp_var_bounds:
-        for v, (lb, ub) in original_bounds.items():
-            v.setlb(lb)
-            v.setub(ub)
 
 def initialize_subproblem(model, solve_data):
     """Perform initialization of the subproblem.
