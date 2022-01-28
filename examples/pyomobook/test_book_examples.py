@@ -21,6 +21,18 @@ from pyomo.opt import check_available_solvers
 from pyomo.common.dependencies import attempt_import, check_min_version
 from pyomo.common.fileutils import this_file_dir
 from pyomo.common.tee import capture_output
+import pyomo.environ as pyo
+
+def gurobi_fully_licensed():
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var(list(range(2001)), within=pyo.NonNegativeReals)
+    m.o = pyo.Objective(expr=sum(m.x.values()))
+    try:
+        results = pyo.SolverFactory('gurobi').solve(m, tee=True)
+        pyo.assert_optimal_termination(results)
+        return True
+    except:
+        return False
 
 parameterized, param_available = attempt_import('parameterized')
 if not param_available:
@@ -109,7 +121,7 @@ solver_dependencies =   {
     'test_overview_ch_pyomo_wl_abstract': ['glpk'],
 
     # performance_ch
-    'test_performance_ch_wl': ['gurobi', 'gurobi_persistent'],
+    'test_performance_ch_wl': ['gurobi', 'gurobi_persistent', 'gurobi_license'],
     'test_performance_ch_persistent': ['gurobi_persistent'],
 }
 package_dependencies =  {
@@ -139,7 +151,9 @@ package_dependencies =  {
 #
 solvers_used = set(sum(list(solver_dependencies.values()), []))
 available_solvers = check_available_solvers(*solvers_used)
-solver_available = {solver_:solver_ in available_solvers for solver_ in solvers_used}
+if gurobi_fully_licensed():
+    available_solvers.append('gurobi_license')
+solver_available = {solver_:(solver_ in available_solvers) for solver_ in solvers_used}
 
 package_available = {}
 package_modules = {}

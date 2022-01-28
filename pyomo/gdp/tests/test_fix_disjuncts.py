@@ -48,8 +48,8 @@ class TestFixDisjuncts(unittest.TestCase):
         m.d1 = Disjunct()
         m.d2 = Disjunct()
         m.d = Disjunction(expr=[m.d1, m.d2], xor=True)
-        m.d1.indicator_var.set_value(1)
-        m.d2.indicator_var.set_value(1)
+        m.d1.indicator_var.set_value(True)
+        m.d2.indicator_var.set_value(True)
         with self.assertRaises(GDP_Error):
             TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
@@ -58,8 +58,8 @@ class TestFixDisjuncts(unittest.TestCase):
         m.d1 = Disjunct()
         m.d2 = Disjunct()
         m.d = Disjunction(expr=[m.d1, m.d2], xor=False)
-        m.d1.indicator_var.set_value(0)
-        m.d2.indicator_var.set_value(0)
+        m.d1.indicator_var.set_value(False)
+        m.d2.indicator_var.set_value(False)
         with self.assertRaises(GDP_Error):
             TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
@@ -73,7 +73,11 @@ class TestFixDisjuncts(unittest.TestCase):
         m.d1.binary_indicator_var.set_value(0.5)
         m.d2.binary_indicator_var.set_value(0.5)
         with self.assertRaisesRegex(
-                ValueError, "Non-binary indicator variable value"):
+                GDP_Error, 
+                "The value of the indicator_var of "
+                "Disjunct 'd1' is None. All indicator_vars "
+                "must have values before calling "
+                "'fix_disjuncts'."):
             TransformationFactory('gdp.fix_disjuncts').apply_to(m)
 
     def test_disjuncts_partially_fixed(self):
@@ -90,7 +94,7 @@ class TestFixDisjuncts(unittest.TestCase):
 
         with self.assertRaisesRegex(
                 GDP_Error,
-                "The value of the binary_indicator_var of "
+                "The value of the indicator_var of "
                 "Disjunct 'another1' is None. All indicator_vars "
                 "must have values before calling "
                 "'fix_disjuncts'."):
@@ -134,6 +138,30 @@ class TestFixDisjuncts(unittest.TestCase):
         self.assertFalse(value(m.another.disjuncts[1].indicator_var))
         self.assertEqual(value(m.Y.get_associated_binary()), 0)
         self.assertEqual(value(m.x), 3)
+
+    def test_reclassify_deactivated_disjuncts(self):
+        m = ConcreteModel()
+        m.d = Disjunct([1, 2, 3])
+        m.disjunction = Disjunction(expr=[m.d[1], m.d[2], m.d[3]])
+        m.d[1].deactivate()
+        m.d[2].indicator_var = True
+        m.d[3].indicator_var = False
+        
+        TransformationFactory('gdp.fix_disjuncts').apply_to(m)
+
+        self.assertTrue(m.d[1].indicator_var.fixed)
+        self.assertFalse(value(m.d[1].indicator_var))
+        self.assertFalse(m.d[1].active)
+        self.assertEqual(m.d[1].ctype, Block)
+
+        self.assertTrue(m.d[2].indicator_var.fixed)
+        self.assertTrue(value(m.d[2].indicator_var))
+        self.assertTrue(m.d[2].active)
+        self.assertTrue(m.d[3].indicator_var.fixed)
+        self.assertFalse(value(m.d[3].indicator_var))
+        self.assertFalse(m.d[3].active)
+        self.assertEqual(m.d[1].ctype, Block)
+        self.assertEqual(m.d[2].ctype, Block)
 
 if __name__ == '__main__':
     unittest.main()

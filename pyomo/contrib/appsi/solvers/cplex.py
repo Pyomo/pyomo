@@ -16,6 +16,7 @@ import time
 from pyomo.common.log import LogStream
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
+from pyomo.core.staleflag import StaleFlagManager
 
 
 logger = logging.getLogger(__name__)
@@ -182,6 +183,7 @@ class Cplex(PersistentSolver):
         self._writer.update_params()
 
     def solve(self, model, timer: HierarchicalTimer = None):
+        StaleFlagManager.mark_all_as_stale()
         avail = self.available()
         if not avail:
             raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')
@@ -322,7 +324,8 @@ class Cplex(PersistentSolver):
             if name == 'obj_const':
                 continue
             v = symbol_map.bySymbol[name]()
-            res[v] = val
+            if self._writer._referenced_variables[id(v)]:
+                res[v] = val
         return res
 
     def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:

@@ -19,6 +19,7 @@ from pyomo.common.collections import ComponentMap, ComponentSet, Bunch
 from pyomo.common.tempfiles import TempfileManager
 import pyomo.opt.base.solvers
 from pyomo.opt.base.formats import ResultsFormat
+from pyomo.core.staleflag import StaleFlagManager
 
 
 class DirectOrPersistentSolver(OptSolver):
@@ -277,6 +278,7 @@ class DirectOrPersistentSolver(OptSolver):
         vars_to_load: list of Var
         """
         self._load_vars(vars_to_load)
+        StaleFlagManager.mark_all_as_stale(delayed=True)
 
     """ This method should be implemented by subclasses."""
     def warm_start_capable(self):
