@@ -23,23 +23,35 @@ from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.fbbt.fbbt import fbbt
 
-
-def solve_disjunctive_subproblem(mip_result, solve_data, config):
-    """Set up and solve the disjunctive subproblem."""
-    if config.force_subproblem_nlp:
-        if config.strategy in {"LOA", "RIC"}:
-            return solve_local_NLP(mip_result.var_values, solve_data, config)
-        elif config.strategy == 'GLOA':
-            return solve_global_subproblem(mip_result, solve_data, config)
+def solve_subproblem(subproblem, subproblem_util_block, config, timing):
+    """Solve the (already set up) subproblem"""
+    if config.strategy in {"LOA", "RIC"}:
+        if config.force_subproblem_nlp:
+            return solve_local_NLP(subproblem, config)
         else:
-            raise ValueError('Unrecognized strategy: ' + config.strategy)
+            return solve_local_subproblem(subproblem, subproblem_util_block,
+                                          config, timing)
+    elif config.strategy == 'GLOA':
+        return solve_global_subproblem(subproblem, config)
     else:
-        if config.strategy in {"LOA", "RIC"}:
-            return solve_local_subproblem(mip_result, solve_data, config)
-        elif config.strategy == 'GLOA':
-            return solve_global_subproblem(mip_result, solve_data, config)
-        else:
-            raise ValueError('Unrecognized strategy: ' + config.strategy)
+        raise ValueError('Unrecognized strategy: ' + config.strategy)
+
+# def solve_subproblem(subproblem, config):
+#     """Set up and solve the disjunctive subproblem."""
+#     if config.force_subproblem_nlp:
+#         if config.strategy in {"LOA", "RIC"}:
+#             return solve_local_NLP(mip_result.var_values, config)
+#         elif config.strategy == 'GLOA':
+#             return solve_global_subproblem(mip_result, config)
+#         else:
+#             raise ValueError('Unrecognized strategy: ' + config.strategy)
+#     else:
+#         if config.strategy in {"LOA", "RIC"}:
+#             return solve_local_subproblem(mip_result, config)
+#         elif config.strategy == 'GLOA':
+#             return solve_global_subproblem(mip_result, config)
+#         else:
+#             raise ValueError('Unrecognized strategy: ' + config.strategy)
 
 
 def solve_linear_subproblem(mip_model, solve_data, config):
@@ -95,7 +107,7 @@ def solve_linear_subproblem(mip_model, solve_data, config):
     return subprob_result
 
 
-def solve_NLP(nlp_model, solve_data, config):
+def solve_NLP(nlp_model, subprob_util_block, config, timing):
     """Solve the NLP subproblem."""
     config.logger.info(
         'Solving nonlinear subproblem for '
@@ -107,12 +119,14 @@ def solve_NLP(nlp_model, solve_data, config):
         "Unfixed discrete variables exist on the NLP subproblem: {0}".format(
         list(v.name for v in unfixed_discrete_vars))
 
-    GDPopt = nlp_model.GDPopt_utils
-
-    initialize_subproblem(nlp_model, solve_data)
+    # Initialize all the continuous variables to their original values.
+    # ESJ TODO: Is this the right thing to do? Why not fill in the ones we know
+    # from the master problem? The old code is confusing because it both does
+    # that but then also overwrites with this, I think.
+    initialize_subproblem(nlp_model, util_block)
 
     # Callback immediately before solving NLP subproblem
-    config.call_before_subproblem_solve(nlp_model, solve_data)
+    config.call_before_subproblem_solve(nlp_model)
 
     nlp_solver = SolverFactory(config.nlp_solver)
     if not nlp_solver.available():
@@ -121,7 +135,7 @@ def solve_NLP(nlp_model, solve_data, config):
     with SuppressInfeasibleWarning():
         try:
             nlp_args = dict(config.nlp_solver_args)
-            elapsed = get_main_elapsed_time(solve_data.timing)
+            elapsed = get_main_elapsed_time(timing)
             remaining = max(config.time_limit - elapsed, 1)
             if config.nlp_solver == 'gams':
                 nlp_args['add_options'] = nlp_args.get('add_options', [])
@@ -144,9 +158,8 @@ def solve_NLP(nlp_model, solve_data, config):
     nlp_result.feasible = True
     nlp_result.var_values = list(v.value for v in GDPopt.variable_list)
     nlp_result.pyomo_results = results
-    nlp_result.dual_values = list(
-        nlp_model.dual.get(c, None)
-        for c in GDPopt.constraint_list)
+    nlp_result.dual_values = list(nlp_model.dual.get(c, None) for c in
+                                  subprob_util_block.constraint_list)
 
     term_cond = results.solver.termination_condition
     if any(term_cond == cond for cond in (tc.optimal, tc.locallyOptimal,
@@ -188,6 +201,7 @@ def solve_NLP(nlp_model, solve_data, config):
                            "%s" % results.solver.message)
         nlp_result.feasible = False
     elif term_cond == tc.maxTimeLimit:
+        # ESJ TODO: This seems like a really bad idea too...
         config.logger.info("NLP solver ran out of time. Assuming infeasible "
                            "for now.")
         nlp_result.feasible = False
@@ -198,27 +212,25 @@ def solve_NLP(nlp_model, solve_data, config):
             % (term_cond, results))
 
     # Call the NLP post-solve callback
-    config.call_after_subproblem_solve(nlp_model, solve_data)
+    config.call_after_subproblem_solve(nlp_model)
 
     # if feasible, call the NLP post-feasible callback
     if nlp_result.feasible:
-        config.call_after_subproblem_feasible(nlp_model, solve_data)
+        config.call_after_subproblem_feasible(nlp_model)
 
     return nlp_result
 
 
-def solve_MINLP(model, solve_data, config):
+def solve_MINLP(model, util_block, config, timing):
     """Solve the MINLP subproblem."""
     config.logger.info(
         "Solving MINLP subproblem for fixed logical realizations."
     )
 
-    GDPopt = model.GDPopt_utils
-
-    initialize_subproblem(model, solve_data)
+    initialize_subproblem(model, util_block)
 
     # Callback immediately before solving MINLP subproblem
-    config.call_before_subproblem_solve(model, solve_data)
+    config.call_before_subproblem_solve(model)
 
     minlp_solver = SolverFactory(config.minlp_solver)
     if not minlp_solver.available():
@@ -226,7 +238,7 @@ def solve_MINLP(model, solve_data, config):
                            config.minlp_solver)
     with SuppressInfeasibleWarning():
         minlp_args = dict(config.minlp_solver_args)
-        elapsed = get_main_elapsed_time(solve_data.timing)
+        elapsed = get_main_elapsed_time(timing)
         remaining = max(config.time_limit - elapsed, 1)
         if config.minlp_solver == 'gams':
             minlp_args['add_options'] = minlp_args.get('add_options', [])
@@ -239,11 +251,11 @@ def solve_MINLP(model, solve_data, config):
 
     subprob_result = SubproblemResult()
     subprob_result.feasible = True
-    subprob_result.var_values = list(v.value for v in GDPopt.variable_list)
+    subprob_result.var_values = list(v.value for v in util_block.variable_list)
     subprob_result.pyomo_results = results
     subprob_result.dual_values = list(
         model.dual.get(c, None)
-        for c in GDPopt.constraint_list)
+        for c in util_block.constraint_list)
 
     term_cond = results.solver.termination_condition
     if any(term_cond == cond for cond in (tc.optimal, tc.locallyOptimal,
@@ -283,11 +295,11 @@ def solve_MINLP(model, solve_data, config):
             % (term_cond, results))
 
     # Call the subproblem post-solve callback
-    config.call_after_subproblem_solve(model, solve_data)
+    config.call_after_subproblem_solve(model)
 
     # if feasible, call the subproblem post-feasible callback
     if subprob_result.feasible:
-        config.call_after_subproblem_feasible(model, solve_data)
+        config.call_after_subproblem_feasible(model)
 
     return subprob_result
 
@@ -325,16 +337,14 @@ def preprocess_subproblem(m, config):
         m, tolerance=config.constraint_tolerance)
 
 
-def initialize_subproblem(model, solve_data):
+def initialize_subproblem(model, util_block):
     """Perform initialization of the subproblem.
 
     Presently, this just restores the continuous variables to the original 
     model values.
-
     """
     # restore original continuous variable values
-    for var, old_value in zip(model.GDPopt_utils.variable_list,
-                              solve_data.initial_var_values):
+    for var, old_value in util_block.initial_var_values.items():
         if not var.fixed and var.is_continuous():
             if old_value is not None:
                 # Adjust value if it falls outside the bounds
@@ -345,7 +355,9 @@ def initialize_subproblem(model, solve_data):
                 # Set the value
                 var.set_value(old_value)
 
-
+# ESJ TODO: YOU ARE HERE. I would rather return this info and process it
+# somewhere else, I think. But I need to think about this since it comes up in
+# initialization too.
 def update_subproblem_progress_indicators(solved_model, solve_data, config):
     """Update the progress indicators for the subproblem."""
     GDPopt = solved_model.GDPopt_utils
@@ -389,82 +401,21 @@ def update_subproblem_progress_indicators(solved_model, solve_data, config):
             solve_data.UB, ub_improved))
 
 
-def solve_local_NLP(mip_var_values, solve_data, config):
-    """Set up and solve the local LOA subproblem."""
-    nlp_model = solve_data.working_model.clone()
-    solve_data.nlp_iteration += 1
-    # copy in the discrete variable values
-    for var, val in zip(nlp_model.GDPopt_utils.variable_list, mip_var_values):
-        if val is None:
-            continue
-        if var.is_continuous():
-            var.set_value(val, skip_validation=True)
-        elif ((fabs(val) > config.integer_tolerance and
-               fabs(val - 1) > config.integer_tolerance)):
-            raise ValueError(
-                "Binary variable %s value %s is not "
-                "within tolerance %s of 0 or 1." %
-                (var.name, var.value, config.integer_tolerance))
-        else:
-            # variable is binary and within tolerances
-            if config.round_discrete_vars:
-                var.fix(int(round(val)))
-            else:
-                var.fix(val, skip_validation=True)
-    TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
+def solve_local_NLP(nlp_model, config):
+    """Solve the local LOA subproblem."""
+    # ESJ: Do I need to track this here??
+    #solve_data.nlp_iteration += 1
 
-    nlp_result = solve_NLP(nlp_model, solve_data, config)
+    nlp_result = solve_NLP(nlp_model, config)
     if nlp_result.feasible:  # NLP is feasible
-        update_subproblem_progress_indicators(nlp_model, solve_data, config)
+        update_subproblem_progress_indicators(nlp_model, config)
     return nlp_result
 
 
-def solve_local_subproblem(mip_result, solve_data, config):
+def solve_local_subproblem(subprob, subprob_util_block, config, timing):
     """Set up and solve the local MINLP or NLP subproblem."""
-    subprob = solve_data.working_model.clone()
-    solve_data.nlp_iteration += 1
-
-    # TODO also copy over the variable values?
-
-    for disj, val in zip(subprob.GDPopt_utils.disjunct_list,
-                         mip_result.disjunct_values):
-        rounded_val = int(round(val))
-        if (fabs(val - rounded_val) > config.integer_tolerance or
-                rounded_val not in (0, 1)):
-            raise ValueError(
-                "Disjunct %s indicator value %s is not "
-                "within tolerance %s of 0 or 1." %
-                (disj.name, val.value, config.integer_tolerance)
-            )
-        else:
-            if config.round_discrete_vars:
-                disj.indicator_var.fix(bool(rounded_val))
-            else:
-                disj.indicator_var.fix(bool(val))
-
-    if config.force_subproblem_nlp:
-        # We also need to copy over the discrete variable values
-        for var, val in zip(subprob.GDPopt_utils.variable_list,
-                            mip_result.var_values):
-            if var.is_continuous():
-                continue
-            rounded_val = int(round(val))
-            if fabs(val - rounded_val) > config.integer_tolerance:
-                raise ValueError( "Discrete variable %s value %s is not "
-                                  "within tolerance %s of %s." % 
-                                  (var.name, var.value, 
-                                   config.integer_tolerance, rounded_val))
-            else:
-                # variable is binary and within tolerances
-                if config.round_discrete_vars:
-                    var.fix(rounded_val)
-                else:
-                    var.fix(val)
-
-    TransformationFactory('gdp.fix_disjuncts').apply_to(subprob)
-
-    # for disj in subprob.component_data_objects(Disjunct, active=True):
-    #     disj.deactivate()  # TODO this is a HACK for something that isn't happening correctly in fix_disjuncts
+    # ESJ: do we need this/do we need to track it here?
+    #solve_data.nlp_iteration += 1
 
     if config.subproblem_presolve:
         try:
@@ -488,7 +439,8 @@ def solve_local_subproblem(mip_result, solve_data, config):
         elif len(unfixed_discrete_vars) == 0:
             subprob_result = solve_NLP(subprob, solve_data, config)
         else:
-            subprob_result = solve_MINLP(subprob, solve_data, config)
+            subprob_result = solve_MINLP(subprob, subprob_util_block, config,
+                                         timing)
 
     if subprob_result.feasible:  # subproblem is feasible
         update_subproblem_progress_indicators(subprob, solve_data, config)
@@ -553,7 +505,7 @@ def solve_global_subproblem(mip_result, solve_data, config):
     elif len(unfixed_discrete_vars) == 0:
         subprob_result = solve_NLP(subprob, solve_data, config)
     else:
-        subprob_result = solve_MINLP(subprob, solve_data, config)
+        subprob_result = solve_MINLP(subprob, config)
     if subprob_result.feasible:  # NLP is feasible
         update_subproblem_progress_indicators(subprob, solve_data, config)
     return subprob_result

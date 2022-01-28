@@ -6,13 +6,15 @@ from math import fabs
 from pyomo.contrib.gdpopt.cut_generation import (
     add_integer_cut, add_subproblem_cuts)
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
-from pyomo.contrib.gdpopt.nlp_solve import solve_disjunctive_subproblem
-from pyomo.contrib.gdpopt.util import _DoNothing
+from pyomo.contrib.gdpopt.nlp_solve import solve_subproblem
+from pyomo.contrib.gdpopt.util import (
+    _DoNothing, fix_master_solution_in_subproblem)
 from pyomo.core import (
     Block, Constraint, Objective, Suffix, TransformationFactory, Var, maximize,
     minimize
 )
 from pyomo.gdp import Disjunct
+
 
 # def GDPopt_initialize_master(solve_data, config):
 #     """Initialize the decomposition algorithm.
@@ -21,7 +23,7 @@ from pyomo.gdp import Disjunct
 #     problem.
 
 #     """
-#     config.logger.info("---Starting GDPopt initialization---")
+#     config.logger.info("---Starting GDPopt initialization---"
 #     m = solve_data.working_model
 #     if not hasattr(m, 'dual'):  # Set up dual value reporting
 #         m.dual = Suffix(direction=Suffix.IMPORT)
@@ -34,7 +36,6 @@ from pyomo.gdp import Disjunct
 #             Constraint, active=True, descend_into=(Block, Disjunct)):
 #         if c.body.polynomial_degree() not in (1, 0):
 #             c.deactivate()
-
 #     # Initialization strategies, defined at bottom
 #     init_strategy_fctn = valid_init_strategies.get(config.init_strategy, None)
 #     if init_strategy_fctn is not None:
@@ -47,35 +48,37 @@ from pyomo.gdp import Disjunct
 #                ", ".join(k for (k, v) in valid_init_strategies.items()
 #                          if v is not None)))
 
-
-def init_custom_disjuncts(solve_data, config):
+def init_custom_disjuncts(master, config, timing, util_block,
+                          master_util_block, subprob_util_block):
     """Initialize by using user-specified custom disjuncts."""
     # TODO error checking to make sure that the user gave proper disjuncts
     for active_disjunct_set in config.custom_init_disjuncts:
         # custom_init_disjuncts contains a list of sets, giving the disjuncts
         # active at each initialization iteration
 
+        subproblem = subprob_util_block.model()
         # fix the disjuncts in the linear GDP and send for solution.
-        solve_data.mip_iteration += 1
-        linear_GDP = solve_data.linear_GDP.clone()
+        # ESJ TODO: Do we need this?
+        # solve_data.mip_iteration += 1
         config.logger.info(
             "Generating initial linear GDP approximation by "
             "solving subproblems with user-specified active disjuncts.")
-        for orig_disj, clone_disj in zip(
-                solve_data.original_model.GDPopt_utils.disjunct_list,
-                linear_GDP.GDPopt_utils.disjunct_list
-        ):
+        for orig_disj, clone_disj in zip(util_block.disjunct_list,
+                                         master_util_block.disjunct_list):
             if orig_disj in active_disjunct_set:
                 clone_disj.indicator_var.fix(True)
-        mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
+        mip_result = solve_linear_GDP(master, util_block, config, timing)
         if mip_result.feasible:
-            nlp_result = solve_disjunctive_subproblem(mip_result, solve_data,
-                                                      config)
-            if nlp_result.feasible:
-                add_subproblem_cuts(nlp_result, solve_data, config)
-            add_integer_cut(
-                mip_result.var_values, solve_data.linear_GDP, solve_data,
-                config, feasible=nlp_result.feasible)
+            with fix_master_solution_in_subproblem(master_util_block,
+                                                   subprob_util_block,
+                                                   config.force_subproblem_nlp):
+                nlp_result = solve_subproblem(subproblem, subprob_util_block,
+                                              config, timing)
+                if nlp_result.feasible:
+                    add_subproblem_cuts(nlp_result, solve_data, config)
+                add_integer_cut(mip_result.var_values, solve_data.linear_GDP,
+                                solve_data, config,
+                                feasible=nlp_result.feasible)
         else:
             config.logger.error(
                 'Linear GDP infeasible for user-specified '

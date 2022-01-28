@@ -39,6 +39,11 @@ def _get_GDPopt_config():
         default=None, domain=In(_supported_strategies),
         description="Decomposition strategy to use."
     ))
+    CONFIG.declare("master_problem_transformation", ConfigValue(
+        default='gdp.bigm',
+        description="Name of the transformation to use to transform the "
+        "master problem from a GDP to an algebraic model."
+    ))
     CONFIG.declare("tee", ConfigValue(
         default=False,
         description="Stream output to terminal.",

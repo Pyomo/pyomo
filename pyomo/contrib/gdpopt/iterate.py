@@ -1,3 +1,5 @@
+# ESJ: I plan to not use anything in this file.
+
 """Iteration code."""
 from pyomo.contrib.gdpopt.cut_generation import (add_integer_cut,
                                                  add_outer_approximation_cuts,

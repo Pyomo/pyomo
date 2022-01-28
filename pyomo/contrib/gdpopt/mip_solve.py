@@ -14,54 +14,31 @@ from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.opt import TerminationCondition as tc, SolverResults
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
+def get_infeasible_master_result(util_block):
+    mip_result = MasterProblemResult()
+    mip_result.feasible = False
+    mip_result.var_values = list(v.value for v in util_block.variable_list)
+    mip_result.pyomo_results = SolverResults()
+    mip_result.pyomo_results.solver.termination_condition = tc.error
+    mip_result.disjunct_values = list(disj.binary_indicator_var.value
+                                      for disj in util_block.disjunct_list)
+    return mip_result
 
-def solve_linear_GDP(linear_GDP_model, solve_data, config):
+
+def solve_linear_GDP(m, util_block, config, timing):
     """Solves the linear GDP model and attempts to resolve solution issues."""
-    m = linear_GDP_model
-    GDPopt = m.GDPopt_utils
-    # Transform disjunctions
-    _bigm = TransformationFactory('gdp.bigm')
-    _bigm.handlers[Port] = False
-    _bigm.apply_to(m)
 
-    preprocessing_transformations = [
-        # # Propagate variable bounds
-        # 'contrib.propagate_eq_var_bounds',
-        # # Detect fixed variables
-        # 'contrib.detect_fixed_vars',
-        # # Propagate fixed variables
-        # 'contrib.propagate_fixed_vars',
-        # # Remove zero terms in linear expressions
-        # 'contrib.remove_zero_terms',
-        # # Remove terms in equal to zero summations
-        # 'contrib.propagate_zero_sum',
-        # # Transform bound constraints
-        # 'contrib.constraints_to_var_bounds',
-        # # Detect fixed variables
-        # 'contrib.detect_fixed_vars',
-        # # Remove terms in equal to zero summations
-        # 'contrib.propagate_zero_sum',
-        # Remove trivial constraints
-        'contrib.deactivate_trivial_constraints',
-    ]
     if config.mip_presolve:
         try:
-            fbbt(m, integer_tol=config.integer_tolerance)
-            for xfrm in preprocessing_transformations:
-                TransformationFactory(xfrm).apply_to(m)
+            fbbt(m, integer_tol=config.integer_tolerance,
+                 deactivate_satisfied_constraints=True)
         except InfeasibleConstraintException:
             config.logger.debug("MIP preprocessing detected infeasibility.")
-            mip_result = MasterProblemResult()
-            mip_result.feasible = False
-            mip_result.var_values = list(v.value for v in GDPopt.variable_list)
-            mip_result.pyomo_results = SolverResults()
-            mip_result.pyomo_results.solver.termination_condition = tc.error
-            mip_result.disjunct_values = list(
-                disj.binary_indicator_var.value
-                for disj in GDPopt.disjunct_list)
-            return mip_result
+            return get_infeasible_master_result(gpdopt_block)
 
-    # Deactivate extraneous IMPORT/EXPORT suffixes
+    # Deactivate extraneous IMPORT/EXPORT suffixes 
+    # ESJ TODO: Do we need to do this? Is this our problem? And, if you give 
+    # a mouse a cookie... Would we have to account for other Suffixes?
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
@@ -71,12 +48,12 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
             "MIP solver %s is not available." % config.mip_solver)
 
     # Callback immediately before solving MIP master problem
-    config.call_before_master_solve(m, solve_data)
+    config.call_before_master_solve(m)
 
     try:
         with SuppressInfeasibleWarning():
             mip_args = dict(config.mip_solver_args)
-            elapsed = get_main_elapsed_time(solve_data.timing)
+            elapsed = get_main_elapsed_time(timing)
             remaining = max(config.time_limit - elapsed, 1)
             if config.mip_solver == 'gams':
                 mip_args['add_options'] = mip_args.get('add_options', [])
@@ -87,18 +64,12 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
             results = SolverFactory(config.mip_solver).solve(
                 m, **mip_args)
     except RuntimeError as e:
+        # ESJ TODO: How come GAMS is special? Doesn't seem safe to assume
+        # infeasibility here if the error could be something else...?
         if 'GAMS encountered an error during solve.' in str(e):
             config.logger.warning(
                 "GAMS encountered an error in solve. Treating as infeasible.")
-            mip_result = MasterProblemResult()
-            mip_result.feasible = False
-            mip_result.var_values = list(v.value for v in GDPopt.variable_list)
-            mip_result.pyomo_results = SolverResults()
-            mip_result.pyomo_results.solver.termination_condition = tc.error
-            mip_result.disjunct_values = list(
-                disj.binary_indicator_var.value
-                for disj in GDPopt.disjunct_list)
-            return mip_result
+            return get_infeasible_master_result(util_block)
         else:
             raise
     terminate_cond = results.solver.termination_condition
@@ -113,6 +84,8 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
         # resolve.  This occurs when the objective is nonlinear. The nonlinear
         # objective is moved to the constraints, and deactivated for the linear
         # master problem.
+        # ESJ TODO: This is terrifying! I don't think we should do this... How
+        # about just check your initialization routine? Or bound your variables?
         obj_bound = 1E15
         config.logger.warning(
             'Linear GDP was unbounded. '
@@ -130,10 +103,10 @@ def solve_linear_GDP(linear_GDP_model, solve_data, config):
     # Build and return results object
     mip_result = MasterProblemResult()
     mip_result.feasible = True
-    mip_result.var_values = list(v.value for v in GDPopt.variable_list)
+    mip_result.var_values = list(v.value for v in util_block.variable_list)
     mip_result.pyomo_results = results
-    mip_result.disjunct_values = list(
-        disj.binary_indicator_var.value for disj in GDPopt.disjunct_list)
+    mip_result.disjunct_values = list(disj.binary_indicator_var.value for disj
+                                      in util_block.disjunct_list)
 
     if terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         pass
@@ -178,6 +151,9 @@ def distinguish_mip_infeasible_or_unbounded(m, config):
         tmp_args['options'] = tmp_args.get('options', {})
         tmp_args['options']['DualReductions'] = 0
     mipopt = SolverFactory(config.mip_solver)
+    # ESJ TODO: Why does this only happen here? Shouldn't it be everywhere or
+    # nowhere? Oh, or is that what the callbacks are for? But how would the user
+    # know what changed?
     if isinstance(mipopt, PersistentSolver):
         mipopt.set_instance(m)
     with SuppressInfeasibleWarning():

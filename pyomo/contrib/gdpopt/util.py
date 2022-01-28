@@ -74,6 +74,25 @@ class SuppressInfeasibleWarning(object):
         logger = logging.getLogger('pyomo.core')
         logger.removeFilter(self.warning_filter)
 
+def solve_continuous_problem(m, config):
+    logger = config.logger
+    logger.info('Problem has no discrete decisions.')
+    obj = next(m.component_data_objects(Objective, active=True))
+    if (any(c.body.polynomial_degree() not in (1, 0) for c in
+            m.component_data_objects(Constraint, active=True,
+                                     descend_into=Block)) 
+        or obj.expr.polynomial_degree() not in (1, 0)):
+        logger.info("Your model is an NLP (nonlinear program). "
+                    "Using NLP solver %s to solve." % config.nlp_solver)
+        results = SolverFactory(config.nlp_solver).solve( 
+            m, **config.nlp_solver_args)
+        return results
+    else:
+        logger.info("Your model is an LP (linear program). "
+                    "Using LP solver %s to solve." % config.mip_solver)
+        results = SolverFactory(config.mip_solver).solve(
+            m, **config.mip_solver_args)
+        return results
 
 def presolve_lp_nlp(solve_data, config):
     """If the model is an LP or NLP, solve it directly.
@@ -110,7 +129,64 @@ def presolve_lp_nlp(solve_data, config):
     # to do some kind of transformation (Glover?) or throw an error message
     return False, None
 
+def move_nonlinear_objective_to_constraints(m, gdpopt_block, results, logger):
+    # Handle missing or multiple objectives
+    active_objectives = list(m.component_data_objects(
+        ctype=Objective, active=True, descend_into=True))
+    number_of_objectives = len(active_objectives)
+    if number_of_objectives == 0:
+        logger.warning(
+            'Model has no active objectives. Adding dummy objective.')
+        main_obj = gdpopt_block.dummy_objective = Objective(expr=1)
+    elif number_of_objectives > 1:
+        raise ValueError('Model has multiple active objectives.')
+    else:
+        main_obj = active_objectives[0]
+    results.problem.sense = ProblemSense.minimize if main_obj.sense == 1 else \
+                            ProblemSense.maximize
 
+    # Move the objective to the constraints if it is nonlinear
+    if main_obj.expr.polynomial_degree() not in (1, 0):
+        logger.info("Objective is nonlinear. Moving it to constraint set.")
+
+        gdpopt_block.objective_value = Var(domain=Reals, initialize=0)
+        if mcpp_available():
+            mc_obj = McCormick(main_obj.expr)
+            gdpopt_block.objective_value.setub(mc_obj.upper())
+            gdpopt_block.objective_value.setlb(mc_obj.lower())
+        else:
+            # Use Pyomo's contrib.fbbt package
+            lb, ub = compute_bounds_on_expr(main_obj.expr)
+            if solve_data.results.problem.sense == ProblemSense.minimize:
+                gdpopt_block.objective_value.setlb(lb)
+            else:
+                gdpopt_block.objective_value.setub(ub)
+
+        if main_obj.sense == minimize:
+            gdpopt_block.objective_constr = Constraint(
+                expr=gdpopt_block.objective_value >= main_obj.expr)
+        else:
+            gdpopt_block.objective_constr = Constraint(
+                expr=gdpopt_block.objective_value <= main_obj.expr)
+        # Deactivate the original objective and add this new one.
+        main_obj.deactivate()
+        gdpopt_block.objective = Objective(
+            expr=gdpopt_block.objective_value, sense=main_obj.sense)
+
+        # Add the new variable and constraint to the working lists
+        if main_obj.expr.polynomial_degree() not in (1, 0):
+            gdpopt_block.variable_list.append(gdpopt_block.objective_value)
+            #util_blk.continuous_variable_list.append(util_blk.objective_value)
+            gdpopt_block.constraint_list.append(util_blk.objective_constr)
+            #util_blk.objective_list.append(util_blk.objective)
+            # if util_blk.objective_constr.body.polynomial_degree() in (0, 1):
+            #     util_blk.linear_constraint_list.append(
+            #         util_blk.objective_constr)
+            # else:
+            #     util_blk.nonlinear_constraint_list.append(
+            #         util_blk.objective_constr)
+    
+# ESJ: planning on abandoning this function
 def process_objective(solve_data, config, move_linear_objective=False,
                       use_mcpp=True, updata_var_con_list=True):
     """Process model objective function.
@@ -240,10 +316,67 @@ def copy_var_list_values(from_list, to_list, config,
             elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
                 v_to.set_value(0)
             else:
-                config.logger.error(
-                    'Unknown validation domain error setting variable %s', (v_to.name,))
+                config.logger.error('Unknown validation domain error setting '
+                                    'variable %s', (v_to.name,))
                 raise
 
+def fix_discrete_var(var, val, config):
+    """Fixes the discrete variable var to val, rounding to the nearest integer
+    or not, depending on if rounding is specifed in config and what the integer
+    tolerance is."""
+    if val is None:
+        return
+    if var.is_continuous():
+        var.set_value(val, skip_validation=True)
+    elif (fabs(val - round(val)) > config.integer_tolerance):
+        raise ValueError(
+            "Integer variable '%s' cannot be fixed to value %s because it "
+            "is not within the specified integer tolerance of %s." %
+            (var.name, val, config.integer_tolerance))
+    else:
+        # variable is integer and within tolerance
+        if config.round_discrete_vars:
+            var.fix(int(round(val)))
+        else:
+            var.fix(val, skip_validation=True)
+
+@contextmanager
+def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
+                                      make_subproblem_continuous=True):
+    # fix subproblem Blocks according to the master solution
+    for disjunct, block in zip(master_util_block.disjunct_list,
+                               subproblem_util_block.disjunct_list):
+        if not disjunct.indicator_var.value:
+            block.deactivate()
+
+    # Fix subproblem discrete variables according to the master solution
+    if make_subproblem_continuous:
+        for master_var, subprob_var in zip(
+                master_util_block.discrete_variable_list,
+                subproblem_util_block.discrete_variable_list):
+            # [ESJ 1/24/21]: We don't check if master_var actually has a value
+            # here because we are going to have to do that error checking
+            # later. This is because the subproblem could have discrete
+            # variables that aren't in the master and vice versa since master is
+            # linearized, but subproblem is a specific realization of the
+            # disjuncts. All this means we don't have enough info to do it here.
+            fix_discrete_var(subprob_var, master_var.value, config)
+
+    # ESJ TODO: Why not initialize with the values of the continuous vars too?
+    # At least in solve_local_subproblem there was a TODO about that.
+            
+    yield
+
+    # unfix all subproblem blocks
+    for block in subproblem_util_block.disjunct_list:
+        block.activate()
+
+    # unfix all discrete variables and restore them to their original values
+    if make_subproblem_continuous:
+        for var in subproblem_util_block.discrete_variable_list:
+            subprob_var.fixed = False
+            subprob_var.set_value(
+                subproblem_util_block.initial_variable_values[var])
 
 def is_feasible(model, config):
     """Checks to see if the algebraic model is feasible in its current state.
@@ -296,7 +429,8 @@ def is_feasible(model, config):
     config.logger.info('Model is feasible.')
     return True
 
-
+# ESJ TODO: I plan to abandon this as well--it's not modular enough from
+# something like enumerate
 def build_ordered_component_lists(model, solve_data):
     """Define lists used for future data transfer.
 
@@ -371,6 +505,44 @@ def build_ordered_component_lists(model, solve_data):
         if v in var_set and v.is_continuous())
     setattr(util_blk, 'continuous_variable_list', continuous_variable_list)
 
+def get_results_object(original_model, logger):
+    results = SolverResults()
+    # TODO work on termination condition and message
+    results.solver.termination_condition = None
+    results.solver.message = None
+    results.solver.user_time = None
+    results.solver.system_time = None
+    results.solver.wallclock_time = None
+    results.solver.termination_message = None
+
+    prob = results.problem
+    prob.name = original_model.name
+    prob.number_of_nonzeros = None  # TODO
+
+    num_of = build_model_size_report(original_model)
+
+    # Get count of constraints and variables
+    prob.number_of_constraints = num_of.activated.constraints
+    prob.number_of_disjunctions = num_of.activated.disjunctions
+    prob.number_of_variables = num_of.activated.variables
+    prob.number_of_binary_variables = num_of.activated.binary_variables
+    prob.number_of_continuous_variables = num_of.activated.continuous_variables
+    prob.number_of_integer_variables = num_of.activated.integer_variables
+
+    logger.info(
+        "Original model has %s constraints (%s nonlinear) "
+        "and %s disjunctions, "
+        "with %s variables, of which %s are binary, %s are integer, "
+        "and %s are continuous." %
+        (num_of.activated.constraints,
+         num_of.activated.nonlinear_constraints,
+         num_of.activated.disjunctions,
+         num_of.activated.variables,
+         num_of.activated.binary_variables,
+         num_of.activated.integer_variables,
+         num_of.activated.continuous_variables))
+
+    return results
 
 def setup_results_object(solve_data, config):
     """Record problem statistics for original model."""
@@ -410,27 +582,6 @@ def setup_results_object(solve_data, config):
          num_of.activated.integer_variables,
          num_of.activated.continuous_variables))
 
-
-# def validate_disjunctions(model, config):
-#     """Validate that the active disjunctions on the model are satisfied
-#     by the current disjunct indicator_var values."""
-#     active_disjunctions = model.component_data_objects(
-#         ctype=Disjunction, active=True, descend_into=(Block, Disjunct))
-#     for disjtn in active_disjunctions:
-#         sum_disj_vals = sum(disj.indicator_var.value
-#                             for disj in disjtn.disjuncts)
-#         if disjtn.xor and fabs(sum_disj_vals - 1) > config.integer_tolerance:
-#             raise ValueError(
-#                 "Expected disjunct values to add up to 1 "
-#                 "for XOR disjunction %s. "
-#                 "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
-#         elif sum_disj_vals + config.integer_tolerance < 1:
-#             raise ValueError(
-#                 "Expected disjunct values to add up to at least 1 for "
-#                 "OR disjunction %s. "
-#                 "Instead, values add up to %s." % (disjtn.name, sum_disj_vals))
-
-
 def constraints_in_True_disjuncts(model, config):
     """Yield constraints in disjuncts where the indicator value is set or 
     fixed to True."""
@@ -448,7 +599,8 @@ def constraints_in_True_disjuncts(model, config):
                 for constr in disj.component_data_objects(Constraint):
                     yield constr
 
-
+# ESJ TODO: Can we rename this? Something like time_tracking or time_recording
+# or something?
 @contextmanager
 def time_code(timing_data_obj, code_block_name, is_main_timer=False):
     """Starts timer at entry, stores elapsed time at exit
@@ -527,10 +679,11 @@ def create_utility_block(model, name, solve_data):
         model.del_component(name)
 
 
+
 @contextmanager
 def setup_solver_environment(model, config):
     solve_data = GDPoptSolveData()  # data object for storing solver state
-    solve_data.config = config
+    #solve_data.config = config
     solve_data.results = SolverResults()
     solve_data.timing = Bunch()
     min_logging_level = logging.INFO if config.tee else None

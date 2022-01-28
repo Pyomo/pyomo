@@ -30,6 +30,10 @@
 - start keeping basic changelog
 
 """
+from pyomo.contrib.gdpopt.loa import solve_gdp_with_loa
+from pyomo.contrib.gdpopt.util import get_results_object, lower_logger_level_to
+from pyomo.common.collections import Bunch
+
 from io import StringIO
 
 from pyomo.common.config import (
@@ -38,9 +42,7 @@ from pyomo.common.config import (
 from pyomo.contrib.gdpopt.branch_and_bound import _perform_branch_and_bound
 from pyomo.contrib.gdpopt.config_options import _get_GDPopt_config
 from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
-from pyomo.contrib.gdpopt.master_initialize import (
-    GDPopt_initialize_master
-)
+
 from pyomo.contrib.gdpopt.util import (
     presolve_lp_nlp, process_objective, time_code, setup_solver_environment)
 from textwrap import indent
@@ -112,34 +114,67 @@ class GDPoptSolver(object):
             msg += '    RIC:  Relaxation with Integer Cuts'
             raise ValueError(msg)
 
-        with setup_solver_environment(model, config) as solve_data:
+        # place to store results
+        results = get_results_object(model, config.logger)
+        results.solver.name = 'GDPopt %s - %s' % ( str(self.version()),
+                                                   config.strategy)
+
+        # Check if this problem actually has any discrete decisions. If not,
+        # just solve it.
+        problem = results.problem
+        if (problem.number_of_binary_variables == 0 and 
+            problem.number_of_integer_variables == 0 and
+            problem.number_of_disjunctions == 0):
+            return solve_continuous_problem(model, problem)
+
+        # where we'll store timing information throughout the algorithm
+        timing = Bunch()
+        min_logging_level = logging.INFO if config.tee else None
+        with time_code(timing, 'total', is_main_timer=True), \
+            lower_logger_level_to(config.logger, min_logging_level):
+            
             self._log_solver_intro_message(config)
-            solve_data.results.solver.name = 'GDPopt %s - %s' % (
-                str(self.version()), config.strategy)
 
-            # Verify that objective has correct form
-            process_objective(solve_data, config)
+            # run the right algorithm
+            if config.strategy == 'LOA':
+                results = solve_gdp_with_loa(model, results, config, timing)
+            elif config.strategy == 'GLOA':
+                pass
+            elif config.strategy == 'RIC':
+                pass
+            elif config.strategy == 'LBB':
+                pass
 
-            # Presolve LP or NLP problems using subsolvers
-            presolved, presolve_results = presolve_lp_nlp(solve_data, config)
-            if presolved:
-                # TODO merge the solver results
-                return presolve_results  # problem presolved
+        return results
 
-            if solve_data.active_strategy in {'LOA', 'GLOA', 'RIC'}:
-                # Initialize the master problem
-                with time_code(solve_data.timing, 'initialization'):
-                    GDPopt_initialize_master(solve_data, config)
+        # with setup_solver_environment(model, config) as solve_data:
+        #     self._log_solver_intro_message(config)
+        #     solve_data.results.solver.name = 'GDPopt %s - %s' % (
+        #         str(self.version()), config.strategy)
 
-                # Algorithm main loop
-                with time_code(solve_data.timing, 'main loop'):
-                    GDPopt_iteration_loop(solve_data, config)
-            elif solve_data.active_strategy == 'LBB':
-                _perform_branch_and_bound(solve_data)
-            else:
-                raise ValueError('Unrecognized strategy: ' + config.strategy)
+        #     # Verify that objective has correct form
+        #     process_objective(solve_data, config)
 
-        return solve_data.results
+        #     # Presolve LP or NLP problems using subsolvers
+        #     presolved, presolve_results = presolve_lp_nlp(solve_data, config)
+        #     if presolved:
+        #         # TODO merge the solver results
+        #         return presolve_results  # problem presolved
+
+        #     if solve_data.active_strategy in {'LOA', 'GLOA', 'RIC'}:
+        #         # Initialize the master problem
+        #         with time_code(solve_data.timing, 'initialization'):
+        #             GDPopt_initialize_master(solve_data, config)
+
+        #         # Algorithm main loop
+        #         with time_code(solve_data.timing, 'main loop'):
+        #             GDPopt_iteration_loop(solve_data, config)
+        #     elif solve_data.active_strategy == 'LBB':
+        #         _perform_branch_and_bound(solve_data)
+        #     else:
+        #         raise ValueError('Unrecognized strategy: ' + config.strategy)
+
+        # return solve_data.results
 
     """Support use as a context manager under current solver API"""
     def __enter__(self):
