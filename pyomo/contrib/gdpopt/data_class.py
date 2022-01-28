@@ -14,6 +14,15 @@ class GDPoptSolveData(object):
     """
     pass
 
+class AlgorithmProgress(object):
+    """Data container to track progress of algorithm
+
+    Attributes:
+        - dual_bound
+        - primal_bound
+        - iteration_log
+    """
+
 
 class MasterProblemResult(object):
     """Data class for master problem results data.
