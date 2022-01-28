@@ -844,21 +844,3 @@ def set_up_logger(config):
     ch.setFormatter(formatter)
     # add the handlers to logger
     config.logger.addHandler(ch)
-
-
-def _generate_additively_separable_repn(nonlinear_part):
-    if nonlinear_part.__class__ is not EXPR.SumExpression:
-        # This isn't separable, so we just have the one expression
-        return {'nonlinear_vars': [tuple(v for v in EXPR.identify_variables(
-            nonlinear_part))], 'nonlinear_exprs': [nonlinear_part]}
-
-    # else, it was a SumExpression, and we will break it into the summands,
-    # recording which variables are there.
-    nonlinear_decomp = {'nonlinear_vars': [],
-                        'nonlinear_exprs': []}
-    for summand in nonlinear_part.args:
-        nonlinear_decomp['nonlinear_exprs'].append(summand)
-        nonlinear_decomp['nonlinear_vars'].append(
-            tuple(v for v in EXPR.identify_variables(summand)))
-
-    return nonlinear_decomp
