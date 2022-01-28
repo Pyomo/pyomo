@@ -2126,8 +2126,9 @@ class RegressionTest(unittest.TestCase):
                                          })
 
 
-@unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
-                     "Global NLP solver is not available.")
+@unittest.skipUnless(SolverFactory('baron').available(exception_flag=False)
+                     and SolverFactory('baron').license_is_valid(),
+                     "Global NLP solver is not available and licensed.")
 class testBypassingSeparation(unittest.TestCase):
     def test_bypass_global_separation(self):
         """Test bypassing of global separation solve calls."""
