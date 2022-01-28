@@ -115,11 +115,15 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
+            # if ROA is activated, linear objective should be replace by epigraph constraint.
+            # Since the distance calculate do not include these variable, these variables should not be added to variable_list
+            # TODO: check why constraint_list are not updated.
             process_objective(solve_data, config,
                               move_linear_objective=(config.init_strategy == 'FP'
                                                      or config.add_regularization is not None),
                               use_mcpp=config.use_mcpp,
-                              updata_var_con_list=config.add_regularization is None
+                              update_var_con_list=config.add_regularization is None,
+                              partition_nonlinear_terms=config.partition_obj_nonlinear_terms
                               )
             # The epigraph constraint is very "flat" for branching rules,
             # we want to use to original model for the main mip.

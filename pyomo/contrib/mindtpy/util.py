@@ -204,7 +204,7 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
     """
     # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v[1].is_integer()) if discrete_only \
-        else (lambda v: v[1].name != 'MindtPy_utils.objective_value' and
+        else (lambda v: 'MindtPy_utils.objective_value' not in v[1].name and
               'MindtPy_utils.feas_opt.slack_var' not in v[1].name)
 
     model_vars, setpoint_vars = zip(*filter(var_filter,
@@ -240,7 +240,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
     """
     # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v.is_integer()) if discrete_only \
-        else (lambda v: v.name != 'MindtPy_utils.objective_value' and
+        else (lambda v: 'MindtPy_utils.objective_value' not in v.name and
               'MindtPy_utils.feas_opt.slack_var' not in v.name)
     model_vars = list(filter(var_filter, model.MindtPy_utils.variable_list))
     setpoint_vars = list(
@@ -284,7 +284,7 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     """
     # skip objective_value variable and slack_var variables
     var_filter = (lambda v: v.is_integer()) if discrete_only \
-        else (lambda v: v.name != 'MindtPy_utils.objective_value' and
+        else (lambda v: 'MindtPy_utils.objective_value' not in v.name and
               'MindtPy_utils.feas_opt.slack_var' not in v.name)
     model_vars = list(filter(var_filter, model.MindtPy_utils.variable_list))
     setpoint_vars = list(
@@ -349,11 +349,12 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
         jac_lag = obj_grad + jac.transpose().dot(numpy.array(lam).reshape(-1, 1))
         jac_lag[abs(jac_lag) < config.zero_tolerance] = 0
         # jac_lag of continuous variables should be zero
-        for var in temp_model.MindtPy_utils.continuous_variable_list[:-1]:
-            jac_lag[nlp.get_primal_indices([var])[0]] = 0
+        for var in temp_model.MindtPy_utils.continuous_variable_list:
+            if 'MindtPy_utils.objective_value' not in var.name:
+                jac_lag[nlp.get_primal_indices([var])[0]] = 0
         nlp_var = set([i.name for i in nlp.get_pyomo_variables()])
         first_order_term = sum(float(jac_lag[nlp.get_primal_indices([temp_var])[0]]) * (var - temp_var.value) for var,
-                               temp_var in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1]) if temp_var.name in nlp_var)
+                               temp_var in zip(model.MindtPy_utils.variable_list, temp_model.MindtPy_utils.variable_list) if temp_var.name in nlp_var)
 
         if config.add_regularization == 'grad_lag':
             return Objective(expr=first_order_term, sense=minimize)
@@ -362,8 +363,8 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
             hess_lag = nlp.evaluate_hessian_lag().toarray()
             hess_lag[abs(hess_lag) < config.zero_tolerance] = 0
             second_order_term = 0.5 * sum((var_i - temp_var_i.value) * float(hess_lag[nlp.get_primal_indices([temp_var_i])[0]][nlp.get_primal_indices([temp_var_j])[0]]) * (var_j - temp_var_j.value)
-                                          for var_i, temp_var_i in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
-                                          for var_j, temp_var_j in zip(model.MindtPy_utils.variable_list[:-1], temp_model.MindtPy_utils.variable_list[:-1])
+                                          for var_i, temp_var_i in zip(model.MindtPy_utils.variable_list, temp_model.MindtPy_utils.variable_list)
+                                          for var_j, temp_var_j in zip(model.MindtPy_utils.variable_list, temp_model.MindtPy_utils.variable_list)
                                           if (temp_var_i.name in nlp_var and temp_var_j.name in nlp_var))
             if config.add_regularization == 'hess_lag':
                 return Objective(expr=first_order_term + second_order_term, sense=minimize)
@@ -371,7 +372,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
                 return Objective(expr=second_order_term, sense=minimize)
         elif config.add_regularization == 'sqp_lag':
             var_filter = (lambda v: v[1].is_integer()) if discrete_only \
-                else (lambda v: v[1].name != 'MindtPy_utils.objective_value' and
+                else (lambda v: 'MindtPy_utils.objective_value' not in v[1].name and
                       'MindtPy_utils.feas_opt.slack_var' not in v[1].name)
 
             model_vars, setpoint_vars = zip(*filter(var_filter,
@@ -700,7 +701,7 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
             # bounds violations no longer generate exceptions (and
             # instead log warnings).  This means that the following will
             # always succeed and the ValueError should never be raised.
-            v_to.set_value(var_val)
+            v_to.set_value(var_val, skip_validation=True)
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             rounded_val = int(round(var_val))
@@ -709,9 +710,9 @@ def copy_var_list_values_from_solution_pool(from_list, to_list, config, solver_m
                 v_to.set_value(var_val, skip_validation=True)
             elif v_to.is_integer() and (
                     abs(var_val - rounded_val) <= config.integer_tolerance):
-                v_to.set_value(rounded_val)
+                v_to.set_value(rounded_val, skip_validation=True)
             elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
-                v_to.set_value(0)
+                v_to.set_value(0, skip_validation=True)
             else:
                 config.logger.error(
                     'Unknown validation domain error setting variable %s' %
@@ -843,3 +844,21 @@ def set_up_logger(config):
     ch.setFormatter(formatter)
     # add the handlers to logger
     config.logger.addHandler(ch)
+
+
+def _generate_additively_separable_repn(nonlinear_part):
+    if nonlinear_part.__class__ is not EXPR.SumExpression:
+        # This isn't separable, so we just have the one expression
+        return {'nonlinear_vars': [tuple(v for v in EXPR.identify_variables(
+            nonlinear_part))], 'nonlinear_exprs': [nonlinear_part]}
+
+    # else, it was a SumExpression, and we will break it into the summands,
+    # recording which variables are there.
+    nonlinear_decomp = {'nonlinear_vars': [],
+                        'nonlinear_exprs': []}
+    for summand in nonlinear_part.args:
+        nonlinear_decomp['nonlinear_exprs'].append(summand)
+        nonlinear_decomp['nonlinear_vars'].append(
+            tuple(v for v in EXPR.identify_variables(summand)))
+
+    return nonlinear_decomp

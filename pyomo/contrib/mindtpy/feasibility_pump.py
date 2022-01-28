@@ -71,10 +71,10 @@ def solve_fp_subproblem(solve_data, config):
     fp_nlp.MindtPy_utils.objective_list[-1].deactivate()
     if solve_data.objective_sense == minimize:
         fp_nlp.improving_objective_cut = Constraint(
-            expr=fp_nlp.MindtPy_utils.objective_value <= solve_data.UB)
+            expr=sum(fp_nlp.MindtPy_utils.objective_value[:]) <= solve_data.UB)
     else:
         fp_nlp.improving_objective_cut = Constraint(
-            expr=fp_nlp.MindtPy_utils.objective_value >= solve_data.LB)
+            expr=sum(fp_nlp.MindtPy_utils.objective_value[:]) >= solve_data.LB)
 
     # Add norm_constraint, which guarantees the monotonicity of the norm objective value sequence of all iterations
     # Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP'
