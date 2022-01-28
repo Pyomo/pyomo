@@ -21,7 +21,7 @@ from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (Block, Constraint,
-                        Objective, Reals, Var, expr, minimize, value, ConstraintList)
+                        Objective, Reals, Var, minimize, value, ConstraintList)
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.base.var import VarList
 from pyomo.gdp import Disjunct, Disjunction
