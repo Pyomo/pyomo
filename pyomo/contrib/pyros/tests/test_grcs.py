@@ -2126,6 +2126,8 @@ class RegressionTest(unittest.TestCase):
                                          })
 
 
+@unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
+                     "Global NLP solver is not available.")
 class testBypassingSeparation(unittest.TestCase):
     def test_bypass_global_separation(self):
         """Test bypassing of global separation solve calls."""
