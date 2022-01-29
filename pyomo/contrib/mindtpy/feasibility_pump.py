@@ -77,7 +77,7 @@ def solve_fp_subproblem(solve_data, config):
             expr=sum(fp_nlp.MindtPy_utils.objective_value[:]) >= solve_data.LB)
 
     # Add norm_constraint, which guarantees the monotonicity of the norm objective value sequence of all iterations
-    # Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP'
+    # Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP'   https://doi.org/10.1007/s10107-012-0608-x
     # the norm type is consistant with the norm obj of the FP-main problem.
     if config.fp_norm_constraint:
         generate_norm_constraint(fp_nlp, solve_data, config)
