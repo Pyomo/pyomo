@@ -152,7 +152,7 @@ def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense
 
 
 def process_objective(solve_data, config, move_linear_objective=False,
-                      use_mcpp=True, update_var_con_list=True,
+                      use_mcpp=False, update_var_con_list=True,
                       partition_nonlinear_terms=True):
     """Process model objective function.
 
