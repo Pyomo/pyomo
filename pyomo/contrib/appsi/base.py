@@ -998,7 +998,7 @@ class PersistentBase(abc.ABC):
                     vars_to_update.append(v)
                 elif ub is not v._ub:
                     vars_to_update.append(v)
-                elif fixed is not v.fixed:
+                elif (fixed is not v.fixed) or (fixed and (value is not v.value)):
                     vars_to_update.append(v)
                     if self.update_config.treat_fixed_vars_as_params:
                         for c in self._referenced_variables[id(v)][0]:
@@ -1006,8 +1006,6 @@ class PersistentBase(abc.ABC):
                         if self._referenced_variables[id(v)][2] is not None:
                             need_to_set_objective = True
                 elif domain is not v.domain:
-                    vars_to_update.append(v)
-                elif fixed and (value is not v.value):
                     vars_to_update.append(v)
             self.update_variables(vars_to_update)
         timer.stop('vars')
