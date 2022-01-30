@@ -470,39 +470,40 @@ class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
     def test_fixed_vars(self, name: str, opt_class: Type[PersistentSolver]):
         opt: PersistentSolver = opt_class()
-        opt.update_config.treat_fixed_vars_as_params = False
-        if not opt.available():
-            raise unittest.SkipTest
-        m = pe.ConcreteModel()
-        m.x = pe.Var()
-        m.x.fix(0)
-        m.y = pe.Var()
-        a1 = 1
-        a2 = -1
-        b1 = 1
-        b2 = 2
-        m.obj = pe.Objective(expr=m.y)
-        m.c1 = pe.Constraint(expr=m.y >= a1 * m.x + b1)
-        m.c2 = pe.Constraint(expr=m.y >= a2 * m.x + b2)
-        res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, 0)
-        self.assertAlmostEqual(m.y.value, 2)
-        m.x.unfix()
-        res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
-        self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
-        m.x.fix(0)
-        res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, 0)
-        self.assertAlmostEqual(m.y.value, 2)
-        m.x.value = 2
-        res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, 2)
-        self.assertAlmostEqual(m.y.value, 3)
-        m.x.value = 0
-        res = opt.solve(m)
-        self.assertAlmostEqual(m.x.value, 0)
-        self.assertAlmostEqual(m.y.value, 2)
+        for treat_fixed_vars_as_params in [True, False]:
+            opt.update_config.treat_fixed_vars_as_params = treat_fixed_vars_as_params
+            if not opt.available():
+                raise unittest.SkipTest
+            m = pe.ConcreteModel()
+            m.x = pe.Var()
+            m.x.fix(0)
+            m.y = pe.Var()
+            a1 = 1
+            a2 = -1
+            b1 = 1
+            b2 = 2
+            m.obj = pe.Objective(expr=m.y)
+            m.c1 = pe.Constraint(expr=m.y >= a1 * m.x + b1)
+            m.c2 = pe.Constraint(expr=m.y >= a2 * m.x + b2)
+            res = opt.solve(m)
+            self.assertAlmostEqual(m.x.value, 0)
+            self.assertAlmostEqual(m.y.value, 2)
+            m.x.unfix()
+            res = opt.solve(m)
+            self.assertAlmostEqual(m.x.value, (b2 - b1) / (a1 - a2))
+            self.assertAlmostEqual(m.y.value, a1 * (b2 - b1) / (a1 - a2) + b1)
+            m.x.fix(0)
+            res = opt.solve(m)
+            self.assertAlmostEqual(m.x.value, 0)
+            self.assertAlmostEqual(m.y.value, 2)
+            m.x.value = 2
+            res = opt.solve(m)
+            self.assertAlmostEqual(m.x.value, 2)
+            self.assertAlmostEqual(m.y.value, 3)
+            m.x.value = 0
+            res = opt.solve(m)
+            self.assertAlmostEqual(m.x.value, 0)
+            self.assertAlmostEqual(m.y.value, 2)
 
     @parameterized.expand(input=all_solvers)
     def test_fixed_vars_2(self, name: str, opt_class: Type[PersistentSolver]):
