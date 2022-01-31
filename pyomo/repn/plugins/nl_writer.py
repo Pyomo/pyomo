@@ -1399,11 +1399,14 @@ def _before_general_expression(visitor, child):
 _before_child_handlers = {
     _type: _before_native for _type in native_types
 }
+# general operators
 for _type in _operator_handles:
     _before_child_handlers[_type] = _before_general_expression
-_before_child_handlers[_GeneralExpressionData] = _before_named_expression
-_before_child_handlers[ScalarExpression] = _before_named_expression
-_before_child_handlers[kernel.expression.expression] = _before_named_expression
+# named subexpressions
+for _type in (_GeneralExpressionData, ScalarExpression,
+              kernel.expression.expression):
+    _before_child_handlers[_type] = _before_named_expression
+# Special linear / summation expressions
 _before_child_handlers[MonomialTermExpression] = _before_monomial
 _before_child_handlers[LinearExpression] = _before_linear
 _before_child_handlers[SumExpression] = _before_general_expression
