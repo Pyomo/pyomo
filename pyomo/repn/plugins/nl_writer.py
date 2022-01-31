@@ -1453,7 +1453,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         # General expressions...
         #
-        if all(_[0] is _CONSTANT for _ in data):
+        if all(arg[0] is _CONSTANT for arg in data):
             return (
                 _CONSTANT, node._apply_operation(tuple(map(
                     itemgetter(1), data)))
