@@ -842,6 +842,60 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertEqual(res.termination_condition, TerminationCondition.maxTimeLimit)
 
+    @parameterized.expand(input=all_solvers)
+    def test_objective_changes(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.c1 = pe.Constraint(expr=m.y >= m.x + 1)
+        m.c2 = pe.Constraint(expr=m.y >= -m.x + 1)
+        m.obj = pe.Objective(expr=m.y)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        m.obj = pe.Objective(expr=2*m.y)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 2)
+        m.obj.expr = 3*m.y
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 3)
+        m.obj.sense = pe.maximize
+        opt.config.load_solution = False
+        res = opt.solve(m)
+        self.assertIn(res.termination_condition, {TerminationCondition.unbounded,
+                                                  TerminationCondition.infeasibleOrUnbounded})
+        m.obj.sense = pe.minimize
+        opt.config.load_solution = True
+        m.obj = pe.Objective(expr=m.x*m.y)
+        m.x.fix(2)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 6, 6)
+        m.x.fix(3)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 12, 6)
+        m.x.unfix()
+        m.y.fix(2)
+        m.x.setlb(-3)
+        m.x.setub(5)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, -2, 6)
+        m.y.unfix()
+        m.x.setlb(None)
+        m.x.setub(None)
+        m.e = pe.Expression(expr=2)
+        m.obj = pe.Objective(expr=m.e * m.y)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 2)
+        m.e.expr = 3
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 3)
+        opt.update_config.check_for_new_objective = False
+        m.e.expr = 4
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 4)
+
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestLegacySolverInterface(unittest.TestCase):

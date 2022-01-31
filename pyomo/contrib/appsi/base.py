@@ -365,19 +365,23 @@ class UpdateConfig(ConfigDict):
         self.declare('check_for_new_or_removed_constraints', ConfigValue(domain=bool))
         self.declare('check_for_new_or_removed_vars', ConfigValue(domain=bool))
         self.declare('check_for_new_or_removed_params', ConfigValue(domain=bool))
+        self.declare('check_for_new_objective', ConfigValue(domain=bool))
         self.declare('update_constraints', ConfigValue(domain=bool))
         self.declare('update_vars', ConfigValue(domain=bool))
         self.declare('update_params', ConfigValue(domain=bool))
         self.declare('update_named_expressions', ConfigValue(domain=bool))
+        self.declare('update_objective', ConfigValue(domain=bool))
         self.declare('treat_fixed_vars_as_params', ConfigValue(domain=bool))
 
         self.check_for_new_or_removed_constraints: bool = True
         self.check_for_new_or_removed_vars: bool = True
         self.check_for_new_or_removed_params: bool = True
+        self.check_for_new_objective: bool = True
         self.update_constraints: bool = True
         self.update_vars: bool = True
         self.update_params: bool = True
         self.update_named_expressions: bool = True
+        self.update_objective: bool = True
         self.treat_fixed_vars_as_params: bool = True
 
 
@@ -677,6 +681,7 @@ class PersistentBase(abc.ABC):
         self._referenced_variables = dict()  # var_id: [dict[constraints, None], dict[sos constraints, None], None or objective]
         self._vars_referenced_by_con = dict()
         self._vars_referenced_by_obj = list()
+        self._expr_types = cmodel.PyomoExprTypes()
 
     @property
     def update_config(self):
@@ -722,7 +727,7 @@ class PersistentBase(abc.ABC):
 
     def add_constraints(self, cons: List[_GeneralConstraintData]):
         all_fixed_vars = dict()
-        expr_types = cmodel.PyomoExprTypes()
+        expr_types = self._expr_types
         for con in cons:
             if con in self._named_expressions:
                 raise ValueError('constraint {name} has already been added'.format(name=con.name))
@@ -1026,20 +1031,24 @@ class PersistentBase(abc.ABC):
                         break
             self.remove_constraints(cons_to_update)
             self.add_constraints(cons_to_update)
-        timer.stop('named expressions')
-        timer.start('objective')
-        pyomo_obj = get_objective(self._model)
-        if pyomo_obj is not self._objective:
-            need_to_set_objective = True
-        elif pyomo_obj is not None and pyomo_obj.expr is not self._objective_expr:
-            need_to_set_objective = True
-        elif pyomo_obj is not None and pyomo_obj.sense is not self._objective_sense:
-            need_to_set_objective = True
-        elif config.update_named_expressions:
             for named_expr, old_expr in self._obj_named_expressions:
                 if named_expr.expr is not old_expr:
                     need_to_set_objective = True
                     break
+        timer.stop('named expressions')
+        timer.start('objective')
+        if self.update_config.check_for_new_objective:
+            pyomo_obj = get_objective(self._model)
+            if pyomo_obj is not self._objective:
+                need_to_set_objective = True
+        else:
+            pyomo_obj = self._objective
+        if self.update_config.update_objective:
+            if pyomo_obj is not None and pyomo_obj.expr is not self._objective_expr:
+                need_to_set_objective = True
+            elif pyomo_obj is not None and pyomo_obj.sense is not self._objective_sense:
+                # we can definitely do something faster here than resetting the whole objective
+                need_to_set_objective = True
         if need_to_set_objective:
             self.set_objective(pyomo_obj)
         timer.stop('objective')
