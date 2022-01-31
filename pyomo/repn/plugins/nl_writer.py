@@ -619,15 +619,27 @@ class _NLWriter_impl(object):
             "\t#%d ranges (rhs's)" % len(constraints)
             if symbolic_solver_labels else '',
         ))
-        _include_lb = {0, 2, 4}
-        _include_ub = {0, 1}
+        # _bound_writer = {
+        #     0: lambda i, c: ostream.write(f"0 {i[3]} {i[4]}{c}\n"),
+        #     1: lambda i, c: ostream.write(f"1 {i[4]}{c}\n"),
+        #     2: lambda i, c: ostream.write(f"2 {i[3]}{c}\n"),
+        #     3: lambda i, c: ostream.write(f"3{c}\n"),
+        #     4: lambda i, c: ostream.write(f"4 {i[3]}{c}\n"),
+        # }
         for row_idx, info in enumerate(constraints):
-            ostream.write(f"{info[2]}")
-            if info[2] in _include_lb:
-                ostream.write(f" {info[3]}") # Note: already cast to repn
-            if info[2] in _include_ub:
-                ostream.write(f" {info[4]}") # Note: already cast to repn
-            ostream.write(f"{row_comments[row_idx]}\n")
+            # _bound_writer[info[2]](info, row_comments[row_idx])
+            ###
+            i = info[2]
+            if i == 4:   # ==
+                ostream.write(f"4 {info[3]}{row_comments[row_idx]}\n")
+            elif i == 1: # body <= ub
+                ostream.write(f"1 {info[4]}{row_comments[row_idx]}\n")
+            elif i == 2: # lb <= body
+                ostream.write(f"2 {info[3]}{row_comments[row_idx]}\n")
+            elif i == 0: # lb <= body <= ub
+                ostream.write(f"0 {info[3]} {info[4]}{row_comments[row_idx]}\n")
+            else: # i == 3; unbounded
+                ostream.write(f"3{row_comments[row_idx]}\n")
 
         #
         # "b" lines (variable bounds)
@@ -637,12 +649,19 @@ class _NLWriter_impl(object):
             if symbolic_solver_labels else '',
         ))
         for var_idx, info in enumerate(variables):
-            ostream.write(f"{info[2]}")
-            if info[2] in _include_lb:
-                ostream.write(f" {info[3]}") # Note: already cast to repn
-            if info[2] in _include_ub:
-                ostream.write(f" {info[4]}") # Note: already cast to repn
-            ostream.write(f"{col_comments[var_idx]}\n")
+            # _bound_writer[info[2]](info, col_comments[var_idx])
+            ###
+            i = info[2]
+            if i == 0: # lb <= body <= ub
+                ostream.write(f"0 {info[3]} {info[4]}{col_comments[var_idx]}\n")
+            elif i == 2: # lb <= body
+                ostream.write(f"2 {info[3]}{col_comments[var_idx]}\n")
+            elif i == 1: # body <= ub
+                ostream.write(f"1 {info[4]}{col_comments[var_idx]}\n")
+            elif i == 4:   # ==
+                ostream.write(f"4 {info[3]}{col_comments[var_idx]}\n")
+            else: # i == 3; unbounded
+                ostream.write(f"3{col_comments[var_idx]}\n")
 
         #
         # "k" lines (column offsets in Jacobian NNZ)
