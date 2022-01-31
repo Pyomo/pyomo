@@ -679,29 +679,26 @@ class _NLWriter_impl(object):
         #
         # "J" lines (non-empty terms in the Jacobian)
         #
-        lbl = ''
         for row_idx, info in enumerate(constraints):
             nz = nz_by_comp[id(info[0])]
             linear = info[1].linear
             ostream.write(f'J{row_idx} {len(nz)}{row_comments[row_idx]}\n')
             for _id in sorted(nz, key=column_order.__getitem__):
                 ostream.write(
-                    f'{column_order[_id]} {linear.get(_id, 0)!r}\n'
+                    f'{column_order[_id]} {linear[_id]!r}\n'
                 )
 
         #
         # "G" lines (non-empty terms in the Objective)
         #
-        lbl = ''
         for obj_idx, info in enumerate(objectives):
-            if symbolic_solver_labels:
-                lbl = '\t#%s' % info[0].name
             nz = nz_by_comp[id(info[0])]
             linear = info[1].linear
-            ostream.write(f'G{obj_idx} {len(nz)}{lbl}\n')
+            ostream.write(
+                f'G{obj_idx} {len(nz)}{row_comments[obj_idx + n_cons]}\n')
             for _id in sorted(nz, key=column_order.__getitem__):
                 ostream.write(
-                    f'{column_order[_id]} {linear.get(_id, 0)!r}\n'
+                    f'{column_order[_id]} {linear[_id]!r}\n'
                 )
 
         timer.toc("written")
@@ -778,8 +775,12 @@ class _NLWriter_impl(object):
                 # nonlinear components.
                 if expr_info.linear:
                     nz = linear_vars | nonlinear_vars
+                    if len(nz) > len(nonlinear_vars):
+                        for i in nonlinear_vars - linear_vars:
+                            expr_info.linear[i] = 0
                 else:
                     nz = nonlinear_vars
+                    expr.linear = {i: 0 for i in nz}
                 all_nonlinear_vars.update(nonlinear_vars)
 
             # Update the count of components that each variable appears in
