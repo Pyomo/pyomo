@@ -420,6 +420,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         self.gurobi_options = saved_options
         self.update_config = saved_update_config
         self._model = model
+        self._expr_types = cmodel.PyomoExprTypes()
 
         if self.config.symbolic_solver_labels:
             self._labeler = TextLabeler()
