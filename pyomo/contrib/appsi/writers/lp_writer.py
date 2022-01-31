@@ -30,7 +30,7 @@ class LPWriter(PersistentBase):
         self._solver_var_to_pyomo_var_map = dict()
         self._solver_con_to_pyomo_con_map = dict()
         self._pyomo_param_to_solver_param_map = dict()
-        self._pyomo_expr_types = None
+        self._expr_types = None
 
     @property
     def config(self):
@@ -47,7 +47,7 @@ class LPWriter(PersistentBase):
         self.config = saved_config
         self.update_config = saved_update_config
         self._model = model
-        self._pyomo_expr_types = cmodel.PyomoExprTypes()
+        self._expr_types = cmodel.PyomoExprTypes()
 
         if self.config.symbolic_solver_labels:
             self._var_labeler = TextLabeler()
@@ -67,7 +67,7 @@ class LPWriter(PersistentBase):
             self.set_objective(None)
 
     def _add_variables(self, variables: List[_GeneralVarData]):
-        cmodel.process_pyomo_vars(self._pyomo_expr_types, variables, self._pyomo_var_to_solver_var_map,
+        cmodel.process_pyomo_vars(self._expr_types, variables, self._pyomo_var_to_solver_var_map,
                                   self._pyomo_param_to_solver_param_map, self._vars,
                                   self._solver_var_to_pyomo_var_map, True, self._symbol_map,
                                   self._var_labeler, False)
@@ -113,7 +113,7 @@ class LPWriter(PersistentBase):
             self._param_labeler.remove_obj(p)
 
     def _update_variables(self, variables: List[_GeneralVarData]):
-        cmodel.process_pyomo_vars(self._pyomo_expr_types, variables, self._pyomo_var_to_solver_var_map,
+        cmodel.process_pyomo_vars(self._expr_types, variables, self._pyomo_var_to_solver_var_map,
                                   self._pyomo_param_to_solver_param_map, self._vars,
                                   self._solver_var_to_pyomo_var_map, False, None,
                                   None, True)
@@ -124,7 +124,7 @@ class LPWriter(PersistentBase):
             cp.value = p.value
 
     def _set_objective(self, obj: _GeneralObjectiveData):
-        cobj = cmodel.process_lp_objective(self._pyomo_expr_types, obj, self._pyomo_var_to_solver_var_map,
+        cobj = cmodel.process_lp_objective(self._expr_types, obj, self._pyomo_var_to_solver_var_map,
                                            self._pyomo_param_to_solver_param_map)
         if obj is None:
             sense = 0
