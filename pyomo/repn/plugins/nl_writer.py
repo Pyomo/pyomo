@@ -17,6 +17,7 @@ from pyomo.common.backports import nullcontext
 from pyomo.common.config import ConfigBlock, ConfigValue, InEnum
 from pyomo.common.errors import DeveloperError
 from pyomo.common.gc_manager import PauseGC
+from pyomo.common.timing import TicTocTimer
 
 from pyomo.core.expr.current import (
     NegationExpression, ProductExpression, DivisionExpression,
@@ -213,6 +214,8 @@ class _NLWriter_impl(object):
         self.next_V_line_id = 0
 
     def write(self, model):
+        timer = TicTocTimer()
+
         sorter = SortComponents.unsorted
         if self.config.file_determinism >= FileDeterminism.SORT_INDICES:
             sorter = sorter | SortComponents.indices
@@ -251,6 +254,7 @@ class _NLWriter_impl(object):
                 if expr.nonlinear:
                     n_nonlinear_objs += 1
                 objectives.append((obj, expr))
+            timer.toc(f'Objective {obj_comp.name}')
 
         linear_cons = []
         nonlinear_cons = []
@@ -276,6 +280,7 @@ class _NLWriter_impl(object):
                 (nonlinear_cons if expr.nonlinear else linear_cons).append((
                     con, expr, _type, lb, ub,
                 ))
+            timer.toc(f'Constraint {con_comp.name}')
 
         #
         # Collect constraints and objectives into the groupings
@@ -305,15 +310,18 @@ class _NLWriter_impl(object):
             nz_by_comp
         )
         n_subexpressions = self._count_subexpression_occurances()
+        timer.toc('subexpressions')
 
         n_objs = len(objectives)
         obj_vars_linear, obj_vars_nonlinear, obj_nnz_by_var \
             = self._categorize_vars(objectives, nz_by_comp)
+        timer.toc('objectives')
 
         n_cons = len(constraints)
         n_nonlinear_cons = len(nonlinear_cons)
         con_vars_linear, con_vars_nonlinear, con_nnz_by_var \
             = self._categorize_vars(constraints, nz_by_comp)
+        timer.toc('constraints')
 
         n_lcons = 0 # We do not yet support logical constraints
 
@@ -388,6 +396,7 @@ class _NLWriter_impl(object):
                 linear_only_vars & integer_vars,
                 key=column_order.__getitem__))
         assert len(variables) == n_vars
+        timer.toc(f'{len(variables)} variables, {len(constraints)} constraints')
         # Fill in the variable list and update the new column order
         for idx, _id in enumerate(variables):
             v = var_map[_id]
@@ -398,6 +407,7 @@ class _NLWriter_impl(object):
             if ub is not None:
                 ub = repr(ub)
             variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
+        timer.toc("var bounds")
 
         # Now that the row/column ordering is resolved, create the labels
         symbol_map = SymbolMap()
@@ -410,6 +420,7 @@ class _NLWriter_impl(object):
         symbol_map.addSymbols(
             (info[0], f"o{idx}") for idx, info in enumerate(objectives)
         )
+        timer.toc("symbols")
 
         if symbolic_solver_labels:
             labeler = NameLabeler()
@@ -436,6 +447,7 @@ class _NLWriter_impl(object):
                 info[1]: var_idx for var_idx, info in enumerate(variables)
             }
 
+        timer.toc("row/col labels & comments")
         #
         # Print Header
         #
@@ -673,6 +685,7 @@ class _NLWriter_impl(object):
                     f'{column_order[_id]} {linear.get(_id, 0)!r}\n'
                 )
 
+        timer.toc("written")
         return symbol_map, sorted(amplfunc_libraries)
 
 
