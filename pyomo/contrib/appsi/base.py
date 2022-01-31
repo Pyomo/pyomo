@@ -681,7 +681,7 @@ class PersistentBase(abc.ABC):
         self._referenced_variables = dict()  # var_id: [dict[constraints, None], dict[sos constraints, None], None or objective]
         self._vars_referenced_by_con = dict()
         self._vars_referenced_by_obj = list()
-        self._expr_types = cmodel.PyomoExprTypes()
+        self._expr_types = None
 
     @property
     def update_config(self):
@@ -696,6 +696,7 @@ class PersistentBase(abc.ABC):
         self.__init__()
         self.update_config = saved_update_config
         self._model = model
+        self._expr_types = cmodel.PyomoExprTypes()
         self.add_block(model)
         if self._objective is None:
             self.set_objective(None)
