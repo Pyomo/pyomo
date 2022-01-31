@@ -950,20 +950,15 @@ class AMPLRepn(object):
         _type = other[0]
         if _type is _MONOMIAL:
             self.linear.append(other[1:])
+        elif _type is _GENERAL:
+            other = other[1]
+            self.const += other.const
+            if other.linear:
+                self.linear.extend(other.linear)
+            if other.nonlinear:
+                self.nonlinear.extend(other.nonlinear)
         elif _type is _CONSTANT:
             self.const += other[1]
-        else: # _type is _GENERAL:
-            self.accumulate(other[1])
-
-    def accumulate(self, other):
-        self.const += other.const
-        if other.linear:
-            self.linear.extend(other.linear)
-        if other.nonlinear:
-            if other.nonlinear.__class__ is list:
-                self.nonlinear.extend(other.nonlinear)
-            else:
-                self.nonlinear.append(other.nonlinear)
 
     def distribute_multiplicand(self, visitor, mult):
         if not mult:
