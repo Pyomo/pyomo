@@ -28,7 +28,7 @@ from pyomo.contrib.appsi.base import (
     PersistentSolver, Results, TerminationCondition, MIPSolverConfig,
     PersistentBase, PersistentSolutionLoader
 )
-from pyomo.contrib.appsi.cmodel import cmodel_available
+from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 
 logger = logging.getLogger(__name__)
