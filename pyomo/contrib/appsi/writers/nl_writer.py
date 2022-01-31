@@ -32,7 +32,7 @@ class NLWriter(PersistentBase):
         self._solver_var_to_pyomo_var_map = dict()
         self._solver_con_to_pyomo_con_map = dict()
         self._pyomo_param_to_solver_param_map = dict()
-        self._pyomo_expr_types = None
+        self._expr_types = None
 
     @property
     def config(self):
@@ -53,7 +53,7 @@ class NLWriter(PersistentBase):
         self.config = saved_config
         self.update_config = saved_update_config
         self._model = model
-        self._pyomo_expr_types = cmodel.PyomoExprTypes()
+        self._expr_types = cmodel.PyomoExprTypes()
 
         if self.config.symbolic_solver_labels:
             self._var_labeler = TextLabeler()
@@ -72,7 +72,7 @@ class NLWriter(PersistentBase):
         self._set_pyomo_amplfunc_env()
 
     def _add_variables(self, variables: List[_GeneralVarData]):
-        cmodel.process_pyomo_vars(self._pyomo_expr_types, variables, self._pyomo_var_to_solver_var_map,
+        cmodel.process_pyomo_vars(self._expr_types, variables, self._pyomo_var_to_solver_var_map,
                                   self._pyomo_param_to_solver_param_map, self._vars,
                                   self._solver_var_to_pyomo_var_map, False, None, None, False)
 
@@ -86,7 +86,7 @@ class NLWriter(PersistentBase):
 
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
         cmodel.process_nl_constraints(self._writer,
-                                      self._pyomo_expr_types,
+                                      self._expr_types,
                                       cons,
                                       self._pyomo_var_to_solver_var_map,
                                       self._pyomo_param_to_solver_param_map,
@@ -123,7 +123,7 @@ class NLWriter(PersistentBase):
             self._param_labeler.remove_obj(p)
 
     def _update_variables(self, variables: List[_GeneralVarData]):
-        cmodel.process_pyomo_vars(self._pyomo_expr_types, variables, self._pyomo_var_to_solver_var_map,
+        cmodel.process_pyomo_vars(self._expr_types, variables, self._pyomo_var_to_solver_var_map,
                                   self._pyomo_param_to_solver_param_map, self._vars,
                                   self._solver_var_to_pyomo_var_map, False, None, None, True)
 
