@@ -79,6 +79,7 @@ class IntervalTightener(PersistentBase):
         self.__init__()
         self.config = saved_config
         self.update_config = saved_update_config
+        self._expr_types = cmodel.PyomoExprTypes()
 
         if symbolic_solver_labels is not None:
             self._symbolic_solver_labels = symbolic_solver_labels
