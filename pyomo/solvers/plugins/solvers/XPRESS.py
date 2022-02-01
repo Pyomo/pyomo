@@ -12,12 +12,8 @@ class XPRESS(OptSolver):
     """
 
     def __new__(cls, *args, **kwds):
-        try:
-            mode = kwds['solver_io']
-            if mode is None:
-                mode = 'python'
-            del kwds['solver_io']
-        except KeyError:
+        mode = kwds.pop('solver_io', 'python')
+        if mode is None:
             mode = 'python'
 
         if mode not in {'python', 'direct', 'persistent'}:
