@@ -283,7 +283,8 @@ class Cbc(PersistentSolver):
         if (self.version() < (2, 10, 2) and
                 self._writer.get_active_objective() is not None and
                 self._writer.get_active_objective().sense == maximize):
-            obj_val = -obj_val
+            if obj_val is not None:
+                obj_val = -obj_val
             for con, dual_val in self._dual_sol.items():
                 self._dual_sol[con] = -dual_val
             for v_id, (v, rc_val) in self._reduced_costs.items():
