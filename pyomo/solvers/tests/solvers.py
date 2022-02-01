@@ -308,7 +308,7 @@ def test_solver_cases(*args):
                                    'sos1',
                                    'sos2'])
 
-        _test_solver_cases['xpress_direct', 'python'] = initialize(
+        _test_solver_cases['xpress', 'python'] = initialize(
             name='xpress_direct',
             io='python',
             capabilities=_xpress_capabilities,
