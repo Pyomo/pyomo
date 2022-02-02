@@ -31,10 +31,9 @@ from nose.tools import set_trace
 solvers = check_available_solvers('gurobi_direct')
 
 class CommonTests:
-    def diff_apply_to_and_create_using(self, model, num_partitions):
+    def diff_apply_to_and_create_using(self, model, **kwargs):
         ct.diff_apply_to_and_create_using(self, model,
-                                          'gdp.partition_disjuncts',
-                                          num_partitions=num_partitions)
+                                          'gdp.partition_disjuncts', **kwargs)
 
 class PaperTwoCircleExample(unittest.TestCase, CommonTests):
     def check_disj_constraint(self, c1, upper, auxVar1, auxVar2):
@@ -179,7 +178,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.check_disj_constraint(c2, -35, aux_vars2[0], aux_vars2[1])
 
     def check_transformation_block(self, m, aux11lb, aux11ub, aux12lb, aux12ub,
-                                   aux21lb, aux21ub, aux22lb, aux22ub):
+                                   aux21lb, aux21ub, aux22lb, aux22ub,
+                                   partitions):
         (b, disj1, disj2,
          aux_vars1,
          aux_vars2) = self.check_transformation_block_structure( m, aux11lb,
@@ -198,17 +198,21 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             "disjunction_disjuncts[0].constraint[1]_split_constraints")
         self.assertEqual(len(c), 2)
         c1 = c[0]
-        self.check_global_constraint_disj1(c1, aux_vars1[0], m.x[1], m.x[2])
+        self.check_global_constraint_disj1(c1, aux_vars1[0], partitions[0][0],
+                                           partitions[0][1])
         c2 = c[1]
-        self.check_global_constraint_disj1(c2, aux_vars1[1], m.x[3], m.x[4])
+        self.check_global_constraint_disj1(c2, aux_vars1[1], partitions[1][0],
+                                           partitions[1][1])
 
         c = b.component(
             "disjunction_disjuncts[1].constraint[1]_split_constraints")
         self.assertEqual(len(c), 2)
         c1 = c[0]
-        self.check_global_constraint_disj2(c1, aux_vars2[0], m.x[1], m.x[2])
+        self.check_global_constraint_disj2(c1, aux_vars2[0], partitions[0][0],
+                                           partitions[0][1])
         c2 = c[1]
-        self.check_global_constraint_disj2(c2, aux_vars2[1], m.x[3], m.x[4])
+        self.check_global_constraint_disj2(c2, aux_vars2[1], partitions[1][0],
+                                           partitions[1][1])
 
     def test_transformation_block_fbbt_bounds(self):
         m = models.makeBetweenStepsPaperExample()
@@ -218,7 +222,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             variable_partitions=[[m.x[1], m.x[2]], [m.x[3], m.x[4]]],
             compute_bounds_method=compute_fbbt_bounds)
 
-        self.check_transformation_block(m, 0, 72, 0, 72, -72, 96, -72, 96)
+        self.check_transformation_block(m, 0, 72, 0, 72, -72, 96, -72, 96,
+                                        partitions=[[m.x[1], m.x[2]], [m.x[3],
+                                                                       m.x[4]]])
 
     def check_transformation_block_indexed_var_on_disjunct(
             self, m, original_disjunction):
@@ -505,7 +511,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             compute_bounds_solver=SolverFactory('gurobi_direct'),
             compute_bounds_method=compute_optimal_bounds)
 
-        self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
+        self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32,
+                                        partitions=[[m.x[1], m.x[2]], [m.x[3],
+                                                                       m.x[4]]])
 
     def test_no_solver_error(self):
         m = models.makeBetweenStepsPaperExample()
@@ -540,7 +548,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             compute_bounds_solver=opt,
             compute_bounds_method=compute_optimal_bounds)
 
-        self.check_transformation_block(m, 0, 32, 0, 32, -18, 14, -18, 14)
+        self.check_transformation_block(m, 0, 32, 0, 32, -18, 14, -18, 14,
+                                        partitions=[[m.x[1], m.x[2]], [m.x[3],
+                                                                       m.x[4]]])
 
     @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
@@ -556,8 +566,10 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             num_partitions=2,
             compute_bounds_solver=SolverFactory('gurobi_direct'),
             compute_bounds_method=compute_optimal_bounds)
-
-        self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
+        # The above will partition as [[x[1], x[3]], [x[2], x[4]]]
+        self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32,
+                                        partitions=[[m.x[1], m.x[3]], [m.x[2],
+                                                                       m.x[4]]])
 
     @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
@@ -584,7 +596,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         m.x[1].fixed = False
         # should be identical to the case where x[1] was not fixed
-        self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32)
+        self.check_transformation_block(m, 0, 72, 0, 72, -18, 32, -18, 32,
+                                        partitions=[[m.x[1], m.x[2]], [m.x[3],
+                                                                       m.x[4]]])
 
     @unittest.skipIf('gurobi_direct' not in solvers,
                      'Gurobi direct solver not available')
@@ -745,8 +759,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         c = b.component(
             "disjunction_disjuncts[0].constraint[1]_split_constraints")
         self.assertEqual(len(c), 3)
+        c.pprint()
         c1 = c[0]
-        self.check_global_constraint_disj1(c1, aux_vars1[0], m.x[1], m.x[2])
+        self.check_global_constraint_disj1(c1, aux_vars1[0], m.x[1], m.x[4])
 
         c2 = c[1]
         self.assertIsNone(c2.lower)
@@ -758,8 +773,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertIs(repn.linear_vars[0], aux_vars1[1])
         self.assertEqual(repn.linear_coefs[0], -1)
         self.assertEqual(repn.quadratic_coefs[0], 1)
-        self.assertIs(repn.quadratic_vars[0][0], m.x[3])
-        self.assertIs(repn.quadratic_vars[0][1], m.x[3])
+        self.assertIs(repn.quadratic_vars[0][0], m.x[2])
+        self.assertIs(repn.quadratic_vars[0][1], m.x[2])
 
         c3 = c[2]
         self.assertIsNone(c3.lower)
@@ -771,15 +786,15 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertIs(repn.linear_vars[0], aux_vars1[2])
         self.assertEqual(repn.linear_coefs[0], -1)
         self.assertEqual(repn.quadratic_coefs[0], 1)
-        self.assertIs(repn.quadratic_vars[0][0], m.x[4])
-        self.assertIs(repn.quadratic_vars[0][1], m.x[4])
+        self.assertIs(repn.quadratic_vars[0][0], m.x[3])
+        self.assertIs(repn.quadratic_vars[0][1], m.x[3])
         self.assertIsNone(repn.nonlinear_expr)
 
         c = b.component(
             "disjunction_disjuncts[1].constraint[1]_split_constraints")
         self.assertEqual(len(c), 3)
         c1 = c[0]
-        self.check_global_constraint_disj2(c1, aux_vars2[0], m.x[1], m.x[2])
+        self.check_global_constraint_disj2(c1, aux_vars2[0], m.x[1], m.x[4])
 
         c2 = c[1]
         self.assertIsNone(c2.lower)
@@ -788,13 +803,13 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(len(repn.quadratic_vars), 1)
-        self.assertIs(repn.linear_vars[0], m.x[3])
+        self.assertIs(repn.linear_vars[0], m.x[2])
         self.assertIs(repn.linear_vars[1], aux_vars2[1])
         self.assertEqual(repn.linear_coefs[0], -6)
         self.assertEqual(repn.linear_coefs[1], -1)
         self.assertEqual(repn.quadratic_coefs[0], 1)
-        self.assertIs(repn.quadratic_vars[0][0], m.x[3])
-        self.assertIs(repn.quadratic_vars[0][1], m.x[3])
+        self.assertIs(repn.quadratic_vars[0][0], m.x[2])
+        self.assertIs(repn.quadratic_vars[0][1], m.x[2])
 
         c3 = c[2]
         self.assertIsNone(c3.lower)
@@ -803,13 +818,13 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(repn.constant, 0)
         self.assertEqual(len(repn.linear_vars), 2)
         self.assertEqual(len(repn.quadratic_vars), 1)
-        self.assertIs(repn.linear_vars[0], m.x[4])
+        self.assertIs(repn.linear_vars[0], m.x[3])
         self.assertIs(repn.linear_vars[1], aux_vars2[2])
         self.assertEqual(repn.linear_coefs[0], -6)
         self.assertEqual(repn.linear_coefs[1], -1)
         self.assertEqual(repn.quadratic_coefs[0], 1)
-        self.assertIs(repn.quadratic_vars[0][0], m.x[4])
-        self.assertIs(repn.quadratic_vars[0][1], m.x[4])
+        self.assertIs(repn.quadratic_vars[0][0], m.x[3])
+        self.assertIs(repn.quadratic_vars[0][1], m.x[3])
 
     def test_transformed_disjuncts_mapped_correctly(self):
         # we map disjuncts to disjuncts because this is a GDP -> GDP
@@ -950,7 +965,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             targets=[m.disjunction])
 
         # should be the same as before
-        self.check_transformation_block(m, 0, 72, 0, 72, -72, 96, -72, 96)
+        self.check_transformation_block(m, 0, 72, 0, 72, -72, 96, -72, 96,
+                                        partitions=[[m.x[1], m.x[2]], [m.x[3],
+                                                                       m.x[4]]])
 
         # and another_disjunction should be untransformed
         self.assertIsNone(m.b.another_disjunction.algebraic_constraint)
@@ -1663,7 +1680,10 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
 
     def test_create_using(self):
         m = models.makeNonQuadraticNonlinearGDP()
-        self.diff_apply_to_and_create_using(m, num_partitions=2)
+        self.diff_apply_to_and_create_using(m, variable_partitions=[[m.x[1],
+                                                                     m.x[2]],
+                                                                    [m.x[3],
+                                                                     m.x[4]]])
 
     def test_infeasible_value_of_P(self):
         m = models.makeNonQuadraticNonlinearGDP()
@@ -1671,7 +1691,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         self.assertRaisesRegex(
             GDP_Error,
             "Variables which appear in the "
-            "expression \(x\[3\]\*\*4 \+ x\[4\]\*\*4\)\*\*0.25 are in "
+            "expression \(x\[1\]\*\*4 \+ x\[2\]\*\*4\)\*\*0.25 are in "
             "different "
             "partitions, but this "
             "expression doesn't appear "

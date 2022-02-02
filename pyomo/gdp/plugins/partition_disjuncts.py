@@ -83,19 +83,9 @@ def arbitrary_partition(disjunction, P):
         v_set.update(get_vars_from_components(disj, Constraint,
                                               descend_into=Block, active=True))
     # assign them to partitions
-    partitions = []
-    V = len(v_set)
-    whole = floor(V/P)
-    for partition in range(V % P):
-        partitions.append(ComponentSet())
-        # add whole + 1 vars
-        for i in range(whole + 1):
-            partitions[partition].add(v_set.pop())
-    # for the rest, add whole vars
-    for partition in range(V % P, P):
-        partitions.append(ComponentSet())
-        for i in range(whole):
-            partitions[partition].add(v_set.pop())
+    partitions = [ComponentSet() for i in range(P)]
+    for i, v in enumerate(v_set):
+        partitions[i % P].add(v)
 
     return partitions
 
