@@ -320,9 +320,6 @@ class PartitionDisjuncts_Transformation(Transformation):
             Set:         False,
             SetOf:       False,
             RangeSet:    False,
-            Disjunction: False, # this actually isn't possible in this
-                                # transformation because we transform them when
-                                # we find them
             Disjunct:    self._warn_for_active_disjunct,
             Block:       False,
             ExternalFunction: False,
@@ -336,9 +333,6 @@ class PartitionDisjuncts_Transformation(Transformation):
                             " must be a ConcreteModel, Block, or Disjunct (in "
                             "the case of nested disjunctions)." %
                             (instance.name, instance.ctype))
-
-        original_log_level = logger.level
-        log_level = logger.getEffectiveLevel()
         try:
             assert not NAME_BUFFER
             self._config = self.CONFIG(kwds.pop('options', {}))
@@ -368,8 +362,6 @@ class PartitionDisjuncts_Transformation(Transformation):
             del self._transformation_blocks
             # clear the global name buffer
             NAME_BUFFER.clear()
-            # restore logging level
-            logger.setLevel(original_log_level)
 
     def _apply_to_impl(self, instance):
         self.variable_partitions = self._config.variable_partitions if \
