@@ -467,7 +467,7 @@ jobs:
       run: |
         echo ""
         echo "Clone Pyomo-model-libraries..."
-        git clone https://github.com/Pyomo/pyomo-model-libraries.git
+        git clone -b main https://github.com/Pyomo/pyomo-model-libraries.git
         echo ""
         echo "Install Pyomo..."
         echo ""
