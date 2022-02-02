@@ -243,21 +243,25 @@ class _NLWriter_impl(object):
         #
         # Tabulate the model expressions
         #
-        n_nonlinear_objs = 0
         objectives = []
+        linear_objs = []
         for obj_comp in model.component_objects(
                 Objective, active=True, descend_into=True, sort=sorter):
             for obj in obj_comp.values():
                 if not obj.active:
                     continue
                 expr = visitor.walk_expression((obj.expr, obj, 1))
-                if expr.nonlinear:
-                    n_nonlinear_objs += 1
-                objectives.append((obj, expr))
+                (objectives if expr.nonlinear else linear_objs).append(
+                    (obj, expr))
             timer.toc(f'Objective {obj_comp.name}')
+        # Order the objectives, moving all nonlinear objectives to
+        # the beginning
+        n_nonlinear_objs = len(objectives)
+        objectives.extend(linear_objs)
+        n_objs = len(objectives)
 
+        constraints = []
         linear_cons = []
-        nonlinear_cons = []
         n_ranges = 0
         n_equality = 0
         for con_comp in model.component_objects(
@@ -277,10 +281,15 @@ class _NLWriter_impl(object):
                     n_equality += 1
                 elif _type == 0:
                     n_ranges += 1
-                (nonlinear_cons if expr.nonlinear else linear_cons).append((
+                (constraints if expr.nonlinear else linear_cons).append((
                     con, expr, _type, lb, ub,
                 ))
             timer.toc(f'Constraint {con_comp.name}')
+        # Order the constraints, moving all nonlinear constraints to
+        # the beginning
+        n_nonlinear_cons = len(constraints)
+        constraints.extend(linear_cons)
+        n_cons = len(constraints)
 
         #
         # Collect constraints and objectives into the groupings
@@ -290,15 +299,9 @@ class _NLWriter_impl(object):
         # var objects themselves)
         #
 
-        # Order the constraints, moving all nonlinear constraints to
-        # the beginning
-        constraints = nonlinear_cons + linear_cons
-
         # nonzeros by (constraint, objective) component.  Keys are
-        # component id(), Values are tuples with three sets:
-        # (linear_vars, nonlinear_vars, nonzeros) [where nonzeros is the
-        # union of linear andd nonlinear].  Note that variables can
-        # appear in both linear and nonlinear sets.
+        # component id(), Values the set of nonzeros [the union of
+        # linear and nonlinear var ids].
         nz_by_comp = {}
 
         # We need to categorize the named subexpressions first so that
@@ -312,13 +315,10 @@ class _NLWriter_impl(object):
         n_subexpressions = self._count_subexpression_occurances()
         timer.toc('subexpressions')
 
-        n_objs = len(objectives)
         obj_vars_linear, obj_vars_nonlinear, obj_nnz_by_var \
             = self._categorize_vars(objectives, nz_by_comp)
         timer.toc('objectives')
 
-        n_cons = len(constraints)
-        n_nonlinear_cons = len(nonlinear_cons)
         con_vars_linear, con_vars_nonlinear, con_nnz_by_var \
             = self._categorize_vars(constraints, nz_by_comp)
         timer.toc('constraints')
