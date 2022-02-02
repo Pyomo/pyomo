@@ -772,34 +772,34 @@ appsi_operator_from_pyomo_expr(py::handle expr, py::handle var_map,
                                py::handle param_map,
                                PyomoExprTypes &expr_types) {
   std::shared_ptr<Node> res;
-  int tmp_type = expr_types.expr_type_map[py::type::of(expr)].cast<int>();
+  ExprType tmp_type = expr_types.expr_type_map[py::type::of(expr)].cast<ExprType>();
 
   switch (tmp_type) {
-  case 0: {
+  case py_float: {
     res = std::make_shared<Constant>(expr.cast<double>());
     break;
   }
-  case 1: {
+  case var: {
     res = var_map[expr_types.id(expr)].cast<std::shared_ptr<Node>>();
     break;
   }
-  case 2: {
+  case param: {
     res = param_map[expr_types.id(expr)].cast<std::shared_ptr<Node>>();
     break;
   }
-  case 3: {
+  case product: {
     res = std::make_shared<MultiplyOperator>();
     break;
   }
-  case 4: {
+  case sum: {
     res = std::make_shared<SumOperator>(expr.attr("nargs")().cast<int>());
     break;
   }
-  case 5: {
+  case negation: {
     res = std::make_shared<NegationOperator>();
     break;
   }
-  case 6: {
+  case external_func: {
     res = std::make_shared<ExternalOperator>(expr.attr("nargs")().cast<int>());
     std::shared_ptr<ExternalOperator> oper =
         std::dynamic_pointer_cast<ExternalOperator>(res);
@@ -807,15 +807,15 @@ appsi_operator_from_pyomo_expr(py::handle expr, py::handle var_map,
         expr.attr("_fcn").attr("_function").cast<std::string>();
     break;
   }
-  case 7: {
+  case power: {
     res = std::make_shared<PowerOperator>();
     break;
   }
-  case 8: {
+  case division: {
     res = std::make_shared<DivideOperator>();
     break;
   }
-  case 9: {
+  case unary_func: {
     std::string function_name = expr.attr("getname")().cast<std::string>();
     if (function_name == "exp")
       res = std::make_shared<ExpOperator>();
@@ -841,17 +841,17 @@ appsi_operator_from_pyomo_expr(py::handle expr, py::handle var_map,
       throw py::value_error("Unrecognized expression type: " + function_name);
     break;
   }
-  case 10: {
+  case linear: {
     res = std::make_shared<LinearOperator>(
         expr_types.len(expr.attr("linear_vars")).cast<int>());
     break;
   }
-  case 11: {
+  case named_expr: {
     res = appsi_operator_from_pyomo_expr(expr.attr("expr"), var_map, param_map,
                                          expr_types);
     break;
   }
-  case 12: {
+  case numeric_constant: {
     res = std::make_shared<Constant>(expr.attr("value").cast<double>());
     break;
   }
@@ -867,23 +867,23 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
                           py::handle variables, py::handle fixed_vars,
                           py::handle external_funcs,
                           PyomoExprTypes &expr_types) {
-  int tmp_type = expr_types.expr_type_map[py::type::of(expr)].cast<int>();
+  ExprType tmp_type = expr_types.expr_type_map[py::type::of(expr)].cast<ExprType>();
 
   switch (tmp_type) {
-  case 0: {
+  case py_float: {
     break;
   }
-  case 1: {
+  case var: {
     variables[expr_types.id(expr)] = expr;
     if (expr.attr("fixed").cast<bool>()) {
       fixed_vars[expr_types.id(expr)] = expr;
     }
     break;
   }
-  case 2: {
+  case param: {
     break;
   }
-  case 3: {
+  case product: {
     py::tuple args = expr.attr("_args_");
     for (py::handle arg : args) {
       prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
@@ -891,7 +891,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     }
     break;
   }
-  case 4: {
+  case sum: {
     py::tuple args = expr.attr("args");
     for (py::handle arg : args) {
       prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
@@ -899,7 +899,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     }
     break;
   }
-  case 5: {
+  case negation: {
     py::tuple args = expr.attr("_args_");
     for (py::handle arg : args) {
       prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
@@ -907,7 +907,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     }
     break;
   }
-  case 6: {
+  case external_func: {
     external_funcs[expr_types.id(expr)] = expr;
     py::tuple args = expr.attr("args");
     for (py::handle arg : args) {
@@ -916,7 +916,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     }
     break;
   }
-  case 7: {
+  case power: {
     py::tuple args = expr.attr("_args_");
     for (py::handle arg : args) {
       prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
@@ -924,7 +924,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     }
     break;
   }
-  case 8: {
+  case division: {
     py::tuple args = expr.attr("_args_");
     for (py::handle arg : args) {
       prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
@@ -932,7 +932,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     }
     break;
   }
-  case 9: {
+  case unary_func: {
     py::tuple args = expr.attr("_args_");
     for (py::handle arg : args) {
       prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
@@ -940,7 +940,7 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
     }
     break;
   }
-  case 10: {
+  case linear: {
     py::list linear_vars = expr.attr("linear_vars");
     py::list linear_coefs = expr.attr("linear_coefs");
     for (py::handle arg : linear_vars) {
@@ -955,13 +955,13 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
                          fixed_vars, external_funcs, expr_types);
     break;
   }
-  case 11: {
+  case named_expr: {
     named_exprs[expr_types.id(expr)] = expr;
     prep_for_repn_helper(expr.attr("expr"), named_exprs, variables, fixed_vars,
                          external_funcs, expr_types);
     break;
   }
-  case 12: {
+  case numeric_constant: {
     break;
   }
   default: {

@@ -456,47 +456,52 @@ public:
   void write_nl_string(std::ofstream &) override;
 };
 
+enum ExprType {py_float = 0, var = 1, param = 2, product = 3,
+  sum = 4, negation = 5, external_func = 6, power = 7, division = 8,
+  unary_func = 9, linear = 10, named_expr = 11,
+  numeric_constant = 12};
+
 class PyomoExprTypes {
 public:
   PyomoExprTypes() {
-    expr_type_map[int_] = 0;
-    expr_type_map[float_] = 0;
-    expr_type_map[np_int16] = 0;
-    expr_type_map[np_int32] = 0;
-    expr_type_map[np_int64] = 0;
-    expr_type_map[np_longlong] = 0;
-    expr_type_map[np_uint16] = 0;
-    expr_type_map[np_uint32] = 0;
-    expr_type_map[np_uint64] = 0;
-    expr_type_map[np_ulonglong] = 0;
-    expr_type_map[np_float16] = 0;
-    expr_type_map[np_float32] = 0;
-    expr_type_map[np_float64] = 0;
-    expr_type_map[ScalarVar] = 1;
-    expr_type_map[_GeneralVarData] = 1;
-    expr_type_map[ScalarParam] = 2;
-    expr_type_map[_ParamData] = 2;
-    expr_type_map[MonomialTermExpression] = 3;
-    expr_type_map[ProductExpression] = 3;
-    expr_type_map[NPV_ProductExpression] = 3;
-    expr_type_map[SumExpression] = 4;
-    expr_type_map[NPV_SumExpression] = 4;
-    expr_type_map[NegationExpression] = 5;
-    expr_type_map[NPV_NegationExpression] = 5;
-    expr_type_map[ExternalFunctionExpression] = 6;
-    expr_type_map[NPV_ExternalFunctionExpression] = 6;
-    expr_type_map[PowExpression] = 7;
-    expr_type_map[NPV_PowExpression] = 7;
-    expr_type_map[DivisionExpression] = 8;
-    expr_type_map[NPV_DivisionExpression] = 8;
-    expr_type_map[UnaryFunctionExpression] = 9;
-    expr_type_map[NPV_UnaryFunctionExpression] = 9;
-    expr_type_map[LinearExpression] = 10;
-    expr_type_map[_GeneralExpressionData] = 11;
-    expr_type_map[ScalarExpression] = 11;
-    expr_type_map[Integral] = 11;
-    expr_type_map[ScalarIntegral] = 11;
-    expr_type_map[NumericConstant] = 12;
+    expr_type_map[int_] = py_float;
+    expr_type_map[float_] = py_float;
+    expr_type_map[np_int16] = py_float;
+    expr_type_map[np_int32] = py_float;
+    expr_type_map[np_int64] = py_float;
+    expr_type_map[np_longlong] = py_float;
+    expr_type_map[np_uint16] = py_float;
+    expr_type_map[np_uint32] = py_float;
+    expr_type_map[np_uint64] = py_float;
+    expr_type_map[np_ulonglong] = py_float;
+    expr_type_map[np_float16] = py_float;
+    expr_type_map[np_float32] = py_float;
+    expr_type_map[np_float64] = py_float;
+    expr_type_map[ScalarVar] = var;
+    expr_type_map[_GeneralVarData] = var;
+    expr_type_map[ScalarParam] = param;
+    expr_type_map[_ParamData] = param;
+    expr_type_map[MonomialTermExpression] = product;
+    expr_type_map[ProductExpression] = product;
+    expr_type_map[NPV_ProductExpression] = product;
+    expr_type_map[SumExpression] = sum;
+    expr_type_map[NPV_SumExpression] = sum;
+    expr_type_map[NegationExpression] = negation;
+    expr_type_map[NPV_NegationExpression] = negation;
+    expr_type_map[ExternalFunctionExpression] = external_func;
+    expr_type_map[NPV_ExternalFunctionExpression] = external_func;
+    expr_type_map[PowExpression] = power;
+    expr_type_map[NPV_PowExpression] = power;
+    expr_type_map[DivisionExpression] = division;
+    expr_type_map[NPV_DivisionExpression] = division;
+    expr_type_map[UnaryFunctionExpression] = unary_func;
+    expr_type_map[NPV_UnaryFunctionExpression] = unary_func;
+    expr_type_map[LinearExpression] = linear;
+    expr_type_map[_GeneralExpressionData] = named_expr;
+    expr_type_map[ScalarExpression] = named_expr;
+    expr_type_map[Integral] = named_expr;
+    expr_type_map[ScalarIntegral] = named_expr;
+    expr_type_map[NumericConstant] = numeric_constant;
   }
   ~PyomoExprTypes() = default;
   py::int_ ione = 1;
