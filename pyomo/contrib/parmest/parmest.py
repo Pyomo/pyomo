@@ -388,7 +388,7 @@ class Estimator(object):
     
 
     def _Q_opt(self, ThetaVals=None, solver="ef_ipopt",
-               return_values=[], bootlist=None, calc_cov=False):
+               return_values=[], bootlist=None, calc_cov=False, cov_n=None):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
@@ -479,8 +479,8 @@ class Estimator(object):
             if calc_cov:
                 # Calculate the covariance matrix
                 
-                # Extract number of data points considered
-                n = len(self.callback_data)
+                # Number of data points considered  
+                n = cov_n
                 
                 # Extract number of fitted parameters
                 l = len(thetavals)
@@ -641,7 +641,7 @@ class Estimator(object):
             
         return samplelist
     
-    def theta_est(self, solver="ef_ipopt", return_values=[], bootlist=None, calc_cov=False): 
+    def theta_est(self, solver="ef_ipopt", return_values=[], calc_cov=False, cov_n=None): 
         """
         Parameter estimation using all scenarios in the data
 
@@ -650,11 +650,12 @@ class Estimator(object):
         solver: string, optional
             Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
         return_values: list, optional
-            List of Variable names used to return values from the model
-        bootlist: list, optional
-            List of bootstrap sample numbers, used internally when calling theta_est_bootstrap
+            List of Variable names, used to return values from the model for data reconciliation
         calc_cov: boolean, optional
             If True, calculate and return the covariance matrix (only for "ef_ipopt" solver)
+        cov_n: int, optional
+            If calc_cov=True, then the user needs to supply the number of datapoints 
+            that are used in the objective function
             
         Returns
         -------
@@ -669,10 +670,13 @@ class Estimator(object):
         """
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
-        assert isinstance(bootlist, (type(None), list))
+        assert isinstance(calc_cov, bool)
+        if calc_cov:
+            assert isinstance(cov_n, int), "The number of datapoints that are used in the objective function is required to calculate the covariance matrix"
+            assert cov_n > len(self.theta_names), "The number of datapoints must be greater than the number of parameters to estimate"
         
         return self._Q_opt(solver=solver, return_values=return_values,
-                           bootlist=bootlist, calc_cov=calc_cov)
+                           bootlist=None, calc_cov=calc_cov, cov_n=cov_n)
     
     
     def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 
@@ -723,7 +727,7 @@ class Estimator(object):
         
         bootstrap_theta = list()
         for idx, sample in local_list:
-            objval, thetavals = self.theta_est(bootlist=list(sample))
+            objval, thetavals = self._Q_opt(bootlist=list(sample))
             thetavals['samples'] = sample
             bootstrap_theta.append(thetavals)
             
@@ -782,7 +786,7 @@ class Estimator(object):
         
         lNo_theta = list()
         for idx, sample in local_list:
-            objval, thetavals = self.theta_est(bootlist=list(sample))
+            objval, thetavals = self._Q_opt(bootlist=list(sample))
             lNo_s = list(set(range(len(self.callback_data))) - set(sample))
             thetavals['lNo'] = np.sort(lNo_s)
             lNo_theta.append(thetavals)
