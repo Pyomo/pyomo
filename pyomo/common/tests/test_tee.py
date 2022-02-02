@@ -243,6 +243,9 @@ class TestFileDescriptor(unittest.TestCase):
     # the capture to be disabled for those two test specifically.
     @unittest.pytest.fixture(autouse=True)
     def capfd(self, capfd):
+        """
+        Reimplementation needed for use in unittest.TestCase subclasses
+        """
         self.capfd = capfd
 
     def test_redirect_synchronize_stdout_not_fd1(self):
