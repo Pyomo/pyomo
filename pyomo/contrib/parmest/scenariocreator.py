@@ -138,7 +138,7 @@ class ScenarioCreator(object):
 
         assert(isinstance(addtoSet, ScenarioSet))
         
-        senario_numbers = list(range(len(self.callback_data)))
+        senario_numbers = list(range(len(self.pest.callback_data)))
         
         prob = 1. / len(senario_numbers)
         for exp_num in senario_numbers:
