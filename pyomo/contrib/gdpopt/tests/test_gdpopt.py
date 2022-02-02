@@ -401,7 +401,7 @@ class TestGDPopt(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 13) <= 1E-2)
 
-    @unittest.category('expensive')
+    @unittest.pytest.mark.expensive
     def test_LOA_constrained_layout_default_init(self):
         """Test LOA with constrained layout."""
         exfile = import_file(
@@ -695,7 +695,7 @@ class TestGDPoptRIC(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 13) <= 1E-2)
 
-    @unittest.category('expensive')
+    @unittest.pytest.mark.expensive
     def test_RIC_constrained_layout_default_init(self):
         """Test RIC with constrained layout."""
         exfile = import_file(
@@ -976,7 +976,7 @@ class TestGLOA(unittest.TestCase):
 
     @unittest.skipUnless(license_available, 
                          "Global NLP solver license not available.")
-    @unittest.category('expensive')
+    @unittest.pytest.mark.expensive
     def test_GLOA_constrained_layout_default_init(self):
         """Test LOA with constrained layout."""
         exfile = import_file(

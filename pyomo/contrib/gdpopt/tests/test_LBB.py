@@ -95,7 +95,7 @@ class TestGDPopt_LBB(unittest.TestCase):
 
     @unittest.skipUnless(license_available, 
                          "Problem is too big for unlicensed BARON.")
-    @unittest.category('expensive')
+    @unittest.pytest.mark.expensive
     def test_LBB_constrained_layout(self):
         """Test LBB with constrained layout."""
         exfile = import_file(
@@ -202,7 +202,7 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
 
     @unittest.skipUnless(license_available, 
                          "Problem is too big for unlicensed BARON.")
-    @unittest.category('expensive')
+    @unittest.pytest.mark.expensive
     def test_LBB_constrained_layout(self):
         """Test LBB with constrained layout."""
         exfile = import_file(
