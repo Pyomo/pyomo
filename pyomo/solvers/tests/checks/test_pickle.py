@@ -117,6 +117,7 @@ def create_method(model, solver, io,
             if prb and sol and prb > sol:
                 def return_test(self):
                     return self.skipTest("Problem is too large for unlicensed %s solver" % solver)
+                break
             else:
                 def return_test(self):
                     return pickle_test(self)

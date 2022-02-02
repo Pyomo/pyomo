@@ -33,7 +33,7 @@ _cleanup_expected_failures = True
 # A function that returns a function that gets
 # added to a test class.
 #
-def create_method(model,
+def create_method(test_name, model,
                        solver,
                        io,
                        test_case,
@@ -126,12 +126,13 @@ def create_method(model,
         def return_test(self):
             return writer_test(self)
     else:
-        # If this solver is in demo mode
+        # Skip if solver is in demo mode
         size = getattr(test_case.model, 'size', (None, None, None))
         for prb, sol in zip(size, test_case.demo_limits):
-            if prb and sol and prb > sol:
+            if (prb and sol) and prb > sol:
                 def return_test(self):
                     return self.skipTest("Problem is too large for unlicensed %s solver" % solver)
+                break
             else:
                 def return_test(self):
                     return writer_test(self)
@@ -167,14 +168,14 @@ for key, value in generate_scenarios():
 
     # Symbolic labels
     test_name = "test_"+solver+"_"+io +"_symbolic_labels"
-    test_method = create_method(model, solver, io, value, True)
+    test_method = create_method(test_name, model, solver, io, value, True)
     if test_method is not None:
         setattr(cls, test_name, test_method)
         test_method = None
 
     # Non-symbolic labels
     test_name = "test_"+solver+"_"+io +"_nonsymbolic_labels"
-    test_method = create_method(model, solver, io, value, False)
+    test_method = create_method(test_name, model, solver, io, value, False)
     if test_method is not None:
         setattr(cls, test_name, test_method)
         test_method = None
