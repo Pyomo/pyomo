@@ -17,6 +17,7 @@ from pyomo.common.collections import ComponentSet, ComponentMap, Bunch
 from pyomo.core.base import Suffix, Var, Constraint, SOSConstraint, Objective
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
@@ -155,10 +156,8 @@ class CPLEXDirect(DirectSolver):
         self._capabilities.sos2 = True
 
     def _apply_solver(self):
-        if not self._save_results:
-            for block in self._pyomo_model.block_data_objects(descend_into=True, active=True):
-                for var in block.component_data_objects(ctype=Var, descend_into=False, active=True, sort=False):
-                    var.stale = True
+        StaleFlagManager.mark_all_as_stale()
+
         # In recent versions of CPLEX it is helpful to manually open the
         # log file and then explicitly close it after CPLEX is finished.
         # This ensures that the file is closed (and unlocked) on Windows
@@ -742,7 +741,6 @@ class CPLEXDirect(DirectSolver):
                 for name, val in zip(var_names, var_vals):
                     pyomo_var = self._solver_var_to_pyomo_var_map[name]
                     if self._referenced_variables[pyomo_var] > 0:
-                        pyomo_var.stale = False
                         soln_variables[name] = {"Value": val}
 
                 if extract_reduced_costs:
@@ -789,7 +787,7 @@ class CPLEXDirect(DirectSolver):
                         soln_constraints[con_name]["Slack"] = qudratic_slacks[i]
         elif self._load_solutions:
             if cpxprob.solution.get_solution_type() > 0:
-                self._load_vars()
+                self.load_vars()
 
                 if extract_reduced_costs:
                     self._load_rc()
@@ -841,7 +839,6 @@ class CPLEXDirect(DirectSolver):
 
         for pyomo_var, val in zip(vars_to_load, vals):
             if self._referenced_variables[pyomo_var] > 0:
-                pyomo_var.stale = False
                 pyomo_var.set_value(val, skip_validation=True)
 
     def _load_rc(self, vars_to_load=None):

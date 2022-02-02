@@ -41,6 +41,11 @@ ExpectedFailures = {}
 # the solver is inconsistent in returning duals.
 MissingSuffixFailures = {}
 
+# These are tests that must be skipped for certain solvers / versions
+# because attempting the solve will break the test suite (usually due to
+# infinite loops / timeouts)
+SkipTests = {}
+
 #
 # MOSEK
 #
@@ -273,6 +278,28 @@ ExpectedFailures['scip', 'nl', 'SOS1_simple'] = \
 #
 # BARON
 #
+SkipTests['baron', 'bar', 'LP_trivial_constraints'] = (
+    lambda v: v[:3] == (22, 1, 19),
+    'BARON 22.1.19 hits an infinite loop for this test case'
+)
+
+for prob in ('QP_simple_nosuffixes', 'QP_simple_nosuffixes_kernel',
+             'QP_simple', 'QP_simple_kernel',
+             'MIQP_simple', 'MIQP_simple_kernel',
+             'MILP_simple', 'MILP_simple_kernel',
+             'LP_simple', 'LP_simple_kernel',
+             'LP_block', 'LP_block_kernel'):
+    ExpectedFailures['baron', 'bar', prob] = (
+        lambda v: v[:3] == (22, 1, 19),
+        'BARON 22.1.19 reports model as infeasible'
+    )
+
+for prob in ('LP_unbounded', 'LP_unbounded_kernel'):
+    ExpectedFailures['baron', 'bar', prob] = (
+        lambda v: v[:3] == (22, 1, 19),
+        'BARON 22.1.19 reports model as optimal'
+    )
+
 #
 # The following were necessary before we started adding the 'WantDual'
 # option when a user explicitly defines a 'dual' or 'rc' suffix to
@@ -371,6 +398,7 @@ def test_scenarios(arg=None):
             continue
         for solver, io in sorted(test_solver_cases()):
             _solver_case = test_solver_cases(solver, io)
+            _ver = _solver_case.version
 
             # Skip this test case if the solver doesn't support the
             # capabilities required by the model
@@ -379,27 +407,33 @@ def test_scenarios(arg=None):
 
             # Set status values for expected failures
             exclude_suffixes = {}
-            status='ok'
-            msg=""
+            status = 'ok'
+            msg = ""
+            case_skip = SkipTests.get((solver, io, _model.description), None)
+            case_suffix = MissingSuffixFailures.get(
+                (solver, io, _model.description), None)
+            case_fail = ExpectedFailures.get(
+                (solver, io, _model.description), None)
             if not _solver_case.available:
-                status='skip'
-                msg="Skipping test because solver %s (%s) is unavailable" % (solver,io)
-            if (solver,io,_model.description) in ExpectedFailures:
-                case = ExpectedFailures[solver,io,_model.description]
-                if _solver_case.version is not None and\
-                   case[0](_solver_case.version):
-                    status='expected failure'
-                    msg=case[1]
-            if (solver,io,_model.description) in MissingSuffixFailures:
-                case = MissingSuffixFailures[solver,io,_model.description]
-                if _solver_case.version is not None and\
-                   case[0](_solver_case.version):
-                    if type(case[1]) is dict:
-                        exclude_suffixes.update(case[1])
-                    else:
-                        for x in case[1]:
-                            exclude_suffixes[x] = (True, {})
-                    msg=case[2]
+                status = 'skip'
+                msg = ("Skipping test because solver %s (%s) is unavailable"
+                       % (solver, io))
+            elif (case_skip is not None and
+                  _ver is not None and case_skip[0](_ver)):
+                status = 'skip'
+                msg = case_skip[1]
+            elif (case_fail is not None and
+                  _ver is not None and case_fail[0](_ver)):
+                status = 'expected failure'
+                msg = case_fail[1]
+            elif (case_suffix is not None and
+                  _ver is not None and case_suffix[0](_ver)):
+                if type(case_suffix[1]) is dict:
+                    exclude_suffixes.update(case_suffix[1])
+                else:
+                    for x in case_suffix[1]:
+                        exclude_suffixes[x] = (True, {})
+                msg = case_suffix[2]
 
             # Return scenario dimensions and scenario information
             yield (model, solver, io), Bunch(

@@ -27,6 +27,7 @@ from pyomo.core.base import IntegerSet
 from pyomo.core.expr.numeric_expr import (
     NPV_ProductExpression, NPV_MaxExpression, NPV_MinExpression,
 )
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.environ import (
     AbstractModel, ConcreteModel, Set, Param, Var, VarList, RangeSet,
     Suffix, Expression, NonPositiveReals, PositiveReals, Reals, RealSet,
@@ -1569,6 +1570,32 @@ class MiscVarTests(unittest.TestCase):
         m.p = 3 * units.kg
         self.assertEqual(m.x.ub, 3000)
 
+    def test_stale(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=0)
+        self.assertFalse(m.x.stale)
+        m.y = Var()
+        self.assertTrue(m.y.stale)
+
+        StaleFlagManager.mark_all_as_stale(delayed=False)
+        self.assertTrue(m.x.stale)
+        self.assertTrue(m.y.stale)
+        m.x = 1
+        self.assertFalse(m.x.stale)
+        self.assertTrue(m.y.stale)
+        m.y = 2
+        self.assertFalse(m.x.stale)
+        self.assertFalse(m.y.stale)
+
+        StaleFlagManager.mark_all_as_stale(delayed=True)
+        self.assertFalse(m.x.stale)
+        self.assertFalse(m.y.stale)
+        m.x = 1
+        self.assertFalse(m.x.stale)
+        self.assertTrue(m.y.stale)
+        m.y = 2
+        self.assertFalse(m.x.stale)
+        self.assertFalse(m.y.stale)
 
 if __name__ == "__main__":
     unittest.main()
