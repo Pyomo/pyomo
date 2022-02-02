@@ -240,11 +240,16 @@ def group_data(data, groupby_column_name, use_mean=None):
     grouped_data: list of dictionaries
         Grouped data
     """
+    if use_mean is None:
+        use_mean_list = []
+    else:
+        use_mean_list = use_mean
+        
     grouped_data = []
     for exp_num, group in data.groupby(data[groupby_column_name]):
         d = {}
         for col in group.columns:
-            if col in use_mean:
+            if col in use_mean_list:
                 d[col] = group[col].mean()
             else:
                 d[col] = list(group[col])
