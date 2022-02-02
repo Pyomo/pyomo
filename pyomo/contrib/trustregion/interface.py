@@ -22,7 +22,7 @@ from pyomo.core.expr.visitor import (identify_variables,
                                      ExpressionReplacementVisitor)
 from pyomo.core.expr.numeric_expr import ExternalFunctionExpression
 from pyomo.core.expr.numvalue import native_types
-from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
+from pyomo.opt import (SolverFactory, check_optimal_termination)
 
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
@@ -97,9 +97,6 @@ class TRFInterface(object):
         # TODO: Provide an API for users to set this only to substitute
         # a subset of identified external functions.
         # Also rename to "efFilterSet" or something similar.
-
-    def __exit__(self):
-        pass
 
     def replaceEF(self, expr):
         """
@@ -379,9 +376,7 @@ class TRFInterface(object):
                                     keepfiles=self.config.keepfiles,
                                     tee=self.config.tee)
                                                     
-        if ((results.solver.status != SolverStatus.ok)
-            or (results.solver.termination_condition !=
-                 TerminationCondition.optimal)):
+        if not check_optimal_termination(results):
             raise ArithmeticError(
                 'EXIT: Model solve failed with status {} and termination'
                 ' condition(s) {}.'.format(

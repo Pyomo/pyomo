@@ -22,7 +22,8 @@ from pyomo.contrib.trustregion.TRF import trust_region_method, _trf_config
 
 logger = logging.getLogger('pyomo.contrib.trustregion')
 
-@unittest.skipIf(not SolverFactory('ipopt').available(False), "The IPOPT solver is not available")
+@unittest.skipIf(not SolverFactory('ipopt').available(False),
+                 "The IPOPT solver is not available")
 class TestTrustRegionConfig(unittest.TestCase):
 
     def setUp(self):
@@ -90,62 +91,79 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertEqual(CONFIG.filter_param_gamma_f, 0.01)
 
     def test_config_vars(self):
+        # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 1.0)
+        self.assertEqual(self.TRF.config.trust_radius, 1.0)
 
         # Both persistent and local values should be 1.0
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 1.0)
+        self.assertEqual(self.TRF.local_config.trust_radius, 1.0)
 
     def test_solve_with_new_kwdval(self):
         # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 1.0)
+        self.assertEqual(self.TRF.config.trust_radius, 1.0)
 
+        # Set local to 2.0; persistent should still be 1.0
         solve_status = self.try_solve(trust_radius=2.0)
         self.assertTrue(solve_status)
-        self.assertEqual(self.TRF.config.trust_radius, 2.0)
+        self.assertEqual(self.TRF.config.trust_radius, 1.0)
+        self.assertEqual(self.TRF.local_config.trust_radius, 2.0)
 
     def test_update_kwdval(self):
         # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 1.0)
+        self.assertEqual(self.TRF.config.trust_radius, 1.0)
 
-        self.TRF._CONFIG.trust_radius = 4.0
+        # Set persistent value to 4.0; local value should also be set to 4.0
+        self.TRF.config.trust_radius = 4.0
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 4.0)
+        self.assertEqual(self.TRF.local_config.trust_radius, 4.0)
 
     def test_update_kwdval_solve_with_new_kwdval(self):
         # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 1.0)
+        self.assertEqual(self.TRF.config.trust_radius, 1.0)
 
-        self.TRF._CONFIG.trust_radius = 4.0
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 4.0)
+        # Set persistent value to 4.0;
+        self.TRF.config.trust_radius = 4.0
+        self.assertEqual(self.TRF.config.trust_radius, 4.0)
+
+        # Set local to 2.0; persistent should still be 4.0
+        solve_status = self.try_solve(trust_radius=2.0)
+        self.assertTrue(solve_status)
+        self.assertEqual(self.TRF.config.trust_radius, 4.0)
+        self.assertEqual(self.TRF.local_config.trust_radius, 2.0)
 
     def test_initialize_with_kwdval(self):
         # Initialized with 3.0
         self.TRF = SolverFactory('trustregion', trust_radius=3.0)
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 3.0)
+        self.assertEqual(self.TRF.config.trust_radius, 3.0)
 
+        # Both persistent and local values should be set to 3.0
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 3.0)
+        self.assertEqual(self.TRF.local_config.trust_radius, 3.0)
 
     def test_initialize_with_kwdval_solve_with_new_kwdval(self):
         # Initialized with 3.0
         self.TRF = SolverFactory('trustregion', trust_radius=3.0)
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 3.0)
+        self.assertEqual(self.TRF.config.trust_radius, 3.0)
 
+        # Persistent should be 3.0, local should be 2.0
         solve_status = self.try_solve(trust_radius=2.0)
         self.assertTrue(solve_status)
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 3.0)
-        self.assertEqual(self.TRF.config.trust_radius, 2.0)
+        self.assertEqual(self.TRF.config.trust_radius, 3.0)
+        self.assertEqual(self.TRF.local_config.trust_radius, 2.0)
 
 
-@unittest.skipIf(not SolverFactory('ipopt').available(False), "The IPOPT solver is not available")
+@unittest.skipIf(not SolverFactory('ipopt').available(False),
+                 "The IPOPT solver is not available")
 class TestTrustRegionMethod(unittest.TestCase):
 
     def setUp(self):
