@@ -295,8 +295,14 @@ def ROSolver_iterative_solve(model_data, config):
                                    master_soln=master_soln)
             return model_data, separation_solns
 
-        # === Check if we terminate due to robust optimality or feasibility
-        if not any(s.found_violation for sep_soln_list in separation_solns for s in sep_soln_list) and is_global:
+        # === Check if we terminate due to robust optimality or feasibility,
+        #     or in the event of bypassing global separation, no violations
+        if (not any(s.found_violation for sep_soln_list in separation_solns for s in sep_soln_list)
+            and (is_global or config.bypass_global_separation)):
+            output_logger(
+                    config=config,
+                    bypass_global_separation=config.bypass_global_separation
+            )
             if config.solve_master_globally and config.objective_focus is ObjectiveType.worst_case:
                 output_logger(config=config, robust_optimal=True)
                 termination_condition = pyrosTerminationCondition.robust_optimal
