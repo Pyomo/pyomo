@@ -618,22 +618,15 @@ void SumOperator::write_nl_string(std::ofstream &f) {
 void LinearOperator::write_nl_string(std::ofstream &f) {
   bool has_const =
       (!constant->is_constant_type()) || (constant->evaluate() != 0);
-  if (has_const) {
-    if (nterms == 1) {
-      f << "o0\n";
-    } else {
-      f << "o54\n";
-      f << nterms + 1 << "\n";
-    }
-    f << "n" << constant->evaluate() << "\n";
+  unsigned int n_sum_args = nterms + (has_const ? 1 : 0);
+  if (n_sum_args == 2) {
+    f << "o0\n";
   } else {
-    if (nterms == 2) {
-      f << "o0\n";
-    } else {
-      f << "o54\n";
-      f << nterms << "\n";
-    }
+    f << "o54\n";
+    f << n_sum_args << "\n";
   }
+  if (has_const)
+    f << "n" << constant->evaluate() << "\n";
   for (unsigned int ndx = 0; ndx < nterms; ++ndx) {
     f << "o2\n";
     f << "n" << coefficients[ndx]->evaluate() << "\n";
