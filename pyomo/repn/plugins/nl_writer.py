@@ -780,7 +780,7 @@ class _NLWriter_impl(object):
                             expr_info.linear[i] = 0
                 else:
                     nz = nonlinear_vars
-                    expr.linear = {i: 0 for i in nz}
+                    expr_info.linear = {i: 0 for i in nz}
                 all_nonlinear_vars.update(nonlinear_vars)
 
             # Update the count of components that each variable appears in
@@ -956,7 +956,10 @@ class AMPLRepn(object):
             if other.linear:
                 self.linear.extend(other.linear)
             if other.nonlinear:
-                self.nonlinear.extend(other.nonlinear)
+                if other.nonlinear.__class__ is list:
+                    self.nonlinear.extend(other.nonlinear)
+                else:
+                    self.nonlinear.append(other.nonlinear)
         elif _type is _CONSTANT:
             self.const += other[1]
 
