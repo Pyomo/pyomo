@@ -15,7 +15,8 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.trustregion.util import minIgnoreNone, maxIgnoreNone
 from pyomo.core import (
     Block, Param, VarList, Constraint,
-    Objective, value, Set, ExternalFunction
+    Objective, value, Set, ExternalFunction, maximize,
+    minimize
     )
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.visitor import (identify_variables,
@@ -199,6 +200,9 @@ class TRFInterface(object):
             raise ValueError(
                 "replaceExternalFunctionsWithVariables: "
                 "TrustRegion only supports models with a single active Objective.")
+        if self.data.objs[0].sense == maximize:
+            self.data.objs[0].expr = -1* self.data.objs[0].expr
+            self.data.objs[0].sense = minimize
         self._remove_ef_from_expr(self.data.objs[0])
 
         for i in self.data.ef_outputs:

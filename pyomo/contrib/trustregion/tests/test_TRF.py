@@ -99,7 +99,6 @@ class TestTrustRegionConfig(unittest.TestCase):
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 1.0)
-        self.assertEqual(self.TRF.local_config.trust_radius, 1.0)
 
     def test_solve_with_new_kwdval(self):
         # Initialized with 1.0
@@ -110,7 +109,6 @@ class TestTrustRegionConfig(unittest.TestCase):
         solve_status = self.try_solve(trust_radius=2.0)
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 1.0)
-        self.assertEqual(self.TRF.local_config.trust_radius, 2.0)
 
     def test_update_kwdval(self):
         # Initialized with 1.0
@@ -122,7 +120,6 @@ class TestTrustRegionConfig(unittest.TestCase):
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 4.0)
-        self.assertEqual(self.TRF.local_config.trust_radius, 4.0)
 
     def test_update_kwdval_solve_with_new_kwdval(self):
         # Initialized with 1.0
@@ -137,7 +134,6 @@ class TestTrustRegionConfig(unittest.TestCase):
         solve_status = self.try_solve(trust_radius=2.0)
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 4.0)
-        self.assertEqual(self.TRF.local_config.trust_radius, 2.0)
 
     def test_initialize_with_kwdval(self):
         # Initialized with 3.0
@@ -148,7 +144,6 @@ class TestTrustRegionConfig(unittest.TestCase):
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 3.0)
-        self.assertEqual(self.TRF.local_config.trust_radius, 3.0)
 
     def test_initialize_with_kwdval_solve_with_new_kwdval(self):
         # Initialized with 3.0
@@ -159,7 +154,6 @@ class TestTrustRegionConfig(unittest.TestCase):
         solve_status = self.try_solve(trust_radius=2.0)
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 3.0)
-        self.assertEqual(self.TRF.local_config.trust_radius, 2.0)
 
 
 @unittest.skipIf(not SolverFactory('ipopt').available(False),

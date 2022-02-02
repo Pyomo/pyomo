@@ -400,8 +400,8 @@ class TrustRegionSolver(object):
             The default is 0 (i.e., no basis function rule.)
 
         """
-        self.local_config = self.config(kwds.pop('options', {}))
-        self.local_config.set_value(kwds)
+        config = self.config(kwds.pop('options', {}))
+        config.set_value(kwds)
         if ext_fcn_surrogate_map_rule is None:
             # If the user does not pass us a "basis" function,
             # we default to 0.
@@ -409,5 +409,5 @@ class TrustRegionSolver(object):
         result = trust_region_method(model,
                             degrees_of_freedom_variables,
                             ext_fcn_surrogate_map_rule,
-                            self.local_config)
+                            config)
         return result
