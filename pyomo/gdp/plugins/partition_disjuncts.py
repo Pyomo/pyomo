@@ -23,7 +23,7 @@ from pyomo.core import ( Block, Constraint, Var, SortComponents, Transformation,
                          NonNegativeIntegers, value, ConcreteModel, Objective,
                          ComponentMap, BooleanVar, LogicalConstraint, Connector,
                          Expression, Suffix, Param, Set, SetOf, RangeSet,
-                         Reference, Binary, LogicalConstraintList)
+                         Reference, Binary, LogicalConstraintList, maximize)
 from pyomo.core.base.external import ExternalFunction
 from pyomo.network import Port
 from pyomo.common.collections import ComponentSet
