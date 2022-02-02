@@ -213,7 +213,8 @@ class TestFileDescriptor(unittest.TestCase):
             F.write("to_fd1_2\n")
             F.flush()
 
-    def test_redirect_synchronize_stdout(self):
+    def test_redirect_synchronize_stdout(self, capsys, capfd):
+        capfd.disabled()
         r,w = os.pipe()
         os.dup2(w, 1)
         sys.stdout = os.fdopen(1, 'w', closefd=False)
@@ -225,7 +226,8 @@ class TestFileDescriptor(unittest.TestCase):
             os.close(1)
             self.assertEqual(FILE.read(), "to_stdout_2\nto_fd1_2\n")
 
-    def test_redirect_no_synchronize_stdout(self):
+    def test_redirect_no_synchronize_stdout(self, capsys, capfd):
+        capfd.disabled()
         r,w = os.pipe()
         os.dup2(w, 1)
         sys.stdout = os.fdopen(1, 'w', closefd=False)
