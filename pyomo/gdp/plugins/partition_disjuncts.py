@@ -116,6 +116,7 @@ def compute_optimal_bounds(expr, global_constraints, opt):
     obj = Objective(expr=expr)
     global_constraints.add_component(unique_component_name(global_constraints,
                                                            "tmp_obj"), obj)
+    # Solve first minimizing, to get a lower bound
     results = opt.solve(global_constraints)
     if verify_successful_solve(results) is not NORMAL:
         logger.warning("Problem to find lower bound for expression %s"
@@ -125,7 +126,8 @@ def compute_optimal_bounds(expr, global_constraints, opt):
         # This has some risks, if you're using a solver the gives a lower bound,
         # getting that would be better. But this is why this is a callback.
         LB = value(obj.expr)
-    obj.sense = -1
+    # Now solve maximizing, to get an upper bound
+    obj.sense = maximize
     results = opt.solve(global_constraints)
     if verify_successful_solve(results) is not NORMAL:
         logger.warning("Problem to find upper bound for expression %s"
