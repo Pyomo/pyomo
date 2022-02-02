@@ -20,14 +20,12 @@ from pyomo.repn import generate_standard_repn
 from pyomo.core.expr import current as EXPR
 import pyomo.environ as pyo
 from math import copysign
-from pyomo.contrib.mindtpy.util import get_integer_solution
+from pyomo.contrib.mindtpy.util import get_integer_solution, update_dual_bound, update_primal_bound
 from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time, time_code
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem, handle_nlp_subproblem_tc
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import Constraint, minimize, value, maximize
 cplex, cplex_available = attempt_import('cplex')
-
-logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_available else object):
@@ -37,19 +35,26 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                                   skip_stale=False, skip_fixed=True,
                                   ignore_integrality=False):
         """This function copies variable values from one list to another.
-        Rounds to Binary/Integer if necessary
-        Sets to zero for NonNegativeReals if necessary
+        
+        Rounds to Binary/Integer if necessary.
+        Sets to zero for NonNegativeReals if necessary.
 
         Parameters
         ----------
-        opt: SolverFactory
-            the mip solver
-        from_list: variable list
-            contains variables and their values
-        to_list: variable list
-            contains the variables that need to set value
-        config: ConfigBlock
-            contains the specific configurations for the algorithm
+        opt : SolverFactory
+            The cplex_persistent solver.
+        from_list : list
+            The variables that provides the values to copy from.
+        to_list : list
+            The variables that need to set value.
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        skip_stale : bool, optional
+            Whether to skip the stale variables, by default False.
+        skip_fixed : bool, optional
+            Whether to skip the fixed variables, by default True.
+        ignore_integrality : bool, optional
+            Whether to ignore the integrality of integer variables, by default False.
         """
         for v_from, v_to in zip(from_list, to_list):
             if skip_stale and v_from.stale:
@@ -59,9 +64,17 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             v_val = self.get_values(
                 opt._pyomo_var_to_solver_var_map[v_from])
             try:
+                # We don't want to trigger the reset of the global stale
+                # indicator, so we will set this variable to be "stale",
+                # knowing that set_value will switch it back to "not
+                # stale"
+                v_to.stale = True
+                # NOTE: PEP 2180 changes the var behavior so that domain
+                # / bounds violations no longer generate exceptions (and
+                # instead log warnings).  This means that the following
+                # will always succeed and the ValueError should never be
+                # raised.
                 v_to.set_value(v_val)
-                if skip_stale:
-                    v_to.stale = False
             except ValueError:
                 # Snap the value to the bounds
                 if v_to.has_lb() and v_val < v_to.lb and v_to.lb - v_val <= config.variable_tolerance:
@@ -80,30 +93,28 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
     def add_lazy_oa_cuts(self, target_model, dual_values, solve_data, config, opt,
                          linearize_active=True,
                          linearize_violated=True):
-        """
-        Linearizes nonlinear constraints; add the OA cuts through Cplex inherent function self.add()
-        For nonconvex problems, turn on 'config.add_slack'. Slack variables will
-        always be used for nonlinear equality constraints.
+        """Linearizes nonlinear constraints; add the OA cuts through Cplex inherent function self.add()
+        For nonconvex problems, turn on 'config.add_slack'. Slack variables will always be used for 
+        nonlinear equality constraints.
+
         Parameters
         ----------
-        target_model:
-            this is the MIP/MILP model for the OA algorithm; we want to add the OA cuts to 'target_model'
-        dual_values:
-            contains the value of the duals for each constraint
-        solve_data: MindtPy Data Container
-            data container that holds solve-instance data
-        config: ConfigBlock
-            contains the specific configurations for the algorithm
-        opt: SolverFactory
-            the mip solver
-        linearize_active: bool, optional
-            this parameter acts as a Boolean flag that signals whether the linearized constraint is active
-        linearize_violated: bool, optional
-            this parameter acts as a Boolean flag that signals whether the nonlinear constraint represented by the
-            linearized constraint has been violated
+        target_model : Pyomo model
+            The MIP main problem.
+        dual_values : list
+            The value of the duals for each constraint.
+        solve_data : MindtPySolveData
+            Data container that holds solve-instance data.
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        opt : SolverFactory
+            The cplex_persistent solver.
+        linearize_active : bool, optional
+            Whether to linearize the active nonlinear constraints, by default True.
+        linearize_violated : bool, optional
+            Whether to linearize the violated nonlinear constraints, by default True.
         """
-
-        config.logger.info('Adding OA cuts')
+        config.logger.debug('Adding OA cuts')
         with time_code(solve_data.timing, 'OA cut generation'):
             for index, constr in enumerate(target_model.MindtPy_utils.constraint_list):
                 if constr.body.polynomial_degree() in {0, 1}:
@@ -155,21 +166,22 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                                  rhs=value(constr.lower) + cplex_rhs)
 
     def add_lazy_affine_cuts(self, solve_data, config, opt):
-        """
-        Adds affine cuts using MCPP; add affine cuts through Cplex inherent function self.add()
+        """Adds affine cuts using MCPP.
+
+        Add affine cuts through Cplex inherent function self.add().
 
         Parameters
         ----------
-        solve_data: MindtPy Data Container
-            data container that holds solve-instance data
-        config: ConfigBlock
-            contains the specific configurations for the algorithm
-        opt: SolverFactory
-            the mip solver
+        solve_data : MindtPySolveData
+            Data container that holds solve-instance data.
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        opt : SolverFactory
+            The cplex_persistent solver.
         """
         with time_code(solve_data.timing, 'Affine cut generation'):
             m = solve_data.mip
-            config.logger.info('Adding affine cuts')
+            config.logger.debug('Adding affine cuts')
             counter = 0
 
             for constr in m.MindtPy_utils.nonlinear_constraint_list:
@@ -245,21 +257,27 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             config.logger.info('Added %s affine cuts' % counter)
 
     def add_lazy_no_good_cuts(self, var_values, solve_data, config, opt, feasible=False):
-        """
-        Adds no-good cuts; add the no-good cuts through Cplex inherent function self.add()
+        """Adds no-good cuts.
+
+        Add the no-good cuts through Cplex inherent function self.add().
 
         Parameters
         ----------
-        var_values: list
-            values of the current variables, used to generate the cut
-        solve_data: MindtPy Data Container
-            data container that holds solve-instance data
-        config: ConfigBlock
-            contains the specific configurations for the algorithm
-        feasible: bool, optional
-            boolean indicating if integer combination yields a feasible or infeasible NLP
-        opt: SolverFactory
-            the mip solver
+        var_values : list
+            The variable values of the incumbent solution, used to generate the cut.
+        solve_data : MindtPySolveData
+            Data container that holds solve-instance data.
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        opt : SolverFactory
+            The cplex_persistent solver.
+        feasible : bool, optional
+            Whether the integer combination yields a feasible or infeasible NLP, by default False.
+
+        Raises
+        ------
+        ValueError
+            The value of binary variable is not 0 or 1.
         """
         if not config.add_no_good_cuts:
             return
@@ -276,6 +294,11 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             for var, val in zip(MindtPy.variable_list, var_values):
                 if not var.is_binary():
                     continue
+                # We don't want to trigger the reset of the global stale
+                # indicator, so we will set this variable to be "stale",
+                # knowing that set_value will switch it back to "not
+                # stale"
+                var.stale = True
                 var.set_value(val, skip_validation=True)
 
             # check to make sure that binary variables are all 0 or 1
@@ -299,20 +322,21 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                      rhs=1 - cplex_no_good_rhs)
 
     def handle_lazy_main_feasible_solution(self, main_mip, solve_data, config, opt):
-        """ This function is called during the branch and bound of main mip, more exactly when a feasible solution is found and LazyCallback is activated.
+        """This function is called during the branch and bound of main mip, more 
+        exactly when a feasible solution is found and LazyCallback is activated.
         Copy the result to working model and update upper or lower bound.
-        In LP-NLP, upper or lower bound are updated during solving the main problem
+        In LP-NLP, upper or lower bound are updated during solving the main problem.
 
         Parameters
         ----------
-        main_mip: Pyomo model
-            the MIP main problem
-        solve_data: MindtPy Data Container
-            data container that holds solve-instance data
-        config: ConfigBlock
-            contains the specific configurations for the algorithm
-        opt: SolverFactory
-            the mip solver
+        main_mip : Pyomo model
+            The MIP main problem.
+        solve_data : MindtPySolveData
+            Data container that holds solve-instance data.
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        opt : SolverFactory
+            The cplex_persistent solver.
         """
         # proceed. Just need integer values
 
@@ -321,37 +345,25 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                                        main_mip.MindtPy_utils.variable_list,
                                        solve_data.working_model.MindtPy_utils.variable_list,
                                        config)
-        if solve_data.objective_sense == minimize:
-            solve_data.LB = max(
-                self.get_best_objective_value(), solve_data.LB)
-            solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-            solve_data.LB_progress.append(solve_data.LB)
-        else:
-            solve_data.UB = min(
-                self.get_best_objective_value(), solve_data.UB)
-            solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-            solve_data.UB_progress.append(solve_data.UB)
-        config.logger.info(
-            'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s  TIME: %s'
-            % (solve_data.mip_iter, self.get_objective_value(), self.get_best_objective_value(),
-                solve_data.LB, solve_data.UB, round(get_main_elapsed_time(
-                    solve_data.timing), 2)))
+        update_dual_bound(solve_data, self.get_best_objective_value())
+        config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'restrLP', self.get_objective_value(),
+                                                           solve_data.LB, solve_data.UB, solve_data.rel_gap, get_main_elapsed_time(solve_data.timing)))
 
     def handle_lazy_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
-        """
-        This function copies  result to mip(explaination see below), updates bound, adds OA and no-good cuts,
-        stores best solution if new one is best
+        """This function copies the optimal solution of the fixed NLP subproblem to the MIP
+        main problem(explanation see below), updates bound, adds OA and no-good cuts, 
+        stores incumbent solution if it has been improved.
 
         Parameters
         ----------
-        fixed_nlp: Pyomo model
-            Fixed-NLP from the model
-        solve_data: MindtPy Data Container
-            data container that holds solve-instance data
-        config: ConfigBlock
-            contains the specific configurations for the algorithm
-        opt: SolverFactory
-            the mip solver
+        fixed_nlp : Pyomo model
+            Integer-variable-fixed NLP model.
+        solve_data : MindtPySolveData
+            Data container that holds solve-instance data.
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        opt : SolverFactory
+            The cplex_persistent solver.
         """
         if config.calculate_dual:
             for c in fixed_nlp.tmp_duals:
@@ -362,19 +374,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         else:
             dual_values = None
         main_objective = fixed_nlp.MindtPy_utils.objective_list[-1]
-        if solve_data.objective_sense == minimize:
-            solve_data.UB = min(value(main_objective.expr), solve_data.UB)
-            solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
-            solve_data.UB_progress.append(solve_data.UB)
-        else:
-            solve_data.LB = max(value(main_objective.expr), solve_data.LB)
-            solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
-            solve_data.LB_progress.append(solve_data.LB)
-
-        config.logger.info(
-            'Fixed-NLP {}: OBJ: {}  LB: {}  UB: {}  TIME: {}'
-            .format(solve_data.nlp_iter, value(main_objective.expr), solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing), 2)))
-
+        update_primal_bound(solve_data, value(main_objective.expr))
         if solve_data.solution_improved:
             solve_data.best_solution_found = fixed_nlp.clone()
             solve_data.best_solution_found_time = get_main_elapsed_time(
@@ -386,6 +386,12 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                 else:
                     solve_data.stored_bound.update(
                         {solve_data.LB: solve_data.UB})
+        config.logger.info(
+            solve_data.fixed_nlp_log_formatter.format('*' if solve_data.solution_improved else ' ',
+                                                      solve_data.nlp_iter, 'Fixed NLP', value(
+                                                          main_objective.expr),
+                                                      solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                      get_main_elapsed_time(solve_data.timing)))
 
         # In OA algorithm, OA cuts are generated based on the solution of the subproblem
         # We need to first copy the value of variables from the subproblem and then add cuts
@@ -406,17 +412,18 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             self.add_lazy_no_good_cuts(var_values, solve_data, config, opt)
 
     def handle_lazy_subproblem_infeasible(self, fixed_nlp, solve_data, config, opt):
-        """
-        Solves feasibility problem and adds cut according to the specified strategy
+        """Solves feasibility NLP subproblem and adds cuts according to the specified strategy.
 
         Parameters
         ----------
-        solve_data: MindtPy Data Container
-            data container that holds solve-instance data
-        config: ConfigBlock
-            contains the specific configurations for the algorithm
-        opt: SolverFactory
-            the mip solver
+        fixed_nlp : Pyomo model
+            Integer-variable-fixed NLP model.
+        solve_data : MindtPySolveData
+            Data container that holds solve-instance data.
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        opt : SolverFactory
+            The cplex_persistent solver.
         """
         # TODO try something else? Reinitialize with different initial
         # value?
@@ -456,18 +463,24 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
 
     def handle_lazy_subproblem_other_termination(self, fixed_nlp, termination_condition,
                                                  solve_data, config):
-        """
-        Handles the result of the latest iteration of solving the NLP subproblem given a solution that is neither optimal
-        nor infeasible.
+        """Handles the result of the latest iteration of solving the NLP subproblem given
+        a solution that is neither optimal nor infeasible.
 
         Parameters
         ----------
-        termination_condition: Pyomo TerminationCondition
-            the termination condition of the NLP subproblem
-        solve_data: MindtPy Data Container
-            data container that holds solve-instance data
-        config: ConfigBlock
-            contains the specific configurations for the algorithm
+        fixed_nlp : Pyomo model
+            Integer-variable-fixed NLP model.
+        termination_condition : Pyomo TerminationCondition
+            The termination condition of the fixed NLP subproblem.
+        solve_data : MindtPySolveData
+            Data container that holds solve-instance data.
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+
+        Raises
+        ------
+        ValueError
+            MindtPy unable to handle the termination condition of the fixed NLP subproblem.
         """
         if termination_condition is tc.maxIterations:
             # TODO try something else? Reinitialize with different initial value?
@@ -481,11 +494,32 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                 'condition of {}'.format(termination_condition))
 
     def handle_lazy_regularization_problem(self, main_mip, main_mip_results, solve_data, config):
+        """Handles the termination condition of the regularization main problem in RLP/NLP.
+
+        Parameters
+        ----------
+        main_mip : Pyomo model
+            The MIP main problem.
+        main_mip_results : SolverResults
+            Results from solving the regularization MIP problem.
+        solve_data : MindtPySolveData
+            Data container that holds solve-instance data.
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+
+        Raises
+        ------
+        ValueError
+            MindtPy unable to handle the termination condition of the regularization problem.
+        ValueError
+            MindtPy unable to handle the termination condition of the regularization problem.
+        """
         if main_mip_results.solver.termination_condition in {tc.optimal, tc.feasible}:
             handle_main_optimal(
                 main_mip, solve_data, config, update_bound=False)
         elif main_mip_results.solver.termination_condition in {tc.infeasible, tc.infeasibleOrUnbounded}:
-            config.logger.info('regularization problem infeasible.')
+            config.logger.info(solve_data.log_note_formatter.format(
+                solve_data.mip_iter, 'Reg '+solve_data.regularization_mip_type, 'infeasible'))
             if config.reduce_level_coef:
                 config.level_coef = config.level_coef / 2
                 main_mip, main_mip_results = solve_main(
@@ -521,7 +555,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                         'of %s. Solver message: %s' %
                         (main_mip_results.solver.termination_condition, main_mip_results.solver.message))
             elif config.use_bb_tree_incumbent:
-                config.logger.info(
+                config.logger.debug(
                     'Fixed subproblem will be generated based on the incumbent solution of the main problem.')
         elif main_mip_results.solver.termination_condition is tc.maxTimeLimit:
             config.logger.info(
@@ -545,9 +579,9 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                 (main_mip_results.solver.termination_condition, main_mip_results.solver.message))
 
     def __call__(self):
-        """
-        This is an inherent function in LazyConstraintCallback in cplex.
-        This function is called whenever an integer solution is found during the branch and bound process
+        """This is an inherent function in LazyConstraintCallback in cplex.
+
+        This function is called whenever an integer solution is found during the branch and bound process.
         """
         solve_data = self.solve_data
         config = self.config
@@ -574,8 +608,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         if config.add_regularization is not None and solve_data.best_solution_found is not None:
             # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if not solve_data.bound_improved and not solve_data.solution_improved:
-                config.logger.info('the bound and the best found solution have neither been improved.'
-                                   'We will skip solving the regularization problem and the Fixed-NLP subproblem')
+                config.logger.debug('the bound and the best found solution have neither been improved.'
+                                    'We will skip solving the regularization problem and the Fixed-NLP subproblem')
                 solve_data.solution_improved = False
                 return
             if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
@@ -599,8 +633,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             solve_data.working_model, string_zero=True)
 
         if solve_data.curr_int_sol in set(solve_data.integer_list):
-            config.logger.info('This integer combination has been explored. '
-                               'We will skip solving the Fixed-NLP subproblem.')
+            config.logger.debug('This integer combination has been explored. '
+                                'We will skip solving the Fixed-NLP subproblem.')
             solve_data.solution_improved = False
             if config.strategy == 'GOA':
                 if config.add_no_good_cuts:
@@ -641,20 +675,20 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
 
 
 def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
-    """
-        This is a GUROBI callback function defined for LP/NLP based B&B algorithm. 
-        Parameters
-        ----------
-        cb_m: Pyomo model
-            the MIP main problem
-        cb_opt: SolverFactory
-            the gurobi_persistent solver
-        cb_where: int
-            an enum member of gurobipy.GRB.Callback
-        solve_data: MindtPy Data Container
-            data container that holds solve-instance data
-        config: ConfigBlock
-            contains the specific configurations for the algorithm
+    """This is a GUROBI callback function defined for LP/NLP based B&B algorithm.
+
+    Parameters
+    ----------
+    cb_m : Pyomo model
+        The MIP main problem.
+    cb_opt : SolverFactory
+        The gurobi_persistent solver.
+    cb_where : int
+        An enum member of gurobipy.GRB.Callback.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
     """
     if cb_where == gurobipy.GRB.Callback.MIPSOL:
         # gurobipy.GRB.Callback.MIPSOL means that an integer solution is found during the branch and bound process
@@ -673,8 +707,8 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
         if config.add_regularization is not None and solve_data.best_solution_found is not None:
             # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if not solve_data.bound_improved and not solve_data.solution_improved:
-                config.logger.info('the bound and the best found solution have neither been improved.'
-                                   'We will skip solving the regularization problem and the Fixed-NLP subproblem')
+                config.logger.debug('the bound and the best found solution have neither been improved.'
+                                    'We will skip solving the regularization problem and the Fixed-NLP subproblem')
                 solve_data.solution_improved = False
                 return
             if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
@@ -698,8 +732,8 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
             solve_data.working_model, string_zero=True)
 
         if solve_data.curr_int_sol in set(solve_data.integer_list):
-            config.logger.info('This integer combination has been explored. '
-                               'We will skip solving the Fixed-NLP subproblem.')
+            config.logger.debug('This integer combination has been explored. '
+                                'We will skip solving the Fixed-NLP subproblem.')
             solve_data.solution_improved = False
             if config.strategy == 'GOA':
                 if config.add_no_good_cuts:
@@ -721,20 +755,22 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
 
 
 def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, solve_data, config):
-    """ This function is called during the branch and bound of main mip, more exactly when a feasible solution is found and LazyCallback is activated.
-    Copy the result to working model and update upper or lower bound.
-    In LP-NLP, upper or lower bound are updated during solving the main problem
+    """This function is called during the branch and bound of main MIP problem, 
+    more exactly when a feasible solution is found and LazyCallback is activated.
+
+    Copy the solution to working model and update upper or lower bound.
+    In LP-NLP, upper or lower bound are updated during solving the main problem.
 
     Parameters
     ----------
-    cb_m: Pyomo model
-        the MIP main problem
-    cb_opt: SolverFactory
-        the gurobi_persistent solver
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    cb_m : Pyomo model
+        The MIP main problem.
+    cb_opt : SolverFactory
+        The gurobi_persistent solver.
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
     """
     # proceed. Just need integer values
     cb_opt.cbGetSolution(vars=cb_m.MindtPy_utils.variable_list)
@@ -742,18 +778,8 @@ def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, solve_data, config):
     copy_var_list_values(cb_m.MindtPy_utils.variable_list,
                          solve_data.working_model.MindtPy_utils.variable_list,
                          config)
-    if solve_data.objective_sense == minimize:
-        solve_data.LB = max(
-            cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJBND), solve_data.LB)
-        solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-        solve_data.LB_progress.append(solve_data.LB)
-    else:
-        solve_data.UB = min(
-            cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJBND), solve_data.UB)
-        solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-        solve_data.UB_progress.append(solve_data.UB)
-    config.logger.info(
-        'MIP %s: OBJ (at current node): %s  Bound: %s  LB: %s  UB: %s  TIME: %s'
-        % (solve_data.mip_iter, cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJ), cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJBND),
-            solve_data.LB, solve_data.UB, round(get_main_elapsed_time(
-                solve_data.timing), 2)))
+    update_dual_bound(solve_data, cb_opt.cbGet(
+        gurobipy.GRB.Callback.MIPSOL_OBJBND))
+    config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'restrLP', cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJ),
+                                                       solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                       get_main_elapsed_time(solve_data.timing)))

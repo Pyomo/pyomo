@@ -17,9 +17,10 @@ import pyomo.core.base.var
 import pyomo.core.base.constraint
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core import is_fixed, value, minimize, maximize
-from pyomo.repn import generate_standard_repn
 from pyomo.core.base.suffix import Suffix
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.opt.base.solvers import OptSolver
+from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import \
     DirectOrPersistentSolver
@@ -133,13 +134,7 @@ class MOSEKDirect(DirectSolver):
         return True
 
     def _apply_solver(self):
-        if not self._save_results:
-            for block in self._pyomo_model.block_data_objects(
-                    descend_into=True, active=True):
-                for var in block.component_data_objects(
-                        ctype=pyomo.core.base.var.Var, descend_into=False,
-                        active=True, sort=False):
-                    var.stale = True
+        StaleFlagManager.mark_all_as_stale()
 
         if self._tee:
             def _process_stream(msg):
@@ -764,7 +759,6 @@ class MOSEKDirect(DirectSolver):
                 for mosek_var, val, name in zip(mosek_vars, var_vals, names):
                     pyomo_var = self._solver_var_to_pyomo_var_map[mosek_var]
                     if self._referenced_variables[pyomo_var] > 0:
-                        pyomo_var.stale = False
                         soln_variables[name] = {"Value": val}
 
                 if extract_reduced_costs:
@@ -827,7 +821,7 @@ class MOSEKDirect(DirectSolver):
         elif self._load_solutions:
             if self.results.problem.number_of_solutions > 0:
 
-                self._load_vars()
+                self.load_vars()
 
                 if extract_reduced_costs:
                     self._load_rc()
@@ -868,7 +862,6 @@ class MOSEKDirect(DirectSolver):
 
         for var, val in zip(vars_to_load, var_vals):
             if ref_vars[var] > 0:
-                var.stale = False
                 var.set_value(val, skip_validation=True)
 
     def _load_rc(self, vars_to_load=None):

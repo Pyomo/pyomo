@@ -144,7 +144,7 @@ from pyomo.opt import (
     TerminationCondition, SolverStatus, check_optimal_termination,
     assert_optimal_termination
     )
-from pyomo.core.base.units_container import units
+from pyomo.core.base.units_container import units, as_quantity
 
 # These APIs are deprecated and should be removed in the near future
 from pyomo.common.deprecation import relocated_module_attribute

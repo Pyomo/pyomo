@@ -2,18 +2,22 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
-from pyomo.core.expr.calculus.diff_with_pyomo import reverse_ad, reverse_sd, DifferentiationException
 from pyomo.common.getGSL import find_GSL
+from pyomo.core.expr.calculus.derivatives import differentiate, Modes
+from pyomo.core.expr.calculus.diff_with_pyomo import (
+    reverse_ad, reverse_sd, DifferentiationException,
+)
 from pyomo.core.expr.numeric_expr import LinearExpression
-
+from pyomo.core.expr.compare import compare_expressions
+from pyomo.core.expr.sympy_tools import sympy_available
 
 tol = 6
 
@@ -300,3 +304,74 @@ class TestDerivs(unittest.TestCase):
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         self.assertAlmostEqual(derivs[m.y], pyo.value(symbolic[m.y]), tol+3)
         self.assertAlmostEqual(derivs[m.y], approx_deriv(e, m.y), tol)
+
+class TestDifferentiate(unittest.TestCase):
+    @unittest.skipUnless(sympy_available, "test requires sympy")
+    def test_sympy(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=0.23)
+        m.y = pyo.Var(initialize=0.88)
+        ddx = differentiate(m.x**2, wrt=m.x, mode='sympy')
+        self.assertTrue(compare_expressions(ddx, 2*m.x))
+        self.assertAlmostEqual(ddx(), 0.46)
+        ddy = differentiate(m.x**2, wrt=m.y, mode='sympy')
+        self.assertEqual(ddy, 0)
+
+        ddx = differentiate(m.x**2, wrt_list=[m.x, m.y], mode='sympy')
+        self.assertIsInstance(ddx, list)
+        self.assertEqual(len(ddx), 2)
+        self.assertTrue(compare_expressions(ddx[0], 2*m.x))
+        self.assertAlmostEqual(ddx[0](), 0.46)
+        self.assertEqual(ddx[1], 0)
+
+    def test_reverse_symbolic(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=0.23)
+        m.y = pyo.Var(initialize=0.88)
+        ddx = differentiate(m.x**2, wrt=m.x, mode='reverse_symbolic')
+        self.assertTrue(compare_expressions(ddx, 2*m.x))
+        self.assertAlmostEqual(ddx(), 0.46)
+        ddy = differentiate(m.x**2, wrt=m.y, mode='reverse_symbolic')
+        self.assertEqual(ddy, 0)
+
+        ddx = differentiate(m.x**2, wrt_list=[m.x, m.y],
+                            mode='reverse_symbolic')
+        self.assertIsInstance(ddx, list)
+        self.assertEqual(len(ddx), 2)
+        self.assertTrue(compare_expressions(ddx[0], 2*m.x))
+        self.assertAlmostEqual(ddx[0](), 0.46)
+        self.assertEqual(ddx[1], 0)
+
+    def test_reverse_numeric(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=0.23)
+        m.y = pyo.Var(initialize=0.88)
+        ddx = differentiate(m.x**2, wrt=m.x, mode='reverse_numeric')
+        self.assertIsInstance(ddx, float)
+        self.assertAlmostEqual(ddx, 0.46)
+        ddy = differentiate(m.x**2, wrt=m.y, mode='reverse_numeric')
+        self.assertEqual(ddy, 0)
+
+        ddx = differentiate(m.x**2, wrt_list=[m.x, m.y],
+                            mode='reverse_numeric')
+        self.assertIsInstance(ddx, list)
+        self.assertEqual(len(ddx), 2)
+        self.assertIsInstance(ddx[0], float)
+        self.assertAlmostEqual(ddx[0], 0.46)
+        self.assertEqual(ddx[1], 0)
+
+    def test_bad_mode(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=0.23)
+        with self.assertRaisesRegex(
+                ValueError, r'Unrecognized differentiation mode: foo\n'
+                r"Expected one of \['sympy', 'reverse_symbolic', "
+                r"'reverse_numeric'\]"):
+            ddx = differentiate(m.x**2, m.x, mode='foo')
+
+    def test_bad_wrt(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=0.23)
+        with self.assertRaisesRegex(
+                ValueError, r'Cannot specify both wrt and wrt_list'):
+            ddx = differentiate(m.x**2, wrt=m.x, wrt_list=[m.x])

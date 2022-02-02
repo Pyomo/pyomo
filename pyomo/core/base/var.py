@@ -21,6 +21,7 @@ from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NoArgumentGiven, NOTSET
 from pyomo.common.timing import ConstructionTimer
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
     NumericValue, value, is_potentially_variable, native_numeric_types,
@@ -55,47 +56,19 @@ _VARDATA_API = (
     'bounds', 'lower', 'upper', 'lb', 'ub', 'has_lb', 'has_ub',
     'setlb', 'setub', 'get_units',
     'is_integer', 'is_binary', 'is_continuous', 'is_fixed',
-    'fix', 'unfix', 'free', 'set_value', 'value',
-    # Note: we can't disable fixed / stale as they are public attributes
+    'fix', 'unfix', 'free', 'set_value', 'value', 'stale', 'fixed',
 )
 
 
 class _VarData(ComponentData, NumericValue):
-    """
-    This class defines the data for a single variable.
+    """This class defines the abstract interface for a single variable.
 
-    Constructor Arguments:
-        component   The Var object that owns this data.
-
-    Public Class Attributes:
-        domain   The domain of this variable.
-        bounds   A tuple (lower,upper) that defines the variable bounds.
-        fixed    If True, then this variable is treated as a
-                     fixed constant in the model.
-        lb       A lower bound for this variable.  The lower bound can be
-                     either numeric constants, parameter values, expressions
-                     or any object that can be called with no arguments.
-        ub       A upper bound for this variable.  The upper bound can be either
-                     numeric constants, parameter values, expressions or any
-                     object that can be called with no arguments.
-        stale    A Boolean indicating whether the value of this variable is
-                     legitimiate.  This value is true if the value should
-                     be considered legitimate for purposes of reporting or
-                     other interrogation.
-        value    The numeric value of this variable.
+    Note that this "abstract" class is not intended to be directly
+    instantiated.
 
     """
 
     __slots__ = ()
-
-    def __init__(self, component=None):
-        #
-        # These lines represent in-lining of the
-        # following constructors:
-        #   - ComponentData
-        #   - NumericValue
-        self._component = weakref_ref(component) if (component is not None) \
-                          else None
 
     #
     # Interface
@@ -248,20 +221,45 @@ class _VarData(ComponentData, NumericValue):
 
     @property
     def fixed(self):
-        """Return the fixed indicator for this variable."""
+        """Return (or set) the fixed indicator for this variable.
+
+        Alias for :meth:`is_fixed` / :meth:`fix` / :meth:`unfix`.
+
+        """
         raise NotImplementedError
 
     @property
     def stale(self):
-        """Return the stale indicator for this variable."""
+        """The stale status for this variable.
+
+        Variables are "stale" if their current value was not updated as
+        part of the most recent model update.  A "model update" can be
+        one of several things: a solver invocation, loading a previous
+        solution, or manually updating a non-stale :class:`Var` value.
+
+        Returns
+        -------
+        bool
+
+        Notes
+        -----
+        Fixed :class:`Var` objects will be stale after invoking a solver
+        (as their value was not updated by the solver).
+
+        Updating a stale :class:`Var` value will not cause other
+        variable values to be come stale.  However, updating the first
+        non-stale :class:`Var` value adter a solve or solution load
+        *will* cause all other variables to be marked as stale
+
+        """
         raise NotImplementedError
 
     def fix(self, value=NOTSET, skip_validation=False):
         """Fix the value of this variable (treat as nonvariable)
 
-        This sets the `fixed` indicator to True.  If ``value`` is
+        This sets the :attr:`fixed` indicator to True.  If ``value`` is
         provided, the value (and the ``skip_validation`` flag) are first
-        passed to :py:meth:`set_value()`.
+        passed to :meth:`set_value()`.
 
         """
         self.fixed = True
@@ -269,49 +267,24 @@ class _VarData(ComponentData, NumericValue):
             self.set_value(value, skip_validation)
 
     def unfix(self):
-        """Unfix this varaible (treat as variable)
+        """Unfix this variable (treat as variable in solver interfaces)
 
-        This sets the `fixed` indicator to False.
+        This sets the :attr:`fixed` indicator to False.
 
         """
         self.fixed = False
 
     def free(self):
-        """Alias for :py:meth:`unfix`"""
+        """Alias for :meth:`unfix`"""
         return self.unfix()
 
 
 class _GeneralVarData(_VarData):
-    """
-    This class defines the data for a single variable.
+    """This class defines the data for a single variable.
 
-    Constructor Arguments:
-        component   The Var object that owns this data.
-
-    Public Class Attributes:
-        domain      The domain of this variable.
-        bounds      A tuple (lower,upper) that defines the variable bounds.
-        fixed       If True, then this variable is treated as a
-                        fixed constant in the model.
-        lb          A lower bound for this variable.  The lower bound can be
-                        either numeric constants, parameter values, expressions
-                        or any object that can be called with no arguments.
-        ub          A upper bound for this variable.  The upper bound can be either
-                        numeric constants, parameter values, expressions or any
-                        object that can be called with no arguments.
-        stale       A Boolean indicating whether the value of this variable is
-                        legitimiate.  This value is true if the value should
-                        be considered legitimate for purposes of reporting or
-                        other interrogation.
-        value       The numeric value of this variable.
-
-    The domain, lb, and ub attributes are properties because they
-    are too widely accessed directly to enforce explicit getter/setter
-    methods and we need to deter directly modifying or accessing
-    these attributes in certain cases.
     """
 
-    __slots__ = ('_value', '_lb', '_ub', '_domain', 'fixed', 'stale')
+    __slots__ = ('_value', '_lb', '_ub', '_domain', '_fixed', '_stale')
 
     def __init__(self, component=None):
         #
@@ -332,8 +305,8 @@ class _GeneralVarData(_VarData):
         self._lb = None
         self._ub = None
         self._domain = None
-        self.fixed = False
-        self.stale = True
+        self._fixed = False
+        self._stale = 0 # True
 
     @classmethod
     def copy(cls, src):
@@ -343,19 +316,23 @@ class _GeneralVarData(_VarData):
         self._lb = src._lb
         self._ub = src._ub
         self._domain = src._domain
-        self.fixed = src.fixed
-        self.stale = src.stale
+        self._fixed = src._fixed
+        self._stale = src._stale
         return self
 
     def __getstate__(self):
         state = super(_GeneralVarData, self).__getstate__()
         for i in _GeneralVarData.__slots__:
             state[i] = getattr(self, i)
+        state['_stale'] = StaleFlagManager.is_stale(self._stale)
         return state
 
-    # Note: None of the slots on this class need to be edited, so we
-    # don't need to implement a specialized __setstate__ method, and
-    # can quietly rely on the super() class's implementation.
+    def __setstate__(self, state):
+        if state.pop('_stale', True):
+            state['_stale'] = 0
+        else:
+            state['_stale'] = StaleFlagManager.get_flag(0)
+        super().__setstate__(state)
 
     #
     # Abstract Interface
@@ -370,14 +347,14 @@ class _GeneralVarData(_VarData):
         correct units before storing the value.  The final value is
         checked against both the variable domain and bounds, and an
         exception is raised if the value is not valid.  Domain and
-        bounds checking can be bypassed by setting the ``valid``
-        argument to `True`.
+        bounds checking can be bypassed by setting the ``skip_validation``
+        argument to :const:`True`.
 
         """
         # Special case: setting a variable to None "clears" the variable.
         if val is None:
             self._value = None
-            self.stale = True
+            self._stale = 0 # True
             return
         # TODO: generate a warning/error:
         #
@@ -409,11 +386,10 @@ class _GeneralVarData(_VarData):
                 )
 
         self._value = val
-        self.stale = False
+        self._stale = StaleFlagManager.get_flag(self._stale)
 
     @property
     def value(self):
-        """Return (or set) the value for this variable."""
         return self._value
     @value.setter
     def value(self, val):
@@ -421,7 +397,6 @@ class _GeneralVarData(_VarData):
 
     @property
     def domain(self):
-        """Return (or set) the domain for this variable."""
         return self._domain
     @domain.setter
     def domain(self, domain):
@@ -487,9 +462,10 @@ class _GeneralVarData(_VarData):
         This returns a (not potentially variable) expression for the
         variable lower bound.  This represents the tighter of the
         current domain and the constant or expression assigned to
-        ``.lower``.  Note that the expression will NOT automatically
+        :attr:`lower`.  Note that the expression will NOT automatically
         reflect changes to either the domain or the bound expression
-        (e.g., because of assignment to either ``.lower`` or ``.domain``).
+        (e.g., because of assignment to either :attr:`lower` or
+        :attr:`domain`).
 
         """
         dlb, _ = self.domain.bounds()
@@ -510,9 +486,10 @@ class _GeneralVarData(_VarData):
         This returns a (not potentially variable) expression for the
         variable upper bound.  This represents the tighter of the
         current domain and the constant or expression assigned to
-        ``.upper``.  Note that the expression will NOT automatically
+        :attr:`upper`.  Note that the expression will NOT automatically
         reflect changes to either the domain or the bound expression
-        (e.g., because of assignment to either ``.upper`` or ``.domain``).
+        (e.g., because of assignment to either :attr:`upper` or
+        :attr:`domain`).
 
         """
         _, dub = self.domain.bounds()
@@ -532,9 +509,22 @@ class _GeneralVarData(_VarData):
         # component if not scalar
         return self.parent_component()._units
 
-    # fixed is an attribute
+    @property
+    def fixed(self):
+        return self._fixed
+    @fixed.setter
+    def fixed(self, val):
+        self._fixed = bool(val)
 
-    # stale is an attribute
+    @property
+    def stale(self):
+        return StaleFlagManager.is_stale(self._stale)
+    @stale.setter
+    def stale(self, val):
+        if val:
+            self._stale = 0 # True
+        else:
+            self._stale = StaleFlagManager.get_flag(0)
 
     def _process_bound(self, val, bound_type):
         if type(val) in native_numeric_types or val is None:
@@ -563,19 +553,19 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
 
     Args:
         domain (Set or function, optional): A Set that defines valid
-            values for the variable (e.g., `Reals`, `NonNegativeReals`,
-            `Binary`), or a rule that returns Sets.  Defaults to `Reals`.
-        within (Set or function, optional): An alias for `domain`.
-        bounds (tuple or function, optional): A tuple of (lower, upper)
+            values for the variable (e.g., ``Reals``, ``NonNegativeReals``,
+            ``Binary``), or a rule that returns Sets.  Defaults to ``Reals``.
+        within (Set or function, optional): An alias for ``domain``.
+        bounds (tuple or function, optional): A tuple of ``(lower, upper)``
             bounds for the variable, or a rule that returns tuples.
-            Defaults to (None, None).
+            Defaults to ``(None, None)``.
         initialize (float or function, optional): The initial value for
             the variable, or a rule that returns initial values.
-        rule (float or function, optional): An alias for `initialize`.
+        rule (float or function, optional): An alias for ``initialize``.
         dense (bool, optional): Instantiate all elements from
-            `index_set()` when constructing the Var (True) or just the
-            variables returned by `initialize`/`rule` (False).  Defaults
-            to True.
+            :meth:`index_set` when constructing the Var (True) or just the
+            variables returned by ``initialize``/``rule`` (False).  Defaults
+            to ``True``.
         units (pyomo units expression, optional): Set the units corresponding
             to the entries in this variable.
         name (str, optional): Name for this component.
@@ -887,29 +877,29 @@ class IndexedVar(Var):
             vardata.upper = val
 
     def fix(self, value=NOTSET, skip_validation=False):
-        """Fix all variables in this IndexedVar (treat as nonvariable)
+        """Fix all variables in this :class:`IndexedVar` (treat as nonvariable)
 
-        This sets the `fixed` indicator to True for every variable in
-        this IndexedVar.  If ``value`` is provided, the value (and the
-        ``skip_validation`` flag) are first passed to
-        :py:meth:`set_value()`.
+        This sets the :attr:`fixed` indicator to True for every variable
+        in this IndexedVar.  If ``value`` is provided, the value (and
+        the ``skip_validation`` flag) are first passed to
+        :meth:`set_value`.
 
         """
         for vardata in self.values():
             vardata.fix(value, skip_validation)
 
     def unfix(self):
-        """Unfix all varaibles in this IndexedVar (treat as variable)
+        """Unfix all variables in this :class:`IndexedVar` (treat as variable)
 
-        This sets the `fixed` indicator to False for every variable in
-        this IndexedVar.
+        This sets the :attr:`_VarData.fixed` indicator to False for
+        every variable in this :class:`IndexedVar`.
 
         """
         for vardata in self.values():
             vardata.unfix()
 
     def free(self):
-        """Alias for :py:meth:`unfix`"""
+        """Alias for :meth:`unfix`"""
         return self.unfix()
 
     @property

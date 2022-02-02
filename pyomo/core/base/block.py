@@ -815,23 +815,6 @@ class _BlockData(ActiveComponentData):
                 and not isinstance(val.domain, GlobalSetBase):
             self.add_component("%s_domain" % (val.local_name,), val.domain)
 
-    def _flag_vars_as_stale(self):
-        """
-        Configure *all* variables (on active blocks) and
-        their composite _VarData objects as stale. This
-        method is used prior to loading solver
-        results. Variable that did not particpate in the
-        solution are flagged as stale.  E.g., it most cases
-        fixed variables will be flagged as stale since they
-        are compiled out of expressions; however, many
-        solver plugins support including fixed variables in
-        the output problem by overriding bounds in order to
-        minimize preprocessing requirements, meaning fixed
-        variables are not necessarily always stale.
-        """
-        for variable in self.component_objects(Var, active=True):
-            variable.flag_as_stale()
-
     def collect_ctypes(self,
                        active=None,
                        descend_into=True):

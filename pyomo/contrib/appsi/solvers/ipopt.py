@@ -23,6 +23,7 @@ from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
 import os
+from pyomo.core.staleflag import StaleFlagManager
 
 
 logger = logging.getLogger(__name__)
@@ -237,6 +238,7 @@ class Ipopt(PersistentSolver):
         f.close()
 
     def solve(self, model, timer: HierarchicalTimer = None):
+        StaleFlagManager.mark_all_as_stale()
         avail = self.available()
         if not avail:
             raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')

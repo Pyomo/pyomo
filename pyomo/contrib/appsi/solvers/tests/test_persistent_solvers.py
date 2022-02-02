@@ -56,6 +56,49 @@ fixed variables
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestSolvers(unittest.TestCase):
     @parameterized.expand(input=all_solvers)
+    def test_stale_vars(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.z = pe.Var()
+        m.obj = pe.Objective(expr=m.y)
+        m.c1 = pe.Constraint(expr=m.y >= m.x)
+        m.c2 = pe.Constraint(expr=m.y >= -m.x)
+        m.x.value = 1
+        m.y.value = 1
+        m.z.value = 1
+        self.assertFalse(m.x.stale)
+        self.assertFalse(m.y.stale)
+        self.assertFalse(m.z.stale)
+
+        res = opt.solve(m)
+        self.assertFalse(m.x.stale)
+        self.assertFalse(m.y.stale)
+        self.assertTrue(m.z.stale)
+
+        opt.config.load_solution = False
+        res = opt.solve(m)
+        self.assertTrue(m.x.stale)
+        self.assertTrue(m.y.stale)
+        self.assertTrue(m.z.stale)
+        res.solution_loader.load_vars()
+        self.assertFalse(m.x.stale)
+        self.assertFalse(m.y.stale)
+        self.assertTrue(m.z.stale)        
+
+        res = opt.solve(m)
+        self.assertTrue(m.x.stale)
+        self.assertTrue(m.y.stale)
+        self.assertTrue(m.z.stale)
+        res.solution_loader.load_vars([m.y])
+        self.assertTrue(m.x.stale)
+        self.assertFalse(m.y.stale)
+        self.assertTrue(m.z.stale)        
+        
+    @parameterized.expand(input=all_solvers)
     def test_range_constraint(self, name: str, opt_class: Type[PersistentSolver]):
         opt: PersistentSolver = opt_class()
         if not opt.available():

@@ -14,37 +14,32 @@ from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
                                        copy_var_list_values, get_main_elapsed_time)
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_affine_cuts
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
-from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, var_bound_add, get_integer_solution
+from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, update_dual_bound, add_var_bound, get_integer_solution, update_suboptimal_dual_bound
 from pyomo.core import (ConstraintList, Objective,
                         TransformationFactory, maximize, minimize,
                         value, Var)
 from pyomo.opt import SolverFactory, TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_nlp_subproblem_tc
-import math
 from pyomo.contrib.mindtpy.feasibility_pump import fp_loop
-import logging
-
-logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 
 def MindtPy_initialize_main(solve_data, config):
-    """
-    Initializes the decomposition algorithm and creates the main MIP/MILP problem.
+    """Initializes the decomposition algorithm and creates the main MIP/MILP problem.
 
-    This function initializes the decomposition problem, which includes generating the initial cuts required to
-    build the main MIP/MILP
+    This function initializes the decomposition problem, which includes generating the
+    initial cuts required to build the main MIP.
 
     Parameters
     ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
     """
     # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded main problem.
     if config.single_tree:
-        var_bound_add(solve_data, config)
+        add_var_bound(solve_data, config)
 
     m = solve_data.mip = solve_data.working_model.clone()
     next(solve_data.mip.component_data_objects(
@@ -86,6 +81,11 @@ def MindtPy_initialize_main(solve_data, config):
     config.logger.info(
         '{} is the initial strategy being used.'
         '\n'.format(config.init_strategy))
+    config.logger.info(
+        ' =============================================================================================')
+    config.logger.info(
+        ' {:>9} | {:>15} | {:>15} | {:>11} | {:>11} | {:^7} | {:>7}\n'.format('Iteration', 'Subproblem Type', 'Objective Value', 'Lower Bound',
+                                                                              'Upper Bound', ' Gap ', 'Time(s)'))
     # Do the initialization
     if config.init_strategy == 'rNLP':
         init_rNLP(solve_data, config)
@@ -105,19 +105,23 @@ def MindtPy_initialize_main(solve_data, config):
 
 
 def init_rNLP(solve_data, config):
-    """
-    Initialize the problem by solving the relaxed NLP and then store the optimal variable
-    values obtained from solving the rNLP
+    """Initialize the problem by solving the relaxed NLP and then store the optimal variable
+    values obtained from solving the rNLP.
 
     Parameters
     ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+
+    Raises
+    ------
+    ValueError
+        MindtPy unable to handle the termination condition of the relaxed NLP.
     """
     m = solve_data.working_model.clone()
-    config.logger.info(
+    config.logger.debug(
         'Relaxed NLP: Solve relaxed integrality')
     MindtPy = m.MindtPy_utils
     TransformationFactory('core.relax_integer_vars').apply_to(m)
@@ -128,27 +132,19 @@ def init_rNLP(solve_data, config):
         results = nlpopt.solve(m, tee=config.nlp_solver_tee, **nlp_args)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
-        if subprob_terminate_cond in {tc.feasible, tc.locallyOptimal}:
+        main_objective = MindtPy.objective_list[-1]
+        if subprob_terminate_cond == tc.optimal:
+            update_dual_bound(solve_data, value(main_objective.expr))
+        else:
             config.logger.info(
                 'relaxed NLP is not solved to optimality.')
+            update_suboptimal_dual_bound(solve_data, results)
         dual_values = list(
             m.dual[c] for c in MindtPy.constraint_list) if config.calculate_dual else None
+        config.logger.info(solve_data.log_formatter.format('-', 'Relaxed NLP', value(main_objective.expr),
+                                                           solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                           get_main_elapsed_time(solve_data.timing)))
         # Add OA cut
-        # This covers the case when the Lower bound does not exist.
-        # TODO: should we use the bound of the rNLP here?
-        if solve_data.objective_sense == minimize:
-            if not math.isnan(results.problem.lower_bound):
-                solve_data.LB = results.problem.lower_bound
-                solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-                solve_data.LB_progress.append(results.problem.lower_bound)
-        elif not math.isnan(results.problem.upper_bound):
-            solve_data.UB = results.problem.upper_bound
-            solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-            solve_data.UB_progress.append(results.problem.upper_bound)
-        main_objective = MindtPy.objective_list[-1]
-        config.logger.info(
-            'Relaxed NLP: OBJ: %s  LB: %s  UB: %s  TIME:%ss'
-            % (value(main_objective.expr), solve_data.LB, solve_data.UB, round(get_main_elapsed_time(solve_data.timing), 2)))
         if config.strategy in {'OA', 'GOA', 'FP'}:
             copy_var_list_values(m.MindtPy_utils.variable_list,
                                  solve_data.mip.MindtPy_utils.variable_list,
@@ -161,8 +157,12 @@ def init_rNLP(solve_data, config):
                 add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
             elif config.strategy == 'GOA':
                 add_affine_cuts(solve_data, config)
-            # TODO check if value of the binary or integer varibles is 0/1 or integer value.
             for var in solve_data.mip.MindtPy_utils.discrete_variable_list:
+                # We don't want to trigger the reset of the global stale
+                # indicator, so we will set this variable to be "stale",
+                # knowing that set_value will switch it back to "not
+                # stale"
+                var.stale = True
                 var.set_value(int(round(var.value)), skip_validation=True)
     elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
         # TODO fail? try something else?
@@ -184,34 +184,39 @@ def init_rNLP(solve_data, config):
 
 
 def init_max_binaries(solve_data, config):
-    """
-    Modifies model by maximizing the number of activated binary variables
+    """Modifies model by maximizing the number of activated binary variables.
 
-    Note - The user would usually want to call solve_subproblem after an
-    invocation of this function.
+    Note - The user would usually want to call solve_subproblem after an invocation 
+    of this function.
 
     Parameters
     ----------
-    solve_data: MindtPy Data Container
-        data container that holds solve-instance data
-    config: ConfigBlock
-        contains the specific configurations for the algorithm
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+    config : ConfigBlock
+        The specific configurations for MindtPy.
+
+    Raises
+    ------
+    ValueError
+        MILP main problem is infeasible.
+    ValueError
+        MindtPy unable to handle the termination condition of the MILP main problem.
     """
     m = solve_data.working_model.clone()
     if config.calculate_dual:
         m.dual.deactivate()
     MindtPy = m.MindtPy_utils
     solve_data.mip_subiter += 1
-    config.logger.info(
-        'MILP %s: maximize value of binaries' %
-        (solve_data.mip_iter))
+    config.logger.debug(
+        'Initialization: maximize value of binaries')
     for c in MindtPy.nonlinear_constraint_list:
         c.deactivate()
     objective = next(m.component_data_objects(Objective, active=True))
     objective.deactivate()
     binary_vars = (v for v in m.MindtPy_utils.discrete_variable_list
                    if v.is_binary() and not v.fixed)
-    MindtPy.MindtPy_max_binary_obj = Objective(
+    MindtPy.max_binary_obj = Objective(
         expr=sum(v for v in binary_vars), sense=maximize)
 
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
@@ -230,6 +235,9 @@ def init_max_binaries(solve_data, config):
             MindtPy.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
+        config.logger.info(solve_data.log_formatter.format('-', 'Max binary MILP', value(MindtPy.max_binary_obj.expr),
+                                                           solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                           get_main_elapsed_time(solve_data.timing)))
     elif solve_terminate_cond is tc.infeasible:
         raise ValueError(
             'MILP main problem is infeasible. '

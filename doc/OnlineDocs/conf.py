@@ -264,11 +264,7 @@ dot_sens_available = bool(pyomo.opt.check_available_solvers('dot_sens'))
 baron_available = bool(pyomo.opt.check_available_solvers('baron'))
 glpk_available = bool(pyomo.opt.check_available_solvers('glpk'))
 baron = pyomo.opt.SolverFactory('baron')
-try:
-    import gurobipy
-    gurobipy_available = True
-except ImportError:
-    gurobipy_available = False
+gurobipy_available = bool(pyomo.opt.check_available_solvers('gurobi_direct'))
 if numpy_available and scipy_available:
     from pyomo.contrib.pynumero.asl import AmplInterface
     asl_available = AmplInterface.available()
