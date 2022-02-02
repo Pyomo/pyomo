@@ -25,6 +25,7 @@ from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
     NumericValue, value, is_potentially_variable, native_numeric_types,
+    native_types,
 )
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.disable_methods import disable_methods
@@ -417,16 +418,20 @@ class _GeneralVarData(_VarData):
         domain_bounds = self.domain.bounds()
         if self._lb is None:
             lb = domain_bounds[0]
-        elif domain_bounds[0] is None:
-            lb = value(self._lb)
         else:
-            lb = max(value(self._lb), domain_bounds[0])
+            lb = self._lb
+            if lb.__class__ not in native_types:
+                lb = lb()
+            if domain_bounds[0] is not None:
+                lb = max(lb, domain_bounds[0])
         if self._ub is None:
             ub = domain_bounds[1]
-        elif domain_bounds[1] is None:
-            ub = value(self._ub)
         else:
-            ub = min(value(self._ub), domain_bounds[1])
+            ub = self._ub
+            if ub.__class__ not in native_types:
+                ub = ub()
+            if domain_bounds[1] is not None:
+                ub = min(ub, domain_bounds[1])
         return None if lb == _ninf else lb, None if ub == _inf else ub
 
     @_VarData.lb.getter
@@ -436,10 +441,12 @@ class _GeneralVarData(_VarData):
         dlb, _ = self.domain.bounds()
         if self._lb is None:
             lb = dlb
-        elif dlb is None:
-            lb = value(self._lb)
         else:
-            lb = max(value(self._lb), dlb)
+            lb = self._lb
+            if lb.__class__ not in native_types:
+                lb = lb()
+            if dlb is not None:
+                lb = max(lb, dlb)
         return None if lb == _ninf else lb
 
     @_VarData.ub.getter
@@ -449,10 +456,12 @@ class _GeneralVarData(_VarData):
         _, dub = self.domain.bounds()
         if self._ub is None:
             ub = dub
-        elif dub is None:
-            ub = value(self._ub)
         else:
-            ub = min(value(self._ub), dub)
+            ub = self._ub
+            if ub.__class__ not in native_types:
+                ub = ub()
+            if dub is not None:
+                ub = min(ub, dub)
         return None if ub == _inf else ub
 
     @property
