@@ -293,7 +293,7 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1 = BooleanVar()
 
         with self.assertRaisesRegex(
-                TypeError, "argument must be a string or a number"):
+                TypeError, "argument must be a string or a( |real )number"):
             float(m.Y1)
 
         with self.assertRaisesRegex(

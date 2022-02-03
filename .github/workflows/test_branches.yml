@@ -263,9 +263,6 @@ jobs:
                 || echo "WARNING: CPLEX Community Edition is not available"
             conda install -q -y -c gurobi gurobi \
                 || echo "WARNING: Gurobi is not available"
-            conda install -q -y -c anaconda pyqt\
-                && conda install -q -y -c conda-forge pytest-qt=3.3.0 \
-                || echo "WARNING: PyQt is not available"
             conda install -q -y -c fico-xpress xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             for PKG in cyipopt pymumps; do
