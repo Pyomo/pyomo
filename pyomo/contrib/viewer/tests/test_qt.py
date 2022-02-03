@@ -15,12 +15,19 @@ UI Tests
 from pyomo.environ import (ConcreteModel, Var, Param, Constraint, Objective,
                            Reals, Block, Expression, ExternalFunction,
                            sin, sqrt, log)
+import pyomo.common.unittest as unittest
+
 from pyomo.contrib.viewer.qt import qt_available
 if qt_available:
     from pyomo.contrib.viewer.qt import QtCore, QMessageBox
     from pyomo.contrib.viewer.ui import get_mainwindow, ModelBrowser
+else:
+    # If qt is not available, we still need to have a fake pytest fixture
+    # in order to stop errors
+    @unittest.pytest.fixture()
+    def qtbot():
+        return
 
-import pyomo.common.unittest as unittest
 
 def get_model():
     # Borrowed this test model from the trust region tests
