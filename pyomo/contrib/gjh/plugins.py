@@ -8,9 +8,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import logging
-
-logger = logging.getLogger('pyomo.contrib.trustregion')
+from pyomo.common.download import DownloadFactory
+from pyomo.contrib.gjh.getGJH import get_gjh
+from pyomo.contrib.gjh.GJH import GJHSolver
+from pyomo.opt.base import SolverFactory
 
 def load():
-    from pyomo.contrib.trustregion.TRF import TrustRegionSolver
+    DownloadFactory.register('gjh')(get_gjh)
+    SolverFactory.register('contrib.gjh',
+                           doc='Interface to the AMPL GJH "solver"')(GJHSolver)
