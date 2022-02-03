@@ -18,11 +18,14 @@
 #  ___________________________________________________________________________
 
 import logging
+import sys
+from io import StringIO
 
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
 from pyomo.environ import (
     Var, ConcreteModel, Reals, ExternalFunction,
-    Objective, Constraint, sqrt, sin, cos, SolverFactory
+    Objective, Constraint, sqrt, sin, cos, SolverFactory, value
     )
 from pyomo.contrib.trustregion.TRF import trust_region_method, _trf_config
 
@@ -97,8 +100,9 @@ class TestTrustRegionConfig(unittest.TestCase):
         self.assertEqual(CONFIG.param_filter_gamma_f, 0.01)
 
     def test_config_vars(self):
+        # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 1.0)
+        self.assertEqual(self.TRF.config.trust_radius, 1.0)
 
         # Both persistent and local values should be 1.0
         solve_status = self.try_solve()
@@ -108,18 +112,20 @@ class TestTrustRegionConfig(unittest.TestCase):
     def test_solve_with_new_kwdval(self):
         # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 1.0)
+        self.assertEqual(self.TRF.config.trust_radius, 1.0)
 
+        # Set local to 2.0; persistent should still be 1.0
         solve_status = self.try_solve(trust_radius=2.0)
         self.assertTrue(solve_status)
-        self.assertEqual(self.TRF.config.trust_radius, 2.0)
+        self.assertEqual(self.TRF.config.trust_radius, 1.0)
 
     def test_update_kwdval(self):
         # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 1.0)
+        self.assertEqual(self.TRF.config.trust_radius, 1.0)
 
-        self.TRF._CONFIG.trust_radius = 4.0
+        # Set persistent value to 4.0; local value should also be set to 4.0
+        self.TRF.config.trust_radius = 4.0
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 4.0)
@@ -127,16 +133,23 @@ class TestTrustRegionConfig(unittest.TestCase):
     def test_update_kwdval_solve_with_new_kwdval(self):
         # Initialized with 1.0
         self.TRF = SolverFactory('trustregion')
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 1.0)
+        self.assertEqual(self.TRF.config.trust_radius, 1.0)
 
-        self.TRF._CONFIG.trust_radius = 4.0
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 4.0)
+        # Set persistent value to 4.0;
+        self.TRF.config.trust_radius = 4.0
+        self.assertEqual(self.TRF.config.trust_radius, 4.0)
+
+        # Set local to 2.0; persistent should still be 4.0
+        solve_status = self.try_solve(trust_radius=2.0)
+        self.assertTrue(solve_status)
+        self.assertEqual(self.TRF.config.trust_radius, 4.0)
 
     def test_initialize_with_kwdval(self):
         # Initialized with 3.0
         self.TRF = SolverFactory('trustregion', trust_radius=3.0)
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 3.0)
+        self.assertEqual(self.TRF.config.trust_radius, 3.0)
 
+        # Both persistent and local values should be set to 3.0
         solve_status = self.try_solve()
         self.assertTrue(solve_status)
         self.assertEqual(self.TRF.config.trust_radius, 3.0)
@@ -144,12 +157,12 @@ class TestTrustRegionConfig(unittest.TestCase):
     def test_initialize_with_kwdval_solve_with_new_kwdval(self):
         # Initialized with 3.0
         self.TRF = SolverFactory('trustregion', trust_radius=3.0)
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 3.0)
+        self.assertEqual(self.TRF.config.trust_radius, 3.0)
 
+        # Persistent should be 3.0, local should be 2.0
         solve_status = self.try_solve(trust_radius=2.0)
         self.assertTrue(solve_status)
-        self.assertEqual(self.TRF._CONFIG.trust_radius, 3.0)
-        self.assertEqual(self.TRF.config.trust_radius, 2.0)
+        self.assertEqual(self.TRF.config.trust_radius, 3.0)
 
 
 @unittest.skipIf(not SolverFactory('ipopt').available(False),
@@ -188,7 +201,24 @@ class TestTrustRegionMethod(unittest.TestCase):
         self.decision_variables = [self.m.z[0], self.m.z[1], self.m.z[2]]
 
     def test_solver(self):
-        trust_region_method(self.m,
+        # Check the log contents
+        log_OUTPUT = StringIO()
+        # Check the printed contents
+        print_OUTPUT = StringIO()
+        sys.stdout = print_OUTPUT
+        with LoggingIntercept(log_OUTPUT,
+                              'pyomo.contrib.trustregion', logging.INFO):
+            result = trust_region_method(self.m,
                             self.decision_variables,
                             self.ext_fcn_surrogate_map_rule,
                             self.config)
+        sys.stdout = sys.__stdout__
+        # Check the log to make sure it is capturing
+        self.assertIn('Iteration 0', log_OUTPUT.getvalue())
+        # Check the printed output
+        self.assertIn('EXIT: Optimal solution found.',
+                      print_OUTPUT.getvalue())
+        # The names of both models should be the same
+        self.assertEqual(result.name, self.m.name)
+        # The values should not be the same
+        self.assertNotEqual(value(result.obj), value(self.m.obj))

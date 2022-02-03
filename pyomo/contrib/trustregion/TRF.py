@@ -103,7 +103,7 @@ def trust_region_method(model,
         if ((trust_radius <= config.minimum_radius) and
             (abs(feasibility_k - feasibility) < config.feasibility_termination)):
             if subopt_flag:
-                print('WARNING: Insufficient progress.')
+                logger.warning('WARNING: Insufficient progress.')
                 print('EXIT: Feasible solution found.')
                 break
             else:
@@ -183,7 +183,9 @@ def trust_region_method(model,
             TRFLogger.printIteration()
 
     if iteration >= config.maximum_iterations:
-        print('EXIT: Maximum iterations reached: {}.'.format(config.maximum_iterations))
+        logger.warning('EXIT: Maximum iterations reached: {}.'.format(config.maximum_iterations))
+
+    return interface.model
 
 
 def _trf_config():
@@ -361,10 +363,10 @@ class TrustRegionSolver(object):
     papers by Eason (2016/2018), Yoshio (2020), and Biegler.
 
     """
+    CONFIG = _trf_config()
 
     def __init__(self, **kwds):
-        self._CONFIG = _trf_config()
-        self._CONFIG.set_value(kwds)
+        self.config = self.CONFIG(kwds)
 
     def available(self, exception_flag=True):
         """
@@ -412,16 +414,17 @@ class TrustRegionSolver(object):
             The default is 0 (i.e., no basis function rule.)
 
         """
-        self.config = self._CONFIG(kwds.pop('options', {}))
-        self.config.set_value(kwds)
+        config = self.config(kwds.pop('options', {}))
+        config.set_value(kwds)
         if ext_fcn_surrogate_map_rule is None:
             # If the user does not pass us a "basis" function,
             # we default to 0.
             ext_fcn_surrogate_map_rule = lambda comp,ef: 0
-        trust_region_method(model,
+        result = trust_region_method(model,
                             degrees_of_freedom_variables,
                             ext_fcn_surrogate_map_rule,
-                            self.config)
+                            config)
+        return result
 
 
 def _generate_filtered_docstring():
