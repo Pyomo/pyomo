@@ -30,7 +30,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: [3.9]
+        python: ['3.10']
         other: [""]
         category: [""]
 
@@ -233,6 +233,8 @@ jobs:
             python -m pip install --cache-dir cache/pip \
                 -i https://pypi.gurobi.com gurobipy \
                 || echo "WARNING: Gurobi is not available"
+            python -m pip install --cache-die cache/pip pyqt6 pytest-qt \
+                || echo "WARNING: PyQt6 is no available"
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
         fi
@@ -263,6 +265,8 @@ jobs:
                 || echo "WARNING: CPLEX Community Edition is not available"
             conda install -q -y -c gurobi gurobi \
                 || echo "WARNING: Gurobi is not available"
+            conda install -q -y -c pyqt pytest-qt \
+                || echo "WARNING: PyQt is not available"
             conda install -q -y -c fico-xpress xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             for PKG in cyipopt pymumps; do
