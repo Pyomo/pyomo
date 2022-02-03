@@ -12,14 +12,15 @@
 UI Tests
 """
 
-from pyomo.environ import ConcreteModel, Var, Param, Constraint, Objective, Reals, Block, Expression, ExternalFunction, sin, sqrt, log
+from pyomo.environ import (ConcreteModel, Var, Param, Constraint, Objective,
+                           Reals, Block, Expression, ExternalFunction,
+                           sin, sqrt, log)
 from pyomo.contrib.viewer.qt import qt_available
-from pyomo.contrib.viewer.qt import QtCore, QMessageBox
-from pyomo.contrib.viewer.ui import get_mainwindow, ModelBrowser
+if qt_available:
+    from pyomo.contrib.viewer.qt import QtCore, QMessageBox
+    from pyomo.contrib.viewer.ui import get_mainwindow, ModelBrowser
 
 import pyomo.common.unittest as unittest
-
-print(qt_available)
 
 def get_model():
     # Borrowed this test model from the trust region tests
