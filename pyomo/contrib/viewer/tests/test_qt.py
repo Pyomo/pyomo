@@ -26,7 +26,7 @@ else:
     # in order to stop errors
     @unittest.pytest.fixture()
     def qtbot():
-        return
+        return qtbot
 
 
 def get_model():
