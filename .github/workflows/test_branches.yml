@@ -36,7 +36,7 @@ jobs:
 
         include:
         - os: ubuntu-latest
-          python: 3.9
+          python: 3.10
           TARGET: linux
           PYENV: pip
 
@@ -77,7 +77,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.6
+          python: 3.7
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1

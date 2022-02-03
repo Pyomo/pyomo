@@ -24,14 +24,12 @@
 UI Tests
 """
 import os
-import sys
 import pyomo.common.unittest as unittest
 from pyomo.common.fileutils import this_file_dir
 
 test_file = os.path.join(this_file_dir(), "pytest_qt.py")
 
 try:
-    import pytest
     # Contextvars is required for anyio/sniffio (pytest), but was not
     # added to the standard library until Python 3.7.  If it is not
     # available (either directly or through the 3.6 backport), do not
@@ -45,10 +43,10 @@ except:
 class TestViewerQT(unittest.TestCase):
     @unittest.timeout(10)
     def test_get_mainwindow(self):
-        rc = pytest.main(["%s::%s" % (test_file, 'test_get_mainwindow')])
-        self.assertEqual(rc, pytest.ExitCode.OK)
+        rc = unittest.pytest.main(["%s::%s" % (test_file, 'test_get_mainwindow')])
+        self.assertEqual(rc, unittest.pytest.ExitCode.OK)
 
     @unittest.timeout(10)
     def test_model_information(self):
-        rc = pytest.main(["%s::%s" % (test_file, 'test_model_information')])
-        self.assertEqual(rc, pytest.ExitCode.OK)
+        rc = unittest.pytest.main(["%s::%s" % (test_file, 'test_model_information')])
+        self.assertEqual(rc, unittest.pytest.ExitCode.OK)
