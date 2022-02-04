@@ -30,7 +30,7 @@ from pyomo.core.expr.current import (
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.base import (
     Block, Objective, Constraint, Var, Param, Expression, ExternalFunction,
-    SymbolMap, NameLabeler, SortComponents, minimize,
+    Suffix, SymbolMap, NameLabeler, SortComponents, minimize,
 )
 from pyomo.core.base.block import SortComponents
 from pyomo.core.base.component import ActiveComponent
@@ -159,6 +159,7 @@ class NLWriter(object):
             # FIXME: Non-active components should not report as Active
             Set, RangeSet, Port,
             # TODO: Suffix, Piecewise, SOSConstraint, Complementarity
+            Suffix,
         })
         if unknown:
             raise ValueError(
@@ -203,6 +204,7 @@ class _NLWriter_impl(object):
         self.subexpression_cache = {}
         self.subexpression_order = []
         self.external_functions = {}
+        self.used_named_expressions = set()
         self.var_map = _deterministic_dict()
         self.visitor = AMPLRepnVisitor(
             self.template,
@@ -210,6 +212,7 @@ class _NLWriter_impl(object):
             self.subexpression_order,
             self.external_functions,
             self.var_map,
+            self.used_named_expressions,
         )
         self.next_V_line_id = 0
 
@@ -309,7 +312,8 @@ class _NLWriter_impl(object):
         # in constraints / objectives
         self._categorize_vars(
             map(self.subexpression_cache.__getitem__,
-                self.subexpression_order),
+                filter(self.used_named_expressions.__contains__,
+                       self.subexpression_order)),
             nz_by_comp
         )
         n_subexpressions = self._count_subexpression_occurances()
@@ -396,7 +400,8 @@ class _NLWriter_impl(object):
                 linear_only_vars & integer_vars,
                 key=column_order.__getitem__))
         assert len(variables) == n_vars
-        timer.toc(f'{len(variables)} variables, {len(constraints)} constraints')
+        timer.toc(f'{len(variables)} variables, {len(constraints)} constraints'
+                  f' [{n_cons-n_nonlinear_cons} L, {n_nonlinear_cons} NL]')
         # Fill in the variable list and update the new column order
         for idx, _id in enumerate(variables):
             v = var_map[_id]
@@ -562,6 +567,8 @@ class _NLWriter_impl(object):
         single_use_subexpressions = {}
         self.next_V_line_id = n_vars
         for _id in self.subexpression_order:
+            if _id not in self.used_named_expressions:
+                continue
             cache = self.subexpression_cache[_id]
             if cache[2][2]:
                 # substitute expression directly into expression trees
@@ -733,25 +740,33 @@ class _NLWriter_impl(object):
 
         for comp_info in comp_list:
             expr_info = comp_info[1]
+            # Note: mult will be 1 here: it is either cleared by
+            # finalizeResult, or this is a named expression, in which
+            # case the mult was reset within handle_named_expression_node
+            #assert expr_info.mult == 1
+            #
             # Process the linear portion of this component
             if expr_info.linear:
-                if expr_info.linear.__class__ is not dict:
-                    coefs = {}
-                    for c, v in expr_info.linear:
-                        if v in coefs:
-                            coefs[v] += c
-                        elif c:
-                            coefs[v] = c
-                    expr_info.linear = coefs
+                if expr_info.linear.__class__ is list:
+                    linear = {}
+                    for v, c in expr_info.linear:
+                        if v in linear:
+                            linear[v] += c
+                        else:
+                            linear[v] = c
+                    expr_info.linear = linear
                 linear_vars = set(expr_info.linear)
                 all_linear_vars.update(linear_vars)
                 # Start off assuming that this is a linear expression.
                 # if we end up with nonlinear terms, we will create a
                 # new nz set
                 nz = linear_vars
-            else:
-                expr_info.linear = {}
-                linear_vars = set()
+            # else:
+            #     # NOTE: we only create the linear_vars set if there
+            #     # are linear vars: the use of linear_vars below is
+            #     # guarded by 'if expr_info.linear'
+            #     linear_vars = set()
+            #
             # Process the nonlinear portion of this component
             if expr_info.nonlinear:
                 nonlinear_vars = set()
@@ -775,12 +790,12 @@ class _NLWriter_impl(object):
                 # nonlinear components.
                 if expr_info.linear:
                     nz = linear_vars | nonlinear_vars
-                    if len(nz) > len(nonlinear_vars):
+                    if len(nz) > len(linear_vars):
                         for i in nonlinear_vars - linear_vars:
                             expr_info.linear[i] = 0
                 else:
                     nz = nonlinear_vars
-                    expr_info.linear = {i: 0 for i in nz}
+                    expr_info.linear = dict.fromkeys(nz, 0)
                 all_nonlinear_vars.update(nonlinear_vars)
 
             # Update the count of components that each variable appears in
@@ -890,51 +905,82 @@ class _NLWriter_impl(object):
 
 
 class AMPLRepn(object):
-    __slots__ = ('nl', 'const', 'linear', 'nonlinear')
+    __slots__ = (
+        'nl', 'mult', 'const', 'linear', 'nonlinear')
 
-    def __init__(self, linear, nonlinear):
+    def __init__(self, const, linear, nonlinear):
         self.nl = None
-        self.const = 0
+        self.mult = 1
+        self.const = const
         self.linear = linear
         self.nonlinear = nonlinear
 
-    def to_nl_node(self, visitor):
+    def compile_repn(self, visitor, prefix='', args=None):
+        template = visitor.template
+        if self.mult != 1:
+            prefix += template.product + (template.const % self.mult)
         if self.nl is not None:
-            return self.nl
-        nl = ''
-        args = []
+            nl, nl_args = self.nl
+            visitor.used_named_expressions.update(nl_args)
+            if prefix:
+                nl = prefix + nl
+            if args is not None and args is not nl_args:
+                args.extend(nl_args)
+            else:
+                args = list(nl_args)
+            return nl, args
+
+        if args is None:
+            args = []
         nterms = 0
         if self.const:
             nterms += 1
-            nl += visitor.template.const % self.const
+            nl_sum = template.const % self.const
+        else:
+            nl_sum = ''
         if self.linear:
-            for c, v in self.linear:
-                if c != 1:
-                    nl += visitor.template.product + (
-                        visitor.template.const % c)
-                nl += visitor.template.var
-            args.extend(map(itemgetter(1), self.linear))
             nterms += len(self.linear)
+            nl_sum += ''.join(
+                template.var
+                if c == 1 else
+                template.product + (template.const % c) + template.var
+                for c in map(itemgetter(1), self.linear))
+            args.extend(map(itemgetter(0), self.linear))
         if self.nonlinear:
             if self.nonlinear.__class__ is list:
                 nterms += len(self.nonlinear)
-                tmp_nl, tmp_args = zip(*self.nonlinear)
-                nl += ''.join(tmp_nl)
-                deque(map(args.extend, tmp_args), maxlen=0)
+                nl_sum += ''.join(map(itemgetter(0), self.nonlinear))
+                deque(map(args.extend, map(itemgetter(1), self.nonlinear)),
+                      maxlen=0)
             else:
                 nterms += 1
-                nl += self.nonlinear[0]
+                nl_sum += self.nonlinear[0]
                 args.extend(self.nonlinear[1])
 
         if nterms > 2:
-            self.nl = (visitor.template.nary_sum % nterms) + nl, tuple(args)
+            return prefix + (template.nary_sum % nterms) + nl_sum, args
         elif nterms == 2:
-            self.nl = visitor.template.binary_sum + nl, tuple(args)
+            return prefix + template.binary_sum + nl_sum, args
         elif nterms == 1:
-            self.nl = nl, tuple(args)
+            return prefix + nl_sum, args
         else: # nterms == 0
-            self.nl = visitor.template.const % 0, ()
-        return self.nl
+            return prefix + (template.const % 0), []
+
+    def compile_nonlinear_fragment(self, template):
+        args = []
+        nterms = len(self.nonlinear)
+        nl_sum = ''.join(map(itemgetter(0), self.nonlinear))
+        deque(map(args.extend, map(itemgetter(1), self.nonlinear)),
+              maxlen=0)
+
+        if nterms > 2:
+            self.nonlinear = (template.nary_sum % nterms) + nl_sum, args
+        elif nterms == 2:
+            self.nonlinear = template.binary_sum + nl_sum, args
+        elif nterms == 1:
+            self.nonlinear = nl_sum, args
+        else: # nterms == 0
+            self.nonlinear = None
 
     def append(self, other):
         """Append a child result from acceptChildResult
@@ -947,71 +993,39 @@ class AMPLRepn(object):
         custom callback)
 
         """
+        #assert self.mult == 1
         _type = other[0]
         if _type is _MONOMIAL:
             self.linear.append(other[1:])
         elif _type is _GENERAL:
             other = other[1]
-            self.const += other.const
-            if other.linear:
-                self.linear.extend(other.linear)
-            if other.nonlinear:
-                if other.nonlinear.__class__ is list:
-                    self.nonlinear.extend(other.nonlinear)
-                else:
-                    self.nonlinear.append(other.nonlinear)
+            if other.mult != 1:
+                if other.nonlinear and other.nonlinear.__class__ is list:
+                    other.compile_nonlinear_fragment(_ActiveVisitor.template)
+                mult = other.mult
+                self.const += mult * other.const
+                if other.linear:
+                    self.linear.extend((v, c*mult) for v, c in other.linear)
+                if other.nonlinear:
+                    if mult == -1:
+                        prefix = _ActiveVisitor.template.negation
+                    else:
+                        prefix = _ActiveVisitor.template.product + (
+                            _ActiveVisitor.template.const % mult)
+                    self.nonlinear.append(
+                        (prefix + other.nonlinear[0], other.nonlinear[1])
+                    )
+            else:
+                self.const += other.const
+                if other.linear:
+                    self.linear.extend(other.linear)
+                if other.nonlinear:
+                    if other.nonlinear.__class__ is list:
+                        self.nonlinear.extend(other.nonlinear)
+                    else:
+                        self.nonlinear.append(other.nonlinear)
         elif _type is _CONSTANT:
             self.const += other[1]
-
-    def distribute_multiplicand(self, visitor, mult):
-        if not mult:
-            return AMPLRepn(None, None)
-        if self.nl:
-            if mult == 1:
-                return AMPLRepn(None, self.nl)
-            return AMPLRepn(
-                None,
-                ( visitor.template.product \
-                  + (visitor.template.const % mult) + self.nl[0],
-                  self.nl[1] )
-            )
-        ans = AMPLRepn(None, None)
-        if self.nonlinear:
-            if type(self.nonlinear) is tuple:
-                nl, args = self.nonlinear
-            else:
-                nl, args = AMPLRepn(None, self.nonlinear).to_nl_node(visitor)
-            if mult == -1:
-                ans.nonlinear = (
-                    visitor.template.negation + nl,
-                    args,
-                )
-            else:
-                ans.nonlinear = (
-                    visitor.template.product \
-                    + (visitor.template.const % mult) + nl,
-                    args,
-                )
-        ans.const = mult * self.const
-        if self.linear is not None:
-            ans.linear = [(mult * c, v) for c, v in self.linear]
-        return ans
-
-    def distribute_divisor(self, visitor, div):
-        ans = AMPLRepn(None, None)
-        if self.nonlinear:
-            if type(self.nonlinear) is tuple:
-                nl, args = self.nonlinear
-            else:
-                nl, args = AMPLRepn(None, self.nonlinear).to_nl_node(visitor)
-            ans.nonlinear = (
-                visitor.template.division + nl + (visitor.template.const % div),
-                args,
-            )
-        ans.const = self.const / div
-        if self.linear is not None:
-            ans.linear = [(c / div, v) for c, v in self.linear]
-        return ans
 
 
 def _create_strict_inequality_map(vars_):
@@ -1081,31 +1095,25 @@ class text_nl_template(text_nl_debug_template):
     _create_strict_inequality_map(vars())
 
 
-def node_result_to_amplrepn(visitor, data):
+def node_result_to_amplrepn(data):
     if data[0] is _GENERAL:
-        ans = data[1]
-        if ans.nonlinear.__class__ is list:
-            if ans.nonlinear:
-                ans.nonlinear = AMPLRepn(
-                    None, ans.nonlinear).to_nl_node(visitor)
-            else:
-                ans.nonlinear = None
+        return data[1]
     elif data[0] is _MONOMIAL:
-        ans = AMPLRepn([], None)
-        if data[1]:
-            ans.linear.append(data[1:])
+        if data[2]:
+            return AMPLRepn(0, (data[1:],), None)
+        else:
+            return AMPLRepn(0, None, None)
     elif data[0] is _CONSTANT:
-        ans = AMPLRepn(None, None)
-        ans.const = data[1]
+        return AMPLRepn(data[1], None, None)
     else:
         raise DeveloperError("unknown result type")
-    return ans
 
 def handle_negation_node(visitor, node, arg1):
     if arg1[0] is _MONOMIAL:
-        return (_MONOMIAL, -1*arg1[1], arg1[2])
+        return (_MONOMIAL, arg1[1], -1*arg1[2])
     elif arg1[0] is _GENERAL:
-        return (_GENERAL, arg1[1].distribute_multiplicand(visitor, -1))
+        arg1[1].mult *= -1
+        return arg1
     elif arg1[0] is _CONSTANT:
         return (_CONSTANT, -1*arg1[1])
     else:
@@ -1124,16 +1132,16 @@ def handle_product_node(visitor, node, arg1, arg2):
         if mult == 1:
             return arg2
         elif arg2[0] is _MONOMIAL:
-            return (_MONOMIAL, mult*arg2[1], arg2[2])
+            return (_MONOMIAL, arg2[1], mult*arg2[2])
         elif arg2[0] is _GENERAL:
-            return (_GENERAL, arg2[1].distribute_multiplicand(visitor, mult))
+            arg2[1].mult *= mult
+            return arg2
         elif arg2[0] is _CONSTANT:
             return (_CONSTANT, mult*arg2[1])
-    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
-    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
-    return (_GENERAL, AMPLRepn(None, (
-        visitor.template.product + nl1[0] + nl2[0], nl1[1] + nl2[1],
-    )))
+    nonlin = node_result_to_amplrepn(arg1).compile_repn(
+        visitor, visitor.template.product)
+    nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
+    return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_division_node(visitor, node, arg1, arg2):
     if arg2[0] is _CONSTANT:
@@ -1141,85 +1149,75 @@ def handle_division_node(visitor, node, arg1, arg2):
         if div == 1:
             return arg1
         if arg1[0] is _MONOMIAL:
-            return (_MONOMIAL, arg1[1]/div, arg1[2])
+            return (_MONOMIAL, arg1[1], arg1[2]/div)
         elif arg1[0] is _GENERAL:
-            return (_GENERAL, arg1[1].distribute_divisor(visitor, div))
+            arg1[1].mult /= div
+            return arg1
         elif arg1[0] is _CONSTANT:
             return (_CONSTANT, arg1[1]/div)
-    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
-    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
-    return (_GENERAL, AMPLRepn(None, (
-        visitor.template.division + nl1[0] + nl2[0], nl1[1] + nl2[1],
-    )))
+    nonlin = node_result_to_amplrepn(arg1).compile_repn(
+        visitor, visitor.template.division)
+    nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
+    return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_pow_node(visitor, node, arg1, arg2):
-    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
-    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
-    return (_GENERAL, AMPLRepn(None, (
-        visitor.template.pow + nl1[0] + nl2[0], nl1[1] + nl2[1],
-    )))
+    nonlin = node_result_to_amplrepn(arg1).compile_repn(
+        visitor, visitor.template.pow)
+    nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
+    return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_abs_node(visitor, node, arg1):
-    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
-    return (_GENERAL, AMPLRepn(None, (
-        visitor.template.abs + nl1[0], nl1[1],
-    )))
+    nonlin = node_result_to_amplrepn(arg1).compile_repn(
+        visitor, visitor.template.abs)
+    return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_unary_node(visitor, node, arg1):
-    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
-    return (_GENERAL, AMPLRepn(None, (
-        visitor.template.unary[node.name] + nl1[0],
-        nl1[1],
-    )))
+    nonlin = node_result_to_amplrepn(arg1).compile_repn(
+        visitor, visitor.template.unary[node.name])
+    return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_exprif_node(visitor, node, arg1, arg2, arg3):
-    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
-    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
-    nl3 = node_result_to_amplrepn(visitor, arg3).to_nl_node(visitor)
-    return (_GENERAL, AMPLRepn(None, (
-        visitor.template.exprif + nl1[0] + nl2[0] + nl3[0],
-        nl1[1] + nl2[1] + nl3[1],
-    )))
+    nonlin = node_result_to_amplrepn(arg1).compile_repn(
+        visitor, visitor.template.exprif)
+    nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
+    nonlin = node_result_to_amplrepn(arg3).compile_repn(visitor, *nonlin)
+    return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_equality_node(visitor, node, arg1, arg2):
-    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
-    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
-    return (_GENERAL, AMPLRepn(None, (
-        visitor.template.equality + nl1[0] + nl2[0],
-        nl1[1] + nl2[1],
-    )))
+    nonlin = node_result_to_amplrepn(arg1).compile_repn(
+        visitor, visitor.template.equality)
+    nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
+    return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_inequality_node(visitor, node, arg1, arg2):
-    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
-    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
-    op = visitor.template.strict_inequality_map[node.strict]
-    return (_GENERAL, AMPLRepn(None, (
-        op + nl1[0] + nl2[0],
-        nl1[1] + nl2[1],
-    )))
+    nonlin = node_result_to_amplrepn(arg1).compile_repn(
+        visitor, visitor.template.strict_inequality_map[node.strict])
+    nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
+    return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
-    nl1 = node_result_to_amplrepn(visitor, arg1).to_nl_node(visitor)
-    nl2 = node_result_to_amplrepn(visitor, arg2).to_nl_node(visitor)
-    nl3 = node_result_to_amplrepn(visitor, arg3).to_nl_node(visitor)
     op = visitor.template.strict_inequality_map[node.strict]
-    return (_GENERAL, AMPLRepn(None, (
-        visitor.template.and_expr
-        + op[0] + nl1[0] + nl2[0]
-        + op[1] + nl2[0] + nl3[0],
-        nl1[1] + nl2[1] + nl2[1] + nl3[1],
-    )))
+    nl, args = node_result_to_amplrepn(arg1).compile_repn(
+        visitor, visitor.template.and_expr + op[0])
+    nl2, args2 = node_result_to_amplrepn(arg2).compile_repn(visitor)
+    nl += nl2 + op[1] + nl2
+    args.extend(args2)
+    args.extend(args2)
+    nonlin = node_result_to_amplrepn(arg3).compile_repn(visitor, nl, args)
+    return (_GENERAL, AMPLRepn(0, None, nonlin))
 
-def handle_expression_node(visitor, node, arg1):
+def handle_named_expression_node(visitor, node, arg1):
+    #return arg1
     _id = id(node)
     # Note that while named subexpressions ('defined variables' in the
     # ASL NL file vernacular) look like variables, they are not allowed
     # to appear in the 'linear' portion of a constraint / objective
     # definition.  We will return this as a "var" template, but
     # wrapped in the nonlinear portion of the expression tree.
-    repn = node_result_to_amplrepn(visitor, arg1)
-    # When converting this shared subexpression to a (nonlinear) node,
-    # we want to just reference this subexpression:
+    repn = node_result_to_amplrepn(arg1)
+
+    # When converting this shared subexpression to a (nonlinear)
+    # node, we want to just reference this subexpression:
     repn.nl = (visitor.template.var, (_id,))
 
     # A local copy of the expression source list.  This will be updated
@@ -1227,8 +1225,17 @@ def handle_expression_node(visitor, node, arg1):
     # expression tree.
     expression_source = list(visitor.active_expression_source)
 
-    if repn.linear:
-        if repn.nonlinear:
+    if repn.nonlinear:
+        # As we will eventually need the compiled form of any nonlinear
+        # expression, we will go ahead and compile it here.  We do not
+        # do the same for the linear component as we will only need the
+        # linear component compiled to a dict if we are emitting the
+        # original (linear + nonlinear) V line (which will not happen if
+        # the V line is part of a larger linear operator).
+        if repn.nonlinear.__class__ is list:
+            repn.compile_nonlinear_fragment(visitor.template)
+
+        if repn.linear:
             # If this expession has both linear and nonlinear
             # components, we will follow the ASL convention and break
             # the named subexpression into two named subexpressions: one
@@ -1237,7 +1244,7 @@ def handle_expression_node(visitor, node, arg1):
             # will allow us to propagate linear coefficients up from
             # named subexpressions when appropriate.
             subid = id(repn)
-            sub_repn = AMPLRepn(None, repn.nonlinear)
+            sub_repn = AMPLRepn(0, None, repn.nonlinear)
             sub_repn.nl = (visitor.template.var, (subid,))
             # See below for the meaning of this tuple
             visitor.subexpression_cache[subid] = (
@@ -1247,37 +1254,59 @@ def handle_expression_node(visitor, node, arg1):
             # It is important that the NL subexpression comes before the
             # main named expression:
             visitor.subexpression_order.append(subid)
-        elif (not repn.const and len(repn.linear) == 1
-              and repn.linear[0][0] == 1):
-            # This Expression holds only a variable (multiplied by 1).
-            # Do not emit this as a named variable and instead just
-            # inject the variable where this expression is used.
+            # The nonlinear identifier is *always* used
+            visitor.used_named_expressions.add(subid)
+    else:
+        repn.nonlinear = None
+        if repn.linear:
+            if (not repn.const and len(repn.linear) == 1
+                and repn.linear[0][1] == 1):
+                # This Expression holds only a variable (multiplied by
+                # 1).  Do not emit this as a named variable and instead
+                # just inject the variable where this expression is
+                # used.
+                repn.nl = None
+                expression_source[2] = True
+        else:
+            # This Expression holds only a constant.  Do not emit this
+            # as a named variable and instead just inject the constant
+            # where this expression is used.
             repn.nl = None
             expression_source[2] = True
-    elif not repn.nonlinear:
-        # This Expression holds only a constant.  Do not emit this as a
-        # named variable and instead just inject the constant where this
-        # expression is used.
-        repn.nl = None
-        expression_source[2] = True
+
+    if repn.mult != 1:
+        mult = repn.mult
+        repn.mult = 1
+        repn.const *= mult
+        if repn.linear:
+            repn.linear = [(v, c*mult) for v, c in repn.linear]
+        if repn.nonlinear:
+            if mult == -1:
+                prefix = visitor.template.negation
+            else:
+                prefix = visitor.template.product + (
+                    visitor.template.const % mult)
+            repn.nonlinear = prefix + repn.nonlinear[0], repn.nonlinear[1]
 
     visitor.subexpression_cache[_id] = (
         # 0: the "component" that generated this expression ID
         node,
-        # 1: the common subexpression
+        # 1: the common subexpression (to be written out)
         repn,
         # 2: the (single) component that uses this subexpression.  This
         # is a 3-tuple [con_id, obj_id, substitute_expression].  If the
         # expression is used by 1 constraint / objective, then the id is
         # set to 0.  If it is not used by any, then it is None.
-        # substitue_expression is a bool indicating id this named
+        # substitue_expression is a bool indicating if this named
         # subexpression tree should be directly substituted into any
         # expression tree that references this node (i.e., do NOT emit
         # the V line).
         expression_source,
     )
     visitor.subexpression_order.append(_id)
-    return (_GENERAL, visitor.subexpression_cache[_id][1])
+    ans = AMPLRepn(repn.const, repn.linear, repn.nonlinear)
+    ans.nl = repn.nl
+    return (_GENERAL, repn)
 
 def handle_external_function_node(visitor, node, *args):
     func = node._fcn._function
@@ -1299,11 +1328,11 @@ def handle_external_function_node(visitor, node, *args):
             node._fcn,
         )
     _amplrepn = lambda arg: \
-                node_result_to_amplrepn(visitor, arg).to_nl_node(visitor)
+                node_result_to_amplrepn(visitor, arg).to_nl_node()
     nl, arg_tuples = zip(*map(_amplrepn, args))
     all_args = []
     deque(map(all_args.extend, arg_tuples), maxlen=0)
-    return (_GENERAL, AMPLRepn(None, (
+    return (_GENERAL, AMPLRepn(0, None, (
         (visitor.template.external_fcn % (
             visitor.external_functions[func][0], len(args))) + ''.join(nl),
         tuple(all_args)
@@ -1321,9 +1350,9 @@ _operator_handles = {
     EqualityExpression: handle_equality_node,
     InequalityExpression: handle_inequality_node,
     RangedExpression: handle_ranged_inequality_node,
-    _GeneralExpressionData: handle_expression_node,
-    ScalarExpression: handle_expression_node,
-    kernel.expression.expression: handle_expression_node,
+    _GeneralExpressionData: handle_named_expression_node,
+    ScalarExpression: handle_named_expression_node,
+    kernel.expression.expression: handle_named_expression_node,
     ExternalFunctionExpression: handle_external_function_node,
     # These are handled explicitly in beforeChild():
     # LinearExpression: handle_linear_expression,
@@ -1342,7 +1371,7 @@ def _before_non_expression(visitor, child):
         _id = id(child)
         if _id not in visitor.var_map:
             visitor.var_map[_id] = child
-        return False, (_MONOMIAL, 1, _id)
+        return False, (_MONOMIAL, _id, 1)
 
 def _before_npv(visitor, child):
     # _id = id(child)
@@ -1371,25 +1400,35 @@ def _before_monomial(visitor, child):
         _id = id(arg2)
         if _id not in visitor.var_map:
             visitor.var_map[_id] = arg2
-        return False, (_MONOMIAL, arg1, _id)
+        return False, (_MONOMIAL, _id, arg1)
 
 def _before_linear(visitor, child):
     # Because we are going to modify the LinearExpression in this
     # walker, we need to make a copy of the LinearExpression from
     # the original expression tree.
-    data = AMPLRepn(list(zip(
-        (c if c.__class__ in native_types else c() for c in child.linear_coefs),
-        map(id, child.linear_vars)
-    )), None)
-    data.const = child.constant
-    return False, (_GENERAL, data)
+    var_map = visitor.var_map
+    const = child.constant
+    linear = []
+    for v, c in zip(child.linear_vars, child.linear_coef):
+        if c.__class__ not in native_types:
+            c = c()
+        if v.is_fixed():
+            const += c
+        else:
+            _id = id(v)
+            if _id not in var_map:
+                var_map[_id] = v
+            linear.append(_id, c)
+    return False, (_GENERAL, AMPLRepn(const, linear, None))
 
 def _before_named_expression(visitor, child):
     _id = id(child)
     if _id in visitor.subexpression_cache:
-        cache = visitor.subexpression_cache[_id]
-        cache[2][visitor.active_expression_source_idx] = 0
-        return False, (_GENERAL, cache[1])
+        obj, repn, info = visitor.subexpression_cache[_id]
+        info[visitor.active_expression_source_idx] = 0
+        ans = AMPLRepn(repn.const, repn.linear, repn.nonlinear)
+        ans.nl = repn.nl
+        return False, (_GENERAL, ans)
     else:
         return True, None
 
@@ -1414,11 +1453,12 @@ _before_child_handlers[MonomialTermExpression] = _before_monomial
 _before_child_handlers[LinearExpression] = _before_linear
 _before_child_handlers[SumExpression] = _before_general_expression
 
+_ActiveVisitor = None
 
 class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def __init__(self, template, subexpression_cache, subexpression_order,
-                 external_functions, var_map):
+                 external_functions, var_map, used_named_expressions):
         super().__init__()
         self.template = template
         self.subexpression_cache = subexpression_cache
@@ -1426,9 +1466,14 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.external_functions = external_functions
         self.active_expression_source = None
         self.var_map = var_map
+        self.used_named_expressions = used_named_expressions
         #self.value_cache = {}
 
     def initializeWalker(self, expr):
+        global _ActiveVisitor
+        assert _ActiveVisitor is None
+        _ActiveVisitor = self
+        #
         expr, src, src_idx = expr
         self.active_expression_source = [None, None, False]
         self.active_expression_source[src_idx] = id(src)
@@ -1449,7 +1494,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
         if node.__class__ is SumExpression:
-            return node.args, AMPLRepn([], [])
+            return node.args, AMPLRepn(0, [], [])
         else:
             return node.args, []
 
@@ -1467,8 +1512,47 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         return _operator_handles[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):
-        ans = node_result_to_amplrepn(self, result)
+        ans = node_result_to_amplrepn(result)
+        if ans.nl:
+            self.used_named_expressions.update(ans.nl[1])
+            ans.const = 0
+            ans.linear = None
+            ans.nonlinear = ans.nl
+            ans.nl = None
+        if ans.nonlinear.__class__ is list:
+            if ans.nonlinear:
+                ans.compile_nonlinear_fragment(self.template)
+            else:
+                ans.nonlinear = None
+        linear = {}
+        if ans.mult != 1:
+            mult = ans.mult
+            ans.mult = 1
+            ans.const *= mult
+            if ans.linear:
+                for v, c in ans.linear:
+                    if v in linear:
+                        linear[v] += mult * c
+                    else:
+                        linear[v] = mult * c
+            if mult == -1:
+                prefix = self.template.negation
+            else:
+                prefix = self.template.product + (self.template.const % mult)
+            ans.nonlinear = prefix + ans.nonlinear[0], ans.nonlinear[1]
+        elif ans.linear:
+            for v, c in ans.linear:
+                if v in linear:
+                    linear[v] += c
+                else:
+                    linear[v] = c
+        ans.linear = linear
+        #
         self.active_expression_source = None
+        global _ActiveVisitor
+        assert _ActiveVisitor is self
+        _ActiveVisitor = None
+        #
         return ans
 
     def _register_new_before_child_processor(self, child):
