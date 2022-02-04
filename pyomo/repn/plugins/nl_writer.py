@@ -881,6 +881,7 @@ class _NLWriter_impl(object):
         return n_subexpressions
 
     def _write_nl_expression(self, repn, const_=None):
+        #assert repn.mult == 1
         if const_ is None:
             const_ = repn.const
         if repn.nonlinear and repn.nonlinear[0] != 'n0\n':
@@ -1318,7 +1319,7 @@ def handle_named_expression_node(visitor, node, arg1):
     visitor.subexpression_order.append(_id)
     ans = AMPLRepn(repn.const, repn.linear, repn.nonlinear)
     ans.nl = repn.nl
-    return (_GENERAL, repn)
+    return (_GENERAL, ans)
 
 def handle_external_function_node(visitor, node, *args):
     func = node._fcn._function
@@ -1421,16 +1422,16 @@ def _before_linear(visitor, child):
     var_map = visitor.var_map
     const = child.constant
     linear = []
-    for v, c in zip(child.linear_vars, child.linear_coef):
+    for v, c in zip(child.linear_vars, child.linear_coefs):
         if c.__class__ not in native_types:
             c = c()
         if v.is_fixed():
-            const += c
+            const += c * v()
         else:
             _id = id(v)
             if _id not in var_map:
                 var_map[_id] = v
-            linear.append(_id, c)
+            linear.append((_id, c))
     return False, (_GENERAL, AMPLRepn(const, linear, None))
 
 def _before_named_expression(visitor, child):
@@ -1541,11 +1542,13 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                         linear[v] += mult * c
                     else:
                         linear[v] = mult * c
-            if mult == -1:
-                prefix = self.template.negation
-            else:
-                prefix = self.template.product + (self.template.const % mult)
-            ans.nonlinear = prefix + ans.nonlinear[0], ans.nonlinear[1]
+            if ans.nonlinear:
+                if mult == -1:
+                    prefix = self.template.negation
+                else:
+                    prefix = self.template.product + (
+                        self.template.const % mult)
+                ans.nonlinear = prefix + ans.nonlinear[0], ans.nonlinear[1]
         elif ans.linear:
             for v, c in ans.linear:
                 if v in linear:
