@@ -217,6 +217,15 @@ class _NLWriter_impl(object):
         self.next_V_line_id = 0
 
     def write(self, model):
+        try:
+            assert AMPLRepn.ActiveVisitor is None
+            AMPLRepn.ActiveVisitor = self.visitor
+            self._write_impl(model)
+        finally:
+            assert AMPLRepn.ActiveVisitor is self.visitor
+            AMPLRepn.ActiveVisitor = None
+
+    def _write_impl(self, model):
         timer = TicTocTimer()
 
         sorter = SortComponents.unsorted
@@ -908,6 +917,8 @@ class AMPLRepn(object):
     __slots__ = (
         'nl', 'mult', 'const', 'linear', 'nonlinear')
 
+    ActiveVisitor = None
+
     def __init__(self, const, linear, nonlinear):
         self.nl = None
         self.mult = 1
@@ -1001,17 +1012,18 @@ class AMPLRepn(object):
             other = other[1]
             if other.mult != 1:
                 if other.nonlinear and other.nonlinear.__class__ is list:
-                    other.compile_nonlinear_fragment(_ActiveVisitor.template)
+                    other.compile_nonlinear_fragment(
+                        self.ActiveVisitor.template)
                 mult = other.mult
                 self.const += mult * other.const
                 if other.linear:
                     self.linear.extend((v, c*mult) for v, c in other.linear)
                 if other.nonlinear:
                     if mult == -1:
-                        prefix = _ActiveVisitor.template.negation
+                        prefix = self.ActiveVisitor.template.negation
                     else:
-                        prefix = _ActiveVisitor.template.product + (
-                            _ActiveVisitor.template.const % mult)
+                        prefix = self.ActiveVisitor.template.product + (
+                            self.ActiveVisitor.template.const % mult)
                     self.nonlinear.append(
                         (prefix + other.nonlinear[0], other.nonlinear[1])
                     )
@@ -1453,8 +1465,6 @@ _before_child_handlers[MonomialTermExpression] = _before_monomial
 _before_child_handlers[LinearExpression] = _before_linear
 _before_child_handlers[SumExpression] = _before_general_expression
 
-_ActiveVisitor = None
-
 class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def __init__(self, template, subexpression_cache, subexpression_order,
@@ -1470,10 +1480,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #self.value_cache = {}
 
     def initializeWalker(self, expr):
-        global _ActiveVisitor
-        assert _ActiveVisitor is None
-        _ActiveVisitor = self
-        #
         expr, src, src_idx = expr
         self.active_expression_source = [None, None, False]
         self.active_expression_source[src_idx] = id(src)
@@ -1549,10 +1555,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         ans.linear = linear
         #
         self.active_expression_source = None
-        global _ActiveVisitor
-        assert _ActiveVisitor is self
-        _ActiveVisitor = None
-        #
         return ans
 
     def _register_new_before_child_processor(self, child):
