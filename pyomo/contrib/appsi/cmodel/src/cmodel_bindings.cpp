@@ -32,6 +32,8 @@ PYBIND11_MODULE(appsi_cmodel, m) {
   m.def("py_interval_power", &py_interval_power);
   m.def("py_interval_exp", &py_interval_exp);
   m.def("py_interval_log", &py_interval_log);
+  m.def("py_interval_abs", &py_interval_abs);
+  m.def("_py_inverse_abs", &_py_inverse_abs);
   m.def("py_interval_log10", &py_interval_log10);
   m.def("py_interval_sin", &py_interval_sin);
   m.def("py_interval_cos", &py_interval_cos);
@@ -162,18 +164,18 @@ PYBIND11_MODULE(appsi_cmodel, m) {
       .def("perform_fbbt_with_seed", &Model::perform_fbbt_with_seed)
       .def("perform_fbbt", &Model::perform_fbbt);
   py::enum_<ExprType>(m, "ExprType")
-    .value("py_float", ExprType::py_float)
-    .value("var", ExprType::var)
-    .value("param", ExprType::param)
-    .value("product", ExprType::product)
-    .value("sum", ExprType::sum)
-    .value("negation", ExprType::negation)
-    .value("external_func", ExprType::external_func)
-    .value("power", ExprType::power)
-    .value("division", ExprType::division)
-    .value("unary_func", ExprType::unary_func)
-    .value("linear", ExprType::linear)
-    .value("named_expr", ExprType::named_expr)
-    .value("numeric_constant", ExprType::numeric_constant)
-    .export_values();
+      .value("py_float", ExprType::py_float)
+      .value("var", ExprType::var)
+      .value("param", ExprType::param)
+      .value("product", ExprType::product)
+      .value("sum", ExprType::sum)
+      .value("negation", ExprType::negation)
+      .value("external_func", ExprType::external_func)
+      .value("power", ExprType::power)
+      .value("division", ExprType::division)
+      .value("unary_func", ExprType::unary_func)
+      .value("linear", ExprType::linear)
+      .value("named_expr", ExprType::named_expr)
+      .value("numeric_constant", ExprType::numeric_constant)
+      .export_values();
 }

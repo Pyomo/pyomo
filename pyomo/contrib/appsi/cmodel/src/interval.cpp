@@ -471,6 +471,27 @@ void interval_log(double xl, double xu, double *res_lb, double *res_ub) {
     *res_ub = -inf;
 }
 
+void interval_abs(double xl, double xu, double *res_lb, double *res_ub) {
+  double abs_xl = std::fabs(xl);
+  double abs_xu = std::fabs(xu);
+  if (xl <= 0 && xu >= 0) {
+    *res_lb = 0;
+    *res_ub = std::max(abs_xl, abs_xu);
+  } else {
+    *res_lb = std::min(abs_xl, abs_xu);
+    *res_ub = std::max(abs_xl, abs_xu);
+  }
+}
+
+void _inverse_abs(double zl, double zu, double *xl, double *xu) {
+  if (zl < 0)
+    zl = 0;
+  if (zu < 0)
+    zu = 0;
+  *xu = std::max(zl, zu);
+  *xl = -(*xu);
+}
+
 void _inverse_power1(double zl, double zu, double yl, double yu, double orig_xl,
                      double orig_xu, double *xl, double *xu,
                      double feasibility_tol) {
@@ -1026,6 +1047,18 @@ std::pair<double, double> py_interval_log(double xl, double xu) {
   double res_lb, res_ub;
   interval_log(xl, xu, &res_lb, &res_ub);
   return std::make_pair(res_lb, res_ub);
+}
+
+std::pair<double, double> py_interval_abs(double xl, double xu) {
+  double res_lb, res_ub;
+  interval_abs(xl, xu, &res_lb, &res_ub);
+  return std::make_pair(res_lb, res_ub);
+}
+
+std::pair<double, double> _py_inverse_abs(double zl, double zu) {
+  double xl, xu;
+  _inverse_abs(zl, zu, &xl, &xu);
+  return std::make_pair(xl, xu);
 }
 
 std::pair<double, double> _py_inverse_power1(double zl, double zu, double yl,
