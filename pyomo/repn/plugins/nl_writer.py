@@ -220,7 +220,7 @@ class _NLWriter_impl(object):
         try:
             assert AMPLRepn.ActiveVisitor is None
             AMPLRepn.ActiveVisitor = self.visitor
-            self._write_impl(model)
+            return self._write_impl(model)
         finally:
             assert AMPLRepn.ActiveVisitor is self.visitor
             AMPLRepn.ActiveVisitor = None
