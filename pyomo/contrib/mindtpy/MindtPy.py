@@ -115,9 +115,12 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
-            # if ROA is activated, linear objective should be replace by epigraph constraint.
-            # Since the distance calculate do not include these variable, these variables should not be added to variable_list
-            # TODO: check why constraint_list are not updated.
+            # In the process_objective function, as long as the objective function is nonlinear, it will be reformulated and the variable/constraint/objective lists will be updated. For OA/GOA/LP-NLP algorithm, if the objective funtion is linear, the objecive function will not be reformulated.
+            # If the objective function is linear, it will be reformulated as epigraph constraint only if the Feasibility Pump or ROA/RLP-NLP algorithm is activated. (move_linear_objective = True)
+            # In Feasibility Pump, since the distance calculation only includes discrete variables and the epigraph slack variables are continuous variables, the Feasibility Pump algorithm will not affected even if the variable list are updated.
+            # In ROA and RLP/NLP, since the distance calculation does not include these epigraph slack variables, they should not be added to the variable list. (update_var_con_list = False)
+            # In the process_objective function, once the objective function has been reformulated as epigraph constraint, the variable/constraint/objective lists will not be updated only if the MINLP has a linear objective function and regularization is activated at the same time. This is because the epigraph constraint is very "flat" for branching rules. The orignal objective function will be used for the main problem and epigraph reformulation will be used for the projection problem.
+            # TODO: The logic here is too complicated, can be simplify it?
             process_objective(solve_data, config,
                               move_linear_objective=(config.init_strategy == 'FP'
                                                      or config.add_regularization is not None),
@@ -125,8 +128,8 @@ class MindtPySolver(object):
                               update_var_con_list=config.add_regularization is None,
                               partition_nonlinear_terms=config.partition_obj_nonlinear_terms
                               )
-            # The epigraph constraint is very "flat" for branching rules,
-            # we want to use to original model for the main mip.
+            # The epigraph constraint is very "flat" for branching rules.
+            # If ROA/RLP-NLP is activated and the original objective function is linear, we will use the original objective for the main mip.
             if MindtPy.objective_list[0].expr.polynomial_degree() in {1, 0} and config.add_regularization is not None:
                 MindtPy.objective_list[0].activate()
                 MindtPy.objective_constr.deactivate()

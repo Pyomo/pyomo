@@ -167,6 +167,10 @@ def process_objective(solve_data, config, move_linear_objective=False,
     config (ConfigBlock): solver configuration options
     move_linear_objective (bool): if True, move even linear
         objective functions to the constraints
+    update_var_con_list (bool): if True, the variable/constraint/objective lists will not be updated. 
+        This arg is set to True by default. Currently, update_var_con_list will be set to False only when
+        add_regularization is not None in MindtPy.
+    partition_nonlinear_terms (bool): if True, partition sum of nonlinear terms in the objective function.
 
     """
     m = solve_data.working_model
@@ -189,9 +193,8 @@ def process_objective(solve_data, config, move_linear_objective=False,
                                        ProblemSense.maximize
     solve_data.objective_sense = main_obj.sense
 
-    # Move the objective to the constraints if it is nonlinear
-    if main_obj.expr.polynomial_degree() not in (1, 0) \
-            or move_linear_objective:
+    # Move the objective to the constraints if it is nonlinear or move_linear_objective is True.
+    if main_obj.expr.polynomial_degree() not in (1, 0) or move_linear_objective:
         if move_linear_objective:
             config.logger.info("Moving objective to constraint set.")
         else:
