@@ -203,8 +203,9 @@ def _get_MindtPy_config():
                     'and minimize the sum of the slack variables (Augmented Penalty).',
         domain=bool
     ))
+    # TODO: determine the default value for partition_obj_nonlinear_terms according to the benchmark result.
     CONFIG.declare('partition_obj_nonlinear_terms', ConfigValue(
-        default=True,
+        default=False,
         description='Partition objective with the sum of nonlinear terms using epigraph reformulation.',
         domain=bool
     ))

@@ -43,6 +43,8 @@ model_list = [EightProcessFlowsheet(convex=True),
               ]
 nonconvex_model_list = [EightProcessFlowsheet(convex=False)]
 
+obj_nonlinear_sum_model_list = [SimpleMINLP(), SimpleMINLP5()]
+
 LP_model = LP_unbounded()
 LP_model._generate_model()
 
@@ -200,6 +202,22 @@ class TestMindtPy(unittest.TestCase):
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
                                     integer_to_binary=True
+                                    )
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
+
+    def test_OA_partition_obj_nonlinear_terms(self):
+        """Test the outer approximation decomposition algorithm (partition_obj_nonlinear_terms)."""
+        with SolverFactory('mindtpy') as opt:
+            print('\n Solving 8PP problem with Outer Approximation')
+            for model in obj_nonlinear_sum_model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver=required_solvers[1],
+                                    nlp_solver=required_solvers[0],
+                                    partition_obj_nonlinear_terms=True
                                     )
 
                 self.assertIn(results.solver.termination_condition,
