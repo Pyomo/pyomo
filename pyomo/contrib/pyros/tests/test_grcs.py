@@ -2126,6 +2126,53 @@ class RegressionTest(unittest.TestCase):
                                          })
 
 
+@unittest.skipUnless(SolverFactory('baron').available(exception_flag=False)
+                     and SolverFactory('baron').license_is_valid(),
+                     "Global NLP solver is not available and licensed.")
+class testBypassingSeparation(unittest.TestCase):
+    def test_bypass_global_separation(self):
+        """Test bypassing of global separation solve calls."""
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # Define the uncertainty set
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('ipopt')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+                         model=m,
+                         first_stage_variables=[m.x1],
+                         second_stage_variables=[m.x2],
+                         uncertain_params=[m.u],
+                         uncertainty_set=interval,
+                         local_solver=local_subsolver,
+                         global_solver=global_subsolver,
+                         options={
+                             "objective_focus": ObjectiveType.worst_case,
+                             "solve_master_globally": True,
+                             "decision_rule_order":0,
+                             "bypass_global_separation": True
+                         }
+        )
+
+        self.assertEqual(results.pyros_termination_condition,
+                         pyrosTerminationCondition.robust_optimal,
+                         msg="Returned termination condition is not return robust_optimal.")
 
 
 if __name__ == "__main__":

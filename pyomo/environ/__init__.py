@@ -39,6 +39,8 @@ _packages = [
     'pyomo.contrib.gdp_bounds',
     'pyomo.contrib.gdpbb',
     'pyomo.contrib.gdpopt',
+    'pyomo.contrib.gjh',
+    'pyomo.contrib.gdp_bounds',
     'pyomo.contrib.mcpp',
     'pyomo.contrib.mindtpy',
     'pyomo.contrib.multistart',
