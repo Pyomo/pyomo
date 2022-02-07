@@ -930,7 +930,7 @@ class AMPLRepn(object):
     def compile_repn(self, visitor, prefix='', args=None):
         template = visitor.template
         if self.mult != 1:
-            prefix += template.product + (template.const % self.mult)
+            prefix += template.multiplier % self.mult
         if self.nl is not None:
             nl, nl_args = self.nl
             visitor.used_named_expressions.update(nl_args)
@@ -953,9 +953,7 @@ class AMPLRepn(object):
         if self.linear:
             nterms += len(self.linear)
             nl_sum += ''.join(
-                template.var
-                if c == 1 else
-                template.product + (template.const % c) + template.var
+                template.var if c == 1 else template.monomial % c
                 for c in map(itemgetter(1), self.linear))
             args.extend(map(itemgetter(0), self.linear))
         if self.nonlinear:
@@ -1023,8 +1021,7 @@ class AMPLRepn(object):
                     if mult == -1:
                         prefix = self.ActiveVisitor.template.negation
                     else:
-                        prefix = self.ActiveVisitor.template.product + (
-                            self.ActiveVisitor.template.const % mult)
+                        prefix = self.ActiveVisitor.template.multiplier % mult
                     self.nonlinear.append(
                         (prefix + other.nonlinear[0], other.nonlinear[1])
                     )
@@ -1090,6 +1087,8 @@ class text_nl_debug_template(object):
     var = 'v%s\n'
     const = 'n%r\n'
     string = 'h%d:%s\n'
+    monomial = product + const + var.replace('%', '%%')
+    multiplier = product + const
 
     _create_strict_inequality_map(vars())
 
@@ -1098,7 +1097,12 @@ def _strip_template_comments(vars_, base_):
              for k, v in base_.unary.items()}
     for k, v in base_.__dict__.items():
         if type(v) is str and '\t#' in v:
-            vars_[k] = '\n'.join(l[:l.find('\t#')] for l in v.split('\n'))
+            v_lines = v.split('\n')
+            for i, l in enumerate(v_lines):
+                comment_start = l.find('\t#')
+                if comment_start >= 0:
+                    v_lines[i] = l[:comment_start]
+            vars_[k] = '\n'.join(v_lines)
 
 
 # The "standard" text mode template is the debugging template with the
@@ -1297,8 +1301,7 @@ def handle_named_expression_node(visitor, node, arg1):
             if mult == -1:
                 prefix = visitor.template.negation
             else:
-                prefix = visitor.template.product + (
-                    visitor.template.const % mult)
+                prefix = visitor.template.multiplier % mult
             repn.nonlinear = prefix + repn.nonlinear[0], repn.nonlinear[1]
 
     visitor.subexpression_cache[_id] = (
@@ -1546,8 +1549,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 if mult == -1:
                     prefix = self.template.negation
                 else:
-                    prefix = self.template.product + (
-                        self.template.const % mult)
+                    prefix = self.template.multiplier % mult
                 ans.nonlinear = prefix + ans.nonlinear[0], ans.nonlinear[1]
         elif ans.linear:
             for v, c in ans.linear:
