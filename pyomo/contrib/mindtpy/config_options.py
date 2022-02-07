@@ -205,7 +205,7 @@ def _get_MindtPy_config():
     ))
     # TODO: determine the default value for partition_obj_nonlinear_terms according to the benchmark result.
     CONFIG.declare('partition_obj_nonlinear_terms', ConfigValue(
-        default=False,
+        default=True,
         description='Partition objective with the sum of nonlinear terms using epigraph reformulation.',
         domain=bool
     ))
