@@ -303,13 +303,13 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
                     for var, val in zip(variables, new_primals):
                         var.set_value(val)
 
-                    vector_scc_idx += 1
-
                 else:
                     # Use a Pyomo solver to solve this strongly connected
                     # component.
                     with TemporarySubsystemManager(to_fix=inputs):
                         solver.solve(block)
+
+                vector_scc_idx += 1
 
         # Send updated variable values to NLP for dervative evaluation
         primals = self._nlp.get_primals()
