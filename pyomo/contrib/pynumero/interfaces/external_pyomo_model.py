@@ -147,9 +147,31 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             external_vars,
             residual_cons,
             external_cons,
-            solver=None,
             use_cyipopt=True,
+            solver=None,
             ):
+        """
+        Arguments:
+        ----------
+        input_vars: list
+            List of variables sent to this system by the outer solver
+        external_vars: list
+            List of variables that are solved for internally by this system
+        residual_cons: list
+            List of equality constraints whose residuals are exposed to
+            the outer solver
+        external_cons: list
+            List of equality constraints used to solve for the external
+            variables
+        use_cyipopt: bool
+            Whether to use CyIpopt to solve strongly connected components of
+            the implicit function that have dimension greater than one.
+        solver: Pyomo solver object
+            Used to solve strongly connected components of the implicit function
+            that have dimension greater than one. Only used if use_cyipopt
+            is False.
+
+        """
         if use_cyipopt and not cyipopt_available:
             raise RuntimeError(
                 "Constructing an ExternalPyomoModel with CyIpopt unavailable. "
