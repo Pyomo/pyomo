@@ -10,11 +10,9 @@ models with low-fidelity basis functions, thus avoiding the direct implementatio
 of the large, computationally expensive high-fidelity models. This is done
 iteratively, resulting in fewer calls to the computationally expensive functions.
 
-The TRF module in Pyomo was originally developed by John Eason to implement
-his and Lorenz Biegler's 2018 algorithm [`Eason & Biegler, 2018`_]. The module
-was updated in late 2021 by **Miranda Mundt** in collaboration with
-**John D. Siirola** of Sandia National Labs to implement a newer version of the 
-algorithm as developed by Yoshio and Biegler [`Yoshio & Biegler, 2021`_].
+This module implements the method from Yoshio & Biegler
+[`Yoshio & Biegler, 2021`_] and represents a rewrite of the original 2018
+implementation of the algorithm from Eason & Biegler [`Eason & Biegler, 2018`_].
 
 In the context of this updated module, black box functions are implemented as
 Pyomo External Functions.
@@ -83,12 +81,16 @@ When using TRF, please consider citing the above papers.
 TRF Inputs
 -----------
 
-The required inputs to the TRF ``solve`` method are the following:
+The required inputs to the TRF
+:py:meth:`solve <pyomo.contrib.trustregion.TRF.TrustRegionSolver.solve>`
+method are the following:
 
 * The optimization model
 * List of degree of freedom variables within the model
 
-The optional input to the TRF ``solve`` method is the following:
+The optional input to the TRF
+:py:meth:`solve <pyomo.contrib.trustregion.TRF.TrustRegionSolver.solve>`
+method is the following:
 
 * The external function surrogate model rule ("basis function")
 
@@ -104,8 +106,10 @@ TRF Solver Interface
 
 TRF Usage Example
 ------------------
-Two examples can be found in the ``examples`` subdirectory. One of them is 
+Two examples can be found in the examples_ subdirectory. One of them is 
 implemented below.
+
+.. _examples: https://github.com/Pyomo/pyomo/tree/main/pyomo/contrib/trustregion/examples
 
 Step 0: Import Pyomo
 ^^^^^^^^^^^^^^^^^^^^^
@@ -173,7 +177,8 @@ Step 3: Solve with TRF
    EXIT: Optimal solution found.
    ...
 
-The ``solve`` method returns a clone of the original model which has been run
+The :py:meth:`solve <pyomo.contrib.trustregion.TRF.TrustRegionSolver.solve>`
+method returns a clone of the original model which has been run
 through TRF algorithm, thus leaving the original model intact.
 
 
