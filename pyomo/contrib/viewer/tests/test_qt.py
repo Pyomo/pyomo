@@ -26,9 +26,9 @@ else:
     # If qt is not available, we still need to have a fake pytest fixture
     # in order to stop errors
     @unittest.pytest.fixture(scope="module")
-    def qtbot():
+    def qtbot(request):
         """Overwrite qtbot - remove test failure"""
-        return qtbot
+        return request
 
 
 def get_model():
