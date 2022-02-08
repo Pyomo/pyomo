@@ -2,18 +2,26 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
+#
+#  Development of this module was conducted as part of the Institute for
+#  the Design of Advanced Energy Systems (IDAES) with support through the
+#  Simulation-Based Engineering, Crosscutting Research Program within the
+#  U.S. Department of Energy’s Office of Fossil Energy and Carbon Management.
+#
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 
 import logging
 
 from pyomo.core.base.range import NumericRange
 from pyomo.common.config import (ConfigDict, ConfigValue,
                                  Bool, PositiveInt,
-                                 PositiveFloat, In)
+                                 PositiveFloat, In,
+                                 add_docstring_list)
 from pyomo.contrib.trustregion.filter import Filter, FilterElement
 from pyomo.contrib.trustregion.interface import TRFInterface
 from pyomo.contrib.trustregion.util import IterationLogger
@@ -142,8 +150,8 @@ def trust_region_method(model,
         else:
             # theta-type step
             TRFLogger.iterrecord.thetaStep = True
-            filterElement = FilterElement(obj_val_k - config.filter_param_gamma_f*feasibility_k,
-                                          (1 - config.filter_param_gamma_theta)*feasibility_k)
+            filterElement = FilterElement(obj_val_k - config.param_filter_gamma_f*feasibility_k,
+                                          (1 - config.param_filter_gamma_theta)*feasibility_k)
             TRFilter.addToFilter(filterElement)
             # Calculate ratio: Eq. (10) in Yoshio/Biegler (2020)
             rho_k = ((feasibility - feasibility_k + config.feasibility_termination) /
@@ -206,136 +214,137 @@ def _trf_config():
     ### Solver options
     CONFIG.declare('solver', ConfigValue(
         default='ipopt',
-        description='Solver to use. Default = ipopt.'
+        description='Solver to use. Default = ``ipopt``.'
     ))
     CONFIG.declare('keepfiles', ConfigValue(
         default=False,
         domain=Bool,
-        description="Optional. Default = False. Whether or not to "
+        description="Optional. Whether or not to "
                     "write files of sub-problems for use in debugging. "
-                    "Must be paired with a writable directory "
-                    "supplied via ``subproblem_file_directory``."
+                    "Default = False."
     ))
     CONFIG.declare('tee', ConfigValue(
         default=False,
         domain=Bool,
-        description="Optional. Default = False. Sets the ``tee`` "
-                    "for sub-solver(s) utilized."
+        description="Optional. Sets the ``tee`` "
+                    "for sub-solver(s) utilized. "
+                    "Default = False."
     ))
 
     ### Trust Region specific options
     CONFIG.declare('verbose', ConfigValue(
         default=False,
         domain=Bool,
-        description="Optional. Default = False. When True, print each "
+        description="Optional. When True, print each "
                     "iteration's relevant information to the console "
-                    "as well as to the log."
+                    "as well as to the log. "
+                    "Default = False."
     ))
-    CONFIG.declare('trust radius', ConfigValue(
+    CONFIG.declare('trust_radius', ConfigValue(
         default=1.0,
         domain=PositiveFloat,
-        description="Initial trust region radius (delta_0). "
+        description="Initial trust region radius ``delta_0``. "
                     "Default = 1.0."
     ))
-    CONFIG.declare('minimum radius', ConfigValue(
+    CONFIG.declare('minimum_radius', ConfigValue(
         default=1e-6,
         domain=PositiveFloat,
-        description="Minimum allowed trust region radius (delta_min). "
+        description="Minimum allowed trust region radius ``delta_min``. "
                     "Default = 1e-6."
     ))
-    CONFIG.declare('maximum radius', ConfigValue(
+    CONFIG.declare('maximum_radius', ConfigValue(
         default=CONFIG.trust_radius * 100,
         domain=PositiveFloat,
         description="Maximum allowed trust region radius. If trust region "
                     "radius reaches maximum allowed, solver will exit. "
                     "Default = 100 * trust_radius."
     ))
-    CONFIG.declare('maximum iterations', ConfigValue(
+    CONFIG.declare('maximum_iterations', ConfigValue(
         default=50,
         domain=PositiveInt,
         description="Maximum allowed number of iterations. "
                     "Default = 50."
     ))
     ### Termination options
-    CONFIG.declare('feasibility termination', ConfigValue(
+    CONFIG.declare('feasibility_termination', ConfigValue(
         default=1e-5,
         domain=PositiveFloat,
-        description="Feasibility measure termination tolerance (epsilon_theta). "
+        description="Feasibility measure termination tolerance ``epsilon_theta``. "
                     "Default = 1e-5."
     ))
-    CONFIG.declare('step size termination', ConfigValue(
+    CONFIG.declare('step_size_termination', ConfigValue(
         default=CONFIG.feasibility_termination,
         domain=PositiveFloat,
-        description="Step size termination tolerance (epsilon_s). "
+        description="Step size termination tolerance ``epsilon_s``. "
                     "Matches the feasibility termination tolerance by default."
     ))
     ### Switching Condition options
-    CONFIG.declare('minimum feasibility', ConfigValue(
+    CONFIG.declare('minimum_feasibility', ConfigValue(
         default=1e-4,
         domain=PositiveFloat,
-        description="Minimum feasibility measure (theta_min). "
+        description="Minimum feasibility measure ``theta_min``. "
                     "Default = 1e-4."
     ))
-    CONFIG.declare('switch condition kappa theta', ConfigValue(
+    CONFIG.declare('switch_condition_kappa_theta', ConfigValue(
         default=0.1,
         domain=In(NumericRange(0, 1, 0, (False, False))),
-        description="Switching condition parameter (kappa_theta). "
+        description="Switching condition parameter ``kappa_theta``. "
                     "Contained in open set (0, 1). "
                     "Default = 0.1."
     ))
-    CONFIG.declare('switch condition gamma s', ConfigValue(
+    CONFIG.declare('switch_condition_gamma_s', ConfigValue(
         default=2.0,
         domain=PositiveFloat,
-        description="Switching condition parameter (gamma_s). "
-                    "Must satisfy: gamma_s > 1/(1+mu) where mu "
+        description="Switching condition parameter ``gamma_s``. "
+                    "Must satisfy: ``gamma_s > 1/(1+mu)`` where ``mu`` "
                     "is contained in set (0, 1]. "
                     "Default = 2.0."
     ))
     ### Trust region update/ratio test parameters
-    CONFIG.declare('radius update param gamma c', ConfigValue(
+    CONFIG.declare('radius_update_param_gamma_c', ConfigValue(
         default=0.5,
         domain=In(NumericRange(0, 1, 0, (False, False))),
-        description="Lower trust region update parameter (gamma_c). "
+        description="Lower trust region update parameter ``gamma_c``. "
                     "Default = 0.5."
     ))
-    CONFIG.declare('radius update param gamma e', ConfigValue(
+    CONFIG.declare('radius_update_param_gamma_e', ConfigValue(
         default=2.5,
         domain=In(NumericRange(1, None, 0)),
-        description="Upper trust region update parameter (gamma_e). "
+        description="Upper trust region update parameter ``gamma_e``. "
                     "Default = 2.5."
     ))
-    CONFIG.declare('ratio test param eta_1', ConfigValue(
+    CONFIG.declare('ratio_test_param_eta_1', ConfigValue(
         default = 0.05,
         domain=In(NumericRange(0, 1, 0, (False, False))),
-        description="Lower ratio test parameter (eta_1). "
-                    "Must satisfy: 0 < eta_1 <= eta_2 < 1. "
+        description="Lower ratio test parameter ``eta_1``. "
+                    "Must satisfy: ``0 < eta_1 <= eta_2 < 1``. "
                     "Default = 0.05."
     ))
-    CONFIG.declare('ratio test param eta_2', ConfigValue(
+    CONFIG.declare('ratio_test_param_eta_2', ConfigValue(
         default = 0.2,
         domain=In(NumericRange(0, 1, 0, (False, False))),
-        description="Lower ratio test parameter (eta_2). "
-                    "Must satisfy: 0 < eta_1 <= eta_2 < 1. "
+        description="Lower ratio test parameter ``eta_2``. "
+                    "Must satisfy: ``0 < eta_1 <= eta_2 < 1``. "
                     "Default = 0.2."
     ))
     ### Filter
-    CONFIG.declare('maximum feasibility', ConfigValue(
+    CONFIG.declare('maximum_feasibility', ConfigValue(
         default=50.0,
         domain=PositiveFloat,
-        description="Maximum allowable feasibility measure (theta_max). "
+        description="Maximum allowable feasibility measure ``theta_max``. "
                     "Parameter for use in filter method."
                     "Default = 50.0."
     ))
-    CONFIG.declare('filter param gamma theta', ConfigValue(
+    CONFIG.declare('param_filter_gamma_theta', ConfigValue(
         default=0.01,
         domain=In(NumericRange(0, 1, 0, (False, False))),
-        description="Fixed filter parameter (gamma_theta) within (0, 1). "
+        description="Fixed filter parameter ``gamma_theta`` within (0, 1). "
                     "Default = 0.01"
     ))
-    CONFIG.declare('filter param gamma f', ConfigValue(
+    CONFIG.declare('param_filter_gamma_f', ConfigValue(
         default=0.01,
         domain=In(NumericRange(0, 1, 0, (False, False))),
-        description="Fixed filter parameter (gamma_f) within (0, 1). "
+        description="Fixed filter parameter ``gamma_f`` within (0, 1). "
                     "Default = 0.01"
     ))
 
@@ -387,6 +396,8 @@ class TrustRegionSolver(object):
 
         Parameters
         ----------
+        model: ``ConcreteModel``
+            The model to be solved using the Trust Region Framework.
         degrees_of_freedom_variables : List of Vars
             User-supplied input. The user must provide a list of vars which
             are the degrees of freedom or decision variables within
@@ -411,3 +422,10 @@ class TrustRegionSolver(object):
                             ext_fcn_surrogate_map_rule,
                             config)
         return result
+
+
+def _generate_filtered_docstring():
+    cfg = _trf_config()
+    return add_docstring_list(TrustRegionSolver.solve.__doc__, cfg, indent_by=8)
+
+TrustRegionSolver.solve.__doc__ = _generate_filtered_docstring()
