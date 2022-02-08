@@ -18,6 +18,7 @@ logger = logging.getLogger('pyomo.common')
 
 # These URLs were retrieved from
 #     https://ampl.com/resources/hooking-your-solver-to-ampl/
+# All 32-bit downloads are used - 64-bit is available only for Linux
 urlmap = {
     'linux':   'https://ampl.com/netlib/ampl/student/linux/gjh.gz',
     'windows': 'https://ampl.com/netlib/ampl/student/mswin/gjh.exe.gz',
@@ -52,6 +53,7 @@ def main(argv):
     downloader.parse_args(argv)
     get_gjh(downloader)
 
+
 if __name__ == '__main__':
     logger.setLevel(logging.INFO)
     try:
@@ -60,4 +62,3 @@ if __name__ == '__main__':
         print(e.message)
         print("Usage: %s [--insecure] [target]" % os.path.basename(sys.argv[0]))
         sys.exit(1)
-
