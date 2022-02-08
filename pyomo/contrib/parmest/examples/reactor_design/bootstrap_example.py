@@ -15,31 +15,36 @@ from pyomo.contrib.parmest.examples.reactor_design.reactor_design import reactor
 
 
 def main():
-    # Parameter estimation using multisensor data
-    
     # Vars to estimate
     theta_names = ['k1', 'k2', 'k3']
     
-    # Data, includes multiple sensors for ca and cc
+    # Data
     file_dirname = dirname(abspath(str(__file__)))
-    file_name = abspath(join(file_dirname, 'reactor_data_multisensor.csv'))
-    data = pd.read_csv(file_name)  
+    file_name = abspath(join(file_dirname, 'reactor_data.csv'))
+    data = pd.read_csv(file_name) 
     
     # Sum of squared error function
-    def SSE_multisensor(model, data): 
-        expr = ((float(data['ca1']) - model.ca)**2)*(1/3) + \
-               ((float(data['ca2']) - model.ca)**2)*(1/3) + \
-               ((float(data['ca3']) - model.ca)**2)*(1/3) + \
-                (float(data['cb'])  - model.cb)**2 + \
-               ((float(data['cc1']) - model.cc)**2)*(1/2) + \
-               ((float(data['cc2']) - model.cc)**2)*(1/2) + \
-                (float(data['cd'])  - model.cd)**2
+    def SSE(model, data): 
+        expr = (float(data['ca']) - model.ca)**2 + \
+               (float(data['cb']) - model.cb)**2 + \
+               (float(data['cc']) - model.cc)**2 + \
+               (float(data['cd']) - model.cd)**2
         return expr
     
-    pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE_multisensor)
-    obj, theta = pest.theta_est()
-    print(obj)
-    print(theta)
+    # Create an instance of the parmest estimator
+    pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
     
+    # Parameter estimation
+    obj, theta = pest.theta_est()
+    
+    # Parameter estimation with bootstrap resampling                                           
+    bootstrap_theta = pest.theta_est_bootstrap(50)
+    
+    # Plot results
+    parmest.graphics.pairwise_plot(bootstrap_theta, title='Bootstrap theta')
+    parmest.graphics.pairwise_plot(bootstrap_theta, theta, 0.8, ['MVN', 'KDE', 'Rect'], 
+                          title='Bootstrap theta with confidence regions')
+
 if __name__ == "__main__":
     main()
+    

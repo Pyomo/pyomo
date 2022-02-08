@@ -22,7 +22,6 @@ import pyomo.common.unittest as unittest
 import os
 import pyomo.contrib.parmest.parmest as parmest
 import pyomo.contrib.parmest.scenariocreator as sc
-import pyomo.contrib.parmest.examples.semibatch.scencreate as sbc
 import pyomo.environ as pyo
 from pyomo.environ import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
@@ -133,9 +132,5 @@ class TestScenarioSemibatch(unittest.TestCase):
         tval = bootscens.ScenarioNumber(0).ThetaVals["k1"]
         self.assertAlmostEqual(tval, 20.64, places=1)
 
-    def test_semibatch_example(self):
-        # this is referenced in the documentation so at least look for smoke
-        sbc.main(self.fbase)
-        
 if __name__ == '__main__':
     unittest.main()

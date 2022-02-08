@@ -15,31 +15,39 @@ from pyomo.contrib.parmest.examples.reactor_design.reactor_design import reactor
 
 
 def main():
-    # Parameter estimation using multisensor data
-    
     # Vars to estimate
     theta_names = ['k1', 'k2', 'k3']
     
-    # Data, includes multiple sensors for ca and cc
+    # Data
     file_dirname = dirname(abspath(str(__file__)))
-    file_name = abspath(join(file_dirname, 'reactor_data_multisensor.csv'))
-    data = pd.read_csv(file_name)  
+    file_name = abspath(join(file_dirname, 'reactor_data.csv'))
+    data = pd.read_csv(file_name) 
     
     # Sum of squared error function
-    def SSE_multisensor(model, data): 
-        expr = ((float(data['ca1']) - model.ca)**2)*(1/3) + \
-               ((float(data['ca2']) - model.ca)**2)*(1/3) + \
-               ((float(data['ca3']) - model.ca)**2)*(1/3) + \
-                (float(data['cb'])  - model.cb)**2 + \
-               ((float(data['cc1']) - model.cc)**2)*(1/2) + \
-               ((float(data['cc2']) - model.cc)**2)*(1/2) + \
-                (float(data['cd'])  - model.cd)**2
+    def SSE(model, data): 
+        expr = (float(data['ca']) - model.ca)**2 + \
+               (float(data['cb']) - model.cb)**2 + \
+               (float(data['cc']) - model.cc)**2 + \
+               (float(data['cd']) - model.cd)**2
         return expr
     
-    pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE_multisensor)
+    # Create an instance of the parmest estimator
+    pest = parmest.Estimator(reactor_design_model, data, theta_names, SSE)
+    
+    # Parameter estimation
     obj, theta = pest.theta_est()
-    print(obj)
-    print(theta)
+    
+    # Assert statements compare parameter estimation (theta) to an expected value 
+    k1_expected = 5.0/6.0
+    k2_expected = 5.0/3.0
+    k3_expected =  1.0/6000.0
+    relative_error = abs(theta['k1'] - k1_expected)/k1_expected
+    assert relative_error < 0.05
+    relative_error = abs(theta['k2'] - k2_expected)/k2_expected
+    assert relative_error < 0.05
+    relative_error = abs(theta['k3'] - k3_expected)/k3_expected
+    assert relative_error < 0.05
     
 if __name__ == "__main__":
     main()
+    
