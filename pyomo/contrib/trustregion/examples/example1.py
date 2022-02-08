@@ -2,12 +2,26 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
+#
+#  Development of this module was conducted as part of the Institute for
+#  the Design of Advanced Energy Systems (IDAES) with support through the
+#  Simulation-Based Engineering, Crosscutting Research Program within the
+#  U.S. Department of Energy’s Office of Fossil Energy and Carbon Management.
+#
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+"""
+This model is an adaptation of Eason & Biegler's example in the
+original version of the Trust Region solver.
+
+Eason, J.P. and Biegler, L.T. (2018), Advanced trust region optimization
+strategies for glass box/black box models. AIChE J, 64: 3934-3943.
+https://doi.org/10.1002/aic.16364
+"""
 
 from pyomo.environ import (
     ConcreteModel, Var, Reals, ExternalFunction, sin, cos,
