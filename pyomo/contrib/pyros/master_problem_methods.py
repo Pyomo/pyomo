@@ -101,27 +101,7 @@ def construct_master_feasibility_problem(model_data, config):
         obj.deactivate()
     iteration = model_data.iteration
 
-    # constraints to which slacks should be added
-    # (all constraints for the current iteration, except the DR eqns)
-    targets = []
-    for blk in model.scenarios[iteration, :]:
-        if blk.util.second_stage_variables:
-            dr_eqs = blk.util.decision_rule_eqns
-        else:
-            dr_eqs = list()
-
-        targets.extend([
-            con for con in blk.component_data_objects(
-                Constraint, active=True, descend_into=True)
-            if con not in dr_eqs])
-
-    # retain original constraint expressions (for initialization and scaling)
-    pre_slack_con_exprs = ComponentMap([(con, con.body) for con in targets])
-
-    TransformationFactory("core.add_slack_variables").apply_to(model,
-                                                               targets=targets)
-
-    # first stage vars already initialized appropriately.
+    # first stage vars are already initialized appropriately.
     # initialize second-stage DOF variables using DR equation expressions
     if model.scenarios[iteration, 0].util.second_stage_variables:
         for blk in model.scenarios[iteration, :]:
@@ -134,12 +114,13 @@ def construct_master_feasibility_problem(model_data, config):
                                 if var in ssv_set][0]
 
                 # update var value for initialization
+                # fine since DR eqns are f(d) - z == 0 (not z - f(d) == 0)
                 ssv_in_dr_eq.set_value(
                         value(replace_expressions(eq.body,
                                                   {id(ssv_in_dr_eq): 0}))
                 )
 
-    # initialize second-stage state vars using previous iteration values
+    # initialize state vars to previous master solution values
     if iteration != 0:
         stvar_map = get_state_vars(model, [iteration, iteration-1])
         # is order of variables in each state vars list guaranteed to
@@ -147,6 +128,28 @@ def construct_master_feasibility_problem(model_data, config):
         for current, prev in zip(stvar_map[iteration], stvar_map[iteration-1]):
             current.set_value(prev)
 
+    # constraints to which slacks should be added
+    # (all the constraints for the current iteration, except the DR eqns)
+    targets = []
+    for blk in model.scenarios[iteration, :]:
+        if blk.util.second_stage_variables:
+            dr_eqs = blk.util.decision_rule_eqns
+        else:
+            dr_eqs = list()
+
+        targets.extend([
+            con for con in blk.component_data_objects(
+                Constraint, active=True, descend_into=True)
+            if con not in dr_eqs])
+
+    # retain original constraint exprs (for slack initialization and scaling)
+    pre_slack_con_exprs = ComponentMap([(con, con.body) for con in targets])
+
+    # add slack variables and objective
+    # inequalities g(v) <= b become g(v) -- s^-<= b
+    # equalities h(v) == b become h(v) -- s^- + s^+ == b
+    TransformationFactory("core.add_slack_variables").apply_to(model,
+                                                               targets=targets)
     slack_vars = ComponentSet(
             model._core_add_slack_variables.component_data_objects(
                 Var, descend_into=True)
@@ -155,7 +158,7 @@ def construct_master_feasibility_problem(model_data, config):
     # initialize and scale slack variables
     for con in pre_slack_con_exprs:
         # obtain slack vars in updated constraints
-        # and their coefficients (+/-1) in the constraint expressions
+        # and their coefficients (+/-1) in the constraint expression
         repn = generate_standard_repn(con.body)
         slack_var_coef_map = ComponentMap()
         for idx in range(len(repn.linear_vars)):
