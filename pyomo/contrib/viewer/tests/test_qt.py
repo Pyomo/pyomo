@@ -18,14 +18,16 @@ from pyomo.environ import (ConcreteModel, Var, Param, Constraint, Objective,
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.viewer.qt import qt_available
+
 if qt_available:
     from pyomo.contrib.viewer.qt import QtCore, QMessageBox
     from pyomo.contrib.viewer.ui import get_mainwindow, ModelBrowser
 else:
     # If qt is not available, we still need to have a fake pytest fixture
     # in order to stop errors
-    @unittest.pytest.fixture()
+    @unittest.pytest.fixture(scope="module")
     def qtbot():
+        """Overwrite qtbot - remove test failure"""
         return qtbot
 
 
