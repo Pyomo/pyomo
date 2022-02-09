@@ -720,6 +720,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
                 external_vars,
                 residual_cons,
                 external_cons,
+                use_cyipopt=False,
                 )
         block.set_external_model(ex_model)
 
@@ -808,6 +809,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
                 external_vars,
                 residual_cons,
                 external_cons,
+                use_cyipopt=False,
                 )
         block.set_external_model(ex_model)
 
@@ -890,6 +892,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
                 external_vars,
                 residual_cons,
                 external_cons,
+                use_cyipopt=False,
                 )
         block.set_external_model(ex_model)
 
@@ -981,6 +984,7 @@ class TestPyomoNLPWithGreyBoxBLocks(unittest.TestCase):
                 external_vars,
                 residual_cons,
                 external_cons,
+                use_cyipopt=False,
                 )
         block.set_external_model(ex_model)
 
