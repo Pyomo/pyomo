@@ -124,6 +124,8 @@ public:
   void write_nl_string(std::ofstream &) override;
 };
 
+enum Domain {continuous, binary, integers};
+
 class Var : public Leaf {
 public:
   Var() = default;
@@ -136,10 +138,9 @@ public:
   std::shared_ptr<ExpressionBase> ub;
   int index = -1;
   bool fixed = false;
-  std::string domain =
-      "reals"; // options are reals, nonnegative_reals, nonpositive_reals,
-               // integers, nonnegative_integers, nonpositive_integers, binary,
-               // percent_fraction, unit_interval
+  double domain_lb = -inf;
+  double domain_ub = inf;
+  Domain domain = continuous;
   bool is_variable_type() override;
   int get_degree_from_array(int *) override;
   std::shared_ptr<std::vector<std::shared_ptr<Var>>>
@@ -152,7 +153,7 @@ public:
   }
   double get_lb();
   double get_ub();
-  std::string get_domain();
+  Domain get_domain();
 };
 
 class Param : public Leaf {
@@ -562,16 +563,6 @@ public:
       py::module_::import("pyomo.dae.integral").attr("ScalarIntegral");
   py::object Integral =
       py::module_::import("pyomo.dae.integral").attr("Integral");
-  py::object set_module = py::module_::import("pyomo.core.base.set");
-  py::object reals = set_module.attr("Reals");
-  py::object nonnegative_reals = set_module.attr("NonNegativeReals");
-  py::object nonpositive_reals = set_module.attr("NonPositiveReals");
-  py::object integers = set_module.attr("Integers");
-  py::object nonnegative_integers = set_module.attr("NonNegativeIntegers");
-  py::object nonpositive_integers = set_module.attr("NonPositiveIntegers");
-  py::object binary = set_module.attr("Binary");
-  py::object percent_fraction = set_module.attr("PercentFraction");
-  py::object unit_interval = set_module.attr("UnitInterval");
   py::object builtins = py::module_::import("builtins");
   py::object id = builtins.attr("id");
   py::object len = builtins.attr("len");

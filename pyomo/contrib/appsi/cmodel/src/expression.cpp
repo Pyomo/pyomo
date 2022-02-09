@@ -13,83 +13,15 @@ bool Expression::is_expression_type() { return true; }
 double Leaf::evaluate() { return value; }
 
 double Var::get_lb() {
-  double lb1 = lb->evaluate();
-  double lb2;
-  if (domain == "reals") {
-    lb2 = -inf;
-  } else if (domain == "nonnegative_reals") {
-    lb2 = 0;
-  } else if (domain == "nonpositive_reals") {
-    lb2 = -inf;
-  } else if (domain == "integers") {
-    lb2 = -inf;
-  } else if (domain == "nonnegative_integers") {
-    lb2 = 0;
-  } else if (domain == "nonpositive_integers") {
-    lb2 = -inf;
-  } else if (domain == "binary") {
-    lb2 = 0;
-  } else if (domain == "percent_fraction") {
-    lb2 = 0;
-  } else if (domain == "unit_interval") {
-    lb2 = 0;
-  } else {
-    throw py::value_error("Unrecognized domain: " + domain);
-  }
-  return std::max(lb1, lb2);
+  return std::max(lb->evaluate(), domain_lb);
 }
 
 double Var::get_ub() {
-  double ub1 = ub->evaluate();
-  double ub2;
-  if (domain == "reals") {
-    ub2 = inf;
-  } else if (domain == "nonnegative_reals") {
-    ub2 = inf;
-  } else if (domain == "nonpositive_reals") {
-    ub2 = 0;
-  } else if (domain == "integers") {
-    ub2 = inf;
-  } else if (domain == "nonnegative_integers") {
-    ub2 = inf;
-  } else if (domain == "nonpositive_integers") {
-    ub2 = 0;
-  } else if (domain == "binary") {
-    ub2 = 1;
-  } else if (domain == "percent_fraction") {
-    ub2 = 1;
-  } else if (domain == "unit_interval") {
-    ub2 = 1;
-  } else {
-    throw py::value_error("Unrecognized domain: " + domain);
-  }
-  return std::min(ub1, ub2);
+  return std::min(ub->evaluate(), domain_ub);
 }
 
-std::string Var::get_domain() {
-  std::string res;
-  if (domain == "reals") {
-    res = "continuous";
-  } else if (domain == "nonnegative_reals") {
-    res = "continuous";
-  } else if (domain == "nonpositive_reals") {
-    res = "continuous";
-  } else if (domain == "integers") {
-    res = "integers";
-  } else if (domain == "nonnegative_integers") {
-    res = "integers";
-  } else if (domain == "nonpositive_integers") {
-    res = "integers";
-  } else if (domain == "binary") {
-    res = "binary";
-  } else if (domain == "percent_fraction") {
-    res = "continuous";
-  } else if (domain == "unit_interval") {
-    res = "continuous";
-  } else {
-    throw py::value_error("Unrecognized domain: " + domain);
-  }
-  return res;
+Domain Var::get_domain() {
+  return domain;
 }
 
 bool Operator::is_operator_type() { return true; }
@@ -1104,18 +1036,27 @@ void process_pyomo_vars(PyomoExprTypes &expr_types, py::list pyomo_vars,
   py::handle v_lb;
   py::handle v_ub;
   py::handle v_val;
+  py::tuple domain_interval;
+  py::handle interval_lb;
+  py::handle interval_ub;
+  py::handle interval_step;
   bool v_fixed;
-  py::handle v_domain;
   bool set_name = _set_name.cast<bool>();
   bool update = _update.cast<bool>();
+  double domain_step;
 
   for (py::handle v : pyomo_vars) {
     v_attrs = var_attrs[expr_types.id(v)];
     v_lb = v_attrs[1];
     v_ub = v_attrs[2];
     v_fixed = v_attrs[3].cast<bool>();
-    v_domain = v_attrs[4];
+    domain_interval = v_attrs[4];
     v_val = v_attrs[5];
+
+    interval_lb = domain_interval[0];
+    interval_ub = domain_interval[1];
+    interval_step = domain_interval[2];
+    domain_step = interval_step.cast<double>();
 
     if (update) {
       cv = var_map[expr_types.id(v)].cast<std::shared_ptr<Var>>();
@@ -1148,27 +1089,25 @@ void process_pyomo_vars(PyomoExprTypes &expr_types, py::list pyomo_vars,
       cv->name = symbol_map.attr("getSymbol")(v, labeler).cast<std::string>();
     }
 
-    if (v_domain.is(expr_types.reals)) {
-      cv->domain = "reals";
-    } else if (v_domain.is(expr_types.nonnegative_reals)) {
-      cv->domain = "nonnegative_reals";
-    } else if (v_domain.is(expr_types.nonpositive_reals)) {
-      cv->domain = "nonpositive_reals";
-    } else if (v_domain.is(expr_types.percent_fraction)) {
-      cv->domain = "percent_fraction";
-    } else if (v_domain.is(expr_types.unit_interval)) {
-      cv->domain = "unit_interval";
-    } else if (v_domain.is(expr_types.integers)) {
-      cv->domain = "integers";
-    } else if (v_domain.is(expr_types.nonnegative_integers)) {
-      cv->domain = "nonnegative_integers";
-    } else if (v_domain.is(expr_types.nonpositive_integers)) {
-      cv->domain = "nonpositive_integers";
-    } else if (v_domain.is(expr_types.binary)) {
-      cv->domain = "binary";
-    } else {
-      throw py::value_error("Unrecognized domain");
-    }
+    if (interval_lb.is(py::none()))
+      cv->domain_lb = -inf;
+    else
+      cv->domain_lb = interval_lb.cast<double>();
+    if (interval_ub.is(py::none()))
+      cv->domain_ub = inf;
+    else
+      cv->domain_ub = interval_ub.cast<double>();
+    if (domain_step == 0)
+      cv->domain = continuous;
+    else if (domain_step == 1)
+      {
+	if ((cv->domain_lb == 0) && (cv->domain_ub == 1))
+	  cv->domain = binary;
+	else
+	  cv->domain = integers;
+      }
+    else
+      throw py::value_error("Unrecognized domain step");
 
     if (!update) {
       var_map[expr_types.id(v)] = py::cast(cv);

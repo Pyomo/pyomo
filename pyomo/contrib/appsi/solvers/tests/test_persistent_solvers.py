@@ -896,6 +896,54 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(res.best_feasible_objective, 4)
 
+    @parameterized.expand(input=all_solvers)
+    def test_domain(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(1, None), domain=pe.NonNegativeReals)
+        m.obj = pe.Objective(expr=m.x)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        m.x.setlb(-1)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        m.x.setlb(1)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        m.x.setlb(-1)
+        m.x.domain = pe.Reals
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, -1)
+        m.x.domain = pe.NonNegativeReals
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
+
+    @parameterized.expand(input=mip_solvers)
+    def test_domain_with_integers(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(-1, None), domain=pe.NonNegativeIntegers)
+        m.obj = pe.Objective(expr=m.x)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        m.x.setlb(0.5)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        m.x.setlb(-5.5)
+        m.x.domain = pe.Integers
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, -5)
+        m.x.domain = pe.Binary
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        m.x.setlb(0.5)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestLegacySolverInterface(unittest.TestCase):
