@@ -10,7 +10,7 @@
 
 import enum
 import sys
-from collections import Counter, deque
+from collections import deque
 from operator import itemgetter, attrgetter
 
 from pyomo.common.backports import nullcontext
@@ -691,7 +691,7 @@ class _NLWriter_impl(object):
         ))
         ktot = 0
         for var_idx, info in enumerate(variables[:-1]):
-            ktot += con_nnz_by_var[info[1]]
+            ktot += con_nnz_by_var.get(info[1], 0)
             ostream.write(f"{ktot}\n")
 
         #
@@ -755,7 +755,7 @@ class _NLWriter_impl(object):
         """
         all_linear_vars = set()
         all_nonlinear_vars = set()
-        nnz_by_var = Counter()
+        nnz_by_var = {}
 
         for comp_info in comp_list:
             expr_info = comp_info[1]
@@ -804,7 +804,12 @@ class _NLWriter_impl(object):
                 all_nonlinear_vars.update(nonlinear_vars)
 
             # Update the count of components that each variable appears in
-            nnz_by_var.update(nz)
+            #nnz_by_var.update(nz)
+            for v in expr_info.linear:
+                if v in nnz_by_var:
+                    nnz_by_var[v] += 1
+                else:
+                    nnz_by_var[v] = 1
             # Record all nonzero variable ids for this component
             linear_by_comp[id(comp_info[0])] = expr_info.linear
         # Linear models (or objectives) are common.  Avoid the set
