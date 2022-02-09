@@ -171,11 +171,13 @@ def construct_master_feasibility_problem(model_data, config):
         for slack_var in slack_var_coef_map:
             # coefficient determines whether the slack is a +ve or -ve slack
             if slack_var_coef_map[slack_var] == -1:
-                scaling_coeff = max(0, value(pre_slack_con_exprs[con]))
-                slack_var.set_value(1)
+                con_slack = max(0, value(pre_slack_con_exprs[con]))
             else:
-                scaling_coeff = max(0, -value(pre_slack_con_exprs[con]))
-                slack_var.set_value(1)
+                con_slack = max(0, -value(pre_slack_con_exprs[con]))
+
+            # initialize slack var, evaluate scaling coefficient
+            scaling_coeff = con_slack
+            slack_var.set_value(1)
 
             # update expression replacement map
             slack_substitution_map[id(slack_var)] = (scaling_coeff * slack_var)
