@@ -1179,6 +1179,7 @@ class TestExternalGreyBoxBlockWithReferences(unittest.TestCase):
         for i, j in zip(jac.row, jac.col):
             self.assertIn((i, j), expected_nonzeros)
 
+
 class TestExceptions(unittest.TestCase):
 
     def test_solver_with_cyipopt(self):
