@@ -263,8 +263,10 @@ class _NLWriter_impl(object):
                 if not obj.active:
                     continue
                 expr = visitor.walk_expression((obj.expr, obj, 1))
-                (objectives if expr.nonlinear else linear_objs).append(
-                    (obj, expr))
+                if expr.nonlinear:
+                    objectives.append((obj, expr))
+                else:
+                    linear_objs.append((obj, expr))
             timer.toc(f'Objective {obj_comp.name}')
         # Order the objectives, moving all nonlinear objectives to
         # the beginning
@@ -293,9 +295,10 @@ class _NLWriter_impl(object):
                     n_equality += 1
                 elif _type == 0:
                     n_ranges += 1
-                (constraints if expr.nonlinear else linear_cons).append((
-                    con, expr, _type, lb, ub,
-                ))
+                if expr.nonlinear:
+                    constraints.append((con, expr, _type, lb, ub))
+                else:
+                    linear_cons.append((con, expr, _type, lb, ub))
             timer.toc(f'Constraint {con_comp.name}')
         # Order the constraints, moving all nonlinear constraints to
         # the beginning
@@ -1517,7 +1520,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         if all(arg[0] is _CONSTANT for arg in data):
             return (
-                _CONSTANT, node._apply_operation(tuple(map(
+                _CONSTANT, node._apply_operation(list(map(
                     itemgetter(1), data)))
             )
         return _operator_handles[node.__class__](self, node, *data)
