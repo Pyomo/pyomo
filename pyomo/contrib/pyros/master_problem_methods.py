@@ -176,8 +176,8 @@ def construct_master_feasibility_problem(model_data, config):
                 con_slack = max(0, -value(pre_slack_con_exprs[con]))
 
             # initialize slack var, evaluate scaling coefficient
-            scaling_coeff = con_slack
-            slack_var.set_value(1)
+            scaling_coeff = max(1, con_slack)
+            slack_var.set_value(min(1, con_slack))
 
             # update expression replacement map
             slack_substitution_map[id(slack_var)] = (scaling_coeff * slack_var)
