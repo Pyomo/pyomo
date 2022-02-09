@@ -35,7 +35,7 @@ from pyomo.contrib.gdpopt.util import (copy_var_list_values, create_utility_bloc
                                        time_code, setup_results_object, process_objective, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
-from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger
+from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger, get_primal_integral
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
                         Var, VarList, TransformationFactory, RangeSet, minimize)
 from pyomo.opt import SolverFactory
@@ -227,6 +227,7 @@ class MindtPySolver(object):
         solve_data.results.solver.iterations = solve_data.mip_iter
         solve_data.results.solver.num_infeasible_nlp_subproblem = solve_data.nlp_infeasible_counter
         solve_data.results.solver.best_solution_found_time = solve_data.best_solution_found_time
+        solve_data.results.solver.primal_integral = get_primal_integral(solve_data)
 
         if config.single_tree:
             solve_data.results.solver.num_nodes = solve_data.nlp_iter - \

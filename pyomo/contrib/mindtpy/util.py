@@ -634,6 +634,7 @@ def set_up_solve_data(model, config):
         solve_data.dual_bound = float('inf')
     solve_data.primal_bound_progress = [solve_data.primal_bound]
     solve_data.dual_bound_progress = [solve_data.dual_bound]
+    solve_data.primal_bound_progress_time = [0]
     solve_data.abs_gap = float('inf')
     solve_data.rel_gap = float('inf')
     solve_data.log_formatter = ' {:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
@@ -824,6 +825,7 @@ def update_primal_bound(solve_data, bound_value):
         solve_data.primal_bound = max(bound_value, solve_data.primal_bound)
         solve_data.primal_bound_improved = solve_data.primal_bound > solve_data.primal_bound_progress[-1]
     solve_data.primal_bound_progress.append(solve_data.primal_bound)
+    solve_data.primal_bound_progress_time.append(get_main_elapsed_time(solve_data.timing))
     if solve_data.primal_bound_improved:
         update_gap(solve_data)
 
@@ -845,3 +847,22 @@ def set_up_logger(config):
     ch.setFormatter(formatter)
     # add the handlers to logger
     config.logger.addHandler(ch)
+
+def get_primal_integral(solve_data):
+    primal_integral = 0
+    primal_bound_progress = solve_data.primal_bound_progress.copy()
+    # TODO: how to set the initial primal bound for primal integral?
+    for primal_bound in primal_bound_progress:
+        if primal_bound != primal_bound_progress[0]:
+            break
+    for i in range(len(primal_bound_progress)):
+        if primal_bound_progress[i] == primal_bound_progress[0]:
+            primal_bound_progress[i] = primal_bound
+        else:
+            break
+    for i in range(len(primal_bound_progress)):
+        if i == 0:
+            primal_integral += (primal_bound_progress[i] - solve_data.primal_bound) * (solve_data.primal_bound_progress_time[i])
+        else:
+            primal_integral += (primal_bound_progress[i] - solve_data.primal_bound) * (solve_data.primal_bound_progress_time[i] - solve_data.primal_bound_progress_time[i-1])
+    return primal_integral
