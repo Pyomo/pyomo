@@ -416,12 +416,12 @@ void NLWriter::write(std::string filename) {
   f << "b\n";
   double v_lb;
   double v_ub;
-  std::string v_domain;
+  Domain v_domain;
   for (std::shared_ptr<Var> v : all_vars) {
     v_lb = v->get_lb();
     v_ub = v->get_ub();
     v_domain = v->get_domain();
-    if (v_domain != "continuous") {
+    if (v_domain != continuous) {
       throw py::value_error(
           "NLWriter currently only supports continuous variables.");
     }
