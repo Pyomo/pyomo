@@ -311,10 +311,12 @@ class _NLWriter_impl(object):
         # var objects themselves)
         #
 
-        # nonzeros by (constraint, objective) component.  Keys are
-        # component id(), Values the set of nonzeros [the union of
-        # linear and nonlinear var ids].
-        nz_by_comp = {}
+        # linear contribution by (constraint, objective) component.
+        # Keys are component id(), Values are dicts mapping variable
+        # id() to linear coefficient.  All nonzeros in the component
+        # (variables appearing in the linear and/or nonlinear
+        # subexpressions) will appear in the dict.
+        linear_by_comp = {}
 
         # We need to categorize the named subexpressions first so that
         # we know their linear / nonlinear vars when we encounter them
@@ -323,17 +325,17 @@ class _NLWriter_impl(object):
             map(self.subexpression_cache.__getitem__,
                 filter(self.used_named_expressions.__contains__,
                        self.subexpression_order)),
-            nz_by_comp
+            linear_by_comp
         )
         n_subexpressions = self._count_subexpression_occurances()
         timer.toc('subexpressions')
 
         obj_vars_linear, obj_vars_nonlinear, obj_nnz_by_var \
-            = self._categorize_vars(objectives, nz_by_comp)
+            = self._categorize_vars(objectives, linear_by_comp)
         timer.toc('objectives')
 
         con_vars_linear, con_vars_nonlinear, con_nnz_by_var \
-            = self._categorize_vars(constraints, nz_by_comp)
+            = self._categorize_vars(constraints, linear_by_comp)
         timer.toc('constraints')
 
         n_lcons = 0 # We do not yet support logical constraints
@@ -696,10 +698,9 @@ class _NLWriter_impl(object):
         # "J" lines (non-empty terms in the Jacobian)
         #
         for row_idx, info in enumerate(constraints):
-            nz = nz_by_comp[id(info[0])]
             linear = info[1].linear
-            ostream.write(f'J{row_idx} {len(nz)}{row_comments[row_idx]}\n')
-            for _id in sorted(nz, key=column_order.__getitem__):
+            ostream.write(f'J{row_idx} {len(linear)}{row_comments[row_idx]}\n')
+            for _id in sorted(linear.keys(), key=column_order.__getitem__):
                 ostream.write(
                     f'{column_order[_id]} {linear[_id]!r}\n'
                 )
@@ -708,11 +709,10 @@ class _NLWriter_impl(object):
         # "G" lines (non-empty terms in the Objective)
         #
         for obj_idx, info in enumerate(objectives):
-            nz = nz_by_comp[id(info[0])]
             linear = info[1].linear
             ostream.write(
-                f'G{obj_idx} {len(nz)}{row_comments[obj_idx + n_cons]}\n')
-            for _id in sorted(nz, key=column_order.__getitem__):
+                f'G{obj_idx} {len(linear)}{row_comments[obj_idx + n_cons]}\n')
+            for _id in sorted(linear.keys(), key=column_order.__getitem__):
                 ostream.write(
                     f'{column_order[_id]} {linear[_id]!r}\n'
                 )
@@ -721,7 +721,7 @@ class _NLWriter_impl(object):
         return symbol_map, sorted(amplfunc_libraries)
 
 
-    def _categorize_vars(self, comp_list, nz_by_comp):
+    def _categorize_vars(self, comp_list, linear_by_comp):
         """Categorize compiled expression vars into linear and nonlinear
 
         This routine takes an iterable of compiled component expression
@@ -730,10 +730,7 @@ class _NLWriter_impl(object):
 
         This routine has a number of side effects:
 
-          - the ``nnz_by_var`` counter is updated with the count of
-            components that each var appears in.
-
-          - the ``nz_by_comp`` dict is updated to contain the set of
+          - the ``linear_by_comp`` dict is updated to contain the set of
             nonzeros for each component in the ``comp_list``
 
           - the expr_info (the second element in each tuple in
@@ -741,6 +738,19 @@ class _NLWriter_impl(object):
             converted from a list of coef, var_id terms (potentially with
             duplicate entries) into a dict that maps var id to
             coefficients
+
+        Returns
+        -------
+        all_linear_vars: set
+            set of all vars that only appear linearly in the compiled
+            component expression infos
+
+        all_nonlinear_vars: set
+            set of all vars that appear nonlinearly in the compiled
+            component expression infos
+
+        nnz_by_var: dict
+            Count of the number of components that each var appears in.
 
         """
         all_linear_vars = set()
@@ -766,51 +776,37 @@ class _NLWriter_impl(object):
                     expr_info.linear = linear
                 linear_vars = set(expr_info.linear)
                 all_linear_vars.update(linear_vars)
-                # Start off assuming that this is a linear expression.
-                # if we end up with nonlinear terms, we will create a
-                # new nz set
-                nz = linear_vars
             # else:
             #     # NOTE: we only create the linear_vars set if there
             #     # are linear vars: the use of linear_vars below is
             #     # guarded by 'if expr_info.linear'
             #     linear_vars = set()
-            #
+
             # Process the nonlinear portion of this component
             if expr_info.nonlinear:
                 nonlinear_vars = set()
-                seen = set()
                 for _id in expr_info.nonlinear[1]:
-                    if _id in nz_by_comp:
-                        if _id in seen:
-                            continue
-                        seen.add(_id)
-                        # This is a defined variable (Expression node)
-                        #
-                        # ... as this subexpression appears in the
-                        # "nonlinear" expression tree, all variables in
-                        # it are nonlinear in the context of this
-                        # expression
-                        nonlinear_vars.update(nz_by_comp[_id]) # all nz
+                    if _id in linear_by_comp:
+                        nonlinear_vars.update(linear_by_comp[_id].keys())
                     else:
-                        # Regular variable
                         nonlinear_vars.add(_id)
                 # Recreate nz if this component has both linear and
                 # nonlinear components.
                 if expr_info.linear:
-                    nz = linear_vars | nonlinear_vars
-                    if len(nz) > len(linear_vars):
-                        for i in nonlinear_vars - linear_vars:
-                            expr_info.linear[i] = 0
+                    # Ensure any variables that only appear nonlinearly
+                    # in the expression have 0's in the linear dict
+                    for i in nonlinear_vars - linear_vars:
+                        expr_info.linear[i] = 0
                 else:
-                    nz = nonlinear_vars
-                    expr_info.linear = dict.fromkeys(nz, 0)
+                    # All variables are nonlinear; generate the linear
+                    # dict with all zeros
+                    expr_info.linear = dict.fromkeys(nonlinear_vars, 0)
                 all_nonlinear_vars.update(nonlinear_vars)
 
             # Update the count of components that each variable appears in
             nnz_by_var.update(nz)
             # Record all nonzero variable ids for this component
-            nz_by_comp[id(comp_info[0])] = nz
+            linear_by_comp[id(comp_info[0])] = expr_info.linear
         # Linear models (or objectives) are common.  Avoid the set
         # difference if possible
         if all_nonlinear_vars:
