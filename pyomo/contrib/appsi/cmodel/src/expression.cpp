@@ -13,11 +13,17 @@ bool Expression::is_expression_type() { return true; }
 double Leaf::evaluate() { return value; }
 
 double Var::get_lb() {
-  return std::max(lb->evaluate(), domain_lb);
+  if (fixed)
+    return value;
+  else
+    return std::max(lb->evaluate(), domain_lb);
 }
 
 double Var::get_ub() {
-  return std::min(ub->evaluate(), domain_ub);
+  if (fixed)
+    return value;
+  else
+    return std::min(ub->evaluate(), domain_ub);
 }
 
 Domain Var::get_domain() {
