@@ -653,7 +653,7 @@ def set_up_solve_data(model, config):
     # Flag indicating whether the solution improved in the past
     # iteration or not
     solve_data.primal_bound_improved = False
-    solve_data.bound_improved = False
+    solve_data.dual_bound_improved = False
 
     if config.nlp_solver == 'ipopt':
         if not hasattr(solve_data.working_model, 'ipopt_zL_out'):
@@ -774,12 +774,12 @@ def update_dual_bound(solve_data, bound_value):
         return
     if solve_data.objective_sense == minimize:
         solve_data.dual_bound = max(bound_value, solve_data.dual_bound)
-        solve_data.bound_improved = solve_data.dual_bound > solve_data.dual_bound_progress[-1]
+        solve_data.dual_bound_improved = solve_data.dual_bound > solve_data.dual_bound_progress[-1]
     else:
         solve_data.dual_bound = min(bound_value, solve_data.dual_bound)
-        solve_data.bound_improved = solve_data.dual_bound < solve_data.dual_bound_progress[-1]
+        solve_data.dual_bound_improved = solve_data.dual_bound < solve_data.dual_bound_progress[-1]
     solve_data.dual_bound_progress.append(solve_data.dual_bound)
-    if solve_data.bound_improved:
+    if solve_data.dual_bound_improved:
         update_gap(solve_data)
 
 
