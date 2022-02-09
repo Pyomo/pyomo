@@ -173,7 +173,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
         dual_values = None
     main_objective = fixed_nlp.MindtPy_utils.objective_list[-1]
     update_primal_bound(solve_data, value(main_objective.expr))
-    if solve_data.solution_improved:
+    if solve_data.primal_bound_improved:
         solve_data.best_solution_found = fixed_nlp.clone()
         solve_data.best_solution_found_time = get_main_elapsed_time(
             solve_data.timing)
@@ -215,7 +215,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
 
     config.call_after_subproblem_feasible(fixed_nlp, solve_data)
 
-    config.logger.info(solve_data.fixed_nlp_log_formatter.format('*' if solve_data.solution_improved else ' ',
+    config.logger.info(solve_data.fixed_nlp_log_formatter.format('*' if solve_data.primal_bound_improved else ' ',
                                                                  solve_data.nlp_iter if not fp else solve_data.fp_iter,
                                                                  'Fixed NLP', 
                                                                  value(main_objective.expr),

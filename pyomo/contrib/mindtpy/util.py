@@ -652,7 +652,7 @@ def set_up_solve_data(model, config):
 
     # Flag indicating whether the solution improved in the past
     # iteration or not
-    solve_data.solution_improved = False
+    solve_data.primal_bound_improved = False
     solve_data.bound_improved = False
 
     if config.nlp_solver == 'ipopt':
@@ -819,12 +819,12 @@ def update_primal_bound(solve_data, bound_value):
         return
     if solve_data.objective_sense == minimize:
         solve_data.primal_bound = min(bound_value, solve_data.primal_bound)
-        solve_data.solution_improved = solve_data.primal_bound < solve_data.primal_bound_progress[-1]
+        solve_data.primal_bound_improved = solve_data.primal_bound < solve_data.primal_bound_progress[-1]
     else:
         solve_data.primal_bound = max(bound_value, solve_data.primal_bound)
-        solve_data.solution_improved = solve_data.primal_bound > solve_data.primal_bound_progress[-1]
+        solve_data.primal_bound_improved = solve_data.primal_bound > solve_data.primal_bound_progress[-1]
     solve_data.primal_bound_progress.append(solve_data.primal_bound)
-    if solve_data.solution_improved:
+    if solve_data.primal_bound_improved:
         update_gap(solve_data)
 
 
