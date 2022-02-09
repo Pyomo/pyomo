@@ -24,7 +24,7 @@ These approaches include:
 This solver implementation was developed by Carnegie Mellon University in the
 research group of Ignacio Grossmann.
 
-For nonconvex problems, the bounds solve_data.LB and solve_data.UB may not be
+For nonconvex problems, the bounds solve_data.primal_bound and solve_data.dual_bound may not be
 rigorous. Questions: Please make a post at StackOverflow and/or David Bernal
 <https://github.com/bernalde>
 
@@ -37,7 +37,7 @@ from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
 from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
-                        Set, Suffix, Var, VarList, TransformationFactory, Objective, RangeSet)
+                        Var, VarList, TransformationFactory, RangeSet, minimize)
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
 from pyomo.common.config import add_docstring_list
@@ -213,9 +213,13 @@ class MindtPySolver(object):
                         Var) if not i.fixed],
                     config)
                 # exclude fixed variables here. This is consistent with the definition of variable_list in GDPopt.util
+            if solve_data.objective_sense == minimize:
+                solve_data.results.problem.lower_bound = solve_data.dual_bound
+                solve_data.results.problem.upper_bound = solve_data.primal_bound
+            else:
+                solve_data.results.problem.lower_bound = solve_data.primal_bound
+                solve_data.results.problem.upper_bound = solve_data.dual_bound
 
-            solve_data.results.problem.lower_bound = solve_data.LB
-            solve_data.results.problem.upper_bound = solve_data.UB
 
         solve_data.results.solver.timing = solve_data.timing
         solve_data.results.solver.user_time = solve_data.timing.total

@@ -626,14 +626,18 @@ def set_up_solve_data(model, config):
         solve_data.fp_iter = 1
 
     # set up bounds
-    solve_data.LB = float('-inf')
-    solve_data.UB = float('inf')
-    solve_data.LB_progress = [solve_data.LB]
-    solve_data.UB_progress = [solve_data.UB]
+    if obj.sense == minimize:
+        solve_data.primal_bound = float('inf')
+        solve_data.dual_bound = float('-inf')
+    else:
+        solve_data.primal_bound = float('-inf')
+        solve_data.dual_bound = float('inf')
+    solve_data.primal_bound_progress = [solve_data.primal_bound]
+    solve_data.dual_bound_progress = [solve_data.dual_bound]
     solve_data.abs_gap = float('inf')
     solve_data.rel_gap = float('inf')
-    solve_data.log_formatter = ' {:>9}   {:>15}   {:>15g}   {:>11g}   {:>11g}   {:>7.2%}   {:>7.2f}'
-    solve_data.fixed_nlp_log_formatter = '{:1}{:>9}   {:>15}   {:>15g}   {:>11g}   {:>11g}   {:>7.2%}   {:>7.2f}'
+    solve_data.log_formatter = ' {:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
+    solve_data.fixed_nlp_log_formatter = '{:1}{:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
     solve_data.log_note_formatter = ' {:>9}   {:>15}   {:>15}'
     if config.add_regularization is not None:
         if config.add_regularization in {'level_L1', 'level_L_infinity', 'grad_lag'}:
@@ -749,9 +753,8 @@ def update_gap(solve_data):
     solve_data : MindtPySolveData
         Data container that holds solve-instance data.
     """
-    solve_data.abs_gap = solve_data.UB - solve_data.LB
-    solve_data.rel_gap = (solve_data.UB - solve_data.LB)/(abs(
-        solve_data.UB if solve_data.objective_sense == minimize else solve_data.LB) + 1E-10)
+    solve_data.abs_gap = abs(solve_data.primal_bound - solve_data.dual_bound)
+    solve_data.rel_gap = solve_data.abs_gap / (abs(solve_data.primal_bound) + 1E-10)
 
 
 def update_dual_bound(solve_data, bound_value):
@@ -770,13 +773,12 @@ def update_dual_bound(solve_data, bound_value):
     if math.isnan(bound_value):
         return
     if solve_data.objective_sense == minimize:
-        solve_data.LB = max(bound_value, solve_data.LB)
-        solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-        solve_data.LB_progress.append(solve_data.LB)
+        solve_data.dual_bound = max(bound_value, solve_data.dual_bound)
+        solve_data.bound_improved = solve_data.dual_bound > solve_data.dual_bound_progress[-1]
     else:
-        solve_data.UB = min(bound_value, solve_data.UB)
-        solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-        solve_data.UB_progress.append(solve_data.UB)
+        solve_data.dual_bound = min(bound_value, solve_data.dual_bound)
+        solve_data.bound_improved = solve_data.dual_bound < solve_data.dual_bound_progress[-1]
+    solve_data.dual_bound_progress.append(solve_data.dual_bound)
     if solve_data.bound_improved:
         update_gap(solve_data)
 
@@ -816,13 +818,12 @@ def update_primal_bound(solve_data, bound_value):
     if math.isnan(bound_value):
         return
     if solve_data.objective_sense == minimize:
-        solve_data.UB = min(bound_value, solve_data.UB)
-        solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
-        solve_data.UB_progress.append(solve_data.UB)
+        solve_data.primal_bound = min(bound_value, solve_data.primal_bound)
+        solve_data.solution_improved = solve_data.primal_bound < solve_data.primal_bound_progress[-1]
     else:
-        solve_data.LB = max(bound_value, solve_data.LB)
-        solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
-        solve_data.LB_progress.append(solve_data.LB)
+        solve_data.primal_bound = max(bound_value, solve_data.primal_bound)
+        solve_data.solution_improved = solve_data.primal_bound > solve_data.primal_bound_progress[-1]
+    solve_data.primal_bound_progress.append(solve_data.primal_bound)
     if solve_data.solution_improved:
         update_gap(solve_data)
 

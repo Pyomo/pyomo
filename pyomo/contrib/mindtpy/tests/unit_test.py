@@ -301,26 +301,13 @@ class TestMindtPy(unittest.TestCase):
 
             # test algorithm_should_terminate
             solve_data.should_terminate = True
-            solve_data.UB = float('inf')
+            solve_data.primal_bound = float('inf')
             self.assertIs(algorithm_should_terminate(
                 solve_data, config, check_cycling=False), True)
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.noSolution)
 
-            solve_data.UB = 100
-            self.assertIs(algorithm_should_terminate(
-                solve_data, config, check_cycling=False), True)
-            self.assertIs(
-                solve_data.results.solver.termination_condition, tc.feasible)
-
-            solve_data.objective_sense = maximize
-            solve_data.LB = float('-inf')
-            self.assertIs(algorithm_should_terminate(
-                solve_data, config, check_cycling=False), True)
-            self.assertIs(
-                solve_data.results.solver.termination_condition, tc.noSolution)
-
-            solve_data.LB = 100
+            solve_data.primal_bound = 100
             self.assertIs(algorithm_should_terminate(
                 solve_data, config, check_cycling=False), True)
             self.assertIs(

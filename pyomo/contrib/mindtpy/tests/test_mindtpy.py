@@ -300,7 +300,6 @@ class TestMindtPy(unittest.TestCase):
             opt.solve(model, strategy='OA',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      #   mip_solver_args={'timelimit': 0.9}
                       )
             self.assertAlmostEqual(
                 value(model.objective.expr), 14.83, places=1)

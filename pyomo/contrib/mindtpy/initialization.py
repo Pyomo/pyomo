@@ -82,10 +82,10 @@ def MindtPy_initialize_main(solve_data, config):
         '{} is the initial strategy being used.'
         '\n'.format(config.init_strategy))
     config.logger.info(
-        ' =============================================================================================')
+        ' ===============================================================================================')
     config.logger.info(
-        ' {:>9} | {:>15} | {:>15} | {:>11} | {:>11} | {:^7} | {:>7}\n'.format('Iteration', 'Subproblem Type', 'Objective Value', 'Lower Bound',
-                                                                              'Upper Bound', ' Gap ', 'Time(s)'))
+        ' {:>9} | {:>15} | {:>15} | {:>12} | {:>12} | {:^7} | {:>7}\n'.format('Iteration', 'Subproblem Type', 'Objective Value', 'Primal Bound',
+                                                                              'Dual Bound', ' Gap ', 'Time(s)'))
     # Do the initialization
     if config.init_strategy == 'rNLP':
         init_rNLP(solve_data, config)
@@ -142,7 +142,7 @@ def init_rNLP(solve_data, config):
         dual_values = list(
             m.dual[c] for c in MindtPy.constraint_list) if config.calculate_dual else None
         config.logger.info(solve_data.log_formatter.format('-', 'Relaxed NLP', value(main_objective.expr),
-                                                           solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                           solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
                                                            get_main_elapsed_time(solve_data.timing)))
         # Add OA cut
         if config.strategy in {'OA', 'GOA', 'FP'}:
@@ -236,7 +236,7 @@ def init_max_binaries(solve_data, config):
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
         config.logger.info(solve_data.log_formatter.format('-', 'Max binary MILP', value(MindtPy.max_binary_obj.expr),
-                                                           solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                           solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
                                                            get_main_elapsed_time(solve_data.timing)))
     elif solve_terminate_cond is tc.infeasible:
         raise ValueError(

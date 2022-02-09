@@ -178,12 +178,8 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
         solve_data.best_solution_found_time = get_main_elapsed_time(
             solve_data.timing)
         if config.strategy == 'GOA':
-            if solve_data.objective_sense == minimize:
-                solve_data.num_no_good_cuts_added.update(
-                    {solve_data.UB: len(solve_data.mip.MindtPy_utils.cuts.no_good_cuts)})
-            else:
-                solve_data.num_no_good_cuts_added.update(
-                    {solve_data.LB: len(solve_data.mip.MindtPy_utils.cuts.no_good_cuts)})
+            solve_data.num_no_good_cuts_added.update(
+                    {solve_data.primal_bound: len(solve_data.mip.MindtPy_utils.cuts.no_good_cuts)})
 
         # add obj increasing constraint for fp
         if fp:
@@ -191,11 +187,10 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
                 'improving_objective_cut')
             if solve_data.objective_sense == minimize:
                 solve_data.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=sum(solve_data.mip.MindtPy_utils.objective_value[:])
-                                                                                       <= solve_data.UB - config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
+                                                                                       <= solve_data.primal_bound - config.fp_cutoffdecr*max(1, abs(solve_data.primal_bound)))
             else:
                 solve_data.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=sum(solve_data.mip.MindtPy_utils.objective_value[:])
-                                                                                       >= solve_data.LB + config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
-
+                                                                                       >= solve_data.primal_bound + config.fp_cutoffdecr*max(1, abs(solve_data.primal_bound)))
     # Add the linear cut
     if config.strategy == 'OA' or fp:
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
@@ -222,11 +217,10 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
 
     config.logger.info(solve_data.fixed_nlp_log_formatter.format('*' if solve_data.solution_improved else ' ',
                                                                  solve_data.nlp_iter if not fp else solve_data.fp_iter,
-                                                                 'Fixed NLP',
-                                                                 value(
-                                                                     main_objective.expr),
-                                                                 solve_data.LB,
-                                                                 solve_data.UB,
+                                                                 'Fixed NLP', 
+                                                                 value(main_objective.expr),
+                                                                 solve_data.primal_bound, 
+                                                                 solve_data.dual_bound, 
                                                                  solve_data.rel_gap,
                                                                  get_main_elapsed_time(solve_data.timing)))
 
