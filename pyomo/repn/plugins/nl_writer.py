@@ -602,7 +602,7 @@ class _NLWriter_impl(object):
             for _id in single_use_subexpressions.get(id(info[0]), ()):
                 self._write_v_line(_id, row_idx)
             ostream.write(f'C{row_idx}{row_comments[row_idx]}\n')
-            self._write_nl_expression(info[1], 0)
+            self._write_nl_expression(info[1], False)
 
         #
         # "O" lines (objectives: nonlinear expression)
@@ -613,7 +613,7 @@ class _NLWriter_impl(object):
             lbl = row_comments[n_cons + obj_idx]
             sense = 0 if info[0].sense == minimize else 1
             ostream.write(f'O{obj_idx} {sense}{lbl}\n')
-            self._write_nl_expression(info[1])
+            self._write_nl_expression(info[1], True)
 
         #
         # "d" lines (dual initialization)
@@ -884,22 +884,22 @@ class _NLWriter_impl(object):
                 n_subexpressions[0] += 1
         return n_subexpressions
 
-    def _write_nl_expression(self, repn, const_=None):
+    def _write_nl_expression(self, repn, include_const):
         #assert repn.mult == 1
-        if const_ is None:
-            const_ = repn.const
-        if repn.nonlinear and repn.nonlinear[0] != 'n0\n':
+        if repn.nonlinear:
             nl, args = repn.nonlinear
-            if const_:
+            if include_const and repn.const:
                 # Add the constant to the NL expression.  AMPL adds the
                 # constant as the second argument, so we will too.
                 nl = self.template.binary_sum + nl + (
-                    self.template.const % const_)
+                    self.template.const % repn.const)
             self.ostream.write(
                 nl % tuple(map(self.var_id_to_nl.__getitem__, args))
             )
+        elif include_const:
+            self.ostream.write(self.template.const % repn.const)
         else:
-            self.ostream.write(self.template.const % const_)
+            self.ostream.write(self.template.const % 0)
 
     def _write_v_line(self, expr_id, k):
         ostream = self.ostream
@@ -914,7 +914,7 @@ class _NLWriter_impl(object):
         ostream.write(f'V{self.next_V_line_id} {len(linear)} {k}{lbl}\n')
         for _id in sorted(linear, key=column_order.__getitem__):
             ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
-        self._write_nl_expression(info[1])
+        self._write_nl_expression(info[1], True)
         self.next_V_line_id += 1
 
 
