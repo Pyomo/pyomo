@@ -1376,16 +1376,12 @@ def handle_external_function_node(visitor, node, *args):
             len(visitor.external_functions),
             node._fcn,
         )
-    _amplrepn = lambda arg: \
-                node_result_to_amplrepn(visitor, arg).to_nl_node()
-    nl, arg_tuples = zip(*map(_amplrepn, args))
-    all_args = []
-    deque(map(all_args.extend, arg_tuples), maxlen=0)
-    return (_GENERAL, AMPLRepn(0, None, (
-        (visitor.template.external_fcn % (
-            visitor.external_functions[func][0], len(args))) + ''.join(nl),
-        tuple(all_args)
-    )))
+    nonlin = node_result_to_amplrepn(args[0]).compile_repn(
+        visitor, visitor.template.external_fcn % (
+            visitor.external_functions[func][0], len(args)))
+    for arg in args[1:]:
+        nonlin = node_result_to_amplrepn(arg[0]).compile_repn(visitor, *nonlin)
+    return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 
 _operator_handles = {
