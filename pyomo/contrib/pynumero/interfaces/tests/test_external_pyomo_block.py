@@ -1200,12 +1200,12 @@ class TestExceptions(unittest.TestCase):
         msg = "Please set use_cyipopt to False"
         with self.assertRaisesRegex(RuntimeError, msg):
             ex_model = ExternalPyomoModel(
-                    input_vars,
-                    external_vars,
-                    residual_cons,
-                    external_cons,
-                    solver=inner_solver,
-                    )
+                input_vars,
+                external_vars,
+                residual_cons,
+                external_cons,
+                solver=inner_solver,
+            )
 
     def test_cyipopt_unavailable(self):
         try:
@@ -1226,11 +1226,12 @@ class TestExceptions(unittest.TestCase):
             msg = "Constructing an ExternalPyomoModel with CyIpopt unavailable"
             with self.assertRaisesRegex(RuntimeError, msg):
                 ex_model = ExternalPyomoModel(
-                        input_vars,
-                        external_vars,
-                        residual_cons,
-                        external_cons,
-                        )
+                    input_vars,
+                    external_vars,
+                    residual_cons,
+                    external_cons,
+                    use_cyipopt=True,
+                )
         finally:
             # HACK: Reset the global flag
             epm_module.cyipopt_available = cyipopt_available
