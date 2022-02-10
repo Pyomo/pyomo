@@ -259,7 +259,12 @@ class _NLWriter_impl(object):
         linear_objs = []
         for obj_comp in model.component_objects(
                 Objective, active=True, descend_into=True, sort=sorter):
-            for obj in obj_comp.values():
+            try:
+                obj_vals = obj_comp.values()
+            except AttributeError:
+                # kernel does not define values() for scalar objectives
+                obj_vals = (obj_comp,)
+            for obj in obj_vals:
                 if not obj.active:
                     continue
                 expr = visitor.walk_expression((obj.expr, obj, 1))
@@ -280,7 +285,12 @@ class _NLWriter_impl(object):
         n_equality = 0
         for con_comp in model.component_objects(
                 Constraint, active=True, descend_into=True, sort=sorter):
-            for con in con_comp.values():
+            try:
+                con_vals = con_comp.values()
+            except AttributeError:
+                # kernel does not define values() for scalar constraints
+                con_vals = (con_comp,)
+            for con in con_vals:
                 if not con.active:
                     continue
                 expr = visitor.walk_expression((con.body, con, 0))
