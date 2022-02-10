@@ -147,7 +147,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             external_vars,
             residual_cons,
             external_cons,
-            use_cyipopt=True,
+            use_cyipopt=None,
             solver=None,
             ):
         """
@@ -172,6 +172,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             is False.
 
         """
+        if use_cyipopt is None:
+            use_cyipopt = cyipopt_available
         if use_cyipopt and not cyipopt_available:
             raise RuntimeError(
                 "Constructing an ExternalPyomoModel with CyIpopt unavailable. "
