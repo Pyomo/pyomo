@@ -26,7 +26,6 @@ import pyomo.gdp.tests.models as models
 from pyomo.repn import generate_standard_repn
 from pyomo.opt import check_available_solvers
 
-from nose.tools import set_trace
 
 solvers = check_available_solvers('gurobi_direct')
 
