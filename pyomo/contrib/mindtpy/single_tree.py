@@ -74,19 +74,19 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                 # instead log warnings).  This means that the following
                 # will always succeed and the ValueError should never be
                 # raised.
-                v_to.set_value(v_val)
+                v_to.set_value(v_val, skip_validation=True)
             except ValueError:
                 # Snap the value to the bounds
                 if v_to.has_lb() and v_val < v_to.lb and v_to.lb - v_val <= config.variable_tolerance:
-                    v_to.set_value(v_to.lb)
+                    v_to.set_value(v_to.lb, skip_validation=True)
                 elif v_to.has_ub() and v_val > v_to.ub and v_val - v_to.ub <= config.variable_tolerance:
-                    v_to.set_value(v_to.ub)
+                    v_to.set_value(v_to.ub, skip_validation=True)
                 # ... or the nearest integer
                 elif v_to.is_integer():
                     rounded_val = int(round(v_val))
                     if (ignore_integrality or abs(v_val - rounded_val) <= config.integer_tolerance) \
                             and rounded_val in v_to.domain:
-                        v_to.set_value(rounded_val)
+                        v_to.set_value(rounded_val, skip_validation=True)
                 else:
                     raise
 
@@ -140,7 +140,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                     if (constr.has_ub()
                         and (linearize_active and abs(constr.uslack()) < config.zero_tolerance)
                             or (linearize_violated and constr.uslack() < 0)
-                            or (config.linearize_inactive and constr.uslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_ub()):
+                            or (config.linearize_inactive and constr.uslack() > 0)) or ('MindtPy_utils.objective_constr' in constr.name and constr.has_ub()):
 
                         pyomo_expr = sum(
                             value(jacs[constr][var])*(var - var.value) for var in constr_vars) + value(constr.body)
@@ -154,7 +154,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                     if (constr.has_lb()
                         and (linearize_active and abs(constr.lslack()) < config.zero_tolerance)
                             or (linearize_violated and constr.lslack() < 0)
-                            or (config.linearize_inactive and constr.lslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_lb()):
+                            or (config.linearize_inactive and constr.lslack() > 0)) or ('MindtPy_utils.objective_constr' in constr.name and constr.has_lb()):
                         pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(
                             opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars) + value(constr.body)
                         cplex_rhs = - \
