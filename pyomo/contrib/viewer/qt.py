@@ -10,7 +10,7 @@
 ##############################################################################
 """
 Import PyQt5 if available, then try PyQt4, then, if all else fails, use some
-dummy classes to allow some testing. If anything fails to import, the excpetion
+dummy classes to allow some testing. If anything fails to import, the exception
 is logged.  That should make it clear exacly what's missing, but it could be a
 little annoying it you are using PyQt4 or don't need jupyter qtconsole.  In the
 future, will probably cut PyQt4 support, so it will be less of an issue.

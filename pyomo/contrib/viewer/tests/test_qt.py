@@ -31,6 +31,7 @@ else:
         """Overwrite qtbot - remove test failure"""
         return
 
+
 @unittest.skipIf((not qt_available), "Qt not available.")
 class TestViewerQT(unittest.TestCase):
     def get_model(self):
@@ -76,7 +77,6 @@ class TestViewerQT(unittest.TestCase):
         """
         self.qtbot = qtbot
 
-    @unittest.timeout(10)
     def test_get_mainwindow(self):
         m = self.get_model()
         mw, m = get_mainwindow(model=m, testing=True)
@@ -86,13 +86,10 @@ class TestViewerQT(unittest.TestCase):
         assert(isinstance(mw.expressions, ModelBrowser))
         assert(isinstance(mw.parameters, ModelBrowser))
 
-    @unittest.timeout(10)
     def test_model_information(self):
         m = self.get_model()
         mw, m = get_mainwindow(model=m, testing=True)
-        self.qtbot.addWidget(mw)
-        self.qtbot.keyClick(mw.menuBar(), "m", modifier=QtCore.Qt.AltModifier)
-        self.qtbot.keyClick(mw.menuModel, "i")
+        mw.model_information()
         assert(isinstance(mw._dialog, QMessageBox))
         text = mw._dialog.text()
         mw._dialog.close()
