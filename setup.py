@@ -205,6 +205,7 @@ setup_kwargs = dict(
             'coverage',
             'pytest',
             'pytest-parallel',
+            'pytest-qt',
             'parameterized',
             'pybind11',
         ],
