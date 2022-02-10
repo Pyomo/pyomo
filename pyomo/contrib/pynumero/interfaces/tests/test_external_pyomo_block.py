@@ -1233,7 +1233,7 @@ class TestExceptions(unittest.TestCase):
                         )
         finally:
             # HACK: Reset the global flag
-            epm_module.cyipopt_available = True
+            epm_module.cyipopt_available = cyipopt_available
 
 
 if __name__ == '__main__':
