@@ -1205,6 +1205,7 @@ class TestExceptions(unittest.TestCase):
                 residual_cons,
                 external_cons,
                 solver=inner_solver,
+                use_cyipopt=True,
             )
 
     def test_cyipopt_unavailable(self):
