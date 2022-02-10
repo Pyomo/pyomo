@@ -1186,7 +1186,10 @@ class TestExternalGreyBoxBlockWithReferences(unittest.TestCase):
 
 class TestExceptions(unittest.TestCase):
 
+    @unittest.skipUnless(cyipopt_available, "cyipopt is not available")
     def test_solver_with_cyipopt(self):
+        # CyIpopt is required here just because we get a different error
+        # (see test below) if CyIpopt is unavailable.
         m = pyo.ConcreteModel()
         m.ex_block = ExternalGreyBoxBlock(concrete=True)
         block = m.ex_block
