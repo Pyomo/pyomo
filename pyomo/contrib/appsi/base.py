@@ -776,7 +776,7 @@ class PersistentBase(abc.ABC):
             if id(v) in self._referenced_variables:
                 raise ValueError('variable {name} has already been added'.format(name=v.name))
             self._referenced_variables[id(v)] = [dict(), dict(), None]
-            self._vars[id(v)] = (v, v._lb, v._ub, v.fixed, v.domain, v.value)
+            self._vars[id(v)] = (v, v._lb, v._ub, v.fixed, v.domain.get_interval(), v.value)
         self._add_variables(variables)
 
     @abc.abstractmethod
@@ -951,7 +951,7 @@ class PersistentBase(abc.ABC):
 
     def update_variables(self, variables: List[_GeneralVarData]):
         for v in variables:
-            self._vars[id(v)] = (v, v._lb, v._ub, v.fixed, v.domain, v.value)
+            self._vars[id(v)] = (v, v._lb, v._ub, v.fixed, v.domain.get_interval(), v.value)
         self._update_variables(variables)
 
     @abc.abstractmethod
@@ -1065,7 +1065,7 @@ class PersistentBase(abc.ABC):
                     vars_to_check.append(v)
             vars_to_update = list()
             for v in vars_to_check:
-                _v, lb, ub, fixed, domain, value = self._vars[id(v)]
+                _v, lb, ub, fixed, domain_interval, value = self._vars[id(v)]
                 if lb is not v._lb:
                     vars_to_update.append(v)
                 elif ub is not v._ub:
@@ -1077,7 +1077,7 @@ class PersistentBase(abc.ABC):
                             cons_to_remove_and_add[c] = None
                         if self._referenced_variables[id(v)][2] is not None:
                             need_to_set_objective = True
-                elif domain is not v.domain:
+                elif domain_interval != v.domain.get_interval():
                     vars_to_update.append(v)
             self.update_variables(vars_to_update)
         timer.stop('vars')
