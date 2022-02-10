@@ -905,7 +905,7 @@ class _NLWriter_impl(object):
         ostream = self.ostream
         column_order = self.column_order
         info = self.subexpression_cache[expr_id]
-        if self.symbolic_solver_labels and info[0].__class__ is not AMPLRepn:
+        if self.symbolic_solver_labels:
             lbl = '\t#%s' % info[0].name
         else:
             lbl = ''
@@ -918,9 +918,27 @@ class _NLWriter_impl(object):
         self.next_V_line_id += 1
 
 
+class NLFragment(object):
+    """This is a mock "component" for the nl portion of a named Expression.
+
+    It is used internally in the writer when requesting symbolic solver
+    labels so that we can generate meaningful names for the nonlinear
+    portion of an Expression component.
+
+    """
+    __slots__ = ('_repn', '_node')
+
+    def __init__(self, repn, node):
+        self._repn = repn
+        self._node = node
+
+    @property
+    def name(self):
+        return 'nl(' + self._node.name + ')'
+
+
 class AMPLRepn(object):
-    __slots__ = (
-        'nl', 'mult', 'const', 'linear', 'nonlinear')
+    __slots__ = ('nl', 'mult', 'const', 'linear', 'nonlinear')
 
     ActiveVisitor = None
 
@@ -1264,19 +1282,20 @@ def handle_named_expression_node(visitor, node, arg1):
             # const/linear component (and references the first).  This
             # will allow us to propagate linear coefficients up from
             # named subexpressions when appropriate.
-            subid = id(repn)
+            sub_node = NLFragment(repn, node)
+            sub_id = id(sub_node)
             sub_repn = AMPLRepn(0, None, repn.nonlinear)
-            sub_repn.nl = (visitor.template.var, (subid,))
+            sub_repn.nl = (visitor.template.var, (sub_id,))
             # See below for the meaning of this tuple
-            visitor.subexpression_cache[subid] = (
-                repn, sub_repn, list(expression_source),
+            visitor.subexpression_cache[sub_id] = (
+                sub_node, sub_repn, list(expression_source),
             )
             repn.nonlinear = sub_repn.nl
             # It is important that the NL subexpression comes before the
             # main named expression:
-            visitor.subexpression_order.append(subid)
+            visitor.subexpression_order.append(sub_id)
             # The nonlinear identifier is *always* used
-            visitor.used_named_expressions.add(subid)
+            visitor.used_named_expressions.add(sub_id)
     else:
         repn.nonlinear = None
         if repn.linear:
