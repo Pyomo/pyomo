@@ -69,6 +69,7 @@ def get_model():
 
 @unittest.skipIf(not qt_available,
                  "Qt packages are not available.")
+@unittest.timeout(10)
 def test_get_mainwindow(qtbot):
     m = get_model()
     mw, m = get_mainwindow(model=m, testing=True)
@@ -78,8 +79,10 @@ def test_get_mainwindow(qtbot):
     assert(isinstance(mw.expressions, ModelBrowser))
     assert(isinstance(mw.parameters, ModelBrowser))
 
+
 @unittest.skipIf(not qt_available,
                  "Qt packages are not available.")
+@unittest.timeout(10)
 def test_model_information(qtbot):
     m = get_model()
     mw, m = get_mainwindow(model=m, testing=True)
