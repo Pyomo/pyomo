@@ -227,6 +227,12 @@ def pyros_config():
                     "'False' to use local solver(s) at intermediate separations, "
                     "using global solver(s) only before termination to certify robust feasibility. "
     ))
+    CONFIG.declare("bypass_global_separation", ConfigValue(
+        default=False, domain=bool,
+        description="This is an advanced option. Default = False. 'True' to only use local solver(s) during separation; "
+                    "however, robustness of the final result will not be guaranteed. Use to expedite PyROS run when "
+                    "global solver(s) cannot (efficiently) solve separation problems."
+    ))
     CONFIG.declare("p_robustness", ConfigValue(
         default={}, domain=dict,
         description="This is an advanced option. Default = {}. Whether or not to add p-robustness constraints to the master problems. "
