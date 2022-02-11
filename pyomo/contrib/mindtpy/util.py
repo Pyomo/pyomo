@@ -635,6 +635,7 @@ def set_up_solve_data(model, config):
     solve_data.primal_bound_progress = [solve_data.primal_bound]
     solve_data.dual_bound_progress = [solve_data.dual_bound]
     solve_data.primal_bound_progress_time = [0]
+    solve_data.dual_bound_progress_time = [0]
     solve_data.abs_gap = float('inf')
     solve_data.rel_gap = float('inf')
     solve_data.log_formatter = ' {:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
@@ -780,6 +781,7 @@ def update_dual_bound(solve_data, bound_value):
         solve_data.dual_bound = min(bound_value, solve_data.dual_bound)
         solve_data.dual_bound_improved = solve_data.dual_bound < solve_data.dual_bound_progress[-1]
     solve_data.dual_bound_progress.append(solve_data.dual_bound)
+    solve_data.dual_bound_progress_time.append(get_main_elapsed_time(solve_data.timing))
     if solve_data.dual_bound_improved:
         update_gap(solve_data)
 
@@ -848,21 +850,64 @@ def set_up_logger(config):
     # add the handlers to logger
     config.logger.addHandler(ch)
 
+
+def get_dual_integral(solve_data):
+    dual_integral = 0
+    dual_bound_progress = solve_data.dual_bound_progress.copy()
+    # Initial dual bound is set to inf or -inf. To calculate dual integral, we set
+    # initial_dual_bound to 10% greater or smaller than the first_found_dual_bound.
+    # TODO: check if the calculation of initial_dual_bound needs to be modified.
+    for dual_bound in dual_bound_progress:
+        if dual_bound != dual_bound_progress[0]:
+            break
+    for i in range(len(dual_bound_progress)):
+        if dual_bound_progress[i] == solve_data.dual_bound_progress[0]:
+            if solve_data.objective_sense == minimize:
+                if dual_bound > 0:
+                    dual_bound_progress[i] = dual_bound * 0.9
+                else:
+                    dual_bound_progress[i] = dual_bound * 1.1
+            else:
+                if dual_bound > 0:
+                    dual_bound_progress[i] = dual_bound * 1.1
+                else:
+                    dual_bound_progress[i] = dual_bound * 0.9
+        else:
+            break
+    for i in range(len(dual_bound_progress)):
+        if i == 0:
+            dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (solve_data.dual_bound_progress_time[i])
+        else:
+            dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (solve_data.dual_bound_progress_time[i] - solve_data.dual_bound_progress_time[i-1])
+    return dual_integral
+
+
 def get_primal_integral(solve_data):
     primal_integral = 0
     primal_bound_progress = solve_data.primal_bound_progress.copy()
-    # TODO: how to set the initial primal bound for primal integral?
+    # Initial primal bound is set to inf or -inf. To calculate primal integral, we set
+    # initial_primal_bound to 10% greater or smaller than the first_found_primal_bound.
+    # TODO: check if the calculation of initial_primal_bound needs to be modified.
     for primal_bound in primal_bound_progress:
         if primal_bound != primal_bound_progress[0]:
             break
     for i in range(len(primal_bound_progress)):
-        if primal_bound_progress[i] == primal_bound_progress[0]:
-            primal_bound_progress[i] = primal_bound
+        if primal_bound_progress[i] == solve_data.primal_bound_progress[0]:
+            if solve_data.objective_sense == minimize:
+                if primal_bound > 0:
+                    primal_bound_progress[i] = primal_bound * 1.1
+                else:
+                    primal_bound_progress[i] = primal_bound * 0.9
+            else:
+                if primal_bound > 0:
+                    primal_bound_progress[i] = primal_bound * 0.9
+                else:
+                    primal_bound_progress[i] = primal_bound * 1.1
         else:
             break
     for i in range(len(primal_bound_progress)):
         if i == 0:
-            primal_integral += (primal_bound_progress[i] - solve_data.primal_bound) * (solve_data.primal_bound_progress_time[i])
+            primal_integral += abs(primal_bound_progress[i] - solve_data.primal_bound) * (solve_data.primal_bound_progress_time[i])
         else:
-            primal_integral += (primal_bound_progress[i] - solve_data.primal_bound) * (solve_data.primal_bound_progress_time[i] - solve_data.primal_bound_progress_time[i-1])
+            primal_integral += abs(primal_bound_progress[i] - solve_data.primal_bound) * (solve_data.primal_bound_progress_time[i] - solve_data.primal_bound_progress_time[i-1])
     return primal_integral

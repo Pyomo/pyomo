@@ -295,7 +295,8 @@ def handle_main_infeasible(main_mip, solve_data, config):
             'quality cuts.')
     # TODO no-good cuts for single tree case
     # set optimistic bound to infinity
-    solve_data.dual_bound_progress.append(solve_data.dual_bound)
+    # TODO: can we remove the following line?
+    # solve_data.dual_bound_progress.append(solve_data.dual_bound)
     config.logger.info(
         'MindtPy exiting due to MILP main problem infeasibility.')
     if solve_data.results.solver.termination_condition is None:
