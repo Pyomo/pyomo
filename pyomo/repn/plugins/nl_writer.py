@@ -250,7 +250,8 @@ class _NLWriter_impl(object):
             # sorted with the LAST occurance.
             for var in model.component_data_objects(
                     Var, descend_into=True, sort=sorter):
-                var_map[id(var)] = var
+                if not var.fixed:
+                    var_map[id(var)] = var
 
         #
         # Tabulate the model expressions
@@ -962,7 +963,10 @@ class AMPLRepn(object):
     def compile_repn(self, visitor, prefix='', args=None):
         template = visitor.template
         if self.mult != 1:
-            prefix += template.multiplier % self.mult
+            if self.mult == -1:
+                prefix += template.negation
+            else:
+                prefix += template.multiplier % self.mult
         if self.nl is not None:
             nl, nl_args = self.nl
             visitor.used_named_expressions.update(nl_args)
@@ -1409,14 +1413,13 @@ _operator_handles = {
 def _before_native(visitor, child):
     return False, (_CONSTANT, child)
 
-def _before_non_expression(visitor, child):
-    if child.is_fixed():
-        return False, (_CONSTANT, child())
-    else:
-        _id = id(child)
-        if _id not in visitor.var_map:
-            visitor.var_map[_id] = child
-        return False, (_MONOMIAL, _id, 1)
+def _before_var(visitor, child):
+    _id = id(child)
+    if _id not in visitor.var_map:
+        if child.fixed:
+            return False, (_CONSTANT, child())
+        visitor.var_map[_id] = child
+    return False, (_MONOMIAL, _id, 1)
 
 def _before_npv(visitor, child):
     # _id = id(child)
@@ -1439,13 +1442,12 @@ def _before_monomial(visitor, child):
         # else:
         #     arg1 = visitor.value_cache[_id] = arg1()
         arg1 = arg1()
-    if arg2.is_fixed():
-        return False, (_CONSTANT, arg1 * arg2())
-    else:
-        _id = id(arg2)
-        if _id not in visitor.var_map:
-            visitor.var_map[_id] = arg2
-        return False, (_MONOMIAL, _id, arg1)
+    _id = id(arg2)
+    if _id not in visitor.var_map:
+        if arg2.fixed:
+            return False, (_CONSTANT, arg1 * arg2())
+        visitor.var_map[_id] = arg2
+    return False, (_MONOMIAL, _id, arg1)
 
 def _before_linear(visitor, child):
     # Because we are going to modify the LinearExpression in this
@@ -1457,7 +1459,7 @@ def _before_linear(visitor, child):
     for v, c in zip(child.linear_vars, child.linear_coefs):
         if c.__class__ not in native_types:
             c = c()
-        if v.is_fixed():
+        if v.fixed:
             const += c * v()
         else:
             _id = id(v)
@@ -1511,6 +1513,8 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.var_map = var_map
         self.used_named_expressions = used_named_expressions
         #self.value_cache = {}
+        self._before_child_handlers = _before_child_handlers
+        self._operator_handles = _operator_handles
 
     def initializeWalker(self, expr):
         expr, src, src_idx = expr
@@ -1524,10 +1528,10 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def beforeChild(self, node, child, child_idx):
         try:
-            return _before_child_handlers[child.__class__](self, child)
+            return self._before_child_handlers[child.__class__](self, child)
         except KeyError:
             self._register_new_before_child_processor(child)
-        return _before_child_handlers[child.__class__](self, child)
+        return self._before_child_handlers[child.__class__](self, child)
 
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
@@ -1548,7 +1552,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 _CONSTANT, node._apply_operation(list(map(
                     itemgetter(1), data)))
             )
-        return _operator_handles[node.__class__](self, node, *data)
+        return self._operator_handles[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):
         ans = node_result_to_amplrepn(result)
@@ -1580,6 +1584,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 else:
                     prefix = self.template.multiplier % mult
                 ans.nonlinear = prefix + ans.nonlinear[0], ans.nonlinear[1]
+
         elif ans.linear:
             for v, c in ans.linear:
                 if v in linear:
@@ -1597,7 +1602,10 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         if child_type in native_types:
             handlers[child_type] = _before_native
         elif not child.is_expression_type():
-            handlers[child_type] = _before_non_expression
+            if child.is_potentially_variable():
+                handlers[child_type] = _before_var
+            else:
+                handlers[child_type] = _before_npv
         elif not child.is_potentially_variable():
             handlers[child_type] = _before_npv
         elif id(child) in self.subexpression_cache:
