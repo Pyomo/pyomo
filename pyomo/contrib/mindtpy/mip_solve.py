@@ -506,10 +506,10 @@ def setup_main(solve_data, config, fp, regularization_problem):
                                                                        discrete_only=False)
         if solve_data.objective_sense == minimize:
             MindtPy.cuts.obj_reg_estimate = Constraint(
-                expr=MindtPy.objective_value <= (1 - config.level_coef) * solve_data.UB + config.level_coef * solve_data.LB)
+                expr=sum(MindtPy.objective_value[:]) <= (1 - config.level_coef) * solve_data.UB + config.level_coef * solve_data.LB)
         else:
             MindtPy.cuts.obj_reg_estimate = Constraint(
-                expr=MindtPy.objective_value >= (1 - config.level_coef) * solve_data.LB + config.level_coef * solve_data.UB)
+                expr=sum(MindtPy.objective_value[:]) >= (1 - config.level_coef) * solve_data.LB + config.level_coef * solve_data.UB)
 
     else:
         if config.add_slack:

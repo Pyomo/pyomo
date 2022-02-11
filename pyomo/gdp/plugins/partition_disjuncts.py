@@ -16,14 +16,14 @@ Relaxations between big-M and Convex Hull Reformulations," 2021.
 """
 from __future__ import division
 
-from pyomo.common.config import (ConfigBlock, ConfigValue)
+from pyomo.common.config import (ConfigBlock, ConfigValue, add_docstring_list)
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Block, Constraint, Var, SortComponents, Transformation,
                          TransformationFactory, TraversalStrategy,
                          NonNegativeIntegers, value, ConcreteModel, Objective,
                          ComponentMap, BooleanVar, LogicalConstraint, Connector,
                          Expression, Suffix, Param, Set, SetOf, RangeSet,
-                         Reference, Binary, LogicalConstraintList)
+                         Reference, Binary, LogicalConstraintList, maximize)
 from pyomo.core.base.external import ExternalFunction
 from pyomo.network import Port
 from pyomo.common.collections import ComponentSet
@@ -83,19 +83,9 @@ def arbitrary_partition(disjunction, P):
         v_set.update(get_vars_from_components(disj, Constraint,
                                               descend_into=Block, active=True))
     # assign them to partitions
-    partitions = []
-    V = len(v_set)
-    whole = floor(V/P)
-    for partition in range(V % P):
-        partitions.append(ComponentSet())
-        # add whole + 1 vars
-        for i in range(whole + 1):
-            partitions[partition].add(v_set.pop())
-    # for the rest, add whole vars
-    for partition in range(V % P, P):
-        partitions.append(ComponentSet())
-        for i in range(whole):
-            partitions[partition].add(v_set.pop())
+    partitions = [ComponentSet() for i in range(P)]
+    for i, v in enumerate(v_set):
+        partitions[i % P].add(v)
 
     return partitions
 
@@ -126,6 +116,7 @@ def compute_optimal_bounds(expr, global_constraints, opt):
     obj = Objective(expr=expr)
     global_constraints.add_component(unique_component_name(global_constraints,
                                                            "tmp_obj"), obj)
+    # Solve first minimizing, to get a lower bound
     results = opt.solve(global_constraints)
     if verify_successful_solve(results) is not NORMAL:
         logger.warning("Problem to find lower bound for expression %s"
@@ -135,7 +126,8 @@ def compute_optimal_bounds(expr, global_constraints, opt):
         # This has some risks, if you're using a solver the gives a lower bound,
         # getting that would be better. But this is why this is a callback.
         LB = value(obj.expr)
-    obj.sense = -1
+    # Now solve maximizing, to get an upper bound
+    obj.sense = maximize
     results = opt.solve(global_constraints)
     if verify_successful_solve(results) is not NORMAL:
         logger.warning("Problem to find upper bound for expression %s"
@@ -172,44 +164,6 @@ class PartitionDisjuncts_Transformation(Transformation):
     Increasing the number of partitions can result in tighter hull relaxations,
     but at the cost of larger model sizes.
 
-    This transformation accepts the following keyword arguments:
-
-    Parameters
-    ----------
-    targets : (Block, Disjunction, or list of those types)
-        The targets to transform. This can be a Block, Disjunction, or a list
-        of Blocks and Disjunctions [default: the instance]
-    variable_partitions : (set of sets of Vars or dictionary mapping
-        Disjunctions to sets of sets of Vars)
-        A partition of the variables that appear in constraints on the disjuncts
-        being transformed (or such a partition for each Disjunction being
-        transformed. All the constraints being transformed must be additively
-        separable with respect to this partition. [default: None]
-    num_partitions : (integer, or dictionary mapping Disjunctions to integers)
-        The number of partitions to automatically generate, if
-        'variable_partitions' are not specified for a Disjunction.
-    variable_partitioning_method : (function, or dictionary mapping Disjunctions
-        to functions)
-        A function which accepts a Disjunction and an integer P and returns a
-        valid partitioning of the variables into P partitions, or a dictionary
-        mapping Disjunctions to such functions. This will not be used if the
-        partition for the Disjunction is specified via the 'variable_partitions'
-        parameter, and it requires that P is specifed.
-        [default: arbitrary_partition]
-    assume_fixed_vars_permanent : (bool)
-        Whether or not to transform such that the transformed model will be
-        correct if fixed Vars are later unfixed. If fixed Vars will never be
-        unfixed, setting this to True could potentially result in a tighter
-        model. [default: False]
-    compute_bounds_method : (function)
-        Function to compute lower and upper bounds on a subexpression. Accepts
-        an expression, a Block containing the global constraints of the
-        original GDP, and a configured solver. Returns both a lower and upper
-        bound for the expression. [default: contrib.fbbt.compute_bounds_on_expr]
-    compute_bounds_solver : (SolverFactory)
-        Configured solver for use in compute_bounds_method (if it is needed)
-        [default: None]
-
     The transformation will create a new Block with a unique name beginning
     "_pyomo_gdp_partition_disjuncts_reformulation".
     The Block will have new Disjunct objects, each corresponding to one of the
@@ -225,6 +179,7 @@ class PartitionDisjuncts_Transformation(Transformation):
     ----------
         [1] J. Kronqvist, R. Misener, and C. Tsay, "Between Steps: Intermediate
             Relaxations between big-M and Convex Hull Reformulations," 2021.
+
     """
     CONFIG = ConfigBlock("gdp.partition_disjuncts")
     CONFIG.declare('targets', ConfigValue(
@@ -232,11 +187,14 @@ class PartitionDisjuncts_Transformation(Transformation):
         domain=target_list,
         description="""target or list of targets that will be relaxed""",
         doc="""
-        This specifies the target or list of targets to relax as either a
-        component or a list of components. If None (default), the entire model
-        is transformed. Note that if the transformation is done out of place,
-        the list of targets should be attached to the model before it is cloned,
-        and the list will specify the targets on the cloned instance."""
+        Specifies the target or list of targets to relax as either a
+        component or a list of components. 
+
+        If None (default), the entire model is transformed. Note that if the 
+        transformation is done out of place, the list of targets should be 
+        attached to the model before it is cloned, and the list will specify 
+        the targets on the cloned instance.
+        """
     ))
     CONFIG.declare('variable_partitions', ConfigValue(
         default=None,
@@ -320,12 +278,14 @@ class PartitionDisjuncts_Transformation(Transformation):
     ))
     CONFIG.declare('compute_bounds_method', ConfigValue(
         default=compute_fbbt_bounds,
-        description="""Function which takes an expression, a Block containing
+        description="""Function that takes an expression, a Block containing
         the global constraints of the original problem, and a configured
         solver, and returns both a lower and upper bound for the expression.""",
-        doc="""Callback for computing bounds on expressions, in order to bound
-        the auxilary variables created by the transformation. Some
-        pre-implemented options include
+        doc="""
+        Callback for computing bounds on expressions, in order to bound
+        the auxiliary variables created by the transformation. 
+
+        Some pre-implemented options include
             * compute_fbbt_bounds (the default), and
             * compute_optimal_bounds
         or you can write your own callback which accepts an Expression object,
@@ -360,9 +320,6 @@ class PartitionDisjuncts_Transformation(Transformation):
             Set:         False,
             SetOf:       False,
             RangeSet:    False,
-            Disjunction: False, # this actually isn't possible in this
-                                # transformation because we transform them when
-                                # we find them
             Disjunct:    self._warn_for_active_disjunct,
             Block:       False,
             ExternalFunction: False,
@@ -376,9 +333,6 @@ class PartitionDisjuncts_Transformation(Transformation):
                             " must be a ConcreteModel, Block, or Disjunct (in "
                             "the case of nested disjunctions)." %
                             (instance.name, instance.ctype))
-
-        original_log_level = logger.level
-        log_level = logger.getEffectiveLevel()
         try:
             assert not NAME_BUFFER
             self._config = self.CONFIG(kwds.pop('options', {}))
@@ -408,8 +362,6 @@ class PartitionDisjuncts_Transformation(Transformation):
             del self._transformation_blocks
             # clear the global name buffer
             NAME_BUFFER.clear()
-            # restore logging level
-            logger.setLevel(original_log_level)
 
     def _apply_to_impl(self, instance):
         self.variable_partitions = self._config.variable_partitions if \
@@ -710,7 +662,7 @@ class PartitionDisjuncts_Transformation(Transformation):
                                  name_buffer=NAME_BUFFER)
 
         # create place on transformed Disjunct for the new constraint and
-        # for the auxilary variables
+        # for the auxiliary variables
         transformed_constraint = Constraint(NonNegativeIntegers)
         transformed_disjunct.add_component(unique_component_name(
             transformed_disjunct, cons_name), transformed_constraint)
@@ -848,3 +800,8 @@ class PartitionDisjuncts_Transformation(Transformation):
                                   transformed_parent_disjunct, transBlock,
                                   partition):
         _warn_for_active_disjunct(disjunct, parent_disjunct, NAME_BUFFER)
+
+# Add the CONFIG arguments to the transformation's docstring
+PartitionDisjuncts_Transformation.__doc__ = add_docstring_list(
+    PartitionDisjuncts_Transformation.__doc__,
+    PartitionDisjuncts_Transformation.CONFIG, indent_by=8)
