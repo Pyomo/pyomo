@@ -120,7 +120,7 @@ public:
   void write_nl_string(std::ofstream &) override;
 };
 
-enum Domain {continuous, binary, integers};
+enum Domain { continuous, binary, integers };
 
 class Var : public Leaf {
 public:
@@ -599,10 +599,21 @@ public:
       std::set<std::shared_ptr<Var>> &improved_vars) override;
 };
 
-enum ExprType {py_float = 0, var = 1, param = 2, product = 3,
-  sum = 4, negation = 5, external_func = 6, power = 7, division = 8,
-  unary_func = 9, linear = 10, named_expr = 11,
-  numeric_constant = 12};
+enum ExprType {
+  py_float = 0,
+  var = 1,
+  param = 2,
+  product = 3,
+  sum = 4,
+  negation = 5,
+  external_func = 6,
+  power = 7,
+  division = 8,
+  unary_func = 9,
+  linear = 10,
+  named_expr = 11,
+  numeric_constant = 12
+};
 
 class PyomoExprTypes {
 public:

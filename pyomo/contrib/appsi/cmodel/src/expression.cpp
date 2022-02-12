@@ -26,9 +26,7 @@ double Var::get_ub() {
     return std::min(ub->evaluate(), domain_ub);
 }
 
-Domain Var::get_domain() {
-  return domain;
-}
+Domain Var::get_domain() { return domain; }
 
 bool Operator::is_operator_type() { return true; }
 
@@ -1467,7 +1465,8 @@ appsi_operator_from_pyomo_expr(py::handle expr, py::handle var_map,
                                py::handle param_map,
                                PyomoExprTypes &expr_types) {
   std::shared_ptr<Node> res;
-  ExprType tmp_type = expr_types.expr_type_map[py::type::of(expr)].cast<ExprType>();
+  ExprType tmp_type =
+      expr_types.expr_type_map[py::type::of(expr)].cast<ExprType>();
 
   switch (tmp_type) {
   case py_float: {
@@ -1562,7 +1561,8 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
                           py::handle variables, py::handle fixed_vars,
                           py::handle external_funcs,
                           PyomoExprTypes &expr_types) {
-  ExprType tmp_type = expr_types.expr_type_map[py::type::of(expr)].cast<ExprType>();
+  ExprType tmp_type =
+      expr_types.expr_type_map[py::type::of(expr)].cast<ExprType>();
 
   switch (tmp_type) {
   case py_float: {
@@ -1862,14 +1862,12 @@ void process_pyomo_vars(PyomoExprTypes &expr_types, py::list pyomo_vars,
       cv->domain_ub = interval_ub.cast<double>();
     if (domain_step == 0)
       cv->domain = continuous;
-    else if (domain_step == 1)
-      {
-	if ((cv->domain_lb == 0) && (cv->domain_ub == 1))
-	  cv->domain = binary;
-	else
-	  cv->domain = integers;
-      }
-    else
+    else if (domain_step == 1) {
+      if ((cv->domain_lb == 0) && (cv->domain_ub == 1))
+        cv->domain = binary;
+      else
+        cv->domain = integers;
+    } else
       throw py::value_error("Unrecognized domain step");
 
     if (!update) {
