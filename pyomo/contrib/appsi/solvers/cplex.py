@@ -16,6 +16,7 @@ import time
 from pyomo.common.log import LogStream
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
+from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 
 
@@ -88,19 +89,22 @@ class Cplex(PersistentSolver):
 
     def _check_license(self):
         if self._cplex_available:
-            try:
-                m = self._cplex.Cplex()
-                m.variables.add(lb=[0]*1001)
-                m.solve()
-                Cplex._available = self.Availability.FullLicense
-            except self._cplex.exceptions.errors.CplexSolverError:
+            if not cmodel_available:
+                Cplex._available = self.Availability.NeedsCompiledExtension
+            else:
                 try:
                     m = self._cplex.Cplex()
-                    m.variables.add(lb=[0])
+                    m.variables.add(lb=[0]*1001)
                     m.solve()
-                    Cplex._available = self.Availability.LimitedLicense
-                except:
-                    Cplex._available = self.Availability.BadLicense
+                    Cplex._available = self.Availability.FullLicense
+                except self._cplex.exceptions.errors.CplexSolverError:
+                    try:
+                        m = self._cplex.Cplex()
+                        m.variables.add(lb=[0])
+                        m.solve()
+                        Cplex._available = self.Availability.LimitedLicense
+                    except:
+                        Cplex._available = self.Availability.BadLicense
         else:
             Cplex._available = self.Availability.NotFound
 
