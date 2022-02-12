@@ -79,7 +79,7 @@ def _check_coefficents(comp, expr, too_large, too_small, largs_coef_map, small_c
                 if comp not in largs_coef_map:
                     largs_coef_map[comp] = list()
                 largs_coef_map[comp].append((_v, der_lb, der_ub))
-            if abs(der_lb) <= too_small and abs(der_ub) < too_small:
+            if 0 < abs(der_lb) <= too_small and 0 < abs(der_ub) < too_small:
                 if comp not in small_coef_map:
                     small_coef_map[comp] = list()
                 small_coef_map[comp].append((_v, der_lb, der_ub))
