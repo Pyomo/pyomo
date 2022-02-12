@@ -60,6 +60,7 @@ class TestRooneyBiegler(unittest.TestCase):
                 'tol': 1e-8,
                 }
 
+        self.data = data
         self.pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE,
                 solver_options=solver_options)
 
@@ -120,7 +121,7 @@ class TestRooneyBiegler(unittest.TestCase):
         lNo_theta = self.pest.theta_est_leaveNout(1)
         self.assertTrue(lNo_theta.shape == (6,2))
 
-        results = self.pest.leaveNout_bootstrap_test(1, None, 3, 'Rect', [0.5, 1.0])
+        results = self.pest.leaveNout_bootstrap_test(1, None, 3, 'Rect', [0.5, 1.0], seed=5436)
         self.assertTrue(len(results) == 6) # 6 lNo samples
         i = 1
         samples = results[i][0] # list of N samples that are left out
@@ -145,22 +146,6 @@ class TestRooneyBiegler(unittest.TestCase):
         obj_at_theta = self.pest.objective_at_theta(theta_vals)
 
         self.pest.diagnostic_mode = False
-
-    def test_rb_main(self):
-        """ test __main__ for rooney biegler """
-        p = str(parmestbase.__path__)
-        l = p.find("'")
-        r = p.find("'", l+1)
-        parmestpath = p[l+1:r]
-        rbpath = parmestpath + os.sep + "examples" + os.sep + \
-                   "rooney_biegler" + os.sep + "rooney_biegler.py"
-        rbpath = os.path.abspath(rbpath) # paranoia strikes deep...
-        if sys.version_info >= (3,5):
-            ret = subprocess.run([sys.executable, rbpath])
-            retcode = ret.returncode
-        else:
-            retcode = subprocess.call([sys.executable, rbpath])
-        assert(retcode == 0)
 
     @unittest.skip("Presently having trouble with mpiexec on appveyor")
     def test_parallel_parmest(self):
@@ -209,6 +194,93 @@ class TestRooneyBiegler(unittest.TestCase):
         The formula used in parmest was verified against equations (7-5-15) and (7-5-16) in
         "Nonlinear Parameter Estimation", Y. Bard, 1974.
         '''
+    def test_cov_scipy_least_squares_comparison(self):
+        '''
+        Scipy results differ in the 3rd decimal place from the paper. It is possible
+        the paper used an alternative finite difference approximation for the Jacobian.
+        '''
+        
+        def model(theta, t):
+            '''
+            Model to be fitted y = model(theta, t)
+            Arguments:
+                theta: vector of fitted parameters
+                t: independent variable [hours]
+                
+            Returns:
+                y: model predictions [need to check paper for units]
+            '''
+            asymptote = theta[0]
+            rate_constant = theta[1]
+            
+            return asymptote * (1 - np.exp(-rate_constant * t))
+        
+        def residual(theta, t, y):
+            '''
+            Calculate residuals
+            Arguments:
+                theta: vector of fitted parameters
+                t: independent variable [hours]
+                y: dependent variable [?]
+            '''
+            return y - model(theta, t)
+        
+        # define data
+        t = self.data['hour'].to_numpy()
+        y = self.data['y'].to_numpy()
+        
+        # define initial guess
+        theta_guess = np.array([15, 0.5])
+        
+        ## solve with optimize.least_squares
+        sol = scipy.optimize.least_squares(residual, theta_guess,method='trf',args=(t,y),verbose=2)
+        theta_hat = sol.x
+        
+        self.assertAlmostEqual(theta_hat[0], 19.1426, places=2) # 19.1426 from the paper
+        self.assertAlmostEqual(theta_hat[1], 0.5311, places=2) # 0.5311 from the paper
+        
+        # calculate residuals
+        r = residual(theta_hat, t, y)
+        
+        # calculate variance of the residuals
+        # -2 because there are 2 fitted parameters
+        sigre = np.matmul(r.T, r / (len(y) - 2))
+        
+        # approximate covariance
+        # Need to divide by 2 because optimize.least_squares scaled the objective by 1/2
+        cov = sigre * np.linalg.inv(np.matmul(sol.jac.T, sol.jac))
+        
+        self.assertAlmostEqual(cov[0,0], 6.22864, places=2) # 6.22864 from paper
+        self.assertAlmostEqual(cov[0,1], -0.4322, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov[1,0], -0.4322, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov[1,1], 0.04124, places=2) # 0.04124 from paper
+        
+    def test_cov_scipy_curve_fit_comparison(self):
+        '''
+        Scipy results differ in the 3rd decimal place from the paper. It is possible
+        the paper used an alternative finite difference approximation for the Jacobian.
+        '''
+        ## solve with optimize.curve_fit
+        def model(t, asymptote, rate_constant):
+            return asymptote * (1 - np.exp(-rate_constant * t))
+        
+        # define data
+        t = self.data['hour'].to_numpy()
+        y = self.data['y'].to_numpy()
+        
+        # define initial guess
+        theta_guess = np.array([15, 0.5])
+        
+        theta_hat, cov = scipy.optimize.curve_fit(model, t, y, p0=theta_guess)
+        
+        self.assertAlmostEqual(theta_hat[0], 19.1426, places=2) # 19.1426 from the paper
+        self.assertAlmostEqual(theta_hat[1], 0.5311, places=2) # 0.5311 from the paper
+        
+        self.assertAlmostEqual(cov[0,0], 6.22864, places=2) # 6.22864 from paper
+        self.assertAlmostEqual(cov[0,1], -0.4322, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov[1,0], -0.4322, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov[1,1], 0.04124, places=2) # 0.04124 from paper
+        
 
 
 @unittest.skipIf(not parmest.parmest_available,
@@ -351,7 +423,7 @@ class TestReactorDesign(unittest.TestCase):
         solver_options = {"max_iter": 6000}
 
         self.pest = parmest.Estimator(reactor_design_model, data,
-                                      theta_names, SSE, solver_options)
+                                      theta_names, SSE, solver_options=solver_options)
 
     def test_theta_est(self):
         # used in data reconciliation
@@ -366,27 +438,6 @@ class TestReactorDesign(unittest.TestCase):
             self.pest.theta_est(return_values=['ca', 'cb', 'cc', 'cd', 'caf'])
         self.assertAlmostEqual(data_rec["cc"].loc[18], 893.84924, places=3)
 
-
-@unittest.skipIf(not parmest.parmest_available,
-                 "Cannot test parmest: required dependencies are missing")
-@unittest.skipIf(not graphics.imports_available,
-                 "parmest.graphics imports are unavailable")
-@unittest.skipIf(is_osx, "Disabling graphics tests on OSX due to issue in Matplotlib, see Pyomo PR #1337")
-class TestGraphics(unittest.TestCase):
-
-    def setUp(self):
-        self.A = pd.DataFrame(np.random.randint(0,100,size=(100,4)), columns=list('ABCD'))
-        self.B = pd.DataFrame(np.random.randint(0,100,size=(100,4)), columns=list('ABCD'))
-
-    def test_pairwise_plot(self):
-        graphics.pairwise_plot(self.A, alpha=0.8, distributions=['Rect', 'MVN', 'KDE'])
-
-    def test_grouped_boxplot(self):
-        graphics.grouped_boxplot(self.A, self.B, normalize=True,
-                                group_names=['A', 'B'])
-
-    def test_grouped_violinplot(self):
-        graphics.grouped_violinplot(self.A, self.B)
 
 if __name__ == '__main__':
     unittest.main()

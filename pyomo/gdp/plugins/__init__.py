@@ -15,3 +15,5 @@ def load():
     import pyomo.gdp.plugins.gdp_var_mover
     import pyomo.gdp.plugins.cuttingplane
     import pyomo.gdp.plugins.fix_disjuncts
+    import pyomo.gdp.plugins.partition_disjuncts
+    import pyomo.gdp.plugins.between_steps

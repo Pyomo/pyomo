@@ -203,6 +203,11 @@ def _get_MindtPy_config():
                     'and minimize the sum of the slack variables (Augmented Penalty).',
         domain=bool
     ))
+    CONFIG.declare('partition_obj_nonlinear_terms', ConfigValue(
+        default=True,
+        description='Partition objective with the sum of nonlinear terms using epigraph reformulation.',
+        domain=bool
+    ))
 
     _add_subsolver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)

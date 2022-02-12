@@ -190,10 +190,10 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
             solve_data.mip.MindtPy_utils.cuts.del_component(
                 'improving_objective_cut')
             if solve_data.objective_sense == minimize:
-                solve_data.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
+                solve_data.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=sum(solve_data.mip.MindtPy_utils.objective_value[:])
                                                                                        <= solve_data.UB - config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
             else:
-                solve_data.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=solve_data.mip.MindtPy_utils.objective_value
+                solve_data.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=sum(solve_data.mip.MindtPy_utils.objective_value[:])
                                                                                        >= solve_data.LB + config.fp_cutoffdecr*max(1, abs(solve_data.UB)))
 
     # Add the linear cut
@@ -353,7 +353,7 @@ def solve_feasibility_subproblem(solve_data, config):
 
     MindtPy = feas_subproblem.MindtPy_utils
     if MindtPy.find_component('objective_value') is not None:
-        MindtPy.objective_value.value = 0
+        MindtPy.objective_value[:].set_value(0, skip_validation=True)
 
     next(feas_subproblem.component_data_objects(
         Objective, active=True)).deactivate()
