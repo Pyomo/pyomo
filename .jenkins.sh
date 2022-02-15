@@ -163,8 +163,7 @@ if test -z "$MODE" -o "$MODE" == test; then
     echo "#"
     python -m pytest -v \
         -W ignore::DeprecationWarning \
-        pyomo `pwd`/pyomo-model-libraries \
-        `pwd`/examples/pyomobook --junitxml="TEST-pyomo.xml"
+        $TEST_SUITES --junitxml="TEST-pyomo.xml"
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then
