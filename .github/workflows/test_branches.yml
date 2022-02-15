@@ -522,10 +522,10 @@ jobs:
         for cat in ${{matrix.category}}; do
             CATEGORY+=" -m $cat"
         done
-        $PYTHON_EXE -m pytest -v \
+        pytest -v \
             -W ignore::DeprecationWarning $CATEGORY \
             pyomo `pwd`/pyomo-model-libraries \
-            `pwd`/examples/pyomobook 
+            `pwd`/examples/pyomobook --junitxml="TEST-pyomo.xml"
 
     - name: Run Pyomo MPI tests
       if: matrix.mpi != 0
