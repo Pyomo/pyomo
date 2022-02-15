@@ -270,6 +270,7 @@ jobs:
                     || echo "WARNING: $PKG is not available"
             done
             conda remove qt pyqt
+            conda install -q -y qt pyqt pytest-qt
         fi
         # Re-try Pyomo (optional) dependencies with pip
         if test -n "$PYPI_DEPENDENCIES"; then
