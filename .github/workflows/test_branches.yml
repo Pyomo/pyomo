@@ -290,6 +290,7 @@ jobs:
                 | tr ":" "\\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
                 | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
         done
+        conda list
 
     #############################################################
     # TODO: Delete this once Python 3.6 is deprecated - 12/2021 #
