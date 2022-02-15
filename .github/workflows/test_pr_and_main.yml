@@ -288,7 +288,7 @@ jobs:
                 conda install -q -y -c conda-forge $PKG \
                     || echo "WARNING: $PKG is not available"
             done
-            # HACK: This is a hack to stop test_qt.py from running until we
+            # TODO: This is a hack to stop test_qt.py from running until we
             # can better troubleshoot why it fails on GHA
             conda remove qt pyqt
         fi
