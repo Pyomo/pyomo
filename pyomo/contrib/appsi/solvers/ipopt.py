@@ -23,6 +23,7 @@ from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
 import os
+from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 
 
@@ -127,6 +128,8 @@ class Ipopt(PersistentSolver):
     def available(self):
         if self.config.executable.path() is None:
             return self.Availability.NotFound
+        elif not cmodel_available:
+            return self.Availability.NeedsCompiledExtension
         return self.Availability.FullLicense
 
     def version(self):
@@ -395,7 +398,10 @@ class Ipopt(PersistentSolver):
         if 'option_file_name' in self.ipopt_options:
             raise ValueError('Use Ipopt.config.filename to specify the name of the options file. '
                              'Do not use Ipopt.ipopt_options["option_file_name"].')
-        for k, v in self.ipopt_options.items():
+        ipopt_options = dict(self.ipopt_options)
+        if config.time_limit is not None:
+            ipopt_options['max_cpu_time'] = config.time_limit
+        for k, v in ipopt_options.items():
             cmd.append(str(k) + '=' + str(v))
 
         env = os.environ.copy()

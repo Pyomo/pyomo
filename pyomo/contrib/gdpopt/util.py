@@ -23,11 +23,13 @@ from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (Block, Constraint,
                         Objective, Reals, Var, minimize, value, ConstraintList)
 from pyomo.core.expr.current import identify_variables
+from pyomo.core.base.var import VarList
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt.results import ProblemSense
+from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.util.model_size import build_model_size_report
-
+from pyomo.core.expr import current as EXPR
 
 class _DoNothing(object):
     """Do nothing, literally.
@@ -113,8 +115,45 @@ def presolve_lp_nlp(solve_data, config):
     return False, None
 
 
+def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense):
+    """Epigraph reformulation.
+
+    Generate the epigraph reformuation for objective expressions.
+
+    Parameters
+    ----------
+    slack_var_list : VarList
+        Slack vars for epigraph reformulation.
+    constraint_list : ConstraintList
+        Epigraph constraint list.
+    use_mcpp : Bool
+        Whether to use mcpp to tighten the bound of slack variables.
+    exp : Expression
+        The expression to reformualte.
+    sense : objective sense
+        The objective sense.
+    """
+    slack_var = slack_var_list.add()
+    if mcpp_available() and use_mcpp:
+        mc_obj = McCormick(exp)
+        slack_var.setub(mc_obj.upper())
+        slack_var.setlb(mc_obj.lower())
+    else:
+        # Use Pyomo's contrib.fbbt package
+        lb, ub = compute_bounds_on_expr(exp)
+        if sense == minimize:
+            slack_var.setlb(lb)
+        else:
+            slack_var.setub(ub)
+    if sense == minimize:
+        constraint_list.add(expr=slack_var >= exp)
+    else:
+        constraint_list.add(expr=slack_var <= exp)
+
+
 def process_objective(solve_data, config, move_linear_objective=False,
-                      use_mcpp=True, updata_var_con_list=True):
+                      use_mcpp=False, update_var_con_list=True,
+                      partition_nonlinear_terms=True):
     """Process model objective function.
 
     Check that the model has only 1 valid objective.
@@ -128,6 +167,10 @@ def process_objective(solve_data, config, move_linear_objective=False,
     config (ConfigBlock): solver configuration options
     move_linear_objective (bool): if True, move even linear
         objective functions to the constraints
+    update_var_con_list (bool): if True, the variable/constraint/objective lists will not be updated. 
+        This arg is set to True by default. Currently, update_var_con_list will be set to False only when
+        add_regularization is not None in MindtPy.
+    partition_nonlinear_terms (bool): if True, partition sum of nonlinear terms in the objective function.
 
     """
     m = solve_data.working_model
@@ -150,51 +193,44 @@ def process_objective(solve_data, config, move_linear_objective=False,
                                        ProblemSense.maximize
     solve_data.objective_sense = main_obj.sense
 
-    # Move the objective to the constraints if it is nonlinear
-    if main_obj.expr.polynomial_degree() not in (1, 0) \
-            or move_linear_objective:
+    # Move the objective to the constraints if it is nonlinear or move_linear_objective is True.
+    if main_obj.expr.polynomial_degree() not in (1, 0) or move_linear_objective:
         if move_linear_objective:
             config.logger.info("Moving objective to constraint set.")
         else:
             config.logger.info(
                 "Objective is nonlinear. Moving it to constraint set.")
-
-        util_blk.objective_value = Var(domain=Reals, initialize=0)
-        if mcpp_available() and use_mcpp:
-            mc_obj = McCormick(main_obj.expr)
-            util_blk.objective_value.setub(mc_obj.upper())
-            util_blk.objective_value.setlb(mc_obj.lower())
-        else:
-            # Use Pyomo's contrib.fbbt package
-            lb, ub = compute_bounds_on_expr(main_obj.expr)
-            if solve_data.results.problem.sense == ProblemSense.minimize:
-                util_blk.objective_value.setlb(lb)
+        util_blk.objective_value = VarList(domain=Reals, initialize=0)
+        util_blk.objective_constr = ConstraintList()
+        if main_obj.expr.polynomial_degree() not in (1, 0) and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
+            repn = generate_standard_repn(main_obj.expr, quadratic=False)
+            # the following code will also work if linear_subexpr is a constant.
+            linear_subexpr = repn.constant + sum(coef*var for coef, var in zip(repn.linear_coefs, repn.linear_vars))
+            # only need to generate one epigraph constraint for the sum of all linear terms and constant
+            epigraph_reformulation(linear_subexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+            nonlinear_subexpr = repn.nonlinear_expr
+            if nonlinear_subexpr.__class__ is EXPR.SumExpression:
+                for subsubexpr in nonlinear_subexpr.args:
+                    epigraph_reformulation(subsubexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
             else:
-                util_blk.objective_value.setub(ub)
-
-        if main_obj.sense == minimize:
-            util_blk.objective_constr = Constraint(
-                expr=util_blk.objective_value >= main_obj.expr)
+                epigraph_reformulation(nonlinear_subexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
         else:
-            util_blk.objective_constr = Constraint(
-                expr=util_blk.objective_value <= main_obj.expr)
-        # Deactivate the original objective and add this new one.
+            epigraph_reformulation(main_obj.expr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+
         main_obj.deactivate()
-        util_blk.objective = Objective(
-            expr=util_blk.objective_value, sense=main_obj.sense)
-        # Add the new variable and constraint to the working lists
+        util_blk.objective = Objective(expr=sum(util_blk.objective_value[:]), sense=main_obj.sense)
+
         if main_obj.expr.polynomial_degree() not in (1, 0) or \
-           (move_linear_objective and updata_var_con_list):
-            util_blk.variable_list.append(util_blk.objective_value)
-            util_blk.continuous_variable_list.append(util_blk.objective_value)
-            util_blk.constraint_list.append(util_blk.objective_constr)
+           (move_linear_objective and update_var_con_list):
+            util_blk.variable_list.extend(util_blk.objective_value[:])
+            util_blk.continuous_variable_list.extend(util_blk.objective_value[:])
+            util_blk.constraint_list.extend(util_blk.objective_constr[:])
             util_blk.objective_list.append(util_blk.objective)
-            if util_blk.objective_constr.body.polynomial_degree() in (0, 1):
-                util_blk.linear_constraint_list.append(
-                    util_blk.objective_constr)
-            else:
-                util_blk.nonlinear_constraint_list.append(
-                    util_blk.objective_constr)
+            for constr in util_blk.objective_constr[:]:
+                if constr.body.polynomial_degree() in (0, 1):
+                    util_blk.linear_constraint_list.append(constr)
+                else:
+                    util_blk.nonlinear_constraint_list.append(constr)
 
 
 def a_logger(str_or_logger):
@@ -228,7 +264,7 @@ def copy_var_list_values(from_list, to_list, config,
             # bounds violations no longer generate exceptions (and
             # instead log warnings).  This means that the following will
             # always succeed and the ValueError should never be raised.
-            v_to.set_value(value(v_from, exception=False))
+            v_to.set_value(value(v_from, exception=False), skip_validation=True)
         except ValueError as err:
             err_msg = getattr(err, 'message', str(err))
             var_val = value(v_from)
@@ -238,9 +274,9 @@ def copy_var_list_values(from_list, to_list, config,
                 v_to.set_value(var_val, skip_validation=True)
             elif v_to.is_integer() and (fabs(var_val - rounded_val) <=
                                         config.integer_tolerance):
-                v_to.set_value(rounded_val)
+                v_to.set_value(rounded_val, skip_validation=True)
             elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
-                v_to.set_value(0)
+                v_to.set_value(0, skip_validation=True)
             else:
                 config.logger.error(
                     'Unknown validation domain error setting variable %s', (v_to.name,))

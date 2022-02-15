@@ -48,7 +48,6 @@ class TestMindtPy(unittest.TestCase):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                # print('\n Solving 8PP problem using feasibility pump')
                 results = opt.solve(model, strategy='FP',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
