@@ -265,10 +265,11 @@ jobs:
                 || echo "WARNING: Gurobi is not available"
             conda install -q -y -c fico-xpress xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
-            for PKG in cyipopt pymumps pytest-qt=3.3.0; do
+            for PKG in cyipopt pymumps; do
                 conda install -q -y -c conda-forge $PKG \
                     || echo "WARNING: $PKG is not available"
             done
+            conda remove qt pyqt
         fi
         # Re-try Pyomo (optional) dependencies with pip
         if test -n "$PYPI_DEPENDENCIES"; then
