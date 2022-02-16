@@ -222,7 +222,7 @@ public:
   int index = 0;
   virtual void evaluate(double *values) = 0;
   virtual void propagate_degree_forward(int *degrees, double *values) = 0;
-  virtual void identify_variables(std::set<std::shared_ptr<Node>> &) = 0;
+  virtual void identify_variables(std::set<std::shared_ptr<Node>> &, std::shared_ptr<std::vector<std::shared_ptr<Var>>>) = 0;
   std::shared_ptr<Operator> shared_from_this() {
     return std::static_pointer_cast<Operator>(Node::shared_from_this());
   }
@@ -252,7 +252,7 @@ class BinaryOperator : public Operator {
 public:
   BinaryOperator() = default;
   virtual ~BinaryOperator() = default;
-  void identify_variables(std::set<std::shared_ptr<Node>> &) override;
+  void identify_variables(std::set<std::shared_ptr<Node>> &, std::shared_ptr<std::vector<std::shared_ptr<Var>>>) override;
   std::shared_ptr<Node> operand1;
   std::shared_ptr<Node> operand2;
   void fill_prefix_notation_stack(
@@ -266,7 +266,7 @@ class UnaryOperator : public Operator {
 public:
   UnaryOperator() = default;
   virtual ~UnaryOperator() = default;
-  void identify_variables(std::set<std::shared_ptr<Node>> &) override;
+  void identify_variables(std::set<std::shared_ptr<Node>> &, std::shared_ptr<std::vector<std::shared_ptr<Var>>>) override;
   std::shared_ptr<Node> operand;
   void fill_prefix_notation_stack(
       std::shared_ptr<std::vector<std::shared_ptr<Node>>> stack) override;
@@ -287,7 +287,7 @@ public:
     delete[] variables;
     delete[] coefficients;
   }
-  void identify_variables(std::set<std::shared_ptr<Node>> &) override;
+  void identify_variables(std::set<std::shared_ptr<Node>> &, std::shared_ptr<std::vector<std::shared_ptr<Var>>>) override;
   std::shared_ptr<Var> *variables;
   std::shared_ptr<ExpressionBase> *coefficients;
   std::shared_ptr<ExpressionBase> constant = std::make_shared<Constant>(0);
@@ -318,7 +318,7 @@ public:
     nargs = _nargs;
   }
   ~SumOperator() { delete[] operands; }
-  void identify_variables(std::set<std::shared_ptr<Node>> &) override;
+  void identify_variables(std::set<std::shared_ptr<Node>> &, std::shared_ptr<std::vector<std::shared_ptr<Var>>>) override;
   void evaluate(double *values) override;
   void propagate_degree_forward(int *degrees, double *values) override;
   void print(std::string *) override;
@@ -372,7 +372,7 @@ public:
   void write_nl_string(std::ofstream &) override;
   void fill_prefix_notation_stack(
       std::shared_ptr<std::vector<std::shared_ptr<Node>>> stack) override;
-  void identify_variables(std::set<std::shared_ptr<Node>> &) override;
+  void identify_variables(std::set<std::shared_ptr<Node>> &, std::shared_ptr<std::vector<std::shared_ptr<Var>>>) override;
   bool is_external_operator() override;
   std::string function_name;
   int external_function_index = -1;
