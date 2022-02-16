@@ -261,9 +261,9 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt=None):
     #     for var in fixed_nlp.component_data_objects(ctype=Var, descend_into=True):
     #         fixed_nlp.ipopt_zL_out[var] = 0
     #         fixed_nlp.ipopt_zU_out[var] = 0
-    #         if var.has_ub() and abs(var.ub - value(var)) < config.bound_tolerance:
+    #         if var.has_ub() and abs(var.ub - value(var)) < config.absolute_bound_tolerance:
     #             fixed_nlp.ipopt_zL_out[var] = 1
-    #         elif var.has_lb() and abs(value(var) - var.lb) < config.bound_tolerance:
+    #         elif var.has_lb() and abs(value(var) - var.lb) < config.absolute_bound_tolerance:
     #             fixed_nlp.ipopt_zU_out[var] = -1
 
     if config.strategy in {'OA', 'GOA'}:

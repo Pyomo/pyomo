@@ -613,11 +613,11 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                     solve_data, config, regularization_problem=True)
                 self.handle_lazy_regularization_problem(
                     main_mip, main_mip_results, solve_data, config)
-        if abs(solve_data.primal_bound - solve_data.dual_bound) <= config.bound_tolerance:
+        if abs(solve_data.primal_bound - solve_data.dual_bound) <= config.absolute_bound_tolerance:
             config.logger.info(
                 'MindtPy exiting on bound convergence. '
                 '|Primal Bound: {} - Dual Bound: {}| <= (absolute tolerance {})  \n'.format(
-                solve_data.primal_bound, solve_data.dual_bound, config.bound_tolerance))
+                solve_data.primal_bound, solve_data.dual_bound, config.absolute_bound_tolerance))
             solve_data.results.solver.termination_condition = tc.optimal
             self.abort()
             return
@@ -650,11 +650,11 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
             self.handle_lazy_subproblem_optimal(
                 fixed_nlp, solve_data, config, opt)
-            if abs(solve_data.primal_bound - solve_data.dual_bound) <= config.bound_tolerance:
+            if abs(solve_data.primal_bound - solve_data.dual_bound) <= config.absolute_bound_tolerance:
                 config.logger.info(
                     'MindtPy exiting on bound convergence. '
                     '|Primal Bound: {} - Dual Bound: {}| <= (absolute tolerance {})  \n'.format(
-                solve_data.primal_bound, solve_data.dual_bound, config.bound_tolerance))
+                solve_data.primal_bound, solve_data.dual_bound, config.absolute_bound_tolerance))
                 solve_data.results.solver.termination_condition = tc.optimal
                 return
         elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
@@ -711,11 +711,11 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
                 handle_regularization_main_tc(
                     main_mip, main_mip_results, solve_data, config)
 
-        if abs(solve_data.primal_bound - solve_data.dual_bound) <= config.bound_tolerance:
+        if abs(solve_data.primal_bound - solve_data.dual_bound) <= config.absolute_bound_tolerance:
             config.logger.info(
                 'MindtPy exiting on bound convergence. '
                 '|Primal Bound: {} - Dual Bound: {}| <= (absolute tolerance {})  \n'.format(
-                solve_data.primal_bound, solve_data.dual_bound, config.bound_tolerance))
+                solve_data.primal_bound, solve_data.dual_bound, config.absolute_bound_tolerance))
             solve_data.results.solver.termination_condition = tc.optimal
             cb_opt._solver_model.terminate()
             return

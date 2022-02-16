@@ -247,11 +247,11 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         return True
 
     # Check bound convergence
-    if solve_data.abs_gap <= config.bound_tolerance:
+    if solve_data.abs_gap <= config.absolute_bound_tolerance:
         config.logger.info(
             'MindtPy exiting on bound convergence. '
             '|Primal Bound: {} - Dual Bound: {}| <= (absolute tolerance {})  \n'.format(
-                solve_data.primal_bound, solve_data.dual_bound, config.bound_tolerance))
+                solve_data.primal_bound, solve_data.dual_bound, config.absolute_bound_tolerance))
         solve_data.results.solver.termination_condition = tc.optimal
         return True
     # Check relative bound convergence
@@ -307,7 +307,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                 solve_data.best_solution_found = solve_data.working_model.clone()
                 config.logger.warning(
                     'Algorithm did not find a feasible solution. '
-                    'Returning best bound solution. Consider increasing stalling_limit or bound_tolerance.')
+                    'Returning best bound solution. Consider increasing stalling_limit or absolute_bound_tolerance.')
                 solve_data.results.solver.termination_condition = tc.noSolution
             return True
 
@@ -460,5 +460,5 @@ def fix_dual_bound(solve_data, config, last_iter_cuts):
                 'Fixed bound values: Primal Bound: {}  Dual Bound: {}'.
                 format(solve_data.primal_bound, solve_data.dual_bound))
         # Check bound convergence
-        if abs(solve_data.primal_bound - solve_data.dual_bound) <= config.bound_tolerance:
+        if abs(solve_data.primal_bound - solve_data.dual_bound) <= config.absolute_bound_tolerance:
             solve_data.results.solver.termination_condition = tc.optimal

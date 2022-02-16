@@ -301,7 +301,7 @@ def _add_tolerance_configs(CONFIG):
     CONFIG : ConfigBlock
         The specific configurations for MindtPy.
     """
-    CONFIG.declare('bound_tolerance', ConfigValue(
+    CONFIG.declare('absolute_bound_tolerance', ConfigValue(
         default=1E-4,
         domain=PositiveFloat,
         description='Bound tolerance',
@@ -536,7 +536,7 @@ def check_config(config):
             config.equality_relaxation = False
     # if ecp tolerance is not provided use bound tolerance
     if config.ecp_tolerance is None:
-        config.ecp_tolerance = config.bound_tolerance
+        config.ecp_tolerance = config.absolute_bound_tolerance
 
     if config.solver_tee:
         config.mip_solver_tee = True
