@@ -127,9 +127,10 @@ unsigned int Model::perform_fbbt_on_cons(
   unsigned int _iter = 0;
   while (_iter < max_iter * constraints.size() && cons_to_fbbt.size() > 0) {
     _iter += cons_to_fbbt.size();
-    for (const std::shared_ptr<Constraint> &c : cons_to_fbbt)
+    for (const std::shared_ptr<Constraint> &c : cons_to_fbbt) {
       c->perform_fbbt(feasibility_tol, integer_tol, improvement_tol,
                       improved_vars_set, deactivate_satisfied_constraints);
+    }
 
     cons_to_fbbt.clear();
     cons_to_fbbt_set.clear();

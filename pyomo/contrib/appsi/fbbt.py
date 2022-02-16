@@ -57,7 +57,7 @@ class IntervalTightener(PersistentBase):
         self._rcon_map = dict()
         self._pyomo_expr_types = cmodel.PyomoExprTypes()
         self._symbolic_solver_labels: bool = False
-        self._symobl_map = SymbolMap()
+        self._symbol_map = SymbolMap()
         self._var_labeler = None
         self._con_labeler = None
         self._param_labeler = None
@@ -98,7 +98,7 @@ class IntervalTightener(PersistentBase):
     def _add_variables(self, variables: List[_GeneralVarData]):
         if self._symbolic_solver_labels:
             set_name = True
-            symbol_map = self._symobl_map
+            symbol_map = self._symbol_map
             labeler = self._var_labeler
         else:
             set_name = False
@@ -116,14 +116,14 @@ class IntervalTightener(PersistentBase):
         if self._symbolic_solver_labels:
             for ndx, p in enumerate(params):
                 cp = cparams[ndx]
-                cp.name = self._symobl_map.getSymbol(p, self._param_labeler)
+                cp.name = self._symbol_map.getSymbol(p, self._param_labeler)
 
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
         cmodel.process_constraints(self._cmodel, self._pyomo_expr_types, cons, self._var_map, self._param_map,
                                    self._active_constraints, self._con_map, self._rcon_map)
         if self._symbolic_solver_labels:
             for c, cc in self._con_map.items():
-                cc.name = self._symobl_map.getSymbol(c, self._con_labeler)
+                cc.name = self._symbol_map.getSymbol(c, self._con_labeler)
 
     def _add_sos_constraints(self, cons: List[_SOSConstraintData]):
         if len(cons) != 0:
@@ -132,7 +132,7 @@ class IntervalTightener(PersistentBase):
     def _remove_constraints(self, cons: List[_GeneralConstraintData]):
         if self._symbolic_solver_labels:
             for c in cons:
-                self._symobl_map.removeSymbol(c)
+                self._symbol_map.removeSymbol(c)
                 self._con_labeler.remove_obj(c)
         for c in cons:
             cc = self._con_map.pop(c)
@@ -146,7 +146,7 @@ class IntervalTightener(PersistentBase):
     def _remove_variables(self, variables: List[_GeneralVarData]):
         if self._symbolic_solver_labels:
             for v in variables:
-                self._symobl_map.removeSymbol(v)
+                self._symbol_map.removeSymbol(v)
                 self._var_labeler.remove_obj(v)
         for v in variables:
             cvar = self._var_map.pop(id(v))
@@ -155,7 +155,7 @@ class IntervalTightener(PersistentBase):
     def _remove_params(self, params: List[_ParamData]):
         if self._symbolic_solver_labels:
             for p in params:
-                self._symobl_map.removeSymbol(p)
+                self._symbol_map.removeSymbol(p)
                 self._param_labeler.remove_obj(p)
         for p in params:
             del self._param_map[id(p)]
@@ -169,11 +169,14 @@ class IntervalTightener(PersistentBase):
             cp = self._param_map[p_id]
             cp.value = p.value
 
-    def _set_objective(self, obj: _GeneralObjectiveData):
+    def set_objective(self, obj: _GeneralObjectiveData):
         if self._symbolic_solver_labels:
             if self._objective is not None:
-                self._symobl_map.removeSymbol(self._objective)
+                self._symbol_map.removeSymbol(self._objective)
                 self._obj_labeler.remove_obj(self._objective)
+        super().set_objective(obj)
+
+    def _set_objective(self, obj: _GeneralObjectiveData):
         if obj is None:
             ce = cmodel.Constant(0)
             sense = 0
@@ -188,7 +191,7 @@ class IntervalTightener(PersistentBase):
         self._cmodel.objective = cobj
         self._objective = obj
         if self._symbolic_solver_labels and obj is not None:
-            cobj.name = self._symobl_map.getSymbol(obj, self._obj_labeler)
+            cobj.name = self._symbol_map.getSymbol(obj, self._obj_labeler)
 
     def _update_pyomo_var_bounds(self):
         for cv, v in self._rvar_map.items():
