@@ -9,11 +9,11 @@
  * ___________________________________________________________________________
  **/
 
-#include "interval.hpp"
 #include "expression.hpp"
-#include "model_base.hpp"
 #include "fbbt_model.hpp"
+#include "interval.hpp"
 #include "lp_writer.hpp"
+#include "model_base.hpp"
 #include "nl_writer.hpp"
 //#include "profiler.h"
 
@@ -114,18 +114,22 @@ PYBIND11_MODULE(appsi_cmodel, m) {
       .def_readwrite("objective", &Model::objective)
       .def("add_constraint", &Model::add_constraint)
       .def("remove_constraint", &Model::remove_constraint)
-    .def(py::init<>());
-  py::class_<FBBTObjective, Objective, std::shared_ptr<FBBTObjective>>(m, "FBBTObjective")
-    .def_readwrite("expr", &FBBTObjective::expr)
-    .def(py::init<std::shared_ptr<ExpressionBase>>());
-  py::class_<FBBTConstraint, Constraint, std::shared_ptr<FBBTConstraint>>(m, "FBBTConstraint")
-    .def_readwrite("body", &FBBTConstraint::body)
-    .def("perform_fbbt", &FBBTConstraint::perform_fbbt)
-    .def(py::init<std::shared_ptr<ExpressionBase>, std::shared_ptr<ExpressionBase>, std::shared_ptr<ExpressionBase>>());
+      .def(py::init<>());
+  py::class_<FBBTObjective, Objective, std::shared_ptr<FBBTObjective>>(
+      m, "FBBTObjective")
+      .def_readwrite("expr", &FBBTObjective::expr)
+      .def(py::init<std::shared_ptr<ExpressionBase>>());
+  py::class_<FBBTConstraint, Constraint, std::shared_ptr<FBBTConstraint>>(
+      m, "FBBTConstraint")
+      .def_readwrite("body", &FBBTConstraint::body)
+      .def("perform_fbbt", &FBBTConstraint::perform_fbbt)
+      .def(py::init<std::shared_ptr<ExpressionBase>,
+                    std::shared_ptr<ExpressionBase>,
+                    std::shared_ptr<ExpressionBase>>());
   py::class_<FBBTModel, Model>(m, "FBBTModel")
-    .def("perform_fbbt_with_seed", &FBBTModel::perform_fbbt_with_seed)
-    .def("perform_fbbt", &FBBTModel::perform_fbbt)
-    .def(py::init<>());
+      .def("perform_fbbt_with_seed", &FBBTModel::perform_fbbt_with_seed)
+      .def("perform_fbbt", &FBBTModel::perform_fbbt)
+      .def(py::init<>());
   py::class_<NLBase, std::shared_ptr<NLBase>>(m, "NLBase");
   py::class_<NLConstraint, NLBase, Constraint, std::shared_ptr<NLConstraint>>(
       m, "NLConstraint")
@@ -133,8 +137,8 @@ PYBIND11_MODULE(appsi_cmodel, m) {
                     std::vector<std::shared_ptr<ExpressionBase>>,
                     std::vector<std::shared_ptr<Var>>,
                     std::shared_ptr<ExpressionBase>>());
-  py::class_<NLObjective, NLBase, Objective, std::shared_ptr<NLObjective>>(m,
-                                                                "NLObjective")
+  py::class_<NLObjective, NLBase, Objective, std::shared_ptr<NLObjective>>(
+      m, "NLObjective")
       .def(py::init<std::shared_ptr<ExpressionBase>,
                     std::vector<std::shared_ptr<ExpressionBase>>,
                     std::vector<std::shared_ptr<Var>>,
@@ -143,18 +147,18 @@ PYBIND11_MODULE(appsi_cmodel, m) {
       .def(py::init<>())
       .def("write", &NLWriter::write)
       .def("get_solve_cons", &NLWriter::get_solve_cons)
-    .def("get_solve_vars", &NLWriter::get_solve_vars);
+      .def("get_solve_vars", &NLWriter::get_solve_vars);
   py::class_<LPBase, std::shared_ptr<LPBase>>(m, "LPBase");
   py::class_<LPConstraint, LPBase, Constraint, std::shared_ptr<LPConstraint>>(
       m, "LPConstraint")
       .def(py::init<>());
-  py::class_<LPObjective, LPBase, Objective, std::shared_ptr<LPObjective>>(m,
-                                                                "LPObjective")
+  py::class_<LPObjective, LPBase, Objective, std::shared_ptr<LPObjective>>(
+      m, "LPObjective")
       .def(py::init<>());
   py::class_<LPWriter, Model>(m, "LPWriter")
       .def(py::init<>())
       .def("write", &LPWriter::write)
-    .def("get_solve_cons", &LPWriter::get_solve_cons);
+      .def("get_solve_cons", &LPWriter::get_solve_cons);
   py::enum_<ExprType>(m, "ExprType")
       .value("py_float", ExprType::py_float)
       .value("var", ExprType::var)

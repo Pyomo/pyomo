@@ -1,10 +1,14 @@
 #include "fbbt_model.hpp"
 
-FBBTObjective::FBBTObjective(std::shared_ptr<ExpressionBase> _expr) : Objective() { expr = _expr; }
+FBBTObjective::FBBTObjective(std::shared_ptr<ExpressionBase> _expr)
+    : Objective() {
+  expr = _expr;
+}
 
 FBBTConstraint::FBBTConstraint(std::shared_ptr<ExpressionBase> _lb,
-			       std::shared_ptr<ExpressionBase> _body,
-			       std::shared_ptr<ExpressionBase> _ub) : Constraint() {
+                               std::shared_ptr<ExpressionBase> _body,
+                               std::shared_ptr<ExpressionBase> _ub)
+    : Constraint() {
   lb = _lb;
   body = _body;
   ub = _ub;
@@ -14,8 +18,7 @@ FBBTConstraint::FBBTConstraint(std::shared_ptr<ExpressionBase> _lb,
     std::shared_ptr<Expression> e = std::dynamic_pointer_cast<Expression>(body);
     lbs = new double[e->n_operators];
     ubs = new double[e->n_operators];
-  }
-  else {
+  } else {
     lbs = new double[1];
     ubs = new double[1];
   }
@@ -27,9 +30,9 @@ FBBTConstraint::~FBBTConstraint() {
 }
 
 void FBBTConstraint::perform_fbbt(double feasibility_tol, double integer_tol,
-				  double improvement_tol,
-				  std::set<std::shared_ptr<Var>> &improved_vars,
-				  bool deactivate_satisfied_constraints) {
+                                  double improvement_tol,
+                                  std::set<std::shared_ptr<Var>> &improved_vars,
+                                  bool deactivate_satisfied_constraints) {
   double body_lb;
   double body_ub;
 
@@ -80,13 +83,14 @@ void FBBTConstraint::perform_fbbt(double feasibility_tol, double integer_tol,
   }
 }
 
-std::shared_ptr<
-    std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<FBBTConstraint>>>>
+std::shared_ptr<std::map<std::shared_ptr<Var>,
+                         std::vector<std::shared_ptr<FBBTConstraint>>>>
 FBBTModel::get_var_to_con_map() {
-  std::shared_ptr<
-      std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<FBBTConstraint>>>>
-      var_to_con_map = std::make_shared<std::map<
-          std::shared_ptr<Var>, std::vector<std::shared_ptr<FBBTConstraint>>>>();
+  std::shared_ptr<std::map<std::shared_ptr<Var>,
+                           std::vector<std::shared_ptr<FBBTConstraint>>>>
+      var_to_con_map = std::make_shared<
+          std::map<std::shared_ptr<Var>,
+                   std::vector<std::shared_ptr<FBBTConstraint>>>>();
   current_con_ndx = 0;
   std::shared_ptr<FBBTConstraint> fbbt_c;
   for (const std::shared_ptr<Constraint> &c : constraints) {
@@ -101,9 +105,9 @@ FBBTModel::get_var_to_con_map() {
 }
 
 unsigned int FBBTModel::perform_fbbt_on_cons(
-    std::vector<std::shared_ptr<FBBTConstraint>> &seed_cons, double feasibility_tol,
-    double integer_tol, double improvement_tol, int max_iter,
-    bool deactivate_satisfied_constraints,
+    std::vector<std::shared_ptr<FBBTConstraint>> &seed_cons,
+    double feasibility_tol, double integer_tol, double improvement_tol,
+    int max_iter, bool deactivate_satisfied_constraints,
     std::shared_ptr<std::map<std::shared_ptr<Var>,
                              std::vector<std::shared_ptr<FBBTConstraint>>>>
         var_to_con_map) {
@@ -139,11 +143,11 @@ unsigned int FBBTModel::perform_fbbt_on_cons(
 
 unsigned int
 FBBTModel::perform_fbbt_with_seed(std::shared_ptr<Var> seed_var,
-				  double feasibility_tol, double integer_tol,
-				  double improvement_tol, int max_iter,
-				  bool deactivate_satisfied_constraints) {
-  std::shared_ptr<
-      std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<FBBTConstraint>>>>
+                                  double feasibility_tol, double integer_tol,
+                                  double improvement_tol, int max_iter,
+                                  bool deactivate_satisfied_constraints) {
+  std::shared_ptr<std::map<std::shared_ptr<Var>,
+                           std::vector<std::shared_ptr<FBBTConstraint>>>>
       var_to_con_map = get_var_to_con_map();
 
   std::vector<std::shared_ptr<FBBTConstraint>> &seed_cons =
@@ -155,10 +159,10 @@ FBBTModel::perform_fbbt_with_seed(std::shared_ptr<Var> seed_var,
 }
 
 unsigned int FBBTModel::perform_fbbt(double feasibility_tol, double integer_tol,
-				     double improvement_tol, int max_iter,
-				     bool deactivate_satisfied_constraints) {
-  std::shared_ptr<
-      std::map<std::shared_ptr<Var>, std::vector<std::shared_ptr<FBBTConstraint>>>>
+                                     double improvement_tol, int max_iter,
+                                     bool deactivate_satisfied_constraints) {
+  std::shared_ptr<std::map<std::shared_ptr<Var>,
+                           std::vector<std::shared_ptr<FBBTConstraint>>>>
       var_to_con_map = get_var_to_con_map();
 
   int n_cons = constraints.size();
@@ -176,9 +180,9 @@ unsigned int FBBTModel::perform_fbbt(double feasibility_tol, double integer_tol,
 }
 
 void process_fbbt_constraints(FBBTModel *model, PyomoExprTypes &expr_types,
-			      py::list cons, py::dict var_map, py::dict param_map,
-			      py::dict active_constraints, py::dict con_map,
-			      py::dict rev_con_map) {
+                              py::list cons, py::dict var_map,
+                              py::dict param_map, py::dict active_constraints,
+                              py::dict con_map, py::dict rev_con_map) {
   std::shared_ptr<FBBTConstraint> ccon;
   std::shared_ptr<ExpressionBase> ccon_lb;
   std::shared_ptr<ExpressionBase> ccon_ub;

@@ -31,7 +31,7 @@ public:
   LPConstraint() = default;
 };
 
-class LPWriter: public Model {
+class LPWriter : public Model {
 public:
   LPWriter() = default;
   std::vector<std::shared_ptr<LPConstraint>> solve_cons;

@@ -139,66 +139,66 @@ double Expression::evaluate() {
 }
 
 void UnaryOperator::identify_variables(
-    std::set<std::shared_ptr<Node>> &var_set, std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
+    std::set<std::shared_ptr<Node>> &var_set,
+    std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
   if (operand->is_variable_type()) {
-    if (var_set.count(operand) == 0)
-      {
-	var_vec->push_back(std::dynamic_pointer_cast<Var>(operand));
-	var_set.insert(operand);
-      }
+    if (var_set.count(operand) == 0) {
+      var_vec->push_back(std::dynamic_pointer_cast<Var>(operand));
+      var_set.insert(operand);
+    }
   }
 }
 
 void BinaryOperator::identify_variables(
-    std::set<std::shared_ptr<Node>> &var_set, std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
+    std::set<std::shared_ptr<Node>> &var_set,
+    std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
   if (operand1->is_variable_type()) {
-    if (var_set.count(operand1) == 0)
-      {
-	var_vec->push_back(std::dynamic_pointer_cast<Var>(operand1));
-	var_set.insert(operand1);
-      }
+    if (var_set.count(operand1) == 0) {
+      var_vec->push_back(std::dynamic_pointer_cast<Var>(operand1));
+      var_set.insert(operand1);
+    }
   }
   if (operand2->is_variable_type()) {
-    if (var_set.count(operand2) == 0)
-      {
-	var_vec->push_back(std::dynamic_pointer_cast<Var>(operand2));
-	var_set.insert(operand2);
-      }
+    if (var_set.count(operand2) == 0) {
+      var_vec->push_back(std::dynamic_pointer_cast<Var>(operand2));
+      var_set.insert(operand2);
+    }
   }
 }
 
 void ExternalOperator::identify_variables(
-    std::set<std::shared_ptr<Node>> &var_set, std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
+    std::set<std::shared_ptr<Node>> &var_set,
+    std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
   for (unsigned int i = 0; i < nargs; ++i) {
     if (operands[i]->is_variable_type()) {
-      if (var_set.count(operands[i]) == 0)
-	{
-	  var_vec->push_back(std::dynamic_pointer_cast<Var>(operands[i]));
-	  var_set.insert(operands[i]);
-	}
+      if (var_set.count(operands[i]) == 0) {
+        var_vec->push_back(std::dynamic_pointer_cast<Var>(operands[i]));
+        var_set.insert(operands[i]);
+      }
     }
   }
 }
 
 void LinearOperator::identify_variables(
-    std::set<std::shared_ptr<Node>> &var_set, std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
+    std::set<std::shared_ptr<Node>> &var_set,
+    std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
   for (unsigned int i = 0; i < nterms; ++i) {
-    if (var_set.count(variables[i]) == 0)
-      {
-	var_vec->push_back(std::dynamic_pointer_cast<Var>(variables[i]));
-	var_set.insert(variables[i]);
-      }
+    if (var_set.count(variables[i]) == 0) {
+      var_vec->push_back(std::dynamic_pointer_cast<Var>(variables[i]));
+      var_set.insert(variables[i]);
+    }
   }
 }
 
-void SumOperator::identify_variables(std::set<std::shared_ptr<Node>> &var_set, std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
+void SumOperator::identify_variables(
+    std::set<std::shared_ptr<Node>> &var_set,
+    std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
   for (unsigned int i = 0; i < nargs; ++i) {
     if (operands[i]->is_variable_type()) {
-      if (var_set.count(operands[i]) == 0)
-	{
-	  var_vec->push_back(std::dynamic_pointer_cast<Var>(operands[i]));
-	  var_set.insert(operands[i]);
-	}
+      if (var_set.count(operands[i]) == 0) {
+        var_vec->push_back(std::dynamic_pointer_cast<Var>(operands[i]));
+        var_set.insert(operands[i]);
+      }
     }
   }
 }

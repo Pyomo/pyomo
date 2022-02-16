@@ -3,14 +3,11 @@
 
 #include "expression.hpp"
 
-
 class Constraint;
 class Objective;
 class Model;
 
-
 extern double inf;
-
 
 class Objective {
 public:
@@ -19,7 +16,6 @@ public:
   int sense = 0; // 0 means min; 1 means max
   std::string name;
 };
-
 
 class Constraint {
 public:
@@ -46,6 +42,5 @@ public:
   void remove_constraint(std::shared_ptr<Constraint>);
   int current_con_ndx = 0;
 };
-
 
 #endif

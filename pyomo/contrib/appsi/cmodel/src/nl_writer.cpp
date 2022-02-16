@@ -99,14 +99,16 @@ void NLWriter::write(std::string filename) {
   std::vector<std::shared_ptr<NLConstraint>> active_linear_cons;
   std::map<std::string, int> external_function_indices;
 
-  std::shared_ptr<NLObjective> nl_objective = std::dynamic_pointer_cast<NLObjective>(objective);
+  std::shared_ptr<NLObjective> nl_objective =
+      std::dynamic_pointer_cast<NLObjective>(objective);
 
   for (std::shared_ptr<Var> v : *(nl_objective->all_vars)) {
     v->index = -1;
     grad_obj_nnz += 1;
   }
 
-  for (std::shared_ptr<ExternalOperator> n : *(nl_objective->external_operators)) {
+  for (std::shared_ptr<ExternalOperator> n :
+       *(nl_objective->external_operators)) {
     std::map<std::string, int>::iterator it =
         external_function_indices.find(n->function_name);
     if (it != external_function_indices.end()) {

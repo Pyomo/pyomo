@@ -47,7 +47,8 @@ void LPWriter::write(std::string filename) {
   f.open(filename);
   f.precision(17);
 
-  std::shared_ptr<LPObjective> lp_objective = std::dynamic_pointer_cast<LPObjective>(objective);
+  std::shared_ptr<LPObjective> lp_objective =
+      std::dynamic_pointer_cast<LPObjective>(objective);
 
   if (lp_objective->sense == 0) {
     f << "minimize\n";
