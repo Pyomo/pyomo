@@ -127,49 +127,34 @@ PYBIND11_MODULE(appsi_cmodel, m) {
     .def("perform_fbbt", &FBBTModel::perform_fbbt)
     .def(py::init<>());
   py::class_<NLBase, std::shared_ptr<NLBase>>(m, "NLBase");
-  py::class_<NLConstraint, NLBase, std::shared_ptr<NLConstraint>>(
+  py::class_<NLConstraint, NLBase, Constraint, std::shared_ptr<NLConstraint>>(
       m, "NLConstraint")
-      .def_readwrite("lb", &NLConstraint::lb)
-      .def_readwrite("ub", &NLConstraint::ub)
-      .def_readwrite("active", &NLConstraint::active)
       .def(py::init<std::shared_ptr<ExpressionBase>,
                     std::vector<std::shared_ptr<ExpressionBase>>,
                     std::vector<std::shared_ptr<Var>>,
                     std::shared_ptr<ExpressionBase>>());
-  py::class_<NLObjective, NLBase, std::shared_ptr<NLObjective>>(m,
+  py::class_<NLObjective, NLBase, Objective, std::shared_ptr<NLObjective>>(m,
                                                                 "NLObjective")
-      .def_readwrite("sense", &NLObjective::sense)
       .def(py::init<std::shared_ptr<ExpressionBase>,
                     std::vector<std::shared_ptr<ExpressionBase>>,
                     std::vector<std::shared_ptr<Var>>,
                     std::shared_ptr<ExpressionBase>>());
-  py::class_<NLWriter>(m, "NLWriter")
+  py::class_<NLWriter, Model>(m, "NLWriter")
       .def(py::init<>())
       .def("write", &NLWriter::write)
-      .def("add_constraint", &NLWriter::add_constraint)
-      .def("remove_constraint", &NLWriter::remove_constraint)
       .def("get_solve_cons", &NLWriter::get_solve_cons)
-      .def("get_solve_vars", &NLWriter::get_solve_vars)
-      .def_readwrite("objective", &NLWriter::objective);
-  py::class_<LPBase, std::shared_ptr<LPBase>>(m, "LPBase")
-      .def_readwrite("name", &LPBase::name);
-  py::class_<LPConstraint, LPBase, std::shared_ptr<LPConstraint>>(
+    .def("get_solve_vars", &NLWriter::get_solve_vars);
+  py::class_<LPBase, std::shared_ptr<LPBase>>(m, "LPBase");
+  py::class_<LPConstraint, LPBase, Constraint, std::shared_ptr<LPConstraint>>(
       m, "LPConstraint")
-      .def_readwrite("lb", &LPConstraint::lb)
-      .def_readwrite("ub", &LPConstraint::ub)
-      .def_readwrite("active", &LPConstraint::active)
       .def(py::init<>());
-  py::class_<LPObjective, LPBase, std::shared_ptr<LPObjective>>(m,
+  py::class_<LPObjective, LPBase, Objective, std::shared_ptr<LPObjective>>(m,
                                                                 "LPObjective")
-      .def_readwrite("sense", &LPObjective::sense)
       .def(py::init<>());
-  py::class_<LPWriter>(m, "LPWriter")
+  py::class_<LPWriter, Model>(m, "LPWriter")
       .def(py::init<>())
       .def("write", &LPWriter::write)
-      .def("add_constraint", &LPWriter::add_constraint)
-      .def("remove_constraint", &LPWriter::remove_constraint)
-      .def("get_solve_cons", &LPWriter::get_solve_cons)
-      .def_readwrite("objective", &LPWriter::objective);
+    .def("get_solve_cons", &LPWriter::get_solve_cons);
   py::enum_<ExprType>(m, "ExprType")
       .value("py_float", ExprType::py_float)
       .value("var", ExprType::var)

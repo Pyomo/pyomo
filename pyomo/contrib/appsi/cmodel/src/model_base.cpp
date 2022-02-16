@@ -14,7 +14,7 @@ Model::Model() {
 void Model::add_constraint(std::shared_ptr<Constraint> con) {
   con->index = current_con_ndx;
   current_con_ndx += 1;
-  constraints.insert(con);
+  constraints.insert(constraints.end(), con);
 }
 
 void Model::remove_constraint(std::shared_ptr<Constraint> con) {
