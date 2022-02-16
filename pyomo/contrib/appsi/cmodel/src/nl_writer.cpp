@@ -52,22 +52,6 @@ bool NLBase::is_nonlinear() {
   }
 }
 
-void NLWriter::add_constraint(std::shared_ptr<NLConstraint> con) {
-  con->index = current_cons_index;
-  ++current_cons_index;
-  constraints->insert(con);
-}
-
-void NLWriter::remove_constraint(std::shared_ptr<NLConstraint> con) {
-  con->index = -1;
-  constraints->erase(con);
-}
-
-bool constraint_sorter(std::shared_ptr<NLConstraint> con1,
-                       std::shared_ptr<NLConstraint> con2) {
-  return con1->index < con2->index;
-}
-
 bool variable_sorter(std::pair<std::shared_ptr<Var>, double> p1,
                      std::pair<std::shared_ptr<Var>, double> p2) {
   return p1.first->index < p2.first->index;
@@ -79,17 +63,15 @@ void NLWriter::write(std::string filename) {
   f.precision(17);
 
   std::vector<std::shared_ptr<NLConstraint>> sorted_constraints;
-  for (std::shared_ptr<NLConstraint> con : *constraints) {
-    sorted_constraints.push_back(con);
+  for (std::shared_ptr<Constraint> con : constraints) {
+    sorted_constraints.push_back(std::dynamic_pointer_cast<NLConstraint>(con));
   }
-  std::sort(sorted_constraints.begin(), sorted_constraints.end(),
-            constraint_sorter);
   int sorted_con_index = 0;
   for (std::shared_ptr<NLConstraint> con : sorted_constraints) {
     con->index = sorted_con_index;
     sorted_con_index += 1;
   }
-  current_cons_index = constraints->size();
+  current_con_ndx = constraints.size();
 
   std::vector<std::shared_ptr<NLConstraint>> nonlinear_constraints;
   std::vector<std::shared_ptr<NLConstraint>> linear_constraints;
@@ -117,12 +99,16 @@ void NLWriter::write(std::string filename) {
   std::vector<std::shared_ptr<NLConstraint>> active_linear_cons;
   std::map<std::string, int> external_function_indices;
 
-  for (std::shared_ptr<Var> v : *(objective->all_vars)) {
+  std::shared_ptr<NLObjective> nl_objective =
+      std::dynamic_pointer_cast<NLObjective>(objective);
+
+  for (std::shared_ptr<Var> v : *(nl_objective->all_vars)) {
     v->index = -1;
     grad_obj_nnz += 1;
   }
 
-  for (std::shared_ptr<ExternalOperator> n : *(objective->external_operators)) {
+  for (std::shared_ptr<ExternalOperator> n :
+       *(nl_objective->external_operators)) {
     std::map<std::string, int>::iterator it =
         external_function_indices.find(n->function_name);
     if (it != external_function_indices.end()) {
@@ -232,7 +218,7 @@ void NLWriter::write(std::string filename) {
   std::vector<std::shared_ptr<Var>> nl_vars_just_in_cons;
   std::vector<std::shared_ptr<Var>> nl_vars_just_in_obj;
   std::vector<std::shared_ptr<Var>> linear_vars;
-  for (std::shared_ptr<Var> v : *(objective->nonlinear_vars)) {
+  for (std::shared_ptr<Var> v : *(nl_objective->nonlinear_vars)) {
     v->index = -2;
     nl_vars_in_obj_or_cons.push_back(v);
   }
@@ -270,14 +256,14 @@ void NLWriter::write(std::string filename) {
     }
   }
 
-  for (std::shared_ptr<Var> v : *(objective->linear_vars)) {
+  for (std::shared_ptr<Var> v : *(nl_objective->linear_vars)) {
     if (v->index == -1) {
       v->index = -5;
       linear_vars.push_back(v);
     }
   }
 
-  for (std::shared_ptr<Var> v : *(objective->nonlinear_vars)) {
+  for (std::shared_ptr<Var> v : *(nl_objective->nonlinear_vars)) {
     if (v->index == -2) {
       nl_vars_just_in_obj.push_back(v);
     }
@@ -291,7 +277,7 @@ void NLWriter::write(std::string filename) {
     ++ndx;
   }
 
-  if (objective->nonlinear_vars->size() > nl_vars_in_cons.size()) {
+  if (nl_objective->nonlinear_vars->size() > nl_vars_in_cons.size()) {
     for (std::shared_ptr<Var> v : nl_vars_just_in_cons) {
       v->index = ndx;
       all_vars.push_back(v);
@@ -330,7 +316,7 @@ void NLWriter::write(std::string filename) {
   f << all_cons.size() << " ";
   f << "1 " << n_range_cons << " " << n_eq_cons << " 0\n";
   f << active_nonlinear_cons.size() << " ";
-  if (objective->is_nonlinear()) {
+  if (nl_objective->is_nonlinear()) {
     f << "1\n";
   } else {
     f << "0\n";
@@ -374,18 +360,18 @@ void NLWriter::write(std::string filename) {
 
   // now write the nonlinear part of the objective in prefix notation
   f << "O0"
-    << " " << objective->sense << "\n";
-  if (objective->is_nonlinear()) {
+    << " " << nl_objective->sense << "\n";
+  if (nl_objective->is_nonlinear()) {
     f << "o0\n";
     for (std::shared_ptr<Node> &node :
-         *(objective->nonlinear_prefix_notation)) {
+         *(nl_objective->nonlinear_prefix_notation)) {
       node->write_nl_string(f);
     }
     f << "n";
-    f << objective->constant_expr->evaluate() << "\n";
+    f << nl_objective->constant_expr->evaluate() << "\n";
   } else {
     f << "n";
-    f << objective->constant_expr->evaluate() << "\n";
+    f << nl_objective->constant_expr->evaluate() << "\n";
   }
 
   // now write initial variable values
@@ -480,9 +466,9 @@ void NLWriter::write(std::string filename) {
   // now write the linear part of the gradient of the objective
   std::vector<std::pair<std::shared_ptr<Var>, double>> sorted_obj_vars;
   _v_ndx = 0;
-  for (std::shared_ptr<Var> v : *(objective->all_vars)) {
+  for (std::shared_ptr<Var> v : *(nl_objective->all_vars)) {
     sorted_obj_vars.push_back(std::make_pair(
-        v, objective->all_linear_coefficients->at(_v_ndx)->evaluate()));
+        v, nl_objective->all_linear_coefficients->at(_v_ndx)->evaluate()));
     _v_ndx += 1;
   }
   std::sort(sorted_obj_vars.begin(), sorted_obj_vars.end(), variable_sorter);

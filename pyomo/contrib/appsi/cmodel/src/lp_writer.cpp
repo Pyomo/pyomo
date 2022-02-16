@@ -1,21 +1,5 @@
 #include "lp_writer.hpp"
 
-void LPWriter::add_constraint(std::shared_ptr<LPConstraint> con) {
-  con->index = current_cons_index;
-  ++current_cons_index;
-  constraints->insert(con);
-}
-
-void LPWriter::remove_constraint(std::shared_ptr<LPConstraint> con) {
-  con->index = -1;
-  constraints->erase(con);
-}
-
-bool constraint_sorter(std::shared_ptr<LPConstraint> con1,
-                       std::shared_ptr<LPConstraint> con2) {
-  return con1->index < con2->index;
-}
-
 void write_expr(std::ofstream &f, std::shared_ptr<LPBase> obj,
                 bool is_objective) {
   double coef;
@@ -63,29 +47,30 @@ void LPWriter::write(std::string filename) {
   f.open(filename);
   f.precision(17);
 
-  if (objective->sense == 0) {
+  std::shared_ptr<LPObjective> lp_objective =
+      std::dynamic_pointer_cast<LPObjective>(objective);
+
+  if (lp_objective->sense == 0) {
     f << "minimize\n";
   } else {
     f << "maximize\n";
   }
 
-  f << objective->name << ": \n";
-  write_expr(f, objective, true);
+  f << lp_objective->name << ": \n";
+  write_expr(f, lp_objective, true);
 
   f << "\ns.t.\n\n";
 
   std::vector<std::shared_ptr<LPConstraint>> sorted_constraints;
-  for (std::shared_ptr<LPConstraint> con : *constraints) {
-    sorted_constraints.push_back(con);
+  for (std::shared_ptr<Constraint> con : constraints) {
+    sorted_constraints.push_back(std::dynamic_pointer_cast<LPConstraint>(con));
   }
-  std::sort(sorted_constraints.begin(), sorted_constraints.end(),
-            constraint_sorter);
   int sorted_con_index = 0;
   for (std::shared_ptr<LPConstraint> con : sorted_constraints) {
     con->index = sorted_con_index;
     sorted_con_index += 1;
   }
-  current_cons_index = constraints->size();
+  current_con_ndx = constraints.size();
 
   std::vector<std::shared_ptr<LPConstraint>> active_constraints;
   for (std::shared_ptr<LPConstraint> con : sorted_constraints) {
@@ -131,7 +116,7 @@ void LPWriter::write(std::string filename) {
 
   f << "obj_const_con_eq: \n";
   f << "+1 obj_const \n";
-  f << "= " << objective->constant_expr->evaluate() << " \n\n";
+  f << "= " << lp_objective->constant_expr->evaluate() << " \n\n";
 
   for (std::shared_ptr<LPConstraint> con : active_constraints) {
     for (std::shared_ptr<Var> v : *(con->linear_vars)) {
@@ -145,13 +130,13 @@ void LPWriter::write(std::string filename) {
     }
   }
 
-  for (std::shared_ptr<Var> v : *(objective->linear_vars)) {
+  for (std::shared_ptr<Var> v : *(lp_objective->linear_vars)) {
     v->index = -1;
   }
-  for (std::shared_ptr<Var> v : *(objective->quadratic_vars_1)) {
+  for (std::shared_ptr<Var> v : *(lp_objective->quadratic_vars_1)) {
     v->index = -1;
   }
-  for (std::shared_ptr<Var> v : *(objective->quadratic_vars_2)) {
+  for (std::shared_ptr<Var> v : *(lp_objective->quadratic_vars_2)) {
     v->index = -1;
   }
 
@@ -177,19 +162,19 @@ void LPWriter::write(std::string filename) {
     }
   }
 
-  for (std::shared_ptr<Var> v : *(objective->linear_vars)) {
+  for (std::shared_ptr<Var> v : *(lp_objective->linear_vars)) {
     if (v->index == -1) {
       v->index = -2;
       active_vars.push_back(v);
     }
   }
-  for (std::shared_ptr<Var> v : *(objective->quadratic_vars_1)) {
+  for (std::shared_ptr<Var> v : *(lp_objective->quadratic_vars_1)) {
     if (v->index == -1) {
       v->index = -2;
       active_vars.push_back(v);
     }
   }
-  for (std::shared_ptr<Var> v : *(objective->quadratic_vars_2)) {
+  for (std::shared_ptr<Var> v : *(lp_objective->quadratic_vars_2)) {
     if (v->index == -1) {
       v->index = -2;
       active_vars.push_back(v);

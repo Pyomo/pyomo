@@ -841,6 +841,48 @@ def makeNestedNonlinearModel():
 # Variations on the example from the Kronqvist et al. Between Steps paper
 ##
 
+def makeBetweenStepsPaperExample():
+    """Original example model, implicit disjunction"""
+    m = ConcreteModel()
+    m.I = RangeSet(1,4)
+    m.x = Var(m.I, bounds=(-2,6))
+
+    m.disjunction = Disjunction(expr=[[sum(m.x[i]**2 for i in m.I) <= 1],
+                                      [sum((3 - m.x[i])**2 for i in m.I) <=
+                                       1]])
+
+    m.obj = Objective(expr=m.x[2] - m.x[1], sense=maximize)
+
+    return m
+
+def makeBetweenStepsPaperExample_DeclareVarOnDisjunct():
+    """Exactly the same model as above, but declaring the Disjuncts explicitly 
+    and declaring the variables on one of them.
+    """
+    m = ConcreteModel()
+    m.I = RangeSet(1,4)
+    m.disj1 = Disjunct()
+    m.disj1.x = Var(m.I, bounds=(-2,6))
+    m.disj1.c = Constraint(expr=sum(m.disj1.x[i]**2 for i in m.I) <= 1)
+    m.disj2 = Disjunct()
+    m.disj2.c = Constraint(expr=sum((3 - m.disj1.x[i])**2 for i in m.I) <=
+                           1)
+    m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
+
+    m.obj = Objective(expr=m.disj1.x[2] - m.disj1.x[1], sense=maximize)
+
+    return m
+
+def makeBetweenStepsPaperExample_Nested():
+    """Mathematically, this is really dumb, but I am nesting this model on 
+    itself because it makes writing tests simpler (I can recycle.)"""
+    m = makeBetweenStepsPaperExample_DeclareVarOnDisjunct()
+    m.disj2.disjunction = Disjunction(
+        expr=[[sum(m.disj1.x[i]**2 for i in m.I) <= 1],
+              [sum((3 - m.disj1.x[i])**2 for i in m.I) <= 1]])
+    
+    return m
+
 def instantiate_hierarchical_nested_model(m):
     """helper function to instantiate a nested version of the model with 
     the Disjuncts and Disjunctions on blocks"""
@@ -879,6 +921,26 @@ def makeHierarchicalNested_DeclOrderOppositeInstantationOrder():
     m.disjunction_block = Block()
     m.disjunct_block = Block()
     instantiate_hierarchical_nested_model(m)
+
+    return m
+
+def makeNonQuadraticNonlinearGDP():
+    """We use this in testing between steps--Needed non-quadratic and not 
+    additively separable constraint expressions on a Disjunct."""
+    m = ConcreteModel()
+    m.I = RangeSet(1,4)
+    m.I1 = RangeSet(1,2)
+    m.I2 = RangeSet(3,4)
+    m.x = Var(m.I, bounds=(-2,6))
+
+    # sum of 4-norms...
+    m.disjunction = Disjunction(
+        expr=[[sum(m.x[i]**4 for i in m.I1)**(1/4) + \
+               sum(m.x[i]**4 for i in m.I2)**(1/4) <= 1],
+              [sum((3 - m.x[i])**4 for i in m.I1)**(1/4) +
+               sum((3 - m.x[i])**4 for i in m.I2)**(1/4) <= 1]])
+
+    m.obj = Objective(expr=m.x[2] - m.x[1], sense=maximize)
 
     return m
 

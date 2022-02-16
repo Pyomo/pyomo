@@ -1,3 +1,6 @@
+#ifndef INTERVAL_HEADER
+#define INTERVAL_HEADER
+
 #include <iostream>
 #include <list>
 #include <vector>
@@ -100,3 +103,5 @@ public:
   const char *what() const noexcept override { return message.c_str(); }
   std::string message = "";
 };
+
+#endif

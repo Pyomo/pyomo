@@ -26,9 +26,7 @@ double Var::get_ub() {
     return std::min(ub->evaluate(), domain_ub);
 }
 
-Domain Var::get_domain() {
-  return domain;
-}
+Domain Var::get_domain() { return domain; }
 
 bool Operator::is_operator_type() { return true; }
 
@@ -145,42 +143,66 @@ double Expression::evaluate() {
 }
 
 void UnaryOperator::identify_variables(
-    std::set<std::shared_ptr<Node>> &var_set) {
+    std::set<std::shared_ptr<Node>> &var_set,
+    std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
   if (operand->is_variable_type()) {
-    var_set.insert(operand);
+    if (var_set.count(operand) == 0) {
+      var_vec->push_back(std::dynamic_pointer_cast<Var>(operand));
+      var_set.insert(operand);
+    }
   }
 }
 
 void BinaryOperator::identify_variables(
-    std::set<std::shared_ptr<Node>> &var_set) {
+    std::set<std::shared_ptr<Node>> &var_set,
+    std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
   if (operand1->is_variable_type()) {
-    var_set.insert(operand1);
+    if (var_set.count(operand1) == 0) {
+      var_vec->push_back(std::dynamic_pointer_cast<Var>(operand1));
+      var_set.insert(operand1);
+    }
   }
   if (operand2->is_variable_type()) {
-    var_set.insert(operand2);
+    if (var_set.count(operand2) == 0) {
+      var_vec->push_back(std::dynamic_pointer_cast<Var>(operand2));
+      var_set.insert(operand2);
+    }
   }
 }
 
 void ExternalOperator::identify_variables(
-    std::set<std::shared_ptr<Node>> &var_set) {
+    std::set<std::shared_ptr<Node>> &var_set,
+    std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
   for (unsigned int i = 0; i < nargs; ++i) {
     if (operands[i]->is_variable_type()) {
-      var_set.insert(operands[i]);
+      if (var_set.count(operands[i]) == 0) {
+        var_vec->push_back(std::dynamic_pointer_cast<Var>(operands[i]));
+        var_set.insert(operands[i]);
+      }
     }
   }
 }
 
 void LinearOperator::identify_variables(
-    std::set<std::shared_ptr<Node>> &var_set) {
+    std::set<std::shared_ptr<Node>> &var_set,
+    std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
   for (unsigned int i = 0; i < nterms; ++i) {
-    var_set.insert(variables[i]);
+    if (var_set.count(variables[i]) == 0) {
+      var_vec->push_back(std::dynamic_pointer_cast<Var>(variables[i]));
+      var_set.insert(variables[i]);
+    }
   }
 }
 
-void SumOperator::identify_variables(std::set<std::shared_ptr<Node>> &var_set) {
+void SumOperator::identify_variables(
+    std::set<std::shared_ptr<Node>> &var_set,
+    std::shared_ptr<std::vector<std::shared_ptr<Var>>> var_vec) {
   for (unsigned int i = 0; i < nargs; ++i) {
     if (operands[i]->is_variable_type()) {
-      var_set.insert(operands[i]);
+      if (var_set.count(operands[i]) == 0) {
+        var_vec->push_back(std::dynamic_pointer_cast<Var>(operands[i]));
+        var_set.insert(operands[i]);
+      }
     }
   }
 }
@@ -188,15 +210,10 @@ void SumOperator::identify_variables(std::set<std::shared_ptr<Node>> &var_set) {
 std::shared_ptr<std::vector<std::shared_ptr<Var>>>
 Expression::identify_variables() {
   std::set<std::shared_ptr<Node>> var_set;
-  for (unsigned int i = 0; i < n_operators; ++i) {
-    operators[i]->identify_variables(var_set);
-  }
   std::shared_ptr<std::vector<std::shared_ptr<Var>>> res =
       std::make_shared<std::vector<std::shared_ptr<Var>>>(var_set.size());
-  int ndx = 0;
-  for (std::shared_ptr<Node> v : var_set) {
-    (*res)[ndx] = std::dynamic_pointer_cast<Var>(v);
-    ndx += 1;
+  for (unsigned int i = 0; i < n_operators; ++i) {
+    operators[i]->identify_variables(var_set, res);
   }
   return res;
 }
@@ -1937,14 +1954,12 @@ void process_pyomo_vars(PyomoExprTypes &expr_types, py::list pyomo_vars,
       cv->domain_ub = interval_ub.cast<double>();
     if (domain_step == 0)
       cv->domain = continuous;
-    else if (domain_step == 1)
-      {
-	if ((cv->domain_lb == 0) && (cv->domain_ub == 1))
-	  cv->domain = binary;
-	else
-	  cv->domain = integers;
-      }
-    else
+    else if (domain_step == 1) {
+      if ((cv->domain_lb == 0) && (cv->domain_ub == 1))
+        cv->domain = binary;
+      else
+        cv->domain = integers;
+    } else
       throw py::value_error("Unrecognized domain step");
 
     if (!update) {

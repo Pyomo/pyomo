@@ -70,7 +70,7 @@ class TestMindtPy(unittest.TestCase):
                               move_linear_objective=(config.init_strategy == 'FP'
                                                      or config.add_regularization is not None),
                               use_mcpp=config.use_mcpp,
-                              updata_var_con_list=config.add_regularization is None
+                              update_var_con_list=config.add_regularization is None
                               )
             feas = MindtPy.feas_opt = Block()
             feas.deactivate()
