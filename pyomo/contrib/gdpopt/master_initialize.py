@@ -49,7 +49,7 @@ from pyomo.gdp import Disjunct
 #                          if v is not None)))
 
 def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
-                          config, alg_info):
+                          config, solver):
     """Initialize by using user-specified custom disjuncts."""
     used_disjuncts = {}
     for count, active_disjunct_set in enumerate(config.custom_init_disjuncts):
@@ -59,7 +59,7 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
 
         subproblem = subprob_util_block.model()
         # fix the disjuncts in the linear GDP and solve
-        alg_info.mip_iteration += 1
+        solver.mip_iteration += 1
         config.logger.info(
             "Generating initial linear GDP approximation by "
             "solving subproblems with user-specified active disjuncts.")
@@ -79,7 +79,7 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                                   'they may not be on the active subtree being '
                                   'solved.' % (count, disj_str))
         mip_result = solve_linear_GDP(master, util_block, config,
-                                      alg_info.timing)
+                                      solver.timing)
         if mip_result.feasible:
             with fix_master_solution_in_subproblem(master_util_block,
                                                    subprob_util_block,
@@ -99,7 +99,8 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                 % list(disj.name for disj in active_disjunct_set))
 
 
-def init_fixed_disjuncts(solve_data, config):
+def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
+                         config, solver):
     """Initialize by solving the problem with the current disjunct values."""
     # TODO error checking to make sure that the user gave proper disjuncts
 
@@ -126,7 +127,8 @@ def init_fixed_disjuncts(solve_data, config):
             'Skipping initialization.')
 
 
-def init_max_binaries(solve_data, config):
+def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
+                      solver):
     """Initialize by maximizing binary variables and disjuncts.
 
     This function activates as many binary variables and disjucts as
@@ -164,7 +166,8 @@ def init_max_binaries(solve_data, config):
         return False
 
 
-def init_set_covering(solve_data, config):
+def init_set_covering(util_block, master_util_block, subprob_util_block, config,
+                      solver):
     """Initialize by solving problems to cover the set of all disjuncts.
 
     The purpose of this initialization is to generate linearizations
@@ -181,12 +184,13 @@ def init_set_covering(solve_data, config):
         any(constr.body.polynomial_degree() not in (0, 1)
             for constr in disj.component_data_objects(
             ctype=Constraint, active=True, descend_into=True))
-        for disj in solve_data.working_model.GDPopt_utils.disjunct_list)
+        for disj in util_block.disjunct_list)
+
     # Set up set covering mip
-    set_cover_mip = solve_data.linear_GDP.clone()
+    #set_cover_mip = solve_data.linear_GDP.clone()
     # Deactivate nonlinear constraints
-    for obj in set_cover_mip.component_data_objects(Objective, active=True):
-        obj.deactivate()
+    # for obj in set_cover_mip.component_data_objects(Objective, active=True):
+    #     obj.deactivate()
     iter_count = 1
     while (any(disjunct_needs_cover) and
            iter_count <= config.set_cover_iterlim):

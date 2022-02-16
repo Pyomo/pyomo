@@ -13,7 +13,6 @@ from math import fabs
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
-from pyomo.contrib.gdpopt.data_class import SubproblemResult
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
                                        is_feasible, get_main_elapsed_time)
 from pyomo.core import (Constraint, TransformationFactory, minimize, value,

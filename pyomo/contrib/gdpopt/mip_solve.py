@@ -3,7 +3,6 @@ from copy import deepcopy
 
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.contrib.gdpopt.data_class import MasterProblemResult
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
                                        get_main_elapsed_time)
 from pyomo.core import (Block, Expression, Objective, TransformationFactory,

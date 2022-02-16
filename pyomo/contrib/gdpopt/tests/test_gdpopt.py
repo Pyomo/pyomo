@@ -20,7 +20,6 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
 from pyomo.common.fileutils import import_file
 from pyomo.contrib.gdpopt.GDPopt import GDPoptSolver
-from pyomo.contrib.gdpopt.data_class import GDPoptSolveData
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.environ import ( ConcreteModel, Objective, SolverFactory, Var, value,
@@ -34,6 +33,8 @@ from pyomo.core.expr.sympy_tools import sympy_available
 
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
+
+from nose.tools import set_trace
 
 mip_solver = 'glpk'
 nlp_solver = 'ipopt'
