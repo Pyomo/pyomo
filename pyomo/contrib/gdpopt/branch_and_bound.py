@@ -15,7 +15,8 @@ from heapq import heappush, heappop
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWarning, get_main_elapsed_time
+from pyomo.contrib.gdpopt.util import (
+    copy_var_list_values, SuppressInfeasibleWarning, get_main_elapsed_time)
 from pyomo.contrib.satsolver.satsolver import satisfiable
 from pyomo.core import minimize, Suffix, Constraint, TransformationFactory
 from pyomo.opt import SolverFactory, SolverStatus
@@ -58,9 +59,9 @@ def _perform_branch_and_bound(solve_data):
         # categorize the disjuncts in the disjunction
         for disjunct in disjunction.disjuncts:
             if disjunct.indicator_var.fixed:
-                if disjunct.indicator_var.value == 1:
+                if disjunct.indicator_var.value:
                     disjuncts_fixed_True.append(disjunct)
-                elif disjunct.indicator_var.value == 0:
+                elif not disjunct.indicator_var.value:
                     disjuncts_fixed_False.append(disjunct)
                 else:
                     pass  # raise error for fractional value?
@@ -74,9 +75,11 @@ def _perform_branch_and_bound(solve_data):
             if not disjuncts_fixed_True:
                 disjuncts_fixed_True = unfixed_disjuncts
                 unfixed_disjuncts = []
-                disjuncts_fixed_True[0].indicator_var.fix(1)
+                disjuncts_fixed_True[0].indicator_var.fix(True)
         elif disjuncts_fixed_True and disjunction.xor:
-            assert len(disjuncts_fixed_True) == 1, "XOR (only one True) violated: %s" % disjunction.name
+            assert len(disjuncts_fixed_True) == 1, ("XOR (only one True) "
+                                                    "violated: %s" %
+                                                    disjunction.name)
             disjuncts_fixed_False.extend(unfixed_disjuncts)
             unfixed_disjuncts = []
 
@@ -87,19 +90,23 @@ def _perform_branch_and_bound(solve_data):
         # Deactivate nonlinear constraints in unfixed disjuncts
         for disjunct in unfixed_disjuncts:
             nonlinear_constraints_in_disjunct = [
-                constr for constr in disjunct.component_data_objects(Constraint, active=True)
+                constr for constr in disjunct.component_data_objects(
+                    Constraint, active=True)
                 if constr.body.polynomial_degree() not in _linear_degrees]
             for constraint in nonlinear_constraints_in_disjunct:
                 constraint.deactivate()
             if nonlinear_constraints_in_disjunct:
-                # TODO might be worthwhile to log number of nonlinear constraints in each disjunction
-                # for later branching purposes
-                root_util_blk.disjunct_to_nonlinear_constraints[disjunct] = nonlinear_constraints_in_disjunct
+                # TODO might be worthwhile to log number of nonlinear
+                # constraints in each disjunction for later branching purposes
+                root_util_blk.disjunct_to_nonlinear_constraints[
+                    disjunct] = nonlinear_constraints_in_disjunct
 
-        root_util_blk.disjunction_to_unfixed_disjuncts[disjunction] = unfixed_disjuncts
+        root_util_blk.disjunction_to_unfixed_disjuncts[
+            disjunction] = unfixed_disjuncts
         pass
 
-    # Add the BigM suffix if it does not already exist. Used later during nonlinear constraint activation.
+    # Add the BigM suffix if it does not already exist. Used later during
+    # nonlinear constraint activation.  
     # TODO is this still necessary?
     if not hasattr(root_node, 'BigM'):
         root_node.BigM = Suffix()
@@ -107,8 +114,9 @@ def _perform_branch_and_bound(solve_data):
     # Set up the priority queue
     queue = solve_data.bb_queue = []
     solve_data.created_nodes = 0
-    unbranched_disjunction_indices = [i for i, disjunction in enumerate(root_util_blk.disjunction_list)
-                                      if disjunction in root_util_blk.disjunction_to_unfixed_disjuncts]
+    unbranched_disjunction_indices = [
+        i for i, disjunction in enumerate(root_util_blk.disjunction_list)
+        if disjunction in root_util_blk.disjunction_to_unfixed_disjuncts]
     sort_tuple = BBNodeData(
         obj_lb=float('-inf'),
         obj_ub=float('inf'),
@@ -129,7 +137,8 @@ def _perform_branch_and_bound(solve_data):
         # ) for x in sorted(queue)])
         node_data, node_model = heappop(queue)
         config.logger.info("Nodes: %s LB %.10g Unbranched %s" % (
-            solve_data.explored_nodes, node_data.obj_lb, node_data.num_unbranched_disjunctions))
+            solve_data.explored_nodes, node_data.obj_lb,
+            node_data.num_unbranched_disjunctions))
 
         # Check time limit
         elapsed = get_main_elapsed_time(solve_data.timing)
@@ -140,8 +149,12 @@ def _perform_branch_and_bound(solve_data):
                 'Elapsed: {} seconds'
                 .format(config.time_limit, elapsed))
             no_feasible_soln = float('inf')
-            solve_data.LB = node_data.obj_lb if solve_data.objective_sense == minimize else -no_feasible_soln
-            solve_data.UB = no_feasible_soln if solve_data.objective_sense == minimize else -node_data.obj_lb
+            solve_data.LB = node_data.obj_lb if \
+                            solve_data.objective_sense == minimize else \
+                            -no_feasible_soln
+            solve_data.UB = no_feasible_soln if \
+                            solve_data.objective_sense == minimize else \
+                            -node_data.obj_lb
             config.logger.info(
                 'Final bound values: LB: {}  UB: {}'.
                 format(solve_data.LB, solve_data.UB))
@@ -153,14 +166,20 @@ def _perform_branch_and_bound(solve_data):
             # Node has not been evaluated.
             solve_data.explored_nodes += 1
             new_node_data = _prescreen_node(node_data, node_model, solve_data)
-            heappush(queue, (new_node_data, node_model))  # replace with updated node data
-        elif node_data.obj_lb < node_data.obj_ub - config.bound_tolerance and not node_data.is_evaluated:
+            heappush(queue, (new_node_data, node_model))  # replace with updated
+                                                          # node data
+        elif node_data.obj_lb < node_data.obj_ub - config.bound_tolerance and \
+             not node_data.is_evaluated:
             # Node has not been fully evaluated.
-            # Note: infeasible and unbounded nodes will skip this condition, because of strict inequality
+            # Note: infeasible and unbounded nodes will skip this condition,
+            # because of strict inequality
             new_node_data = _evaluate_node(node_data, node_model, solve_data)
-            heappush(queue, (new_node_data, node_model))  # replace with updated node data
-        elif node_data.num_unbranched_disjunctions == 0 or node_data.obj_lb == float('inf'):
-            # We have reached a leaf node, or the best available node is infeasible.
+            heappush(queue, (new_node_data, node_model))  # replace with updated
+                                                          # node data
+        elif node_data.num_unbranched_disjunctions == 0 or \
+             node_data.obj_lb == float('inf'):
+            # We have reached a leaf node, or the best available node is
+            # infeasible.
             original_model = solve_data.original_model
             copy_var_list_values(
                 from_list=node_model.GDPopt_utils.variable_list,
@@ -168,8 +187,12 @@ def _perform_branch_and_bound(solve_data):
                 config=config,
             )
 
-            solve_data.LB = node_data.obj_lb if solve_data.objective_sense == minimize else -node_data.obj_ub
-            solve_data.UB = node_data.obj_ub if solve_data.objective_sense == minimize else -node_data.obj_lb
+            solve_data.LB = node_data.obj_lb if \
+                            solve_data.objective_sense == minimize else \
+                            -node_data.obj_ub
+            solve_data.UB = node_data.obj_ub if \
+                            solve_data.objective_sense == minimize else \
+                            -node_data.obj_lb
             solve_data.master_iteration = solve_data.explored_nodes
             if node_data.obj_lb == float('inf'):
                 solve_data.results.solver.termination_condition = tc.infeasible
@@ -186,50 +209,70 @@ def _branch_on_node(node_data, node_model, solve_data):
     # Keeping the naive branch selection
     config = solve_data.config
     disjunction_to_branch_idx = node_data.unbranched_disjunction_indices[0]
-    disjunction_to_branch = node_model.GDPopt_utils.disjunction_list[disjunction_to_branch_idx]
-    num_unfixed_disjuncts = len(node_model.GDPopt_utils.disjunction_to_unfixed_disjuncts[disjunction_to_branch])
-    config.logger.info("Branching on disjunction %s" % disjunction_to_branch.name)
+    disjunction_to_branch = node_model.GDPopt_utils.disjunction_list[
+        disjunction_to_branch_idx]
+    num_unfixed_disjuncts = len(
+        node_model.GDPopt_utils.disjunction_to_unfixed_disjuncts[
+            disjunction_to_branch])
+    config.logger.info("Branching on disjunction %s" %
+                       disjunction_to_branch.name)
     node_count = solve_data.created_nodes
     newly_created_nodes = 0
 
     for disjunct_index_to_fix_True in range(num_unfixed_disjuncts):
         # Create a new branch for each unfixed disjunct
         child_model = node_model.clone()
-        child_disjunction_to_branch = child_model.GDPopt_utils.disjunction_list[disjunction_to_branch_idx]
-        child_unfixed_disjuncts = child_model.GDPopt_utils.disjunction_to_unfixed_disjuncts[child_disjunction_to_branch]
+        child_disjunction_to_branch = child_model.GDPopt_utils.\
+                                      disjunction_list[
+                                          disjunction_to_branch_idx]
+        child_unfixed_disjuncts = child_model.GDPopt_utils.\
+                                  disjunction_to_unfixed_disjuncts[
+                                      child_disjunction_to_branch]
         for idx, child_disjunct in enumerate(child_unfixed_disjuncts):
             if idx == disjunct_index_to_fix_True:
-                child_disjunct.indicator_var.fix(1)
+                child_disjunct.indicator_var.fix(True)
             else:
                 child_disjunct.deactivate()
         if not child_disjunction_to_branch.xor:
-            raise NotImplementedError("We still need to add support for non-XOR disjunctions.")
-            # This requires adding all combinations of activation status among unfixed_disjuncts
-        # Reactivate nonlinear constraints in the newly-fixed child disjunct
-        fixed_True_disjunct = child_unfixed_disjuncts[disjunct_index_to_fix_True]
-        for constr in child_model.GDPopt_utils.disjunct_to_nonlinear_constraints.get(fixed_True_disjunct, ()):
+            raise NotImplementedError("We still need to add support for "
+                                      "non-XOR disjunctions.")
+        # This requires adding all combinations of activation status among
+        # unfixed_disjuncts Reactivate nonlinear constraints in the newly-fixed
+        # child disjunct
+        fixed_True_disjunct = child_unfixed_disjuncts[
+            disjunct_index_to_fix_True]
+        for constr in child_model.GDPopt_utils.\
+            disjunct_to_nonlinear_constraints.get(fixed_True_disjunct, ()):
             constr.activate()
-            child_model.BigM[constr] = 1  # set arbitrary BigM (ok, because we fix corresponding Y=True)
+            child_model.BigM[constr] = 1  # set arbitrary BigM (ok, because we
+                                          # fix corresponding Y=True)
 
-        del child_model.GDPopt_utils.disjunction_to_unfixed_disjuncts[child_disjunction_to_branch]
+        del child_model.GDPopt_utils.disjunction_to_unfixed_disjuncts[
+            child_disjunction_to_branch]
         for child_disjunct in child_unfixed_disjuncts:
-            child_model.GDPopt_utils.disjunct_to_nonlinear_constraints.pop(child_disjunct, None)
+            child_model.GDPopt_utils.disjunct_to_nonlinear_constraints.pop(
+                child_disjunct, None)
 
         newly_created_nodes += 1
         child_node_data = node_data._replace(
             is_screened=False,
             is_evaluated=False,
-            num_unbranched_disjunctions=node_data.num_unbranched_disjunctions - 1,
+            num_unbranched_disjunctions=node_data.\
+            num_unbranched_disjunctions - 1,
             node_count=node_count + newly_created_nodes,
-            unbranched_disjunction_indices=node_data.unbranched_disjunction_indices[1:],
+            unbranched_disjunction_indices=node_data.\
+            unbranched_disjunction_indices[1:],
             obj_ub=float('inf'),
         )
         heappush(solve_data.bb_queue, (child_node_data, child_model))
 
     solve_data.created_nodes += newly_created_nodes
 
-    config.logger.info("Added %s new nodes with %s relaxed disjunctions to the heap. Size now %s." % (
-        num_unfixed_disjuncts, node_data.num_unbranched_disjunctions - 1, len(solve_data.bb_queue)))
+    config.logger.info("Added %s new nodes with %s relaxed disjunctions to "
+                       "the heap. Size now %s." % 
+                       ( num_unfixed_disjuncts,
+                         node_data.num_unbranched_disjunctions - 1,
+                         len(solve_data.bb_queue)))
 
 
 def _prescreen_node(node_data, node_model, solve_data):
@@ -237,23 +280,27 @@ def _prescreen_node(node_data, node_model, solve_data):
     # Check node for satisfiability if sat-solver is enabled
     if config.check_sat and satisfiable(node_model, config.logger) is False:
         if node_data.node_count == 0:
-            config.logger.info("Root node is not satisfiable. Problem is infeasible.")
+            config.logger.info("Root node is not satisfiable. Problem is "
+                               "infeasible.")
         else:
-            config.logger.info("SAT solver pruned node %s" % node_data.node_count)
+            config.logger.info("SAT solver pruned node %s" %
+                               node_data.node_count)
         new_lb = new_ub = float('inf')
     else:
         # Solve model subproblem
         if config.solve_local_rnGDP:
             solve_data.config.logger.debug(
-                "Screening node %s with LB %.10g and %s inactive disjunctions." % (
-                    node_data.node_count, node_data.obj_lb, node_data.num_unbranched_disjunctions
-                ))
-            new_lb, new_ub = _solve_local_rnGDP_subproblem(node_model, solve_data)
+                "Screening node %s with LB %.10g and %s inactive "
+                "disjunctions." % (node_data.node_count, node_data.obj_lb, 
+                                   node_data.num_unbranched_disjunctions))
+            new_lb, new_ub = _solve_local_rnGDP_subproblem(node_model,
+                                                           solve_data)
         else:
             new_lb, new_ub = float('-inf'), float('inf')
         new_lb = max(node_data.obj_lb, new_lb)
 
-    new_node_data = node_data._replace(obj_lb=new_lb, obj_ub=new_ub, is_screened=True)
+    new_node_data = node_data._replace(obj_lb=new_lb, obj_ub=new_ub,
+                                       is_screened=True)
     return new_node_data
 
 
@@ -261,11 +308,13 @@ def _evaluate_node(node_data, node_model, solve_data):
     config = solve_data.config
     # Solve model subproblem
     solve_data.config.logger.info(
-        "Exploring node %s with LB %.10g UB %.10g and %s inactive disjunctions." % (
-            node_data.node_count, node_data.obj_lb, node_data.obj_ub, node_data.num_unbranched_disjunctions
-        ))
+        "Exploring node %s with LB %.10g UB %.10g and %s inactive "
+        "disjunctions." % (node_data.node_count, node_data.obj_lb, 
+                           node_data.obj_ub, 
+                           node_data.num_unbranched_disjunctions))
     new_lb, new_ub = _solve_rnGDP_subproblem(node_model, solve_data)
-    new_node_data = node_data._replace(obj_lb=new_lb, obj_ub=new_ub, is_evaluated=True)
+    new_node_data = node_data._replace(obj_lb=new_lb, obj_ub=new_ub,
+                                       is_evaluated=True)
     return new_node_data
 
 
@@ -290,8 +339,10 @@ def _solve_rnGDP_subproblem(model, solve_data):
                 elapsed = get_main_elapsed_time(solve_data.timing)
                 remaining = max(config.time_limit - elapsed, 1)
                 minlp_args['add_options'] = minlp_args.get('add_options', [])
-                minlp_args['add_options'].append('option reslim=%s;' % remaining)
-            result = SolverFactory(config.minlp_solver).solve(subproblem, **minlp_args)
+                minlp_args['add_options'].append('option reslim=%s;' %
+                                                 remaining)
+            result = SolverFactory(config.minlp_solver).solve(subproblem,
+                                                              **minlp_args)
     except RuntimeError as e:
         config.logger.warning(
             "Solver encountered RuntimeError. Treating as infeasible. "
@@ -306,8 +357,10 @@ def _solve_rnGDP_subproblem(model, solve_data):
     term_cond = result.solver.termination_condition
     if term_cond == tc.optimal:
         assert result.solver.status is SolverStatus.ok
-        lb = result.problem.lower_bound if not obj_sense_correction else -result.problem.upper_bound
-        ub = result.problem.upper_bound if not obj_sense_correction else -result.problem.lower_bound
+        lb = result.problem.lower_bound if not obj_sense_correction else \
+             -result.problem.upper_bound
+        ub = result.problem.upper_bound if not obj_sense_correction else \
+             -result.problem.lower_bound
         copy_var_list_values(
             from_list=subproblem.GDPopt_utils.variable_list,
             to_list=model.GDPopt_utils.variable_list,
@@ -316,8 +369,10 @@ def _solve_rnGDP_subproblem(model, solve_data):
         return lb, ub
     elif term_cond == tc.locallyOptimal or term_cond == tc.feasible:
         assert result.solver.status is SolverStatus.ok
-        lb = result.problem.lower_bound if not obj_sense_correction else -result.problem.upper_bound
-        ub = result.problem.upper_bound if not obj_sense_correction else -result.problem.lower_bound
+        lb = result.problem.lower_bound if not obj_sense_correction else \
+             -result.problem.upper_bound
+        ub = result.problem.upper_bound if not obj_sense_correction else \
+             -result.problem.lower_bound
         # TODO handle LB absent
         copy_var_list_values(
             from_list=subproblem.GDPopt_utils.variable_list,
@@ -340,7 +395,8 @@ def _solve_rnGDP_subproblem(model, solve_data):
         )
         return float('inf'), float('inf')
     else:
-        config.logger.warning("Unknown termination condition of %s. Treating as infeasible." % term_cond)
+        config.logger.warning("Unknown termination condition of %s. "
+                              "Treating as infeasible." % term_cond)
         copy_var_list_values(
             from_list=subproblem.GDPopt_utils.variable_list,
             to_list=model.GDPopt_utils.variable_list,
@@ -357,7 +413,8 @@ def _solve_local_rnGDP_subproblem(model, solve_data):
 
     try:
         with SuppressInfeasibleWarning():
-            result = SolverFactory(config.local_minlp_solver).solve(subproblem, **config.local_minlp_solver_args)
+            result = SolverFactory(config.local_minlp_solver).solve(
+                subproblem, **config.local_minlp_solver_args)
     except RuntimeError as e:
         config.logger.warning(
             "Solver encountered RuntimeError. Treating as infeasible. "
@@ -372,8 +429,10 @@ def _solve_local_rnGDP_subproblem(model, solve_data):
     term_cond = result.solver.termination_condition
     if term_cond == tc.optimal:
         assert result.solver.status is SolverStatus.ok
-        lb = result.problem.lower_bound if not obj_sense_correction else -result.problem.upper_bound
-        ub = result.problem.upper_bound if not obj_sense_correction else -result.problem.lower_bound
+        lb = result.problem.lower_bound if not obj_sense_correction else \
+             -result.problem.upper_bound
+        ub = result.problem.upper_bound if not obj_sense_correction else \
+             -result.problem.lower_bound
         copy_var_list_values(
             from_list=subproblem.GDPopt_utils.variable_list,
             to_list=model.GDPopt_utils.variable_list,
@@ -382,8 +441,10 @@ def _solve_local_rnGDP_subproblem(model, solve_data):
         return float('-inf'), ub
     elif term_cond == tc.locallyOptimal or term_cond == tc.feasible:
         assert result.solver.status is SolverStatus.ok
-        lb = result.problem.lower_bound if not obj_sense_correction else -result.problem.upper_bound
-        ub = result.problem.upper_bound if not obj_sense_correction else -result.problem.lower_bound
+        lb = result.problem.lower_bound if not obj_sense_correction else \
+             -result.problem.upper_bound
+        ub = result.problem.upper_bound if not obj_sense_correction else \
+             -result.problem.lower_bound
         # TODO handle LB absent
         copy_var_list_values(
             from_list=subproblem.GDPopt_utils.variable_list,
@@ -406,7 +467,8 @@ def _solve_local_rnGDP_subproblem(model, solve_data):
         )
         return float('-inf'), float('inf')
     else:
-        config.logger.warning("Unknown termination condition of %s. Treating as infeasible." % term_cond)
+        config.logger.warning("Unknown termination condition of %s. "
+                              "Treating as infeasible." % term_cond)
         copy_var_list_values(
             from_list=subproblem.GDPopt_utils.variable_list,
             to_list=model.GDPopt_utils.variable_list,

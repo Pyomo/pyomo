@@ -4,6 +4,7 @@ from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.appsi.base import TerminationCondition
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.expr.taylor_series import taylor_series_expansion
+from pyomo.contrib.appsi.cmodel import cmodel_available
 
 
 opt = Gurobi()
@@ -12,6 +13,7 @@ if not opt.available():
 import gurobipy
 
 
+@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
     def setUp(self):
         self.m = pe.ConcreteModel()
@@ -68,13 +70,14 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         self.assertAlmostEqual(x, self.m.x.value)
         self.assertAlmostEqual(y, self.m.y.value)
         x, y = self.get_solution()
-        self.assertNotAlmostEquals(x, self.m.x.value)
-        self.assertNotAlmostEquals(y, self.m.y.value)
+        self.assertNotAlmostEqual(x, self.m.x.value)
+        self.assertNotAlmostEqual(y, self.m.y.value)
         opt.load_vars()
         self.assertAlmostEqual(x, self.m.x.value)
         self.assertAlmostEqual(y, self.m.y.value)
 
 
+@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestGurobiPersistent(unittest.TestCase):
     def test_range_constraints(self):
         m = pe.ConcreteModel()
@@ -266,7 +269,7 @@ class TestGurobiPersistent(unittest.TestCase):
         m.obj = pe.Objective(expr=m.x**2 + m.y**2)
         m.c = pe.Constraint(expr=m.y == (m.x-1)**2 - 2)
         opt = Gurobi()
-        opt.solver_options['nonconvex'] = 2
+        opt.gurobi_options['nonconvex'] = 2
         opt.solve(m)
         self.assertAlmostEqual(m.x.value, -0.3660254037844423, 2)
         self.assertAlmostEqual(m.y.value, -0.13397459621555508, 2)
@@ -281,12 +284,13 @@ class TestGurobiPersistent(unittest.TestCase):
         m.c1 = pe.Constraint(expr=0 <= -m.y + (m.x-1)**2 - 2)
         m.c2 = pe.Constraint(expr=0 >= -m.y + (m.x-1)**2 - 2)
         opt = Gurobi()
-        opt.solver_options['nonconvex'] = 2
+        opt.gurobi_options['nonconvex'] = 2
         opt.solve(m)
         self.assertAlmostEqual(m.x.value, -0.3660254037844423, 2)
         self.assertAlmostEqual(m.y.value, -0.13397459621555508, 2)
 
 
+@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestManualModel(unittest.TestCase):
     def setUp(self):
         opt = Gurobi()
@@ -342,7 +346,7 @@ class TestManualModel(unittest.TestCase):
         self.assertEqual(opt.get_model_attr('NumQConstrs'), 0)
 
         self.assertEqual(opt.get_gurobi_param_info('FeasibilityTol')[2], 1e-6)
-        opt.solver_options['FeasibilityTol'] = 1e-7
+        opt.gurobi_options['FeasibilityTol'] = 1e-7
         opt.config.load_solution = True
         res = opt.solve(m)
         self.assertEqual(opt.get_gurobi_param_info('FeasibilityTol')[2], 1e-7)

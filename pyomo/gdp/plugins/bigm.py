@@ -19,34 +19,29 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
-    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
-    Expression, SortComponents, TraversalStrategy, value,
-    RangeSet, NonNegativeIntegers, LogicalConstraint, )
+    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var, 
+    Expression, SortComponents, TraversalStrategy, value, RangeSet,
+    NonNegativeIntegers, LogicalConstraint, Binary, )
+from pyomo.core.base.boolean_var import (
+    _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
-    _warn_for_active_logical_constraint, target_list, is_child_of, get_src_disjunction,
-    get_src_constraint, get_transformed_constraints,
-    _get_constraint_transBlock, get_src_disjunct,
-    _warn_for_active_disjunction,
-    _warn_for_active_disjunct, )
+    is_child_of, get_src_disjunction, get_src_constraint, 
+    get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
+    _warn_for_active_disjunction, _warn_for_active_disjunct, preprocess_targets,
+    _to_dict)
+from pyomo.core.util import target_list
+from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
-
 from functools import wraps
-from six import iterkeys, iteritems
-from weakref import ref as weakref_ref
+from weakref import ref as weakref_ref, ReferenceType
 
 logger = logging.getLogger('pyomo.gdp.bigm')
 
 NAME_BUFFER = {}
-
-def _to_dict(val):
-    if isinstance(val, (dict, ComponentMap)):
-       return val
-    return {None: val}
-
 
 @TransformationFactory.register('gdp.bigm', doc="Relax disjunctive model using "
                                 "big-M terms.")
@@ -123,8 +118,9 @@ class BigM_Transformation(Transformation):
     CONFIG.declare('assume_fixed_vars_permanent', ConfigValue(
         default=False,
         domain=bool,
-        description="Boolean indicating whether or not to transform so that the "
-        "the transformed model will still be valid when fixed Vars are unfixed.",
+        description="Boolean indicating whether or not to transform so that "
+        "the transformed model will still be valid when fixed Vars are "
+        "unfixed.",
         doc="""
         This is only relevant when the transformation will be estimating values
         for M. If True, the transformation will calculate M values assuming that
@@ -160,14 +156,15 @@ class BigM_Transformation(Transformation):
             Disjunction: self._warn_for_active_disjunction,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       self._transform_block_on_disjunct,
-            LogicalConstraint: self._warn_for_active_logical_statement,
             ExternalFunction: False,
+            Port:        False, # not Arcs, because those are deactivated after
+                                # the network.expand_arcs transformation
         }
         self._generate_debug_messages = False
 
     def _get_bigm_suffix_list(self, block, stopping_block=None):
         # Note that you can only specify suffixes on BlockData objects or
-        # SimpleBlocks. Though it is possible at this point to stick them
+        # ScalarBlocks. Though it is possible at this point to stick them
         # on whatever components you want, we won't pick them up.
         suffix_list = []
 
@@ -214,50 +211,45 @@ class BigM_Transformation(Transformation):
             self.used_args.clear()
 
     def _apply_to_impl(self, instance, **kwds):
+        if not instance.ctype in (Block, Disjunct):
+            raise GDP_Error("Transformation called on %s of type %s. "
+                            "'instance' must be a ConcreteModel, Block, or "
+                            "Disjunct (in the case of nested disjunctions)." %
+                            (instance.name, instance.ctype))
+
         config = self.CONFIG(kwds.pop('options', {}))
 
         # We will let args override suffixes and estimate as a last
         # resort. More specific args/suffixes override ones anywhere in
         # the tree. Suffixes lower down in the tree override ones higher
         # up.
-        if 'default_bigM' in kwds:
-            deprecation_warning("the 'default_bigM=' argument has been "
-                                "replaced by 'bigM='", version='5.4')
-            config.bigM = kwds.pop('default_bigM')
-
         config.set_value(kwds)
         bigM = config.bigM
         self.assume_fixed_vars_permanent = config.assume_fixed_vars_permanent
 
         targets = config.targets
-        if targets is None:
-            targets = (instance, )
         # We need to check that all the targets are in fact on instance. As we
         # do this, we will use the set below to cache components we know to be
         # in the tree rooted at instance.
         knownBlocks = {}
+        if targets is None:
+            targets = (instance, )
+        # we need to preprocess targets to make sure that if there are any
+        # disjunctions in targets that their disjuncts appear before them in
+        # the list.
+        targets = preprocess_targets(targets, instance, knownBlocks)
+
         for t in targets:
-            # check that t is in fact a child of instance
-            if not is_child_of(parent=instance, child=t,
-                               knownBlocks=knownBlocks):
-                raise GDP_Error(
-                    "Target '%s' is not a component on instance '%s'!"
-                    % (t.name, instance.name))
-            elif t.ctype is Disjunction:
+            if t.ctype is Disjunction:
                 if t.is_indexed():
                     self._transform_disjunction(t, bigM)
                 else:
                     self._transform_disjunctionData( t, bigM, t.index())
-            elif t.ctype in (Block, Disjunct):
+            else:# We know t.ctype in (Block, Disjunct) after preprocessing
                 if t.is_indexed():
                     self._transform_block(t, bigM)
                 else:
                     self._transform_blockData(t, bigM)
-            else:
-                raise GDP_Error(
-                    "Target '%s' was not a Block, Disjunct, or Disjunction. "
-                    "It was of type %s and can't be transformed."
-                    % (t.name, type(t)))
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use
@@ -273,7 +265,11 @@ class BigM_Transformation(Transformation):
                         warning_msg += "\t%s\n" % component.name
                     else:
                         warning_msg += "\t%s\n" % component
-                logger.warn(warning_msg)
+                logger.warning(warning_msg)
+
+        # at the end, transform any logical constraints that might be on
+        # instance
+        TransformationFactory('core.logical_to_linear').apply_to(instance)
 
     def _add_transformation_block(self, instance):
         # make a transformation block on instance to put transformed disjuncts
@@ -289,7 +285,7 @@ class BigM_Transformation(Transformation):
         return transBlock
 
     def _transform_block(self, obj, bigM):
-        for i in sorted(iterkeys(obj)):
+        for i in sorted(obj.keys()):
             self._transform_blockData(obj[i], bigM)
 
     def _transform_blockData(self, obj, bigM):
@@ -301,6 +297,8 @@ class BigM_Transformation(Transformation):
                 descend_into=(Block, Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transform_disjunction(disjunction, bigM)
+        # transform any logical constraints
+        TransformationFactory('core.logical_to_linear').apply_to(obj)
 
     def _add_xor_constraint(self, disjunction, transBlock):
         # Put the disjunction constraint on the transformation block and
@@ -345,7 +343,7 @@ class BigM_Transformation(Transformation):
             transBlock = self._add_transformation_block(obj.parent_block())
 
         # relax each of the disjunctionDatas
-        for i in sorted(iterkeys(obj)):
+        for i in sorted(obj.keys()):
             self._transform_disjunctionData(obj[i], bigM, i, transBlock)
 
         # deactivate so the writers don't scream
@@ -381,7 +379,7 @@ class BigM_Transformation(Transformation):
                             obj.getname(fully_qualified=True,
                                         name_buffer=NAME_BUFFER))
         for disjunct in obj.disjuncts:
-            or_expr += disjunct.indicator_var
+            or_expr += disjunct.binary_indicator_var
             # make suffix list. (We don't need it until we are
             # transforming constraints, but it gets created at the
             # disjunct level, so more efficient to make it here and
@@ -408,7 +406,7 @@ class BigM_Transformation(Transformation):
         # deactivated -> either we've already transformed or user deactivated
         if not obj.active:
             if obj.indicator_var.is_fixed():
-                if value(obj.indicator_var) == 0:
+                if not value(obj.indicator_var):
                     # The user cleanly deactivated the disjunct: there
                     # is nothing for us to do here.
                     return
@@ -423,7 +421,7 @@ class BigM_Transformation(Transformation):
                     "indicator_var is not fixed and the disjunct does not "
                     "appear to have been relaxed. This makes no sense. "
                     "(If the intent is to deactivate the disjunct, fix its "
-                    "indicator_var to 0.)"
+                    "indicator_var to False.)"
                     % ( obj.name, ))
 
         if obj._transformation_block is not None:
@@ -468,21 +466,13 @@ class BigM_Transformation(Transformation):
 
     def _transform_block_components(self, block, disjunct, bigM, arg_list,
                                     suffix_list):
-        # Find all the variables declared here (including the indicator_var) and
-        # add a reference on the transformation block so these will be
-        # accessible when the Disjunct is deactivated. We don't descend into
-        # Disjuncts because we'll just reference the references which are
-        # already on their transformation blocks.
+        # We find any transformed disjunctions that might be here because we
+        # need to move their transformation blocks up onto the parent block
+        # before we transform anything else on this block. Note that we do this
+        # before we create references to local variables because we do not want
+        # duplicate references to indicator variables and local variables on
+        # nested disjuncts.
         disjunctBlock = disjunct._transformation_block()
-        varRefBlock = disjunctBlock.localVarReferences
-        for v in block.component_objects(Var, descend_into=Block, active=None):
-            varRefBlock.add_component(unique_component_name(
-                varRefBlock, v.getname(fully_qualified=True,
-                                       name_buffer=NAME_BUFFER)), Reference(v))
-
-        # Now need to find any transformed disjunctions that might be here
-        # because we need to move their transformation blocks up onto the parent
-        # block before we transform anything else on this block
         destinationBlock = disjunctBlock.parent_block()
         for obj in block.component_data_objects(
                 Disjunction,
@@ -499,6 +489,38 @@ class BigM_Transformation(Transformation):
             self._transfer_transBlock_data(transBlock, destinationBlock)
             # we leave the transformation block because it still has the XOR
             # constraints, which we want to be on the parent disjunct.
+
+        # Transform any logical constraints here. We need to do this before we
+        # create the variable references!
+        TransformationFactory('core.logical_to_linear').apply_to(block)
+
+        # We don't know where all the BooleanVars are used, so if there are any
+        # that the above transformation didn't transform, we need to do it now,
+        # so that the Reference gets moved up. This won't be necessary when the
+        # writers are willing to find Vars not in the active subtree.
+        for boolean in block.component_data_objects(BooleanVar,
+                                                    descend_into=Block,
+                                                    active=None):
+            if isinstance(boolean._associated_binary,
+                          _DeprecatedImplicitAssociatedBinaryVariable):
+                parent_block = boolean.parent_block()
+                new_var = Var(domain=Binary)
+                parent_block.add_component(
+                    unique_component_name(parent_block,
+                                          boolean.local_name + "_asbinary"),
+                    new_var)
+                boolean.associate_binary_var(new_var)
+
+        # Find all the variables declared here (including the indicator_var) and
+        # add a reference on the transformation block so these will be
+        # accessible when the Disjunct is deactivated. We don't descend into
+        # Disjuncts because we just moved the references to their local
+        # variables up in the previous loop.
+        varRefBlock = disjunctBlock.localVarReferences
+        for v in block.component_objects(Var, descend_into=Block, active=None):
+            varRefBlock.add_component(unique_component_name(
+                varRefBlock, v.getname(fully_qualified=True,
+                                       name_buffer=NAME_BUFFER)), Reference(v))
 
         # Now look through the component map of block and transform everything
         # we have a handler for. Yell if we don't know how to handle it. (Note
@@ -526,7 +548,7 @@ class BigM_Transformation(Transformation):
         # we need to leave those on the disjunct.
         disjunctList = toBlock.relaxedDisjuncts
         to_delete = []
-        for idx, disjunctBlock in iteritems(fromBlock.relaxedDisjuncts):
+        for idx, disjunctBlock in fromBlock.relaxedDisjuncts.items():
             newblock = disjunctList[len(disjunctList)]
             newblock.transfer_attributes_from(disjunctBlock)
 
@@ -556,7 +578,8 @@ class BigM_Transformation(Transformation):
 
     def _warn_for_active_logical_statement(
             self, logical_statment, disjunct, infodict, bigMargs, suffix_list):
-        _warn_for_active_logical_constraint(logical_statment, disjunct, NAME_BUFFER)
+        _warn_for_active_logical_constraint(logical_statment, disjunct,
+                                            NAME_BUFFER)
 
     def _transform_block_on_disjunct(self, block, disjunct, bigMargs, arg_list,
                                      suffix_list):
@@ -565,7 +588,7 @@ class BigM_Transformation(Transformation):
         # directly.  (We are passing the disjunct through so that when
         # we find constraints, _xform_constraint will have access to
         # the correct indicator variable.)
-        for i in sorted(iterkeys(block)):
+        for i in sorted(block.keys()):
             self._transform_block_components( block[i], disjunct, bigMargs,
                                               arg_list, suffix_list)
 
@@ -615,7 +638,7 @@ class BigM_Transformation(Transformation):
             newConstraint = Constraint(obj.index_set(),
                                        disjunctionRelaxationBlock.lbub)
             # we map the container of the original to the container of the
-            # transformed constraint. Don't do this if obj is a SimpleConstraint
+            # transformed constraint. Don't do this if obj is a ScalarConstraint
             # because we will treat that like a _ConstraintData and map to a
             # list of transformed _ConstraintDatas
             constraintMap['transformedConstraints'][obj] = newConstraint
@@ -625,7 +648,7 @@ class BigM_Transformation(Transformation):
         # add mapping of transformed constraint to original constraint
         constraintMap['srcConstraints'][newConstraint] = obj
 
-        for i in sorted(iterkeys(obj)):
+        for i in sorted(obj.keys()):
             c = obj[i]
             if not c.active:
                 continue
@@ -638,7 +661,7 @@ class BigM_Transformation(Transformation):
             lower, upper = self._get_M_from_args(c, bigMargs, arg_list, lower,
                                                  upper)
             M = (lower[0], upper[0])
-            
+
             if self._generate_debug_messages:
                 _name = obj.getname(
                     fully_qualified=True, name_buffer=NAME_BUFFER)
@@ -650,8 +673,9 @@ class BigM_Transformation(Transformation):
             if (M[0] is None and c.lower is not None) or \
                (M[1] is None and c.upper is not None):
                 # first get anything parent to c but below disjunct
-                suffix_list = self._get_bigm_suffix_list(c.parent_block(),
-                                                         stopping_block=disjunct)
+                suffix_list = self._get_bigm_suffix_list(
+                    c.parent_block(),
+                    stopping_block=disjunct)
                 # prepend that to what we already collected for the disjunct.
                 suffix_list.extend(disjunct_suffix_list)
                 lower, upper = self._update_M_from_suffixes(c, suffix_list,
@@ -682,7 +706,7 @@ class BigM_Transformation(Transformation):
             # save the source information
             bigm_src[c] = (lower, upper)
 
-            # Handle indices for both SimpleConstraint and IndexedConstraint
+            # Handle indices for both ScalarConstraint and IndexedConstraint
             if i.__class__ is tuple:
                 i_lb = i + ('lb',)
                 i_ub = i + ('ub',)
@@ -697,7 +721,7 @@ class BigM_Transformation(Transformation):
                 if M[0] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint '%s' "
                                     "because M is not defined." % name)
-                M_expr = M[0] * (1 - disjunct.indicator_var)
+                M_expr = M[0] * (1 - disjunct.binary_indicator_var)
                 newConstraint.add(i_lb, c.lower <= c. body - M_expr)
                 constraintMap[
                     'transformedConstraints'][c] = [newConstraint[i_lb]]
@@ -706,7 +730,7 @@ class BigM_Transformation(Transformation):
                 if M[1] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint '%s' "
                                     "because M is not defined." % name)
-                M_expr = M[1] * (1 - disjunct.indicator_var)
+                M_expr = M[1] * (1 - disjunct.binary_indicator_var)
                 newConstraint.add(i_ub, c.body - M_expr <= c.upper)
                 transformed = constraintMap['transformedConstraints'].get(c)
                 if transformed is not None:
@@ -753,7 +777,7 @@ class BigM_Transformation(Transformation):
         parent = constraint.parent_component()
         if constraint in bigMargs:
             m = bigMargs[constraint]
-            (lower, upper, 
+            (lower, upper,
              need_lower, need_upper) = self._process_M_value(m, lower, upper,
                                                              need_lower,
                                                              need_upper,
@@ -765,7 +789,7 @@ class BigM_Transformation(Transformation):
                 return lower, upper
         elif parent in bigMargs:
             m = bigMargs[parent]
-            (lower, upper, 
+            (lower, upper,
              need_lower, need_upper) = self._process_M_value(m, lower, upper,
                                                              need_lower,
                                                              need_upper,
@@ -777,23 +801,21 @@ class BigM_Transformation(Transformation):
 
         # use the precomputed traversal up the blocks
         for arg in arg_list:
-            for block, val in iteritems(arg):
-                (lower, upper, 
-                 need_lower, need_upper) = self._process_M_value(val, lower,
-                                                                 upper,
-                                                                 need_lower,
-                                                                 need_upper,
-                                                                 bigMargs,
-                                                                 block,
-                                                                 constraint_name,
-                                                                 from_args=True)
+            for block, val in arg.items():
+                (lower, upper,
+                 need_lower,
+                 need_upper) = self._process_M_value( val, lower, upper,
+                                                      need_lower, need_upper,
+                                                      bigMargs, block,
+                                                      constraint_name,
+                                                      from_args=True)
                 if not need_lower and not need_upper:
                     return lower, upper
 
         # last check for value for None!
         if None in bigMargs:
             m = bigMargs[None]
-            (lower, upper, 
+            (lower, upper,
              need_lower, need_upper) = self._process_M_value(m, lower, upper,
                                                              need_lower,
                                                              need_upper,
@@ -818,14 +840,12 @@ class BigM_Transformation(Transformation):
         for bigm in suffix_list:
             if constraint in bigm:
                 M = bigm[constraint]
-                (lower, upper, 
-                 need_lower, need_upper) = self._process_M_value(M, lower,
-                                                                 upper,
-                                                                 need_lower,
-                                                                 need_upper,
-                                                                 bigm,
-                                                                 constraint,
-                                                                 constraint_name)
+                (lower, upper,
+                 need_lower,
+                 need_upper) = self._process_M_value(M, lower, upper,
+                                                     need_lower, need_upper,
+                                                     bigm, constraint,
+                                                     constraint_name)
                 if not need_lower and not need_upper:
                     return lower, upper
 
@@ -833,13 +853,12 @@ class BigM_Transformation(Transformation):
             if constraint.parent_component() in bigm:
                 parent = constraint.parent_component()
                 M = bigm[parent]
-                (lower, upper, 
-                 need_lower, need_upper) = self._process_M_value(M, lower,
-                                                                 upper,
-                                                                 need_lower,
-                                                                 need_upper,
-                                                                 bigm, parent,
-                                                                 constraint_name)
+                (lower, upper,
+                 need_lower,
+                 need_upper) = self._process_M_value(M, lower, upper,
+                                                     need_lower, need_upper,
+                                                     bigm, parent,
+                                                     constraint_name)
                 if not need_lower and not need_upper:
                     return lower, upper
 
@@ -849,8 +868,8 @@ class BigM_Transformation(Transformation):
             for bigm in suffix_list:
                 if None in bigm:
                     M = bigm[None]
-                    (lower, upper, 
-                     need_lower, 
+                    (lower, upper,
+                     need_lower,
                      need_upper) = self._process_M_value(M, lower, upper,
                                                          need_lower, need_upper,
                                                          bigm, None,
@@ -869,47 +888,19 @@ class BigM_Transformation(Transformation):
                     fixed_vars[v] = value(v)
                     v.fixed = False
 
-        # Calculate a best guess at M
-        repn = generate_standard_repn(expr, quadratic=False)
-        M = [0, 0]
-
-        if not repn.is_nonlinear():
-            if repn.constant is not None:
-                for i in (0, 1):
-                    if M[i] is not None:
-                        M[i] += repn.constant
-
-            for i, coef in enumerate(repn.linear_coefs or []):
-                var = repn.linear_vars[i]
-                bounds = (value(var.lb), value(var.ub))
-                for i in (0, 1):
-                    # reverse the bounds if the coefficient is negative
-                    if coef > 0:
-                        j = i
-                    else:
-                        j = 1 - i
-
-                    if bounds[i] is not None:
-                        M[j] += value(bounds[i]) * coef
-                    else:
-                        raise GDP_Error(
-                            "Cannot estimate M for "
-                            "expressions with unbounded variables."
-                            "\n\t(found unbounded var '%s' while processing "
-                            "constraint '%s')" % (var.name, name))
+        expr_lb, expr_ub = compute_bounds_on_expr(expr)
+        if expr_lb is None or expr_ub is None:
+            raise GDP_Error("Cannot estimate M for unbounded "
+                            "expressions.\n\t(found while processing "
+                            "constraint '%s'). Please specify a value of M "
+                            "or ensure all variables that appear in the "
+                            "constraint are bounded." % name)
         else:
-            # expression is nonlinear. Try using `contrib.fbbt` to estimate.
-            expr_lb, expr_ub = compute_bounds_on_expr(expr)
-            if expr_lb is None or expr_ub is None:
-                raise GDP_Error("Cannot estimate M for unbounded nonlinear "
-                                "expressions.\n\t(found while processing "
-                                "constraint '%s')" % name)
-            else:
-                M = (expr_lb, expr_ub)
+            M = (expr_lb, expr_ub)
 
         # clean up if we unfixed things (fixed_vars is empty if we were assuming
         # fixed vars are fixed for life)
-        for v, val in iteritems(fixed_vars):
+        for v, val in fixed_vars.items():
             v.fix(val)
 
         return tuple(M)
@@ -934,14 +925,14 @@ class BigM_Transformation(Transformation):
         return get_transformed_constraints(srcConstraint)
 
     @deprecated("The get_m_value_src function is deprecated. Use "
-                "the get_M_value_src function is you need source "
+                "the get_M_value_src function if you need source "
                 "information or the get_M_value function if you "
                 "only need values.", version='5.7.1')
     def get_m_value_src(self, constraint):
         transBlock = _get_constraint_transBlock(constraint)
         ((lower_val, lower_source, lower_key),
          (upper_val, upper_source, upper_key)) = transBlock.bigm_src[constraint]
-        
+
         if constraint.lower is not None and constraint.upper is not None and \
            (not lower_source is upper_source or not lower_key is upper_key):
             raise GDP_Error("This is why this method is deprecated: The lower "
@@ -966,19 +957,20 @@ class BigM_Transformation(Transformation):
         Return is of the form: ((lower_M_val, lower_M_source, lower_M_key),
                                 (upper_M_val, upper_M_source, upper_M_key))
 
-        If the constraint does not have a lower bound (or an upper bound), 
+        If the constraint does not have a lower bound (or an upper bound),
         the first (second) element will be (None, None, None). Note that if
         a constraint is of the form a <= expr <= b or is an equality constraint,
         it is not necessarily true that the source of lower_M and upper_M
         are the same.
 
-        If the M value came from an arg, source is the  dictionary itself and 
+        If the M value came from an arg, source is the  dictionary itself and
         key is the key in that dictionary which gave us the M value.
 
-        If the M value came from a Suffix, source is the BigM suffix used and 
+        If the M value came from a Suffix, source is the BigM suffix used and
         key is the key in that Suffix.
 
-        If the transformation calculated the value, both source and key are None.
+        If the transformation calculated the value, both source and key are
+        None.
 
         Parameters
         ----------
@@ -992,7 +984,7 @@ class BigM_Transformation(Transformation):
 
     def get_M_value(self, constraint):
         """Returns the M values used to transform constraint. Return is a tuple:
-        (lower_M_value, upper_M_value). Either can be None if constraint does 
+        (lower_M_value, upper_M_value). Either can be None if constraint does
         not have a lower or upper bound, respectively.
 
         Parameters

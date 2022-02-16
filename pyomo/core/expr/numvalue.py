@@ -16,14 +16,22 @@ __all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type',
 import sys
 import logging
 
-from pyomo.common.deprecation import deprecated
-from pyomo.core.expr.expr_common import \
-    (_add, _sub, _mul, _div, _pow,
-     _neg, _abs, _radd,
-     _rsub, _rmul, _rdiv, _rpow,
-     _iadd, _isub, _imul, _idiv,
-     _ipow, _lt, _le, _eq)
-
+from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.errors import PyomoException
+from pyomo.core.expr.expr_common import (
+    _add, _sub, _mul, _div, _pow,
+    _neg, _abs, _radd,
+    _rsub, _rmul, _rdiv, _rpow,
+    _iadd, _isub, _imul, _idiv,
+    _ipow, _lt, _le, _eq
+)
+# TODO: update imports of these objects to pull from numeric_types
+from pyomo.common.numeric_types import (
+    nonpyomo_leaf_types, native_types, native_numeric_types,
+    native_integer_types, native_boolean_types, native_logical_types,
+    RegisterNumericType, RegisterIntegerType, RegisterBooleanType,
+    pyomo_constant_types,
+)
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 
@@ -67,93 +75,8 @@ class NonNumericValue(object):
     def __setstate__(self, state):
         setattr(self, 'value', state['value'])
 
+nonpyomo_leaf_types.add(NonNumericValue)
 
-#: Python set used to identify numeric constants, boolean values, strings
-#: and instances of
-#: :class:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>`,
-#: which is commonly used in code that walks Pyomo expression trees.
-#:
-#: :data:`nonpyomo_leaf_types` = :data:`native_types <pyomo.core.expr.numvalue.native_types>` + { :data:`NonNumericValue <pyomo.core.expr.numvalue.NonNumericValue>` }
-nonpyomo_leaf_types = set([NonNumericValue])
-
-
-# It is *significantly* faster to build the list of types we want to
-# test against as a "static" set, and not to regenerate it locally for
-# every call.  Plus, this allows us to dynamically augment the set
-# with new "native" types (e.g., from NumPy)
-#
-# Note: These type sets are used in set_types.py for domain validation
-#       For backward compatibility reasons, we include str in the set
-#       of valid types for bool. We also avoid updating the numeric
-#       and integer type sets when a new boolean type is registered
-#       because not all boolean types exhibit numeric properties
-#       (e.g., numpy.bool_)
-#
-
-#: Python set used to identify numeric constants.  This set includes
-#: native Python types as well as numeric types from Python packages
-#: like numpy, which may be registered by users.
-native_numeric_types = set([ int, float, bool ])
-native_integer_types = set([ int, bool ])
-native_boolean_types = set([ int, bool, str, bytes ])
-native_logical_types = {bool, }
-pyomo_constant_types = set()  # includes NumericConstant
-
-#: Python set used to identify numeric constants and related native
-#: types.  This set includes
-#: native Python types as well as numeric types from Python packages
-#: like numpy.
-#:
-#: :data:`native_types` = :data:`native_numeric_types <pyomo.core.expr.numvalue.native_numeric_types>` + { str }
-native_types = set([ bool, str, type(None), slice, bytes])
-
-native_types.update( native_numeric_types )
-native_types.update( native_integer_types )
-native_types.update( native_boolean_types )
-nonpyomo_leaf_types.update( native_types )
-
-def RegisterNumericType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized to handle numeric values.
-
-    The argument should be a class (e.g, numpy.float64).
-    """
-    global native_numeric_types
-    global native_types
-    native_numeric_types.add(new_type)
-    native_types.add(new_type)
-    nonpyomo_leaf_types.add(new_type)
-
-def RegisterIntegerType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized to handle integer values. This also registers the type
-    as numeric but does not register it as boolean.
-
-    The argument should be a class (e.g., numpy.int64).
-    """
-    global native_numeric_types
-    global native_integer_types
-    global native_types
-    native_numeric_types.add(new_type)
-    native_integer_types.add(new_type)
-    native_types.add(new_type)
-    nonpyomo_leaf_types.add(new_type)
-
-def RegisterBooleanType(new_type):
-    """
-    A utility function for updating the set of types that are
-    recognized as handling boolean values. This function does not
-    register the type of integer or numeric.
-
-    The argument should be a class (e.g., numpy.bool_).
-    """
-    global native_boolean_types
-    global native_types
-    native_boolean_types.add(new_type)
-    native_types.add(new_type)
-    nonpyomo_leaf_types.add(new_type)
 
 def value(obj, exception=True):
     """
@@ -518,7 +441,7 @@ Dynamic registration is supported for convenience, but there are known
 limitations to this approach.  We recommend explicitly registering
 numeric types using the following functions:
     RegisterNumericType(), RegisterIntegerType(), RegisterBooleanType()."""
-                % (type(obj).__name__,))
+                % (obj_class.__name__,))
         except:
             pass
         return retval
@@ -601,11 +524,6 @@ class NumericValue(PyomoObject):
     def local_name(self):
         return self.getname(fully_qualified=False)
 
-    @deprecated("The cname() method has been renamed to getname().",
-                version='5.0')
-    def cname(self, *args, **kwds):
-        return self.getname(*args, **kwds)
-
     def is_numeric_type(self):
         """Return True if this class is a Pyomo numeric object"""
         return True
@@ -655,33 +573,73 @@ class NumericValue(PyomoObject):
         """
         return None
 
-    def __float__(self):
+    def __bool__(self):
+        """Coerce the value to a bool
+
+        Numeric values can be coerced to bool only if the value /
+        expression is constant.  Fixed (but non-constant) or variable
+        values will raise an exception.
+
+        Raises:
+            PyomoException
+
         """
-        Coerce the value to a floating point
+        # Note that we want to implement __bool__, as scalar numeric
+        # components (e.g., Param, Var) implement __len__ (since they
+        # are implicit containers), and Python falls back on __len__ if
+        # __bool__ is not defined.
+        if self.is_constant():
+            return bool(self())
+        raise PyomoException("""
+Cannot convert non-constant Pyomo numeric value (%s) to bool.
+This error is usually caused by using a Var, unit, or mutable Param in a
+Boolean context such as an "if" statement. For example,
+    >>> m.x = Var()
+    >>> if not m.x:
+    ...     pass
+would cause this exception.""".strip() % (self,))
+
+    def __float__(self):
+        """Coerce the value to a floating point
+
+        Numeric values can be coerced to float only if the value /
+        expression is constant.  Fixed (but non-constant) or variable
+        values will raise an exception.
 
         Raises:
             TypeError
+
         """
-        raise TypeError(
-"""Implicit conversion of Pyomo NumericValue type `%s' to a float is
-disabled. This error is often the result of using Pyomo components as
-arguments to one of the Python built-in math module functions when
-defining expressions. Avoid this error by using Pyomo-provided math
-functions.""" % (self.name,))
+        if self.is_constant():
+            return float(self())
+        raise TypeError("""
+Implicit conversion of Pyomo numeric value (%s) to float is disabled.
+This error is often the result of using Pyomo components as arguments to
+one of the Python built-in math module functions when defining
+expressions. Avoid this error by using Pyomo-provided math functions or
+explicitly resolving the numeric value using the Pyomo value() function.
+""".strip() % (self,))
 
     def __int__(self):
-        """
-        Coerce the value to an integer
+        """Coerce the value to an integer
+
+        Numeric values can be coerced to int only if the value /
+        expression is constant.  Fixed (but non-constant) or variable
+        values will raise an exception.
 
         Raises:
             TypeError
+
         """
-        raise TypeError(
-"""Implicit conversion of Pyomo NumericValue type `%s' to an integer is
-disabled. This error is often the result of using Pyomo components as
-arguments to one of the Python built-in math module functions when
-defining expressions. Avoid this error by using Pyomo-provided math
-functions.""" % (self.name,))
+        if self.is_constant():
+            return int(self())
+        raise TypeError("""
+Implicit conversion of Pyomo numeric value (%s) to int is disabled.
+This error is often the result of using Pyomo components as arguments to
+one of the Python built-in math module functions when defining
+expressions. Avoid this error by using Pyomo-provided math functions or
+explicitly resolving the numeric value using the Pyomo value() function.
+""".strip() % (self,))
 
     def __lt__(self,other):
         """
@@ -947,6 +905,10 @@ functions.""" % (self.name,))
         """
         return _generate_other_expression(_abs,self, None)
 
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        return NumericNDArray.__array_ufunc__(
+            None, ufunc, method, *inputs, **kwargs)
+
     def to_string(self, verbose=None, labeler=None, smap=None,
                   compute_values=False):
         """
@@ -963,17 +925,17 @@ functions.""" % (self.name,))
         Returns:
             A string representation for the expression tree.
         """
-        if compute_values:
+        if compute_values and self.is_fixed():
             try:
                 return str(self())
             except:
                 pass        
         if not self.is_constant():
-            if smap:
+            if smap is not None:
                 return smap.getSymbol(self, labeler)
             elif labeler is not None:
                 return labeler(self)
-        return self.__str__()
+        return str(self)
 
 
 class NumericConstant(NumericValue):
@@ -1006,16 +968,6 @@ class NumericConstant(NumericValue):
     def __str__(self):
         return str(self.value)
 
-    def __nonzero__(self):
-        """Return True if the value is defined and non-zero"""
-        if self.value:
-            return True
-        if self.value is None:
-            raise ValueError("Numeric Constant: value is undefined")
-        return False
-
-    __bool__ = __nonzero__
-
     def __call__(self, exception=True):
         """Return the constant value"""
         return self.value
@@ -1028,6 +980,31 @@ class NumericConstant(NumericValue):
 
 pyomo_constant_types.add(NumericConstant)
 
-
 # We use as_numeric() so that the constant is also in the cache
 ZeroConstant = as_numeric(0)
+
+#
+# Note: the "if numpy_available" in the class definition also ensures
+# that the numpy types are registered if numpy is in fact available
+#
+class NumericNDArray(np.ndarray if numpy_available else object):
+    """An ndarray subclass that stores Pyomo numeric expressions"""
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        if method == '__call__':
+            # Convert all incoming types to ndarray (to prevent recursion)
+            args = [np.asarray(i) for i in inputs]
+            # Set the return type to be an 'object'.  This prevents the
+            # logical operators from casting the result to a bool.  This
+            # requires numpy >= 1.6
+            kwargs['dtype'] = object
+
+        # Delegate to the base ufunc, but return an instance of this
+        # class so that additional operators hit this method.
+        ans = getattr(ufunc, method)(*args, **kwargs)
+        if isinstance(ans, np.ndarray):
+            if ans.size == 1:
+                return ans[0]
+            return ans.view(NumericNDArray)
+        else:
+            return ans

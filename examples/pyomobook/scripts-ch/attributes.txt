@@ -1,0 +1,3 @@
+1956*x[Harlingen,NYC] + 1606*x[Harlingen,LA] + 1410*x[Harlingen,Chicago] + 330*x[Harlingen,Houston] + 1096*x[Memphis,NYC] + 1792*x[Memphis,LA] + 531*x[Memphis,Chicago] + 567*x[Memphis,Houston] + 485*x[Ashland,NYC] + 2322*x[Ashland,LA] + 324*x[Ashland,Chicago] + 1236*x[Ashland,Houston]
+2745.0
+1.0

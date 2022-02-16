@@ -7,20 +7,23 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 import abc
 import logging
 import numpy as np
 from scipy.sparse import coo_matrix
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base import Var, Set, Constraint, value
 from pyomo.core.base.block import _BlockData, Block, declare_custom_block
-from pyomo.core.base.util import Initializer
+from pyomo.core.base.initializer import Initializer
+from pyomo.core.base.set import UnindexedComponent_set
+from pyomo.core.base.reference import Reference
 
 from ..sparse.block_matrix import BlockMatrix
 
-from six import iteritems
 
 logger = logging.getLogger('pyomo.contrib.pynumero')
 
@@ -293,26 +296,67 @@ class ExternalGreyBoxModel(object):
 
 class ExternalGreyBoxBlockData(_BlockData):
 
-    def set_external_model(self, external_grey_box_model):
+    def set_external_model(self,
+            external_grey_box_model,
+            inputs=None,
+            outputs=None,
+            ):
+        """
+        Parameters
+        ----------
+        external_grey_box_model: ExternalGreyBoxModel
+            The external model that will be interfaced to in this block
+        inputs: List of VarData objects
+            If provided, these VarData will be used as inputs into the
+            external model.
+        outputs: List of VarData objects
+            If provided, these VarData will be used as outputs from the
+            external model.
+
+        """
         self._ex_model = ex_model = external_grey_box_model
         if ex_model is None:
             self._input_names = self._output_names = None
             self.inputs = self.outputs = None
             return
 
+        # Shouldn't need input names if we provide input vars, but
+        # no reason to remove this.
+        # _could_ make inputs a reference-to-mapping
         self._input_names = ex_model.input_names()
         if self._input_names is None or len(self._input_names) == 0:
             raise ValueError(
                 'No input_names specified for external_grey_box_model.'
                 ' Must specify at least one input.')
+
         self._input_names_set = Set(initialize=self._input_names, ordered=True)
-        self.inputs = Var(self._input_names_set)
+
+        if inputs is None:
+            self.inputs = Var(self._input_names_set)
+        else:
+            if ex_model.n_inputs() != len(inputs):
+                raise ValueError(
+                    "Dimension mismatch in provided input vars for external "
+                    "model.\nExpected %s input vars, got %s."
+                    % (ex_model.n_inputs(), len(inputs))
+                    )
+            self.inputs = Reference(inputs)
 
         self._equality_constraint_names = ex_model.equality_constraint_names()
         self._output_names = ex_model.output_names()
 
         self._output_names_set = Set(initialize=self._output_names, ordered=True)
-        self.outputs = Var(self._output_names_set)
+
+        if outputs is None:
+            self.outputs = Var(self._output_names_set)
+        else:
+            if ex_model.n_outputs() != len(outputs):
+                raise ValueError(
+                    "Dimension mismatch in provided output vars for external "
+                    "model.\nExpected %s output vars, got %s."
+                    % (ex_model.n_outputs(), len(outputs))
+                    )
+            self.outputs = Reference(outputs)
 
         # call the callback so the model can set initialization, bounds, etc.
         external_grey_box_model.finalize_block_construction(self)
@@ -322,11 +366,14 @@ class ExternalGreyBoxBlockData(_BlockData):
 
 
 class ExternalGreyBoxBlock(Block):
+
+    _ComponentDataClass = ExternalGreyBoxBlockData
+
     def __new__(cls, *args, **kwds):
         if cls != ExternalGreyBoxBlock:
             target_cls = cls
         elif not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            target_cls = SimpleExternalGreyBoxBlock
+            target_cls = ScalarExternalGreyBoxBlock
         else:
             target_cls = IndexedExternalGreyBoxBlock
         return super(ExternalGreyBoxBlock, cls).__new__(target_cls)
@@ -353,11 +400,11 @@ class ExternalGreyBoxBlock(Block):
 
         if self._init_model is not None:
             block = self.parent_block()
-            for index, data in iteritems(self):
+            for index, data in self.items():
                 data.set_external_model(self._init_model(block, index))
 
 
-class SimpleExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock):
+class ScalarExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock):
     def __init__(self, *args, **kwds):
         ExternalGreyBoxBlockData.__init__(self, component=self)
         ExternalGreyBoxBlock.__init__(self, *args, **kwds)
@@ -366,5 +413,10 @@ class SimpleExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock)
     display = ExternalGreyBoxBlock.display
 
 
-class IndexedExternalGreyBoxBlock(Block):
+class SimpleExternalGreyBoxBlock(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarExternalGreyBoxBlock
+    __renamed__version__ = '6.0'
+
+
+class IndexedExternalGreyBoxBlock(ExternalGreyBoxBlock):
     pass

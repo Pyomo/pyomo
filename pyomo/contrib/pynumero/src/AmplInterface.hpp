@@ -34,7 +34,7 @@ public:
    AmplInterface();
    virtual ~AmplInterface();
 
-   void initialize(const char *nlfilename); 
+   void initialize(const char *nlfilename, const char *amplfunc="");
 
    virtual FILE* open_nl(ASL_pfgh *asl, char *stub) = 0;
 

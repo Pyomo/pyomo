@@ -28,7 +28,6 @@ from pyomo.core.expr.current import (
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 
-import pyomo.core.kernel.register_numpy_types
 import pyomo.core.kernel.base
 import pyomo.core.kernel.homogeneous_container
 import pyomo.core.kernel.heterogeneous_container

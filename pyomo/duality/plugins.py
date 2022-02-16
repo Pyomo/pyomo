@@ -9,7 +9,6 @@
 #  ___________________________________________________________________________
 
 import logging
-from six import iteritems
 
 from pyomo.common.deprecation import deprecated
 from pyomo.core.base import (Transformation,
@@ -38,16 +37,17 @@ logger = logging.getLogger('pyomo.core')
 # specified, then the entire model is dualized.
 # This returns a new Block object.
 #
-@TransformationFactory.register('duality.linear_dual', doc="Dualize a linear model")
+@TransformationFactory.register(
+    'duality.linear_dual', doc="[DEPRECATED] Dualize a linear model")
+@deprecated(
+    "Use of the pyomo.duality package is deprecated. There are known bugs "
+    "in pyomo.duality, and we do not recommend the use of this code. "
+    "Development of dualization capabilities has been shifted to "
+    "the Pyomo Adversarial Optimization (PAO) library. Please contact "
+    "William Hart for further details (wehart@sandia.gov).",
+    version='5.6.2')
 class LinearDual_PyomoTransformation(Transformation):
 
-    @deprecated(
-        "Use of the pyomo.duality package is deprecated. There are known bugs "
-        "in pyomo.duality, and we do not recommend the use of this code. "
-        "Development of dualization capabilities has been shifted to "
-        "the Pyomo Adversarial Optimization (PAO) library. Please contact "
-        "William Hart for further details (wehart@sandia.gov).",
-        version='5.6.2')
     def __init__(self):
         super(LinearDual_PyomoTransformation, self).__init__()
 
@@ -123,7 +123,7 @@ class LinearDual_PyomoTransformation(Transformation):
         # Construct the constraints
         #
         for cname in A:
-            for ndx, terms in iteritems(A[cname]):
+            for ndx, terms in A[cname].items():
                 expr = 0
                 for term in terms:
                     expr += term.coef * getvar(term.var, term.ndx)
@@ -144,7 +144,7 @@ class LinearDual_PyomoTransformation(Transformation):
                     c_name = "%s[%s]" % (cname, str(ndx))
                 setattr(dual, c_name, c)
             #
-            for (name, ndx), domain in iteritems(v_domain):
+            for (name, ndx), domain in v_domain.items():
                 v = getvar(name, ndx)
                 flag = type(ndx) is tuple and (ndx[-1] == 'lb' or ndx[-1] == 'ub')
                 if domain == 1:

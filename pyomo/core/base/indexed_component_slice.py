@@ -9,7 +9,10 @@
 #  ___________________________________________________________________________
 
 import copy
+import itertools
+
 from pyomo.common import DeveloperError
+from pyomo.common.collections import Sequence
 
 
 class IndexedComponent_slice(object):
@@ -204,7 +207,7 @@ class IndexedComponent_slice(object):
             pass
         return None
 
-    def __call__(self, *idx, **kwds):
+    def __call__(self, *args, **kwds):
         """Special handling of the "()" operator for component slices.
 
         Creating a slice of a component returns a IndexedComponent_slice
@@ -230,7 +233,7 @@ class IndexedComponent_slice(object):
             self._len -= 1
 
         ans = IndexedComponent_slice(self, (
-            IndexedComponent_slice.call, idx, kwds ) )
+            IndexedComponent_slice.call, args, kwds ) )
         # Because we just duplicated the slice and added a new entry, we
         # know that the _len == len(_call_stack)
         if ans._call_stack[-2][1] == 'component':
@@ -239,6 +242,52 @@ class IndexedComponent_slice(object):
             # Note: simply calling "list(self)" results in infinite
             # recursion in python2.6
             return list( i for i in ans )
+
+    @classmethod
+    def _getitem_args_to_str(cls, args):
+        for i, v in enumerate(args):
+            if v is Ellipsis:
+                args[i] = '...'
+            elif type(v) is slice:
+                args[i] = (
+                    (repr(v.start) if v.start is not None else '') + ':' +
+                    (repr(v.stop) if v.stop is not None else '') +
+                    (':%r' % v.step if v.step is not None else ''))
+            else:
+                args[i] = repr(v)
+        return '[' + ', '.join(args) + ']'
+
+    def __str__(self):
+        ans = ''
+        for level in self._call_stack:
+            if level[0] == IndexedComponent_slice.slice_info:
+                ans += level[1][0].name
+                tmp = dict(level[1][1])
+                tmp.update(level[1][2])
+                if level[1][3] is not None:
+                    tmp[level[1][3]] = Ellipsis
+                ans += self._getitem_args_to_str([tmp[i] for i in sorted(tmp)])
+            elif level[0] & IndexedComponent_slice.ITEM_MASK:
+                if isinstance(level[1], Sequence):
+                    tmp = list(level[1])
+                else:
+                    tmp = [level[1]]
+                ans += self._getitem_args_to_str(tmp)
+            elif level[0] & IndexedComponent_slice.ATTR_MASK:
+                ans += '.' + level[1]
+            elif level[0] & IndexedComponent_slice.CALL_MASK:
+                ans += (
+                    '(' + ', '.join(
+                        itertools.chain(
+                            (repr(_) for _ in level[1]),
+                            ('%s=%r' % kv for kv in level[2].items()))
+                    ) + ')'
+                )
+            if level[0] & IndexedComponent_slice.SET_MASK:
+                ans += ' = %r' % (level[2],)
+            elif level[0] & IndexedComponent_slice.DEL_MASK:
+                ans = 'del ' + ans
+        return ans
 
     def __hash__(self):
         return hash(tuple(_freeze(x) for x in self._call_stack[:self._len]))
@@ -323,13 +372,13 @@ class _slice_generator(object):
             or len(self.component._implicit_subsets) == 1 )
 
         self.explicit_index_count = len(fixed) + len(sliced)
-        if iter_over_index:
+        if iter_over_index and component.index_set().isfinite():
             # This should be used to iterate over all the potential
             # indices of a sparse IndexedComponent.
             self.component_iter = component.index_set().__iter__()
         else:
             # The default behavior is to iterate over the component.
-            self.component_iter = component.__iter__()
+            self.component_iter = component.keys()
 
         # Cache for the most recent index returned. This is used to
         # iterate over keys of the slice (for instance, in a

@@ -10,9 +10,9 @@
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (ConcreteModel, Var, Constraint, Objective, Block,
+from pyomo.environ import (Var, Constraint, Objective, Block,
                            TransformationFactory, value, maximize, Suffix)
-from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp import GDP_Error
 from pyomo.gdp.plugins.cuttingplane import create_cuts_fme 
 
 import pyomo.opt
@@ -20,7 +20,6 @@ import pyomo.gdp.tests.models as models
 from pyomo.repn import generate_standard_repn
 from pyomo.gdp.tests.common_tests import diff_apply_to_and_create_using
 
-from six import StringIO
 
 solvers = pyomo.opt.check_available_solvers('ipopt', 'gurobi')
 
@@ -49,8 +48,8 @@ class OneVarDisj(unittest.TestCase):
         cut_expr = cuts[0].body
         # should be 2Y_2 <= x
         m.x.fix(0)
-        m.disj1.indicator_var.fix(1)
-        m.disj2.indicator_var.fix(0)
+        m.disj1.indicator_var.fix(True)
+        m.disj2.indicator_var.fix(False)
         # The almost equal here is OK because we are going to check that it is
         # actually valid in the next test. I just wanted to make sure it is the
         # line I am expecting, so I want to know that it is tight here...
@@ -58,8 +57,8 @@ class OneVarDisj(unittest.TestCase):
 
         # ...and that it is tight here
         m.x.fix(2)
-        m.disj2.indicator_var.fix(1)
-        m.disj1.indicator_var.fix(0)
+        m.disj2.indicator_var.fix(True)
+        m.disj1.indicator_var.fix(False)
         self.assertAlmostEqual(value(cut_expr), 0)
 
     def check_two_segment_cuts_valid(self, m):
@@ -75,7 +74,7 @@ class OneVarDisj(unittest.TestCase):
 
             # (0,0)
             m.x.fix(0)
-            m.disj2.indicator_var.fix(0)
+            m.disj2.indicator_var.fix(False)
             check_validity(self, cut_expr, cut_lower, cut_upper, TOL=1e-8)
 
             # (1,0)
@@ -84,7 +83,7 @@ class OneVarDisj(unittest.TestCase):
 
             # (2, 1)
             m.x.fix(2)
-            m.disj2.indicator_var.fix(1)
+            m.disj2.indicator_var.fix(True)
             check_validity(self, cut_expr, cut_lower, cut_upper)
 
             # (3, 1)
@@ -231,8 +230,8 @@ class OneVarDisj(unittest.TestCase):
         cut_expr = cuts[0].body
         # should be 2Y_2 <= x
         m.x.fix(0)
-        m.disj1.indicator_var.fix(1)
-        m.disj2.indicator_var.fix(0)
+        m.disj1.indicator_var.fix(True)
+        m.disj2.indicator_var.fix(False)
         # The almost equal here is OK because we are going to check that it is
         # actually valid in the next test. I just wanted to make sure it is the
         # line I am expecting, so I want to know that it is tight here...
@@ -240,8 +239,8 @@ class OneVarDisj(unittest.TestCase):
 
         # ...and that it is tight here
         m.x.fix(2)
-        m.disj2.indicator_var.fix(1)
-        m.disj1.indicator_var.fix(0)
+        m.disj2.indicator_var.fix(True)
+        m.disj1.indicator_var.fix(False)
         self.assertEqual(value(cut_expr), 0)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
@@ -301,7 +300,7 @@ class OneVarDisj(unittest.TestCase):
     def test_non_unique_cut_name_error(self):
         m = models.twoSegments_SawayaGrossmann()
 
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "cuts_name was specified as 'disj1', but this is "
             "already a component on the instance! Please "
@@ -341,8 +340,8 @@ class TwoTermDisj(unittest.TestCase):
             cut_expr = cut.body
             lower = cut.lower
             upper = cut.upper
-            m.d[0].indicator_var.fix(1)
-            m.d[1].indicator_var.fix(0)
+            m.d[0].indicator_var.fix(True)
+            m.d[1].indicator_var.fix(False)
             m.x.fix(3)
             m.y.fix(1)
             check_validity(self, cut_expr, lower, upper, TOL)
@@ -379,8 +378,8 @@ class TwoTermDisj(unittest.TestCase):
             upper = cut.upper
             # now there are 8 extreme points and we can test all of them
             for pt in self.extreme_points:
-                m.d[0].indicator_var.fix(pt[0])
-                m.d[1].indicator_var.fix(pt[1])
+                m.d[0].binary_indicator_var.fix(pt[0])
+                m.d[1].binary_indicator_var.fix(pt[1])
                 m.x.fix(pt[2])
                 m.y.fix(pt[3])
                 check_validity(self, cut_expr, lower, upper, TOL)
@@ -440,8 +439,8 @@ class TwoTermDisj(unittest.TestCase):
         lower = cut.lower
         upper = cut.upper
         for pt in facet_extreme_pts:
-            m.d[0].indicator_var.fix(pt[0])
-            m.d[1].indicator_var.fix(pt[1])
+            m.d[0].binary_indicator_var.fix(pt[0])
+            m.d[1].binary_indicator_var.fix(pt[1])
             m.x.fix(pt[2])
             m.y.fix(pt[3])
             if lower is not None:
@@ -467,8 +466,8 @@ class TwoTermDisj(unittest.TestCase):
         lower = cut.lower
         upper = cut.upper
         for pt in cut1_tight_pts:
-            m.d[0].indicator_var.fix(pt[0])
-            m.d[1].indicator_var.fix(pt[1])
+            m.d[0].binary_indicator_var.fix(pt[0])
+            m.d[1].binary_indicator_var.fix(pt[1])
             m.x.fix(pt[2])
             m.y.fix(pt[3])
             if lower is not None:
@@ -485,8 +484,8 @@ class TwoTermDisj(unittest.TestCase):
         lower = cut.lower
         upper = cut.upper
         for pt in facet2_extreme_pts:
-            m.d[0].indicator_var.fix(pt[0])
-            m.d[1].indicator_var.fix(pt[1])
+            m.d[0].binary_indicator_var.fix(pt[0])
+            m.d[1].binary_indicator_var.fix(pt[1])
             m.x.fix(pt[2])
             m.y.fix(pt[3])
             if lower is not None:
@@ -515,7 +514,7 @@ class TwoTermDisj(unittest.TestCase):
     def test_active_objective_err(self):
         m = models.makeTwoTermDisj_boxes()
         m.obj.deactivate()
-        self.assertRaisesRegexp(
+        self.assertRaisesRegex(
             GDP_Error,
             "Cannot apply cutting planes transformation without an active "
             "objective in the model*",
@@ -552,7 +551,7 @@ class TwoTermDisj(unittest.TestCase):
         repn = generate_standard_repn(cut.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
-        self.assertIs(repn.linear_vars[0], m.disj1.indicator_var)
+        self.assertIs(repn.linear_vars[0], m.disj1.binary_indicator_var)
         self.assertEqual(repn.linear_coefs[0], 1)
         self.assertIs(repn.linear_vars[1], m.x)
         self.assertEqual(repn.linear_coefs[1], -1)
@@ -580,8 +579,8 @@ class Grossmann_TestCases(unittest.TestCase):
             for pt in extreme_points:
                 m.x.fix(pt[2])
                 m.y.fix(pt[3])
-                m.disjunct1.indicator_var.fix(pt[0])
-                m.disjunct2.indicator_var.fix(pt[1])
+                m.disjunct1.binary_indicator_var.fix(pt[0])
+                m.disjunct2.binary_indicator_var.fix(pt[1])
                 check_validity(self, cut_expr, lower, upper)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
@@ -635,14 +634,14 @@ class Grossmann_TestCases(unittest.TestCase):
         for pt in facet_extreme_points:
             m.x.fix(pt[2])
             m.y.fix(pt[3])
-            m.disjunct1.indicator_var.fix(pt[0])
-            m.disjunct2.indicator_var.fix(pt[1])
+            m.disjunct1.binary_indicator_var.fix(pt[0])
+            m.disjunct2.binary_indicator_var.fix(pt[1])
             self.assertEqual(value(cuts[0].lower), value(cuts[0].body))
         for pt in facet2_extreme_points:
             m.x.fix(pt[2])
             m.y.fix(pt[3])
-            m.disjunct1.indicator_var.fix(pt[0])
-            m.disjunct2.indicator_var.fix(pt[1])
+            m.disjunct1.binary_indicator_var.fix(pt[0])
+            m.disjunct2.binary_indicator_var.fix(pt[1])
             self.assertEqual(value(cuts[1].lower), value(cuts[1].body))
 
     def check_cut_is_correct_facet(self, m):
@@ -664,15 +663,15 @@ class Grossmann_TestCases(unittest.TestCase):
         for pt in cut1_tight_points:
             m.x.fix(pt[2])
             m.y.fix(pt[3])
-            m.disjunct1.indicator_var.fix(pt[0])
-            m.disjunct2.indicator_var.fix(pt[1])
+            m.disjunct1.binary_indicator_var.fix(pt[0])
+            m.disjunct2.binary_indicator_var.fix(pt[1])
             self.assertAlmostEqual(value(cuts[0].lower), value(cuts[0].body),
                                    places=6)
         for pt in cut2_tight_points:
             m.x.fix(pt[2])
             m.y.fix(pt[3])
-            m.disjunct1.indicator_var.fix(pt[0])
-            m.disjunct2.indicator_var.fix(pt[1])
+            m.disjunct1.binary_indicator_var.fix(pt[0])
+            m.disjunct2.binary_indicator_var.fix(pt[1])
             self.assertAlmostEqual(value(cuts[1].lower), value(cuts[1].body),
                                    places=6)
 
@@ -714,8 +713,8 @@ class Grossmann_TestCases(unittest.TestCase):
             for pt in extreme_points:
                 m.x.fix(pt[2])
                 m.y.fix(pt[3])
-                m.disjunct1.indicator_var.fix(pt[0])
-                m.disjunct2.indicator_var.fix(pt[1])
+                m.disjunct1.binary_indicator_var.fix(pt[0])
+                m.disjunct2.binary_indicator_var.fix(pt[1])
                 check_validity(self, cut_expr, lower, upper)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
@@ -763,8 +762,8 @@ class Grossmann_TestCases(unittest.TestCase):
         for pt in cut_extreme_points:
             m.x.fix(pt[2])
             m.y.fix(pt[3])
-            m.disjunct1.indicator_var.fix(pt[0])
-            m.disjunct2.indicator_var.fix(pt[1])
+            m.disjunct1.binary_indicator_var.fix(pt[0])
+            m.disjunct2.binary_indicator_var.fix(pt[1])
             # tiny bit of numerical error
             self.assertAlmostEqual(value(cuts[0].lower), value(cuts[0].body))
             self.assertLessEqual(value(cuts[0].lower), value(cuts[0].body))
@@ -781,8 +780,8 @@ class Grossmann_TestCases(unittest.TestCase):
         for pt in cut_tight_points:
             m.x.fix(pt[2])
             m.y.fix(pt[3])
-            m.disjunct1.indicator_var.fix(pt[0])
-            m.disjunct2.indicator_var.fix(pt[1])
+            m.disjunct1.binary_indicator_var.fix(pt[0])
+            m.disjunct2.binary_indicator_var.fix(pt[1])
             # ESJ: 5 places is not ideal... But it's in the direction of valid,
             # so I think that's just the price we pay. This test still seems
             # useful to me as a sanity check that the cut is where it should be.
@@ -825,10 +824,10 @@ class Grossmann_TestCases(unittest.TestCase):
             for pt in extreme_points:
                 m.x.fix(pt[4])
                 m.y.fix(pt[5])
-                m.disjunct1.indicator_var.fix(pt[0])
-                m.disjunct2.indicator_var.fix(pt[1])
-                m.disjunct3.indicator_var.fix(pt[2])
-                m.disjunct4.indicator_var.fix(pt[3])
+                m.disjunct1.binary_indicator_var.fix(pt[0])
+                m.disjunct2.binary_indicator_var.fix(pt[1])
+                m.disjunct3.binary_indicator_var.fix(pt[2])
+                m.disjunct4.binary_indicator_var.fix(pt[3])
                 check_validity(self, cut_expr, lower, upper)
 
     @unittest.skipIf('ipopt' not in solvers, "Ipopt solver not available")
@@ -861,8 +860,8 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
 
         m.x.fix(2)
         m.y.fix(7)
-        m.upper_circle.indicator_var.fix(1)
-        m.lower_circle.indicator_var.fix(0)
+        m.upper_circle.indicator_var.fix(True)
+        m.lower_circle.indicator_var.fix(False)
         for i in range(len(cuts)):
             self.assertGreaterEqual(value(cuts[i].body), 0)
 
@@ -895,8 +894,8 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
 
         m.x.fix(5)
         m.y.fix(3)
-        m.upper_circle.indicator_var.fix(0)
-        m.lower_circle.indicator_var.fix(1)
+        m.upper_circle.indicator_var.fix(False)
+        m.lower_circle.indicator_var.fix(True)
         for i in range(len(cuts)):
             self.assertTrue(value(cuts[i].expr))
 
@@ -926,15 +925,15 @@ class NonlinearConvex_TwoCircles(unittest.TestCase):
 
         m.x.fix(3)
         m.y.fix(1)
-        m.upper_circle.indicator_var.fix(1)
-        m.lower_circle.indicator_var.fix(0)
+        m.upper_circle.indicator_var.fix(True)
+        m.lower_circle.indicator_var.fix(False)
         for i in range(len(cuts)):
             self.assertGreaterEqual(value(cuts[i].body), 0)
 
         m.x.fix(0)
         m.y.fix(5)
-        m.upper_circle.indicator_var.fix(0)
-        m.lower_circle.indicator_var.fix(1)
+        m.upper_circle.indicator_var.fix(False)
+        m.lower_circle.indicator_var.fix(True)
         for i in range(len(cuts)):
             self.assertGreaterEqual(value(cuts[i].body), 0)
 
@@ -1049,10 +1048,10 @@ class NonlinearConvex_OverlappingCircles(unittest.TestCase):
         
         m.x.fix(2)
         m.y.fix(7)
-        m.upper_circle.indicator_var.fix(1)
-        m.lower_circle.indicator_var.fix(0)
-        m.upper_circle2.indicator_var.fix(1)
-        m.lower_circle2.indicator_var.fix(0)
+        m.upper_circle.indicator_var.fix(True)
+        m.lower_circle.indicator_var.fix(False)
+        m.upper_circle2.indicator_var.fix(True)
+        m.lower_circle2.indicator_var.fix(False)
         for i in range(len(cuts)):
             self.assertGreaterEqual(value(cuts[i].body), 0)
       
@@ -1082,10 +1081,10 @@ class NonlinearConvex_OverlappingCircles(unittest.TestCase):
 
         m.x.fix(5)
         m.y.fix(3)
-        m.upper_circle.indicator_var.fix(0)
-        m.lower_circle.indicator_var.fix(1)
-        m.upper_circle2.indicator_var.fix(0)
-        m.lower_circle2.indicator_var.fix(1)
+        m.upper_circle.indicator_var.fix(False)
+        m.lower_circle.indicator_var.fix(True)
+        m.upper_circle2.indicator_var.fix(False)
+        m.lower_circle2.indicator_var.fix(True)
         for i in range(len(cuts)):
             self.assertGreaterEqual(value(cuts[i].body), 0)
 

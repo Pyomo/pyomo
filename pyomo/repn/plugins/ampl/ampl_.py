@@ -37,10 +37,47 @@ from pyomo.core.kernel.block import IBlock
 from pyomo.core.kernel.expression import IIdentityExpression
 from pyomo.core.kernel.variable import IVariable
 
-from six import itervalues, iteritems
-from six.moves import xrange, zip
-
 logger = logging.getLogger('pyomo.core')
+
+
+def set_pyomo_amplfunc_env(external_libs):
+    # The ASL AMPLFUNC environment variable is nominally a
+    # whitespace-separated string of library names.  Beginning
+    # sometime between 2010 and 2012, the ASL added support for
+    # simple quoted strings: the first non-whitespace character
+    # can be either " or '.  When that is detected, the ASL
+    # parser will continue to the next occurance of that
+    # character (i.e., no escaping is allowed).  We will use
+    # that same logic here to quote any strings with spaces
+    # ... bearing in mind that this will only work with solvers
+    # compiled against versions of the ASL more recent than
+    # ~2012.
+    #
+    # We are (arbitrarily) chosing to use newline as the field
+    # separator.
+    env_str = ''
+    for _lib in external_libs:
+        _lib = _lib.strip()
+        if ( ' ' not in _lib
+             or ( _lib[0]=='"' and _lib[-1]=='"'
+                  and '"' not in _lib[1:-1] )
+             or ( _lib[0]=="'" and _lib[-1]=="'"
+                  and "'" not in _lib[1:-1] ) ):
+            pass
+        elif '"' not in _lib:
+            _lib = '"' + _lib + '"'
+        elif "'" not in _lib:
+            _lib = "'" + _lib + "'"
+        else:
+            raise RuntimeError(
+                "Cannot pass the AMPL external function library\n\t%s\n"
+                "to the ASL because the string contains spaces, "
+                "single quote and\ndouble quote characters." % (_lib,))
+        if env_str:
+            env_str += "\n"
+        env_str += _lib
+    os.environ["PYOMO_AMPLFUNC"] = env_str
+
 
 _intrinsic_function_operators = {
     'log':    'o43',
@@ -61,8 +98,8 @@ _intrinsic_function_operators = {
     'atanh':  'o47',
     'pow':    'o5',
     'abs':    'o15',
-    'ceil':   'o13',
-    'floor':  'o14'
+    'ceil':   'o14',
+    'floor':  'o13'
 }
 
 # build string templates
@@ -78,8 +115,6 @@ def _build_op_template():
     _op_comment[EXPR.ProductExpression] = prod_comment
     _op_template[EXPR.DivisionExpression] = div_template
     _op_comment[EXPR.DivisionExpression] = div_comment
-    _op_template[EXPR.ReciprocalExpression] = div_template
-    _op_comment[EXPR.ReciprocalExpression] = div_comment
 
     _op_template[EXPR.ExternalFunctionExpression] = ("f%d %d{C}\n", #function
                                                       "h%d:%s{C}\n") #string arg
@@ -314,10 +349,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
         include_all_variable_bounds = \
             io_options.pop("include_all_variable_bounds", False)
 
+        # List of variables that don't appear in constraints to force into the
+        # nl-file
+        export_nonlinear_variables = \
+            io_options.pop("export_nonlinear_variables", False)
+
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_nl passed unrecognized io_options:\n\t" +
-                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
+                "\n\t".join("%s = %s" % (k,v) for k,v in io_options.items()))
 
         if filename is None:
             filename = model.name + ".nl"
@@ -332,7 +372,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             comment_str = _op_comment[optype]
             if type(template_str) is tuple:
                 op_strings = []
-                for i in xrange(len(template_str)):
+                for i in range(len(template_str)):
                     if symbolic_solver_labels:
                         op_strings.append(template_str[i].format(C=comment_str[i]))
                     else:
@@ -362,7 +402,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     show_section_timing=show_section_timing,
                     skip_trivial_constraints=skip_trivial_constraints,
                     file_determinism=file_determinism,
-                    include_all_variable_bounds=include_all_variable_bounds)
+                    include_all_variable_bounds=include_all_variable_bounds,
+                    export_nonlinear_variables=export_nonlinear_variables)
 
         self._symbolic_solver_labels = False
         self._output_fixed_variable_bounds = False
@@ -439,7 +480,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             n = len(exp)
             if n > 2:
                 OUTPUT.write(nary_sum_str % (n))
-                for i in xrange(0,n):
+                for i in range(0,n):
                     assert(exp[i].__class__ is tuple)
                     coef = exp[i][0]
                     child_exp = exp[i][1]
@@ -447,7 +488,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         OUTPUT.write(coef_term_str % (coef))
                     self._print_nonlinear_terms_NL(child_exp)
             else: # n == 1 or 2
-                for i in xrange(0,n):
+                for i in range(0,n):
                     assert(exp[i].__class__ is tuple)
                     coef = exp[i][0]
                     child_exp = exp[i][1]
@@ -522,13 +563,6 @@ class ProblemWriter_nl(AbstractProblemWriter):
                 self._print_nonlinear_terms_NL(exp.arg(0))
                 self._print_nonlinear_terms_NL(exp.arg(1))
 
-            elif exp_type is EXPR.ReciprocalExpression:
-                assert exp.nargs() == 1
-                div_str = self._op_string[EXPR.ReciprocalExpression]
-                OUTPUT.write(div_str)
-                self._print_nonlinear_terms_NL(1.0)
-                self._print_nonlinear_terms_NL(exp.arg(0))
-
             elif exp_type is EXPR.NegationExpression:
                 assert exp.nargs() == 1
                 OUTPUT.write(self._op_string[EXPR.NegationExpression])
@@ -558,8 +592,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                                     exp.name))
                 for arg in exp.args:
                     if isinstance(arg, str):
-                        OUTPUT.write(string_arg_str % (len(arg) + 1, arg))
-                    elif isinstance(arg, (float, int)):
+                        OUTPUT.write(string_arg_str % (len(arg), arg))
+                    elif type(arg) in native_numeric_types:
                         self._print_nonlinear_terms_NL(arg)
                     elif arg.is_fixed():
                         self._print_nonlinear_terms_NL(arg())
@@ -663,7 +697,8 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         show_section_timing=False,
                         skip_trivial_constraints=False,
                         file_determinism=1,
-                        include_all_variable_bounds=False):
+                        include_all_variable_bounds=False,
+                        export_nonlinear_variables=False):
 
         output_fixed_variable_bounds = self._output_fixed_variable_bounds
         symbolic_solver_labels = self._symbolic_solver_labels
@@ -741,42 +776,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     (fcn, len(self.external_byFcn))
             external_Libs.add(fcn._library)
         if external_Libs:
-            # The ASL AMPLFUNC environment variable is nominally a
-            # whitespace-separated string of library names.  Beginning
-            # sometime between 2010 and 2012, the ASL added support for
-            # simple quoted strings: the first non-whitespace character
-            # can be either " or '.  When that is detected, the ASL
-            # parser will continue to the next occurance of that
-            # character (i.e., no escaping is allowed).  We will use
-            # that same logic here to quote any strings with spaces
-            # ... bearing in mind that this will only work with solvers
-            # compiled against versions of the ASL more recent than
-            # ~2012.
-            #
-            # We are (arbitrarily) chosing to use newline as the field
-            # separator.
-            env_str = ''
-            for _lib in external_Libs:
-                _lib = _lib.strip()
-                if ( ' ' not in _lib
-                     or ( _lib[0]=='"' and _lib[-1]=='"'
-                          and '"' not in _lib[1:-1] )
-                     or ( _lib[0]=="'" and _lib[-1]=="'"
-                          and "'" not in _lib[1:-1] ) ):
-                    pass
-                elif '"' not in _lib:
-                    _lib = '"' + _lib + '"'
-                elif "'" not in _lib:
-                    _lib = "'" + _lib + "'"
-                else:
-                    raise RuntimeError(
-                        "Cannot pass the AMPL external function library\n\t%s\n"
-                        "to the ASL because the string contains spaces, "
-                        "single quote and\ndouble quote characters." % (_lib,))
-                if env_str:
-                    env_str += "\n"
-                env_str += _lib
-            os.environ["PYOMO_AMPLFUNC"] = env_str
+            set_pyomo_amplfunc_env(external_Libs)
         elif "PYOMO_AMPLFUNC" in os.environ:
             del os.environ["PYOMO_AMPLFUNC"]
 
@@ -800,7 +800,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #         cntr))
         #     cntr += len(vars_counter)
         #     Vars_dict.update(vars_counter)
-        self._varID_map = dict((id(val),key) for key,val in iteritems(Vars_dict))
+        self._varID_map = dict((id(val),key) for key,val in Vars_dict.items())
         self_varID_map = self._varID_map
         # Use to label the rest of the components (which we will not encounter twice)
         trivial_labeler = _Counter(cntr)
@@ -815,13 +815,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
         ObjNonlinearVarsInt = set()
         for block in all_blocks_list:
 
-            gen_obj_repn = \
-                getattr(block, "_gen_obj_repn", True)
-
-            # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_repn'):
-                block._repn = ComponentMap()
-            block_repn = block._repn
+            gen_obj_repn = getattr(block, "_gen_obj_repn", None)
+            if gen_obj_repn is not None:
+                gen_obj_repn = bool(gen_obj_repn)
+                # Get/Create the ComponentMap for the repn
+                if not hasattr(block,'_repn'):
+                    block._repn = ComponentMap()
+                block_repn = block._repn
 
             for active_objective in block.component_data_objects(Objective,
                                                                  active=True,
@@ -832,13 +832,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if len(objname) > max_rowname_len:
                         max_rowname_len = len(objname)
 
-                if gen_obj_repn:
-                    repn = generate_standard_repn(active_objective.expr,
-                                                  quadratic=False)
-                    block_repn[active_objective] = repn
-                    linear_vars = repn.linear_vars
-                    nonlinear_vars = repn.nonlinear_vars
-                else:
+                if gen_obj_repn == False:
                     repn = block_repn[active_objective]
                     linear_vars = repn.linear_vars
                     # By default, the NL writer generates
@@ -848,6 +842,15 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     # are using a cached repn object, so we
                     # must check for the quadratic form.
                     if repn.is_nonlinear() and (repn.nonlinear_expr is None):
+                        # Note that this is fragile:
+                        # generate_standard_repn can leave nonlinear
+                        # terms in both quadratic and nonlinear fields.
+                        # However, when this was writen the assumption
+                        # is that generate_standard_repn is only called
+                        # with quadratic=True for QCQPs (by the LP
+                        # writer).  So, quadratic and nonlinear_expr
+                        # will both never be non-empty.  This assertion
+                        # will fail if that assumption is ever violated:
                         assert repn.is_quadratic()
                         assert len(repn.quadratic_vars) > 0
                         nonlinear_vars = {}
@@ -857,7 +860,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
                         nonlinear_vars = nonlinear_vars.values()
                     else:
                         nonlinear_vars = repn.nonlinear_vars
-
+                else:
+                    repn = generate_standard_repn(active_objective.expr,
+                                                  quadratic=False)
+                    linear_vars = repn.linear_vars
+                    nonlinear_vars = repn.nonlinear_vars
+                    if gen_obj_repn:
+                        block_repn[active_objective] = repn
                 try:
                     wrapped_repn = RepnWrapper(
                         repn,
@@ -921,13 +930,13 @@ class ProblemWriter_nl(AbstractProblemWriter):
         for block in all_blocks_list:
             all_repns = list()
 
-            gen_con_repn = \
-                getattr(block, "_gen_con_repn", True)
-
-            # Get/Create the ComponentMap for the repn
-            if not hasattr(block,'_repn'):
-                block._repn = ComponentMap()
-            block_repn = block._repn
+            gen_con_repn = getattr(block, "_gen_con_repn", None)
+            if gen_con_repn is not None:
+                gen_con_repn = bool(gen_con_repn)
+                # Get/Create the ComponentMap for the repn
+                if not hasattr(block,'_repn'):
+                    block._repn = ComponentMap()
+                block_repn = block._repn
 
             # Initializing the constraint dictionary
             for constraint_data in block.component_data_objects(Constraint,
@@ -945,36 +954,46 @@ class ProblemWriter_nl(AbstractProblemWriter):
                     if len(conname) > max_rowname_len:
                         max_rowname_len = len(conname)
 
-                if constraint_data._linear_canonical_form:
-                    repn = constraint_data.canonical_form()
+                if gen_con_repn == False:
+                    repn = block_repn[constraint_data]
                     linear_vars = repn.linear_vars
-                    nonlinear_vars = repn.nonlinear_vars
+                    # By default, the NL writer generates
+                    # StandardRepn objects without the more
+                    # expense quadratic processing, but
+                    # there is no guarantee of this if we
+                    # are using a cached repn object, so we
+                    # must check for the quadratic form.
+                    if repn.is_nonlinear() and (repn.nonlinear_expr is None):
+                        # Note that this is fragile:
+                        # generate_standard_repn can leave nonlinear
+                        # terms in both quadratic and nonlinear fields.
+                        # However, when this was writen the assumption
+                        # is that generate_standard_repn is only called
+                        # with quadratic=True for QCQPs (by the LP
+                        # writer).  So, quadratic and nonlinear_expr
+                        # will both never be non-empty.  This assertion
+                        # will fail if that assumption is ever violated:
+                        assert repn.is_quadratic()
+                        assert len(repn.quadratic_vars) > 0
+                        nonlinear_vars = {}
+                        for v1, v2 in repn.quadratic_vars:
+                            nonlinear_vars[id(v1)] = v1
+                            nonlinear_vars[id(v2)] = v2
+                        nonlinear_vars = nonlinear_vars.values()
+                    else:
+                        nonlinear_vars = repn.nonlinear_vars
                 else:
-                    if gen_con_repn:
-                        repn = generate_standard_repn(constraint_data.body,
-                                                      quadratic=False)
-                        block_repn[constraint_data] = repn
+                    if constraint_data._linear_canonical_form:
+                        repn = constraint_data.canonical_form()
                         linear_vars = repn.linear_vars
                         nonlinear_vars = repn.nonlinear_vars
                     else:
-                        repn = block_repn[constraint_data]
+                        repn = generate_standard_repn(constraint_data.body,
+                                                      quadratic=False)
                         linear_vars = repn.linear_vars
-                        # By default, the NL writer generates
-                        # StandardRepn objects without the more
-                        # expense quadratic processing, but
-                        # there is no guarantee of this if we
-                        # are using a cached repn object, so we
-                        # must check for the quadratic form.
-                        if repn.is_nonlinear() and (repn.nonlinear_expr is None):
-                            assert repn.is_quadratic()
-                            assert len(repn.quadratic_vars) > 0
-                            nonlinear_vars = {}
-                            for v1, v2 in repn.quadratic_vars:
-                                nonlinear_vars[id(v1)] = v1
-                                nonlinear_vars[id(v2)] = v2
-                            nonlinear_vars = nonlinear_vars.values()
-                        else:
-                            nonlinear_vars = repn.nonlinear_vars
+                        nonlinear_vars = repn.nonlinear_vars
+                    if gen_con_repn:
+                        block_repn[constraint_data] = repn
 
                 ### GAH: Even if this is fixed, it is still useful to
                 ###      write out these types of constraints
@@ -1111,9 +1130,18 @@ class ProblemWriter_nl(AbstractProblemWriter):
         if include_all_variable_bounds:
             # classify unused vars as linear
             AllVars = set(self_varID_map[id(vardata)]
-                          for vardata in itervalues(Vars_dict))
+                          for vardata in Vars_dict.values())
             UnusedVars = AllVars.difference(UsedVars)
             LinearVars.update(UnusedVars)
+
+        if export_nonlinear_variables:
+            for v in export_nonlinear_variables:
+                v_iter = v.values() if v.is_indexed() else iter((v,))
+                for vi in v_iter:
+                    if self_varID_map[id(vi)] not in UsedVars:
+                        Vars_dict[id(vi)] = vi
+                        ConNonlinearVars.update([self_varID_map[id(vi)]])
+
 
         ### There used to be an if statement here for the following code block
         ### checking model.statistics.num_binary_vars was greater than zero.
@@ -1315,7 +1343,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "F" lines
         #
-        for fcn, fid in sorted(itervalues(self.external_byFcn),
+        for fcn, fid in sorted(self.external_byFcn.values(),
                                key=operator.itemgetter(1)):
             OUTPUT.write("F%d 1 -1 %s\n" % (fid, fcn._function))
 
@@ -1443,7 +1471,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             obj_s_lines = []
             mod_s_lines = []
             for suffix in suffixes:
-                for component_data, suffix_value in iteritems(suffix):
+                for component_data, suffix_value in suffix.items():
 
                     try:
                         symbol = symbol_map_byObject[id(component_data)]
@@ -1513,7 +1541,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         if symbolic_solver_labels:
             rowf = open(rowfilename,'w')
 
-        cu = [0 for i in xrange(len(full_var_list))]
+        cu = [0 for i in range(len(full_var_list))]
         for con_ID in nonlin_con_order_list:
             con_data, wrapped_repn = Constraints_dict[con_ID]
             row_id = self_ampl_con_id[con_ID]
@@ -1559,7 +1587,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         #
         # "O" lines
         #
-        for obj_ID, (obj, wrapped_repn) in iteritems(Objectives_dict):
+        for obj_ID, (obj, wrapped_repn) in Objectives_dict.items():
 
             k = 0
             if not obj.is_minimizing():
@@ -1607,7 +1635,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             s_lines = []
             for dual_suffix in suffix_dict['dual']:
 
-                for constraint_data, suffix_value in iteritems(dual_suffix):
+                for constraint_data, suffix_value in dual_suffix.items():
                     try:
                         # a constraint might not be referenced
                         # (inactive / on inactive block)
@@ -1723,7 +1751,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             OUTPUT.write("\t#intermediate Jacobian column lengths")
         OUTPUT.write("\n")
         ktot = 0
-        for i in xrange(n1):
+        for i in range(n1):
             ktot += cu[i]
             OUTPUT.write("%d\n"%(ktot))
         del cu
@@ -1786,7 +1814,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # "G" lines
         #
         for obj_ID, (obj, wrapped_repn) in \
-               iteritems(Objectives_dict):
+               Objectives_dict.items():
 
             grad_entries = {}
             for idx, obj_var in enumerate(
@@ -1824,7 +1852,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
             else:
                 _parent = v.parent_block()
                 while _parent is not None and _parent is not model:
-                    if _parent.ctype is not model.type():
+                    if _parent.ctype is not model.ctype:
                         _errors.append(
                             "Variable '%s' exists within %s '%s', "
                             "but is used by an active "

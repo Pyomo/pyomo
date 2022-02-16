@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Re-implementation of eight-process problem.
 
 Re-implementation of Duran example 3 superstructure synthesis problem in Pyomo
@@ -23,8 +24,6 @@ http://dx.doi.org/10.1016/0098-1354(95)00219-7
 """
 from __future__ import division
 
-from six import iteritems
-
 from pyomo.environ import (Binary, ConcreteModel, Constraint, NonNegativeReals,
                            Objective, Param, RangeSet, Var, exp, minimize)
 
@@ -39,17 +38,17 @@ class EightProcessFlowsheet(ConcreteModel):
         m = self
 
         """Set declarations"""
-        I = m.I = RangeSet(2, 25, doc="process streams")
-        J = m.J = RangeSet(1, 8, doc="process units")
-        m.PI = RangeSet(1, 4, doc="integer constraints")
-        m.DS = RangeSet(1, 4, doc="design specifications")
+        I = m.I = RangeSet(2, 25, doc='process streams')
+        J = m.J = RangeSet(1, 8, doc='process units')
+        m.PI = RangeSet(1, 4, doc='integer constraints')
+        m.DS = RangeSet(1, 4, doc='design specifications')
         """
         1: Unit 8
         2: Unit 8
         3: Unit 4
         4: Unit 4
         """
-        m.MB = RangeSet(1, 7, doc="mass balances")
+        m.MB = RangeSet(1, 7, doc='mass balances')
         """Material balances:
         1: 4-6-7
         2: 3-5-8
@@ -81,7 +80,7 @@ class EightProcessFlowsheet(ConcreteModel):
             'sub3': {1: 1, 2: 0, 3: 1, 4: 0, 5: 1, 6: 0, 7: 0, 8: 1}
         }
         # initial point information for stream flows
-        initX = {1: 0, 2: 2, 3: 1.5, 4: 0, 5: 0, 6: 0.75, 7: 0.5, 8: 0.5,
+        initX = {2: 2, 3: 1.5, 4: 0, 5: 0, 6: 0.75, 7: 0.5, 8: 0.5,
                  9: 0.75, 10: 0, 11: 1.5, 12: 1.34, 13: 2, 14: 2.5, 15: 0,
                  16: 0, 17: 2, 18: 0.75, 19: 2, 20: 1.5, 21: 0, 22: 0,
                  23: 1.7, 24: 1.5, 25: 0.5}
@@ -145,14 +144,15 @@ class EightProcessFlowsheet(ConcreteModel):
         m.pureint4 = Constraint(expr=m.Y[3] - m.Y[8] <= 0)
 
         """Cost (objective) function definition"""
-        m.cost = Objective(expr=sum(Y[j] * CF[j] for j in J) +
-                           sum(X[i] * CV[i] for i in I) + CONSTANT,
-                           sense=minimize)
+        m.objective = Objective(expr=sum(Y[j] * CF[j] for j in J) +
+                                sum(X[i] * CV[i] for i in I) + CONSTANT,
+                                sense=minimize)
 
         """Bound definitions"""
         # x (flow) upper bounds
         # x_ubs = {3: 2, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 19: 2, 21: 2, 25: 3}
         x_ubs = {2: 10, 3: 2, 4: 10, 5: 2, 9: 2, 10: 1, 14: 1, 17: 2, 18: 10, 19: 2,
                  20: 10, 21: 2, 22: 10, 25: 3}  # add bounds for variables in nonlinear constraints
-        for i, x_ub in iteritems(x_ubs):
+        for i, x_ub in x_ubs.items():
             X[i].setub(x_ub)
+        m.optimal_value = 68.0097

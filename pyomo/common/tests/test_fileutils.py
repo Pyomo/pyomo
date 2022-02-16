@@ -18,16 +18,16 @@ import sys
 import tempfile
 import subprocess
 
-from six import StringIO
+from io import StringIO
 
 import pyomo.common.unittest as unittest
 
-import pyomo.common.config as config
+import pyomo.common.envvar as envvar
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.fileutils import (
     this_file, this_file_dir, find_file, find_library, find_executable, 
-    PathManager, _system, _path, _exeExt, _libExt, _ExecutableData,
-    import_file, StreamIndenter
+    PathManager, _system, _path, _exeExt, _libExt, ExecutableData,
+    import_file,
 )
 from pyomo.common.download import FileDownloader
 
@@ -46,12 +46,12 @@ class TestFileUtils(unittest.TestCase):
     def setUp(self):
         self.tmpdir = None
         self.basedir = os.path.abspath(os.path.curdir)
-        self.config = config.PYOMO_CONFIG_DIR
+        self.config = envvar.PYOMO_CONFIG_DIR
         self.ld_library_path = os.environ.get('LD_LIBRARY_PATH', None)
         self.path = os.environ.get('PATH', None)
 
     def tearDown(self):
-        config.PYOMO_CONFIG_DIR = self.config
+        envvar.PYOMO_CONFIG_DIR = self.config
         os.chdir(self.basedir)
         if self.tmpdir:
             shutil.rmtree(self.tmpdir)
@@ -82,7 +82,7 @@ class TestFileUtils(unittest.TestCase):
         self.assertTrue(samefile(ref, found))
 
     def test_this_file(self):
-        self.assertEquals(_this_file, __file__.replace('.pyc','.py'))
+        self.assertEqual(_this_file, __file__.replace('.pyc','.py'))
         # Note that in some versions of PyPy, this can return <module>
         # instead of the normal <string>
         self.assertIn(subprocess.run([
@@ -93,7 +93,7 @@ class TestFileUtils(unittest.TestCase):
             stderr=subprocess.STDOUT,
             universal_newlines=True).stdout.strip(),
             ['<string>','<module>'])
-        self.assertEquals(subprocess.run(
+        self.assertEqual(subprocess.run(
             [sys.executable],
             input='from pyomo.common.fileutils import this_file;'
             'print(this_file())', stdout=subprocess.PIPE,
@@ -114,20 +114,6 @@ class TestFileUtils(unittest.TestCase):
             import_file(os.path.join(_this_file_dir, 'import_ex'))
         self.assertTrue('File does not exist' in str(context.exception))
 
-    def test_StreamIndenter_noprefix(self):
-        OUT1 = StringIO()
-        OUT2 = StreamIndenter(OUT1)
-        OUT2.write('Hello?\nHello, world!')
-        self.assertEqual('    Hello?\n    Hello, world!',
-                         OUT2.getvalue())
-
-    def test_StreamIndenter_prefix(self):
-        prefix = 'foo:'
-        OUT1 = StringIO()
-        OUT2 = StreamIndenter(OUT1, prefix)
-        OUT2.write('Hello?\nHello, world!')
-        self.assertEqual('foo:Hello?\nfoo:Hello, world!', OUT2.getvalue())
-
     def test_system(self):
         self.assertTrue(platform.system().lower().startswith(_system()))
         self.assertNotIn('.', _system())
@@ -147,6 +133,7 @@ class TestFileUtils(unittest.TestCase):
         subdir_name = 'aaa'
         subdir = os.path.join(self.tmpdir, subdir_name)
         os.mkdir(subdir)
+        # CWD restored in tearDown
         os.chdir(self.tmpdir)
 
         fname = 'foo.py'
@@ -219,10 +206,10 @@ class TestFileUtils(unittest.TestCase):
             os.path.join(subdir,subdir_name)
         )
 
-    def test_find_library(self):
-        self.tmpdir = os.path.abspath(tempfile.mkdtemp())
-        os.chdir(self.tmpdir)
-
+    @unittest.skipIf(sys.version_info[:2] < (3, 8)
+                     and platform.mac_ver()[0].startswith('10.16'),
+                     "find_library has known bugs in Big Sur for Python<3.8")
+    def test_find_library_system(self):
         # Find a system library (before we muck with the PATH)
         _args = {'cwd':False, 'include_PATH':False, 'pathlist':[]}
         if FileDownloader.get_sysinfo()[0] == 'windows':
@@ -237,13 +224,19 @@ class TestFileUtils(unittest.TestCase):
         self.assertIsNotNone(b)
         self.assertIsNotNone(c)
         self.assertEqual(a,b)
-        self.assertEqual(a,c)
+        # find_library could have found libc.so.6
+        self.assertTrue(c.startswith(a))
         # Verify that the library is loadable (they are all the same
         # file, so only check one)
         _lib = ctypes.cdll.LoadLibrary(a)
         self.assertIsNotNone(_lib)
 
-        config.PYOMO_CONFIG_DIR = self.tmpdir
+    def test_find_library_user(self):
+        self.tmpdir = os.path.abspath(tempfile.mkdtemp())
+        # CWD restored in tearDown
+        os.chdir(self.tmpdir)
+
+        envvar.PYOMO_CONFIG_DIR = self.tmpdir
         config_libdir = os.path.join(self.tmpdir, 'lib')
         os.mkdir(config_libdir)
         config_bindir = os.path.join(self.tmpdir, 'bin')
@@ -338,9 +331,10 @@ class TestFileUtils(unittest.TestCase):
 
     def test_find_executable(self):
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
+        # CWD restored in tearDown
         os.chdir(self.tmpdir)
 
-        config.PYOMO_CONFIG_DIR = self.tmpdir
+        envvar.PYOMO_CONFIG_DIR = self.tmpdir
         config_libdir = os.path.join(self.tmpdir, 'lib')
         os.mkdir(config_libdir)
         config_bindir = os.path.join(self.tmpdir, 'bin')
@@ -423,10 +417,10 @@ class TestFileUtils(unittest.TestCase):
 
 
     def test_PathManager(self):
-        Executable = PathManager(find_executable, _ExecutableData)
+        Executable = PathManager(find_executable, ExecutableData)
         self.tmpdir = os.path.abspath(tempfile.mkdtemp())
 
-        config.PYOMO_CONFIG_DIR = self.tmpdir
+        envvar.PYOMO_CONFIG_DIR = self.tmpdir
         config_bindir = os.path.join(self.tmpdir, 'bin')
         os.mkdir(config_bindir)
 

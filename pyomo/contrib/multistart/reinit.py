@@ -4,8 +4,6 @@ from __future__ import division
 import logging
 import random
 
-from six.moves import range
-
 from pyomo.core import Var
 
 logger = logging.getLogger('pyomo.contrib.multistart')
@@ -71,4 +69,5 @@ def reinitialize_variables(model, config):
             continue
         val = var.value if var.value is not None else (var.lb + var.ub) / 2
         # apply reinitialization strategy to variable
-        var.value = strategies[config.strategy](val, var.lb, var.ub)
+        var.set_value(strategies[config.strategy](val, var.lb, var.ub),
+                      skip_validation=True)

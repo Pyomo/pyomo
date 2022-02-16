@@ -19,6 +19,7 @@ else:
     import collections
     _ordered_dict_ = collections.OrderedDict
 
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.kernel.base import \
     (_no_ctype,
@@ -163,13 +164,11 @@ class block(IBlock):
         ctype = _convert_ctype.get(ctype, ctype)
 
         if ctype is _no_ctype:
-            for child in self.__order.values():
-                yield child
+            yield from self.__order.values()
         elif self_byctype.__class__ is _ordered_dict_:
             # large-block storage
             if ctype in self_byctype:
-                for child in self_byctype[ctype].values():
-                    yield child
+                yield from self_byctype[ctype].values()
         elif self_byctype.__class__ is int:
             # small-block storage
             # (self_byctype is a union of hash bytes)
@@ -180,8 +179,7 @@ class block(IBlock):
                         yield child
         elif self_byctype is ctype:
             # storing a single ctype
-            for child in self.__order.values():
-                yield child
+            yield from self.__order.values()
 
     #
     # Interface
@@ -384,11 +382,15 @@ class block(IBlock):
                 valid_import_suffixes[attr_key][self] = attr_value
 
         #
+        # Set the "stale" flag of each variable in the model prior to
+        # loading the solution, so you known which variables have "real"
+        # values and which ones don't.
+        #
+        StaleFlagManager.mark_all_as_stale()
+         #
         # Load variable data
         #
         from pyomo.core.kernel.variable import IVariable
-        for var in self.components(ctype=IVariable):
-            var.stale = True
         var_skip_attrs = ['id','canonical_label']
         seen_var_ids = set()
         for label, entry in solution.variable.items():
@@ -432,8 +434,7 @@ class block(IBlock):
                             % (var.name, attr_value,
                                comparison_tolerance_for_fixed_vars,
                                var.value))
-                    var.value = attr_value
-                    var.stale = False
+                    var.set_value(attr_value, skip_validation=True)
                 elif attr_key in valid_import_suffixes:
                     valid_import_suffixes[attr_key][var] = attr_value
 
@@ -513,8 +514,12 @@ class block(IBlock):
                         % (var.name, default_variable_value,
                            comparison_tolerance_for_fixed_vars,
                            var.value))
-                var.value = default_variable_value
-                var.stale = False
+                var.set_value(default_variable_value, skip_validation=True)
+
+        # Set the state flag to "delayed advance": it will auto-advance
+        # if a non-stale variable is updated (causing all non-stale
+        # variables to be marked as stale).
+        StaleFlagManager.mark_all_as_stale(delayed=True)
 
 # inserts class definitions for simple _tuple, _list, and
 # _dict containers into this module

@@ -10,7 +10,6 @@
 
 __all__ = ['test_solver_cases', 'available_solvers']
 
-import six
 import logging
 
 from pyomo.common.collections import Bunch
@@ -309,32 +308,11 @@ def test_solver_cases(*args):
                                    'sos1',
                                    'sos2'])
 
-        _test_solver_cases['xpress', 'lp'] = initialize(
-            name='xpress',
-            io='lp',
-            capabilities=_xpress_capabilities,
-            import_suffixes=['dual','rc','slack'],
-            options={'bargapstop':1e-9,})
-
-        _test_solver_cases['xpress', 'mps'] = initialize(
-            name='xpress',
-            io='mps',
-            capabilities=_xpress_capabilities,
-            import_suffixes=['dual','rc','slack'],
-            options={'bargapstop':1e-9,})
-
-        _test_solver_cases['xpress', 'nl'] = initialize(
-            name='xpress',
-            io='nl',
-            capabilities=_xpress_capabilities,
-            import_suffixes=['dual'],
-            options={'bargapstop':1e-9,})
-
         _test_solver_cases['xpress', 'python'] = initialize(
-            name='xpress',
+            name='xpress_direct',
             io='python',
             capabilities=_xpress_capabilities,
-            import_suffixes=['dual','rc','slack'],
+            import_suffixes=['dual', 'rc', 'slack'],
             options={'bargapstop':1e-9,})
 
         #
@@ -426,7 +404,7 @@ def test_solver_cases(*args):
         #
         # Error Checks
         #
-        for sc in six.itervalues(_test_solver_cases):
+        for sc in _test_solver_cases.values():
             if sc.capabilities is None:
                 sc.capabilities = set([])
             if sc.export_suffixes is None:

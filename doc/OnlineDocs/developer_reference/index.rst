@@ -9,5 +9,5 @@ scripts using Pyomo.
 .. toctree::
    :maxdepth: 1
 
+   config.rst
    expressions/index.rst
-

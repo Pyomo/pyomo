@@ -10,7 +10,6 @@
 
 import os
 from os.path import join, dirname, abspath
-import warnings
 import types
 try:
     import new
@@ -29,7 +28,6 @@ thisDir = dirname(abspath( __file__ ))
 
 # Cleanup Expected Failure Results Files
 _cleanup_expected_failures = True
-
 
 #
 # A function that returns a function that gets
@@ -89,14 +87,16 @@ def create_test_method(model,
 
         if is_expected_failure:
             if rc[0]:
-                warnings.warn("\nTest model '%s' was marked as an expected "
-                              "failure but no failure occured. The "
-                              "reason given for the expected failure "
-                              "is:\n\n****\n%s\n****\n\n"
-                              "Please remove this case as an expected "
-                              "failure if the above issue has been "
-                              "corrected in the latest version of the "
-                              "solver." % (model_class.description, test_case.msg))
+                self.fail(
+                    "\nTest model '%s' was marked as an expected "
+                    "failure but no failure occured. The "
+                    "reason given for the expected failure "
+                    "is:\n\n****\n%s\n****\n\n"
+                    "Please remove this case as an expected "
+                    "failure if the above issue has been "
+                    "corrected in the latest version of the "
+                    "solver." % (model_class.description, test_case.msg)
+                )
             if _cleanup_expected_failures:
                 os.remove(save_filename)
 
@@ -117,15 +117,6 @@ def create_test_method(model,
             os.remove(save_filename)
         except OSError:
             pass
-
-    # 03/23/2021: IDAES-ext added CBC 2.10.4 to their official release
-    #             This is causing failures in this test.
-    #             Manually turning off CBC tests until a solution can be found.
-    #             - mrmundt
-    if solver == 'cbc':
-        def skipping_test(self):
-            self.skipTest('SKIP: cbc currently does not work.')
-        return skipping_test
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':

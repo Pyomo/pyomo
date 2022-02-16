@@ -52,16 +52,18 @@ Logic-based Outer Approximation
 An example which includes the modeling approach may be found below.
 
 .. doctest::
+  :skipif: not glpk_available
 
   Required imports
   >>> from pyomo.environ import *
   >>> from pyomo.gdp import *
 
   Create a simple model
-  >>> model = ConcreteModel()
+  >>> model = ConcreteModel(name='LOA example')
 
   >>> model.x = Var(bounds=(-1.2, 2))
   >>> model.y = Var(bounds=(-10,10))
+  >>> model.c = Constraint(expr= model.x + model.y == 1)
 
   >>> model.fix_x = Disjunct()
   >>> model.fix_x.c = Constraint(expr=model.x == 0)
@@ -69,19 +71,34 @@ An example which includes the modeling approach may be found below.
   >>> model.fix_y = Disjunct()
   >>> model.fix_y.c = Constraint(expr=model.y == 0)
 
-  >>> model.c = Disjunction(expr=[model.fix_x, model.fix_y])
-  >>> model.objective = Objective(expr=model.x, sense=minimize)
+  >>> model.d = Disjunction(expr=[model.fix_x, model.fix_y])
+  >>> model.objective = Objective(expr=model.x + 0.1*model.y, sense=minimize)
 
   Solve the model using GDPopt
-  >>> SolverFactory('gdpopt').solve(model, mip_solver='glpk') # doctest: +SKIP
+  >>> results = SolverFactory('gdpopt').solve(
+  ...     model, strategy='LOA', mip_solver='glpk') # doctest: +IGNORE_RESULT
 
-The solution may then be displayed by using the commands
-
-.. code::
-
-  >>> model.objective.display()
+  Display the final solution
   >>> model.display()
-  >>> model.pprint()
+  Model LOA example
+  <BLANKLINE>
+    Variables:
+      x : Size=1, Index=None
+          Key  : Lower : Value : Upper : Fixed : Stale : Domain
+          None :  -1.2 :   0.0 :     2 : False : False :  Reals
+      y : Size=1, Index=None
+          Key  : Lower : Value : Upper : Fixed : Stale : Domain
+          None :   -10 :   1.0 :    10 : False : False :  Reals
+  <BLANKLINE>
+    Objectives:
+      objective : Size=1, Index=None, Active=True
+          Key  : Active : Value
+          None :   True :   0.1
+  <BLANKLINE>
+    Constraints:
+      c : Size=1
+          Key  : Lower : Body : Upper
+          None :   1.0 :  1.0 :   1.0
 
 .. note:: 
 
@@ -131,7 +148,7 @@ To use the GDPopt-LBB solver, define your Pyomo GDP model as usual:
   optimal
 
   >>> print([value(m.y1.indicator_var), value(m.y2.indicator_var)])
-  [1, 0]
+  [True, False]
 
 GDPopt implementation and optional arguments
 --------------------------------------------

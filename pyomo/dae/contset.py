@@ -11,8 +11,8 @@
 import logging
 import bisect
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.core.base.set import SortedSimpleSet
+from pyomo.core.base.set import SortedScalarSet
+from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.numvalue import native_numeric_types
 
 logger = logging.getLogger('pyomo.dae')
@@ -22,7 +22,7 @@ __all__ = ['ContinuousSet']
 @ModelComponentFactory.register(
                    "A bounded continuous numerical range optionally containing"
                    " discrete points of interest.")
-class ContinuousSet(SortedSimpleSet):
+class ContinuousSet(SortedScalarSet):
     """ Represents a bounded continuous domain
 
         Minimally, this set must contain two numeric values defining the
@@ -162,7 +162,7 @@ class ContinuousSet(SortedSimpleSet):
         if point in self._fe:
             return point
         elif point > max(self._fe):
-            logger.warn("The point '%s' exceeds the upper bound "
+            logger.warning("The point '%s' exceeds the upper bound "
                         "of the ContinuousSet '%s'. Returning the upper bound"
                         % (str(point), self.name))
             return max(self._fe)
@@ -195,7 +195,7 @@ class ContinuousSet(SortedSimpleSet):
                         return self._fe[tmp - 1]
             return point
         elif point < min(self._fe):
-            logger.warn("The point '%s' is less than the lower bound "
+            logger.warning("The point '%s' is less than the lower bound "
                         "of the ContinuousSet '%s'. Returning the lower bound "
                         % (str(point), self.name))
             return min(self._fe)
@@ -224,7 +224,7 @@ class ContinuousSet(SortedSimpleSet):
 
         # TBD: If a user specifies bounds they will be added to the set
         # unless the user specified bounds have been overwritten during
-        # OrderedSimpleSet construction. This can lead to some unintuitive
+        # OrderedScalarSet construction. This can lead to some unintuitive
         # behavior when the ContinuousSet is both initialized with values and
         # bounds are specified. The current implementation is consistent
         # with how 'Set' treats this situation.
@@ -265,27 +265,30 @@ class ContinuousSet(SortedSimpleSet):
         -------
         `float` or `None` 
         """
-        lo = 1
-        hi = len(self) + 1
-        i = bisect.bisect_right(self, target, lo=lo, hi=hi)
+        lo = 0
+        hi = len(self)
+        arr = list(self)
+        i = bisect.bisect_right(arr, target, lo=lo, hi=hi)
         # i is the index at which target should be inserted if it is to be
         # right of any equal components. 
 
         if i == lo:
             # target is less than every entry of the set
-            nearest_index = i
-            delta = self[nearest_index] - target
+            nearest_index = i + 1
+            delta = self.at(nearest_index) - target
         elif i == hi:
             # target is greater than or equal to every entry of the set
-            nearest_index = i-1
-            delta = target - self[nearest_index]
+            nearest_index = i
+            delta = target - self.at(nearest_index)
         else:
             # p_le <= target < p_g
             # delta_left = target - p_le
             # delta_right = p_g - target
             # delta = min(delta_left, delta_right)
             # Tie goes to the index on the left.
-            delta, nearest_index = min((abs(target - self[j]), j) for j in [i-1, i])
+            delta, nearest_index = min(
+                (abs(target - self.at(j)), j) for j in [i, i+1]
+            )
 
         if tolerance is not None:
             if delta > tolerance:

@@ -10,7 +10,7 @@
 """
 The cyipopt_solver module includes the python interface to the
 Cythonized ipopt solver cyipopt (see more:
-https://github.com/matthias-k/cyipopt.git). To use the solver,
+https://github.com/mechmotum/cyipopt.git). To use the solver,
 you can create a derived implementation from the abstract base class
 CyIpoptProblemInterface that provides the necessary methods.
 
@@ -19,7 +19,7 @@ that works with problems derived from AslNLP as long as those
 classes return numpy ndarray objects for the vectors and coo_matrix
 objects for the matrices (e.g., AmplNLP and PyomoNLP)
 """
-import six
+import io
 import sys
 import logging
 import os
@@ -29,12 +29,33 @@ from pyomo.common.dependencies import (
     attempt_import,
     numpy as np, numpy_available,
 )
-ipopt, ipopt_available = attempt_import(
-    'ipopt',
-    error_message='cyipopt solver relies on the ipopt module from cyipopt. '
-    'See https://github.com/matthias-k/cyipopt.git for cyipopt '
-    'installation instructions.'
+from pyomo.common.tee import redirect_fd, TeeStream
+
+def _cyipopt_importer():
+    import cyipopt
+    # cyipopt before version 1.0.3 called the problem class "Problem"
+    if not hasattr(cyipopt, 'Problem'):
+        cyipopt.Problem = cyipopt.problem
+    # cyipopt before version 1.0.3 put the __version__ flag in the ipopt
+    # module (which was deprecated starting in 1.0.3)
+    if not hasattr(cyipopt, '__version__'):
+        import ipopt
+        cyipopt.__version__ = ipopt.__version__
+    # Beginning in 1.0.3, STATUS_MESSAGES is in a separate
+    # ipopt_wrapper module
+    if not hasattr(cyipopt, 'STATUS_MESSAGES'):
+        import ipopt_wrapper
+        cyipopt.STATUS_MESSAGES = ipopt_wrapper.STATUS_MESSAGES
+    return cyipopt
+
+cyipopt, cyipopt_available = attempt_import(
+     'ipopt',
+     error_message='cyipopt solver relies on the ipopt module from cyipopt. '
+     'See https://github.com/mechmotum/cyipopt.git for cyipopt '
+     'installation instructions.',
+     importer=_cyipopt_importer,
 )
+
 # Because pynumero.interfaces requires numpy, we will leverage deferred
 # imports here so that the solver can be registered even when numpy is
 # not available.
@@ -54,25 +75,48 @@ logger = logging.getLogger(__name__)
 # This maps the cyipopt STATUS_MESSAGES back to string representations
 # of the Ipopt ApplicationReturnStatus enum
 _cyipopt_status_enum = [
-    'Solve_Succeeded', b'Algorithm terminated successfully at a locally optimal point, satisfying the convergence tolerances (can be specified by options).',
-    'Solved_To_Acceptable_Level', b'Algorithm stopped at a point that was converged, not to "desired" tolerances, but to "acceptable" tolerances (see the acceptable-... options).',
-    'Infeasible_Problem_Detected', b'Algorithm converged to a point of local infeasibility. Problem may be infeasible.',
-    'Search_Direction_Becomes_Too_Small', b'Algorithm proceeds with very little progress.',
-    'Diverging_Iterates', b'It seems that the iterates diverge.',
-    'User_Requested_Stop', b'The user call-back function intermediate_callback (see Section 3.3.4 in the documentation) returned false, i.e., the user code requested a premature termination of the optimization.',
-    'Feasible_Point_Found', b'Feasible point for square problem found.',
-    'Maximum_Iterations_Exceeded', b'Maximum number of iterations exceeded (can be specified by an option).',
-    'Restoration_Failed', b'Restoration phase failed, algorithm doesn\'t know how to proceed.',
-    'Error_In_Step_Computation', b'An unrecoverable error occurred while Ipopt tried to compute the search direction.',
-    'Maximum_CpuTime_Exceeded', b'Maximum CPU time exceeded.',
-    'Not_Enough_Degrees_Of_Freedom', b'Problem has too few degrees of freedom.',
-    'Invalid_Problem_Definition', b'Invalid problem definition.',
-    'Invalid_Option', b'Invalid option encountered.',
-    'Invalid_Number_Detected', b'Algorithm received an invalid number (such as NaN or Inf) from the NLP; see also option check_derivatives_for_naninf',
-    'Unrecoverable_Exception', b'Some uncaught Ipopt exception encountered.',
-    'NonIpopt_Exception_Thrown', b'Unknown Exception caught in Ipopt',
-    'Insufficient_Memory', b'Not enough memory.',
-    'Internal_Error', b'An unknown internal error occurred. Please contact the Ipopt authors through the mailing list.'
+    "Solve_Succeeded", (b"Algorithm terminated successfully at a locally "
+                        b"optimal point, satisfying the convergence tolerances "
+                        b"(can be specified by options)."),
+    "Solved_To_Acceptable_Level", (b"Algorithm stopped at a point that was "
+                                   b"converged, not to \"desired\" tolerances, "
+                                   b"but to \"acceptable\" tolerances (see the "
+                                   b"acceptable-... options)."),
+    "Infeasible_Problem_Detected", (b"Algorithm converged to a point of local "
+                                    b"infeasibility. Problem may be "
+                                    b"infeasible."),
+    "Search_Direction_Becomes_Too_Small", (b"Algorithm proceeds with very "
+                                           b"little progress."),
+    "Diverging_Iterates", b"It seems that the iterates diverge.",
+    "User_Requested_Stop", (b"The user call-back function intermediate_callback "
+                            b"(see Section 3.3.4 in the documentation) returned "
+                            b"false, i.e., the user code requested a premature "
+                            b"termination of the optimization."),
+    "Feasible_Point_Found", b"Feasible point for square problem found.",
+    "Maximum_Iterations_Exceeded", (b"Maximum number of iterations exceeded "
+                                    b"(can be specified by an option)."),
+    "Restoration_Failed", (b"Restoration phase failed, algorithm doesn\'t know "
+                           b"how to proceed."),
+    "Error_In_Step_Computation", (b"An unrecoverable error occurred while Ipopt "
+                                  b"tried to compute the search direction."),
+    "Maximum_CpuTime_Exceeded", b"Maximum CPU time exceeded.",
+    "Not_Enough_Degrees_Of_Freedom", b"Problem has too few degrees of freedom.",
+    "Invalid_Problem_Definition", b"Invalid problem definition.",
+    "Invalid_Option", b"Invalid option encountered.",
+    "Invalid_Number_Detected", (b"Algorithm received an invalid number (such as "
+                                b"NaN or Inf) from the NLP; see also option "
+                                b"check_derivatives_for_naninf."),
+    # Note that the concluding "." was missing before cyipopt 1.0.3
+    "Invalid_Number_Detected", (b"Algorithm received an invalid number (such as "
+                                b"NaN or Inf) from the NLP; see also option "
+                                b"check_derivatives_for_naninf"),
+    "Unrecoverable_Exception", b"Some uncaught Ipopt exception encountered.",
+    "NonIpopt_Exception_Thrown", b"Unknown Exception caught in Ipopt.",
+    # Note that the concluding "." was missing before cyipopt 1.0.3
+    "NonIpopt_Exception_Thrown", b"Unknown Exception caught in Ipopt",
+    "Insufficient_Memory", b"Not enough memory.",
+    "Internal_Error", (b"An unknown internal error occurred. Please contact "
+                       b"the Ipopt authors through the mailing list."),
 ]
 _cyipopt_status_enum = {
     _cyipopt_status_enum[i+1]: _cyipopt_status_enum[i]
@@ -103,8 +147,7 @@ _ipopt_term_cond = {
     'Internal_Error': TerminationCondition.internalSolverError,
 }
 
-@six.add_metaclass(abc.ABCMeta)
-class CyIpoptProblemInterface(object):
+class CyIpoptProblemInterface(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def x_init(self):
         """Return the initial values for x as a numpy ndarray
@@ -346,29 +389,6 @@ class CyIpoptNLP(CyIpoptProblemInterface):
         return True
 
 
-def _redirect_stdout():
-    sys.stdout.flush() # <--- important when redirecting to files
-
-    # Duplicate stdout (file descriptor 1)
-    # to a different file descriptor number
-    newstdout = os.dup(1)
-
-    # /dev/null is used just to discard what is being printed
-    devnull = os.open(os.devnull, os.O_WRONLY)
-
-    # Duplicate the file descriptor for /dev/null
-    # and overwrite the value for stdout (file descriptor 1)
-    os.dup2(devnull, 1)
-
-    # Close devnull after duplication (no longer needed)
-    os.close(devnull)
-
-    # Use the original stdout to still be able
-    # to print to stdout within python
-    sys.stdout = os.fdopen(newstdout, 'w')
-    return newstdout
-
-
 class CyIpoptSolver(object):
     def __init__(self, problem_interface, options=None):
         """Create an instance of the CyIpoptSolver. You must
@@ -398,7 +418,7 @@ class CyIpoptSolver(object):
         nx = len(xstart)
         ng = len(gl)
 
-        cyipopt_solver = ipopt.problem(
+        cyipopt_solver = cyipopt.Problem(
             n=nx,
             m=ng,
             problem_obj=self._problem,
@@ -418,18 +438,39 @@ class CyIpoptSolver(object):
                 x_scaling = np.ones(nx)
             if g_scaling is None:
                 g_scaling = np.ones(ng)
-            cyipopt_solver.setProblemScaling(obj_scaling, x_scaling, g_scaling)
+            try:
+                set_scaling = cyipopt_solver.set_problem_scaling
+            except AttributeError:
+                # Fall back to pre-1.0.0 API
+                set_scaling = cyipopt_solver.setProblemScaling
+            set_scaling(obj_scaling, x_scaling, g_scaling)
 
         # add options
+        try:
+            add_option = cyipopt_solver.add_option
+        except AttributeError:
+            # Fall back to pre-1.0.0 API
+            add_option = cyipopt_solver.addOption
         for k, v in self._options.items():
-            cyipopt_solver.addOption(k, v)
+            add_option(k, v)
 
-        if tee:
-            x, info = cyipopt_solver.solve(xstart)
-        else:
-            newstdout = _redirect_stdout()
-            x, info = cyipopt_solver.solve(xstart)
-            os.dup2(newstdout, 1)
+        # We preemptively set up the TeeStream, even if we aren't
+        # going to use it: the implementation is such that the
+        # context manager does nothing (i.e., doesn't start up any
+        # processing threads) until afer a client accesses
+        # STDOUT/STDERR
+        with TeeStream(sys.stdout) as _teeStream:
+            if tee:
+                try:
+                    fd = sys.stdout.fileno()
+                except (io.UnsupportedOperation, AttributeError):
+                    # If sys,stdout doesn't have a valid fileno,
+                    # then create one using the TeeStream
+                    fd = _teeStream.STDOUT.fileno()
+            else:
+                fd = None
+            with redirect_fd(fd=1, output=fd, synchronize=False):
+                x, info = cyipopt_solver.solve(xstart)
 
         return x, info
 
@@ -482,13 +523,13 @@ class PyomoCyIpoptSolver(object):
         self._model = model
 
     def available(self, exception_flag=False):
-        return numpy_available and ipopt_available
+        return bool(numpy_available and cyipopt_available)
 
     def license_is_valid(self):
         return True
 
     def version(self):
-        return tuple(int(_) for _ in ipopt.__version__.split('.'))
+        return tuple(int(_) for _ in cyipopt.__version__.split('.'))
 
     def solve(self, model, **kwds):
         config = self.config(kwds, preserve_implicit=True)
@@ -517,7 +558,7 @@ class PyomoCyIpoptSolver(object):
         nx = len(xl)
         ng = len(gl)
 
-        cyipopt_solver = ipopt.problem(
+        cyipopt_solver = cyipopt.Problem(
             n=nx,
             m=ng,
             problem_obj=problem,
@@ -537,20 +578,41 @@ class PyomoCyIpoptSolver(object):
                 x_scaling = np.ones(nx)
             if g_scaling is None:
                 g_scaling = np.ones(ng)
-            cyipopt_solver.setProblemScaling(obj_scaling, x_scaling, g_scaling)
+            try:
+                set_scaling = cyipopt_solver.set_problem_scaling
+            except AttributeError:
+                # Fall back to pre-1.0.0 API
+                set_scaling = cyipopt_solver.setProblemScaling
+            set_scaling(obj_scaling, x_scaling, g_scaling)
 
         # add options
+        try:
+            add_option = cyipopt_solver.add_option
+        except AttributeError:
+            # Fall back to pre-1.0.0 API
+            add_option = cyipopt_solver.addOption
         for k, v in config.options.items():
-            cyipopt_solver.addOption(k, v)
+            add_option(k, v)
 
         timer = TicTocTimer()
         try:
-            if config.tee:
-                x, info = cyipopt_solver.solve(problem.x_init())
-            else:
-                newstdout = _redirect_stdout()
-                x, info = cyipopt_solver.solve(problem.x_init())
-                os.dup2(newstdout, 1)
+            # We preemptively set up the TeeStream, even if we aren't
+            # going to use it: the implementation is such that the
+            # context manager does nothing (i.e., doesn't start up any
+            # processing threads) until afer a client accesses
+            # STDOUT/STDERR
+            with TeeStream(sys.stdout) as _teeStream:
+                if config.tee:
+                    try:
+                        fd = sys.stdout.fileno()
+                    except (io.UnsupportedOperation, AttributeError):
+                        # If sys,stdout doesn't have a valid fileno,
+                        # then create one using the TeeStream
+                        fd = _teeStream.STDOUT.fileno()
+                else:
+                    fd = None
+                with redirect_fd(fd=1, output=fd, synchronize=False):
+                    x, info = cyipopt_solver.solve(problem.x_init())
             solverStatus = SolverStatus.ok
         except:
             msg = "Exception encountered during cyipopt solve:"

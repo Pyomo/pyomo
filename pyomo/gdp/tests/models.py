@@ -1,7 +1,11 @@
 from pyomo.core import (Block, ConcreteModel, Constraint, Objective, Param, Set,
-                        Var, inequality, RangeSet, Any, Expression, maximize)
+                        Var, inequality, RangeSet, Any, Expression, maximize,
+                        TransformationFactory, BooleanVar, LogicalConstraint,
+                        exactly)
+from pyomo.core.expr.current import sqrt
 from pyomo.gdp import Disjunct, Disjunction
 
+import pyomo.network as ntwk
 
 def oneVarDisj_2pts():
     m = ConcreteModel()
@@ -541,9 +545,7 @@ def makeDisjunctInMultipleDisjunctions():
 def makeDuplicatedNestedDisjunction():
     """Not a transformable model (because of disjuncts shared between 
     disjunctions): A SimpleDisjunction where one of the disjuncts contains
-    two SimpleDisjunctions with the same Disjuncts. This is a lazy
-    way to test that we complain about untransformed disjunctions we encounter
-    while transforming a disjunct.
+    two SimpleDisjunctions with the same Disjuncts.
     """
     m = ConcreteModel()
     m.x = Var(bounds=(0, 8))
@@ -726,4 +728,304 @@ def makeAnyIndexedDisjunctionOfDisjunctDatas():
     m.disjunction = Disjunction(Any)
     m.disjunction[1] = [m.firstTerm[1], m.secondTerm[1]]
     m.disjunction[2] = [m.firstTerm[2], m.secondTerm[2]]
+    return m
+
+def makeNetworkDisjunction(minimize=True):
+    """ creates a GDP model with pyomo.network components """
+    m = ConcreteModel()
+
+    m.feed = feed = Block()
+    m.wkbx = wkbx = Block()
+    m.dest = dest = Block()
+
+    m.orange = orange = Disjunct()
+    m.blue = blue = Disjunct()
+
+    m.orange_or_blue = Disjunction(expr=[orange,blue])
+
+    blue.blue_box = blue_box = Block()
+
+    feed.x = Var(bounds=(0,1))
+    wkbx.x = Var(bounds=(0,1))
+    dest.x = Var(bounds=(0,1))
+
+    wkbx.inlet = ntwk.Port(initialize={"x":wkbx.x})
+    wkbx.outlet = ntwk.Port(initialize={"x":wkbx.x})
+
+    feed.outlet = ntwk.Port(initialize={"x":feed.x})
+    dest.inlet = ntwk.Port(initialize={"x":dest.x})
+
+    blue_box.x = Var(bounds=(0,1))
+    blue_box.x_wkbx = Var(bounds=(0,1))
+    blue_box.x_dest = Var(bounds=(0,1))
+
+
+    blue_box.inlet_feed = ntwk.Port(initialize={"x":blue_box.x})
+    blue_box.outlet_wkbx = ntwk.Port(initialize={"x":blue_box.x})
+
+    blue_box.inlet_wkbx = ntwk.Port(initialize={"x":blue_box.x_wkbx})
+    blue_box.outlet_dest = ntwk.Port(initialize={"x":blue_box.x_dest})
+
+    blue_box.multiplier_constr = Constraint(expr=blue_box.x_dest == \
+                                            2*blue_box.x_wkbx)
+
+    # orange arcs
+    orange.a1 = ntwk.Arc(source=feed.outlet, destination=wkbx.inlet)
+    orange.a2 = ntwk.Arc(source=wkbx.outlet, destination=dest.inlet)
+
+    # blue arcs
+    blue.a1 = ntwk.Arc(source=feed.outlet, destination=blue_box.inlet_feed)
+    blue.a2 = ntwk.Arc(source=blue_box.outlet_wkbx, destination=wkbx.inlet)
+    blue.a3 = ntwk.Arc(source=wkbx.outlet, destination=blue_box.inlet_wkbx)
+    blue.a4 = ntwk.Arc(source=blue_box.outlet_dest, destination=dest.inlet)
+
+    # maximize/minimize "production"
+    if minimize:
+        m.obj = Objective(expr=m.dest.x)
+    else:
+        m.obj = Objective(expr=m.dest.x, sense=maximize)
+
+    # create a completely fixed model
+    feed.x.fix(0.42)
+
+    return m
+
+def makeExpandedNetworkDisjunction(minimize=True):
+    m = makeNetworkDisjunction(minimize)
+    TransformationFactory('network.expand_arcs').apply_to(m)
+    return m
+
+def makeThreeTermDisjunctionWithOneVarInOneDisjunct():
+    """This is to make sure hull doesn't create more disaggregated variables 
+    than it needs to: Here, x only appears in the first Disjunct, so we only 
+    need two copies: one as usual for that disjunct and then one other that is 
+    free if either of the second two Disjuncts is active and 0 otherwise.
+    """
+    m = ConcreteModel()
+    m.x = Var(bounds=(-2,8))
+    m.y = Var(bounds=(3,4))
+    m.d1 = Disjunct()
+    m.d1.c1 = Constraint(expr=m.x <= 3)
+    m.d1.c2 = Constraint(expr=m.y >= 3.5)
+    m.d2 = Disjunct()
+    m.d2.c1 = Constraint(expr=m.y >= 3.7)
+    m.d3 = Disjunct()
+    m.d3.c1 = Constraint(expr=m.y >= 3.9)
+
+    m.disjunction = Disjunction(expr=[m.d1, m.d2, m.d3])
+
+    return m
+
+def makeNestedNonlinearModel():
+    """This is actually a disjunction between two points, but it's written 
+    as a nested disjunction over four circles!"""
+    m = ConcreteModel()
+    m.x = Var(bounds=(-10, 10))
+    m.y = Var(bounds=(-10, 10))
+    m.d1 = Disjunct()
+    m.d1.lower_circle = Constraint(expr=m.x**2 + m.y**2 <= 1)
+    m.disj = Disjunction(expr=[[m.x == 10], [(sqrt(2) - m.x)**2 + (sqrt(2) -
+                                                                   m.y)**2 <=
+                                             1]])
+    m.d2 = Disjunct()
+    m.d2.upper_circle = Constraint(expr=(3 - m.x)**2 + (3 - m.y)**2 <= 1)
+    m.d2.inner = Disjunction(expr=[[m.y == 10], [(sqrt(2) - m.x)**2 + (sqrt(2) -
+                                                                       m.y)**2
+                                                 <= 1]])
+    m.outer = Disjunction(expr=[m.d1, m.d2])
+    m.obj = Objective(expr=m.x + m.y)
+
+    return m
+
+##
+# Variations on the example from the Kronqvist et al. Between Steps paper
+##
+
+def makeBetweenStepsPaperExample():
+    """Original example model, implicit disjunction"""
+    m = ConcreteModel()
+    m.I = RangeSet(1,4)
+    m.x = Var(m.I, bounds=(-2,6))
+
+    m.disjunction = Disjunction(expr=[[sum(m.x[i]**2 for i in m.I) <= 1],
+                                      [sum((3 - m.x[i])**2 for i in m.I) <=
+                                       1]])
+
+    m.obj = Objective(expr=m.x[2] - m.x[1], sense=maximize)
+
+    return m
+
+def makeBetweenStepsPaperExample_DeclareVarOnDisjunct():
+    """Exactly the same model as above, but declaring the Disjuncts explicitly 
+    and declaring the variables on one of them.
+    """
+    m = ConcreteModel()
+    m.I = RangeSet(1,4)
+    m.disj1 = Disjunct()
+    m.disj1.x = Var(m.I, bounds=(-2,6))
+    m.disj1.c = Constraint(expr=sum(m.disj1.x[i]**2 for i in m.I) <= 1)
+    m.disj2 = Disjunct()
+    m.disj2.c = Constraint(expr=sum((3 - m.disj1.x[i])**2 for i in m.I) <=
+                           1)
+    m.disjunction = Disjunction(expr=[m.disj1, m.disj2])
+
+    m.obj = Objective(expr=m.disj1.x[2] - m.disj1.x[1], sense=maximize)
+
+    return m
+
+def makeBetweenStepsPaperExample_Nested():
+    """Mathematically, this is really dumb, but I am nesting this model on 
+    itself because it makes writing tests simpler (I can recycle.)"""
+    m = makeBetweenStepsPaperExample_DeclareVarOnDisjunct()
+    m.disj2.disjunction = Disjunction(
+        expr=[[sum(m.disj1.x[i]**2 for i in m.I) <= 1],
+              [sum((3 - m.disj1.x[i])**2 for i in m.I) <= 1]])
+    
+    return m
+
+def instantiate_hierarchical_nested_model(m):
+    """helper function to instantiate a nested version of the model with 
+    the Disjuncts and Disjunctions on blocks"""
+    m.disj1 = Disjunct()
+    m.disjunct_block.disj2 = Disjunct()
+    m.disj1.c = Constraint(expr=sum(m.x[i]**2 for i in m.I) <= 1)
+    m.disjunct_block.disj2.c = Constraint(expr=sum((3 - m.x[i])**2 for i in
+                                                   m.I) <= 1)
+    m.disjunct_block.disj2.disjunction = Disjunction(
+        expr=[[sum(m.x[i]**2 for i in m.I) <= 1],
+              [sum((3 - m.x[i])**2 for i in m.I) <= 1]])
+    m.disjunction_block.disjunction = Disjunction(
+        expr=[m.disj1, m.disjunct_block.disj2])
+
+def makeHierarchicalNested_DeclOrderMatchesInstantationOrder():
+    """Here, we put the disjunctive components on Blocks, but we do it in the 
+    same order that we declared the blocks, that is, on each block, decl order
+    matches instantiation order."""
+    m = ConcreteModel()
+    m.I = RangeSet(1,4)
+    m.x = Var(m.I, bounds=(-2,6))
+    m.disjunct_block = Block()
+    m.disjunction_block = Block()
+    instantiate_hierarchical_nested_model(m)
+
+    return m
+
+def makeHierarchicalNested_DeclOrderOppositeInstantationOrder():
+    """Here, we declare the Blocks in the opposite order. This means that 
+    decl order will be *opposite* instantiation order, which means that we 
+    can break our targets preprocessing without even using targets if we 
+    are not correctly identifying what is nested in what!"""
+    m = ConcreteModel()
+    m.I = RangeSet(1,4)
+    m.x = Var(m.I, bounds=(-2,6))
+    m.disjunction_block = Block()
+    m.disjunct_block = Block()
+    instantiate_hierarchical_nested_model(m)
+
+    return m
+
+def makeNonQuadraticNonlinearGDP():
+    """We use this in testing between steps--Needed non-quadratic and not 
+    additively separable constraint expressions on a Disjunct."""
+    m = ConcreteModel()
+    m.I = RangeSet(1,4)
+    m.I1 = RangeSet(1,2)
+    m.I2 = RangeSet(3,4)
+    m.x = Var(m.I, bounds=(-2,6))
+
+    # sum of 4-norms...
+    m.disjunction = Disjunction(
+        expr=[[sum(m.x[i]**4 for i in m.I1)**(1/4) + \
+               sum(m.x[i]**4 for i in m.I2)**(1/4) <= 1],
+              [sum((3 - m.x[i])**4 for i in m.I1)**(1/4) +
+               sum((3 - m.x[i])**4 for i in m.I2)**(1/4) <= 1]])
+
+    m.obj = Objective(expr=m.x[2] - m.x[1], sense=maximize)
+
+    return m
+
+#
+# Logical Constraints on Disjuncts
+#
+
+def makeLogicalConstraintsOnDisjuncts():
+    m = ConcreteModel()
+    m.s = RangeSet(4)
+    m.ds = RangeSet(2)
+    m.d = Disjunct(m.s)
+    m.djn = Disjunction(m.ds)
+    m.djn[1] = [m.d[1], m.d[2]]
+    m.djn[2] = [m.d[3], m.d[4]]
+    m.x = Var(bounds=(-2, 10))
+    m.Y = BooleanVar([1, 2])
+    m.d[1].c = Constraint(expr=m.x >= 2)
+    m.d[1].logical = LogicalConstraint(expr=~m.Y[1])
+    m.d[2].c = Constraint(expr=m.x >= 3)
+    m.d[3].c = Constraint(expr=m.x >= 8)
+    m.d[4].logical = LogicalConstraint(expr=m.Y[1].equivalent_to(m.Y[2]))
+    m.d[4].c = Constraint(expr=m.x == 2.5)
+    m.o = Objective(expr=m.x)
+
+    # Add the logical proposition
+    m.p = LogicalConstraint(
+        expr=m.d[1].indicator_var.implies(m.d[4].indicator_var))
+    # Use the logical stuff to make choosing d1 and d4 infeasible:
+    m.bwahaha = LogicalConstraint(expr=m.Y[1].xor(m.Y[2]))
+
+    return m
+
+def makeLogicalConstraintsOnDisjuncts_NonlinearConvex():
+    # same game as the previous model, but include some nonlinear
+    # constraints. This is to test gdpopt because it needs to handle the logical
+    # things even when they are on the same Disjunct as a nonlinear thing
+    m = ConcreteModel()
+    m.s = RangeSet(4)
+    m.ds = RangeSet(2)
+    m.d = Disjunct(m.s)
+    m.djn = Disjunction(m.ds)
+    m.djn[1] = [m.d[1], m.d[2]]
+    m.djn[2] = [m.d[3], m.d[4]]
+    m.x = Var(bounds=(-5, 10))
+    m.y = Var(bounds=(-5, 10))
+    m.Y = BooleanVar([1, 2])
+    m.d[1].c = Constraint(expr=m.x**2 + m.y**2 <= 2)
+    m.d[1].logical = LogicalConstraint(expr=~m.Y[1])
+    m.d[2].c1 = Constraint(expr=m.x >= -3)
+    m.d[2].c2 = Constraint(expr=m.x**2 <= 16)
+    m.d[2].logical = LogicalConstraint(expr=m.Y[1].land(m.Y[2]))
+    m.d[3].c = Constraint(expr=m.x >= 4)
+    m.d[4].logical = LogicalConstraint(expr=exactly(1, m.Y[1]))
+    m.d[4].logical2 = LogicalConstraint(expr=~m.Y[2])
+    m.d[4].c = Constraint(expr=m.x == 3)
+    m.o = Objective(expr=m.x)
+
+    return m
+
+def makeBooleanVarsOnDisjuncts():
+    # same as linear model above, but declare the BooleanVar on one of the
+    # Disjuncts, just to make sure we make references and stuff correctly.
+    m = ConcreteModel()
+    m.s = RangeSet(4)
+    m.ds = RangeSet(2)
+    m.d = Disjunct(m.s)
+    m.djn = Disjunction(m.ds)
+    m.djn[1] = [m.d[1], m.d[2]]
+    m.djn[2] = [m.d[3], m.d[4]]
+    m.x = Var(bounds=(-2, 10))
+    m.d[1].Y = BooleanVar([1, 2])
+    m.d[1].c = Constraint(expr=m.x >= 2)
+    m.d[1].logical = LogicalConstraint(expr=~m.d[1].Y[1])
+    m.d[2].c = Constraint(expr=m.x >= 3)
+    m.d[3].c = Constraint(expr=m.x >= 8)
+    m.d[4].logical = LogicalConstraint(
+        expr=m.d[1].Y[1].equivalent_to(m.d[1].Y[2]))
+    m.d[4].c = Constraint(expr=m.x == 2.5)
+    m.o = Objective(expr=m.x)
+
+    # Add the logical proposition
+    m.p = LogicalConstraint(
+        expr=m.d[1].indicator_var.implies(m.d[4].indicator_var))
+    # Use the logical stuff to make choosing d1 and d4 infeasible:
+    m.bwahaha = LogicalConstraint(expr=m.d[1].Y[1].xor(m.d[1].Y[2]))
+
     return m

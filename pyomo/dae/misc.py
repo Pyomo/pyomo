@@ -18,7 +18,7 @@ from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.block import IndexedBlock, SortComponents
 from pyomo.dae import ContinuousSet, DAE_Error
 
-from six import iterkeys, itervalues, StringIO
+from io import StringIO
 
 logger = logging.getLogger('pyomo.dae')
 
@@ -119,7 +119,7 @@ def expand_components(block):
     # BlockData will be added to the indexed Block but will not be
     # constructed correctly.
     for blk in block.component_objects(Block, descend_into=True):
-        missing_idx = set(blk._index) - set(iterkeys(blk._data))
+        missing_idx = set(blk._index) - set(blk._data.keys())
         if missing_idx:
             blk._dae_missing_idx = missing_idx
 
@@ -259,7 +259,7 @@ def _update_var(v):
     #       Var (which is now a IndexedComponent). However, it
     #       would be much slower to rely on that method to generate new
     #       _VarData for a large number of new indices.
-    new_indices = set(v._index) - set(iterkeys(v._data))
+    new_indices = set(v._index) - set(v._data.keys())
     for index in new_indices:
         v.add(index)
 
@@ -269,13 +269,7 @@ def _update_constraint(con):
     This method will construct any additional indices in a constraint
     resulting from the discretization of a ContinuousSet.
     """
-
-    _rule = con.rule
-    _parent = con._parent()
-    for i in con.index_set():
-        if i not in con:
-            # Code taken from the construct() method of Constraint
-            con.add(i, _rule(_parent, i))
+    con.to_dense_data()
 
 
 def _update_expression(expre):
@@ -283,12 +277,7 @@ def _update_expression(expre):
     This method will construct any additional indices in an expression
     resulting from the discretization of a ContinuousSet.
     """
-    _rule = expre._init_rule
-    _parent = expre._parent()
-    for i in expre.index_set():
-        if i not in expre:
-            # Code taken from the construct() method of Expression
-            expre.add(i, apply_indexed_rule(expre, _rule, _parent, i))
+    expre.to_dense_data()
 
 
 def _update_block(blk):
@@ -430,7 +419,7 @@ def block_fully_discretized(b):
     Checks to see if all ContinuousSets in a block have been discretized
     """
 
-    for i in itervalues(b.component_map(ContinuousSet)):
+    for i in b.component_map(ContinuousSet).values():
         if 'scheme' not in i.get_discretization_info():
             return False
     return True
@@ -452,7 +441,7 @@ def get_index_information(var, ds):
 
     if var.dim() != 1:
         indCount = 0
-        for index in var.index_set().set_tuple:
+        for index in var.index_set().subsets():
             if isinstance(index, ContinuousSet):
                 if index is ds:
                     dsindex = indCount

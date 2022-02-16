@@ -13,8 +13,10 @@ import pyomo.environ as pyo
 import os
 
 from pyomo.contrib.pynumero.dependencies import (
-    numpy as np, numpy_available, scipy_sparse as spa, scipy_available
+    numpy as np, numpy_available, scipy, scipy_available
 )
+from pyomo.common.dependencies.scipy import sparse as spa
+
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest("Pynumero needs scipy and numpy to run NLP tests")
 
@@ -25,9 +27,10 @@ if not AmplInterface.available():
 
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 
-try:
-    import ipopt
-except ImportError:
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
+    cyipopt_available
+)
+if not cyipopt_available:
     raise unittest.SkipTest("Pynumero needs cyipopt to run CyIpoptSolver tests")
 
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (

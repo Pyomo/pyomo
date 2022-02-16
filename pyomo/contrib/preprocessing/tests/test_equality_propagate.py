@@ -1,5 +1,6 @@
 """Tests the equality set propagation module."""
 import pyomo.common.unittest as unittest
+from pyomo.common.errors import InfeasibleConstraintException
 
 from pyomo.environ import (ConcreteModel, Constraint, RangeSet,
                            TransformationFactory, Var, value)
@@ -40,13 +41,13 @@ class TestEqualityPropagate(unittest.TestCase):
         self.assertTrue(m.v2.fixed)
         self.assertTrue(m.v3.fixed)
         self.assertTrue(m.v4.fixed)
-        self.assertEquals(value(m.v4), 2)
+        self.assertEqual(value(m.v4), 2)
 
         self.assertTrue(m.x[1].fixed)
         self.assertTrue(m.x[2].fixed)
         self.assertTrue(m.x[3].fixed)
         self.assertTrue(m.x[4].fixed)
-        self.assertEquals(value(m.x[4]), 1)
+        self.assertEqual(value(m.x[4]), 1)
 
         self.assertFalse(m.y[1].fixed)
         self.assertFalse(m.y[2].fixed)
@@ -73,7 +74,7 @@ class TestEqualityPropagate(unittest.TestCase):
         self.assertTrue(m.v2.fixed)
         self.assertTrue(m.v3.fixed)
         self.assertTrue(m.v4.fixed)
-        self.assertEquals(value(m.v4), 4)
+        self.assertEqual(value(m.v4), 4)
 
     def test_var_fix_revert(self):
         """Test to make sure that variable fixing reversion works."""
@@ -97,6 +98,29 @@ class TestEqualityPropagate(unittest.TestCase):
         self.assertTrue(m.v2.fixed)
         self.assertFalse(m.v3.fixed)
         self.assertFalse(m.v4.fixed)
+
+    def test_var_fix_accounts_for_constants(self):
+        """Test to make sure that constraints of the form x == y + constant
+        are handled correctly when propogating fixed variables."""
+        m = ConcreteModel()
+        m.v = Var(initialize=1.0)
+        m.v2 = Var(initialize=1.0)
+        m.v3 = Var(initialize=1.0)
+        m.c = Constraint(expr = m.v - m.v2 + m.v3 == 0)
+        m.v.fix()
+        m.v4 = Var(initialize=1.0)
+        m.c2 = Constraint(expr=m.v2 == m.v4)
+        m.v4.fix()
+        TransformationFactory('contrib.propagate_fixed_vars').apply_to(m)
+        
+        self.assertTrue(m.v.fixed)
+        self.assertEqual(value(m.v), 1)
+        self.assertTrue(m.v4.fixed)
+        self.assertEqual(value(m.v4), 1)
+        self.assertTrue(m.v2.fixed)
+        self.assertEqual(value(m.v2), 1)
+        # v3 doesn't get fixed at all since m.c is not in the form x == y.
+        self.assertFalse(m.v3.fixed)
 
     def test_var_bound_propagate(self):
         """Test for transitivity in a variable equality set."""
@@ -129,27 +153,27 @@ class TestEqualityPropagate(unittest.TestCase):
 
         TransformationFactory('contrib.propagate_eq_var_bounds').apply_to(m)
 
-        self.assertEquals(value(m.v1.lb), 2)
-        self.assertEquals(value(m.v1.lb), value(m.v2.lb))
-        self.assertEquals(value(m.v1.lb), value(m.v3.lb))
-        self.assertEquals(value(m.v1.lb), value(m.v4.lb))
-        self.assertEquals(value(m.v1.ub), 3)
-        self.assertEquals(value(m.v1.ub), value(m.v2.ub))
-        self.assertEquals(value(m.v1.ub), value(m.v3.ub))
-        self.assertEquals(value(m.v1.ub), value(m.v4.ub))
+        self.assertEqual(value(m.v1.lb), 2)
+        self.assertEqual(value(m.v1.lb), value(m.v2.lb))
+        self.assertEqual(value(m.v1.lb), value(m.v3.lb))
+        self.assertEqual(value(m.v1.lb), value(m.v4.lb))
+        self.assertEqual(value(m.v1.ub), 3)
+        self.assertEqual(value(m.v1.ub), value(m.v2.ub))
+        self.assertEqual(value(m.v1.ub), value(m.v3.ub))
+        self.assertEqual(value(m.v1.ub), value(m.v4.ub))
 
         for i in m.s:
-            self.assertEquals(value(m.x[i].lb), -1)
+            self.assertEqual(value(m.x[i].lb), -1)
 
-        self.assertEquals(value(m.y[1].ub), 3)
-        self.assertEquals(value(m.y[2].ub), 3)
-        self.assertEquals(value(m.y[1].lb), None)
-        self.assertEquals(value(m.y[1].lb), None)
+        self.assertEqual(value(m.y[1].ub), 3)
+        self.assertEqual(value(m.y[2].ub), 3)
+        self.assertEqual(value(m.y[1].lb), None)
+        self.assertEqual(value(m.y[1].lb), None)
 
-        self.assertEquals(value(m.z1.ub), 2)
-        self.assertEquals(value(m.z2.ub), 4)
-        self.assertEquals(value(m.z1.lb), 1)
-        self.assertEquals(value(m.z2.lb), 3)
+        self.assertEqual(value(m.z1.ub), 2)
+        self.assertEqual(value(m.z2.ub), 4)
+        self.assertEqual(value(m.z1.lb), 1)
+        self.assertEqual(value(m.z2.lb), 3)
 
     def test_var_bound_propagate_crossover(self):
         """Test for error message when variable bound crosses over."""
@@ -158,7 +182,10 @@ class TestEqualityPropagate(unittest.TestCase):
         m.v2 = Var(initialize=5, bounds=(4, 8))
         m.c1 = Constraint(expr=m.v1 == m.v2)
         xfrm = TransformationFactory('contrib.propagate_eq_var_bounds')
-        with self.assertRaises(ValueError):
+        with self.assertRaisesRegex(InfeasibleConstraintException,
+                                    "Variable v2 has a lower bound 4 > the "
+                                    "upper bound 3 of variable v1, but they "
+                                    "are linked by equality constraints"):
             xfrm.apply_to(m)
 
     def test_var_bound_propagate_revert(self):
@@ -173,23 +200,23 @@ class TestEqualityPropagate(unittest.TestCase):
         m.c3 = Constraint(expr=m.v3 == m.v4)
         xfrm = TransformationFactory('contrib.propagate_eq_var_bounds')
         xfrm.apply_to(m, tmp=True)
-        self.assertEquals(value(m.v1.lb), 2)
-        self.assertEquals(value(m.v1.lb), value(m.v2.lb))
-        self.assertEquals(value(m.v1.lb), value(m.v3.lb))
-        self.assertEquals(value(m.v1.lb), value(m.v4.lb))
-        self.assertEquals(value(m.v1.ub), 3)
-        self.assertEquals(value(m.v1.ub), value(m.v2.ub))
-        self.assertEquals(value(m.v1.ub), value(m.v3.ub))
-        self.assertEquals(value(m.v1.ub), value(m.v4.ub))
+        self.assertEqual(value(m.v1.lb), 2)
+        self.assertEqual(value(m.v1.lb), value(m.v2.lb))
+        self.assertEqual(value(m.v1.lb), value(m.v3.lb))
+        self.assertEqual(value(m.v1.lb), value(m.v4.lb))
+        self.assertEqual(value(m.v1.ub), 3)
+        self.assertEqual(value(m.v1.ub), value(m.v2.ub))
+        self.assertEqual(value(m.v1.ub), value(m.v3.ub))
+        self.assertEqual(value(m.v1.ub), value(m.v4.ub))
         xfrm.revert(m)
-        self.assertEquals(value(m.v1.lb), 1)
-        self.assertEquals(value(m.v2.lb), 0)
-        self.assertEquals(value(m.v3.lb), 2)
-        self.assertEquals(value(m.v4.lb), 0)
-        self.assertEquals(value(m.v1.ub), 3)
-        self.assertEquals(value(m.v2.ub), 8)
-        self.assertEquals(value(m.v3.ub), 4)
-        self.assertEquals(value(m.v4.ub), 5)
+        self.assertEqual(value(m.v1.lb), 1)
+        self.assertEqual(value(m.v2.lb), 0)
+        self.assertEqual(value(m.v3.lb), 2)
+        self.assertEqual(value(m.v4.lb), 0)
+        self.assertEqual(value(m.v1.ub), 3)
+        self.assertEqual(value(m.v2.ub), 8)
+        self.assertEqual(value(m.v3.ub), 4)
+        self.assertEqual(value(m.v4.ub), 5)
 
 
 if __name__ == '__main__':

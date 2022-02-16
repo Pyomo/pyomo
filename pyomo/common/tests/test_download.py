@@ -11,16 +11,14 @@
 import os
 import platform
 import re
-import six
 import shutil
 import tempfile
 import subprocess
 
 import pyomo.common.unittest as unittest
-
+import pyomo.common.envvar as envvar
 
 from pyomo.common import DeveloperError
-from pyomo.common.config import PYOMO_CONFIG_DIR
 from pyomo.common.fileutils import this_file
 from pyomo.common.download import FileDownloader, distro_available
 from pyomo.common.tee import capture_output
@@ -50,7 +48,7 @@ class Test_FileDownloader(unittest.TestCase):
         self.assertEqual(f.cacert, this_file())
         self.assertIsNone(f._fname)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "cacert='nonexistant_file_name' does not "
                 "refer to a valid file."):
             FileDownloader(True, 'nonexistant_file_name')
@@ -95,7 +93,7 @@ class Test_FileDownloader(unittest.TestCase):
                           io.getvalue())
 
         f = FileDownloader()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "--cacert='nonexistant_file_name' does "
                 "not refer to a valid file"):
             f.parse_args(['--cacert', 'nonexistant_file_name'])
@@ -113,9 +111,10 @@ class Test_FileDownloader(unittest.TestCase):
         f = FileDownloader()
         self.assertIsNone(f._fname)
         f.set_destination_filename('foo')
-        self.assertEqual(f._fname, os.path.join(PYOMO_CONFIG_DIR, 'foo'))
+        self.assertEqual(f._fname,
+                         os.path.join(envvar.PYOMO_CONFIG_DIR, 'foo'))
         # By this point, the CONFIG_DIR is guaranteed to have been created
-        self.assertTrue(os.path.isdir(PYOMO_CONFIG_DIR))
+        self.assertTrue(os.path.isdir(envvar.PYOMO_CONFIG_DIR))
 
         f.target = self.tmpdir
         f.set_destination_filename('foo')
@@ -214,7 +213,7 @@ class Test_FileDownloader(unittest.TestCase):
     def test_get_platform_url(self):
         f = FileDownloader()
         urlmap = {'bogus_sys': 'bogus'}
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 RuntimeError, "cannot infer the correct url for platform '.*'"):
             f.get_platform_url(urlmap)
 
@@ -224,15 +223,15 @@ class Test_FileDownloader(unittest.TestCase):
 
     def test_get_files_requires_set_destination(self):
         f = FileDownloader()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeveloperError, 'target file name has not been initialized'):
             f.get_binary_file('bogus')
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeveloperError, 'target file name has not been initialized'):
             f.get_binary_file_from_zip_archive('bogus', 'bogus')
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DeveloperError, 'target file name has not been initialized'):
             f.get_gzipped_binary_file('bogus')
 
@@ -242,10 +241,7 @@ class Test_FileDownloader(unittest.TestCase):
             f = FileDownloader()
 
             # Mock retrieve_url so network connections are not necessary
-            if six.PY3:
-                f.retrieve_url = lambda url: bytes("\n", encoding='utf-8')
-            else:
-                f.retrieve_url = lambda url: str("\n")
+            f.retrieve_url = lambda url: bytes("\n", encoding='utf-8')
 
             # Binary files will preserve line endings
             target = os.path.join(tmpdir, 'bin.txt')

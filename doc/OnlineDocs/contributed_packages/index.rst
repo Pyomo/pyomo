@@ -14,18 +14,28 @@ Contributed packages distributed with Pyomo:
 
 .. toctree::
    :maxdepth: 1
-
-   preprocessing.rst
-   gdpopt.rst
-   multistart.rst
-   parmest/index.rst
-   mcpp.rst
-   mindtpy.rst
-   satsolver.rst
-   sensitivity_toolbox.rst
+   
    community.rst
+   gdpopt.rst
+   mindtpy.rst
+   multistart.rst
+   preprocessing.rst
+   parmest/index.rst
+   pynumero/index.rst
+   pyros.rst
+   sensitivity_toolbox.rst
+   trustregion.rst
+
+Contributed Pyomo interfaces to other packages:
+
+.. toctree::
+   :maxdepth: 1
+   
+   mcpp.rst
+   satsolver.rst
+
 
 Contributed packages distributed independently of Pyomo, but accessible
 through ``pyomo.contrib``:
 
-* `pyomo.contrib.simplemodel <http://pyomocontrib-simplemodel.readthedocs.io/en/latest/source.html>`_
+* `pyomo.contrib.simplemodel <http://pyomo-simplemodel.readthedocs.io/en/latest>`_

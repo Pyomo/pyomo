@@ -16,16 +16,14 @@ from pyomo.common.dependencies import (
     scipy, scipy_available,
     check_min_version, attempt_import
 )
-
-plt = matplotlib.pyplot
-stats = scipy.stats
+from pyomo.common.dependencies.matplotlib import pyplot as plt
+from pyomo.common.dependencies.scipy import stats
 
 # occasionally dependent conda packages for older distributions
 # (e.g. python 3.5) get released that are either broken not
 # compatible, resulting in a SyntaxError
 sns, seaborn_available = attempt_import(
-    'seaborn', alt_names=['sns'],
-    catch_exceptions=(ImportError, SyntaxError)
+    'seaborn', catch_exceptions=(ImportError, SyntaxError)
 )
 
 imports_available = numpy_available & scipy_available & pandas_available \

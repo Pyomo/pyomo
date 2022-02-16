@@ -9,7 +9,15 @@
 #  ___________________________________________________________________________
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import ConcreteModel, Block, Var, Reference, Set, Constraint
+from pyomo.environ import (
+        ConcreteModel,
+        Block,
+        Var,
+        Reference,
+        Set,
+        Constraint,
+        ComponentUID,
+        )
 from pyomo.dae import ContinuousSet
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.indexed_component import (
@@ -19,6 +27,7 @@ from pyomo.core.base.indexed_component import (
 from pyomo.dae.flatten import (
         flatten_dae_components,
         flatten_components_along_sets,
+        slice_component_along_sets,
         )
 
 class TestAssumedBehavior(unittest.TestCase):
@@ -1166,6 +1175,307 @@ class TestFlatten(TestCategorize):
                 raise RuntimeError()
 
 
+class TestCUID(unittest.TestCase):
+    """
+    When returning indexed components, the flattener returns references.
+    Unless these are subsequently attached to a model (and maybe even if they
+    are), these references will not have useful names. Creating a CUID
+    from the referent attribute of these references is the preferred way
+    to generate these names, because these names will be unique if these
+    references are generated multiple times.
+
+    However, when referring to a slice, a CUID is not truly unique, as
+    "m.b[*].v" is often equivalent to "m.b[**].v".
+    Our convention is to always use constant-dimension slices ("*")
+    unless we are slicing a component with a None-dimensioned set.
+
+    These tests assert that we use the correct convention.
+
+    """
+
+    # 3 cases to cover:
+    # Components indexed by no sets we're interested in
+    # Components indexed by some sets we're interested in
+    # Components indexed by all sets we're interested in
+
+    def test_cuids_no_sets_no_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        m.v1 = Var(m.s3, m.s4)
+
+        pred_cuid_set = {
+            "v1[4,c]",
+            "v1[4,d]",
+            "v1[5,c]",
+            "v1[5,d]",
+            "v1[6,c]",
+            "v1[6,d]",
+        }
+
+        sets = (m.s1, m.s2)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                self.assertEqual(len(comps), len(m.s1)*len(m.s2))
+                cuid_set = set(str(ComponentUID(comp)) for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+    def test_cuids_some_sets_no_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        m.v1 = Var(m.s1, m.s4)
+
+        pred_cuid_set = {
+            "v1[1,*]",
+            "v1[2,*]",
+            "v1[3,*]",
+        }
+
+        sets = (m.s3, m.s4)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is m.s4:
+                self.assertEqual(len(comps), len(m.s1))
+                cuid_set = set(str(ComponentUID(comp.referent))
+                        for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+    def test_cuids_all_sets_no_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        m.v1 = Var(m.s3, m.s4)
+
+        pred_cuid_set = {
+            "v1[*,*]",
+        }
+
+        sets = (m.s3, m.s4)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 2 and sets[0] is m.s3 and sets[1] is m.s4:
+                self.assertEqual(len(comps), 1)
+                cuid_set = set(str(ComponentUID(comp.referent))
+                        for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+    def test_cuid_one_set_no_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.v = Var(m.s1)
+
+        pred_cuid_set = {
+            "v[*]",
+        }
+
+        sets = (m.s1,)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(comps_list), 1)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is m.s1:
+                self.assertEqual(len(comps), 1)
+                cuid_set = set(str(ComponentUID(comp.referent))
+                        for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+    def test_cuids_no_sets_with_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        def block_rule(b, i, j):
+            b.v = Var()
+        m.b = Block(m.s1, m.s2, rule=block_rule)
+
+        pred_cuid_set = {
+            "b[1,a].v",
+            "b[1,b].v",
+            "b[2,a].v",
+            "b[2,b].v",
+            "b[3,a].v",
+            "b[3,b].v",
+        }
+
+        sets = (m.s3, m.s4)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(comps_list), 1)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                self.assertEqual(len(comps), len(m.s1)*len(m.s2))
+                cuid_set = set(str(ComponentUID(comp)) for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+    def test_cuids_some_sets_with_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        def block_rule(b, i, j):
+            b.v = Var()
+        m.b = Block(m.s1, m.s2, rule=block_rule)
+
+        pred_cuid_set = {
+            "b[*,a].v",
+            "b[*,b].v",
+        }
+
+        sets = (m.s1, m.s4)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(comps_list), 1)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is m.s1:
+                self.assertEqual(len(comps), len(m.s2))
+                cuid_set = set(str(ComponentUID(comp.referent))
+                        for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+    def test_cuids_all_sets_with_subblocks(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        def block_rule(b, i, j):
+            b.v = Var()
+        m.b = Block(m.s1, m.s2, rule=block_rule)
+
+        pred_cuid_set = {
+            "b[*,*].v",
+        }
+
+        sets = (m.s1, m.s2)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(comps_list), 1)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 2 and sets[0] is m.s1 and sets[1] is m.s2:
+                self.assertEqual(len(comps), 1)
+                cuid_set = set(str(ComponentUID(comp.referent))
+                        for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+    def test_cuids_multiple_slices(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        def block_rule(b, i):
+            b.v = Var(m.s1)
+        m.b = Block(m.s1, rule=block_rule)
+
+        pred_cuid_set = {"b[*].v[*]"}
+        sets = (m.s1,)
+        ctype = Var
+        sets_list, comps_list = flatten_components_along_sets(m, sets, ctype)
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(comps_list), 1)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 2 and sets[0] is m.s1 and sets[1] is m.s1:
+                self.assertEqual(len(comps), 1)
+                cuid_set = set(str(ComponentUID(comp.referent))
+                        for comp in comps)
+                self.assertEqual(cuid_set, pred_cuid_set)
+            else:
+                raise RuntimeError()
+
+
+class TestSliceComponent(TestFlatten):
+
+    def make_model(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=["a", "b"])
+        m.s3 = Set(initialize=[4, 5, 6])
+        m.s4 = Set(initialize=["c", "d"])
+        m.v12 = Var(m.s1, m.s2)
+        m.v124 = Var(m.s1, m.s2, m.s4)
+        return m
+    
+    def test_no_sets(self):
+        m = self.make_model()
+        var = m.v12
+        sets = (m.s3, m.s4)
+        ref_data = {self._hashRef(v) for v in m.v12.values()}
+
+        slices = [slice_ for _, slice_ in slice_component_along_sets(var, sets)]
+        self.assertEqual(len(slices), len(ref_data))
+        self.assertEqual(len(slices), len(m.s1)*len(m.s2))
+        for slice_ in slices:
+            self.assertIn(self._hashRef(slice_), ref_data)
+
+    def test_one_set(self):
+        m = self.make_model()
+        var = m.v124
+        sets = (m.s1, m.s3)
+        ref_data = {
+            self._hashRef(Reference(m.v124[:, i, j])) for i, j in m.s2*m.s4
+        }
+
+        slices = [s for _, s in slice_component_along_sets(var, sets)]
+        self.assertEqual(len(slices), len(ref_data))
+        self.assertEqual(len(slices), len(m.s2)*len(m.s4))
+        for slice_ in slices:
+            self.assertIn(self._hashRef(Reference(slice_)), ref_data)
+
+    def test_some_sets(self):
+        m = self.make_model()
+        var = m.v124
+        sets = (m.s1, m.s3)
+        ref_data = {
+            self._hashRef(Reference(m.v124[:, i, j])) for i, j in m.s2*m.s4
+        }
+
+        slices = [s for _, s in slice_component_along_sets(var, sets)]
+        self.assertEqual(len(slices), len(ref_data))
+        self.assertEqual(len(slices), len(m.s2)*len(m.s4))
+        for slice_ in slices:
+            self.assertIn(self._hashRef(Reference(slice_)), ref_data)
+
+    def test_all_sets(self):
+        m = self.make_model()
+        var = m.v12
+        sets = (m.s1, m.s2)
+        ref_data = {self._hashRef(Reference(m.v12[:, :]))}
+
+        slices = [s for _, s in slice_component_along_sets(var, sets)]
+        self.assertEqual(len(slices), len(ref_data))
+        self.assertEqual(len(slices), 1)
+        for slice_ in slices:
+            self.assertIn(self._hashRef(Reference(slice_)), ref_data)
+
+
 class TestExceptional(unittest.TestCase):
     """
     These are the cases that motivate the try/excepts in the slice-checking
@@ -1254,10 +1564,68 @@ class TestExceptional(unittest.TestCase):
         subset_set = ComponentSet(m.b.index_set().subsets())
         for s in sets:
             self.assertIn(s, subset_set)
-            
+
+    def test_descend_stop_iteration(self):
+        """
+        Even if we construct a non-empty slice, if we provide a bad
+        index to descend into, we can end up with no valid blocks
+        to descend into. Unclear whether we should raise an error here.
+        """
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=['a', 'b'])
+        m.v = Var(m.s1, m.s2)
+
+        def b_rule(b, i, j):
+            b.v = Var()
+        m.b = Block(m.s1, m.s2, rule=b_rule)
+
+        # 'b' will be a bad index to descend into
+        for i in m.s1:
+            del m.b[i, 'b']
+
+        with self.assertRaises(StopIteration):
+            next(iter(m.b[:, 'b']))
+
+        sets = (m.s1, m.s2)
+        ctype = Var
+        indices = ComponentMap([(m.s2, 'b')])
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, ctype, indices=indices,
+        )
+        for sets, comps in zip(sets_list, comps_list):
+            # Here we just check that m.b[:,:].v was not encountered,
+            # because of our poor choice of "descend index"
+            if len(sets) == 2 and sets[0] is m.s1 and sets[1] is m.s2:
+                self.assertEqual(len(comps), 1)
+                self.assertEqual(str(ComponentUID(comps[0].referent)), "v[*,*]")
+            else:
+                raise RuntimeError()
+
+    def test_bad_descend_index(self):
+        m = ConcreteModel()
+        m.s1 = Set(initialize=[1, 2, 3])
+        m.s2 = Set(initialize=['a', 'b'])
+        m.v = Var(m.s1, m.s2)
+
+        def b_rule(b, i, j):
+            b.v = Var()
+        m.b = Block(m.s1, m.s2, rule=b_rule)
+
+        sets = (m.s1, m.s2)
+        ctype = Var
+        # Here we accidentally provide an index for the wrong set.
+        indices = ComponentMap([(m.s1, 'b')])
+        # Check that we fail gracefully instead of hitting the StopIteration
+        # checked by the above test.
+        with self.assertRaisesRegex(ValueError, "bad index"):
+            sets_list, comps_list = flatten_components_along_sets(
+                m, sets, ctype, indices=indices,
+            )
+
     def test_keyerror(self):
         """
-        KeyErrors occur when we a component that we don't slice
+        KeyErrors occur when a component that we don't slice
         doesn't have data for some members of its indexing set.
         """
         m = ConcreteModel()

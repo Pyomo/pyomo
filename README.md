@@ -72,10 +72,9 @@ Pyomo is currently tested with the following Python implementations:
 
 ### Getting Help
 
-* [Ask a Pyomo Question on StackExchange](https://stackoverflow.com/questions/ask?tags=pyomo)
+To get help from the Pyomo community ask a question on one of the following:
+* [Use the #pyomo tag on StackOverflow](https://stackoverflow.com/questions/ask?tags=pyomo)
 * [Pyomo Forum](https://groups.google.com/forum/?hl=en#!forum/pyomo-forum)
-* [Add a Ticket](https://github.com/Pyomo/pyomo/issues/new)
-* [Find a Ticket](https://github.com/Pyomo/pyomo/issues) and **Vote On It**!
 
 ### Developers
 
@@ -92,3 +91,8 @@ following terms and conditions for your contributions:
    includes your contributions, you represent that you have received
    permission to make contributions and grant the required license on
    behalf of that employer.
+
+
+### Related Packages
+
+See https://pyomo.readthedocs.io/en/latest/related_packages.html.

@@ -13,7 +13,6 @@ from pyomo.core.expr.numeric_expr import (
     NegationExpression,
     MonomialTermExpression,
     DivisionExpression,
-    ReciprocalExpression,
     AbsExpression,
     UnaryFunctionExpression,
 )
@@ -162,7 +161,7 @@ class SMTSatSolver(object):
         disjuncts = []
         for disj in djn.disjuncts:
             constraints = []
-            iv = disj.indicator_var
+            iv = disj.binary_indicator_var
             label = self.add_var(iv)
             or_expr = "(+ " + or_expr + " " + label + ")"
             for c in disj.component_data_objects(ctype=Constraint, active=True):
@@ -182,7 +181,7 @@ class SMTSatSolver(object):
     def _process_inactive_disjunction(self, djn):
         or_expr = "0"
         for disj in djn.disjuncts:
-            iv = disj.indicator_var
+            iv = disj.binary_indicator_var
             label = self.add_var(iv)
             or_expr = "(+ " + or_expr + " " + label + ")"
         if djn.xor:
@@ -245,8 +244,6 @@ class SMT_visitor(StreamBasedExpressionVisitor):
             ans = "(* " + data[0] + " " + data[1] + ")"
         elif isinstance(node, DivisionExpression):
             ans = "(/ " + data[0] + " " + data[1] + ")"
-        elif isinstance(node, ReciprocalExpression):
-            ans = "(/ 1 " + data[0] + ")"
         elif isinstance(node, AbsExpression):
             ans = "(abs " + data[0] + ")"
         elif isinstance(node, UnaryFunctionExpression):

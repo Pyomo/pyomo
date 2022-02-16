@@ -23,25 +23,23 @@ from pyomo.core.base import (Constraint,
 
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.objective import (_GeneralObjectiveData,
-                                       SimpleObjective)
+                                       ScalarObjective)
 from pyomo.core.base import _ExpressionData, Expression
-from pyomo.core.base.expression import SimpleExpression, _GeneralExpressionData
-from pyomo.core.base.var import (SimpleVar,
+from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
+from pyomo.core.base.var import (ScalarVar,
                                  Var,
                                  _GeneralVarData,
                                  value)
+from pyomo.core.base.param import ScalarParam, _ParamData
 from pyomo.core.base.numvalue import (NumericConstant,
                                       native_numeric_types)
 from pyomo.core.kernel.expression import expression, noclone
 from pyomo.core.kernel.variable import IVariable, variable
 from pyomo.core.kernel.objective import objective
 
-from six import iteritems, StringIO, PY3
-from six.moves import zip
+from io import StringIO
 
 logger = logging.getLogger('pyomo.core')
-
-using_py3 = PY3
 
 
 #
@@ -580,20 +578,23 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     if not lhs_nonl_None or not rhs_nonl_None:
         return Results(nonl=multiplier*exp)
+
+    # If the resulting expression has a polynomial degree greater than 2
+    # (1 if quadratic is False), then simply return this as a general
+    # nonlinear expression
     #
-    # If not collecting quadratic terms and both terms are linear, then simply return the nonlinear expression
-    #
-    if not quadratic and len(lhs.linear) > 0 and len(rhs.linear) > 0:
-        # NOTE: We treat a product of linear terms as nonlinear unless quadratic is True
+    if ( max(1 if lhs.linear else 0, 2 if quadratic and lhs.quadratic else 0) +
+         max(1 if rhs.linear else 0, 2 if quadratic and rhs.quadratic else 0)
+         > (2 if quadratic else 1) ):
         return Results(nonl=multiplier*exp)
 
     ans = Results()
     ans.constant = multiplier*lhs.constant * rhs.constant
     if not (lhs.constant.__class__ in native_numeric_types and lhs.constant == 0):
-        for key, coef in iteritems(rhs.linear):
+        for key, coef in rhs.linear.items():
             ans.linear[key] = multiplier*coef*lhs.constant
     if not (rhs.constant.__class__ in native_numeric_types and rhs.constant == 0):
-        for key, coef in iteritems(lhs.linear):
+        for key, coef in lhs.linear.items():
             if key in ans.linear:
                 ans.linear[key] += multiplier*coef*rhs.constant
             else:
@@ -601,26 +602,26 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
 
     if quadratic:
         if not (lhs.constant.__class__ in native_numeric_types and lhs.constant == 0):
-            for key, coef in iteritems(rhs.quadratic):
+            for key, coef in rhs.quadratic.items():
                 ans.quadratic[key] = multiplier*coef*lhs.constant
         if not (rhs.constant.__class__ in native_numeric_types and rhs.constant == 0):
-            for key, coef in iteritems(lhs.quadratic):
+            for key, coef in lhs.quadratic.items():
                 if key in ans.quadratic:
                     ans.quadratic[key] += multiplier*coef*rhs.constant
                 else:
                     ans.quadratic[key] = multiplier*coef*rhs.constant
-        for lkey, lcoef in iteritems(lhs.linear):
-            for rkey, rcoef in iteritems(rhs.linear):
+        for lkey, lcoef in lhs.linear.items():
+            for rkey, rcoef in rhs.linear.items():
                 ndx = (lkey, rkey) if lkey <= rkey else (rkey, lkey)
                 if ndx in ans.quadratic:
                     ans.quadratic[ndx] += multiplier*lcoef*rcoef
                 else:
                     ans.quadratic[ndx] = multiplier*lcoef*rcoef
         # TODO - Use quicksum here?
-        el_linear = multiplier*sum(coef*idMap[key] for key, coef in iteritems(lhs.linear))
-        er_linear = multiplier*sum(coef*idMap[key] for key, coef in iteritems(rhs.linear))
-        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in iteritems(lhs.quadratic))
-        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in iteritems(rhs.quadratic))
+        el_linear = multiplier*sum(coef*idMap[key] for key, coef in lhs.linear.items())
+        er_linear = multiplier*sum(coef*idMap[key] for key, coef in rhs.linear.items())
+        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in lhs.quadratic.items())
+        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in rhs.quadratic.items())
         ans.nonl += el_linear*er_quadratic + el_quadratic*er_linear
 
     return ans
@@ -767,22 +768,6 @@ def _collect_division(exp, multiplier, idMap, compute_values, verbose, quadratic
 
     return _collect_standard_repn(exp._args_[0], multiplier/denom, idMap, compute_values, verbose, quadratic)
 
-def _collect_reciprocal(exp, multiplier, idMap, compute_values, verbose, quadratic):
-    if exp._args_[0].__class__ in native_numeric_types or not exp._args_[0].is_potentially_variable():  # TODO: coverage?
-        if compute_values:
-            denom = 1.0 * value(exp._args_[0])
-        else:
-            denom = 1.0 * exp._args_[0]
-    else:
-        res =_collect_standard_repn(exp._args_[0], 1, idMap, compute_values, verbose, quadratic)
-        if not (res.nonl.__class__ in native_numeric_types and res.nonl == 0) or len(res.linear) > 0 or (quadratic and len(res.quadratic) > 0):
-            return Results(nonl=multiplier*exp)
-        else:
-            denom = 1.0*res.constant
-    if denom.__class__ in native_numeric_types and denom == 0:
-        raise ZeroDivisionError
-    return Results(constant=multiplier/denom)
-
 def _collect_branching_expr(exp, multiplier, idMap, compute_values, verbose, quadratic):
     if exp._if.__class__ in native_numeric_types:           # TODO: coverage?
         if_val = exp._if
@@ -887,7 +872,6 @@ _repn_collectors = {
     EXPR.MonomialTermExpression                 : _collect_term,
     EXPR.PowExpression                          : _collect_pow,
     EXPR.DivisionExpression                     : _collect_division,
-    EXPR.ReciprocalExpression                   : _collect_reciprocal,
     EXPR.Expr_ifExpression                      : _collect_branching_expr,
     EXPR.UnaryFunctionExpression                : _collect_nonl,
     EXPR.AbsExpression                          : _collect_nonl,
@@ -898,25 +882,25 @@ _repn_collectors = {
     EXPR.EqualityExpression                     : _collect_comparison,
     EXPR.ExternalFunctionExpression             : _collect_external_fn,
     #_ConnectorData          : _collect_linear_connector,
-    #SimpleConnector         : _collect_linear_connector,
-    #param._ParamData        : _collect_linear_const,
-    #param.SimpleParam       : _collect_linear_const,
+    #ScalarConnector         : _collect_linear_connector,
+    _ParamData        : _collect_const,
+    ScalarParam       : _collect_const,
     #param.Param             : _collect_linear_const,
     #parameter               : _collect_linear_const,
     NumericConstant                             : _collect_const,
     _GeneralVarData                             : _collect_var,
-    SimpleVar                                   : _collect_var,
+    ScalarVar                                   : _collect_var,
     Var                                         : _collect_var,
     variable                                    : _collect_var,
     IVariable                                   : _collect_var,
     _GeneralExpressionData                      : _collect_identity,
-    SimpleExpression                            : _collect_identity,
+    ScalarExpression                            : _collect_identity,
     expression                                  : _collect_identity,
     noclone                                     : _collect_identity,
     _ExpressionData                             : _collect_identity,
     Expression                                  : _collect_identity,
     _GeneralObjectiveData                       : _collect_identity,
-    SimpleObjective                             : _collect_identity,
+    ScalarObjective                             : _collect_identity,
     objective                                   : _collect_identity,
     }
 
@@ -1284,7 +1268,6 @@ _linear_repn_collectors = {
     EXPR.MonomialTermExpression                 : _linear_collect_term,
     EXPR.PowExpression                          : _linear_collect_pow,
     #EXPR.DivisionExpression                     : _linear_collect_division,
-    #EXPR.ReciprocalExpression                   : _linear_collect_reciprocal,
     EXPR.Expr_ifExpression                      : _linear_collect_branching_expr,
     #EXPR.UnaryFunctionExpression                : _linear_collect_nonl,
     #EXPR.AbsExpression                          : _linear_collect_nonl,
@@ -1296,24 +1279,24 @@ _linear_repn_collectors = {
     #EXPR.ExternalFunctionExpression             : _linear_collect_external_fn,
     ##EXPR.LinearSumExpression               : _collect_linear_sum,
     ##_ConnectorData          : _collect_linear_connector,
-    ##SimpleConnector         : _collect_linear_connector,
+    ##ScalarConnector         : _collect_linear_connector,
     ##param._ParamData        : _collect_linear_const,
-    ##param.SimpleParam       : _collect_linear_const,
+    ##param.ScalarParam       : _collect_linear_const,
     ##param.Param             : _collect_linear_const,
     ##parameter               : _collect_linear_const,
     _GeneralVarData                             : _linear_collect_var,
-    SimpleVar                                   : _linear_collect_var,
+    ScalarVar                                   : _linear_collect_var,
     Var                                         : _linear_collect_var,
     variable                                    : _linear_collect_var,
     IVariable                                   : _linear_collect_var,
     _GeneralExpressionData                      : _linear_collect_identity,
-    SimpleExpression                            : _linear_collect_identity,
+    ScalarExpression                            : _linear_collect_identity,
     expression                                  : _linear_collect_identity,
     noclone                                     : _linear_collect_identity,
     _ExpressionData                             : _linear_collect_identity,
     Expression                                  : _linear_collect_identity,
     _GeneralObjectiveData                       : _linear_collect_identity,
-    SimpleObjective                             : _linear_collect_identity,
+    ScalarObjective                             : _linear_collect_identity,
     objective                                   : _linear_collect_identity,
     }
 
@@ -1427,7 +1410,7 @@ def preprocess_constraint(block,
         block._repn = ComponentMap()
     block_repn = block._repn
 
-    for index, constraint_data in iteritems(constraint):
+    for index, constraint_data in constraint.items():
 
         if not constraint_data.active:
             continue

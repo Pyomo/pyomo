@@ -258,10 +258,10 @@ class _TestComponentDictBase(object):
                               for i in index)
         index_to_string = {}
         index_to_string['a'] = '[a]'
+        index_to_string['a,b'] = "['a,b']"
         index_to_string[1] = '[1]'
         index_to_string[None] = '[None]'
-        # I don't like that (1,) looks the same as 1, but oh well
-        index_to_string[(1,)] = '[1]'
+        index_to_string[(1,)] = '[(1,)]'
         index_to_string[(1,2)] = '[1,2]'
         prefix = "c"
         for i in index:
@@ -357,8 +357,10 @@ class _TestActiveComponentDictBase(_TestComponentDictBase):
 
 class TestVarDict(_TestComponentDictBase,
                   unittest.TestCase):
+    # Note: the updated _GeneralVarData class only takes an optional
+    # parent argument (you no longer pass the domain in)
     _ctype = VarDict
-    _cdatatype = _GeneralVarData
+    _cdatatype = lambda self, arg: _GeneralVarData()
     def setUp(self):
         _TestComponentDictBase.setUp(self)
         self._arg = lambda: Reals

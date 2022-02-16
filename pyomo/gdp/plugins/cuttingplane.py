@@ -16,7 +16,7 @@ convex GDPs.
 """
 from __future__ import division
 
-from pyomo.common.config import (ConfigBlock, ConfigValue, PositiveFloat,
+from pyomo.common.config import (ConfigBlock, ConfigValue,
                                  NonNegativeFloat, PositiveInt, In)
 from pyomo.common.modeling import unique_component_name
 from pyomo.core import ( Any, Block, Constraint, Objective, Param, Var,
@@ -34,8 +34,6 @@ from pyomo.gdp.util import ( verify_successful_solve, NORMAL,
 
 from pyomo.contrib.fme.fourier_motzkin_elimination import \
     Fourier_Motzkin_Elimination_Transformation
-
-from six import iteritems
 
 import logging
 
@@ -193,7 +191,7 @@ def create_cuts_fme(transBlock_rHull, var_info, hull_to_bigm_map,
                  do_integer_arithmetic=integer_arithmetic,
                  projected_constraints_name="fme_constraints")
     fme_results = tight_constraints.fme_constraints
-    projected_constraints = [cons for i, cons in iteritems(fme_results)]
+    projected_constraints = [cons for i, cons in fme_results.items()]
 
     # we created these constraints with the variables from rHull. We
     # actually need constraints for BigM and rBigM now!
@@ -822,7 +820,6 @@ class CuttingPlane_Transformation(Transformation):
 
     def _get_disaggregated_vars(self, hull):
         disaggregatedVars = ComponentSet()
-        hull_xform = TransformationFactory('gdp.hull')
         for disjunction in hull.component_data_objects( Disjunction,
                                                         descend_into=(Disjunct,
                                                                       Block)):
@@ -934,9 +931,9 @@ class CuttingPlane_Transformation(Transformation):
             logger.info("x* is:")
             for x_rbigm, x_hull, x_star in var_info:
                 if not x_rbigm.stale:
-                    x_star.value = x_rbigm.value
+                    x_star.set_value(x_rbigm.value)
                     # initialize the X values
-                    x_hull.value = x_rbigm.value    
+                    x_hull.set_value(x_rbigm.value, skip_validation=True)
                 if self.verbose:
                     logger.info("\t%s = %s" % 
                                 (x_rbigm.getname(fully_qualified=True,
@@ -1029,7 +1026,7 @@ class CuttingPlane_Transformation(Transformation):
 
             # Initialize rbigm with xhat (for the next iteration)
             for x_rbigm, x_hull, x_star in var_info:
-                x_rbigm.value = xhat[x_rbigm]
+                x_rbigm.set_value(xhat[x_rbigm], skip_validation=True)
 
     def _add_transformation_block(self, instance):
         # creates transformation block with a unique name based on name, adds it

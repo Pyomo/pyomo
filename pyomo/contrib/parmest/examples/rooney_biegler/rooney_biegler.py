@@ -17,7 +17,6 @@ model parameter uncertainty using nonlinear confidence regions. AIChE Journal,
 import pandas as pd
 import pyomo.environ as pyo
 
-
 def rooney_biegler_model(data):
 
     model = pyo.ConcreteModel()
@@ -36,9 +35,7 @@ def rooney_biegler_model(data):
 
     return model
 
-
-if __name__ == '__main__':
-
+def main():
     # These were taken from Table A1.4 in Bates and Watts (1988).
     data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],[4,16.0],[5,15.6],[7,19.8]],
                         columns=['hour', 'y'])
@@ -46,5 +43,10 @@ if __name__ == '__main__':
     model = rooney_biegler_model(data)
     solver = pyo.SolverFactory('ipopt')
     solver.solve(model)
+
     print('asymptote = ', model.asymptote())
     print('rate constant = ', model.rate_constant())
+    
+if __name__ == '__main__':
+    main()
+    

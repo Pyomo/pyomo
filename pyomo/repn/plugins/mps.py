@@ -14,8 +14,7 @@
 
 import logging
 
-from six import iteritems, StringIO
-from six.moves import xrange
+from io import StringIO
 
 from pyomo.common.gc_manager import PauseGC
 from pyomo.opt import ProblemFormat
@@ -130,7 +129,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
         if len(io_options):
             raise ValueError(
                 "ProblemWriter_mps passed unrecognized io_options:\n\t" +
-                "\n\t".join("%s = %s" % (k,v) for k,v in iteritems(io_options)))
+                "\n\t".join("%s = %s" % (k,v) for k,v in io_options.items()))
 
         if symbolic_solver_labels and (labeler is not None):
             raise ValueError("ProblemWriter_mps: Using both the "
@@ -319,7 +318,7 @@ class ProblemWriter_mps(AbstractProblemWriter):
         variable_to_column = ComponentMap(
             (vardata, i) for i, vardata in enumerate(variable_list))
         # add one position for ONE_VAR_CONSTANT
-        column_data = [[] for i in xrange(len(variable_list)+1)]
+        column_data = [[] for i in range(len(variable_list)+1)]
         quadobj_data = []
         quadmatrix_data = []
         # constraint rhs

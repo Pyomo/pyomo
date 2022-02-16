@@ -21,8 +21,9 @@ import json
 import os.path
 
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
 
-import pyomo.scripting.pyomo_command as main
+from pyomo.scripting.pyomo_main import main
 from pyomo.scripting.util import cleanup
 from pyomo.neos.kestrel import kestrelAMPL
 import pyomo.neos
@@ -82,6 +83,18 @@ class TestKestrel(unittest.TestCase):
         #missing = gamssolvers - amplsolvers
         #self.assertEqual(len(missing) == 0)
 
+    def test_connection_failed(self):
+        try:
+            orig_host = pyomo.neos.kestrel.NEOS.host
+            pyomo.neos.kestrel.NEOS.host = 'neos-bogus-server.org'
+            with LoggingIntercept() as LOG:
+                kestrel = kestrelAMPL()
+            self.assertIsNone(kestrel.neos)
+            self.assertRegex(LOG.getvalue(),
+                             "NEOS is temporarily unavailable:\n\t\(.+\)")
+        finally:
+            pyomo.neos.kestrel.NEOS.host = orig_host
+
 
 class RunAllNEOSSolvers(object):
     def test_bonmin(self):
@@ -133,6 +146,9 @@ class RunAllNEOSSolvers(object):
     def test_mosek(self):
         self._run('mosek')
 
+    def test_octeract(self):
+        self._run('octeract')
+
     def test_ooqp(self):
         if self.sense == pyo.maximize:
             # OOQP does not recognize maximization problems and
@@ -161,8 +177,8 @@ class RunAllNEOSSolvers(object):
 class DirectDriver(object):
     def _run(self, opt, constrained=True):
         m = _model(self.sense)
-        solver_manager = pyo.SolverManagerFactory('neos')
-        results = solver_manager.solve(m, opt=opt)
+        with pyo.SolverManagerFactory('neos') as solver_manager:
+            results = solver_manager.solve(m, opt=opt)
 
         expected_y = {
             (pyo.minimize, True): -1,
@@ -193,6 +209,7 @@ class PyomoCommandDriver(object):
 
         results = os.path.join(currdir, 'result.json')
         args = [
+            'solve',
             os.path.join(currdir, filename),
             '--solver-manager=neos',
             '--solver=%s' % opt,
@@ -202,7 +219,7 @@ class PyomoCommandDriver(object):
             '-c'
             ]
         try:
-            output = main.run(args)
+            output = main(args)
             self.assertEqual(output.errorcode, 0)
 
             with open(results) as FILE:
@@ -236,10 +253,19 @@ class TestSolvers_direct_call_min(RunAllNEOSSolvers, DirectDriver,
                                   unittest.TestCase):
     sense = pyo.minimize
 
-    # Add the CBC test to the nightly suite
-    @unittest.category('nightly')
-    def test_cbc(self):
+    # Add the CBC test to the nightly suite, but with a non-fatal
+    # (short) timeout
+    #
+    # TODO: remove queued job from NEOS servers.  Using timeout() leaves
+    # the queued problem on the NEOS servers, because timeout kills the
+    # forked process with SIGTERM.  Implementing a proper timeout will
+    # likely require reworking the AsynchronousSolverManager to accept a
+    # timeout through _perform_wait_any()
+    @unittest.category('nightly', '!neos')
+    @unittest.timeout(60, timeout_raises=unittest.SkipTest)
+    def test_cbc_timeout(self):
         super(TestSolvers_direct_call_min, self).test_cbc()
+
 
 @unittest.category('neos')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
@@ -248,6 +274,7 @@ class TestSolvers_direct_call_max(RunAllNEOSSolvers, DirectDriver,
                                   unittest.TestCase):
     sense = pyo.maximize
 
+
 @unittest.category('neos')
 @unittest.skipIf(not neos_available, "Cannot make connection to NEOS server")
 @unittest.skipUnless(email_set, "NEOS_EMAIL not set")
@@ -255,9 +282,17 @@ class TestSolvers_pyomo_cmd_min(RunAllNEOSSolvers, PyomoCommandDriver,
                                 unittest.TestCase):
     sense = pyo.minimize
 
-    # Add the CBC test to the nightly suite
-    @unittest.category('nightly')
-    def test_cbc(self):
+    # Add the CBC test to the nightly suite, but with a non-fatal
+    # (short) timeout
+    #
+    # TODO: remove queued job from NEOS servers.  Using timeout() leaves
+    # the queued problem on the NEOS servers, because timeout kills the
+    # forked process with SIGTERM.  Implementing a proper timeout will
+    # likely require reworking the AsynchronousSolverManager to accept a
+    # timeout through _perform_wait_any()
+    @unittest.category('nightly', '!neos')
+    @unittest.timeout(60, timeout_raises=unittest.SkipTest)
+    def test_cbc_timeout(self):
         super(TestSolvers_pyomo_cmd_min, self).test_cbc()
 
 if __name__ == "__main__":

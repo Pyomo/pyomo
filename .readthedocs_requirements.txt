@@ -1,7 +1,0 @@
-git+https://github.com/PyUtilib/pyutilib
-sphinx>=1.8.0
-networkx
-pandas
-numpy
-seaborn
-pint

@@ -17,7 +17,6 @@ from pyomo.core import (
 )
 from pyomo.gdp import Disjunct
 
-
 def GDPopt_initialize_master(solve_data, config):
     """Initialize the decomposition algorithm.
 
@@ -70,10 +69,11 @@ def init_custom_disjuncts(solve_data, config):
                 linear_GDP.GDPopt_utils.disjunct_list
         ):
             if orig_disj in active_disjunct_set:
-                clone_disj.indicator_var.fix(1)
+                clone_disj.indicator_var.fix(True)
         mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
         if mip_result.feasible:
-            nlp_result = solve_disjunctive_subproblem(mip_result, solve_data, config)
+            nlp_result = solve_disjunctive_subproblem(mip_result, solve_data,
+                                                      config)
             if nlp_result.feasible:
                 add_subproblem_cuts(nlp_result, solve_data, config)
             add_integer_cut(
@@ -100,7 +100,8 @@ def init_fixed_disjuncts(solve_data, config):
     TransformationFactory('gdp.fix_disjuncts').apply_to(linear_GDP)
     mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
     if mip_result.feasible:
-        nlp_result = solve_disjunctive_subproblem(mip_result, solve_data, config)
+        nlp_result = solve_disjunctive_subproblem(mip_result, solve_data,
+                                                  config)
         if nlp_result.feasible:
             add_subproblem_cuts(nlp_result, solve_data, config)
         add_integer_cut(
@@ -138,11 +139,12 @@ def init_max_binaries(solve_data, config):
     # Solve
     mip_results = solve_linear_GDP(linear_GDP, solve_data, config)
     if mip_results.feasible:
-        nlp_result = solve_disjunctive_subproblem(mip_results, solve_data, config)
+        nlp_result = solve_disjunctive_subproblem(mip_results, solve_data,
+                                                  config)
         if nlp_result.feasible:
             add_subproblem_cuts(nlp_result, solve_data, config)
-        add_integer_cut(mip_results.var_values, solve_data.linear_GDP, solve_data, config,
-                        feasible=nlp_result.feasible)
+        add_integer_cut(mip_results.var_values, solve_data.linear_GDP,
+                        solve_data, config, feasible=nlp_result.feasible)
     else:
         config.logger.info(
             "Linear relaxation for initialization was infeasible. "
@@ -187,7 +189,8 @@ def init_set_covering(solve_data, config):
             # problem is infeasible. break
             return False
         # solve local NLP
-        subprob_result = solve_disjunctive_subproblem(mip_result, solve_data, config)
+        subprob_result = solve_disjunctive_subproblem(mip_result, solve_data,
+                                                      config)
         if subprob_result.feasible:
             # if successful, updated sets
             active_disjuncts = list(
@@ -235,7 +238,7 @@ def solve_set_cover_mip(model, disj_needs_cover, solve_data, config):
     if hasattr(GDPopt, "set_cover_obj"):
         del GDPopt.set_cover_obj
     GDPopt.set_cover_obj = Objective(
-        expr=sum(weight * disj.indicator_var
+        expr=sum(weight * disj.binary_indicator_var
                  for (weight, disj) in zip(
             weights, GDPopt.disjunct_list)),
         sense=maximize)

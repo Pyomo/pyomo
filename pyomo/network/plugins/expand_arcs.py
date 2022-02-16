@@ -11,20 +11,20 @@
 import logging
 logger = logging.getLogger('pyomo.network')
 
-from six import iteritems, itervalues
-
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core.base.indexed_component import UnindexedComponent_set
 from pyomo.core.base import Transformation, Block, SortComponents, TransformationFactory
+from pyomo.gdp import Disjunct
 
 from pyomo.network import Arc
 from pyomo.network.util import replicate_var
 
 # keyword arguments for component_objects and component_data_objects
-obj_iter_kwds = dict(ctype=Arc, active=True, sort=SortComponents.deterministic)
+obj_iter_kwds = dict(ctype=Arc, active=True, sort=SortComponents.deterministic,
+        descend_into=(Block,Disjunct))
 
 
 @TransformationFactory.register('network.expand_arcs',
@@ -47,7 +47,7 @@ class ExpandArcs(Transformation):
             # for all occurences of this member in related ports
             # and so we iterate over members deterministically
             ref = known_port_sets[id(matched_ports[port])]
-            for k, v in sorted(iteritems(ref)):
+            for k, v in sorted(ref.items()):
                 rule, kwds = port._rules[k]
                 if v[1] >= 0:
                     index_set = v[0].index_set()
@@ -115,7 +115,7 @@ class ExpandArcs(Transformation):
 
         # Validate all port sets and expand the empty ones
         known_port_sets = {}
-        for groupID, port_set in sorted(itervalues(port_groups)):
+        for groupID, port_set in sorted(port_groups.values()):
             known_port_sets[id(port_set)] \
                 = self._validate_and_expand_port_set(port_set)
 
@@ -125,7 +125,7 @@ class ExpandArcs(Transformation):
         ref = {}
         # First, go through the ports and get the superset of all fields
         for p in ports:
-            for k, v in iteritems(p.vars):
+            for k, v in p.vars.items():
                 if k in ref:
                     # We have already seen this var
                     continue
@@ -142,7 +142,7 @@ class ExpandArcs(Transformation):
             logger.warning(
                 "Cannot identify a reference port: no ports "
                 "in the port set have assigned variables:\n\t(%s)"
-                % ', '.join(sorted(p.name for p in itervalues(ports))))
+                % ', '.join(sorted(p.name for p in ports.values())))
             return ref
 
         # Now make sure that ports match
@@ -155,7 +155,7 @@ class ExpandArcs(Transformation):
                 empty_or_partial.append(p)
                 continue
 
-            for k, v in iteritems(ref):
+            for k, v in ref.items():
                 if k not in p.vars:
                     raise ValueError(
                         "Port mismatch: Port '%s' missing variable "
@@ -195,7 +195,7 @@ class ExpandArcs(Transformation):
 
         # as we are adding things to the model, sort by key so that
         # the order things are added is deterministic
-        sorted_refs = sorted(iteritems(ref))
+        sorted_refs = sorted(ref.items())
         if len(empty_or_partial) > 1:
             # This is expensive (names aren't cheap), but does result in
             # a deterministic ordering

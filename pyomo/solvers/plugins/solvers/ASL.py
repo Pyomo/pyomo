@@ -93,13 +93,26 @@ class ASL(SystemCallSolver):
         if solver_exec is None:
             return _extract_version('')
         try:
-            results = subprocess.run([solver_exec,"-v"], timeout=1,
-                                 stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT,
-                                 universal_newlines=True)
-            return _extract_version(results.stdout)
+            results = subprocess.run([solver_exec, "-v"],
+                                     timeout=5,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.STDOUT,
+                                     universal_newlines=True)
+            ver = _extract_version(results.stdout)
+            if ver is None:
+                # Some ASL solvers do not export a version number
+                if results.stdout.strip().split()[-1].startswith('ASL('):
+                    return '0.0.0'
+            return ver
         except OSError:
             pass
+        except subprocess.TimeoutExpired:
+            pass
+
+    def available(self, exception_flag=True):
+        if not super().available(exception_flag):
+            return False
+        return self.version() is not None
 
     def create_command_line(self, executable, problem_files):
         assert(self._problem_format == ProblemFormat.nl)

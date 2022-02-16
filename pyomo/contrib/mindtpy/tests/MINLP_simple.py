@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -26,8 +26,6 @@ Ref:
 """
 from __future__ import division
 
-from six import iteritems
-
 from pyomo.environ import (Binary, ConcreteModel, Constraint,
                            NonNegativeReals, Objective,
                            RangeSet, Var, minimize)
@@ -43,8 +41,8 @@ class SimpleMINLP(ConcreteModel):
         m = self
 
         """Set declarations"""
-        I = m.I = RangeSet(1, 2, doc="continuous variables")
-        J = m.J = RangeSet(1, 3, doc="discrete variables")
+        I = m.I = RangeSet(1, 2, doc='continuous variables')
+        J = m.J = RangeSet(1, 3, doc='discrete variables')
 
         # initial point information for discrete variables
         initY = {
@@ -74,11 +72,11 @@ class SimpleMINLP(ConcreteModel):
         m.const7 = Constraint(expr=m.Y[1] + m.Y[2] + m.Y[3] >= 1)
 
         """Cost (objective) function definition"""
-        m.cost = Objective(expr=Y[1] + 1.5 * Y[2] + 0.5 * Y[3] + X[1] ** 2 + X[2] ** 2,
-                           sense=minimize)
-
+        m.objective = Objective(expr=Y[1] + 1.5 * Y[2] + 0.5 * Y[3] + X[1] ** 2 + X[2] ** 2,
+                                sense=minimize)
+        m.optimal_value = 3.5
         """Bound definitions"""
         # x (continuous) upper bounds
         x_ubs = {1: 4, 2: 4}
-        for i, x_ub in iteritems(x_ubs):
+        for i, x_ub in x_ubs.items():
             X[i].setub(x_ub)
