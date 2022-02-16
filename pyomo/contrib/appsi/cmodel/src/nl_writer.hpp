@@ -53,12 +53,16 @@ public:
   int index = -1;
 };
 
+
+bool nl_constraint_sorter(std::shared_ptr<NLConstraint> con1,
+                          std::shared_ptr<NLConstraint> con2);
+
 class NLWriter {
 public:
   NLWriter() = default;
   std::shared_ptr<NLObjective> objective;
-  std::shared_ptr<std::set<std::shared_ptr<NLConstraint>>> constraints =
-      std::make_shared<std::set<std::shared_ptr<NLConstraint>>>();
+  std::shared_ptr<std::set<std::shared_ptr<NLConstraint>, decltype(nl_constraint_sorter) *>> constraints =
+    std::make_shared<std::set<std::shared_ptr<NLConstraint>, decltype(nl_constraint_sorter) *>>(nl_constraint_sorter);
   std::vector<std::shared_ptr<Var>> solve_vars;
   std::vector<std::shared_ptr<NLConstraint>> solve_cons;
   void write(std::string filename);

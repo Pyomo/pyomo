@@ -63,8 +63,8 @@ void NLWriter::remove_constraint(std::shared_ptr<NLConstraint> con) {
   constraints->erase(con);
 }
 
-bool constraint_sorter(std::shared_ptr<NLConstraint> con1,
-                       std::shared_ptr<NLConstraint> con2) {
+bool nl_constraint_sorter(std::shared_ptr<NLConstraint> con1,
+                          std::shared_ptr<NLConstraint> con2) {
   return con1->index < con2->index;
 }
 
@@ -83,7 +83,7 @@ void NLWriter::write(std::string filename) {
     sorted_constraints.push_back(con);
   }
   std::sort(sorted_constraints.begin(), sorted_constraints.end(),
-            constraint_sorter);
+            nl_constraint_sorter);
   int sorted_con_index = 0;
   for (std::shared_ptr<NLConstraint> con : sorted_constraints) {
     con->index = sorted_con_index;
