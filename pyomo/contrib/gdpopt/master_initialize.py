@@ -48,26 +48,38 @@ from pyomo.gdp import Disjunct
 #                ", ".join(k for (k, v) in valid_init_strategies.items()
 #                          if v is not None)))
 
-def init_custom_disjuncts(master, config, timing, util_block,
-                          master_util_block, subprob_util_block):
+def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
+                          config, alg_info):
     """Initialize by using user-specified custom disjuncts."""
-    # TODO error checking to make sure that the user gave proper disjuncts
-    for active_disjunct_set in config.custom_init_disjuncts:
+    used_disjuncts = {}
+    for count, active_disjunct_set in enumerate(config.custom_init_disjuncts):
+        used_disjuncts = set()
         # custom_init_disjuncts contains a list of sets, giving the disjuncts
         # active at each initialization iteration
 
         subproblem = subprob_util_block.model()
-        # fix the disjuncts in the linear GDP and send for solution.
-        # ESJ TODO: Do we need this?
-        # solve_data.mip_iteration += 1
+        # fix the disjuncts in the linear GDP and solve
+        alg_info.mip_iteration += 1
         config.logger.info(
             "Generating initial linear GDP approximation by "
             "solving subproblems with user-specified active disjuncts.")
         for orig_disj, clone_disj in zip(util_block.disjunct_list,
                                          master_util_block.disjunct_list):
             if orig_disj in active_disjunct_set:
+                used_disjuncts.add(orig_disj)
                 clone_disj.indicator_var.fix(True)
-        mip_result = solve_linear_GDP(master, util_block, config, timing)
+        unused = set(config.custom_init_disjuncts) - used_disjuncts
+        if len(unused) > 0:
+            disj_str = ""
+            for disj in unused:
+                disj_str += "%s, " % disj.name # TODO: make this efficient
+            config.logger.warning('The following disjuncts the custom disjunct'
+                                  'initialization set number %s were unused: '
+                                  '%s\nThey may not be Disjunct objects or '
+                                  'they may not be on the active subtree being '
+                                  'solved.' % (count, disj_str))
+        mip_result = solve_linear_GDP(master, util_block, config,
+                                      alg_info.timing)
         if mip_result.feasible:
             with fix_master_solution_in_subproblem(master_util_block,
                                                    subprob_util_block,

@@ -32,6 +32,10 @@ def solve_linear_GDP(m, util_block, config, timing):
         try:
             fbbt(m, integer_tol=config.integer_tolerance,
                  deactivate_satisfied_constraints=True)
+            # [ESJ 1/28/22]: Despite being a little scary, this is okay to leave
+            # in because if you tighten the bounds now, they could only get
+            # tighter in later iterations, since you are tightening this
+            # relaxation
         except InfeasibleConstraintException:
             config.logger.debug("MIP preprocessing detected infeasibility.")
             return get_infeasible_master_result(gpdopt_block)
@@ -48,6 +52,8 @@ def solve_linear_GDP(m, util_block, config, timing):
             "MIP solver %s is not available." % config.mip_solver)
 
     # Callback immediately before solving MIP master problem
+    # ESJ: Should we expose alg_info here? I guess we should but I need to make
+    # it safer in terms of getters and setters I think.
     config.call_before_master_solve(m)
 
     try:
@@ -59,10 +65,10 @@ def solve_linear_GDP(m, util_block, config, timing):
                 mip_args['add_options'] = mip_args.get('add_options', [])
                 mip_args['add_options'].append('option reslim=%s;' % remaining)
             elif config.mip_solver == 'multisolve':
-                mip_args['time_limit'] = min(mip_args.get(
-                    'time_limit', float('inf')), remaining)
-            results = SolverFactory(config.mip_solver).solve(
-                m, **mip_args)
+                mip_args['time_limit'] = min(mip_args.get( 'time_limit',
+                                                           float('inf')),
+                                             remaining)
+            results = SolverFactory(config.mip_solver).solve(m, **mip_args)
     except RuntimeError as e:
         # ESJ TODO: How come GAMS is special? Doesn't seem safe to assume
         # infeasibility here if the error could be something else...?

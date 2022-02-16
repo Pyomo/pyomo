@@ -12,53 +12,17 @@ from pyomo.common.config import (ConfigValue, NonNegativeInt,
                                  In, PositiveInt, NonNegativeFloat,
                                  ConfigBlock, ConfigList)
 from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
-from pyomo.contrib.gdpopt.util import _DoNothing, a_logger
+from pyomo.contrib.gdpopt.util import _DoNothing
 
 
-def _get_GDPopt_config():
-    _supported_strategies = {
-        'LOA',  # Logic-based outer approximation
-        'GLOA',  # Global logic-based outer approximation
-        'LBB',  # Logic-based branch-and-bound
-        'RIC',  # Relaxation with Integer Cuts
-    }
-    CONFIG = ConfigBlock("GDPopt")
-    CONFIG.declare("iterlim", ConfigValue(
-        default=100, domain=NonNegativeInt,
-        description="Iteration limit."
-    ))
-    CONFIG.declare("time_limit", ConfigValue(
-        default=600,
-        domain=PositiveInt,
-        description="Time limit (seconds, default=600)",
-        doc="Seconds allowed until terminated. Note that the time limit can "
-            "currently only be enforced between subsolver invocations. You may "
-            "need to set subsolver time limits as well."
-    ))
-    CONFIG.declare("strategy", ConfigValue(
-        default=None, domain=In(_supported_strategies),
-        description="Decomposition strategy to use."
-    ))
-    CONFIG.declare("master_problem_transformation", ConfigValue(
-        default='gdp.bigm',
-        description="Name of the transformation to use to transform the "
-        "master problem from a GDP to an algebraic model."
-    ))
-    CONFIG.declare("tee", ConfigValue(
-        default=False,
-        description="Stream output to terminal.",
-        domain=bool
-    ))
-    CONFIG.declare("logger", ConfigValue(
-        default='pyomo.contrib.gdpopt',
-        description="The logger object or name to use for reporting.",
-        domain=a_logger
-    ))
-    _add_OA_configs(CONFIG)
-    _add_BB_configs(CONFIG)
-    _add_subsolver_configs(CONFIG)
-    _add_tolerance_configs(CONFIG)
-    return CONFIG
+# def _get_GDPopt_config():
+    
+    
+#     _add_OA_configs(CONFIG)
+#     _add_BB_configs(CONFIG)
+#     _add_subsolver_configs(CONFIG)
+#     _add_tolerance_configs(CONFIG)
+#     return CONFIG
 
 
 def _add_OA_configs(CONFIG):
@@ -85,6 +49,11 @@ def _add_OA_configs(CONFIG):
     CONFIG.declare("set_cover_iterlim", ConfigValue(
         default=8, domain=NonNegativeInt,
         description="Limit on the number of set covering iterations."
+    ))
+    CONFIG.declare("master_problem_transformation", ConfigValue(
+        default='gdp.bigm',
+        description="Name of the transformation to use to transform the "
+        "master problem from a GDP to an algebraic model."
     ))
     CONFIG.declare("call_before_master_solve", ConfigValue(
         default=_DoNothing,
@@ -178,7 +147,7 @@ def _add_BB_configs(CONFIG):
     ))
 
 
-def _add_subsolver_configs(CONFIG):
+def _add_mip_solver_configs(CONFIG):
     CONFIG.declare("mip_solver", ConfigValue(
         default="gurobi",
         description="Mixed integer linear solver to use."
@@ -187,6 +156,9 @@ def _add_subsolver_configs(CONFIG):
         description="Keyword arguments to send to the MILP subsolver "
                     "solve() invocation",
         implicit=True))
+
+
+def _add_nlp_solver_configs(CONFIG):
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
         description="Nonlinear solver to use"))

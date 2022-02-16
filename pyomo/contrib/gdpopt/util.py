@@ -47,7 +47,8 @@ class _DoNothing(object):
 
         return _do_nothing
 
-
+# ESJ TODO: I think we also need to suppress the one about not being able to
+# load results into the model...
 class SuppressInfeasibleWarning(object):
     """Suppress the infeasible model warning message from solve().
 
@@ -96,56 +97,44 @@ def solve_continuous_problem(m, config):
             m, **config.mip_solver_args)
         return results
 
-def presolve_lp_nlp(solve_data, config):
-    """If the model is an LP or NLP, solve it directly.
+# def presolve_lp_nlp(solve_data, config):
+#     """If the model is an LP or NLP, solve it directly.
 
-    """
-    m = solve_data.working_model
-    GDPopt = m.GDPopt_utils
+#     """
+#     m = solve_data.working_model
+#     GDPopt = m.GDPopt_utils
 
-    # Handle LP/NLP being passed to the solver
-    prob = solve_data.results.problem
-    if (prob.number_of_binary_variables == 0 and
-            prob.number_of_integer_variables == 0 and
-            prob.number_of_disjunctions == 0):
-        config.logger.info('Problem has no discrete decisions.')
-        obj = next(m.component_data_objects(Objective, active=True))
-        if (any(c.body.polynomial_degree() not in (1, 0) for c in
-                GDPopt.constraint_list) or obj.expr.polynomial_degree() not in
-            (1, 0)):
-            config.logger.info(
-                "Your model is an NLP (nonlinear program). "
-                "Using NLP solver %s to solve." % config.nlp_solver)
-            results = SolverFactory(config.nlp_solver).solve(
-                solve_data.original_model, **config.nlp_solver_args)
-            return True, results
-        else:
-            config.logger.info(
-                "Your model is an LP (linear program). "
-                "Using LP solver %s to solve." % config.mip_solver)
-            results = SolverFactory(config.mip_solver).solve(
-                solve_data.original_model, **config.mip_solver_args)
-            return True, results
+#     # Handle LP/NLP being passed to the solver
+#     prob = solve_data.results.problem
+#     if (prob.number_of_binary_variables == 0 and
+#             prob.number_of_integer_variables == 0 and
+#             prob.number_of_disjunctions == 0):
+#         config.logger.info('Problem has no discrete decisions.')
+#         obj = next(m.component_data_objects(Objective, active=True))
+#         if (any(c.body.polynomial_degree() not in (1, 0) for c in
+#                 GDPopt.constraint_list) or obj.expr.polynomial_degree() not in
+#             (1, 0)):
+#             config.logger.info(
+#                 "Your model is an NLP (nonlinear program). "
+#                 "Using NLP solver %s to solve." % config.nlp_solver)
+#             results = SolverFactory(config.nlp_solver).solve(
+#                 solve_data.original_model, **config.nlp_solver_args)
+#             return True, results
+#         else:
+#             config.logger.info(
+#                 "Your model is an LP (linear program). "
+#                 "Using LP solver %s to solve." % config.mip_solver)
+#             results = SolverFactory(config.mip_solver).solve(
+#                 solve_data.original_model, **config.mip_solver_args)
+#             return True, results
 
-    # TODO if any continuous variables are multipled with binary ones, need
-    # to do some kind of transformation (Glover?) or throw an error message
-    return False, None
+#     # TODO if any continuous variables are multipled with binary ones, need
+#     # to do some kind of transformation (Glover?) or throw an error message
+#     return False, None
 
 def move_nonlinear_objective_to_constraints(m, gdpopt_block, results, logger):
-    # Handle missing or multiple objectives
-    active_objectives = list(m.component_data_objects(
-        ctype=Objective, active=True, descend_into=True))
-    number_of_objectives = len(active_objectives)
-    if number_of_objectives == 0:
-        logger.warning(
-            'Model has no active objectives. Adding dummy objective.')
-        main_obj = gdpopt_block.dummy_objective = Objective(expr=1)
-    elif number_of_objectives > 1:
-        raise ValueError('Model has multiple active objectives.')
-    else:
-        main_obj = active_objectives[0]
-    results.problem.sense = ProblemSense.minimize if main_obj.sense == 1 else \
-                            ProblemSense.maximize
+    main_obj = next(m.component_data_objects(Objective, descend_into=True,
+                                             active=True))
 
     # Move the objective to the constraints if it is nonlinear
     if main_obj.expr.polynomial_degree() not in (1, 0):
@@ -306,7 +295,7 @@ def process_objective(solve_data, config, move_linear_objective=False,
                 else:
                     util_blk.nonlinear_constraint_list.append(constr)
 
-
+# ESJ: Do we need this? Can it be renamed?
 def a_logger(str_or_logger):
     """Returns a logger when passed either a logger name or logger object."""
     if isinstance(str_or_logger, logging.Logger):
@@ -414,6 +403,8 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
             subprob_var.set_value(
                 subproblem_util_block.initial_variable_values[var])
 
+    # TODO: Should we reset the values of the continuous Vars or no?
+
 def is_feasible(model, config):
     """Checks to see if the algebraic model is feasible in its current state.
 
@@ -467,157 +458,81 @@ def is_feasible(model, config):
 
 # ESJ TODO: I plan to abandon this as well--it's not modular enough from
 # something like enumerate
-def build_ordered_component_lists(model, solve_data):
-    """Define lists used for future data transfer.
+# def build_ordered_component_lists(model, solve_data):
+#     """Define lists used for future data transfer.
 
-    Also attaches ordered lists of the variables, constraints, disjuncts, and
-    disjunctions to the model so that they can be used for mapping back and
-    forth.
+#     Also attaches ordered lists of the variables, constraints, disjuncts, and
+#     disjunctions to the model so that they can be used for mapping back and
+#     forth.
 
-    """
-    util_blk = getattr(model, solve_data.util_block_name)
-    var_set = ComponentSet()
-    setattr(
-        util_blk, 'constraint_list', list(
-            model.component_data_objects(
-                ctype=Constraint, active=True,
-                descend_into=(Block, Disjunct))))
-    setattr(
-        util_blk, 'linear_constraint_list', list(
-            c for c in model.component_data_objects(
-            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() in (0, 1)))
-    setattr(
-        util_blk, 'nonlinear_constraint_list', list(
-            c for c in model.component_data_objects(
-            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() not in (0, 1)))
-    setattr(
-        util_blk, 'disjunct_list', list(
-            model.component_data_objects(
-                ctype=Disjunct, active=True,
-                descend_into=(Block, Disjunct))))
-    setattr(
-        util_blk, 'disjunction_list', list(
-            model.component_data_objects(
-                ctype=Disjunction, active=True,
-                descend_into=(Disjunct, Block))))
-    setattr(
-        util_blk, 'objective_list', list(
-            model.component_data_objects(
-                ctype=Objective, active=True,
-                descend_into=(Block))))
+#     """
+#     util_blk = getattr(model, solve_data.util_block_name)
+#     var_set = ComponentSet()
+#     setattr(
+#         util_blk, 'constraint_list', list(
+#             model.component_data_objects(
+#                 ctype=Constraint, active=True,
+#                 descend_into=(Block, Disjunct))))
+#     setattr(
+#         util_blk, 'linear_constraint_list', list(
+#             c for c in model.component_data_objects(
+#             ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+#             if c.body.polynomial_degree() in (0, 1)))
+#     setattr(
+#         util_blk, 'nonlinear_constraint_list', list(
+#             c for c in model.component_data_objects(
+#             ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+#             if c.body.polynomial_degree() not in (0, 1)))
+#     setattr(
+#         util_blk, 'disjunct_list', list(
+#             model.component_data_objects(
+#                 ctype=Disjunct, active=True,
+#                 descend_into=(Block, Disjunct))))
+#     setattr(
+#         util_blk, 'disjunction_list', list(
+#             model.component_data_objects(
+#                 ctype=Disjunction, active=True,
+#                 descend_into=(Disjunct, Block))))
+#     setattr(
+#         util_blk, 'objective_list', list(
+#             model.component_data_objects(
+#                 ctype=Objective, active=True,
+#                 descend_into=(Block))))
 
-    # Identify the non-fixed variables in (potentially) active constraints and
-    # objective functions
-    for constr in getattr(util_blk, 'constraint_list'):
-        for v in identify_variables(constr.body, include_fixed=False):
-            var_set.add(v)
-    for obj in model.component_data_objects(ctype=Objective, active=True):
-        for v in identify_variables(obj.expr, include_fixed=False):
-            var_set.add(v)
-    # Disjunct indicator variables might not appear in active constraints. In
-    # fact, if we consider them Logical variables, they should not appear in
-    # active algebraic constraints. For now, they need to be added to the
-    # variable set.
-    for disj in getattr(util_blk, 'disjunct_list'):
-        var_set.add(disj.binary_indicator_var)
+#     # Identify the non-fixed variables in (potentially) active constraints and
+#     # objective functions
+#     for constr in getattr(util_blk, 'constraint_list'):
+#         for v in identify_variables(constr.body, include_fixed=False):
+#             var_set.add(v)
+#     for obj in model.component_data_objects(ctype=Objective, active=True):
+#         for v in identify_variables(obj.expr, include_fixed=False):
+#             var_set.add(v)
+#     # Disjunct indicator variables might not appear in active constraints. In
+#     # fact, if we consider them Logical variables, they should not appear in
+#     # active algebraic constraints. For now, they need to be added to the
+#     # variable set.
+#     for disj in getattr(util_blk, 'disjunct_list'):
+#         var_set.add(disj.binary_indicator_var)
 
-    # We use component_data_objects rather than list(var_set) in order to
-    # preserve a deterministic ordering.
-    var_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set)
-    setattr(util_blk, 'variable_list', var_list)
-    discrete_variable_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set and v.is_integer())
-    setattr(util_blk, 'discrete_variable_list', discrete_variable_list)
-    continuous_variable_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set and v.is_continuous())
-    setattr(util_blk, 'continuous_variable_list', continuous_variable_list)
+#     # We use component_data_objects rather than list(var_set) in order to
+#     # preserve a deterministic ordering.
+#     var_list = list(
+#         v for v in model.component_data_objects(
+#             ctype=Var, descend_into=(Block, Disjunct))
+#         if v in var_set)
+#     setattr(util_blk, 'variable_list', var_list)
+#     discrete_variable_list = list(
+#         v for v in model.component_data_objects(
+#             ctype=Var, descend_into=(Block, Disjunct))
+#         if v in var_set and v.is_integer())
+#     setattr(util_blk, 'discrete_variable_list', discrete_variable_list)
+#     continuous_variable_list = list(
+#         v for v in model.component_data_objects(
+#             ctype=Var, descend_into=(Block, Disjunct))
+#         if v in var_set and v.is_continuous())
+#     setattr(util_blk, 'continuous_variable_list', continuous_variable_list)
 
-def get_results_object(original_model, logger):
-    results = SolverResults()
-    # TODO work on termination condition and message
-    results.solver.termination_condition = None
-    results.solver.message = None
-    results.solver.user_time = None
-    results.solver.system_time = None
-    results.solver.wallclock_time = None
-    results.solver.termination_message = None
-
-    prob = results.problem
-    prob.name = original_model.name
-    prob.number_of_nonzeros = None  # TODO
-
-    num_of = build_model_size_report(original_model)
-
-    # Get count of constraints and variables
-    prob.number_of_constraints = num_of.activated.constraints
-    prob.number_of_disjunctions = num_of.activated.disjunctions
-    prob.number_of_variables = num_of.activated.variables
-    prob.number_of_binary_variables = num_of.activated.binary_variables
-    prob.number_of_continuous_variables = num_of.activated.continuous_variables
-    prob.number_of_integer_variables = num_of.activated.integer_variables
-
-    logger.info(
-        "Original model has %s constraints (%s nonlinear) "
-        "and %s disjunctions, "
-        "with %s variables, of which %s are binary, %s are integer, "
-        "and %s are continuous." %
-        (num_of.activated.constraints,
-         num_of.activated.nonlinear_constraints,
-         num_of.activated.disjunctions,
-         num_of.activated.variables,
-         num_of.activated.binary_variables,
-         num_of.activated.integer_variables,
-         num_of.activated.continuous_variables))
-
-    return results
-
-def setup_results_object(solve_data, config):
-    """Record problem statistics for original model."""
-    # Create the solver results object
-    res = solve_data.results
-    prob = res.problem
-    res.problem.name = solve_data.original_model.name
-    res.problem.number_of_nonzeros = None  # TODO
-    # TODO work on termination condition and message
-    res.solver.termination_condition = None
-    res.solver.message = None
-    res.solver.user_time = None
-    res.solver.system_time = None
-    res.solver.wallclock_time = None
-    res.solver.termination_message = None
-
-    num_of = build_model_size_report(solve_data.original_model)
-
-    # Get count of constraints and variables
-    prob.number_of_constraints = num_of.activated.constraints
-    prob.number_of_disjunctions = num_of.activated.disjunctions
-    prob.number_of_variables = num_of.activated.variables
-    prob.number_of_binary_variables = num_of.activated.binary_variables
-    prob.number_of_continuous_variables = num_of.activated.continuous_variables
-    prob.number_of_integer_variables = num_of.activated.integer_variables
-
-    config.logger.info(
-        "Original model has %s constraints (%s nonlinear) "
-        "and %s disjunctions, "
-        "with %s variables, of which %s are binary, %s are integer, "
-        "and %s are continuous." %
-        (num_of.activated.constraints,
-         num_of.activated.nonlinear_constraints,
-         num_of.activated.disjunctions,
-         num_of.activated.variables,
-         num_of.activated.binary_variables,
-         num_of.activated.integer_variables,
-         num_of.activated.continuous_variables))
-
+# ESJ: What is this for??
 def constraints_in_True_disjuncts(model, config):
     """Yield constraints in disjuncts where the indicator value is set or 
     fixed to True."""
@@ -666,7 +581,8 @@ def get_main_elapsed_time(timing_data_obj):
                 "`get_main_elapsed_time()`."
             )
 
-
+# ESJ TODO: If it's okay with Qi and David, let's remove this. Only the old
+# gdpbb is using it, and I think we should remove it too.
 @deprecated(
     "'restore_logger_level()' has been deprecated in favor of the more "
     "specific 'lower_logger_level_to()' function.",
@@ -690,7 +606,7 @@ def lower_logger_level_to(logger, level=None):
     else:
         yield  # Otherwise, leave the logger alone
 
-
+# ESJ TODO: I'm not using this
 @contextmanager
 def create_utility_block(model, name, solve_data):
     created_util_block = False
@@ -714,64 +630,101 @@ def create_utility_block(model, name, solve_data):
     if created_util_block:
         model.del_component(name)
 
+def setup_results_object(solve_data, config):
+    """Record problem statistics for original model."""
+    # Create the solver results object
+    res = solve_data.results
+    prob = res.problem
+    res.problem.name = solve_data.original_model.name
+    res.problem.number_of_nonzeros = None  # TODO
+    # TODO work on termination condition and message
+    res.solver.termination_condition = None
+    res.solver.message = None
+    res.solver.user_time = None
+    res.solver.system_time = None
+    res.solver.wallclock_time = None
+    res.solver.termination_message = None
 
+    num_of = build_model_size_report(solve_data.original_model)
 
-@contextmanager
-def setup_solver_environment(model, config):
-    solve_data = GDPoptSolveData()  # data object for storing solver state
-    #solve_data.config = config
-    solve_data.results = SolverResults()
-    solve_data.timing = Bunch()
-    min_logging_level = logging.INFO if config.tee else None
-    with time_code(solve_data.timing, 'total', is_main_timer=True), \
-            lower_logger_level_to(config.logger, min_logging_level), \
-            create_utility_block(model, 'GDPopt_utils', solve_data):
+    # Get count of constraints and variables
+    prob.number_of_constraints = num_of.activated.constraints
+    prob.number_of_disjunctions = num_of.activated.disjunctions
+    prob.number_of_variables = num_of.activated.variables
+    prob.number_of_binary_variables = num_of.activated.binary_variables
+    prob.number_of_continuous_variables = num_of.activated.continuous_variables
+    prob.number_of_integer_variables = num_of.activated.integer_variables
 
-        # Create a working copy of the original model
-        solve_data.original_model = model
-        solve_data.working_model = model.clone()
-        setup_results_object(solve_data, config)
-        solve_data.active_strategy = config.strategy
-        util_block = solve_data.working_model.GDPopt_utils
+    config.logger.info(
+        "Original model has %s constraints (%s nonlinear) "
+        "and %s disjunctions, "
+        "with %s variables, of which %s are binary, %s are integer, "
+        "and %s are continuous." %
+        (num_of.activated.constraints,
+         num_of.activated.nonlinear_constraints,
+         num_of.activated.disjunctions,
+         num_of.activated.variables,
+         num_of.activated.binary_variables,
+         num_of.activated.integer_variables,
+         num_of.activated.continuous_variables))
 
-        # Save model initial values.
-        # These can be used later to initialize NLP subproblems.
-        solve_data.initial_var_values = list(
-            v.value for v in util_block.variable_list)
-        solve_data.best_solution_found = None
+# @contextmanager
+# def setup_solver_environment(model, config):
+#     solve_data = GDPoptSolveData()  # data object for storing solver state
+#     #solve_data.config = config
+#     solve_data.results = SolverResults()
+#     solve_data.timing = Bunch()
+#     min_logging_level = logging.INFO if config.tee else None
+#     with time_code(solve_data.timing, 'total', is_main_timer=True), \
+#             lower_logger_level_to(config.logger, min_logging_level), \
+#             create_utility_block(model, 'GDPopt_utils', solve_data):
 
-        # Integer cuts exclude particular discrete decisions
-        util_block.integer_cuts = ConstraintList(doc='integer cuts')
+#         # Create a working copy of the original model
+#         solve_data.original_model = model
+#         solve_data.working_model = model.clone()
+#         setup_results_object(solve_data, config)
+#         solve_data.active_strategy = config.strategy
+#         util_block = solve_data.working_model.GDPopt_utils
 
-        # Set up iteration counters
-        solve_data.master_iteration = 0
-        solve_data.mip_iteration = 0
-        solve_data.nlp_iteration = 0
+#         # Save model initial values.
+#         # These can be used later to initialize NLP subproblems.
+#         solve_data.initial_var_values = list(
+#             v.value for v in util_block.variable_list)
+#         solve_data.best_solution_found = None
 
-        # set up bounds
-        solve_data.LB = float('-inf')
-        solve_data.UB = float('inf')
-        solve_data.iteration_log = {}
+#         # Integer cuts exclude particular discrete decisions
+#         util_block.integer_cuts = ConstraintList(doc='integer cuts')
 
-        # Flag indicating whether the solution improved in the past
-        # iteration or not
-        solve_data.feasible_solution_improved = False
+#         # Set up iteration counters
+#         solve_data.master_iteration = 0
+#         solve_data.mip_iteration = 0
+#         solve_data.nlp_iteration = 0
 
-        yield solve_data  # yield setup solver environment
+#         # set up bounds
+#         solve_data.LB = float('-inf')
+#         solve_data.UB = float('inf')
+#         solve_data.iteration_log = {}
 
-        if (solve_data.best_solution_found is not None and
-            solve_data.best_solution_found is not solve_data.original_model):
-            # Update values on the original model
-            copy_var_list_values(
-                from_list=solve_data.best_solution_found.GDPopt_utils.\
-                variable_list,
-                to_list=solve_data.original_model.GDPopt_utils.variable_list,
-                config=config)
+#         # Flag indicating whether the solution improved in the past
+#         # iteration or not
+#         solve_data.feasible_solution_improved = False
 
-    # Finalize results object
-    solve_data.results.problem.lower_bound = solve_data.LB
-    solve_data.results.problem.upper_bound = solve_data.UB
-    solve_data.results.solver.iterations = solve_data.master_iteration
-    solve_data.results.solver.timing = solve_data.timing
-    solve_data.results.solver.user_time = solve_data.timing.total
-    solve_data.results.solver.wallclock_time = solve_data.timing.total
+#         yield solve_data  # yield setup solver environment
+
+#         if (solve_data.best_solution_found is not None and
+#             solve_data.best_solution_found is not solve_data.original_model):
+#             # Update values on the original model
+#             copy_var_list_values(
+#                 from_list=solve_data.best_solution_found.GDPopt_utils.\
+#                 variable_list,
+#                 to_list=solve_data.original_model.GDPopt_utils.variable_list,
+#                 config=config)
+
+#     # Finalize results object
+#     solve_data.results.problem.lower_bound = solve_data.LB
+#     solve_data.results.problem.upper_bound = solve_data.UB
+#     solve_data.results.solver.iterations = solve_data.master_iteration
+#     solve_data.results.solver.timing = solve_data.timing
+#     solve_data.results.solver.user_time = solve_data.timing.total
+#     solve_data.results.solver.wallclock_time = solve_data.timing.total
+    

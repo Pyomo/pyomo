@@ -30,32 +30,27 @@
 - start keeping basic changelog
 
 """
-from pyomo.contrib.gdpopt.loa import solve_gdp_with_loa
-from pyomo.contrib.gdpopt.util import get_results_object, lower_logger_level_to
-from pyomo.common.collections import Bunch
 
-from io import StringIO
 
 from pyomo.common.config import (
     add_docstring_list
 )
-from pyomo.contrib.gdpopt.branch_and_bound import _perform_branch_and_bound
-from pyomo.contrib.gdpopt.config_options import _get_GDPopt_config
-from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
-
-from pyomo.contrib.gdpopt.util import (
-    presolve_lp_nlp, process_objective, time_code, setup_solver_environment)
-from textwrap import indent
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.opt.base import SolverFactory
+#from pyomo.contrib.gdpopt.branch_and_bound import _perform_branch_and_bound
+from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
+from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
+#from pyomo.contrib.gdptopt.gloa import GDP_GLOA_Solver
+# etc...
 
-__version__ = (20, 2, 28)  # Note: date-based version number
 
+from nose.tools import set_trace
 
 @SolverFactory.register(
     'gdpopt',
     doc='The GDPopt decomposition-based '
     'Generalized Disjunctive Programming (GDP) solver')
-class GDPoptSolver(object):
+class GDPoptSolver(_GDPoptAlgorithm):
     """Decomposition solver for Generalized Disjunctive Programming (GDP)
     problems.
 
@@ -86,19 +81,46 @@ class GDPoptSolver(object):
     - LOA set-covering initialization: Eloy Fernandez
 
     """
-
     # Declare configuration options for the GDPopt solver
-    CONFIG = _get_GDPopt_config()
+    def __new__(cls, *args, **kwds):
+        config = cls.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
+        config.set_value(kwds)
+        strategy = config.strategy
+        if strategy is None:
+            # raise deprecation warning
+            deprecation_warning("Instantiating the gdpopt solver without "
+                                "specifying an algorithm is deprecated. "
+                                "For example, you should write: "
+                                "SolverFactory('gdpopt', algorithm='LOA'), "
+                                "replacing 'LOA' with a valid solution "
+                                "strategy.", version='TODO')
+            return _HACK_GDPoptSolver(*args, **kwds)
+        solver = self.handlers.get(strategy)
+        if solver is None:
+            # TODO: make this more general...
+            msg = 'Please specify a valid solution strategy. Options are: \n'
+            msg += '    LOA:  Logic-based Outer Approximation\n'
+            msg += '    GLOA: Global Logic-based Outer Approximation\n'
+            msg += '    LBB:  Logic-based Branch and Bound\n'
+            msg += '    RIC:  Relaxation with Integer Cuts'
+            raise ValueError(msg)
+        return SolverFactory(solver, *args, **kwds)
+
+@SolverFactory.register(
+    '_HACK_gdpopt',
+    doc='The GDPopt decomposition-based '
+    'Generalized Disjunctive Programming (GDP) solver, supporting specifying'
+    'solution strategy in the call to solve.')
+class _HACK_GDPoptSolver(_GDPoptAlgorithm):
+    # def __init__(self, **kwds):
+    #     config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
+    #     config.set_value(kwds)
 
     def solve(self, model, **kwds):
-        """Solve the model.
-
-        Warning: this solver is still in beta. Keyword arguments subject to
-        change. Undocumented keyword arguments definitely subject to change.
-
-        This function performs all of the GDPopt solver setup and problem
-        validation. It then calls upon helper functions to construct the
-        initial master approximation and iteration loop.
+        """Solve the model, depending on the value for config.strategy. Note
+        that this is merely a deprecation path and eventually setting the 
+        algorithm in the call to solve will not be supported: It will need to
+        be set when the solver is instantiated.
 
         Args:
             model (Block): a Pyomo model or block to be solved
@@ -106,186 +128,26 @@ class GDPoptSolver(object):
         """
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
-        if config.strategy is None:
-            msg = 'Please specify solution strategy. Options are: \n'
+
+        strategy = config.strategy
+        if strategy == 'LOA':
+            return SolverFactory('_logic_based_oa').solve(model, **kwds)
+        elif strategy == 'GLOA':
+            return SolverFactory('_global_logic_based_oa').solve(model, **kwds)
+        elif strategy == 'RIC':
+            return SolverFactory('_relaxation_with_integer_cuts').solve(model,
+                                                                        **kwds)
+        elif strategy == 'LBB':
+            return SolverFactory('_logic_based_branch_and_bound').solve(model,
+                                                                        **kwds)
+        else:
+            msg = 'Please specify a valid solution strategy. Options are: \n'
             msg += '    LOA:  Logic-based Outer Approximation\n'
             msg += '    GLOA: Global Logic-based Outer Approximation\n'
             msg += '    LBB:  Logic-based Branch and Bound\n'
             msg += '    RIC:  Relaxation with Integer Cuts'
             raise ValueError(msg)
 
-        # place to store results
-        results = get_results_object(model, config.logger)
-        results.solver.name = 'GDPopt %s - %s' % ( str(self.version()),
-                                                   config.strategy)
-
-        # Check if this problem actually has any discrete decisions. If not,
-        # just solve it.
-        problem = results.problem
-        if (problem.number_of_binary_variables == 0 and 
-            problem.number_of_integer_variables == 0 and
-            problem.number_of_disjunctions == 0):
-            return solve_continuous_problem(model, problem)
-
-        # where we'll store timing information throughout the algorithm
-        timing = Bunch()
-        min_logging_level = logging.INFO if config.tee else None
-        with time_code(timing, 'total', is_main_timer=True), \
-            lower_logger_level_to(config.logger, min_logging_level):
-            
-            self._log_solver_intro_message(config)
-
-            # run the right algorithm
-            if config.strategy == 'LOA':
-                results = solve_gdp_with_loa(model, results, config, timing)
-            elif config.strategy == 'GLOA':
-                pass
-            elif config.strategy == 'RIC':
-                pass
-            elif config.strategy == 'LBB':
-                pass
-
-        return results
-
-        # with setup_solver_environment(model, config) as solve_data:
-        #     self._log_solver_intro_message(config)
-        #     solve_data.results.solver.name = 'GDPopt %s - %s' % (
-        #         str(self.version()), config.strategy)
-
-        #     # Verify that objective has correct form
-        #     process_objective(solve_data, config)
-
-        #     # Presolve LP or NLP problems using subsolvers
-        #     presolved, presolve_results = presolve_lp_nlp(solve_data, config)
-        #     if presolved:
-        #         # TODO merge the solver results
-        #         return presolve_results  # problem presolved
-
-        #     if solve_data.active_strategy in {'LOA', 'GLOA', 'RIC'}:
-        #         # Initialize the master problem
-        #         with time_code(solve_data.timing, 'initialization'):
-        #             GDPopt_initialize_master(solve_data, config)
-
-        #         # Algorithm main loop
-        #         with time_code(solve_data.timing, 'main loop'):
-        #             GDPopt_iteration_loop(solve_data, config)
-        #     elif solve_data.active_strategy == 'LBB':
-        #         _perform_branch_and_bound(solve_data)
-        #     else:
-        #         raise ValueError('Unrecognized strategy: ' + config.strategy)
-
-        # return solve_data.results
-
-    """Support use as a context manager under current solver API"""
-    def __enter__(self):
-        return self
-
-    def __exit__(self, t, v, traceback):
-        pass
-
-    def available(self, exception_flag=True):
-        """Check if solver is available.
-
-        TODO: For now, it is always available. However, sub-solvers may not
-        always be available, and so this should reflect that possibility.
-
-        """
-        return True
-
-    def license_is_valid(self):
-        return True
-
-    def version(self):
-        """Return a 3-tuple describing the solver version."""
-        return __version__
-
-    def _log_solver_intro_message(self, config):
-        config.logger.info(
-            "Starting GDPopt version %s using %s algorithm"
-            % (".".join(map(str, self.version())), config.strategy)
-        )
-        mip_args_output = StringIO()
-        nlp_args_output = StringIO()
-        minlp_args_output = StringIO()
-        lminlp_args_output = StringIO()
-        config.mip_solver_args.display(ostream=mip_args_output)
-        config.nlp_solver_args.display(ostream=nlp_args_output)
-        config.minlp_solver_args.display(ostream=minlp_args_output)
-        config.local_minlp_solver_args.display(ostream=lminlp_args_output)
-        mip_args_text = indent(mip_args_output.getvalue().rstrip(), prefix=" " *
-                               2 + " - ")
-        nlp_args_text = indent(nlp_args_output.getvalue().rstrip(), prefix=" " *
-                               2 + " - ")
-        minlp_args_text = indent(minlp_args_output.getvalue().rstrip(),
-                                 prefix=" " * 2 + " - ")
-        lminlp_args_text = indent(lminlp_args_output.getvalue().rstrip(),
-                                  prefix=" " * 2 + " - ")
-        mip_args_text = "" if len(mip_args_text.strip()) == 0 else \
-                        "\n" + mip_args_text
-        nlp_args_text = "" if len(nlp_args_text.strip()) == 0 else \
-                        "\n" + nlp_args_text
-        minlp_args_text = "" if len(minlp_args_text.strip()) == 0 else \
-                          "\n" + minlp_args_text
-        lminlp_args_text = "" if len(lminlp_args_text.strip()) == 0 else \
-                           "\n" + lminlp_args_text
-        config.logger.info(
-            """
-Subsolvers:
-- MILP: {milp}{milp_args}
-- NLP: {nlp}{nlp_args}
-- MINLP: {minlp}{minlp_args}
-- local MINLP: {lminlp}{lminlp_args}
-            """.format(
-                milp=config.mip_solver,
-                milp_args=mip_args_text,
-                nlp=config.nlp_solver,
-                nlp_args=nlp_args_text,
-                minlp=config.minlp_solver,
-                minlp_args=minlp_args_text,
-                lminlp=config.local_minlp_solver,
-                lminlp_args=lminlp_args_text,
-            ).strip()
-        )
-        to_cite_text = """
-If you use this software, you may cite the following:
-- Implementation:
-Chen, Q; Johnson, ES; Siirola, JD; Grossmann, IE.
-Pyomo.GDP: Disjunctive Models in Python.
-Proc. of the 13th Intl. Symposium on Process Systems Eng.
-San Diego, 2018.
-        """.strip()
-        if config.strategy == "LOA":
-            to_cite_text += "\n"
-            to_cite_text += """
-- LOA algorithm:
-Türkay, M; Grossmann, IE.
-Logic-based MINLP algorithms for the optimal synthesis of process networks.
-Comp. and Chem. Eng. 1996, 20(8), 959–978.
-DOI: 10.1016/0098-1354(95)00219-7.
-            """.strip()
-        elif config.strategy == "GLOA":
-            to_cite_text += "\n"
-            to_cite_text += """
-- GLOA algorithm:
-Lee, S; Grossmann, IE.
-A Global Optimization Algorithm for Nonconvex Generalized Disjunctive
-Programming and Applications to Process Systems.
-Comp. and Chem. Eng. 2001, 25, 1675-1697.
-DOI: 10.1016/S0098-1354(01)00732-3.
-            """.strip()
-        elif config.strategy == "LBB":
-            to_cite_text += "\n"
-            to_cite_text += """
-- LBB algorithm:
-Lee, S; Grossmann, IE.
-New algorithms for nonlinear generalized disjunctive programming.
-Comp. and Chem. Eng. 2000, 24, 2125-2141.
-DOI: 10.1016/S0098-1354(00)00581-0.
-            """.strip()
-        config.logger.info(to_cite_text)
-
-    _metasolver = False
-
 # Add the CONFIG arguments to the solve method docstring
-GDPoptSolver.solve.__doc__ = add_docstring_list(
-    GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)
+# GDPoptSolver.solve.__doc__ = add_docstring_list(
+#     GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)
