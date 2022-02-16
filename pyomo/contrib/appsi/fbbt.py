@@ -90,7 +90,7 @@ class IntervalTightener(PersistentBase):
             self._obj_labeler = TextLabeler()
 
         self._model = model
-        self._cmodel = cmodel.Model()
+        self._cmodel = cmodel.FBBTModel()
         self.add_block(model)
         if self._objective is None:
             self.set_objective(None)
@@ -119,8 +119,8 @@ class IntervalTightener(PersistentBase):
                 cp.name = self._symbol_map.getSymbol(p, self._param_labeler)
 
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
-        cmodel.process_constraints(self._cmodel, self._pyomo_expr_types, cons, self._var_map, self._param_map,
-                                   self._active_constraints, self._con_map, self._rcon_map)
+        cmodel.process_fbbt_constraints(self._cmodel, self._pyomo_expr_types, cons, self._var_map, self._param_map,
+                                        self._active_constraints, self._con_map, self._rcon_map)
         if self._symbolic_solver_labels:
             for c, cc in self._con_map.items():
                 cc.name = self._symbol_map.getSymbol(c, self._con_labeler)
@@ -186,7 +186,7 @@ class IntervalTightener(PersistentBase):
                 sense = 0
             else:
                 sense = 1
-        cobj = cmodel.Objective(ce)
+        cobj = cmodel.FBBTObjective(ce)
         cobj.sense = sense
         self._cmodel.objective = cobj
         self._objective = obj

@@ -1,3 +1,6 @@
+#ifndef EXPRESSION_HEADER
+#define EXPRESSION_HEADER
+
 #include "interval.hpp"
 #include <mutex>
 
@@ -738,3 +741,5 @@ void process_pyomo_vars(PyomoExprTypes &expr_types, py::list pyomo_vars,
                         py::dict var_attrs, py::dict rev_var_map,
                         py::bool_ _set_name, py::handle symbol_map,
                         py::handle labeler, py::bool_ _update);
+
+#endif

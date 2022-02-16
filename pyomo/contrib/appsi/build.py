@@ -37,7 +37,8 @@ def get_appsi_extension(in_setup=False, appsi_root=None):
                 'common.cpp',
                 'nl_writer.cpp',
                 'lp_writer.cpp',
-                'model.cpp',
+                'model_base.cpp',
+                'fbbt_model.cpp',
                 'cmodel_bindings.cpp',
         )
     ]

@@ -1,4 +1,4 @@
-#include "nl_writer.hpp"
+#include "expression.hpp"
 
 class LPBase;
 class LPConstraint;

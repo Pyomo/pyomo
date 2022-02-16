@@ -59,8 +59,8 @@ void NLWriter::add_constraint(std::shared_ptr<NLConstraint> con) {
 }
 
 void NLWriter::remove_constraint(std::shared_ptr<NLConstraint> con) {
-  con->index = -1;
   constraints->erase(con);
+  con->index = -1;
 }
 
 bool nl_constraint_sorter(std::shared_ptr<NLConstraint> con1,
