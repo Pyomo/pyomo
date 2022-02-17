@@ -227,9 +227,10 @@ class MindtPySolver(object):
         solve_data.results.solver.iterations = solve_data.mip_iter
         solve_data.results.solver.num_infeasible_nlp_subproblem = solve_data.nlp_infeasible_counter
         solve_data.results.solver.best_solution_found_time = solve_data.best_solution_found_time
-        solve_data.results.solver.primal_integral = get_primal_integral(solve_data)
-        solve_data.results.solver.dual_integral = get_dual_integral(solve_data)
+        solve_data.results.solver.primal_integral = get_primal_integral(solve_data, config)
+        solve_data.results.solver.dual_integral = get_dual_integral(solve_data, config)
         solve_data.results.solver.primal_dual_gap_integral = solve_data.results.solver.primal_integral + solve_data.results.solver.dual_integral
+        config.logger.info(' {:<25}:   {:>7.4f} '.format('Primal-dual gap integral', solve_data.results.solver.primal_dual_gap_integral))
 
         if config.single_tree:
             solve_data.results.solver.num_nodes = solve_data.nlp_iter - \

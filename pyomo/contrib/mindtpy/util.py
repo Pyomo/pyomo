@@ -851,7 +851,7 @@ def set_up_logger(config):
     config.logger.addHandler(ch)
 
 
-def get_dual_integral(solve_data):
+def get_dual_integral(solve_data, config):
     """Calculate the dual integral.
     Ref: The confined primal integral. [http://www.optimization-online.org/DB_FILE/2020/07/7910.pdf]
 
@@ -892,10 +892,11 @@ def get_dual_integral(solve_data):
             dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (solve_data.dual_bound_progress_time[i])
         else:
             dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (solve_data.dual_bound_progress_time[i] - solve_data.dual_bound_progress_time[i-1])
+    config.logger.info(' {:<15}:   {:>7.4f} '.format('Dual integral', dual_integral))
     return dual_integral
 
 
-def get_primal_integral(solve_data):
+def get_primal_integral(solve_data, config):
     """Calculate the primal integral.
     Ref: The confined primal integral. [http://www.optimization-online.org/DB_FILE/2020/07/7910.pdf]
 
@@ -936,4 +937,6 @@ def get_primal_integral(solve_data):
             primal_integral += abs(primal_bound_progress[i] - solve_data.primal_bound) * (solve_data.primal_bound_progress_time[i])
         else:
             primal_integral += abs(primal_bound_progress[i] - solve_data.primal_bound) * (solve_data.primal_bound_progress_time[i] - solve_data.primal_bound_progress_time[i-1])
+
+    config.logger.info(' {:<15}:   {:>7.4f} '.format('Primal integral', primal_integral))
     return primal_integral
