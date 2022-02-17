@@ -12,22 +12,6 @@
 
 """Implementation of the MindtPy solver.
 
-The MindtPy (MINLP Decomposition Toolkit) solver applies a variety of
-decomposition-based approaches to solve nonlinear continuous-discrete problems.
-These approaches include:
-
-- Outer approximation
-- Benders decomposition [pending]
-- Partial surrogate cuts [pending]
-- Extended cutting plane [pending]
-
-This solver implementation was developed by Carnegie Mellon University in the
-research group of Ignacio Grossmann.
-
-For nonconvex problems, the bounds solve_data.primal_bound and solve_data.dual_bound may not be
-rigorous. Questions: Please make a post at StackOverflow and/or David Bernal
-<https://github.com/bernalde>
-
 22.2.10 changes:
 - Add support for partitioning nonlinear-sum objective.
 
@@ -101,7 +85,7 @@ class MindtPySolver(object):
     - Regularized LP/NLP based branch-and-bound (RLP/NLP)
     - Feasibility pump (FP)
 
-    This solver implementation has been developed by David Bernal (@bernalde) and Zedong Peng (@ZedongPeng) as part of research efforts at the Grossmann Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at Carnegie Mellon University.
+    This solver implementation has been developed by David Bernal <https://github.com/bernalde> and Zedong Peng <https://github.com/ZedongPeng> as part of research efforts at the Grossmann Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at Carnegie Mellon University.
     """
     CONFIG = _get_MindtPy_config()
 
