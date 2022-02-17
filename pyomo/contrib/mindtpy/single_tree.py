@@ -604,7 +604,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         if config.add_regularization is not None and solve_data.best_solution_found is not None:
             # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if not solve_data.dual_bound_improved and not solve_data.primal_bound_improved:
-                config.logger.debug('the bound and the best found solution have neither been improved.'
+                config.logger.debug('The bound and the best found solution have neither been improved.'
                                     'We will skip solving the regularization problem and the Fixed-NLP subproblem')
                 solve_data.primal_bound_improved = False
                 return
@@ -701,7 +701,7 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
         if config.add_regularization is not None and solve_data.best_solution_found is not None:
             # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if not solve_data.dual_bound_improved and not solve_data.primal_bound_improved:
-                config.logger.debug('the bound and the best found solution have neither been improved.'
+                config.logger.debug('The bound and the best found solution have neither been improved.'
                                     'We will skip solving the regularization problem and the Fixed-NLP subproblem')
                 solve_data.primal_bound_improved = False
                 return
