@@ -24,8 +24,9 @@ def get_infeasible_master_result(util_block):
     return mip_result
 
 
-def solve_linear_GDP(m, util_block, config, timing):
+def solve_linear_GDP(util_block, config, timing):
     """Solves the linear GDP model and attempts to resolve solution issues."""
+    m = util_block.model()
 
     if config.mip_presolve:
         try:
@@ -37,7 +38,7 @@ def solve_linear_GDP(m, util_block, config, timing):
             # relaxation
         except InfeasibleConstraintException:
             config.logger.debug("MIP preprocessing detected infeasibility.")
-            return get_infeasible_master_result(gpdopt_block)
+            return get_infeasible_master_result(util_block)
 
     # Deactivate extraneous IMPORT/EXPORT suffixes 
     # ESJ TODO: Do we need to do this? Is this our problem? And, if you give 
@@ -106,12 +107,13 @@ def solve_linear_GDP(m, util_block, config, timing):
         terminate_cond = results.solver.termination_condition
 
     # Build and return results object
-    mip_result = MasterProblemResult()
-    mip_result.feasible = True
-    mip_result.var_values = list(v.value for v in util_block.variable_list)
-    mip_result.pyomo_results = results
-    mip_result.disjunct_values = list(disj.binary_indicator_var.value for disj
-                                      in util_block.disjunct_list)
+    mip_feasible = True
+    # mip_result = MasterProblemResult()
+    # mip_result.feasible = True
+    # mip_result.var_values = list(v.value for v in util_block.variable_list)
+    # mip_result.pyomo_results = results
+    # mip_result.disjunct_values = list(disj.binary_indicator_var.value for disj
+    #                                   in util_block.disjunct_list)
 
     if terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
         pass
@@ -119,7 +121,7 @@ def solve_linear_GDP(m, util_block, config, timing):
         config.logger.info(
             'Linear GDP is now infeasible. '
             'GDPopt has finished exploring feasible discrete configurations.')
-        mip_result.feasible = False
+        mip_feasible = False
     elif terminate_cond is tc.maxTimeLimit:
         # TODO check that status is actually ok and everything is feasible
         config.logger.info(
@@ -139,7 +141,7 @@ def solve_linear_GDP(m, util_block, config, timing):
             'of %s. Solver message: %s' %
             (terminate_cond, results.solver.message))
 
-    return mip_result
+    return mip_feasible
 
 
 def distinguish_mip_infeasible_or_unbounded(m, config):
@@ -166,12 +168,11 @@ def distinguish_mip_infeasible_or_unbounded(m, config):
     termination_condition = results.solver.termination_condition
     return results, termination_condition
 
-
-def solve_LOA_master(solve_data, config):
+# ESJ: Going to abandon this method completely
+def solve_LOA_master(master_util_block, config, solver):
     """Solve the augmented lagrangean outer approximation master problem."""
-    m = solve_data.linear_GDP.clone()
-    GDPopt = m.GDPopt_utils
-    solve_data.mip_iteration += 1
+    m = master_util_block.model()
+    solver.mip_iteration += 1
     main_objective = next(m.component_data_objects(Objective, active=True))
 
     if solve_data.active_strategy == 'LOA':
@@ -195,20 +196,23 @@ def solve_LOA_master(solve_data, config):
         raise ValueError('Unrecognized strategy: ' + solve_data.active_strategy)
 
     mip_result = solve_linear_GDP(m, solve_data, config)
+
     if mip_result.feasible:
         if main_objective.sense == minimize:
             solve_data.LB = max(value(obj_expr), solve_data.LB)
         else:
             solve_data.UB = min(value(obj_expr), solve_data.UB)
-        solve_data.iteration_log[
-            (solve_data.master_iteration,
-             solve_data.mip_iteration,
-             solve_data.nlp_iteration)
-        ] = (
-            value(obj_expr),
-            value(base_obj_expr),
-            mip_result.var_values
-        )
+        
+        # TODO: is this useful for anything??
+        # solve_data.iteration_log[
+        #     (solve_data.master_iteration,
+        #      solve_data.mip_iteration,
+        #      solve_data.nlp_iteration)
+        # ] = (
+        #     value(obj_expr),
+        #     value(base_obj_expr),
+        #     mip_result.var_values
+        # )
         config.logger.info(
             'ITER {:d}.{:d}.{:d}-MIP: OBJ: {:.10g}  LB: {:.10g}  UB: {:.10g}'.\
             format(

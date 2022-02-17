@@ -15,39 +15,6 @@ from pyomo.core import (
 )
 from pyomo.gdp import Disjunct
 
-
-# def GDPopt_initialize_master(solve_data, config):
-#     """Initialize the decomposition algorithm.
-
-#     This includes generating the initial cuts require to build the master
-#     problem.
-
-#     """
-#     config.logger.info("---Starting GDPopt initialization---"
-#     m = solve_data.working_model
-#     if not hasattr(m, 'dual'):  # Set up dual value reporting
-#         m.dual = Suffix(direction=Suffix.IMPORT)
-#     m.dual.activate()
-
-#     # Set up the linear GDP model
-#     solve_data.linear_GDP = m.clone()
-#     # deactivate nonlinear constraints
-#     for c in solve_data.linear_GDP.component_data_objects(
-#             Constraint, active=True, descend_into=(Block, Disjunct)):
-#         if c.body.polynomial_degree() not in (1, 0):
-#             c.deactivate()
-#     # Initialization strategies, defined at bottom
-#     init_strategy_fctn = valid_init_strategies.get(config.init_strategy, None)
-#     if init_strategy_fctn is not None:
-#         init_strategy_fctn(solve_data, config)
-#     else:
-#         raise ValueError(
-#             'Unknown initialization strategy: %s. '
-#             'Valid strategies include: %s'
-#             % (config.init_strategy,
-#                ", ".join(k for (k, v) in valid_init_strategies.items()
-#                          if v is not None)))
-
 def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                           config, solver):
     """Initialize by using user-specified custom disjuncts."""
@@ -239,10 +206,10 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
     return True
 
 
-def solve_set_cover_mip(model, disj_needs_cover, solve_data, config):
+def solve_set_cover_mip(master_util_block, disj_needs_cover, config, solver):
     """Solve the set covering MIP to determine next configuration."""
-    m = model
-    GDPopt = m.GDPopt_utils
+    m = master_util_block.model()
+
     # number of disjuncts that still need to be covered
     num_needs_cover = sum(1 for disj_bool in disj_needs_cover if disj_bool)
     # number of disjuncts that have been covered
@@ -251,15 +218,14 @@ def solve_set_cover_mip(model, disj_needs_cover, solve_data, config):
     weights = list((num_covered + 1 if disj_bool else 1)
                    for disj_bool in disj_needs_cover)
     # Set up set covering objective
-    if hasattr(GDPopt, "set_cover_obj"):
-        del GDPopt.set_cover_obj
-    GDPopt.set_cover_obj = Objective(
+    if hasattr(master_util_block, "set_cover_obj"):
+        del master_util_block.set_cover_obj
+    master_util_block.set_cover_obj = Objective(
         expr=sum(weight * disj.binary_indicator_var
                  for (weight, disj) in zip(
-            weights, GDPopt.disjunct_list)),
-        sense=maximize)
+            weights, master_util_block.disjunct_list)), sense=maximize)
 
-    mip_results = solve_linear_GDP(m.clone(), solve_data, config)
+    mip_results = solve_linear_GDP(master_util_block, config, solver.timing)
     if mip_results.feasible:
         config.logger.info('Solved set covering MIP')
     else:
@@ -272,10 +238,10 @@ def solve_set_cover_mip(model, disj_needs_cover, solve_data, config):
                 'Set covering problem was infeasible. '
                 'Check your linear and logical constraints '
                 'for contradictions.')
-        if solve_data.objective_sense == minimize:
-            solve_data.LB = float('inf')
+        if solver.objective_sense == minimize:
+            solver._update_bounds(primal=float('inf'))
         else:
-            solve_data.UB = float('-inf')
+            solver._update_bounds(primal=float('-inf'))
 
     return mip_results
 

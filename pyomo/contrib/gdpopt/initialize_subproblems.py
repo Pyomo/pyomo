@@ -16,6 +16,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.collections import ComponentMap
 from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
+from pyomo.contrib.gdpopt.util import move_nonlinear_objective_to_constraints
 
 def initialize_master_problem(util_block, subprob_util_block, config, solver):
     """
@@ -25,8 +26,11 @@ def initialize_master_problem(util_block, subprob_util_block, config, solver):
     config.logger.info("---Starting GDPopt initialization---")
     # clone the original model
     master = util_block.model().clone()
+
     # TODO: switch to getname and set up a name buffer
     master_util_block = master.component(util_block.name)
+    # TODO: Should we do this for subproblem too?? I think I have this wrong.
+    move_nonlinear_objective_to_constraints(master_util_block, config.logger)
 
     # deactivate nonlinear constraints
     for c in master.component_data_objects(Constraint, active=True,
@@ -50,7 +54,7 @@ def initialize_master_problem(util_block, subprob_util_block, config, solver):
                                       valid_init_strategies.items()
                                       if v is not None)))
 
-    return master
+    return master_util_block
 
 def add_util_block(master):
     # create a block to store the cuts

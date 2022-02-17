@@ -131,7 +131,8 @@ def solve_continuous_problem(m, config):
 #     # to do some kind of transformation (Glover?) or throw an error message
 #     return False, None
 
-def move_nonlinear_objective_to_constraints(m, gdpopt_block, results, logger):
+def move_nonlinear_objective_to_constraints(util_block, logger):
+    m = util_block.model()
     main_obj = next(m.component_data_objects(Objective, descend_into=True,
                                              active=True))
 
@@ -139,35 +140,35 @@ def move_nonlinear_objective_to_constraints(m, gdpopt_block, results, logger):
     if main_obj.expr.polynomial_degree() not in (1, 0):
         logger.info("Objective is nonlinear. Moving it to constraint set.")
 
-        gdpopt_block.objective_value = Var(domain=Reals, initialize=0)
+        util_block.objective_value = Var(domain=Reals, initialize=0)
         if mcpp_available():
             mc_obj = McCormick(main_obj.expr)
-            gdpopt_block.objective_value.setub(mc_obj.upper())
-            gdpopt_block.objective_value.setlb(mc_obj.lower())
+            util_block.objective_value.setub(mc_obj.upper())
+            util_block.objective_value.setlb(mc_obj.lower())
         else:
             # Use Pyomo's contrib.fbbt package
             lb, ub = compute_bounds_on_expr(main_obj.expr)
-            if solve_data.results.problem.sense == ProblemSense.minimize:
-                gdpopt_block.objective_value.setlb(lb)
+            if main_obj.sense == minimize:
+                util_block.objective_value.setlb(lb)
             else:
-                gdpopt_block.objective_value.setub(ub)
+                util_block.objective_value.setub(ub)
 
         if main_obj.sense == minimize:
-            gdpopt_block.objective_constr = Constraint(
-                expr=gdpopt_block.objective_value >= main_obj.expr)
+            util_block.objective_constr = Constraint(
+                expr=util_block.objective_value >= main_obj.expr)
         else:
-            gdpopt_block.objective_constr = Constraint(
-                expr=gdpopt_block.objective_value <= main_obj.expr)
+            util_block.objective_constr = Constraint(
+                expr=util_block.objective_value <= main_obj.expr)
         # Deactivate the original objective and add this new one.
         main_obj.deactivate()
-        gdpopt_block.objective = Objective(
-            expr=gdpopt_block.objective_value, sense=main_obj.sense)
+        util_block.objective = Objective(
+            expr=util_block.objective_value, sense=main_obj.sense)
 
         # Add the new variable and constraint to the working lists
         if main_obj.expr.polynomial_degree() not in (1, 0):
-            gdpopt_block.variable_list.append(gdpopt_block.objective_value)
+            util_block.variable_list.append(util_block.objective_value)
             #util_blk.continuous_variable_list.append(util_blk.objective_value)
-            gdpopt_block.constraint_list.append(util_blk.objective_constr)
+            util_block.constraint_list.append(util_block.objective_constr)
             #util_blk.objective_list.append(util_blk.objective)
             # if util_blk.objective_constr.body.polynomial_degree() in (0, 1):
             #     util_blk.linear_constraint_list.append(

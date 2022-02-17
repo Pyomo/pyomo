@@ -5,9 +5,9 @@ from pyomo.common.collections import Bunch
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, NonNegativeInt, In, PositiveInt)
 from pyomo.opt import SolverResults, ProblemSense
-from pyomo.core.base import Objective
+from pyomo.core.base import Objective, value, minimize
 from pyomo.util.model_size import build_model_size_report
-from pyomo.contrib.gdpopt.util import a_logger
+from pyomo.contrib.gdpopt.util import a_logger, get_main_elapsed_time
 
 from nose.tools import set_trace
 
@@ -98,7 +98,7 @@ class _GDPoptAlgorithm(object):
             problem.number_of_disjunctions == 0):
             return solve_continuous_problem(model, problem)
 
-    def _update_bounds(primal=None, dual=None):
+    def _update_bounds(self, primal=None, dual=None):
         """
         Update bounds correctly depending on objective sense.
 
@@ -115,6 +115,79 @@ class _GDPoptAlgorithm(object):
                 self.LB = primal
             if dual is not None:
                 self.UB = dual
+
+    def _update_after_master_problem_solve(self, mip_feasible, obj_expr, 
+                                           logger):
+        if mip_feasible:
+            self._update_bounds(primal=value(obj_expr))
+            # TODO: I'm going to change this anyway
+            logger.info(
+                'ITER {:d}.{:d}.{:d}-MIP: OBJ: {:.10g}  LB: {:.10g}  UB: {:.10g}'.\
+                format(
+                    self.master_iteration,
+                    self.mip_iteration,
+                    self.nlp_iteration,
+                    value(obj_expr),
+                    self.LB, self.UB))
+        else:
+            # Master problem was infeasible.
+            if self.master_iteration == 1:
+                config.logger.warning(
+                    'GDPopt initialization may have generated poor '
+                    'quality cuts.')
+            # set optimistic bound to infinity
+            if self.objective_sense == minimize:
+                self._update_bounds(primal=float('inf'))
+            else:
+                self._update_bounds(primal=float('-inf'))
+        
+    def bounds_converged(self, config):
+        if self.LB + config.bound_tolerance >= self.UB:
+            config.logger.info(
+                'GDPopt exiting on bound convergence. '
+                'LB: {:.10g} + (tol {:.10g}) >= UB: {:.10g}'.format(
+                    self.LB, config.bound_tolerance, self.UB))
+            if self.LB == float('inf') and self.UB == float('inf'):
+                self.results.solver.termination_condition = tc.infeasible
+            elif self.LB == float('-inf') and self.UB == float('-inf'):
+                self.results.solver.termination_condition = tc.infeasible
+            else:
+                self.results.solver.termination_condition = tc.optimal
+            return True
+        return False
+
+    def reached_iteration_limit(self, config):
+        if self.master_iteration >= config.iterlim:
+            config.logger.info(
+                'GDPopt unable to converge bounds '
+                'after %s master iterations.'
+                % (self.master_iteration,))
+            config.logger.info(
+                'Final bound values: LB: {:.10g}  UB: {:.10g}'.format(
+                    self.LB, self.UB))
+            self.results.solver.termination_condition = tc.maxIterations
+            return True
+        return False
+
+    def reached_time_limit(self, config):
+        elapsed = get_main_elapsed_time(self.timing)
+        if elapsed >= config.time_limit:
+            config.logger.info(
+                'GDPopt unable to converge bounds '
+                'before time limit of {} seconds. '
+                'Elapsed: {} seconds'
+                .format(config.time_limit, elapsed))
+            config.logger.info(
+                'Final bound values: LB: {}  UB: {}'.
+                format(self.LB, self.UB))
+            self.results.solver.termination_condition = tc.maxTimeLimit
+            return True
+        return False
+
+    def any_termination_criterion_met(self, config):
+        return (self.bounds_converged(config) or 
+                self.reached_iteration_limit(config) or 
+                self.reached_time_limit(config))
 
     def _get_pyomo_results_object_with_problem_info(self, original_model,
                                                     config):
