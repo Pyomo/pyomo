@@ -369,6 +369,11 @@ def _add_bound_configs(CONFIG):
         description='Default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.',
         domain=PositiveFloat
     ))
+    CONFIG.declare('initial_bound_coef', ConfigValue(
+        default=1E-1,
+        domain=PositiveFloat,
+        description='The coefficient used to approximate the initial primal/dual bound.'
+    ))
 
 
 def _add_fp_configs(CONFIG):
