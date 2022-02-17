@@ -9,7 +9,7 @@ from itertools import permutations, product
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation, get_dsdp
 
 class Measurements:
-    def __init__(self, measurement_index_time, ind_string='_index_'):
+    def __init__(self, measurement_index_time, variance=None, ind_string='_index_'):
         '''
         This class stores measurements' information
         Parameters:
@@ -19,6 +19,11 @@ class Measurements:
                 values are a list of measuring time point if there is no extra index for this measurement
                 For e.g., for the kinetics illustrative example, it should be {'C':{'CA':[0,1,..], 'CB':[0,2,...]}, 'k':[0,4,..]},
                 so the measurements are C[scenario, 'CA', 0]..., k[scenario, 0]....
+        variance: a dictionary, keys are measurement variable names, 
+                values are a dictionary, keys are its extra index, values are its variance (a scalar number)
+                values are its variance if there is no extra index for this measurement 
+                For e.g., for the kinetics illustrative example, it should be {'C':{'CA': 10, 'CB': 1, 'CC': 2}}
+                If given None, the default is {'C':{'CA': 1, 'CB': 1, 'CC': 1}}. 
         '''
         self.measurement_all_info = measurement_index_time
         self.ind_string = ind_string
@@ -27,11 +32,13 @@ class Measurements:
         # begin flatten
         self.__name_and_index_generator(self.measurement_all_info)
         self.__generate_flatten_name(self.name_and_index)
+        self.__generate_variance(self.flatten_measure_name, variance, self.name_and_index)
         self.__generate_flatten_timeset(self.measurement_all_info, self.flatten_measure_name, self.name_and_index)
         self.__model_measure_name()
         print('All measurements are flattened.')
         print('Flatten measurement name:', self.flatten_measure_name)
-        print('Flatten measurement timeset:', self.flatten_measure_timeset)
+        print('Flatten measurement variance:', self.flatten_variance)
+        #print('Flatten measurement timeset:', self.flatten_measure_timeset)
 
         # generate the overall measurement time points set, including the measurement time for all measurements
         flatten_timepoint = list(self.flatten_measure_timeset.values())
@@ -93,6 +100,28 @@ class Measurements:
                 flatten_names.append(j)
 
         self.flatten_measure_name = flatten_names
+
+    def __generate_variance(self, flatten_measure_name, variance, name_and_index):
+        '''Generate the variance dictionary
+        '''
+        flatten_variance = {}
+        for i in flatten_measure_name:
+            if variance is None:
+                flatten_variance[i] = 1
+            else:
+                # split the flattened name if needed
+                if self.ind_string in i:
+                    measure_name = i.split(self.ind_string)[0]
+                    measure_index = i.split(self.ind_string)[1]
+                    print(measure_name)
+                    print(measure_index)
+                    print(type(measure_index))
+                    if type(name_and_index[measure_name][0]) is int:
+                        measure_index = int(measure_index)
+                    flatten_variance[i] = variance[measure_name][measure_index]
+                else:
+                    flatten_variance[i] = variance[i]
+        self.flatten_variance = flatten_variance
 
     def __generate_flatten_timeset(self, all_info, flatten_measure_name,name_and_index):
         '''
@@ -250,6 +279,7 @@ class DesignOfExperiments:
         # create the measurement information object
         self.measure = measurement_object
         self.flatten_measure_name = self.measure.flatten_measure_name
+        self.flatten_variance = self.measure.flatten_variance
         self.flatten_measure_timeset = self.measure.flatten_measure_timeset
         #print('The extra index:', self.measure.measurement_extra_index)
         #print('The extra index name:', self.measure.extra_measure_name)
@@ -1939,14 +1969,18 @@ class FIM_result:
 
         # get number of parameters
         no_param = len(self.para_name)
-        ### calculate the FIM
+
+        # reform jacobian, split the overall Q into Q_r, each r is a flattened measurement name
+        Q_response_list, variance_list = self.__jac_reform_3D(self.jaco_information, Q_response=True)
+
         fim = np.zeros((no_param, no_param))
-        # loop over parameters
-        for row, para_n in enumerate(self.para_name):
-            for col, para_m in enumerate(self.para_name):
-                jaco_n = np.asarray(self.jaco_information[para_n])
-                jaco_m = np.asarray(self.jaco_information[para_m])
-                fim[row][col] = jaco_n.T@jaco_m
+
+        for i in range(len(Q_response_list)):
+            #print(1/variance_list[i])
+            #print(np.shape(Q_response_list[i]))
+            #print(np.shape(Q_response_list[i]@Q_response_list[i].T))
+            fim += ((1/variance_list[i])*(Q_response_list[i]@Q_response_list[i].T))
+        #print('shape of fim:', np.shape(fim))
 
         # add prior information
         if (self.prior_FIM is not None):
@@ -2027,7 +2061,7 @@ class FIM_result:
         print('jaco now:', jaco_info)
         return jaco_info
 
-    def __jac_reform_3D(self, jac_original):
+    def __jac_reform_3D(self, jac_original, Q_response=False):
         '''
         Reform the Jacobian returned by __finite_calculation() to be a 3D numpy array, [measurements, parameters, time]
         '''
@@ -2040,8 +2074,19 @@ class FIM_result:
             for p, para in enumerate(self.para_name):
                 for t, tim in enumerate(self.measure_timeset):
                     jac_3Darray[m, p, t] = jac_original[para][m * no_time + t]
+        if Q_response:
+            Qr_list = []
+            var_list = []
+            for m, mname in enumerate(self.flatten_all_measure):
+                Qr_list.append(jac_3Darray[m, :, :])
+                var_list.append(self.measure_object.flatten_variance[mname])
+            print(type(Qr_list[0]))
+            print(Qr_list[0])
+            print(var_list)
 
-        return jac_3Darray
+            return Qr_list, var_list
+        else:
+            return jac_3Darray
 
 
     def __print_FIM_info(self, FIM, dv_set=None):
