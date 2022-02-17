@@ -852,6 +852,19 @@ def set_up_logger(config):
 
 
 def get_dual_integral(solve_data):
+    """Calculate the dual integral.
+    Ref: The confined primal integral. [http://www.optimization-online.org/DB_FILE/2020/07/7910.pdf]
+
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+
+    Returns
+    -------
+    float
+        The dual integral.
+    """    
     dual_integral = 0
     dual_bound_progress = solve_data.dual_bound_progress.copy()
     # Initial dual bound is set to inf or -inf. To calculate dual integral, we set
@@ -883,6 +896,19 @@ def get_dual_integral(solve_data):
 
 
 def get_primal_integral(solve_data):
+    """Calculate the primal integral.
+    Ref: The confined primal integral. [http://www.optimization-online.org/DB_FILE/2020/07/7910.pdf]
+
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+
+    Returns
+    -------
+    float
+        The primal integral.
+    """    
     primal_integral = 0
     primal_bound_progress = solve_data.primal_bound_progress.copy()
     # Initial primal bound is set to inf or -inf. To calculate primal integral, we set

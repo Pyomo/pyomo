@@ -74,9 +74,9 @@ def MindtPy_iteration_loop(solve_data, config):
         else:
             raise ValueError()
 
-        # regularization is activated after the first feasible solution is found.
+        # Regularization is activated after the first feasible solution is found.
         if config.add_regularization is not None and solve_data.best_solution_found is not None and not config.single_tree:
-            # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
+            # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
             if solve_data.dual_bound != solve_data.dual_bound_progress[0]:
                 main_mip, main_mip_results = solve_main(
                     solve_data, config, regularization_problem=True)
