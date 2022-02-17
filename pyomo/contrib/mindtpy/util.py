@@ -875,16 +875,7 @@ def get_dual_integral(solve_data, config):
             break
     for i in range(len(dual_bound_progress)):
         if dual_bound_progress[i] == solve_data.dual_bound_progress[0]:
-            if solve_data.objective_sense == minimize:
-                if dual_bound > 0:
-                    dual_bound_progress[i] = dual_bound * 0.9
-                else:
-                    dual_bound_progress[i] = dual_bound * 1.1
-            else:
-                if dual_bound > 0:
-                    dual_bound_progress[i] = dual_bound * 1.1
-                else:
-                    dual_bound_progress[i] = dual_bound * 0.9
+            dual_bound_progress[i] = dual_bound * (1 - 0.1 * solve_data.objective_sense * math.copysign(1,dual_bound))
         else:
             break
     for i in range(len(dual_bound_progress)):
@@ -920,16 +911,7 @@ def get_primal_integral(solve_data, config):
             break
     for i in range(len(primal_bound_progress)):
         if primal_bound_progress[i] == solve_data.primal_bound_progress[0]:
-            if solve_data.objective_sense == minimize:
-                if primal_bound > 0:
-                    primal_bound_progress[i] = primal_bound * 1.1
-                else:
-                    primal_bound_progress[i] = primal_bound * 0.9
-            else:
-                if primal_bound > 0:
-                    primal_bound_progress[i] = primal_bound * 0.9
-                else:
-                    primal_bound_progress[i] = primal_bound * 1.1
+            primal_bound_progress[i] = primal_bound * (1 + 0.1 * solve_data.objective_sense * math.copysign(1,primal_bound))
         else:
             break
     for i in range(len(primal_bound_progress)):
