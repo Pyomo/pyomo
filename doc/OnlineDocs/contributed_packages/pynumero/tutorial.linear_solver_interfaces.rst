@@ -24,7 +24,7 @@ Interface to MA27
    >>> import numpy as np
    >>> from scipy.sparse import coo_matrix
    >>> from scipy.sparse import tril
-   >>> from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
+   >>> from pyomo.contrib.pynumero.linalg.ma27_interface import MA27
    >>> row = np.array([0, 1, 0, 1, 0, 1, 2, 3, 3, 4, 4, 4])
    >>> col = np.array([0, 1, 3, 3, 4, 4, 4, 0, 1, 0, 1, 2])
    >>> data = np.array([1.67025575, 2, -1.64872127,  1, -1, -1, -1, -1.64872127, 1, -1, -1, -1])
@@ -36,12 +36,11 @@ Interface to MA27
           [-1.64872127,  1.        ,  0.        ,  0.        ,  0.        ],
           [-1.        , -1.        , -1.        ,  0.        ,  0.        ]])
    >>> rhs = np.array([-0.67025575, -1.2,  0.1,  1.14872127,  1.25])
-   >>> solver = MA27Interface()
+   >>> solver = MA27()
    >>> solver.set_cntl(1, 1e-6)  # set the pivot tolerance
-   >>> A_tril = tril(A)  # extract lower triangular portion of A
-   >>> status = solver.do_symbolic_factorization(dim=5, irn=A_tril.row, icn=A_tril.col)
-   >>> status = solver.do_numeric_factorization(dim=5, irn=A_tril.row, icn=A_tril.col, entries=A_tril.data)
-   >>> x = solver.do_backsolve(rhs)
+   >>> status = solver.do_symbolic_factorization(A)
+   >>> status = solver.do_numeric_factorization(A)
+   >>> x, status = solver.do_backsolve(rhs)
    >>> np.max(np.abs(A*x - rhs)) <= 1e-15
    True
 
@@ -68,9 +67,8 @@ Interface to MUMPS
           [-1.        , -1.        , -1.        ,  0.        ,  0.        ]])
    >>> rhs = np.array([-0.67025575, -1.2,  0.1,  1.14872127,  1.25])
    >>> solver = MumpsCentralizedAssembledLinearSolver(sym=2, par=1, comm=None)  # symmetric matrix; solve in serial
-   >>> A_tril = tril(A)  # extract lower triangular portion of A
-   >>> solver.do_symbolic_factorization(A_tril)
-   >>> solver.do_numeric_factorization(A_tril)
+   >>> solver.do_symbolic_factorization(A)
+   >>> solver.do_numeric_factorization(A)
    >>> x = solver.do_back_solve(rhs)
    >>> np.max(np.abs(A*x - rhs)) <= 1e-15
    True
