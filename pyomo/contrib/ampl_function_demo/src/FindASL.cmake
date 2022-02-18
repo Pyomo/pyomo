@@ -84,7 +84,7 @@ IF( BUILD_AMPLMP )
     # abbefd7; see https://github.com/fmtlib/fmt/issues/398
     # The patch also disables AMPL/MP tests to speed up compilation.
     PATCH_COMMAND git apply
-       ${CMAKE_CURRENT_SOURCE_DIR}/amplmp-${AMPLMP_TAG}.patch
+       ${CMAKE_CURRENT_LIST_DIR}/amplmp-${AMPLMP_TAG}.patch
     )
   # Update the ASL paths (if necessary).  Since these do not (yet)
   # exist, we need to bypass find_path / find_library and explicitly set
