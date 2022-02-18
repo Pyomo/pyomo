@@ -1,6 +1,6 @@
 from pyomo.contrib.pynumero.interfaces.nlp import NLP
 from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
-from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
+from pyomo.contrib.pynumero.linalg.ma27_interface import MA27
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 import numpy as np
 from scipy.sparse import tril
@@ -8,6 +8,7 @@ import pyomo.environ as pe
 from pyomo import dae
 from pyomo.common.timing import TicTocTimer
 import time
+from pyomo.contrib.pynumero.linalg.base import LinearSolverInterface, LinearSolverStatus
 
 
 def build_burgers_model(nfe_x=100, nfe_t=200, start_t=0, end_t=1):
@@ -132,7 +133,8 @@ def build_burgers_model(nfe_x=100, nfe_t=200, start_t=0, end_t=1):
     return m
 
 
-def sqp(nlp: NLP, max_iter=100, tol=1e-8, output=True):
+def sqp(nlp: NLP, linear_solver: LinearSolverInterface,
+        max_iter=100, tol=1e-8, output=True):
     """
     An example of a simple SQP algoritm for 
     equality-constrained NLPs.
@@ -156,10 +158,6 @@ def sqp(nlp: NLP, max_iter=100, tol=1e-8, output=True):
     z = BlockVector(2)
     z.set_block(0, nlp.get_primals())
     z.set_block(1, nlp.get_duals())
-
-    # create the linear solver
-    linear_solver = MA27Interface()
-    linear_solver.set_cntl(1, 1e-6) # pivot tolerance
 
     if output:
         print(f"{'Iter':<12}{'Objective':<12}{'Primal Infeasibility':<25}{'Dual Infeasibility':<25}{'Elapsed Time':<15}")
@@ -187,12 +185,8 @@ def sqp(nlp: NLP, max_iter=100, tol=1e-8, output=True):
         rhs.set_block(0, grad_lag)
         rhs.set_block(1, residuals)
 
-        _kkt = tril(kkt.tocoo())
-        linear_solver.do_symbolic_factorization(_kkt.shape[0], _kkt.row,
-                                                _kkt.col)
-        linear_solver.do_numeric_factorization(_kkt.row, _kkt.col,
-                                               _kkt.shape[0], _kkt.data)
-        delta = linear_solver.do_backsolve(-rhs.flatten())
+        delta, res = linear_solver.solve(kkt, -rhs)
+        assert res.status == LinearSolverStatus.successful
         z += delta
 
     
@@ -203,14 +197,18 @@ def load_solution(m: pe.ConcreteModel(), nlp: PyomoNLP):
         v.value = val
 
 
-def main(nfe_x=100, nfe_t=200):
+def main(linear_solver, nfe_x=100, nfe_t=200):
     m = build_burgers_model(nfe_x=nfe_x, nfe_t=nfe_t)
     nlp = PyomoNLP(m)
-    sqp(nlp)
+    sqp(nlp, linear_solver)
     load_solution(m, nlp)
     return pe.value(m.obj)
 
 
 if __name__ == '__main__':
-    optimal_obj = main()
+    # create the linear solver
+    linear_solver = MA27()
+    linear_solver.set_cntl(1, 1e-6) # pivot tolerance
+
+    optimal_obj = main(linear_solver)
     print(f'Optimal Objective: {optimal_obj}')
