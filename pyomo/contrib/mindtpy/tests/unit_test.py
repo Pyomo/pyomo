@@ -17,7 +17,7 @@ from pyomo.environ import SolverFactory, maximize
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QCP_simple import QCP_simple
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
-from pyomo.contrib.mindtpy.util import set_up_solve_data, add_feas_slacks, set_solver_options
+from pyomo.contrib.mindtpy.util import get_primal_integral, get_dual_integral, set_up_solve_data, add_feas_slacks, set_solver_options
 from pyomo.contrib.mindtpy.nlp_solve import handle_subproblem_other_termination, handle_feasibility_subproblem_tc, solve_subproblem, handle_nlp_subproblem_tc
 from pyomo.core.base import TransformationFactory
 from pyomo.opt import TerminationCondition as tc
@@ -313,12 +313,15 @@ class TestMindtPy(unittest.TestCase):
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.feasible)
 
-            # config.time_limit = 1
-            # solve_data.should_terminate = False
-            # self.assertIs(algorithm_should_terminate(
-            #     solve_data, config, check_cycling=False), True)
-            # self.assertIs(
-            #     solve_data.results.solver.termination_condition, tc.maxTimeLimit)
+            solve_data.primal_bound_progress = [float('inf'), 5, 4, 3, 2, 1]
+            solve_data.primal_bound_progress_time = [1, 2, 3, 4, 5, 6]
+            solve_data.primal_bound = 1
+            self.assertEqual(get_primal_integral(solve_data, config), 14.5)
+
+            solve_data.dual_bound_progress = [float('-inf'), 1, 2, 3, 4, 5]
+            solve_data.dual_bound_progress_time = [1, 2, 3, 4, 5, 6]
+            solve_data.dual_bound = 5
+            self.assertEqual(get_dual_integral(solve_data, config), 14.1)
 
 
 if __name__ == '__main__':
