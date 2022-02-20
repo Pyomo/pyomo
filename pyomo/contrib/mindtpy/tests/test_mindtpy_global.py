@@ -11,10 +11,8 @@ from pyomo.environ import SolverFactory, value
 from pyomo.environ import *
 from pyomo.opt import TerminationCondition
 
-required_solvers = ('baron', 'cplex_persistent')
+required_solvers = ('ipopt', 'cplex_persistent')
 if not all(SolverFactory(s).available(False) for s in required_solvers):
-    subsolvers_available = False
-elif not SolverFactory('baron').license_is_valid():
     subsolvers_available = False
 else:
     subsolvers_available = True
@@ -46,7 +44,7 @@ class TestMindtPy(unittest.TestCase):
                 self.assertIn(results.solver.termination_condition, [
                     TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    value(model.objective.expr), model.optimal_value, places=2)
 
     def test_GOA_tabu_list(self):
         """Test the global outer approximation decomposition algorithm."""
@@ -60,7 +58,7 @@ class TestMindtPy(unittest.TestCase):
                 self.assertIn(results.solver.termination_condition, [
                     TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    value(model.objective.expr), model.optimal_value, places=2)
 
 
 if __name__ == '__main__':
