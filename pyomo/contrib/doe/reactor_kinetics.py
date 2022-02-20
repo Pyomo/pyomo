@@ -18,7 +18,7 @@ def disc_for_measure(m, NFE=32):
 
 
 def create_model(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300, 0.375: 300, 0.5: 300, 0.625: 300, 0.75: 300, 0.875: 300, 1: 300}, 
-                     t_range=[0.0,1], CA_init=3, C_init=0.3, model_form='dae-index-1'):
+                     t_range=[0.0,1], CA_init=3, C_init=0.3, model_form='dae-index-1', args=[True]):
     '''
     This is an example user model provided to DoE library. 
     It is a dynamic problem solved by Pyomo.DAE.
@@ -94,15 +94,17 @@ def create_model(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300, 0.
     m.R = 8.31446261815324 # J / K / mole
        
     # Define parameters
-    m.A1 = Param(m.scena, initialize=scena['A1'],mutable=True)
-    m.A2 = Param(m.scena, initialize=scena['A2'],mutable=True)
-    m.E1 = Param(m.scena, initialize=scena['E1'],mutable=True)
-    m.E2 = Param(m.scena, initialize=scena['E2'],mutable=True)
+    if args[0]:
+        m.A1 = Param(m.scena, initialize=scena['A1'],mutable=True)
+        m.A2 = Param(m.scena, initialize=scena['A2'],mutable=True)
+        m.E1 = Param(m.scena, initialize=scena['E1'],mutable=True)
+        m.E2 = Param(m.scena, initialize=scena['E2'],mutable=True)
     
-    #m.A1 = Var(m.scena, initialize = m.scena_all['A1'])
-    #m.A2 = Var(m.scena, initialize = m.scena_all['A2'])
-    #m.E1 = Var(m.scena, initialize = m.scena_all['E1'])
-    #m.E2 = Var(m.scena, initialize = m.scena_all['E2'])
+    else:
+        m.A1 = Var(m.scena, initialize = m.scena_all['A1'])
+        m.A2 = Var(m.scena, initialize = m.scena_all['A2'])
+        m.E1 = Var(m.scena, initialize = m.scena_all['E1'])
+        m.E2 = Var(m.scena, initialize = m.scena_all['E2'])
     
     # Concentration variables under perturbation
     m.y_set = Set(initialize=['CA','CB','CC'])
@@ -185,7 +187,7 @@ def create_model(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300, 0.
     def obj_rule(m):
         return 0
     
-    m.obj = Objective(rule=obj_rule, sense=maximize)
+    m.Obj = Objective(rule=obj_rule, sense=maximize)
         
         
     # Control time

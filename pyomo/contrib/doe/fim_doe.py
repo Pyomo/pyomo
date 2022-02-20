@@ -449,7 +449,7 @@ class DesignOfExperiments:
             analysis_optimize = FIM_result(self.param_name, self.measure, jacobian_info=None, all_jacobian_info=jac_optimize,
                                            prior_FIM=self.prior_FIM)
             # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
-            analysis_optimize.calculate_FIM(m, self.design_timeset, result=result_doe)
+            analysis_optimize.calculate_FIM(self.design_timeset, result=result_doe)
             analysis_optimize.model = m
 
             time1 = time.time()
@@ -573,7 +573,7 @@ class DesignOfExperiments:
                     # TODO:(long term) add options to create model once and then update. only try this after the
                     # package is completed and unitest is finished
                     time0_build = time.time()
-                    mod = self.create_model(scenario_iter, self.args)
+                    mod = self.create_model(scenario_iter, args=self.args)
                     time1_build = time.time()
                     time_allbuild.append(time1_build-time0_build)
 
@@ -826,7 +826,7 @@ class DesignOfExperiments:
 
             # create model
             time0_build = time.time()
-            mod = self.create_model(scenario_all, self.args)
+            mod = self.create_model(scenario_all, args=self.args)
             time1_build = time.time()
             time_build = time1_build - time0_build
 
@@ -1272,7 +1272,7 @@ class DesignOfExperiments:
         scenario_all = scena_gen.simultaneous_scenario()
         
         # create model
-        m = self.create_model(scenario_all, self.args)
+        m = self.create_model(scenario_all, args= self.args)
         # discretize if discretization function is provided
         if self.discretize_model is not None:
             m = self.discretize_model(m)
@@ -1408,7 +1408,10 @@ class DesignOfExperiments:
             if legal_t_option:
                 up_C = eval(up_C_name)
                 lo_C = eval(lo_C_name)
-                return m.jac[j, p, t] == (up_C - lo_C) / scenario_all['eps-abs'][p] * self.scale_constant_value
+                if self.scale_nominal_param_value:
+                    return m.jac[j, p, t] == (up_C - lo_C) / scenario_all['eps-abs'][p] * self.param_init[p] * self.scale_constant_value
+                else:
+                    return m.jac[j, p, t] == (up_C - lo_C) / scenario_all['eps-abs'][p] * self.scale_constant_value
                 # if t is not measured, let the value be 0
             else:
                 return m.jac[j, p, t] == 0
@@ -1486,7 +1489,8 @@ class DesignOfExperiments:
         ### Constraints and Objective function
         m.dC_value = Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
         m.ele_rule = Constraint(m.para_set, m.para_set, rule=calc_FIM)
-        
+
+        #if m.Obj.available():
         m.Obj.deactivate()
 
             # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
