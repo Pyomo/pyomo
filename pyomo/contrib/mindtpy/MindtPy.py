@@ -74,7 +74,9 @@ class MindtPySolver(object):
     """
     Decomposition solver for Mixed-Integer Nonlinear Programming (MINLP) problems.
 
-    The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver applies a variety of decomposition-based approaches to solve Mixed-Integer Nonlinear Programming (MINLP) problems. 
+    The MindtPy (Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo) solver 
+    applies a variety of decomposition-based approaches to solve Mixed-Integer 
+    Nonlinear Programming (MINLP) problems. 
     These approaches include:
 
     - Outer approximation (OA)
@@ -85,7 +87,10 @@ class MindtPySolver(object):
     - Regularized LP/NLP based branch-and-bound (RLP/NLP)
     - Feasibility pump (FP)
 
-    This solver implementation has been developed by David Bernal <https://github.com/bernalde> and Zedong Peng <https://github.com/ZedongPeng> as part of research efforts at the Grossmann Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at Carnegie Mellon University.
+    This solver implementation has been developed by David Bernal <https://github.com/bernalde>
+    and Zedong Peng <https://github.com/ZedongPeng> as part of research efforts at the Grossmann
+    Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at 
+    Carnegie Mellon University.
     """
     CONFIG = _get_MindtPy_config()
 
@@ -114,7 +119,8 @@ class MindtPySolver(object):
         results : SolverResults
             Results from solving the MINLP problem by MindtPy.
         """
-        config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)  # TODO: do we need to set preserve_implicit=True?
+        config = self.CONFIG(kwds.pop('options', {
+        }), preserve_implicit=True)  # TODO: do we need to set preserve_implicit=True?
         config.set_value(kwds)
         set_up_logger(config)
         check_config(config)
@@ -137,13 +143,13 @@ class MindtPySolver(object):
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
-            # In the process_objective function, as long as the objective function is nonlinear, it will be reformulated and the variable/constraint/objective lists will be updated. 
+            # In the process_objective function, as long as the objective function is nonlinear, it will be reformulated and the variable/constraint/objective lists will be updated.
             # For OA/GOA/LP-NLP algorithm, if the objective funtion is linear, it will not be reformulated as epigraph constraint.
             # If the objective function is linear, it will be reformulated as epigraph constraint only if the Feasibility Pump or ROA/RLP-NLP algorithm is activated. (move_linear_objective = True)
-            # In some cases, the variable/constraint/objective lists will not be updated even if the objective is epigraph-reformulated.  
+            # In some cases, the variable/constraint/objective lists will not be updated even if the objective is epigraph-reformulated.
             # In Feasibility Pump, since the distance calculation only includes discrete variables and the epigraph slack variables are continuous variables, the Feasibility Pump algorithm will not affected even if the variable list are updated.
             # In ROA and RLP/NLP, since the distance calculation does not include these epigraph slack variables, they should not be added to the variable list. (update_var_con_list = False)
-            # In the process_objective function, once the objective function has been reformulated as epigraph constraint, the variable/constraint/objective lists will not be updated only if the MINLP has a linear objective function and regularization is activated at the same time. 
+            # In the process_objective function, once the objective function has been reformulated as epigraph constraint, the variable/constraint/objective lists will not be updated only if the MINLP has a linear objective function and regularization is activated at the same time.
             # This is because the epigraph constraint is very "flat" for branching rules. The original objective function will be used for the main problem and epigraph reformulation will be used for the projection problem.
             # TODO: The logic here is too complicated, can we simplify it?
             process_objective(solve_data, config,
@@ -242,7 +248,6 @@ class MindtPySolver(object):
                 solve_data.results.problem.lower_bound = solve_data.primal_bound
                 solve_data.results.problem.upper_bound = solve_data.dual_bound
 
-
             solve_data.results.solver.timing = solve_data.timing
             solve_data.results.solver.user_time = solve_data.timing.total
             solve_data.results.solver.wallclock_time = solve_data.timing.total
@@ -251,8 +256,10 @@ class MindtPySolver(object):
             solve_data.results.solver.best_solution_found_time = solve_data.best_solution_found_time
             solve_data.results.solver.primal_integral = get_primal_integral(solve_data, config)
             solve_data.results.solver.dual_integral = get_dual_integral(solve_data, config)
-            solve_data.results.solver.primal_dual_gap_integral = solve_data.results.solver.primal_integral + solve_data.results.solver.dual_integral
-            config.logger.info(' {:<25}:   {:>7.4f} '.format('Primal-dual gap integral', solve_data.results.solver.primal_dual_gap_integral))
+            solve_data.results.solver.primal_dual_gap_integral = solve_data.results.solver.primal_integral + \
+                solve_data.results.solver.dual_integral
+            config.logger.info(' {:<25}:   {:>7.4f} '.format(
+                'Primal-dual gap integral', solve_data.results.solver.primal_dual_gap_integral))
 
             if config.single_tree:
                 solve_data.results.solver.num_nodes = solve_data.nlp_iter - \
