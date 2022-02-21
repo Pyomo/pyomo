@@ -35,14 +35,12 @@ from pyomo.contrib.gdpopt.util import (copy_var_list_values, create_utility_bloc
                                        time_code, setup_results_object, process_objective, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
-from pyomo.contrib.mindtpy.util import model_is_valid, setup_solve_data
+from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
                         Set, Suffix, Var, VarList, TransformationFactory, Objective, RangeSet)
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
 from pyomo.common.config import add_docstring_list
-
-logger = logging.getLogger('pyomo.contrib.mindtpy')
 
 __version__ = (0, 1, 0)
 
@@ -84,17 +82,22 @@ class MindtPySolver(object):
     def solve(self, model, **kwds):
         """Solve the model.
 
-        Warning: this solver is still in beta. Keyword arguments subject to
-        change. Undocumented keyword arguments definitely subject to change.
+        Parameters
+        ----------
+        model : Pyomo model
+            The MINLP model to be solved.
 
-        Args:
-            model (Block): a Pyomo model or block to be solved
+        Returns
+        -------
+        results : SolverResults
+            Results from solving the MINLP problem by MindtPy.
         """
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)  # TODO: do we need to set preserve_implicit=True?
         config.set_value(kwds)
+        set_up_logger(config)
         check_config(config)
 
-        solve_data = setup_solve_data(model, config)
+        solve_data = set_up_solve_data(model, config)
 
         if config.integer_to_binary:
             TransformationFactory('contrib.integer_to_binary'). \
@@ -104,18 +107,32 @@ class MindtPySolver(object):
         with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 lower_logger_level_to(config.logger, new_logging_level), \
                 create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
-            config.logger.info('---Starting MindtPy---')
+            config.logger.info(
+                '---------------------------------------------------------------------------------------------\n'
+                '              Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo (MindtPy)               \n'
+                '---------------------------------------------------------------------------------------------\n'
+                'For more information, please visit https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html')
 
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
+            # In the process_objective function, as long as the objective function is nonlinear, it will be reformulated and the variable/constraint/objective lists will be updated. 
+            # For OA/GOA/LP-NLP algorithm, if the objective funtion is linear, it will not be reformulated as epigraph constraint.
+            # If the objective function is linear, it will be reformulated as epigraph constraint only if the Feasibility Pump or ROA/RLP-NLP algorithm is activated. (move_linear_objective = True)
+            # In some cases, the variable/constraint/objective lists will not be updated even if the objective is epigraph-reformulated.  
+            # In Feasibility Pump, since the distance calculation only includes discrete variables and the epigraph slack variables are continuous variables, the Feasibility Pump algorithm will not affected even if the variable list are updated.
+            # In ROA and RLP/NLP, since the distance calculation does not include these epigraph slack variables, they should not be added to the variable list. (update_var_con_list = False)
+            # In the process_objective function, once the objective function has been reformulated as epigraph constraint, the variable/constraint/objective lists will not be updated only if the MINLP has a linear objective function and regularization is activated at the same time. 
+            # This is because the epigraph constraint is very "flat" for branching rules. The original objective function will be used for the main problem and epigraph reformulation will be used for the projection problem.
+            # TODO: The logic here is too complicated, can we simplify it?
             process_objective(solve_data, config,
                               move_linear_objective=(config.init_strategy == 'FP'
                                                      or config.add_regularization is not None),
                               use_mcpp=config.use_mcpp,
-                              updata_var_con_list=config.add_regularization is None
+                              update_var_con_list=config.add_regularization is None,
+                              partition_nonlinear_terms=config.partition_obj_nonlinear_terms
                               )
-            # The epigraph constraint is very "flat" for branching rules,
-            # we want to use to original model for the main mip.
+            # The epigraph constraint is very "flat" for branching rules.
+            # If ROA/RLP-NLP is activated and the original objective function is linear, we will use the original objective for the main mip.
             if MindtPy.objective_list[0].expr.polynomial_degree() in {1, 0} and config.add_regularization is not None:
                 MindtPy.objective_list[0].activate()
                 MindtPy.objective_constr.deactivate()

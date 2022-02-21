@@ -2546,11 +2546,11 @@ class NetworkDisjuncts(unittest.TestCase, CommonTests):
 
     @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
     def test_solution_maximize(self):
-        ct.check_network_disjucts(self, minimize=False, transformation='bigm')
+        ct.check_network_disjuncts(self, minimize=False, transformation='bigm')
 
     @unittest.skipIf(not ct.linear_solvers, "No linear solver available")
     def test_solution_minimize(self):
-        ct.check_network_disjucts(self, minimize=True, transformation='bigm')
+        ct.check_network_disjuncts(self, minimize=True, transformation='bigm')
 
 @unittest.skipUnless(sympy_available, "Sympy not available")
 class LogicalConstraintsOnDisjuncts(unittest.TestCase):

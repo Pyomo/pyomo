@@ -26,6 +26,7 @@ from pyomo.core.base import SymbolMap
 import weakref
 from io import StringIO
 from .cmodel import cmodel, cmodel_available
+from pyomo.core.staleflag import StaleFlagManager
 
 
 class TerminationCondition(enum.Enum):
@@ -155,6 +156,8 @@ class SolutionLoaderBase(abc.ABC):
         """
         for v, val in self.get_primals(vars_to_load=vars_to_load).items():
             v.set_value(val, skip_validation=True)
+        StaleFlagManager.mark_all_as_stale(delayed=True)
+        
 
     @abc.abstractmethod
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
@@ -353,28 +356,98 @@ class UpdateConfig(ConfigDict):
                  implicit=False,
                  implicit_domain=None,
                  visibility=0):
+        if doc is None:
+            doc = 'Configuration options to detect changes in model between solves'
         super(UpdateConfig, self).__init__(description=description,
                                            doc=doc,
                                            implicit=implicit,
                                            implicit_domain=implicit_domain,
                                            visibility=visibility)
 
-        self.declare('check_for_new_or_removed_constraints', ConfigValue(domain=bool))
-        self.declare('check_for_new_or_removed_vars', ConfigValue(domain=bool))
-        self.declare('check_for_new_or_removed_params', ConfigValue(domain=bool))
-        self.declare('update_constraints', ConfigValue(domain=bool))
-        self.declare('update_vars', ConfigValue(domain=bool))
-        self.declare('update_params', ConfigValue(domain=bool))
-        self.declare('update_named_expressions', ConfigValue(domain=bool))
-        self.declare('treat_fixed_vars_as_params', ConfigValue(domain=bool))
+        self.declare('check_for_new_or_removed_constraints',
+                     ConfigValue(domain=bool,
+                                 default=True,
+                                 doc="""If False, new/old constraints will not be automatically detected on subsequent 
+                                 solves. Use False only when manually updating the solver with opt.add_constraints() 
+                                 and opt.remove_constraints() or when you are certain constraints are not being 
+                                 added to/removed from the model."""))
+        self.declare('check_for_new_or_removed_vars',
+                     ConfigValue(domain=bool,
+                                 default=True,
+                                 doc="""If False, new/old variables will not be automatically detected on subsequent 
+                                 solves. Use False only when manually updating the solver with opt.add_variables() and 
+                                 opt.remove_variables() or when you are certain variables are not being added to /
+                                 removed from the model."""))
+        self.declare('check_for_new_or_removed_params',
+                     ConfigValue(domain=bool,
+                                 default=True,
+                                 doc="""If False, new/old parameters will not be automatically detected on subsequent 
+                                 solves. Use False only when manually updating the solver with opt.add_params() and 
+                                 opt.remove_params() or when you are certain parameters are not being added to /
+                                 removed from the model."""))
+        self.declare('check_for_new_objective',
+                     ConfigValue(domain=bool,
+                                 default=True,
+                                 doc="""If False, new/old objectives will not be automatically detected on subsequent 
+                                 solves. Use False only when manually updating the solver with opt.set_objective() or 
+                                 when you are certain objectives are not being added to / removed from the model."""))
+        self.declare('update_constraints',
+                     ConfigValue(domain=bool,
+                                 default=True,
+                                 doc="""If False, changes to existing constraints will not be automatically detected on 
+                                 subsequent solves. This includes changes to the lower, body, and upper attributes of 
+                                 constraints. Use False only when manually updating the solver with 
+                                 opt.remove_constraints() and opt.add_constraints() or when you are certain constraints 
+                                 are not being modified."""))
+        self.declare('update_vars',
+                     ConfigValue(domain=bool,
+                                 default=True,
+                                 doc="""If False, changes to existing variables will not be automatically detected on 
+                                 subsequent solves. This includes changes to the lb, ub, domain, and fixed 
+                                 attributes of variables. Use False only when manually updating the solver with 
+                                 opt.update_variables() or when you are certain variables are not being modified."""))
+        self.declare('update_params',
+                     ConfigValue(domain=bool,
+                                 default=True,
+                                 doc="""If False, changes to parameter values will not be automatically detected on 
+                                 subsequent solves. Use False only when manually updating the solver with 
+                                 opt.update_params() or when you are certain parameters are not being modified."""))
+        self.declare('update_named_expressions',
+                     ConfigValue(domain=bool,
+                                 default=True,
+                                 doc="""If False, changes to Expressions will not be automatically detected on 
+                                 subsequent solves. Use False only when manually updating the solver with 
+                                 opt.remove_constraints() and opt.add_constraints() or when you are certain 
+                                 Expressions are not being modified."""))
+        self.declare('update_objective',
+                     ConfigValue(domain=bool,
+                                 default=True,
+                                 doc="""If False, changes to objectives will not be automatically detected on 
+                                 subsequent solves. This includes the expr and sense attributes of objectives. Use 
+                                 False only when manually updating the solver with opt.set_objective() or when you are 
+                                 certain objectives are not being modified."""))
+        self.declare('treat_fixed_vars_as_params',
+                     ConfigValue(domain=bool,
+                                 default=True,
+                                 doc="""This is an advanced option that should only be used in special circumstances. 
+                                 With the default setting of True, fixed variables will be treated like parameters. 
+                                 This means that z == x*y will be linear if x or y is fixed and the constraint 
+                                 can be written to an LP file. If the value of the fixed variable gets changed, we have 
+                                 to completely reprocess all constraints using that variable. If 
+                                 treat_fixed_vars_as_params is False, then constraints will be processed as if fixed 
+                                 variables are not fixed, and the solver will be told the variable is fixed. This means 
+                                 z == x*y could not be written to an LP file even if x and/or y is fixed. However, 
+                                 updating the values of fixed variables is much faster this way."""))
 
         self.check_for_new_or_removed_constraints: bool = True
         self.check_for_new_or_removed_vars: bool = True
         self.check_for_new_or_removed_params: bool = True
+        self.check_for_new_objective: bool = True
         self.update_constraints: bool = True
         self.update_vars: bool = True
         self.update_params: bool = True
         self.update_named_expressions: bool = True
+        self.update_objective: bool = True
         self.treat_fixed_vars_as_params: bool = True
 
 
@@ -490,6 +563,7 @@ class PersistentSolver(Solver):
         """
         for v, val in self.get_primals(vars_to_load=vars_to_load).items():
             v.set_value(val, skip_validation=True)
+        StaleFlagManager.mark_all_as_stale(delayed=True)
 
     @abc.abstractmethod
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
@@ -673,6 +747,7 @@ class PersistentBase(abc.ABC):
         self._referenced_variables = dict()  # var_id: [dict[constraints, None], dict[sos constraints, None], None or objective]
         self._vars_referenced_by_con = dict()
         self._vars_referenced_by_obj = list()
+        self._expr_types = None
 
     @property
     def update_config(self):
@@ -687,6 +762,7 @@ class PersistentBase(abc.ABC):
         self.__init__()
         self.update_config = saved_update_config
         self._model = model
+        self._expr_types = cmodel.PyomoExprTypes()
         self.add_block(model)
         if self._objective is None:
             self.set_objective(None)
@@ -700,7 +776,7 @@ class PersistentBase(abc.ABC):
             if id(v) in self._referenced_variables:
                 raise ValueError('variable {name} has already been added'.format(name=v.name))
             self._referenced_variables[id(v)] = [dict(), dict(), None]
-            self._vars[id(v)] = (v, v._lb, v._ub, v.fixed, v.domain, v.value)
+            self._vars[id(v)] = (v, v._lb, v._ub, v.fixed, v.domain.get_interval(), v.value)
         self._add_variables(variables)
 
     @abc.abstractmethod
@@ -718,7 +794,7 @@ class PersistentBase(abc.ABC):
 
     def add_constraints(self, cons: List[_GeneralConstraintData]):
         all_fixed_vars = dict()
-        expr_types = cmodel.PyomoExprTypes()
+        expr_types = self._expr_types
         for con in cons:
             if con in self._named_expressions:
                 raise ValueError('constraint {name} has already been added'.format(name=con.name))
@@ -875,7 +951,7 @@ class PersistentBase(abc.ABC):
 
     def update_variables(self, variables: List[_GeneralVarData]):
         for v in variables:
-            self._vars[id(v)] = (v, v._lb, v._ub, v.fixed, v.domain, v.value)
+            self._vars[id(v)] = (v, v._lb, v._ub, v.fixed, v.domain.get_interval(), v.value)
         self._update_variables(variables)
 
     @abc.abstractmethod
@@ -989,21 +1065,19 @@ class PersistentBase(abc.ABC):
                     vars_to_check.append(v)
             vars_to_update = list()
             for v in vars_to_check:
-                _v, lb, ub, fixed, domain, value = self._vars[id(v)]
+                _v, lb, ub, fixed, domain_interval, value = self._vars[id(v)]
                 if lb is not v._lb:
                     vars_to_update.append(v)
                 elif ub is not v._ub:
                     vars_to_update.append(v)
-                elif fixed is not v.fixed:
+                elif (fixed is not v.fixed) or (fixed and (value is not v.value)):
                     vars_to_update.append(v)
                     if self.update_config.treat_fixed_vars_as_params:
                         for c in self._referenced_variables[id(v)][0]:
                             cons_to_remove_and_add[c] = None
                         if self._referenced_variables[id(v)][2] is not None:
                             need_to_set_objective = True
-                elif domain is not v.domain:
-                    vars_to_update.append(v)
-                elif fixed and (value is not v.value):
+                elif domain_interval != v.domain.get_interval():
                     vars_to_update.append(v)
             self.update_variables(vars_to_update)
         timer.stop('vars')
@@ -1024,20 +1098,24 @@ class PersistentBase(abc.ABC):
                         break
             self.remove_constraints(cons_to_update)
             self.add_constraints(cons_to_update)
-        timer.stop('named expressions')
-        timer.start('objective')
-        pyomo_obj = get_objective(self._model)
-        if pyomo_obj is not self._objective:
-            need_to_set_objective = True
-        elif pyomo_obj is not None and pyomo_obj.expr is not self._objective_expr:
-            need_to_set_objective = True
-        elif pyomo_obj is not None and pyomo_obj.sense is not self._objective_sense:
-            need_to_set_objective = True
-        elif config.update_named_expressions:
             for named_expr, old_expr in self._obj_named_expressions:
                 if named_expr.expr is not old_expr:
                     need_to_set_objective = True
                     break
+        timer.stop('named expressions')
+        timer.start('objective')
+        if self.update_config.check_for_new_objective:
+            pyomo_obj = get_objective(self._model)
+            if pyomo_obj is not self._objective:
+                need_to_set_objective = True
+        else:
+            pyomo_obj = self._objective
+        if self.update_config.update_objective:
+            if pyomo_obj is not None and pyomo_obj.expr is not self._objective_expr:
+                need_to_set_objective = True
+            elif pyomo_obj is not None and pyomo_obj.sense is not self._objective_sense:
+                # we can definitely do something faster here than resetting the whole objective
+                need_to_set_objective = True
         if need_to_set_objective:
             self.set_objective(pyomo_obj)
         timer.stop('objective')

@@ -21,6 +21,7 @@ from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
 from pyomo.contrib.appsi.cmodel import cmodel_available
+from pyomo.core.staleflag import StaleFlagManager
 
 
 logger = logging.getLogger(__name__)
@@ -172,6 +173,7 @@ class Cbc(PersistentSolver):
         self._writer.update_params()
 
     def solve(self, model, timer: HierarchicalTimer = None):
+        StaleFlagManager.mark_all_as_stale()
         avail = self.available()
         if not avail:
             raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')
@@ -281,7 +283,8 @@ class Cbc(PersistentSolver):
         if (self.version() < (2, 10, 2) and
                 self._writer.get_active_objective() is not None and
                 self._writer.get_active_objective().sense == maximize):
-            obj_val = -obj_val
+            if obj_val is not None:
+                obj_val = -obj_val
             for con, dual_val in self._dual_sol.items():
                 self._dual_sol[con] = -dual_val
             for v_id, (v, rc_val) in self._reduced_costs.items():
@@ -344,7 +347,7 @@ class Cbc(PersistentSolver):
             cmd.extend(['-timeMode', 'elapsed'])
         for key, val in _check_and_escape_options():
             if val.strip() != '':
-                cmd.append('-'+key, val)
+                cmd.extend(['-'+key, val])
             else:
                 action_options.append('-'+key)
         cmd.extend(['-printingOptions', 'all'])
