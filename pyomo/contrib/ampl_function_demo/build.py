@@ -14,7 +14,7 @@ from pyomo.common.cmake_builder import build_cmake_project
 def build_ampl_function_demo(user_args=[], parallel=None):
     return build_cmake_project(
         targets=['src'],
-        package_name='ampl_function_demo',
+        package_name='asl_external_demo',
         description='AMPL External function demo library',
         user_args=user_args,
         parallel=parallel,
