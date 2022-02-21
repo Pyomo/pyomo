@@ -1,3 +1,9 @@
+###############################################################################
+# Pyomo.DOE Copyright (c) 2020 - 2022, by the software owners: 
+#
+###############################################################################
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from pyomo.environ import *
