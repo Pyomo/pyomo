@@ -82,7 +82,7 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "#"
     popd
     pushd "$WORKSPACE/pyutilib" || echo "PyUtilib not found"
-    python setup.py develop || exit 1
+    python setup.py develop || echo "PyUtilib failed - skipping."
     popd
     pushd "$WORKSPACE/pyomo" || exit 1
     python setup.py develop $PYOMO_SETUP_ARGS || exit 1
