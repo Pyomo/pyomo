@@ -28,10 +28,11 @@ from pyomo.contrib.appsi.base import (
     PersistentSolver, Results, TerminationCondition, MIPSolverConfig,
     PersistentBase, PersistentSolutionLoader
 )
-from pyomo.contrib.appsi.cmodel import cmodel_available
+from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 from pyomo.contrib.appsi.highs_bindings import pyhighs, pyhighs_available
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.core.expr.visitor import replace_expressions
+from pyomo.core.staleflag import StaleFlagManager
 
 logger = logging.getLogger(__name__)
 
@@ -228,6 +229,7 @@ class Highs(PersistentBase, PersistentSolver):
         return self._postsolve(timer)
 
     def solve(self, model, timer: HierarchicalTimer = None) -> Results:
+        StaleFlagManager.mark_all_as_stale()
         avail = self.available()
         if not avail:
             raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')
@@ -249,6 +251,46 @@ class Highs(PersistentBase, PersistentSolver):
             logger.info('\n' + str(timer))
         return res
 
+    def _process_domain_and_bounds(self, var_id):
+        _v, _lb, _ub, _fixed, _domain_interval, _value = self._vars[var_id]
+        lb, ub, step = _domain_interval
+        if lb is None:
+            lb = -pyhighs.kHighsInf
+        if ub is None:
+            ub = pyhighs.kHighsInf
+        if step == 0:
+            vtype = pyhighs.HighsVarType.kContinuous
+        elif step == 1:
+            vtype = pyhighs.HighsVarType.kInteger
+        else:
+            raise ValueError(f'Unrecognized domain step: {step} (should be either 0 or 1)')
+        if _fixed:
+            lb = _value
+            ub = _value
+        else:
+            if _lb is not None or _ub is not None:
+                if not is_constant(_lb) or not is_constant(_ub):
+                    if _lb is None:
+                        tmp_lb = -pyhighs.kHighsInf
+                    else:
+                        tmp_lb = _lb
+                    if _ub is None:
+                        tmp_ub = pyhighs.kHighsInf
+                    else:
+                        tmp_ub = _ub
+                    mutable_bound = _MutableVarBounds(lower_expr=NPV_MaxExpression((tmp_lb, lb)),
+                                                      upper_expr=NPV_MinExpression((tmp_ub, ub)),
+                                                      pyomo_var_id=var_id,
+                                                      var_map=self._pyomo_var_to_solver_var_map,
+                                                      highs=self._solver_model)
+                    self._mutable_bounds[var_id] = (_v, mutable_bound)
+            if _lb is not None:
+                lb = max(value(_lb), lb)
+            if _ub is not None:
+                ub = min(value(_ub), ub)
+
+        return lb, ub, vtype
+
     def _add_variables(self, variables: List[_GeneralVarData]):
         self._sol = None
         if self._last_results_object is not None:
@@ -261,32 +303,7 @@ class Highs(PersistentBase, PersistentSolver):
         current_num_vars = len(self._pyomo_var_to_solver_var_map)
         for v in variables:
             v_id = id(v)
-            _v, _lb, _ub, _fixed, _domain, _value = self._vars[v_id]
-            lb, ub, vtype = self._domain_to_vtype_map[id(_domain)]
-            if _fixed:
-                lb = _value
-                ub = _value
-            else:
-                if _lb is not None or _ub is not None:
-                    if not is_constant(_lb) or not is_constant(_ub):
-                        if _lb is None:
-                            tmp_lb = -pyhighs.kHighsInf
-                        else:
-                            tmp_lb = _lb
-                        if _ub is None:
-                            tmp_ub = pyhighs.kHighsInf
-                        else:
-                            tmp_ub = _ub
-                        mutable_bound = _MutableVarBounds(lower_expr=NPV_MaxExpression((tmp_lb, lb)),
-                                                          upper_expr=NPV_MinExpression((tmp_ub, ub)),
-                                                          pyomo_var_id=v_id,
-                                                          var_map=self._pyomo_var_to_solver_var_map,
-                                                          highs=self._solver_model)
-                        self._mutable_bounds[v_id] = (v, mutable_bound)
-                if _lb is not None:
-                    lb = max(value(_lb), lb)
-                if _ub is not None:
-                    ub = min(value(_ub), ub)
+            lb, ub, vtype = self._process_domain_and_bounds(v_id)
             lbs.append(lb)
             ubs.append(ub)
             vtypes.append(vtype)
@@ -319,6 +336,7 @@ class Highs(PersistentBase, PersistentSolver):
         self.update_config = saved_update_config
         self._model = model
         self._solver_model = pyhighs.Highs()
+        self._expr_types = cmodel.PyomoExprTypes()
         self.add_block(model)
         if self._objective is None:
             self.set_objective(None)
@@ -451,32 +469,7 @@ class Highs(PersistentBase, PersistentSolver):
             v_id = id(v)
             self._mutable_bounds.pop(v_id, None)
             v_ndx = self._pyomo_var_to_solver_var_map[v_id]
-            _v, _lb, _ub, _fixed, _domain, _value = self._vars[v_id]
-            lb, ub, vtype = self._domain_to_vtype_map[id(_domain)]
-            if _fixed:
-                lb = _value
-                ub = _value
-            else:
-                if _lb is not None or _ub is not None:
-                    if not is_constant(_lb) or not is_constant(_ub):
-                        if _lb is None:
-                            tmp_lb = -pyhighs.kHighsInf
-                        else:
-                            tmp_lb = _lb
-                        if _ub is None:
-                            tmp_ub = pyhighs.kHighsInf
-                        else:
-                            tmp_ub = _ub
-                        mutable_bound = _MutableVarBounds(lower_expr=NPV_MaxExpression((tmp_lb, lb)),
-                                                          upper_expr=NPV_MinExpression((tmp_ub, ub)),
-                                                          pyomo_var_id=v_id,
-                                                          var_map=self._pyomo_var_to_solver_var_map,
-                                                          highs=self._solver_model)
-                        self._mutable_bounds[v_id] = (v, mutable_bound)
-                if _lb is not None:
-                    lb = max(value(_lb), lb)
-                if _ub is not None:
-                    ub = min(value(_ub), ub)
+            lb, ub, vtype = self._process_domain_and_bounds(v_id)
             lbs.append(lb)
             ubs.append(ub)
             vtypes.append(vtype)
@@ -640,6 +633,7 @@ class Highs(PersistentBase, PersistentSolver):
     def load_vars(self, vars_to_load=None):
         for v, val in self.get_primals(vars_to_load=vars_to_load).items():
             v.set_value(val, skip_validation=True)
+        StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def get_primals(self, vars_to_load=None, solution_number=0):
         if self._sol is None or not self._sol.value_valid:
@@ -648,7 +642,11 @@ class Highs(PersistentBase, PersistentSolver):
                                'model was modified since the last solve')
         res = ComponentMap()
         if vars_to_load is None:
-            var_ids_to_load = list(self._vars.keys())
+            var_ids_to_load = list()
+            for v, ref_info in self._referenced_variables.items():
+                using_cons, using_sos, using_obj = ref_info
+                if using_cons or using_sos or (using_obj is not None):
+                    var_ids_to_load.append(v)
         else:
             var_ids_to_load = [id(v) for v in vars_to_load]
 
