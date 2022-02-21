@@ -23,8 +23,15 @@ class TestAMPLExternalFunction(unittest.TestCase):
     def test_eval_function(self):
         m = pyo.ConcreteModel()
         m.tf = pyo.ExternalFunction(library=flib, function="demo_function")
-        self.assertAlmostEqual(pyo.value(m.tf("sum", 1, 2, 3)), 6, 4)
-        self.assertAlmostEqual(pyo.value(m.tf("inv", 1, 2, 3)), 1.8333333, 4)
+        self.assertAlmostEqual(m.tf("sum", 1, 2, 3)(), 6, 4)
+        self.assertAlmostEqual(m.tf("inv", 1, 2, 3)(), 1.8333333, 4)
+        m.cbrt = pyo.ExternalFunction(library=flib, function="safe_cbrt")
+        self.assertAlmostEqual(m.cbrt(6)(), 1.81712059, 4)
+        self.assertStructuredAlmostEqual(
+            m.cbrt.evaluate_fgh([0]),
+            (0, [100951], [-1.121679e13]),
+            reltol=1e-5
+        )
 
     @unittest.skipUnless(check_available_solvers('ipopt'),
                          "The 'ipopt' solver is not available")
@@ -42,4 +49,3 @@ class TestAMPLExternalFunction(unittest.TestCase):
         solver = pyo.SolverFactory("ipopt")
         solver.solve(m, tee=True)
         self.assertAlmostEqual(m.x(), 6, 4)
-        self.assertAlmostEqual(m.o(), 1.81712059, 4)
