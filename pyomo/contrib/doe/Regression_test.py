@@ -1,9 +1,5 @@
-#!/usr/bin/env python
-# coding: utf-8
 
-# In[1]:
-
-
+# import libraries
 from pyomo.common.dependencies import (
     numpy as np, numpy_available,
     pandas as pd, pandas_available,
@@ -19,34 +15,27 @@ import idaes
 
 from fim_doe import *
 
-
-# In[2]:
-
-
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
 
 
-# In[3]:
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
 
-
-#@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-
-
-# In[17]:
 
 
 class doe_object_Tester(unittest.TestCase):
     def setUP(self):
         import reactor_kinetics as reactor
         
+        # define create model function 
         createmod = reactor.create_model
+        
+        # discretizer 
         disc = reactor.disc_for_measure
-        t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
-
+        
         # design variable and its control time set
+        t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
         dv_pass = {'CA0': [0],'T': t_control}
-
 
         # Define measurement time points
         t_measure = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]
@@ -75,7 +64,8 @@ class doe_object_Tester(unittest.TestCase):
         prior_all = np.zeros((4,4))
 
         prior_pass=np.asarray(prior_all)
-
+        
+        ### Test sequential_finite mode
         exp1 = generate_exp(t_control, 5, [300, 300, 300, 300, 300, 300, 300, 300, 300])
 
         doe_object = DesignOfExperiments(parameter_dict, dv_pass,
@@ -94,7 +84,7 @@ class doe_object_Tester(unittest.TestCase):
         self.assertAlmostEqual(result.FIM[0][1], 1.840604, places=3)
         self.assertAlmostEqual(result.FIM[0][2], -70.238140, places=3)
         
-        
+        ### Test direct_kaug mode
         exp2 = generate_exp(t_control, 5, [570, 300, 300, 300, 300, 300, 300, 300, 300])
         
         doe_object2 = DesignOfExperiments(parameter_dict, dv_pass,
@@ -120,22 +110,9 @@ class doe_object_Tester(unittest.TestCase):
         self.assertAlmostEqual(np.log10(optimize_result.det), 3.303190, places=3)
         
 
-
-
-# In[18]:
-
-
 if __name__ == '__main__':
     unittest.main()
 
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
 
 
 
