@@ -86,7 +86,7 @@ if test -z "$MODE" -o "$MODE" == setup; then
     popd
     pushd "$WORKSPACE/pyomo" || exit 1
     python setup.py develop $PYOMO_SETUP_ARGS || exit 1
-    cp conftest.py ../
+    cp conftest.py $WORKSPACE/python/conftest.py
     popd
     #
     # DO NOT install pyomo-model-libraries
