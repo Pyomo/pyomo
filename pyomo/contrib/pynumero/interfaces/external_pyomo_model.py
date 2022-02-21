@@ -205,7 +205,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         ))
 
         if use_cyipopt:
-            # Using CyIpopt allows us to solver inner problems without
+            # Using CyIpopt allows us to solve inner problems without
             # costly rewriting of the nl file. It requires quite a bit
             # of preprocessing, however, to construct the ProjectedNLP
             # for each block of the decomposition.
