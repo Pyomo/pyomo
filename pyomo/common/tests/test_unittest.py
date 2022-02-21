@@ -216,9 +216,11 @@ class TestPyomoUnittest(unittest.TestCase):
             return
         LOG = StringIO()
         with LoggingIntercept(LOG):
-            with self.assertRaises(TypeError):
+            with self.assertRaises((TypeError, EOFError, AttributeError)):
                 self.bound_function()
         self.assertIn("platform that does not support 'fork'", LOG.getvalue())
+        self.assertIn(
+            "one of its arguments is not serializable", LOG.getvalue())
 
     @unittest.timeout(10, require_fork=True)
     def bound_function_require_fork(self):
