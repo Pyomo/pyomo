@@ -9,7 +9,7 @@
 #     virtualenv) and config (the local Pyomo configuration/cache
 #     directory)
 #
-# CATEGORY: the category to pass to pyomo.common.unittest (defaults to nightly)
+# CATEGORY: the category to pass to pyomo.common.unittest
 #
 # TEST_SUITES: Paths (module or directory) to be passed to nosetests to
 #     run. (defaults to "pyomo '$WORKSPACE/pyomo-model-libraries'")
@@ -33,9 +33,6 @@
 #
 if test -z "$WORKSPACE"; then
     export WORKSPACE=`pwd`
-fi
-if test -z "$CATEGORY"; then
-    export CATEGORY=nightly
 fi
 if test -z "$TEST_SUITES"; then
     export TEST_SUITES="pyomo ${WORKSPACE}/pyomo-model-libraries ${WORKSPACE}/pyomo/examples/pyomobook"
@@ -86,6 +83,7 @@ if test -z "$MODE" -o "$MODE" == setup; then
     popd
     pushd "$WORKSPACE/pyomo" || exit 1
     python setup.py develop $PYOMO_SETUP_ARGS || exit 1
+    cp conftest.py ../
     popd
     #
     # DO NOT install pyomo-model-libraries
