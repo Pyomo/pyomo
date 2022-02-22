@@ -27,6 +27,7 @@ import weakref
 from io import StringIO
 from .cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.core.expr.numvalue import NumericConstant
 
 
 class TerminationCondition(enum.Enum):
@@ -798,10 +799,7 @@ class PersistentBase(abc.ABC):
         for con in cons:
             if con in self._named_expressions:
                 raise ValueError('constraint {name} has already been added'.format(name=con.name))
-            if con._body is None:
-                # this can happen with a ranged constraint with variable bounds
-                raise NotImplementedError('Appsi does not support ranged constraints with variable bounds')
-            self._active_constraints[con] = (con._lower, con._body, con._upper)
+            self._active_constraints[con] = (con.lower, con.body, con.upper)
             named_exprs, variables, fixed_vars, external_functions = cmodel.prep_for_repn(con.body, expr_types)
             self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
             if len(external_functions) > 0:
@@ -1055,8 +1053,22 @@ class PersistentBase(abc.ABC):
                     sos_to_update.append(c)
             for c in cons_to_update:
                 lower, body, upper = self._active_constraints[c]
-                if c._lower is not lower or c._body is not body or c._upper is not upper:
+                new_lower, new_body, new_upper = c.lower, c.body, c.upper
+                if new_body is not body:
                     cons_to_remove_and_add[c] = None
+                    continue
+                if new_lower is not lower:
+                    if type(new_lower) is NumericConstant and type(lower) is NumericConstant and new_lower.value == lower.value:
+                        pass
+                    else:
+                        cons_to_remove_and_add[c] = None
+                        continue
+                if new_upper is not upper:
+                    if type(new_upper) is NumericConstant and type(upper) is NumericConstant and new_upper.value == upper.value:
+                        pass
+                    else:
+                        cons_to_remove_and_add[c] = None
+                        continue
             self.remove_sos_constraints(sos_to_update)
             self.add_sos_constraints(sos_to_update)
         timer.stop('cons')
