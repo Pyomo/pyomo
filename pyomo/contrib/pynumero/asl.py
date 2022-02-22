@@ -232,9 +232,8 @@ class AmplInterface(object):
         amplfunc = os.environ.pop('AMPLFUNC', '')
 
         if AmplInterface.ASLib is None:
-            with CtypesEnviron(AMPLFUNC='/home/jdsiiro/.pyomo/lib/amplgsl.dll'):
-                AmplInterface.ASLib, AmplInterface.interface_version \
-                    = _LoadASLInterface(AmplInterface.libname)
+            AmplInterface.ASLib, AmplInterface.interface_version \
+                = _LoadASLInterface(AmplInterface.libname)
             if AmplInterface.interface_version >= 3:
                 AmplInterface.asl_date \
                     = AmplInterface.ASLib.EXTERNAL_get_asl_date()
