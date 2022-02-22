@@ -17,8 +17,8 @@ import pyomo.scripting.pyomo_main as main
 from pyomo.opt import check_available_solvers
 
 currdir = os.path.dirname(os.path.abspath(__file__))
-exdir = os.path.abspath(os.path.join(currdir, '..', '..',
-                                     '..', '..', 'examples', 'pyomo', 'diet'))
+exdir = os.path.abspath(os.path.join(
+    currdir, '..', '..', '..', '..', 'examples', 'pyomo', 'diet'))
 
 sqlite3_available = pyodbc_available = False
 try:
