@@ -22,6 +22,7 @@ import logging
 import shutil
 import weakref
 from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.errors import TempfileContextError
 try:
     from pyutilib.component.config.tempfiles import (
         TempfileManager as pyutilib_mngr
@@ -120,19 +121,32 @@ class TempfileManagerClass(object):
         # exception
         self._context_stack = None
 
+    def context(self):
+        """Return the current active TempfileContext.
+
+        Raises
+        ------
+        TempfileContextError if there is not a current context."""
+        if not self._context_stack:
+            raise TempfileContextError(
+                "TempfileManager has no currently active context.  "
+                "Create a context (with push() or __enter__()) before "
+                "attempting to create temporary objects.")
+        return self._context_stack[-1]
+
     def create_tempfile(self, suffix=None, prefix=None, text=False, dir=None):
         "Call :meth:`TempfileContext.create_tempfile` on the active context"
-        return self._context_stack[-1].create_tempfile(
+        return self.context().create_tempfile(
             suffix=suffix, prefix=prefix, text=text, dir=dir)
 
     def create_tempdir(self, suffix=None, prefix=None, dir=None):
         "Call :meth:`TempfileContext.create_tempdir` on the active context"
-        return self._context_stack[-1].create_tempdir(
+        return self.context().create_tempdir(
             suffix=suffix, prefix=prefix, dir=dir)
 
     def add_tempfile(self, filename, exists=True):
         "Call :meth:`TempfileContext.add_tempfile` on the active context"
-        return self._context_stack[-1].add_tempfile(
+        return self.context().add_tempfile(
             filename=filename, exists=exists)
 
     def clear_tempfiles(self, remove=True):
