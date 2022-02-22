@@ -293,12 +293,12 @@ class TestLogicalClasses(unittest.TestCase):
         m.Y1 = BooleanVar()
 
         with self.assertRaisesRegex(
-                TypeError, "argument must be a string or a number"):
+                TypeError, r"argument must be a string or a(.*) number"):
             float(m.Y1)
 
         with self.assertRaisesRegex(
-                TypeError, "argument must be a string"
-                           "(?:, a bytes-like object)? or a number"):
+                TypeError, r"argument must be a string"
+                           r"(?:, a bytes-like object)? or a(.*) number"):
             int(m.Y1)
 
 

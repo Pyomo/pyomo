@@ -203,7 +203,8 @@ setup_kwargs = dict(
     extras_require = {
         'tests': [
             'coverage',
-            'nose',
+            'pytest',
+            'pytest-parallel',
             'parameterized',
             'pybind11',
         ],

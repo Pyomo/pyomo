@@ -24,8 +24,10 @@ thisDir = dirname(abspath( __file__ ))
 _test_models = {}
 
 
-@unittest.nottest
-def test_models(arg=None):
+def all_models(arg=None):
+    """
+    Previously named "test_models" - renamed due to port to Pytest
+    """
     if arg is None:
         return _test_models
     else:
