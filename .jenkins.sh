@@ -9,7 +9,7 @@
 #     virtualenv) and config (the local Pyomo configuration/cache
 #     directory)
 #
-# CATEGORY: the category to pass to pyomo.common.unittest
+# CATEGORY: the category to pass to pytest
 #
 # TEST_SUITES: Paths (module or directory) to be passed to nosetests to
 #     run. (defaults to "pyomo '$WORKSPACE/pyomo-model-libraries'")
@@ -39,6 +39,9 @@ if test -z "$TEST_SUITES"; then
 fi
 if test -z "$SLIM"; then
     export VENV_SYSTEM_PACKAGES='--system-site-packages'
+fi
+if test ! -z "$CATEGORY"; then
+    export PY_CAT="-m $CATEGORY"
 fi
 
 if test "$WORKSPACE" != "`pwd`"; then
@@ -160,9 +163,9 @@ if test -z "$MODE" -o "$MODE" == test; then
     echo "# Running Pyomo tests"
     echo "#"
     python -m pytest -v \
-        -W ignore::DeprecationWarning \
+        -W ignore::Warning \
 	--junitxml="TEST-pyomo.xml" \
-        $TEST_SUITES
+        $PY_CAT $TEST_SUITES
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then
