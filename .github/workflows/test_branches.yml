@@ -52,6 +52,14 @@ jobs:
           PACKAGES: glpk
 
         - os: ubuntu-latest
+          python: 3.9
+          other: /conda
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: conda
+          PACKAGES: mpi4py openmpi
+
+        - os: ubuntu-latest
           python: 3.8
           other: /mpi
           mpi: 3
@@ -62,14 +70,6 @@ jobs:
 
         - os: ubuntu-latest
           python: 3.7
-          other: /conda
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: conda
-          PACKAGES: mpi4py openmpi
-
-        - os: ubuntu-latest
-          python: 3.9
           other: /slim
           slim: 1
           skip_doctest: 1
@@ -77,7 +77,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.7
+          python: 3.8
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
