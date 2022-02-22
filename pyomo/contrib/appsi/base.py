@@ -798,7 +798,10 @@ class PersistentBase(abc.ABC):
         for con in cons:
             if con in self._named_expressions:
                 raise ValueError('constraint {name} has already been added'.format(name=con.name))
-            self._active_constraints[con] = (con.lower, con.body, con.upper)
+            if con._body is None:
+                # this can happen with a ranged constraint with variable bounds
+                raise NotImplementedError('Appsi does not support ranged constraints with variable bounds')
+            self._active_constraints[con] = (con._lower, con._body, con._upper)
             named_exprs, variables, fixed_vars, external_functions = cmodel.prep_for_repn(con.body, expr_types)
             self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
             if len(external_functions) > 0:
@@ -1052,7 +1055,7 @@ class PersistentBase(abc.ABC):
                     sos_to_update.append(c)
             for c in cons_to_update:
                 lower, body, upper = self._active_constraints[c]
-                if c.lower is not lower or c.body is not body or c.upper is not upper:
+                if c._lower is not lower or c._body is not body or c._upper is not upper:
                     cons_to_remove_and_add[c] = None
             self.remove_sos_constraints(sos_to_update)
             self.add_sos_constraints(sos_to_update)
