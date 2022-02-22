@@ -86,7 +86,6 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "#"
     echo "# Installing pyomo modules"
     echo "#"
-    popd
     pushd "$WORKSPACE/pyutilib" || echo "PyUtilib not found"
     python setup.py develop || echo "PyUtilib failed - skipping."
     popd
@@ -215,8 +214,7 @@ if test -z "$MODE" -o "$MODE" == test; then
             done
         fi
         rm .coverage
+        # Exit ${WORKSPACE}/pyomo
+        popd
     fi
-
-    # Exit ${WORKSPACE}/pyomo
-    popd
 fi
