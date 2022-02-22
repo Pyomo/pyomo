@@ -375,9 +375,7 @@ class TempfileContext:
             The absolute path of the new directory.
 
         """
-        dirname = self.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
-        self.tempfiles[-1] = (None, dirname)
-        return dirname
+        return self.mkdtemp(suffix=suffix, prefix=prefix, dir=dir)
 
     def add_tempfile(self, filename, exists=True):
         """Declare the specified file/directory to be temporary.
