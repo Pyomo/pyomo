@@ -86,7 +86,7 @@ IF( BUILD_ASL )
   IF( BUILD_AMPLMP )
     # If we are building AMPL/MP, it is possible that we are linking
     # against it, so we will add the appropriate dependency
-    add_dependencies(pynumero_ASL amplmp)
+    add_dependencies(pynumero_ASL ampl_asl)
   ENDIF()
 ENDIF()
 

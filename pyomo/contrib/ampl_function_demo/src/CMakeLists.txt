@@ -9,11 +9,9 @@
 #  ___________________________________________________________________________
 
 cmake_minimum_required(VERSION 3.0)
-# CMake 3.0 added GIT_SUBMODULES to ExternalProject_ADD, and without it
-# the Ampl/MP checkout fails because one of the submodules (gecode) is a
-# private repository.
+# CMake 3.0 needed by AMPL/asl build
 
-PROJECT( amlp_function_demo )
+PROJECT( ampl_function_demo )
 
 INCLUDE(
   "${CMAKE_CURRENT_SOURCE_DIR}/../../ampl_function_demo/src/FindASL.cmake")
@@ -36,9 +34,9 @@ IF( BUILD_EXTERNAL_FCN_LIBRARY )
   #SET_TARGET_PROPERTIES( asl_external_demo PROPERTIES ENABLE_EXPORTS 1 )
   INSTALL( TARGETS asl_external_demo LIBRARY DESTINATION lib
     RUNTIME DESTINATION lib )
-  IF( BUILD_AMPLMP )
-    # If we are building AMPL/MP (from FindASL), it is possible that we
+  IF( BUILD_AMPL_ASL )
+    # If we are building AMPL/asl (from FindASL), it is possible that we
     # are linking against it, so we will add the appropriate dependency
-    add_dependencies(asl_external_demo amplmp)
+    add_dependencies(asl_external_demo ampl_asl)
   ENDIF()
 ENDIF()

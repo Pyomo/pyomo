@@ -16,7 +16,7 @@ def build_pynumero(user_args=[], parallel=None):
         targets=['src'],
         package_name='pynumero_libraries',
         description='PyNumero libraries',
-        user_args=user_args,
+        user_args=['-DBUILD_AMPL_ASL_IF_NEEDED=ON'] + user_args,
         parallel=parallel,
     )
 

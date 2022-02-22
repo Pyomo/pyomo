@@ -41,7 +41,6 @@ def build_cmake_project(targets, package_name=None, description=None,
             cmake_config = 'Debug' if self.debug else 'Release'
             cmake_args = [
                 '-DCMAKE_INSTALL_PREFIX=' + envvar.PYOMO_CONFIG_DIR,
-                '-DBUILD_AMPLMP_IF_NEEDED=ON',
                 #'-DCMAKE_BUILD_TYPE=' + cmake_config,
             ] + cmake_ext.user_args
 
