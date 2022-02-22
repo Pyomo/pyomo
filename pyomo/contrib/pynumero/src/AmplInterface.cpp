@@ -57,6 +57,18 @@ void AmplInterface::initialize(const char *nlfilename, const char *amplfunc)
    if (cp_amplfunc.length() > 0) {
       arguments.push_back("-i");
       arguments.push_back(cp_amplfunc);
+      // We don't know the exact ASL date where the ASL corrected an
+      // issue where AMPLFUNC from a previous load would bleed into (and
+      // override the -i for) subsequent instances, but we know things
+      // work in 20160307, but not in 20150101.
+      if (ASLdate_ASL < 20160307) {
+         std::cerr << "WARNING: ASLdate " << ASLdate_ASL << " < 20160307."
+                   << std::endl;
+         std::cerr << "    This is known to have bugs when used with "
+                   << "user-provided external functions" << std::endl;
+         std::cerr << "    Consider recompiling PyNumero against a more "
+                   << "recent version of the ASL." << std::endl;
+      }
    }
    arguments.push_back(cp_nlfilename);
    for (iter it=options.begin(); it != options.end(); ++it) {
@@ -414,6 +426,10 @@ void AmplInterface::finalize_solution(int ampl_solve_result_num, char* msg, doub
    write_sol(msg, const_cast<double *>(const_x), const_cast<double *>(const_lam), 0);
 }
 
+long AmplInterface::get_asl_date() {
+   return ASLdate_ASL;
+}
+
 AmplInterfaceFile::AmplInterfaceFile()
    : AmplInterface()
 {}
@@ -459,8 +475,9 @@ extern "C" {
              updated EXTERNAL_AmplInterface_eval_hes_lag arguments
           2: added EXTERNAL_AmplInterface_version
              added amplfunc argument to EXTERNAL_AmplInterface_new_file
+          3: added EXTERNAL_get_asl_date
        **/
-      return 2;
+      return 3;
    }
 
    PYNUMERO_ASL_EXPORT AmplInterface*
@@ -589,6 +606,11 @@ extern "C" {
      double *const_x, int nx, double *const_lam, int nc ) {
       p_ai->finalize_solution(ampl_solve_result_num, msg,
                               const_x, nx, const_lam, nc);
+   }
+
+   PYNUMERO_ASL_EXPORT
+   long EXTERNAL_get_asl_date() {
+      return ASLdate_ASL;
    }
 
    PYNUMERO_ASL_EXPORT
