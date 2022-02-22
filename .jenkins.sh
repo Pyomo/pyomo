@@ -28,8 +28,11 @@
 # PYOMO_SETUP_ARGS: passed to the 'python setup.py develop' command
 #     (e.g., to specify --with-cython)
 #
-# PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions" command
+# PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions' command
 #     (e.g., to set up local SSL certificate authorities)
+#
+# PYTEST_EXTRA_ARGS: passed to the 'pytest' command
+#     (e.g., to add extra pytest options like '--collect-only')
 #
 if test -z "$WORKSPACE"; then
     export WORKSPACE=`pwd`
@@ -89,7 +92,6 @@ if test -z "$MODE" -o "$MODE" == setup; then
     popd
     pushd "$WORKSPACE/pyomo" || exit 1
     python setup.py develop $PYOMO_SETUP_ARGS || exit 1
-    cp conftest.py $WORKSPACE
     popd
     #
     # DO NOT install pyomo-model-libraries
@@ -158,6 +160,14 @@ if test -z "$MODE" -o "$MODE" == setup; then
 fi
 
 if test -z "$MODE" -o "$MODE" == test; then
+    # Copy conftest.py into every requested test suite that is NOT
+    # within ${WORKSPACE}/pyomo
+    for TEST in $TEST_SUITES; do
+      if [[ "$TEST" != *"${WORKSPACE}/pyomo/"* ]]; then
+        cp ${WORKSPACE}/conftest.py $TEST
+      fi;
+    done
+    rm ${WORKSPACE}/conftest.py
     echo ""
     echo "#"
     echo "# Running Pyomo tests"
@@ -165,7 +175,7 @@ if test -z "$MODE" -o "$MODE" == test; then
     python -m pytest -v \
         -W ignore::Warning \
         --junitxml="TEST-pyomo.xml" \
-        $PY_CAT $TEST_SUITES
+        $PY_CAT $TEST_SUITES $PYTEST_EXTRA_ARGS
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then
