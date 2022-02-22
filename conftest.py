@@ -46,7 +46,7 @@ def pytest_runtest_setup(item):
     elif item_markers:
         if (not set(implicit_markers).issubset(item_markers)
             and not item_markers.issubset(set(extended_implicit_markers))):
-            pytest.skip('SKIPPED: Default tests are unmarked, ci, and solver.')
+            pytest.skip('SKIPPED: Only running default, solver, and unmarked tests.')
 
 
 def pytest_addoption(parser):
