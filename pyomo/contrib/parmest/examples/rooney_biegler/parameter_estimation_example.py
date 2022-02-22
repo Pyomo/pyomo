@@ -38,8 +38,6 @@ def main():
     parmest.graphics.pairwise_plot((theta, cov, 100), theta_star=theta, alpha=0.8, 
                                    distributions=['MVN'], title='Theta estimates within 80% confidence region')
     
-    print(data)
-    
     # Assert statements compare parameter estimation (theta) to an expected value 
     relative_error = abs(theta['asymptote'] - 19.1426)/19.1426
     assert relative_error < 0.01
