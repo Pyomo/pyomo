@@ -16,7 +16,7 @@ def build_ampl_function_demo(user_args=[], parallel=None):
         targets=['src'],
         package_name='asl_external_demo',
         description='AMPL External function demo library',
-        user_args=['-DBUILD_AMPL_ASL_IF_NEEDED=ON'] + user_args,
+        user_args=['-DBUILD_AMPLASL_IF_NEEDED=ON'] + user_args,
         parallel=parallel,
     )
 

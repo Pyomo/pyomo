@@ -83,7 +83,7 @@ IF( BUILD_ASL )
   SET_TARGET_PROPERTIES( pynumero_ASL PROPERTIES ENABLE_EXPORTS 1 )
   INSTALL( TARGETS pynumero_ASL LIBRARY DESTINATION lib
     RUNTIME DESTINATION lib )
-  IF( BUILD_AMPLMP )
+  IF( BUILD_AMPLASL )
     # If we are building AMPL/MP, it is possible that we are linking
     # against it, so we will add the appropriate dependency
     add_dependencies(pynumero_ASL ampl_asl)

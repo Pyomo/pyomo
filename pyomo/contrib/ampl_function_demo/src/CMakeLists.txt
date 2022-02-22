@@ -34,7 +34,7 @@ IF( BUILD_EXTERNAL_FCN_LIBRARY )
   #SET_TARGET_PROPERTIES( asl_external_demo PROPERTIES ENABLE_EXPORTS 1 )
   INSTALL( TARGETS asl_external_demo LIBRARY DESTINATION lib
     RUNTIME DESTINATION lib )
-  IF( BUILD_AMPL_ASL )
+  IF( BUILD_AMPLASL )
     # If we are building AMPL/asl (from FindASL), it is possible that we
     # are linking against it, so we will add the appropriate dependency
     add_dependencies(asl_external_demo ampl_asl)
