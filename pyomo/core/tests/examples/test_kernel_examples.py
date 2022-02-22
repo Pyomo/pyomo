@@ -34,9 +34,10 @@ examples = glob.glob(join(examplesdir,"*.py"))
 examples.extend(glob.glob(join(examplesdir,"mosek","*.py")))
 
 testing_solvers = {}
-testing_solvers['ipopt','nl'] = False
-testing_solvers['glpk','lp'] = False
-testing_solvers['mosek_direct','python'] = False
+testing_solvers['ipopt', 'nl'] = False
+testing_solvers['glpk', 'lp'] = False
+testing_solvers['mosek_direct', 'python'] = False
+
 def setUpModule():
     global testing_solvers
     import pyomo.environ
@@ -46,8 +47,8 @@ def setUpModule():
             test_solver_cases(_solver, _io).available:
             testing_solvers[_solver, _io] = True
 
-@unittest.nottest
-def create_test_method(example):
+
+def create_method(example):
     # It is important that this inner function has a name that
     # starts with 'test' in order for nose to discover it
     # after we assign it to the class. I have _no_ idea why
@@ -57,12 +58,12 @@ def create_test_method(example):
         if basename(example) == "piecewise_nd_functions.py":
             if (not numpy_available) or \
                (not scipy_available) or \
-               (not testing_solvers['ipopt','nl']) or \
-               (not testing_solvers['glpk','lp']):
+               (not testing_solvers['ipopt', 'nl']) or \
+               (not testing_solvers['glpk', 'lp']):
                 self.skipTest("Numpy or Scipy or Ipopt or Glpk is not available")
         elif "mosek" in example:
-            if (not testing_solvers['ipopt','nl']) or \
-               (not testing_solvers['mosek_direct','python']):
+            if (not testing_solvers['ipopt', 'nl']) or \
+               (not testing_solvers['mosek_direct', 'python']):
                 self.skipTest("Ipopt or Mosek is not available")
         result = subprocess.run([sys.executable, example],
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -70,15 +71,19 @@ def create_test_method(example):
         self.assertEqual(result.returncode, 0, msg=result.stdout)
     return testmethod
 
+
 class TestKernelExamples(unittest.TestCase):
     pass
+
+
 for filename in examples:
     testname = basename(filename)
     assert testname.endswith(".py")
     testname = "test_"+testname[:-3]+"_example"
     setattr(TestKernelExamples,
             testname,
-            create_test_method(filename))
+            create_method(filename))
+
 
 if __name__ == "__main__":
     unittest.main()

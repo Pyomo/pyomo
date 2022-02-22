@@ -238,7 +238,18 @@ class TestFileDescriptor(unittest.TestCase):
             self.assertEqual(FILE.read(),
                              "to_stdout_1\nto_stdout_2\nto_fd1_2\n")
 
+    # Pytest's default capture method causes failures for the following
+    # two tests. This re-implementation of the capfd fixture allows
+    # the capture to be disabled for those two test specifically.
+    @unittest.pytest.fixture(autouse=True)
+    def capfd(self, capfd):
+        """
+        Reimplementation needed for use in unittest.TestCase subclasses
+        """
+        self.capfd = capfd
+
     def test_redirect_synchronize_stdout_not_fd1(self):
+        self.capfd.disabled()
         r,w = os.pipe()
         os.dup2(w, 1)
         rd = tee.redirect_fd(synchronize=True)
@@ -250,6 +261,7 @@ class TestFileDescriptor(unittest.TestCase):
             self.assertEqual(FILE.read(), "to_fd1_2\n")
 
     def test_redirect_no_synchronize_stdout_not_fd1(self):
+        self.capfd.disabled()
         r,w = os.pipe()
         os.dup2(w, 1)
         rd = tee.redirect_fd(synchronize=False)
