@@ -36,12 +36,13 @@ def get_appsi_extension(in_setup=False, appsi_root=None):
     sources = [
         os.path.join(appsi_root, 'cmodel', 'src', file_)
         for file_ in (
-                #'interval.cpp',
+                'interval.cpp',
                 'expression.cpp',
                 'common.cpp',
                 'nl_writer.cpp',
                 'lp_writer.cpp',
-                #'model.cpp',
+                'model_base.cpp',
+                'fbbt_model.cpp',
                 'cmodel_bindings.cpp',
         )
     ]
