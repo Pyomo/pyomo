@@ -169,6 +169,8 @@ if test -z "$MODE" -o "$MODE" == test; then
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then
+        # Enter ${WORKSPACE}/pyomo for coverage Processing
+        pushd ${WORKSPACE}/pyomo || exit 1
         echo ""
         echo "#"
         echo "# Processing coverage information in "`pwd`
