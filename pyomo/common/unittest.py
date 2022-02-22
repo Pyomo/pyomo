@@ -18,9 +18,6 @@
 import enum
 import logging
 import sys
-import os
-import argparse
-import subprocess
 from io import StringIO
 
 
@@ -28,12 +25,10 @@ from io import StringIO
 # specifically later
 from unittest import *
 import unittest as _unittest
+import pytest as pytest
 
 from pyomo.common.collections import Mapping, Sequence
 from pyomo.common.tee import capture_output
-
-# This augments the unittest exports with two additional decorators
-__all__ = _unittest.__all__ + ['category', 'nottest']
 
 from unittest import mock
 
@@ -255,74 +250,6 @@ def _assertStructuredAlmostEqual(first, second,
         )
     raise exception(msg)
 
-
-def _category_to_tuple(_cat):
-    _cat = str(_cat).lower().strip()
-    if _cat.endswith('=0') or _cat.endswith('=1'):
-        _val = int(_cat[-1])
-        _cat = _cat[:-2]
-    else:
-        _val = 1
-    if _cat and _cat[0] in '!~-':
-        _val = 1 - _val
-        _cat = _cat[1:]
-    return _cat, _val
-
-def category(*args, **kwargs):
-    # Get the set of categories for this test
-    _categories = {}
-    for cat in args:
-        _cat, _val = _category_to_tuple(cat)
-        if not _cat:
-            continue
-        _categories[_cat] = _val
-
-    # Note: we used to try and short-circuit the nosetest test selection
-    # and return test skips for tests that couldn't/wouldn't be run.
-    # However, this code was unreliable, as categories could be set by
-    # both decorating the TestCase (class) and the function.  As a
-    # result, we will just rely on nosetest to do the right thing.
-
-    def _id(func):
-        if hasattr(func, '__mro__') and TestCase in func.__mro__:
-            # @category() called on a TestCase class
-            if len(_categories) > (1 if 'fragile' in _categories else 0):
-                for c,v in func.unspecified_categories.items():
-                    setattr(func, c, v)
-                    _categories.setdefault(c, v)
-            default_updates = {}
-            for c,v in _categories.items():
-                if c in func.unspecified_categories:
-                    default_updates[c] = v
-                setattr(func, c, v)
-            if default_updates:
-                for fcn in func.__dict__.values():
-                    if hasattr(fcn, '_categories'):
-                        for c,v in default_updates.items():
-                            if c not in fcn._categories:
-                                setattr(fcn, c, v)
-        else:
-            # This is a (currently unbound) method definition
-            if len(_categories) > (1 if 'fragile' in _categories else 0):
-                for c,v in TestCase.unspecified_categories.items():
-                    setattr(func, c, v)
-            for c,v in _categories.items():
-                setattr(func, c, v)
-            setattr(func, '_categories', _categories)
-        return func
-    return _id
-
-
-try:
-    from nose.tools import nottest
-except ImportError:
-
-    def nottest(func):
-        """Decorator to mark a function or method as *not* a test"""
-        func.__test__ = False
-        return func
-
-
 def _runner(q, qualname):
     "Utility wrapper for running functions, used by timeout()"
     resultType = _RunnerResult.call
@@ -490,7 +417,6 @@ class TestCase(_unittest.TestCase):
 
     This class derives from unittest.TestCase and provides the following
     additional functionality:
-      - extended suport for test categories
       - additional assertions:
         * :py:meth:`assertStructuredAlmostEqual`
 
@@ -498,35 +424,6 @@ class TestCase(_unittest.TestCase):
     -------------------------------
     """
     __doc__ += _unittest.TestCase.__doc__
-    smoke = 1
-    nightly = 1
-    expensive = 0
-    fragile = 0
-    pyomo_unittest = 1
-    _default_categories = True
-    unspecified_categories = {
-        'smoke':0, 'nightly':0, 'expensive':0, 'fragile':0 }
-
-
-    @staticmethod
-    def parse_categories(category_string):
-        return tuple(
-            tuple(_category_to_tuple(_cat) for _cat in _set.split(','))
-            for _set in category_string.split()
-        )
-
-    @staticmethod
-    def categories_to_string(categories):
-        return ' '.join(','.join("%s=%s" % y for y in x) for x in categories)
-
-    def shortDescription(self):
-        # Disable nose's use of test docstrings for the test description.
-        return None
-
-    def currentTestPassed(self):
-        # Note: this only works for Python 3.4+
-        return not (self._outcome and any(
-            test is self and err for test, err in self._outcome.errors))
 
     def assertStructuredAlmostEqual(self, first, second,
                                     places=None, msg=None, delta=None,
@@ -546,165 +443,3 @@ class TestCase(_unittest.TestCase):
             exception=self.failureException,
             formatter=self._formatMessage,
         )
-
-def buildParser():
-    parser = argparse.ArgumentParser(usage='python -m pyomo.common.unittest [TARGETS] [OPTIONS]')
-
-    parser.add_argument(
-        'targets',
-        action='store',
-        nargs='*',
-        default=['pyomo'],
-        help='Packages to test')
-    parser.add_argument(
-        '-v',
-        '--verbose',
-        action='store_true',
-        dest='verbose',
-        help='Verbose output')
-    parser.add_argument(
-        '--cat',
-        '--category',
-        action='append',
-        dest='cat',
-        default=[],
-        help='Specify the test category. \
-            Can be used several times for multiple categories (e.g., \
-            --cat=nightly --cat=smoke).')
-    parser.add_argument('--xunit',
-        action='store_true',
-        dest='xunit',
-        help='Enable the nose XUnit plugin')
-    parser.add_argument('-x',
-        '--stop',
-        action='store_true',
-        dest='stop',
-        help='Stop running tests after the first error or failure.')
-    parser.add_argument('--dry-run',
-        action='store_true',
-        dest='dryrun',
-        help='Dry run: collect but do not execute the tests')
-    parser.add_argument('--show-log',
-        action='store_true',
-        dest='showlog',
-        help='Turn off log capture and allow warnings/deprecations to show.')
-    return parser
-
-def build_cmd(options, unknown, env):
-    from pyomo.common.fileutils import Executable
-
-    if sys.platform.startswith('win'):
-        binDir = os.path.join(sys.exec_prefix, 'Scripts')
-        nosetests = os.path.join(binDir, 'nosetests.exe')
-    else:
-        binDir = os.path.join(sys.exec_prefix, 'bin')
-        nosetests = os.path.join(binDir, 'nosetests')
-
-    if os.path.exists(nosetests):
-        cmd = [nosetests]
-    else:
-        nose = Executable('nosetests')
-        cmd = [sys.executable, nose.path()]
-
-    if (sys.platform.startswith('win') and sys.version_info[0:2] >= (3, 8)):
-        #######################################################
-        # This option is required due to a (likely) bug within nosetests.
-        # Nose is no longer maintained, but this workaround is based on a public forum suggestion:
-        #   https://stackoverflow.com/questions/58556183/nose-unittest-discovery-broken-on-python-3-8
-        #######################################################
-        cmd.append('--traverse-namespace')
-
-    if binDir not in env['PATH']:
-        env['PATH'] = os.pathsep.join([binDir, env.get('PATH','')])
-
-    if options.verbose:
-        cmd.append('-v')
-    if options.stop:
-        cmd.append('-x')
-    if options.dryrun:
-        cmd.append('--collect-only')
-    if options.xunit:
-        cmd.append('--with-xunit')
-        cmd.append('--xunit-file=TEST-pyomo.xml')
-    if options.showlog:
-        cmd.append('--nologcapture')
-        cmd.append('--nocapture')
-    if unknown:
-        cmd.extend(unknown)
-
-    attr = []
-    _with_performance = False
-    _categories = []
-    for x in options.cat:
-        _categories.extend( TestCase.parse_categories(x) )
-
-    # If no one specified a category, default to "smoke" (and anything
-    # not built on pyomo.common.unittest.TestCase)
-    if not _categories:
-        _categories = [ (('smoke',1),), (('pyomo_unittest',0),) ]
-    # process each category set (that is, each conjunction of categories)
-    for _category_set in _categories:
-        _attrs = []
-        # "ALL" deletes the categories, and just runs everything.  Note
-        # that "ALL" disables performance testing
-        if ('all', 1) in _category_set:
-            _categories = []
-            _with_performance = False
-            attr = []
-            break
-        # For each category set, unless the user explicitly says
-        # something about fragile, assume that fragile should be
-        # EXCLUDED.
-        if ('fragile',1) not in _category_set \
-           and ('fragile',0) not in _category_set:
-            _category_set = _category_set + (('fragile',0),)
-        # Process each category in the conjection and add to the nose
-        # "attrib" plugin arguments
-        for _category, _value in _category_set:
-            if not _category:
-                continue
-            if _value:
-                _attrs.append(_category)
-            else:
-                _attrs.append("(not %s)" % (_category,))
-            if _category == 'performance' and _value == 1:
-                _with_performance = True
-        if _attrs:
-            attr.append("--eval-attr=%s" % (' and '.join(_attrs),))
-    cmd.extend(attr)
-    if attr:
-        print(" ... for test categor%s: %s" %
-              ('y' if len(attr)<=2 else 'ies',
-               ' '.join(attr[1::2])))
-
-    if _with_performance:
-        cmd.append('--with-testdata')
-        env['NOSE_WITH_TESTDATA'] = '1'
-        env['NOSE_WITH_FORCED_GC'] = '1'
-
-    cmd.extend(options.targets)
-
-    return cmd
-
-def runtests(parser):
-
-    from pyomo.common.fileutils import PYOMO_ROOT_DIR as basedir
-    env = os.environ.copy()
-    os.chdir(basedir)
-
-    options, unknown = parser.parse_known_args()
-
-    print("Running tests in directory %s" % (basedir,))
-    cmd = build_cmd(options, unknown, env)
-    print(cmd)
-    print("Running...\n    %s\n" % (
-            ' '.join( (x if ' ' not in x else '"'+x+'"') for x in cmd ), ))
-    sys.stdout.flush()
-    result = subprocess.run(cmd, env=env)
-    rc = result.returncode
-    return rc
-
-
-if __name__ == '__main__':
-    parser = buildParser()
-    sys.exit(runtests(parser))

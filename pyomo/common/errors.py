@@ -43,6 +43,13 @@ class DeveloperError(PyomoException, NotImplementedError):
                  % ( repr(self.parameter), ) )
 
 
+class IntervalException(PyomoException, ValueError):
+    """
+    Exception class used for errors in interval arithmetic.
+    """
+    pass
+
+
 class InfeasibleConstraintException(PyomoException):
     """
     Exception class used by Pyomo transformations to indicate
@@ -54,4 +61,11 @@ class InfeasibleConstraintException(PyomoException):
 
 class NondifferentiableError(PyomoException, ValueError):
     """A Pyomo-specific ValueError raised for non-differentiable expressions"""
+    pass
+
+class TempfileContextError(PyomoException, IndexError):
+    """A Pyomo-specific IndexError raised when attempting to use the
+    TempfileManager when it does not have a currently active context.
+
+    """
     pass

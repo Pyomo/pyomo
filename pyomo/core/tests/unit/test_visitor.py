@@ -17,7 +17,6 @@ from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
 import pyomo.common.unittest as unittest
-from pyomo.common.unittest import nottest
 
 from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Expression, ExternalFunction, VarList, sum_product, inequality, quicksum, sin, tanh, value
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types, NumericConstant

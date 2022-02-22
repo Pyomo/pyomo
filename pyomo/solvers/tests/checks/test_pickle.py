@@ -17,15 +17,14 @@ except:
     new_available=False
 
 import pyomo.common.unittest as unittest
-from pyomo.solvers.tests.models.base import test_models
-from pyomo.solvers.tests.testcases import test_scenarios
+from pyomo.solvers.tests.models.base import all_models
+from pyomo.solvers.tests.testcases import generate_scenarios
 
 #
 # A function that returns a function that gets
 # added to a test class.
 #
-@unittest.nottest
-def create_test_method(model, solver, io,
+def create_method(model, solver, io,
                        test_case,
                        symbolic_labels):
 
@@ -105,28 +104,25 @@ def create_test_method(model, solver, io,
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
-        def skipping_test(self):
+        def return_test(self):
             return self.skipTest(test_case.msg)
-        return skipping_test
-
-    # If this solver is in demo mode
-    size = getattr(test_case.model, 'size', (None, None, None))
-    for prb, sol in zip(size, test_case.demo_limits):
-        if prb is None or sol is None:
-            continue
-        if prb > sol:
-            def skipping_test(self):
-                self.skipTest("Problem is too large for unlicensed %s solver" % solver)
-            return skipping_test
-
-    if is_expected_failure:
+    elif is_expected_failure:
         @unittest.expectedFailure
-        def failing_pickle_test(self):
+        def return_test(self):
             return pickle_test(self)
-        # Return a test that is expected to fail
-        return failing_pickle_test
-
-    return pickle_test
+    else:
+        # If this solver is in demo mode
+        size = getattr(test_case.model, 'size', (None, None, None))
+        for prb, sol in zip(size, test_case.demo_limits):
+            if prb and sol and prb > sol:
+                def return_test(self):
+                    return self.skipTest("Problem is too large for unlicensed %s solver" % solver)
+                break
+            else:
+                def return_test(self):
+                    return pickle_test(self)
+    unittest.pytest.mark.solver(solver)(return_test)
+    return return_test
 
 cls = None
 
@@ -134,9 +130,9 @@ cls = None
 # Create test driver classes for each test model
 #
 driver = {}
-for model in test_models():
+for model in all_models():
     # Get the test case for the model
-    case = test_models(model)
+    case = all_models(model)
 
     # Create the test class
     name = "Test_%s" % model
@@ -145,29 +141,26 @@ for model in test_models():
     else:
         cls = types.new_class(name, (unittest.TestCase,))
         cls.__module__ = __name__
-    cls = unittest.category(*case.level)(cls)
     driver[model] = cls
     globals()[name] = cls
 #
 # Iterate through all test scenarios and add test methods
 #
-for key, value in test_scenarios(lambda c: c.test_pickling):
+for key, value in generate_scenarios(lambda c: c.test_pickling):
     model, solver, io = key
     cls = driver[model]
 
     # Symbolic labels
     test_name = "test_"+solver+"_"+io +"_symbolic_labels"
-    test_method = create_test_method(model, solver, io, value, True)
+    test_method = create_method(model, solver, io, value, True)
     if test_method is not None:
-        test_method = unittest.category('smoke','nightly',solver)(test_method)
         setattr(cls, test_name, test_method)
         test_method = None
 
     # Non-symbolic labels
     test_name = "test_"+solver+"_"+io +"_nonsymbolic_labels"
-    test_method = create_test_method(model, solver, io, value, False)
+    test_method = create_method(model, solver, io, value, False)
     if test_method is not None:
-        test_method = unittest.category('smoke','nightly',solver)(test_method)
         setattr(cls, test_name, test_method)
         test_method = None
 

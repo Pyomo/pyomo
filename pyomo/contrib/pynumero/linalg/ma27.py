@@ -85,7 +85,6 @@ class MA27Interface(object):
     def __del__(self):
         self.lib.free_MA27_struct(self._ma27)
 
-
     def set_icntl(self, i, val):
         validate_index(i, self.icntl_len, 'ICNTL')
         validate_value(i, int, 'ICNTL')
@@ -94,27 +93,22 @@ class MA27Interface(object):
         # functions use C indexing. Maybe this is too confusing.
         self.lib.set_icntl(self._ma27, i-1, val)
 
-
     def get_icntl(self, i):
         validate_index(i, self.icntl_len, 'ICNTL')
         return self.lib.get_icntl(self._ma27, i-1)
-
 
     def set_cntl(self, i, val):
         validate_index(i, self.cntl_len, 'CNTL')
         validate_value(val, float, 'CNTL')
         self.lib.set_cntl(self._ma27, i-1, val)
 
-
     def get_cntl(self, i):
         validate_index(i, self.cntl_len, 'CNTL')
         return self.lib.get_cntl(self._ma27, i-1)
 
-
     def get_info(self, i):
         validate_index(i, self.info_len, 'INFO')
         return self.lib.get_info(self._ma27, i-1)
-
 
     def do_symbolic_factorization(self, dim, irn, icn):
         irn = irn.astype(np.intc, casting='safe', copy=True)
@@ -131,7 +125,6 @@ class MA27Interface(object):
         self.lib.do_symbolic_factorization(self._ma27,
                 dim, ne, irn, icn)
         return self.get_info(1)
-
 
     def do_numeric_factorization(self, irn, icn, dim, entries):
         irn = irn.astype(np.intc, casting='safe', copy=True)
@@ -157,9 +150,8 @@ class MA27Interface(object):
                 irn, icn, ent)
         return self.get_info(1)
 
-
-    def do_backsolve(self, rhs):
-        rhs = rhs.astype(np.double, casting='safe', copy=True)
+    def do_backsolve(self, rhs, copy=True):
+        rhs = rhs.astype(np.double, casting='safe', copy=copy)
         rhs_dim = rhs.size
         assert rhs_dim == self._dim_cached,\
             'Dimension mismatch in right hand side. Please correct.'
