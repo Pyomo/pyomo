@@ -12,6 +12,7 @@ from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
 import os
 numpy, numpy_available = attempt_import('numpy')
+import random
 
 
 all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex), ('cbc', Cbc)]
@@ -819,28 +820,47 @@ class TestSolvers(unittest.TestCase):
         opt: PersistentSolver = opt_class()
         if not opt.available():
             raise unittest.SkipTest
-        if type(opt) is Cbc:
-            raise unittest.SkipTest
         from sys import platform
         if platform == 'win32':
             raise unittest.SkipTest
+
+        if opt.available() == opt.Availability.LimitedLicense:
+            N = 30
+        else:
+            N = 100
         m = pe.ConcreteModel()
-        m.a = pe.Set(initialize=list(range(100)))
-        m.x = pe.Var(m.a)
-        m.y = pe.Var(m.a)
-        m.obj = pe.Objective(expr=sum(m.y.values()))
-        m.c1 = pe.Constraint(m.a)
-        m.c2 = pe.Constraint(m.a)
-        for i in m.a:
-            m.c1[i] = m.y[i] >= -m.x[i]
-            m.c2[i] = m.y[i] >= m.x[i]
+        m.jobs = pe.Set(initialize=list(range(N)))
+        m.tasks = pe.Set(initialize=list(range(N)))
+        m.x = pe.Var(m.jobs, m.tasks, bounds=(0, 1))
+
+        random.seed(0)
+        coefs = list()
+        lin_vars = list()
+        for j in m.jobs:
+            for t in m.tasks:
+                coefs.append(random.uniform(0, 10))
+                lin_vars.append(m.x[j, t])
+        obj_expr = LinearExpression(linear_coefs=coefs, linear_vars=lin_vars, constant=0)
+        m.obj = pe.Objective(expr=obj_expr, sense=pe.maximize)
+
+        m.c1 = pe.Constraint(m.jobs)
+        m.c2 = pe.Constraint(m.tasks)
+        for j in m.jobs:
+            expr = LinearExpression(linear_coefs=[1]*N, linear_vars=[m.x[j, t] for t in m.tasks], constant=0)
+            m.c1[j] = expr == 1
+        for t in m.tasks:
+            expr = LinearExpression(linear_coefs=[1]*N, linear_vars=[m.x[j, t] for j in m.jobs], constant=0)
+            m.c2[t] = expr == 1
         if type(opt) is Ipopt:
             opt.config.time_limit = 1e-6
         else:
             opt.config.time_limit = 0
         opt.config.load_solution = False
         res = opt.solve(m)
-        self.assertEqual(res.termination_condition, TerminationCondition.maxTimeLimit)
+        if type(opt) is Cbc:
+            self.assertIn(res.termination_condition, {TerminationCondition.maxIterations, TerminationCondition.maxTimeLimit})
+        else:
+            self.assertEqual(res.termination_condition, TerminationCondition.maxTimeLimit)
 
     @parameterized.expand(input=all_solvers)
     def test_objective_changes(self, name: str, opt_class: Type[PersistentSolver]):
