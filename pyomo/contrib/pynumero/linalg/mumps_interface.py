@@ -7,8 +7,10 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-from scipy.sparse import isspmatrix_coo, coo_matrix
+from scipy.sparse import isspmatrix_coo, coo_matrix, tril, spmatrix
 import numpy as np
+from .base import DirectLinearSolverInterface, LinearSolverResults, LinearSolverStatus
+from typing import Union, Tuple, Optional
 
 from pyomo.common.dependencies import attempt_import
 mumps, mumps_available = attempt_import(
@@ -16,10 +18,10 @@ mumps, mumps_available = attempt_import(
     "mumps_interface requires pymumps; install it with, e.g., "
     "'conda install -c conda-forge pymumps'")
 
-from pyomo.contrib.pynumero.sparse import BlockVector
+from pyomo.contrib.pynumero.sparse import BlockVector, BlockMatrix
 
 
-class MumpsCentralizedAssembledLinearSolver(object):
+class MumpsCentralizedAssembledLinearSolver(DirectLinearSolverInterface):
     """
     A thin wrapper around pymumps which uses the centralized assembled matrix format. 
     In other words ICNTL(5) = 0 and ICNTL(18) = 0.
@@ -49,6 +51,7 @@ class MumpsCentralizedAssembledLinearSolver(object):
         self._mumps.set_silent()
         self._icntl_options = dict()
         self._cntl_options = dict()
+        self._sym = sym
 
         if cntl_options is None:
             cntl_options = dict()
@@ -58,6 +61,7 @@ class MumpsCentralizedAssembledLinearSolver(object):
             self.set_cntl(k, v)
         for k, v in icntl_options.items():
             self.set_icntl(k, v)
+        self._prev_allocation = None
 
     def _init(self):
         """
@@ -70,7 +74,9 @@ class MumpsCentralizedAssembledLinearSolver(object):
         for k, v in self._icntl_options.items():
             self.set_icntl(k, v)
         
-    def do_symbolic_factorization(self, matrix):
+    def do_symbolic_factorization(
+        self, matrix: Union[spmatrix, BlockMatrix], raise_on_error: bool = True
+    ) -> LinearSolverResults:
         """
         Perform Mumps analysis. 
 
@@ -79,24 +85,47 @@ class MumpsCentralizedAssembledLinearSolver(object):
         matrix: scipy.sparse.spmatrix or pyomo.contrib.pynumero.sparse.BlockMatrix
             This matrix must have the same nonzero structure as the matrix passed into
             do_numeric_factorization. The matrix will be converted to coo format if it 
-            is not already in coo format. If sym is 1 or 2, the matrix must be lower 
-            or upper triangular.
+            is not already in coo format. If sym is 1 or 2, the matrix will be converted
+            to lower triangular.
         """
         self._init()
-        if type(matrix) == np.ndarray:
-            matrix = coo_matrix(matrix)
         if not isspmatrix_coo(matrix):
             matrix = matrix.tocoo()
+        if self._sym in {1, 2}:
+            matrix = tril(matrix)
         nrows, ncols = matrix.shape
         if nrows != ncols:
             raise ValueError('matrix is not square')
         self._dim = nrows
         self._nnz = matrix.nnz
-        self._mumps.set_shape(nrows)
-        self._mumps.set_centralized_assembled_rows_cols(matrix.row + 1, matrix.col + 1)
-        self._mumps.run(job=1)
+        try:
+            self._mumps.set_shape(nrows)
+            self._mumps.set_centralized_assembled_rows_cols(matrix.row + 1, matrix.col + 1)
+            self._mumps.run(job=1)
+            self._prev_allocation = max(self.get_infog(16),
+                                        self.get_icntl(23))
+            # INFOG(16) is the Mumps estimate for memory usage; ICNTL(23)
+            # is the override used in increase_memory_allocation. Both are
+            # already rounded to MB, so neither should every be negative.
+        except RuntimeError as err:
+            if raise_on_error:
+                raise err
 
-    def do_numeric_factorization(self, matrix):
+        stat = self.get_infog(1)
+        res = LinearSolverResults()
+        if stat == 0:
+            res.status = LinearSolverStatus.successful
+        elif stat in {-6, -10}:
+            res.status = LinearSolverStatus.singular
+        elif stat < 0:
+            res.status = LinearSolverStatus.error
+        else:
+            res.status = LinearSolverStatus.warning
+        return res
+
+    def do_numeric_factorization(
+        self, matrix: Union[spmatrix, BlockMatrix], raise_on_error: bool = True
+    ) -> LinearSolverResults:
         """
         Perform Mumps factorization. Note that do_symbolic_factorization should be called 
         before do_numeric_factorization. 
@@ -106,15 +135,15 @@ class MumpsCentralizedAssembledLinearSolver(object):
         matrix: scipy.sparse.spmatrix or pyomo.contrib.pynumero.sparse.BlockMatrix
             This matrix must have the same nonzero structure as the matrix passed into
             do_symbolic_factorization. The matrix will be converted to coo format if it 
-            is not already in coo format. If sym is 1 or 2, the matrix must be lower 
-            or upper triangular.
+            is not already in coo format. If sym is 1 or 2, the matrix will be converted
+            to lower triangular.
         """
         if self._nnz is None:
             raise RuntimeError('Call do_symbolic_factorization first.')
-        if type(matrix) == np.ndarray:
-            matrix = coo_matrix(matrix)
         if not isspmatrix_coo(matrix):
             matrix = matrix.tocoo()
+        if self._sym in {1, 2}:
+            matrix = tril(matrix)
         nrows, ncols = matrix.shape
         if nrows != ncols:
             raise ValueError('matrix is not square')
@@ -122,10 +151,31 @@ class MumpsCentralizedAssembledLinearSolver(object):
             raise ValueError('The shape of the matrix changed between symbolic and numeric factorization')
         if self._nnz != matrix.nnz:
             raise ValueError('The number of nonzeros changed between symbolic and numeric factorization')
-        self._mumps.set_centralized_assembled_values(matrix.data)
-        self._mumps.run(job=2)
+        try:
+            self._mumps.set_centralized_assembled_values(matrix.data)
+            self._mumps.run(job=2)
+        except RuntimeError as err:
+            if raise_on_error:
+                raise err
 
-    def do_back_solve(self, rhs):
+        stat = self.get_infog(1)
+        res = LinearSolverResults()
+        if stat == 0:
+            res.status = LinearSolverStatus.successful
+        elif stat in {-6, -10}:
+            res.status = LinearSolverStatus.singular
+        elif stat in {-8, -9}:
+            res.status = LinearSolverStatus.not_enough_memory
+        elif stat < 0:
+            res.status = LinearSolverStatus.error
+        else:
+            res.status = LinearSolverStatus.warning
+        return res
+
+    def do_back_solve(
+        self, rhs: Union[np.ndarray, BlockVector],
+        raise_on_error: bool = True
+    ) -> Tuple[Optional[Union[np.ndarray, BlockVector]], LinearSolverResults]:
         """
         Perform back solve with Mumps. Note that both do_symbolic_factorization and 
         do_numeric_factorization should be called before do_back_solve. 
@@ -155,7 +205,19 @@ class MumpsCentralizedAssembledLinearSolver(object):
             _result.copyfrom(result)
             result = _result
         
-        return result
+        return result, LinearSolverResults(LinearSolverStatus.successful)
+
+    def increase_memory_allocation(self, factor):
+        # info(16) is rounded to the nearest MB, so it could be zero
+        if self._prev_allocation == 0:
+            new_allocation = 1
+        else:
+            new_allocation = int(factor*self._prev_allocation)
+        # Here I set the memory allocation directly instead of increasing
+        # the "percent-increase-from-predicted" parameter ICNTL(14)
+        self.set_icntl(23, new_allocation)
+        self._prev_allocation = new_allocation
+        return new_allocation
 
     def __del__(self):
         self._mumps.destroy()
@@ -167,11 +229,6 @@ class MumpsCentralizedAssembledLinearSolver(object):
     def set_cntl(self, key, value):
         self._cntl_options[key] = value
         self._mumps.id.cntl[key - 1] = value
-
-    def solve(self, matrix, rhs):
-        self.do_symbolic_factorization(matrix)
-        self.do_numeric_factorization(matrix)
-        return self.do_back_solve(rhs)
 
     def get_icntl(self, key):
         return self._mumps.id.icntl[key - 1]
