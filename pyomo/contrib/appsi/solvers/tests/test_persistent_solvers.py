@@ -824,10 +824,7 @@ class TestSolvers(unittest.TestCase):
         if platform == 'win32':
             raise unittest.SkipTest
 
-        if opt.available() == opt.Availability.LimitedLicense:
-            N = 30
-        else:
-            N = 100
+        N = 30
         m = pe.ConcreteModel()
         m.jobs = pe.Set(initialize=list(range(N)))
         m.tasks = pe.Set(initialize=list(range(N)))
@@ -857,7 +854,7 @@ class TestSolvers(unittest.TestCase):
             opt.config.time_limit = 0
         opt.config.load_solution = False
         res = opt.solve(m)
-        if type(opt) is Cbc:
+        if type(opt) is Cbc:  # I can't figure out why CBC is reporting max iter...
             self.assertIn(res.termination_condition, {TerminationCondition.maxIterations, TerminationCondition.maxTimeLimit})
         else:
             self.assertEqual(res.termination_condition, TerminationCondition.maxTimeLimit)
