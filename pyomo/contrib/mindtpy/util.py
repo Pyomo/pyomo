@@ -184,7 +184,7 @@ def add_var_bound(solve_data, config):
 
 
 def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model.
+    r"""This function generates objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model.
 
     L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}.
 
@@ -220,7 +220,7 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
 
 
 def generate_norm1_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
+    r"""This function generates objective (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
 
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
 
@@ -264,7 +264,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
 
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
+    r"""This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
 
     Norm-Infinity distance of (x,y) = \max_i |x_i - y_i|.
 
@@ -394,7 +394,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
 
 
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
-    """This function generates constraint (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
+    r"""This function generates constraint (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
 
     Norm constraint is used to guarantees the monotonicity of the norm objective value sequence of all iterations
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|.

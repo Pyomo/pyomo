@@ -41,7 +41,7 @@ if not SKIPTESTS:
     )
 
 
-@unittest.category("mpi")
+@unittest.pytest.mark.mpi
 class TestMPIBlockMatrix(unittest.TestCase):
 
     # Because the setUpClass is called before decorators around the
@@ -953,7 +953,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
             res = serial_mat1 > mat1
 
 
-@unittest.category("mpi")
+@unittest.pytest.mark.mpi
 class TestMPIMatVec(unittest.TestCase):
 
     @classmethod
