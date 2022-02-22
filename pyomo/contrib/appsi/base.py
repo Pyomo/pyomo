@@ -1085,7 +1085,7 @@ class PersistentBase(abc.ABC):
                     vars_to_update.append(v)
                 elif ub is not v._ub:
                     vars_to_update.append(v)
-                elif (fixed is not v.fixed) or (fixed and (value is not v.value)):
+                elif (fixed is not v.fixed) or (fixed and (value != v.value)):
                     vars_to_update.append(v)
                     if self.update_config.treat_fixed_vars_as_params:
                         for c in self._referenced_variables[id(v)][0]:
