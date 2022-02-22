@@ -119,6 +119,7 @@ class TestReactorDesignExamples(unittest.TestCase):
         from pyomo.contrib.parmest.examples.reactor_design import likelihood_ratio_example
         likelihood_ratio_example.main()
 
+    @unittest.pytest.mark.expensive
     def test_leaveNout_example(self):
         from pyomo.contrib.parmest.examples.reactor_design import leaveNout_example
         leaveNout_example.main()
