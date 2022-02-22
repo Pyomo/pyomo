@@ -411,7 +411,7 @@ class TempfileContext:
             If ``True``, delete all managed files / directories
         """
         if remove:
-            for fd, name in self.tempfiles:
+            for fd, name in reversed(self.tempfiles):
                 if fd is not None:
                     try:
                         os.close(fd)
