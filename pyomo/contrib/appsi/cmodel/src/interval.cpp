@@ -489,7 +489,7 @@ void _inverse_power1(double zl, double zu, double yl, double yu, double orig_xl,
   interval_exp(*xl, *xu, xl, xu);
 
   // if y is an integer, then x can be negative
-  if (yl == yu and yl == round(yl)) // y is a fixed integer
+  if ((yl == yu) and (yl == round(yl))) // y is a fixed integer
   {
     int y = static_cast<int>(yl);
     if (y == 0) {
