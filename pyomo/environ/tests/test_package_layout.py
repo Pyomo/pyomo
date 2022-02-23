@@ -25,6 +25,7 @@ import pyomo.common.unittest as unittest
 _NON_MODULE_DIRS = {
     join('checker', 'doc'),
     join('checker', 'tests', 'examples'),
+    join('contrib', 'ampl_function_demo', 'src'),
     join('contrib', 'appsi', 'cmodel', 'src'),
     join('contrib', 'pynumero', 'src'),
     join('core', 'tests', 'data', 'baselines'),

@@ -891,9 +891,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             #       these logs don't matter anyway (we redirect everything),
             #       and are largely an annoyance.
             try:
-                if  re.match('cplex\.log', filename) != None:
+                if  re.match(r'cplex\.log', filename) != None:
                     os.remove(filename)
-                elif re.match('clone\d+\.log', filename) != None:
+                elif re.match(r'clone\d+\.log', filename) != None:
                     os.remove(filename)
             except OSError:
                 pass

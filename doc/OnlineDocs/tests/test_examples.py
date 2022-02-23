@@ -153,14 +153,16 @@ for tdir in testdirs:
     #
     #testdir_ = testdir.replace('-','_')
     #testClassName = 'Test_'+testdir_.split("pyomobook"+os.sep)[1]
-    testClassName = 'Test_'+os.path.basename(testdir).replace('-','_')
+    testClassName = 'Test_'+os.path.basename(testdir).replace('-', '_')
     assert '.' not in testClassName
     Test = globals()[testClassName] = type(
         testClassName, (unittest.TestCase,), {})
+    # Adding the marker to the class instance
     if testClassName in only_book_tests:
-        Test = unittest.category("book")(Test)
+        Test = unittest.pytest.mark.book(Test)
     else:
-        Test = unittest.category("book","smoke","nightly")(Test)
+        Test = unittest.pytest.mark.book(Test)
+        Test = unittest.pytest.mark.default(Test)
     
     # Find all .py files in the test directory
     for file in list(glob.glob(os.path.join(testdir,'*.py'))) \

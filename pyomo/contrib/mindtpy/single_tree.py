@@ -74,19 +74,19 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                 # instead log warnings).  This means that the following
                 # will always succeed and the ValueError should never be
                 # raised.
-                v_to.set_value(v_val)
+                v_to.set_value(v_val, skip_validation=True)
             except ValueError:
                 # Snap the value to the bounds
                 if v_to.has_lb() and v_val < v_to.lb and v_to.lb - v_val <= config.variable_tolerance:
-                    v_to.set_value(v_to.lb)
+                    v_to.set_value(v_to.lb, skip_validation=True)
                 elif v_to.has_ub() and v_val > v_to.ub and v_val - v_to.ub <= config.variable_tolerance:
-                    v_to.set_value(v_to.ub)
+                    v_to.set_value(v_to.ub, skip_validation=True)
                 # ... or the nearest integer
                 elif v_to.is_integer():
                     rounded_val = int(round(v_val))
                     if (ignore_integrality or abs(v_val - rounded_val) <= config.integer_tolerance) \
                             and rounded_val in v_to.domain:
-                        v_to.set_value(rounded_val)
+                        v_to.set_value(rounded_val, skip_validation=True)
                 else:
                     raise
 
@@ -140,7 +140,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                     if (constr.has_ub()
                         and (linearize_active and abs(constr.uslack()) < config.zero_tolerance)
                             or (linearize_violated and constr.uslack() < 0)
-                            or (config.linearize_inactive and constr.uslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_ub()):
+                            or (config.linearize_inactive and constr.uslack() > 0)) or ('MindtPy_utils.objective_constr' in constr.name and constr.has_ub()):
 
                         pyomo_expr = sum(
                             value(jacs[constr][var])*(var - var.value) for var in constr_vars) + value(constr.body)
@@ -154,7 +154,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                     if (constr.has_lb()
                         and (linearize_active and abs(constr.lslack()) < config.zero_tolerance)
                             or (linearize_violated and constr.lslack() < 0)
-                            or (config.linearize_inactive and constr.lslack() > 0)) or (constr.name == 'MindtPy_utils.objective_constr' and constr.has_lb()):
+                            or (config.linearize_inactive and constr.lslack() > 0)) or ('MindtPy_utils.objective_constr' in constr.name and constr.has_lb()):
                         pyomo_expr = sum(value(jacs[constr][var]) * (var - self.get_values(
                             opt._pyomo_var_to_solver_var_map[var])) for var in constr_vars) + value(constr.body)
                         cplex_rhs = - \
@@ -347,7 +347,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                                        config)
         update_dual_bound(solve_data, self.get_best_objective_value())
         config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'restrLP', self.get_objective_value(),
-                                                           solve_data.LB, solve_data.UB, solve_data.rel_gap, get_main_elapsed_time(solve_data.timing)))
+                                                           solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap, get_main_elapsed_time(solve_data.timing)))
 
     def handle_lazy_subproblem_optimal(self, fixed_nlp, solve_data, config, opt):
         """This function copies the optimal solution of the fixed NLP subproblem to the MIP
@@ -375,22 +375,18 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             dual_values = None
         main_objective = fixed_nlp.MindtPy_utils.objective_list[-1]
         update_primal_bound(solve_data, value(main_objective.expr))
-        if solve_data.solution_improved:
+        if solve_data.primal_bound_improved:
             solve_data.best_solution_found = fixed_nlp.clone()
             solve_data.best_solution_found_time = get_main_elapsed_time(
                 solve_data.timing)
             if config.add_no_good_cuts or config.use_tabu_list:
-                if solve_data.results.problem.sense == ProblemSense.minimize:
-                    solve_data.stored_bound.update(
-                        {solve_data.UB: solve_data.LB})
-                else:
-                    solve_data.stored_bound.update(
-                        {solve_data.LB: solve_data.UB})
+                solve_data.stored_bound.update(
+                        {solve_data.primal_bound: solve_data.dual_bound})
         config.logger.info(
-            solve_data.fixed_nlp_log_formatter.format('*' if solve_data.solution_improved else ' ',
+            solve_data.fixed_nlp_log_formatter.format('*' if solve_data.primal_bound_improved else ' ',
                                                       solve_data.nlp_iter, 'Fixed NLP', value(
                                                           main_objective.expr),
-                                                      solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                      solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
                                                       get_main_elapsed_time(solve_data.timing)))
 
         # In OA algorithm, OA cuts are generated based on the solution of the subproblem
@@ -606,24 +602,22 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
 
         # regularization is activated after the first feasible solution is found.
         if config.add_regularization is not None and solve_data.best_solution_found is not None:
-            # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
-            if not solve_data.bound_improved and not solve_data.solution_improved:
-                config.logger.debug('the bound and the best found solution have neither been improved.'
+            # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
+            if not solve_data.dual_bound_improved and not solve_data.primal_bound_improved:
+                config.logger.debug('The bound and the best found solution have neither been improved.'
                                     'We will skip solving the regularization problem and the Fixed-NLP subproblem')
-                solve_data.solution_improved = False
+                solve_data.primal_bound_improved = False
                 return
-            if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
-                    or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
+            if solve_data.dual_bound != solve_data.dual_bound_progress[0]:
                 main_mip, main_mip_results = solve_main(
                     solve_data, config, regularization_problem=True)
                 self.handle_lazy_regularization_problem(
                     main_mip, main_mip_results, solve_data, config)
-
-        if solve_data.LB + config.bound_tolerance >= solve_data.UB:
+        if abs(solve_data.primal_bound - solve_data.dual_bound) <= config.absolute_bound_tolerance:
             config.logger.info(
                 'MindtPy exiting on bound convergence. '
-                'LB: {} + (tol {}) >= UB: {}\n'.format(
-                    solve_data.LB, config.bound_tolerance, solve_data.UB))
+                '|Primal Bound: {} - Dual Bound: {}| <= (absolute tolerance {})  \n'.format(
+                solve_data.primal_bound, solve_data.dual_bound, config.absolute_bound_tolerance))
             solve_data.results.solver.termination_condition = tc.optimal
             self.abort()
             return
@@ -635,7 +629,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         if solve_data.curr_int_sol in set(solve_data.integer_list):
             config.logger.debug('This integer combination has been explored. '
                                 'We will skip solving the Fixed-NLP subproblem.')
-            solve_data.solution_improved = False
+            solve_data.primal_bound_improved = False
             if config.strategy == 'GOA':
                 if config.add_no_good_cuts:
                     var_values = list(
@@ -656,11 +650,11 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         if fixed_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
             self.handle_lazy_subproblem_optimal(
                 fixed_nlp, solve_data, config, opt)
-            if solve_data.LB + config.bound_tolerance >= solve_data.UB:
+            if abs(solve_data.primal_bound - solve_data.dual_bound) <= config.absolute_bound_tolerance:
                 config.logger.info(
                     'MindtPy exiting on bound convergence. '
-                    'LB: {} + (tol {}) >= UB: {}\n'.format(
-                        solve_data.LB, config.bound_tolerance, solve_data.UB))
+                    '|Primal Bound: {} - Dual Bound: {}| <= (absolute tolerance {})  \n'.format(
+                solve_data.primal_bound, solve_data.dual_bound, config.absolute_bound_tolerance))
                 solve_data.results.solver.termination_condition = tc.optimal
                 return
         elif fixed_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
@@ -703,26 +697,25 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
             if config.strategy == 'OA':
                 add_oa_cuts(solve_data.mip, None, solve_data, config, cb_opt)
 
-        # # regularization is activated after the first feasible solution is found.
+        # Regularization is activated after the first feasible solution is found.
         if config.add_regularization is not None and solve_data.best_solution_found is not None:
-            # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
-            if not solve_data.bound_improved and not solve_data.solution_improved:
-                config.logger.debug('the bound and the best found solution have neither been improved.'
+            # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
+            if not solve_data.dual_bound_improved and not solve_data.primal_bound_improved:
+                config.logger.debug('The bound and the best found solution have neither been improved.'
                                     'We will skip solving the regularization problem and the Fixed-NLP subproblem')
-                solve_data.solution_improved = False
+                solve_data.primal_bound_improved = False
                 return
-            if ((solve_data.objective_sense == minimize and solve_data.LB != float('-inf'))
-                    or (solve_data.objective_sense == maximize and solve_data.UB != float('inf'))):
+            if solve_data.dual_bound != solve_data.dual_bound_progress[0]:
                 main_mip, main_mip_results = solve_main(
                     solve_data, config, regularization_problem=True)
                 handle_regularization_main_tc(
                     main_mip, main_mip_results, solve_data, config)
 
-        if solve_data.LB + config.bound_tolerance >= solve_data.UB:
+        if abs(solve_data.primal_bound - solve_data.dual_bound) <= config.absolute_bound_tolerance:
             config.logger.info(
                 'MindtPy exiting on bound convergence. '
-                'LB: {} + (tol {}) >= UB: {}\n'.format(
-                    solve_data.LB, config.bound_tolerance, solve_data.UB))
+                '|Primal Bound: {} - Dual Bound: {}| <= (absolute tolerance {})  \n'.format(
+                solve_data.primal_bound, solve_data.dual_bound, config.absolute_bound_tolerance))
             solve_data.results.solver.termination_condition = tc.optimal
             cb_opt._solver_model.terminate()
             return
@@ -734,7 +727,7 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
         if solve_data.curr_int_sol in set(solve_data.integer_list):
             config.logger.debug('This integer combination has been explored. '
                                 'We will skip solving the Fixed-NLP subproblem.')
-            solve_data.solution_improved = False
+            solve_data.primal_bound_improved = False
             if config.strategy == 'GOA':
                 if config.add_no_good_cuts:
                     var_values = list(
@@ -781,5 +774,5 @@ def handle_lazy_main_feasible_solution_gurobi(cb_m, cb_opt, solve_data, config):
     update_dual_bound(solve_data, cb_opt.cbGet(
         gurobipy.GRB.Callback.MIPSOL_OBJBND))
     config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'restrLP', cb_opt.cbGet(gurobipy.GRB.Callback.MIPSOL_OBJ),
-                                                       solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                       solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
                                                        get_main_elapsed_time(solve_data.timing)))

@@ -41,7 +41,7 @@ class TestMindtPy(unittest.TestCase):
                                     init_strategy='rNLP',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
-                                    bound_tolerance=1E-5)
+                                    absolute_bound_tolerance=1E-5)
 
                 self.assertIs(results.solver.termination_condition,
                               TerminationCondition.optimal)
@@ -56,7 +56,7 @@ class TestMindtPy(unittest.TestCase):
                                     init_strategy='rNLP',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
-                                    bound_tolerance=1E-5,
+                                    absolute_bound_tolerance=1E-5,
                                     add_slack=True)
 
                 self.assertIs(results.solver.termination_condition,

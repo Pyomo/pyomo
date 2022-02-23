@@ -10,7 +10,7 @@ from scipy.sparse import coo_matrix
 import pyomo.contrib.interior_point as ip
 if mumps_available:
     from pyomo.contrib.interior_point.linalg.mumps_interface import MumpsInterface
-from pyomo.contrib.interior_point.linalg.results import LinearSolverStatus
+from pyomo.contrib.pynumero.linalg.base import LinearSolverStatus
 
 @unittest.skipIf(not mumps_available, 'mumps is not available')
 class TestReallocation(unittest.TestCase):

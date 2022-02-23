@@ -16,8 +16,8 @@ from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
 from pyomo.environ import SolverFactory, maximize
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QCP_simple import QCP_simple
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
-from pyomo.contrib.mindtpy.util import set_up_solve_data, add_feas_slacks, set_solver_options
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
+from pyomo.contrib.mindtpy.util import get_primal_integral, get_dual_integral, set_up_solve_data, add_feas_slacks, set_solver_options
 from pyomo.contrib.mindtpy.nlp_solve import handle_subproblem_other_termination, handle_feasibility_subproblem_tc, solve_subproblem, handle_nlp_subproblem_tc
 from pyomo.core.base import TransformationFactory
 from pyomo.opt import TerminationCondition as tc
@@ -70,7 +70,7 @@ class TestMindtPy(unittest.TestCase):
                               move_linear_objective=(config.init_strategy == 'FP'
                                                      or config.add_regularization is not None),
                               use_mcpp=config.use_mcpp,
-                              updata_var_con_list=config.add_regularization is None
+                              update_var_con_list=config.add_regularization is None
                               )
             feas = MindtPy.feas_opt = Block()
             feas.deactivate()
@@ -301,38 +301,72 @@ class TestMindtPy(unittest.TestCase):
 
             # test algorithm_should_terminate
             solve_data.should_terminate = True
-            solve_data.UB = float('inf')
+            solve_data.primal_bound = float('inf')
             self.assertIs(algorithm_should_terminate(
                 solve_data, config, check_cycling=False), True)
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.noSolution)
 
-            solve_data.UB = 100
+            solve_data.primal_bound = 100
             self.assertIs(algorithm_should_terminate(
                 solve_data, config, check_cycling=False), True)
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.feasible)
 
-            solve_data.objective_sense = maximize
-            solve_data.LB = float('-inf')
-            self.assertIs(algorithm_should_terminate(
-                solve_data, config, check_cycling=False), True)
-            self.assertIs(
-                solve_data.results.solver.termination_condition, tc.noSolution)
+            solve_data.primal_bound_progress = [float('inf'), 5, 4, 3, 2, 1]
+            solve_data.primal_bound_progress_time = [1, 2, 3, 4, 5, 6]
+            solve_data.primal_bound = 1
+            self.assertEqual(get_primal_integral(solve_data, config), 14.5)
 
-            solve_data.LB = 100
-            self.assertIs(algorithm_should_terminate(
-                solve_data, config, check_cycling=False), True)
-            self.assertIs(
-                solve_data.results.solver.termination_condition, tc.feasible)
+            solve_data.dual_bound_progress = [float('-inf'), 1, 2, 3, 4, 5]
+            solve_data.dual_bound_progress_time = [1, 2, 3, 4, 5, 6]
+            solve_data.dual_bound = 5
+            self.assertEqual(get_dual_integral(solve_data, config), 14.1)
 
-            # config.time_limit = 1
-            # solve_data.should_terminate = False
-            # self.assertIs(algorithm_should_terminate(
-            #     solve_data, config, check_cycling=False), True)
-            # self.assertIs(
-            #     solve_data.results.solver.termination_condition, tc.maxTimeLimit)
+            # test check_config
+            config.add_regularization = 'level_L1'
+            config.regularization_mip_threads = 0
+            config.threads = 8
+            check_config(config)
+            self.assertEqual(config.regularization_mip_threads, 8)
 
+            config.mip_solver = 'cplex'
+            config.single_tree = True
+            check_config(config)
+            self.assertEqual(config.mip_solver, 'cplex_persistent')
+            self.assertEqual(config.threads, 1)
+
+            config.add_slack = True
+            config.max_slack == 0.0
+            check_config(config)
+            self.assertEqual(config.add_slack, False)
+
+            config.strategy = 'GOA'
+            config.add_slack = True
+            config.use_mcpp = False
+            config.equality_relaxation = True
+            config.use_fbbt = False
+            config.add_no_good_cuts = False
+            config.use_tabu_list = False
+            check_config(config)
+            self.assertTrue(config.use_mcpp)
+            self.assertTrue(config.use_fbbt)
+            self.assertFalse(config.add_slack)
+            self.assertFalse(config.equality_relaxation)
+            self.assertTrue(config.add_no_good_cuts)
+            self.assertFalse(config.use_tabu_list)
+            
+            config.single_tree = False
+            config.strategy = 'FP'
+            config.init_strategy = 'rNLP'
+            config.iteration_limit = 100
+            config.add_no_good_cuts = False
+            config.use_tabu_list = True
+            check_config(config)
+            self.assertIs(config.init_strategy, 'FP')
+            self.assertEqual(config.iteration_limit, 0)
+            self.assertEqual(config.add_no_good_cuts, True)
+            self.assertEqual(config.use_tabu_list, False)
 
 if __name__ == '__main__':
     unittest.main()

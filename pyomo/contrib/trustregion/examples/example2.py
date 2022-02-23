@@ -2,14 +2,27 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
+#
+#  Development of this module was conducted as part of the Institute for
+#  the Design of Advanced Energy Systems (IDAES) with support through the
+#  Simulation-Based Engineering, Crosscutting Research Program within the
+#  U.S. Department of Energy’s Office of Fossil Energy and Carbon Management.
+#
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# This model is adapted from Noriyuki Yoshio's model for his and Biegler's
-# 2020 publication in AIChE
+"""
+This model is adapted from Noriyuki Yoshio's model for his and Biegler's
+2020 publication in AIChE.
+
+
+Yoshio, N, Biegler, L.T. Demand-based optimization of a chlorobenzene process
+with high-fidelity and surrogate reactor models under trust region strategies.
+AIChE J. 2021; 67:e17054. https://doi.org/10.1002/aic.17054
+"""
 
 from pyomo.environ import (
     ConcreteModel, Var, ExternalFunction, Objective)

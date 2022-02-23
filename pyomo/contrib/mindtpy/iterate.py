@@ -74,10 +74,10 @@ def MindtPy_iteration_loop(solve_data, config):
         else:
             raise ValueError()
 
-        # regularization is activated after the first feasible solution is found.
+        # Regularization is activated after the first feasible solution is found.
         if config.add_regularization is not None and solve_data.best_solution_found is not None and not config.single_tree:
-            # the main problem might be unbounded, regularization is activated only when a valid bound is provided.
-            if (solve_data.objective_sense == minimize and solve_data.LB != float('-inf')) or (solve_data.objective_sense == maximize and solve_data.UB != float('inf')):
+            # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
+            if solve_data.dual_bound != solve_data.dual_bound_progress[0]:
                 main_mip, main_mip_results = solve_main(
                     solve_data, config, regularization_problem=True)
                 handle_regularization_main_tc(
@@ -215,7 +215,7 @@ def MindtPy_iteration_loop(solve_data, config):
     if (config.add_no_good_cuts or config.use_tabu_list) and config.strategy != 'FP' and not solve_data.should_terminate and config.add_regularization is None:
         fix_dual_bound(solve_data, config, last_iter_cuts)
     config.logger.info(
-        ' =============================================================================================')
+        ' ===============================================================================================')
 
 
 def algorithm_should_terminate(solve_data, config, check_cycling):
@@ -240,24 +240,18 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         True if the algorithm should terminate, False otherwise.
     """
     if solve_data.should_terminate:
-        if solve_data.objective_sense == minimize:
-            if solve_data.UB == float('inf'):
-                solve_data.results.solver.termination_condition = tc.noSolution
-            else:
-                solve_data.results.solver.termination_condition = tc.feasible
+        if solve_data.primal_bound == solve_data.primal_bound_progress[0]:
+            solve_data.results.solver.termination_condition = tc.noSolution
         else:
-            if solve_data.LB == float('-inf'):
-                solve_data.results.solver.termination_condition = tc.noSolution
-            else:
-                solve_data.results.solver.termination_condition = tc.feasible
+            solve_data.results.solver.termination_condition = tc.feasible
         return True
 
     # Check bound convergence
-    if solve_data.abs_gap <= config.bound_tolerance:
+    if solve_data.abs_gap <= config.absolute_bound_tolerance:
         config.logger.info(
             'MindtPy exiting on bound convergence. '
-            'LB: {} + (tol {}) >= UB: {}\n'.format(
-                solve_data.LB, config.bound_tolerance, solve_data.UB))
+            '|Primal Bound: {} - Dual Bound: {}| <= (absolute tolerance {})  \n'.format(
+                solve_data.primal_bound, solve_data.dual_bound, config.absolute_bound_tolerance))
         solve_data.results.solver.termination_condition = tc.optimal
         return True
     # Check relative bound convergence
@@ -265,7 +259,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         if solve_data.rel_gap <= config.relative_bound_tolerance:
             config.logger.info(
                 'MindtPy exiting on bound convergence. '
-                '(UB: {} - LB: {})/ (1e-10+|bestinteger|:{}) <= relative tolerance: {}'.format(solve_data.UB, solve_data.LB, abs(solve_data.UB if solve_data.objective_sense == minimize else solve_data.LB), config.relative_bound_tolerance))
+                '|Primal Bound: {} - Dual Bound: {}| / (1e-10 + |Primal Bound|:{}) <= relative tolerance: {}'.format(solve_data.primal_bound, solve_data.dual_bound, abs(solve_data.primal_bound), config.relative_bound_tolerance))
             solve_data.results.solver.termination_condition = tc.optimal
             return True
 
@@ -275,8 +269,8 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
             'MindtPy unable to converge bounds '
             'after {} main iterations.'.format(solve_data.mip_iter))
         config.logger.info(
-            'Final bound values: LB: {}  UB: {}'.
-            format(solve_data.LB, solve_data.UB))
+            'Final bound values: Primal Bound: {}  Dual Bound: {}'.
+            format(solve_data.primal_bound, solve_data.dual_bound))
         if config.single_tree:
             solve_data.results.solver.termination_condition = tc.feasible
         else:
@@ -291,22 +285,20 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
             'Elapsed: {} seconds'
             .format(config.time_limit, get_main_elapsed_time(solve_data.timing)))
         config.logger.info(
-            'Final bound values: LB: {}  UB: {}'.
-            format(solve_data.LB, solve_data.UB))
+            'Final bound values: Primal Bound: {}  Dual Bound: {}'.
+            format(solve_data.primal_bound, solve_data.dual_bound))
         solve_data.results.solver.termination_condition = tc.maxTimeLimit
         return True
 
     # Check if algorithm is stalling
-    if (len(solve_data.LB_progress) >= config.stalling_limit and solve_data.objective_sense == maximize) or \
-        (len(solve_data.UB_progress) >= config.stalling_limit and solve_data.objective_sense == minimize):
-        if (abs(solve_data.LB_progress[-1] - solve_data.LB_progress[-config.stalling_limit]) <= config.zero_tolerance and solve_data.objective_sense == maximize) or \
-            (abs(solve_data.UB_progress[-1] - solve_data.UB_progress[-config.stalling_limit]) <= config.zero_tolerance and solve_data.objective_sense == minimize):
+    if len(solve_data.primal_bound_progress) >= config.stalling_limit:
+        if abs(solve_data.primal_bound_progress[-1] - solve_data.primal_bound_progress[-config.stalling_limit]) <= config.zero_tolerance:
             config.logger.info(
                 'Algorithm is not making enough progress. '
                 'Exiting iteration loop.')
             config.logger.info(
-                'Final bound values: LB: {}  UB: {}'.
-                format(solve_data.LB, solve_data.UB))
+                'Final bound values: Primal Bound: {}  Dual Bound: {}'.
+                format(solve_data.primal_bound, solve_data.dual_bound))
             if solve_data.best_solution_found is not None:
                 solve_data.results.solver.termination_condition = tc.feasible
             else:
@@ -315,9 +307,8 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                 solve_data.best_solution_found = solve_data.working_model.clone()
                 config.logger.warning(
                     'Algorithm did not find a feasible solution. '
-                    'Returning best bound solution. Consider increasing stalling_limit or bound_tolerance.')
+                    'Returning best bound solution. Consider increasing stalling_limit or absolute_bound_tolerance.')
                 solve_data.results.solver.termination_condition = tc.noSolution
-
             return True
 
     if config.strategy == 'ECP':
@@ -349,13 +340,10 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                         '\n'.format(nlc))
                     return False
         # For ECP to know whether to know which bound to copy over (primal or dual)
-        if solve_data.objective_sense == minimize:
-            solve_data.UB = solve_data.LB
-        else:
-            solve_data.LB = solve_data.UB
+        solve_data.primal_bound = solve_data.dual_bound
         config.logger.info(
             'MindtPy-ECP exiting on nonlinear constraints satisfaction. '
-            'LB: {} UB: {}\n'.format(solve_data.LB, solve_data.UB))
+            'Primal Bound: {} Dual Bound: {}\n'.format(solve_data.primal_bound, solve_data.dual_bound))
 
         solve_data.best_solution_found = solve_data.working_model.clone()
         solve_data.results.solver.termination_condition = tc.optimal
@@ -374,9 +362,9 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
                         'Convergence to optimal solution is not guaranteed.'
                         .format(solve_data.mip_iter, solve_data.integer_list.index(solve_data.curr_int_sol)+1))
                     config.logger.info(
-                        'Final bound values: LB: {}  UB: {}'.
-                        format(solve_data.LB, solve_data.UB))
-                    # TODO determine solve_data.LB, solve_data.UB is inf or -inf.
+                        'Final bound values: Primal Bound: {}  Dual Bound: {}'.
+                        format(solve_data.primal_bound, solve_data.dual_bound))
+                    # TODO determine solve_data.primal_bound, solve_data.dual_bound is inf or -inf.
                     solve_data.results.solver.termination_condition = tc.feasible
                     return True
             solve_data.integer_list.append(solve_data.curr_int_sol)
@@ -405,10 +393,7 @@ def fix_dual_bound(solve_data, config, last_iter_cuts):
         config.logger.info(
             'Fix the bound to the value of one iteration before optimal solution is found.')
         try:
-            if solve_data.objective_sense == minimize:
-                solve_data.LB = solve_data.stored_bound[solve_data.UB]
-            else:
-                solve_data.UB = solve_data.stored_bound[solve_data.LB]
+            solve_data.dual_bound = solve_data.stored_bound[solve_data.primal_bound]
         except KeyError:
             config.logger.info('No stored bound found. Bound fix failed.')
     else:
@@ -427,10 +412,7 @@ def fix_dual_bound(solve_data, config, last_iter_cuts):
         # deactivate the integer cuts generated after the best solution was found.
         if config.strategy == 'GOA':
             try:
-                if solve_data.objective_sense == minimize:
-                    valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.UB]
-                else:
-                    valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.LB]
+                valid_no_good_cuts_num = solve_data.num_no_good_cuts_added[solve_data.primal_bound]
                 if config.add_no_good_cuts:
                     for i in range(valid_no_good_cuts_num+1, len(MindtPy.cuts.no_good_cuts)+1):
                         MindtPy.cuts.no_good_cuts[i].deactivate()
@@ -475,8 +457,8 @@ def fix_dual_bound(solve_data, config, last_iter_cuts):
         else:
             update_suboptimal_dual_bound(solve_data, main_mip_results)
             config.logger.info(
-                'Fixed bound values: LB: {}  UB: {}'.
-                format(solve_data.LB, solve_data.UB))
+                'Fixed bound values: Primal Bound: {}  Dual Bound: {}'.
+                format(solve_data.primal_bound, solve_data.dual_bound))
         # Check bound convergence
-        if solve_data.LB + config.bound_tolerance >= solve_data.UB:
+        if abs(solve_data.primal_bound - solve_data.dual_bound) <= config.absolute_bound_tolerance:
             solve_data.results.solver.termination_condition = tc.optimal

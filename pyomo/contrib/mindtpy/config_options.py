@@ -203,6 +203,11 @@ def _get_MindtPy_config():
                     'and minimize the sum of the slack variables (Augmented Penalty).',
         domain=bool
     ))
+    CONFIG.declare('partition_obj_nonlinear_terms', ConfigValue(
+        default=True,
+        description='Partition objective with the sum of nonlinear terms using epigraph reformulation.',
+        domain=bool
+    ))
 
     _add_subsolver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)
@@ -296,7 +301,7 @@ def _add_tolerance_configs(CONFIG):
     CONFIG : ConfigBlock
         The specific configurations for MindtPy.
     """
-    CONFIG.declare('bound_tolerance', ConfigValue(
+    CONFIG.declare('absolute_bound_tolerance', ConfigValue(
         default=1E-4,
         domain=PositiveFloat,
         description='Bound tolerance',
@@ -307,7 +312,7 @@ def _add_tolerance_configs(CONFIG):
         domain=PositiveFloat,
         description='Relative bound tolerance',
         doc='Relative tolerance for bound feasibility checks.'
-            '(UB - LB) / (1e-10+|bestinteger|) <= relative tolerance.'
+            '|Primal Bound - Dual Bound| / (1e-10 + |Primal Bound|) <= relative tolerance.'
     ))
     CONFIG.declare('small_dual_tolerance', ConfigValue(
         default=1E-8,
@@ -363,6 +368,11 @@ def _add_bound_configs(CONFIG):
         default=1e9,
         description='Default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.',
         domain=PositiveFloat
+    ))
+    CONFIG.declare('initial_bound_coef', ConfigValue(
+        default=1E-1,
+        domain=PositiveFloat,
+        description='The coefficient used to approximate the initial primal/dual bound.'
     ))
 
 
@@ -531,7 +541,7 @@ def check_config(config):
             config.equality_relaxation = False
     # if ecp tolerance is not provided use bound tolerance
     if config.ecp_tolerance is None:
-        config.ecp_tolerance = config.bound_tolerance
+        config.ecp_tolerance = config.absolute_bound_tolerance
 
     if config.solver_tee:
         config.mip_solver_tee = True
