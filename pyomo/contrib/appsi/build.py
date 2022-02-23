@@ -49,8 +49,8 @@ def get_appsi_extension(in_setup=False, appsi_root=None):
         package_name = 'appsi_cmodel'
     if sys.platform.startswith('win'):
         # Assume that builds on Windows will use MSVC
-        # MSVC doesn't have a flag for c++11, use c++14
-        extra_args = ['/std:c++14']
+        # MSVC doesn't have a flag for c++11, use c++latest
+        extra_args = ['/std:c++latest']
     else:
         # Assume all other platforms are GCC-like
         extra_args = ['-std=c++11']
