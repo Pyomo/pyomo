@@ -35,6 +35,7 @@ BACKWARDS COMPATIBILITY WARNING
     (#2222)
   - NPV_SumExpression to inherit from NPV_Mixin (#2209)
   - Add support for `abs` in numeric differentiation (#2232)
+  - Search for specified library in AMPLExternalFunction (#2305)
 - Documentation
   - Updates to installation documentation (#2259)
   - Update GDP references (#2300)
