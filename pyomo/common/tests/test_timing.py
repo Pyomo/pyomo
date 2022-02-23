@@ -170,7 +170,6 @@ class TestTiming(unittest.TestCase):
             timer.stop()
             delta = timer.toc()
         self.assertAlmostEqual(ref, delta, delta=RES)
-        #self.assertAlmostEqual(0.01, timer.toc(None), delta=RES)
         self.assertRegex(
             out.getvalue(),
             r'\[    [.0-9]+\|   1\] .* in test_TicTocTimer_tictoc'
