@@ -180,7 +180,7 @@ class TestDerivs(unittest.TestCase):
         m = pyo.ConcreteModel()
         m.x = pyo.Var(initialize=2.0)
         e = 2 * abs(m.x)
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DifferentiationException,
                 r'Cannot perform symbolic differentiation of abs\(x\)'):
             reverse_sd(e)
@@ -190,7 +190,7 @@ class TestDerivs(unittest.TestCase):
         derivs = reverse_ad(e)
         self.assertAlmostEqual(derivs[m.x], approx_deriv(e, m.x), tol)
         m.x.value = 0
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 DifferentiationException,
                 r'Cannot differentiate abs\(x\) at x=0'):
             reverse_ad(e)
