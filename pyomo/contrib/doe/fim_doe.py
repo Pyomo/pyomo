@@ -2,7 +2,6 @@
 # Pyomo.DOE Copyright (c) 2020 - 2022, by the software owners: 
 #
 ###############################################################################
-"""
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -43,7 +42,6 @@ class Measurements:
         self.__model_measure_name()
         print('All measurements are flattened.')
         print('Flatten measurement name:', self.flatten_measure_name)
-        print('Flatten measurement variance:', self.flatten_variance)
         #print('Flatten measurement timeset:', self.flatten_measure_timeset)
 
         # generate the overall measurement time points set, including the measurement time for all measurements
@@ -119,9 +117,6 @@ class Measurements:
                 if self.ind_string in i:
                     measure_name = i.split(self.ind_string)[0]
                     measure_index = i.split(self.ind_string)[1]
-                    print(measure_name)
-                    print(measure_index)
-                    print(type(measure_index))
                     if type(name_and_index[measure_name][0]) is int:
                         measure_index = int(measure_index)
                     flatten_variance[i] = variance[measure_name][measure_index]
@@ -339,7 +334,7 @@ class DesignOfExperiments:
 
     def optimize_doe(self,  design_values, if_optimize=True, objective_option='det',
                      jac_involved_measurement=None,
-                     scale_nominal_param_value=False, scale_constant_value=1, if_Cholesky=False, L_LB = 1E-10, L_initial=None,
+                     scale_nominal_param_value=False, scale_constant_value=1, optimize_opt=None, if_Cholesky=False, L_LB = 1E-10, L_initial=None,
                      jac_initial=None, fim_initial=None,
                      formula='central', step=0.001, check=True):
         '''
@@ -357,6 +352,7 @@ class DesignOfExperiments:
         jac_involved_measurement: the measurement class involved in calculation. If None, take the overall measurement class
         scale_nominal_param_value: if scale Jacobian by the corresponding parameter nominal value
         scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
+        optimize_opt: A dictionary, keys are design variables, values are True or False deciding if this design variable will be optimized as DOF or not
         if_Cholesky: if true, cholesky decomposition is used for Objective function (to optimize determinant).
             L_LB: if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
             L_initial: initialize the L
@@ -422,7 +418,7 @@ class DesignOfExperiments:
         # Solve square problem first
         # result_square: solver result
         time0_solve = time.time()
-        result_square = self.__solve_doe(m, fix=True)
+        result_square = self.__solve_doe(m, fix=True, opt_option=optimize_opt)
         time1_solve = time.time()
 
         time_solve1 = time1_solve-time0_solve
@@ -641,8 +637,6 @@ class DesignOfExperiments:
             else:
                 prior_in_use = specified_prior
 
-            #jacobian_split = Jac_splitter(self.param_name, self.measure, jaco_information=jac, prior_FIM=prior_in_use,
-            #                              scale_constant_value=self.scale_constant_value)
             FIM_analysis = FIM_result(self.param_name, self.measure, jacobian_info=None, all_jacobian_info=jac,
                                       prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
@@ -919,7 +913,6 @@ class DesignOfExperiments:
                     # get right line of dsdp
                     dsdp_extract.append(dsdp_array[kaug_no])
 
-            print('dsdp extract is:', dsdp_extract)
             # Extract and calculate sensitivity if scaled by constants or parameters.
             # Convert sensitivity to a dictionary
             jac = {}
@@ -1200,11 +1193,7 @@ class DesignOfExperiments:
 
                 count += 1
 
-                if (mode=='simultaneous_finite'):
-                    result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.objective_option)
-
-                elif (mode in ['sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug']):
-                    result_iter.calculate_FIM(self.jac, self.design_values)
+                result_iter.calculate_FIM(self.design_values)
 
                 t_now = time.time()
 
@@ -1521,7 +1510,7 @@ class DesignOfExperiments:
         return m
 
 
-    def __fix_design(self, m, design_val, fix_opt=True):
+    def __fix_design(self, m, design_val, fix_opt=True, optimize_option=None):
         ''' Fix design variable
 
         Parameters:
@@ -1529,6 +1518,7 @@ class DesignOfExperiments:
         m: model
         design_val: design variable values dict
         fix_opt: if True, fix. Else, unfix
+        optimize: a dictionary, keys are design variable name, values are True or False, deciding if this design variable is optimized as DOF this time
 
         Returns:
         --------
@@ -1546,7 +1536,11 @@ class DesignOfExperiments:
                         newvar.fix(fix_v)
                         #print(newvar, 'is fixed at ', fix_v)
                     else:
-                        newvar.unfix()
+                        if optimize_option is None:
+                            newvar.unfix()
+                        else:
+                            if optimize_option[dname]:
+                                newvar.unfix()
             else:
                 newvar = eval('m.' + dname)
                 fix_v = design_val[dname][0]
@@ -1567,7 +1561,7 @@ class DesignOfExperiments:
         solver.options['max_iter'] = 3000
         return solver
 
-    def __solve_doe(self, m, fix=False):
+    def __solve_doe(self, m, fix=False, opt_option=None):
         '''Solve DOE model.
         If it's a square problem, fix design variable and solve.
         Else, fix design variable and solve square problem firstly, then unfix them and solve the optimization problem
@@ -1582,7 +1576,7 @@ class DesignOfExperiments:
         solver_results: solver results
         '''
         ### Solve square problem
-        mod = self.__fix_design(m, self.design_values, fix_opt=fix)
+        mod = self.__fix_design(m, self.design_values, fix_opt=fix, optimize_option=opt_option)
 
         # if user gives solver, use this solver. if not, use default IPOPT solver
         solver_result = self.solver.solve(mod,tee=self.tee_opt)
@@ -1942,7 +1936,6 @@ class FIM_result:
         else:
             self.jaco_information = jacobian_info
         self.all_jacobian_info = all_jacobian_info
-        print('Splitted jacobian:', self.jaco_information)
 
         self.prior_FIM = prior_FIM
         self.store_FIM = store_FIM
@@ -2063,12 +2056,11 @@ class FIM_result:
             # loop over flatten measurements
             for n, nam in enumerate(involved_flatten_index):
                 if nam in self.flatten_all_measure:
-                    print('get :', nam)
+                    #print('get :', nam)
                     n_all_measure = self.flatten_all_measure.index(nam)
                     # loop over time
                     for d in range(len(jaco_3D[n_all_measure, p, :])):
                         jaco_info[par].append(jaco_3D[n_all_measure, p, d])
-        print('jaco now:', jaco_info)
         return jaco_info
 
     def __jac_reform_3D(self, jac_original, Q_response=False):
@@ -2090,9 +2082,9 @@ class FIM_result:
             for m, mname in enumerate(self.flatten_all_measure):
                 Qr_list.append(jac_3Darray[m, :, :])
                 var_list.append(self.measure_object.flatten_variance[mname])
-            print(type(Qr_list[0]))
-            print(Qr_list[0])
-            print(var_list)
+            #print(type(Qr_list[0]))
+            #print(Qr_list[0])
+            #print(var_list)
 
             return Qr_list, var_list
         else:

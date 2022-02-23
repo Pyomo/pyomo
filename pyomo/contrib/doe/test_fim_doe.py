@@ -1,3 +1,8 @@
+###############################################################################
+# Pyomo.DOE Copyright (c) 2020 - 2022, by the software owners: 
+#
+###############################################################################
+
 from pyomo.environ import *
 from pyomo.dae import *
 import numpy as np
@@ -8,7 +13,8 @@ import pyomo.common.unittest as unittest
 from fim_doe import *
 
 class TestMeasurement(unittest.TestCase):
-    
+    '''Test the measurement class
+    '''
     def test_setup(self):
         # generate a set of measurements with extra index CA, CB, CC
         # each extra index has different measure time points
@@ -32,7 +38,8 @@ class TestMeasurement(unittest.TestCase):
         
 
 class TestParameter(unittest.TestCase):
-    
+    ''' Test the parameter class 
+    '''
     def test_setup(self):
         # set up parameter class
         param_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}

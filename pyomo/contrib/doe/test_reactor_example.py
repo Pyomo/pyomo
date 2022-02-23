@@ -1,3 +1,7 @@
+###############################################################################
+# Pyomo.DOE Copyright (c) 2020 - 2022, by the software owners: 
+#
+###############################################################################
 
 # import libraries
 from pyomo.common.dependencies import (
@@ -24,6 +28,8 @@ ipopt_available = SolverFactory('ipopt').available()
 
 
 class doe_object_Tester(unittest.TestCase):
+    ''' Test the kinetics example with both the sequential_finite mode and the direct_kaug mode 
+    '''
     def setUP(self):
         import reactor_kinetics as reactor
         

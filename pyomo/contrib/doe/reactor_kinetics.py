@@ -1,14 +1,16 @@
+###############################################################################
+# Pyomo.DOE Copyright (c) 2020 - 2022, by the software owners: 
+#
+###############################################################################
+
+
 from pyomo.environ import *
 from pyomo.dae import *
 import numpy as np
 
-def discretizer(m, NFE=32):
-    discretizer = TransformationFactory('dae.collocation')
-    discretizer.apply_to(m, nfe=NFE, ncp=3, wrt=m.t)
-    #m = discretizer.reduce_collocation_points(m, var=m.T, ncp=1, contset=m.t)
-    return m 
-
 def disc_for_measure(m, NFE=32):
+    '''Pyomo.DAE discretization
+    '''
     discretizer = TransformationFactory('dae.collocation')
     discretizer.apply_to(m, nfe=NFE, ncp=3, wrt=m.t)
     for z in m.scena:
@@ -23,22 +25,22 @@ def create_model(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300, 0.
     This is an example user model provided to DoE library. 
     It is a dynamic problem solved by Pyomo.DAE.
     
-    Arguments:
-        scena: a dictionary of scenarios, achieved from scenario_generator()
+    Arguments
+    ---------
+    scena: a dictionary of scenarios, achieved from scenario_generator()
+    Controlled time-dependent design variable:
+        - controls: a Dict, keys are control timepoints, values are the controlled T at that timepoint
+    t_range: time range, h 
+    Time-independent design variable: 
+        - CA_init: CA0 value
+    CA_init: An initial value for CA
+    C_init: An initial value for C
+    model_form: choose from 'ode-index-0' and 'dae-index-1'
+    args: a list, deciding if the model is for k_aug or not. If [False], it is for k_aug, the parameters are defined as Var instead of Param.
         
-        Controlled time-dependent design variable:
-            - controls: a Dict, keys are control timepoints, values are the controlled T at that timepoint
-        
-        t_range: time range 
-
-        Time-independent design variable: 
-            - CA_init: CA0 value
-        
-        C_init: An initial value for C
-        model_form: choose from 'ode-index-0' and 'dae-index-1'
-        
-    Return:
-        m: a Pyomo.DAE model 
+    Return
+    ------
+    m: a Pyomo.DAE model 
     '''
     # parameters initialization, results from parameter estimation
     theta_pe = {'A1': 84.79085853498033, 'A2': 371.71773413976416, 'E1': 7.777032028026428, 'E2': 15.047135137500822}
@@ -93,13 +95,14 @@ def create_model(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300, 0.
      
     m.R = 8.31446261815324 # J / K / mole
        
-    # Define parameters
+    # Define parameters as Param
     if args[0]:
         m.A1 = Param(m.scena, initialize=scena['A1'],mutable=True)
         m.A2 = Param(m.scena, initialize=scena['A2'],mutable=True)
         m.E1 = Param(m.scena, initialize=scena['E1'],mutable=True)
         m.E2 = Param(m.scena, initialize=scena['E2'],mutable=True)
     
+    # if False, define parameters as Var (for k_aug)
     else:
         m.A1 = Var(m.scena, initialize = m.scena_all['A1'])
         m.A2 = Var(m.scena, initialize = m.scena_all['A2'])
@@ -197,20 +200,11 @@ def create_model(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300, 0.
     m.k1_pert_rule = Constraint(m.scena, m.t, rule=cal_kp1)
     m.k2_pert_rule = Constraint(m.scena, m.t, rule=cal_kp2)
     m.dCdt_rule = Constraint(m.scena,m.y_set, m.t, rule=dCdt_control)
-    #m.dCdt_rule.deactivate()
-    #for z in m.scena:
-    #    for t in m.t:
-            #m.dCdt_rule[z,'CA',t].activate()
-            #m.dCdt_rule[z,'CB',t].activate()
-            #m.dCdt_rule[z,'CC',t].deactivate()
-    # switch between DAE and ODE model
+
     m.alge_rule = Constraint(m.scena, m.t, rule=alge)
 
     # B.C. 
     for z in m.scena:
-        # only ODE model needs this BC
-        #if not m.index1:
-        #m.C[z,'CA',0.0].fix(value(m.CA0[0]))
         m.C[z,'CB',0.0].fix(0.0)
         m.C[z,'CC',0.0].fix(0.0)
     
