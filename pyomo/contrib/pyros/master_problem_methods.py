@@ -209,22 +209,23 @@ def solve_master_feasibility_problem(model_data, config):
     if not solver.available():
         raise RuntimeError("NLP solver %s is not available." %
                            config.solver)
-    try:
-        results = solver.solve(model, tee=config.tee)
-    except ValueError as err:
-        if 'Cannot load a SolverResults object with bad status: error' in str(err):
-            results.solver.termination_condition = tc.error
-            results.solver.message = str(err)
-        else:
-            raise
 
-    if check_optimal_termination(results) and value(model._core_add_slack_variables._slack_objective) <= 0:
+    results = solver.solve(model, tee=config.tee, load_solutions=False)
+
+    if check_optimal_termination(results):
+        model.solutions.load_from(results)
+
         # If this led to a feasible solution, continue with this model
         # Load solution into master
-        for v in model.component_data_objects(Var):
-            master_v = model_data.master_model.find_component(v)
-            if master_v is not None:
-                master_v.set_value(v.value, skip_validation=True)
+        if value(model._core_add_slack_variables._slack_objective) <= 0:
+            for v in model.component_data_objects(Var):
+                master_v = model_data.master_model.find_component(v)
+                if master_v is not None:
+                    master_v.set_value(v.value, skip_validation=True)
+    else:
+        results.solver.termination_condition = tc.error
+        results.solver.message = ("Cannot load a SolverResults object with "
+                                  "bad status: error")
     return results
 
 
