@@ -371,8 +371,16 @@ class AMPLExternalFunction(ExternalFunction):
 
     def load_library(self):
         # Note that the library was located in __init__ and converted to
-        # an absolute path (including checking the CWD).  Previous logic
-        # with multiple attempts to load the library is no longer necessary
+        # an absolute path (including checking the CWD).  However, we
+        # previously tested that changing the environment (i.e.,
+        # changing directories) between defining the ExternalFunction
+        # and loading it would cause the library to still be correctly
+        # loaded.  We will re-search for the library here.  If it was
+        # previously found, we will be searching for an absolute path
+        # (and the same path will be found again).
+        _abs_lib = find_library(self._library)
+        if _abs_lib is not None:
+            self._library = _abs_lib
         self._so = cdll.LoadLibrary(self._library)
         self._known_functions = {}
         AE = _AMPLEXPORTS()
