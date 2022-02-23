@@ -67,10 +67,10 @@ def this_file(stack_offset=1):
     return os.path.abspath(inspect.getfile(callerFrame))
 
 
-def this_file_dir():
+def this_file_dir(stack_offset=1):
     """Returns the directory containing the module that calls this function.
     """
-    return os.path.dirname(this_file(stack_offset=2))
+    return os.path.dirname(this_file(stack_offset=1 + stack_offset))
 
 
 PYOMO_ROOT_DIR = os.path.dirname(os.path.dirname(this_file_dir()))
