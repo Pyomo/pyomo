@@ -1868,6 +1868,8 @@ class CommonModels(unittest.TestCase, CommonTests):
         ct.check_untransformed_network_raises_GDPError( self,
                                                         'partition_disjuncts',
                                                         num_partitions=2)
+
+    @unittest.skipUnless(ct.linear_solvers, "Could not find a linear solver")
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_network_disjuncts(self):
         ct.check_network_disjuncts(self, True, 'between_steps',
