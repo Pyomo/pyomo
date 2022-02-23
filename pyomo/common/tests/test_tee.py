@@ -69,7 +69,7 @@ class TestTeeStream(unittest.TestCase):
                                              # all error before stdout
         }
         self.assertIn(a.getvalue(), acceptable_results)
-        self.assertEqual(b.getvalue(), a.getvalue()))
+        self.assertEqual(b.getvalue(), a.getvalue())
 
     def test_merged_out_and_err_without_peek(self):
         a = StringIO()
