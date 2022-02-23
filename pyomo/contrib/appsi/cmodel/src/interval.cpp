@@ -706,7 +706,7 @@ void interval_tan(double xl, double xu, double *res_lb, double *res_ub) {
   // minimum value of i such that pi*i + pi/2 >= xl. Then round i up. If pi*i +
   // pi/2 is still less than or equal to xu, then there is an undefined point
   // between xl and xu.
-  if (xl <= -inf or xu >= inf) {
+  if ((xl <= -inf) || (xu >= inf)) {
     *res_lb = -inf;
     *res_ub = inf;
   } else if (_is_inf(xl) || _is_inf(xu))
