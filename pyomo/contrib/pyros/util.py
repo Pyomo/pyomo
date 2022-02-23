@@ -707,8 +707,11 @@ def add_decision_rule_variables(model_data, config):
     bounds = (None, None)
     if degree == 0:
         for i in range(len(second_stage_variables)):
-            model_data.working_model.add_component("decision_rule_var_" + str(i),
-                                                   Var(initialize=value(second_stage_variables[i]),bounds=bounds,domain=Reals))#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
+            model_data.working_model.add_component(
+                    "decision_rule_var_" + str(i),
+                    Var(initialize=value(second_stage_variables[i], exception=False),
+                        bounds=bounds,domain=Reals)
+            )#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
             first_stage_variables.extend(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values())
             decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
     elif degree == 1:
@@ -729,7 +732,7 @@ def add_decision_rule_variables(model_data, config):
             dict_init = {}
             for r in range(num_vars):
                 if r == 0:
-                    dict_init.update({r: value(second_stage_variables[i])})
+                    dict_init.update({r: value(second_stage_variables[i], exception=False)})
                 else:
                     dict_init.update({r: 0})
             model_data.working_model.add_component("decision_rule_var_" + str(i),
