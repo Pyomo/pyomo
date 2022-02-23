@@ -47,7 +47,7 @@ BACKWARDS COMPATIBILITY WARNING
   - Deprecate the `Alias` component (#2288)
   - Remove XPRESS interface (#2273)
 - Testing
-  - Skip some fileutils tests on OSX Big Sur and Pyhon<3.8 (#2224)
+  - Skip some fileutils tests on OSX Big Sur and Python<3.8 (#2224)
   - Fix Windows/Python 3.6 testing dependency (#2234)
   - Update test suite for BARON 22.1.19 (#2268)
   - Rework coverage uploads to use GitHub Actions (#2225)
@@ -65,8 +65,8 @@ BACKWARDS COMPATIBILITY WARNING
 - Contributed Packages
   - AMPL: Support string arguments in NL external functions (#2295)
   - APPSI: Fix bug with CBC options (#2243)
-  - APPSI: Correctly identify changes to constraints (#2299), Improvements to
-    persistent interface (#2246)
+  - APPSI: Correctly identify changes to constraints (#2299)
+  - APPSI: Improvements to persistent interface (#2246)
   - FBBT: Reimplement FBBT in C++ with a persistent interface through APPSI
     (#2248)
   - GDPopt: Fix bugs in preprocessing (#2211)
@@ -75,12 +75,13 @@ BACKWARDS COMPATIBILITY WARNING
     to calculate_variable_from_constraint (#2239)
   - incidence_analysis: Add remove_nodes method to IncidenceGraphInterface (#2240)
   - MindtPy: Update online docs and logging (#2219, #2207)
-  - MindtPy: Add Primal/Dual Integral (#2285), Nonlinear sum reformulation of
-    objective of MINLP (#2276)
+  - MindtPy: Add Primal/Dual Integral (#2285)
+  - MindtPy: Nonlinear sum reformulation of objective of MINLP (#2276)
   - Parmest: Covariance matrix (#2287), Add examples (#2274)
   - PyNumero: Add methods to support scaling factors in ExternalPyomoModel (#2269)
   - PyNumero: Use projected NLPs for the inner problem solves in
-    ExternalPyomoModel (#2283), Add SQP example (#2291)
+    ExternalPyomoModel (#2283)
+  - PyNumero: Add SQP example (#2291)
   - PyROS: Extend model constraint standardization to range constraints and 
     ConstraintList (#2206)
   - PyROS: Add optional bypassing of global separation subproblems (#2254)
