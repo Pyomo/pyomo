@@ -19,7 +19,8 @@ from ctypes import (
     c_int, c_long, c_ulong, c_double, c_byte, c_char_p, c_void_p )
 
 from pyomo.core.expr.numvalue import (
-    native_types, pyomo_constant_types, NonNumericValue, NumericConstant,
+    native_types, native_numeric_types, pyomo_constant_types,
+    NonNumericValue, NumericConstant,
 )
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import Component
@@ -604,26 +605,52 @@ class _ARGLIST(Structure):
 
     def __init__(self, args, fgh=0, fixed=None):
         super().__init__()
-        N = len(args)
-        self.n = self.nr = N
-        self.at = (c_int*N)()
-        self.ra = (c_double*N)()
-        self.sa = None
+        self._encoded_strings = []
+        self.n = len(args)
+        self.at = (c_int*self.n)()
+        _reals = []
+        _strings = []
+        nr = 0
+        ns = 0
+        for i, arg in enumerate(args):
+            if arg.__class__ in native_numeric_types:
+                _reals.append(arg)
+                self.at[i] = nr
+                nr += 1
+                continue
+            if isinstance(arg, str):
+                # String arguments need to be converted to bytes
+                # (encoded as plain ASCII characters).  We will
+                # explicitly cache the resulting bytes object to make
+                # absolutely sure that the Python garbage collector
+                # doesn't accidentally clean up the object before we
+                # call the external function.
+                arg = arg.encode('ascii')
+                self._encoded_strings.append(arg)
+            if isinstance(arg, bytes):
+                _strings.append(arg)
+                # Note increment first, as at[i] starts at -1 for strings
+                ns += 1
+                self.at[i] = -ns
+            else:
+                raise RuntimeError(
+                    f"Unknown data type, {type(arg).__name__}, passed as "
+                    f"argument {i} for an ASL ExternalFunction")
+        self.nr = nr
+        self.ra = (c_double*nr)(*_reals)
+        self.sa = (c_char_p*ns)(*_strings)
         if fgh >= 1:
-            self.derivs = (c_double*N)(0.)
+            self.derivs = (c_double*nr)(0.)
         if fgh >= 2:
-            self.hes = (c_double*((N+N*N)//2))(0.)
-
-        for i,v in enumerate(args):
-            self.at[i] = i
-            self.ra[i] = v
+            self.hes = (c_double*((nr + nr*nr)//2))(0.)
 
         if fixed:
-            # This has to be revisited if nr != ra
-            self.dig = (c_byte*N)(0)
-            for i,v in enumerate(fixed):
+            self.dig = (c_byte*nr)(0)
+            for i, v in enumerate(fixed):
                 if v:
-                    self.dig[i] = 1
+                    r_idx = self.at[i]
+                    if r_idx >= 0:
+                        self.dig[r_idx] = 1
 
 # The following "fake" class resolves a circular reference issue in the
 # _AMPLEXPORTS datastructure

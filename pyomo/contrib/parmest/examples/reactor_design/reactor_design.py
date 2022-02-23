@@ -60,8 +60,7 @@ def reactor_design_model(data):
     
     return model
 
-if __name__ == "__main__":
-    
+def main():
     # For a range of sv values, return ca, cb, cc, and cd
     results = []
     sv_values = [1.0 + v * 0.05 for v in range(1, 20)]
@@ -75,3 +74,5 @@ if __name__ == "__main__":
     results = pd.DataFrame(results, columns=['sv', 'caf', 'ca', 'cb', 'cc', 'cd'])
     print(results)
     
+if __name__ == "__main__":
+    main()

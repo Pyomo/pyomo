@@ -137,7 +137,7 @@ def inv_reduced_hessian_barrier(model, independent_variables, bound_tolerance=1e
     
     for rhi, vari in enumerate(ind_var_indices):
         rhs[vari] = 1
-        v = linear_solver.do_back_solve(rhs)
+        v, res = linear_solver.do_back_solve(rhs)
         rhs[vari] = 0
         for rhj, varj in enumerate(ind_var_indices):
             inv_red_hess[rhi,rhj] = v[varj]

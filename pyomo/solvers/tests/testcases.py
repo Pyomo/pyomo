@@ -11,11 +11,9 @@
 import sys
 import logging
 
-import pyomo.common.unittest as unittest
-
 from pyomo.common.collections import Bunch
 from pyomo.opt import TerminationCondition
-from pyomo.solvers.tests.models.base import test_models
+from pyomo.solvers.tests.models.base import all_models
 from pyomo.solvers.tests.solvers import test_solver_cases
 from pyomo.core.kernel.block import IBlock
 
@@ -387,13 +385,12 @@ for prob in ('LP_unbounded', 'LP_unbounded_kernel'):
 #
 
 
-@unittest.nottest
-def test_scenarios(arg=None):
+def generate_scenarios(arg=None):
     """
     Generate scenarios
     """
-    for model in sorted(test_models()):
-        _model = test_models(model)
+    for model in sorted(all_models()):
+        _model = all_models(model)
         if not arg is None and not arg(_model):
             continue
         for solver, io in sorted(test_solver_cases()):
@@ -442,14 +439,13 @@ def test_scenarios(arg=None):
                 exclude_suffixes=exclude_suffixes)
 
 
-@unittest.nottest
-def run_test_scenarios(options):
+def run_scenarios(options):
     logging.disable(logging.WARNING)
 
     solvers = set(options.solver)
     stat = {}
 
-    for key, test_case in test_scenarios():
+    for key, test_case in generate_scenarios():
         model, solver, io = key
         if len(solvers) > 0 and not solver in solvers:
             continue
@@ -569,21 +565,19 @@ def run_test_scenarios(options):
 
 
 if __name__ == "__main__":
-    from pyomo.solvers.tests.models.base import test_models
-
     print("")
     print("Testing model generation")
     print("-"*30)
-    for key in sorted(test_models()):
+    for key in sorted(all_models()):
         print(key)
-        obj = test_models(key)()
+        obj = all_models(key)()
         obj.generate_model()
         obj.warmstart_model()
 
     print("")
     print("Testing scenario generation")
     print("-"*30)
-    for key, value in test_scenarios():
+    for key, value in generate_scenarios():
         print(", ".join(key))
         print("   %s: %s" % (value.status, value.msg))
 

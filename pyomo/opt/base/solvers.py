@@ -49,7 +49,7 @@ def _extract_version(x, length=4):
         # since that a solver advertising trunk should always be greater
         # than a version check, hence returning a tuple of infinities
         return tuple(float('inf') for i in range(length))
-    m = re.search('[0-9]+(\.[0-9]+){1,3}',x)
+    m = re.search(r'[0-9]+(\.[0-9]+){1,3}', x)
     if not m is None:
         version = tuple(int(i) for i in m.group(0).split('.')[:length])
         while(len(version) < length):
