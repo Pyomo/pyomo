@@ -21,6 +21,7 @@ import os
 import time
 from math import isclose
 
+from pyomo.common.fileutils import find_library
 from pyomo.common.gc_manager import PauseGC
 from pyomo.opt import ProblemFormat, AbstractProblemWriter, WriterFactory
 from pyomo.core.expr import current as EXPR
