@@ -16,6 +16,7 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 
 from pyomo.common.getGSL import find_GSL
+from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.environ import (
     ConcreteModel, Block, Var, Objective, Expression, SolverFactory, value,
@@ -449,6 +450,17 @@ class TestAMPLExternalFunction(unittest.TestCase):
                 self.assertAlmostEqual(value(model.o), 2.0, 7)
             finally:
                 os.chdir(orig_dir)
+
+    def test_unknown_library(self):
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.ef = ExternalFunction(
+                library='unknown_pyomo_external_testing_function',
+                function='f')
+        self.assertEqual(
+            LOG.getvalue(),
+            'Defining AMPL external function, but cannot locate '
+            'specified library "unknown_pyomo_external_testing_function"\n')
 
     def test_eval_gsl_function(self):
         DLL = find_GSL()
