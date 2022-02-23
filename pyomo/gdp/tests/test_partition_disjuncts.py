@@ -1296,11 +1296,11 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertRaisesRegex(
             GDP_Error,
             "Partition specified for disjunction "
-            "containing Disjunct 'disjunction_disjuncts\[0\]' does not "
+            r"containing Disjunct 'disjunction_disjuncts\[0\]' does not "
             "include all the variables that appear "
             "in the disjunction. The following variables "
             "are not assigned to any part of the "
-            "partition: 'x\[3\]', 'x\[4\]'",
+            r"partition: 'x\[3\]', 'x\[4\]'",
             TransformationFactory('gdp.partition_disjuncts').apply_to,
             m,
             variable_partitions=[[m.x[1]], [m.x[2]]],
@@ -1313,8 +1313,8 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
         self.assertRaisesRegex(
             GDP_Error,
-            "Expression x\[1\]\*x\[1\] from constraint "
-            "'disjunction_disjuncts\[0\].constraint\[1\]' is unbounded! "
+            r"Expression x\[1\]\*x\[1\] from constraint "
+            r"'disjunction_disjuncts\[0\].constraint\[1\]' is unbounded! "
             "Please ensure all variables that appear in the constraint are "
             "bounded or specify compute_bounds_method=compute_optimal_bounds "
             "if the expression is bounded by the global constraints.",
@@ -1325,12 +1325,12 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
 
     def test_no_value_for_P_error(self):
         m = models.makeBetweenStepsPaperExample()
-        with self.assertRaisesRegex(GDP_Error,
-                                    "No value for P was given for disjunction "
-                                    "disjunction! Please specify a value of P "
-                                    "\(number of "
-                                    "partitions\), if you do not specify the "
-                                    "partitions directly."):
+        with self.assertRaisesRegex(
+                GDP_Error,
+                "No value for P was given for disjunction "
+                "disjunction! Please specify a value of P "
+                r"\(number of partitions\), if you do not specify the "
+                "partitions directly."):
             TransformationFactory('gdp.partition_disjuncts').apply_to(m)
 
     def test_create_using(self):
@@ -1569,17 +1569,14 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         self.assertRaisesRegex(
             GDP_Error,
             "Variables which appear in the expression "
-            "\(x\[1\]\*\*4 \+ x\[2\]\*\*4\)\*\*0.25 "
+            r"\(x\[1\]\*\*4 \+ x\[2\]\*\*4\)\*\*0.25 "
             "are in different partitions, but this expression doesn't appear "
             "additively separable. Please expand it if it is additively "
             "separable or, more likely, ensure that all the constraints in "
             "the disjunction are additively separable with respect to the "
-            "specified partition. If you did not "
-            "specify a partition, only "
-            "a value of P, note that to "
-            "automatically partition the "
-            "variables, we assume all the "
-            "expressions are additively "
+            "specified partition. If you did not specify a partition, only "
+            "a value of P, note that to automatically partition the "
+            "variables, we assume all the expressions are additively "
             "separable.",
             TransformationFactory('gdp.partition_disjuncts').apply_to,
             m,
@@ -1690,7 +1687,7 @@ class NonQuadraticNonlinear(unittest.TestCase, CommonTests):
         self.assertRaisesRegex(
             GDP_Error,
             "Variables which appear in the "
-            "expression \(x\[1\]\*\*4 \+ x\[2\]\*\*4\)\*\*0.25 are in "
+            r"expression \(x\[1\]\*\*4 \+ x\[2\]\*\*4\)\*\*0.25 are in "
             "different "
             "partitions, but this "
             "expression doesn't appear "
