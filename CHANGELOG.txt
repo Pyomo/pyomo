@@ -67,6 +67,7 @@ ADVANCE CHANGE NOTICE
   - APPSI: Correctly identify changes to constraints (#2299)
   - APPSI: Improvements to persistent interface (#2246)
   - APPSI: Implement FBBT in C++ module (#2248)
+  - APPSI: Resolve build errors on Windows (#2309)
   - GDPopt: Fix bugs in preprocessing (#2211)
   - GDPopt: Switch preprocessing to use FBBT (#2264)
   - incidence_analysis: General improvements (#2239, #2240)
