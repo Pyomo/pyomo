@@ -63,8 +63,13 @@ class TestTeeStream(unittest.TestCase):
             start_time = time.time()
             while 'cow' not in a.getvalue() and time.time() - start_time < 1:
                 time.sleep(tee._poll_interval)
-        self.assertEqual(a.getvalue(), "Hello\ninterrupting\ncowWorld")
-        self.assertEqual(b.getvalue(), "Hello\ninterrupting\ncowWorld")
+        acceptable_results = {
+            "Hello\ninterrupting\ncowWorld", # expected
+            "interrupting\ncowHello\nWorld", # Windows occasionally puts
+                                             # all error before stdout
+        }
+        self.assertIn(a.getvalue(), acceptable_results)
+        self.assertEqual(b.getvalue(), a.getvalue()))
 
     def test_merged_out_and_err_without_peek(self):
         a = StringIO()
