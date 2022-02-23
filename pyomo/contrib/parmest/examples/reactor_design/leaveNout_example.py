@@ -25,9 +25,10 @@ def main():
     data = pd.read_csv(file_name) 
     
     # Create more data for the example
+    N = 50
     df_std = data.std().to_frame().transpose()
-    df_rand = pd.DataFrame(np.random.normal(size=100))
-    df_sample = data.sample(100, replace=True).reset_index(drop=True)
+    df_rand = pd.DataFrame(np.random.normal(size=N))
+    df_sample = data.sample(N, replace=True).reset_index(drop=True)
     data = df_sample + df_rand.dot(df_std)/10
     
     # Sum of squared error function
@@ -55,13 +56,13 @@ def main():
     parmest.graphics.pairwise_plot(lNo_theta, theta)
     
     ### Leave one out/boostrap analysis
-    # Example use case: leave 50 data points out, run 75 bootstrap samples with the 
+    # Example use case: leave 25 data points out, run 20 bootstrap samples with the 
     # remaining points, determine if the theta estimate using the points left out 
     # is inside or outside an alpha region based on the bootstrap samples, repeat 
-    # 10 times. Results are stored as a list of tuples, see API docs for information.
-    lNo = 50
-    lNo_samples = 10
-    bootstrap_samples = 75
+    # 5 times. Results are stored as a list of tuples, see API docs for information.
+    lNo = 25
+    lNo_samples = 5
+    bootstrap_samples = 20
     dist = 'MVN'
     alphas = [0.7, 0.8, 0.9]
     
