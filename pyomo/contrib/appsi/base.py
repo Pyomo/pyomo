@@ -27,6 +27,7 @@ import weakref
 from io import StringIO
 from .cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.core.expr.numvalue import NumericConstant
 
 
 class TerminationCondition(enum.Enum):
@@ -1052,8 +1053,22 @@ class PersistentBase(abc.ABC):
                     sos_to_update.append(c)
             for c in cons_to_update:
                 lower, body, upper = self._active_constraints[c]
-                if c.lower is not lower or c.body is not body or c.upper is not upper:
+                new_lower, new_body, new_upper = c.lower, c.body, c.upper
+                if new_body is not body:
                     cons_to_remove_and_add[c] = None
+                    continue
+                if new_lower is not lower:
+                    if type(new_lower) is NumericConstant and type(lower) is NumericConstant and new_lower.value == lower.value:
+                        pass
+                    else:
+                        cons_to_remove_and_add[c] = None
+                        continue
+                if new_upper is not upper:
+                    if type(new_upper) is NumericConstant and type(upper) is NumericConstant and new_upper.value == upper.value:
+                        pass
+                    else:
+                        cons_to_remove_and_add[c] = None
+                        continue
             self.remove_sos_constraints(sos_to_update)
             self.add_sos_constraints(sos_to_update)
         timer.stop('cons')
@@ -1070,7 +1085,7 @@ class PersistentBase(abc.ABC):
                     vars_to_update.append(v)
                 elif ub is not v._ub:
                     vars_to_update.append(v)
-                elif (fixed is not v.fixed) or (fixed and (value is not v.value)):
+                elif (fixed is not v.fixed) or (fixed and (value != v.value)):
                     vars_to_update.append(v)
                     if self.update_config.treat_fixed_vars_as_params:
                         for c in self._referenced_variables[id(v)][0]:
