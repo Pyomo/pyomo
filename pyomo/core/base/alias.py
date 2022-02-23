@@ -51,7 +51,7 @@ __all__ = ['Alias']
 
 @deprecated("The Alias component was never completed/tested and will "
             "be removed.  Consider using Reference()",
-            version='6.3', remove_in='6.3.1')
+            version='6.3.0', remove_in='6.3.1')
 class Alias(Component):
 
     __slots__ = ('_aliased_object')
