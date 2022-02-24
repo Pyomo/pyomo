@@ -294,17 +294,6 @@ jobs:
                 | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
         done
 
-    #############################################################
-    # TODO: Delete this once Python 3.6 is deprecated - 12/2021 #
-    #############################################################
-    - name: Windows Python 3.6 Temporary Fix (conda)
-      if: |
-        (matrix.PYENV == 'conda' &&
-        matrix.TARGET == 'win' &&
-        matrix.python == '3.6')
-      run: |
-        conda install tomli==1.2.2 --force-reinstall
-
     - name: Setup TPL package directories
       run: |
         TPL_DIR="${GITHUB_WORKSPACE}/cache/tpl"
@@ -563,17 +552,17 @@ jobs:
 
 
   bare-python-env:
-    name: linux/3.6/bare-env
+    name: linux/3.8/bare-env
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v2
 
-    - name: Set up Python 3.6
+    - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: 3.6
+        python-version: 3.8
 
     - name: Install Pyomo
       run: |
