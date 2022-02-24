@@ -1,5 +1,5 @@
 """
-Lumache - Python library for cooks and food lovers.
+Pyomo.DOE - Pyomo Design of Experiments.
 """
 
 __version__ = "0.1.0"
