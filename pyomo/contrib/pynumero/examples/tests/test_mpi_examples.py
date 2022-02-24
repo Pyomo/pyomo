@@ -25,7 +25,7 @@ except ImportError:
 if not SKIPTESTS:
     from pyomo.contrib.pynumero.examples import parallel_vector_ops, parallel_matvec
 
-@unittest.category("mpi")
+@unittest.pytest.mark.mpi
 @unittest.skipIf(SKIPTESTS, SKIPTESTS)
 class TestExamples(unittest.TestCase):
     def test_parallel_vector_ops(self):

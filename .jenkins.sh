@@ -9,7 +9,7 @@
 #     virtualenv) and config (the local Pyomo configuration/cache
 #     directory)
 #
-# CATEGORY: the category to pass to pyomo.common.unittest (defaults to nightly)
+# CATEGORY: the category to pass to pytest
 #
 # TEST_SUITES: Paths (module or directory) to be passed to nosetests to
 #     run. (defaults to "pyomo '$WORKSPACE/pyomo-model-libraries'")
@@ -28,20 +28,23 @@
 # PYOMO_SETUP_ARGS: passed to the 'python setup.py develop' command
 #     (e.g., to specify --with-cython)
 #
-# PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions" command
+# PYOMO_DOWNLOAD_ARGS: passed to the 'pyomo download-extensions' command
 #     (e.g., to set up local SSL certificate authorities)
+#
+# PYTEST_EXTRA_ARGS: passed to the 'pytest' command
+#     (e.g., to add extra pytest options like '--collect-only')
 #
 if test -z "$WORKSPACE"; then
     export WORKSPACE=`pwd`
 fi
-if test -z "$CATEGORY"; then
-    export CATEGORY=nightly
-fi
 if test -z "$TEST_SUITES"; then
-    export TEST_SUITES="pyomo ${WORKSPACE}/pyomo-model-libraries ${WORKSPACE}/pyomo/examples/pyomobook"
+    export TEST_SUITES="${WORKSPACE}/pyomo/pyomo ${WORKSPACE}/pyomo-model-libraries ${WORKSPACE}/pyomo/examples/pyomobook"
 fi
 if test -z "$SLIM"; then
     export VENV_SYSTEM_PACKAGES='--system-site-packages'
+fi
+if test ! -z "$CATEGORY"; then
+    export PY_CAT="-m $CATEGORY"
 fi
 
 if test "$WORKSPACE" != "`pwd`"; then
@@ -83,6 +86,8 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "#"
     echo "# Installing pyomo modules"
     echo "#"
+    pushd "$WORKSPACE/pyutilib" || echo "PyUtilib not found"
+    python setup.py develop || echo "PyUtilib failed - skipping."
     popd
     pushd "$WORKSPACE/pyomo" || exit 1
     python setup.py develop $PYOMO_SETUP_ARGS || exit 1
@@ -154,17 +159,27 @@ if test -z "$MODE" -o "$MODE" == setup; then
 fi
 
 if test -z "$MODE" -o "$MODE" == test; then
-    # Move into the pyomo directory
-    pushd ${WORKSPACE}/pyomo || exit 1
-
+    # Copy conftest.py into every requested test suite that is NOT
+    # within ${WORKSPACE}/pyomo
+    for TEST in $TEST_SUITES; do
+      if [[ "$TEST" != *"${WORKSPACE}/pyomo/"* ]]; then
+        cp ${WORKSPACE}/conftest.py $TEST
+      fi;
+    done
+    rm ${WORKSPACE}/conftest.py
     echo ""
     echo "#"
     echo "# Running Pyomo tests"
     echo "#"
-    python -m pyomo.common.unittest $TEST_SUITES -v --cat=$CATEGORY --xunit
+    python -m pytest -v \
+        -W ignore::Warning \
+        --junitxml="TEST-pyomo.xml" \
+        $PY_CAT $TEST_SUITES $PYTEST_EXTRA_ARGS
 
     # Combine the coverage results and upload
     if test -z "$DISABLE_COVERAGE"; then
+        # Enter ${WORKSPACE}/pyomo for coverage Processing
+        pushd ${WORKSPACE}/pyomo || exit 1
         echo ""
         echo "#"
         echo "# Processing coverage information in "`pwd`
@@ -199,8 +214,7 @@ if test -z "$MODE" -o "$MODE" == test; then
             done
         fi
         rm .coverage
+        # Exit ${WORKSPACE}/pyomo
+        popd
     fi
-
-    # Exit ${WORKSPACE}/pyomo
-    popd
 fi

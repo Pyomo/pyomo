@@ -32,10 +32,13 @@ def get_appsi_extension(in_setup=False, appsi_root=None):
     sources = [
         os.path.join(appsi_root, 'cmodel', 'src', file_)
         for file_ in (
+                'interval.cpp',
                 'expression.cpp',
                 'common.cpp',
                 'nl_writer.cpp',
                 'lp_writer.cpp',
+                'model_base.cpp',
+                'fbbt_model.cpp',
                 'cmodel_bindings.cpp',
         )
     ]
@@ -44,7 +47,14 @@ def get_appsi_extension(in_setup=False, appsi_root=None):
         package_name = 'pyomo.contrib.appsi.cmodel.appsi_cmodel'
     else:
         package_name = 'appsi_cmodel'
-    return Pybind11Extension(package_name, sources, extra_compile_args=['-std=c++11'])
+    if sys.platform.startswith('win'):
+        # Assume that builds on Windows will use MSVC
+        # MSVC doesn't have a flag for c++11, use c++14
+        extra_args = ['/std:c++14']
+    else:
+        # Assume all other platforms are GCC-like
+        extra_args = ['-std=c++11']
+    return Pybind11Extension(package_name, sources, extra_compile_args=extra_args)
 
 def build_appsi(args=[]):
     print('\n\n**** Building APPSI ****')

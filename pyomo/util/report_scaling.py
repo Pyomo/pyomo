@@ -80,9 +80,10 @@ def _check_coefficents(comp, expr, too_large, too_small, largs_coef_map, small_c
                     largs_coef_map[comp] = list()
                 largs_coef_map[comp].append((_v, der_lb, der_ub))
             if abs(der_lb) <= too_small and abs(der_ub) < too_small:
-                if comp not in small_coef_map:
-                    small_coef_map[comp] = list()
-                small_coef_map[comp].append((_v, der_lb, der_ub))
+                if der_lb != 0 or der_ub != 0:
+                    if comp not in small_coef_map:
+                        small_coef_map[comp] = list()
+                    small_coef_map[comp].append((_v, der_lb, der_ub))
 
 
 def report_scaling(m: _BlockData, too_large: float = 5e4, too_small: float = 1e-6) -> bool:

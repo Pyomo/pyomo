@@ -2036,12 +2036,8 @@ endBlock{}
         parser = argparse.ArgumentParser(prog='tester')
         self.config.initialize_argparse(parser)
         help = parser.format_help()
-        #print(help)
-        self.assertEqual(
-            """usage: tester [-h] [--epanet-file EPANET] [--scenario-file STR] [--merlion]
-
-optional arguments:
-  -h, --help            show this help message and exit
+        self.assertIn(
+"""  -h, --help            show this help message and exit
   --epanet-file EPANET  EPANET network inp file
 
 Scenario definition:
@@ -2057,13 +2053,9 @@ Scenario definition:
         parser = argparse.ArgumentParser(prog='tester')
         self.config.initialize_argparse(parser)
         help = parser.format_help()
-        #print(help)
         self.maxDiff = None
-        self.assertEqual(
-            """usage: tester [-h] [--epanet-file EPANET] [--scenario-file STR] [--merlion]
-              [--disable-epanet]
-
-optional arguments:
+        self.assertIn(
+            """
   -h, --help            show this help message and exit
   --epanet-file EPANET  EPANET network inp file
 
@@ -2122,12 +2114,8 @@ Scenario definition:
         self.config.initialize_argparse(parser)
 
         help = parser.format_help()
-        #print(help)
-        self.assertEqual(
-            """usage: tester [-h] [--epanet-file EPANET] [--scenario-file STR] [--merlion]
-              {flushing} ...
-
-optional arguments:
+        self.assertIn(
+            """
   -h, --help            show this help message and exit
   --epanet-file EPANET  EPANET network inp file
 
@@ -2141,12 +2129,8 @@ Scenario definition:
 """, help)
 
         help = subp.format_help()
-        #print(help)
-        self.assertEqual(
-            """usage: tester flushing [-h] [--feasible-nodes STR] [--infeasible-nodes STR]
-                       [--duration FLOAT]
-
-optional arguments:
+        self.assertIn(
+            """
   -h, --help            show this help message and exit
   --duration FLOAT      Time [min] for flushing
 

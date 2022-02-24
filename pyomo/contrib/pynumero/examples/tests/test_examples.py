@@ -11,6 +11,7 @@ if not AmplInterface.available():
     raise unittest.SkipTest('Pynumero examples need ASL')
 
 from pyomo.contrib.pynumero.linalg.mumps_interface import mumps_available
+from pyomo.contrib.pynumero.linalg.scipy_interface import ScipyLU
 
 import pyomo.environ as pe
 ipopt_opt = pe.SolverFactory('ipopt')
@@ -20,7 +21,8 @@ from pyomo.contrib.pynumero.examples import (nlp_interface,
                                              nlp_interface_2,
                                              feasibility,
                                              mumps_example,
-                                             sensitivity)
+                                             sensitivity,
+                                             sqp)
 
 
 class TestPyNumeroExamples(unittest.TestCase):
@@ -46,3 +48,7 @@ class TestPyNumeroExamples(unittest.TestCase):
     def test_sensitivity(self):
         x_sens, x_correct = sensitivity.main()
         self.assertTrue(np.allclose(x_sens, x_correct, rtol=1e-3, atol=1e-4))
+
+    def test_sqp(self):
+        obj = sqp.main(ScipyLU(), 10, 10)
+        self.assertAlmostEqual(obj, 4.9834689888961198e-02)
