@@ -257,9 +257,16 @@ def solve_separation_problem(model_data, config):
     set_of_deterministic_constraints = model_data.separation_model.util.deterministic_constraints
     if hasattr(model_data.separation_model, "epigraph_constr"):
         set_of_deterministic_constraints.add(model_data.separation_model.epigraph_constr)
-    for is_global in (False, True):
-        solver = config.global_solver if \
-            (is_global or config.bypass_local_separation) else config.local_solver
+
+    # Determine whether to solve separation problems globally as well
+    if config.bypass_global_separation:
+        separation_cycle = [False]
+    elif config.bypass_local_separation:
+        separation_cycle = [True]
+    else:
+        separation_cycle = [False, True]
+    for is_global in separation_cycle:
+        solver = config.global_solver if is_global else config.local_solver
         solve_data_list = []
 
         for val in sorted_unique_priorities:
@@ -304,7 +311,7 @@ def solve_separation_problem(model_data, config):
                     solve_data_list.append([solve_data])
 
                 # === Keep track of total solve times
-                if is_global or config.bypass_local_separation:
+                if is_global:
                     if config.uncertainty_set.geometry == Geometry.DISCRETE_SCENARIOS:
                         for sublist in solve_data_list:
                             for s in sublist:
@@ -417,7 +424,7 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
     """
     save_dir = config.subproblem_file_directory
 
-    if is_global or config.bypass_local_separation:
+    if is_global:
         backup_solvers = deepcopy(config.backup_global_solvers)
     else:
         backup_solvers = deepcopy(config.backup_local_solvers)

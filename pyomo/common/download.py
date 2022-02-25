@@ -90,7 +90,7 @@ class FileDownloader(object):
             dist = FILE.readline().lower().strip()
             ver = ''
             for word in dist.split():
-                if re.match('^[0-9\.]+', word):
+                if re.match(r'^[0-9\.]+', word):
                     ver = word
                     break
         return cls._map_dist(dist), ver

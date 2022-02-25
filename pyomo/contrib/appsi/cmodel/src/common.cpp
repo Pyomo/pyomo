@@ -1,1 +1,3 @@
-double inf = 1.0e100;
+#include "common.hpp"
+
+double inf = py::module_::import("math").attr("inf").cast<double>();

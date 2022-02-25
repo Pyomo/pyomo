@@ -46,7 +46,7 @@ class TestMindtPy(unittest.TestCase):
                 self.assertIn(results.solver.termination_condition, [
                     TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    value(model.objective.expr), model.optimal_value, places=2)
 
     def test_GOA_tabu_list(self):
         """Test the global outer approximation decomposition algorithm."""
@@ -60,7 +60,7 @@ class TestMindtPy(unittest.TestCase):
                 self.assertIn(results.solver.termination_condition, [
                     TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
-                    value(model.objective.expr), model.optimal_value, places=1)
+                    value(model.objective.expr), model.optimal_value, places=2)
 
 
 if __name__ == '__main__':

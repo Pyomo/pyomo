@@ -24,7 +24,7 @@ _init_url="$URL$"
 # should generally be left at 0, unless a downstream package is tracking
 # main and needs a hard reference to "suitably new" development.
 major=6
-minor=2
+minor=3
 micro=1
 releaselevel='invalid'
 #releaselevel='final'
@@ -66,7 +66,7 @@ elif releaselevel == 'invalid':
 
 version_info = (major, minor, micro, releaselevel, serial)
 
-version = '.'.join(str(x) for x in version_info[:(3 if micro else 2)])
+version = '.'.join(str(x) for x in version_info[:3])
 __version__ = version
 if releaselevel != 'final':
     version += ' ('+releaselevel+')'

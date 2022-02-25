@@ -38,7 +38,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_solution_pool_cplex(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     init_strategy='rNLP',
@@ -56,7 +55,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_solution_pool_gurobi(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     init_strategy='rNLP',
@@ -75,7 +73,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_solution_pool_coverage1(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     init_strategy='rNLP',

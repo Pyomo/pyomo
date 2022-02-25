@@ -43,6 +43,8 @@ model_list = [EightProcessFlowsheet(convex=True),
               ]
 nonconvex_model_list = [EightProcessFlowsheet(convex=False)]
 
+obj_nonlinear_sum_model_list = [SimpleMINLP(), SimpleMINLP5()]
+
 LP_model = LP_unbounded()
 LP_model._generate_model()
 
@@ -68,7 +70,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_rNLP(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     init_strategy='rNLP',
@@ -84,7 +85,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_extreme_model(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in extreme_model_list:
                 results = opt.solve(model, strategy='OA',
                                     init_strategy='rNLP',
@@ -95,7 +95,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_L2_norm(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     init_strategy='rNLP',
@@ -112,7 +111,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_L_infinity_norm(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     init_strategy='rNLP',
@@ -129,7 +127,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_max_binary(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     init_strategy='max_binary',
@@ -146,7 +143,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_sympy(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     differentiate_mode='sympy',
@@ -162,7 +158,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_initial_binary(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     init_strategy='initial_binary',
@@ -178,7 +173,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_no_good_cuts(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     mip_solver=required_solvers[1],
@@ -194,7 +188,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_integer_to_binary(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     mip_solver=required_solvers[1],
@@ -207,10 +200,24 @@ class TestMindtPy(unittest.TestCase):
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
 
+    def test_OA_partition_obj_nonlinear_terms(self):
+        """Test the outer approximation decomposition algorithm (partition_obj_nonlinear_terms)."""
+        with SolverFactory('mindtpy') as opt:
+            for model in obj_nonlinear_sum_model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver=required_solvers[1],
+                                    nlp_solver=required_solvers[0],
+                                    partition_obj_nonlinear_terms=True
+                                    )
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
+
     def test_OA_add_slack(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     init_strategy='initial_binary',
@@ -239,7 +246,6 @@ class TestMindtPy(unittest.TestCase):
     def test_OA_nonconvex(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
-            print('\n Solving 8PP problem with Outer Approximation')
             for model in nonconvex_model_list:
                 results = opt.solve(model, strategy='OA',
                                     mip_solver=required_solvers[1],
@@ -255,7 +261,6 @@ class TestMindtPy(unittest.TestCase):
     def test_iteration_limit(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
-            print('\n test iteration_limit  to improve code coverage')
             opt.solve(model, strategy='OA',
                       iteration_limit=1,
                       mip_solver=required_solvers[1],
@@ -266,7 +271,6 @@ class TestMindtPy(unittest.TestCase):
     def test_time_limit(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
-            print('\n test time_limit to improve code coverage')
             opt.solve(model, strategy='OA',
                       time_limit=1,
                       mip_solver=required_solvers[1],
@@ -278,11 +282,9 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             model.objective.sense = maximize
-            print('\n test maximize case to improve code coverage')
             opt.solve(model, strategy='OA',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
-                      #   mip_solver_args={'timelimit': 0.9}
                       )
             self.assertAlmostEqual(
                 value(model.objective.expr), 14.83, places=1)

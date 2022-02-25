@@ -240,11 +240,16 @@ def group_data(data, groupby_column_name, use_mean=None):
     grouped_data: list of dictionaries
         Grouped data
     """
+    if use_mean is None:
+        use_mean_list = []
+    else:
+        use_mean_list = use_mean
+        
     grouped_data = []
     for exp_num, group in data.groupby(data[groupby_column_name]):
         d = {}
         for col in group.columns:
-            if col in use_mean:
+            if col in use_mean_list:
                 d[col] = group[col].mean()
             else:
                 d[col] = list(group[col])
@@ -273,7 +278,7 @@ class Estimator(object):
     model_function: function
         Function that generates an instance of the Pyomo model using 'data' 
         as the input argument
-    data: pd.DataFrame, list of dictionaries, or list of json file names
+    data: pd.DataFrame, list of dictionaries, list of dataframes, or list of json file names
         Data that is used to build an instance of the Pyomo model and build 
         the objective function
     theta_names: list of strings
@@ -295,8 +300,15 @@ class Estimator(object):
                  tee=False, diagnostic_mode=False, solver_options=None):
         
         self.model_function = model_function
-        self.callback_data = data
-
+        
+        assert isinstance(data, (list, pd.DataFrame)), "Data must be a list or DataFrame"
+        # convert dataframe into a list of dataframes, each row = one scenario
+        if isinstance(data, pd.DataFrame):
+            self.callback_data = [data.loc[i,:].to_frame().transpose() for i in data.index]
+        else:
+            self.callback_data = data
+        assert isinstance(self.callback_data[0], (dict, pd.DataFrame, str)), "The scenarios in data must be a dictionary, DataFrame or filename"
+        
         if len(theta_names) == 0:
             self.theta_names = ['parmest_dummy_var']
         else:
@@ -308,7 +320,6 @@ class Estimator(object):
         self.solver_options = solver_options
         
         self._second_stage_cost_exp = "SecondStageCost"
-        self._numbers_list = list(range(len(data)))
 
 
     def _create_parmest_model(self, data):
@@ -364,22 +375,16 @@ class Estimator(object):
     
     def _instance_creation_callback(self, experiment_number=None, cb_data=None):
         
-        # DataFrame
-        if isinstance(cb_data, pd.DataFrame):
-            # Keep single experiments in a Dataframe (not a Series)
-            exp_data = cb_data.loc[experiment_number,:].to_frame().transpose() 
-        
-        # List of dictionaries OR list of json file names
-        elif isinstance(cb_data, list):
-            exp_data = cb_data[experiment_number]
-            if isinstance(exp_data, dict):
-                pass
-            if isinstance(exp_data, str):
-                try:
-                    with open(exp_data,'r') as infile:
-                        exp_data = json.load(infile)
-                except:
-                    raise RuntimeError(f'Could not read {exp_data} as json')
+        # cb_data is a list of dictionaries, list of dataframes, OR list of json file names
+        exp_data = cb_data[experiment_number]
+        if isinstance(exp_data, (dict, pd.DataFrame)):
+            pass
+        elif isinstance(exp_data, str):
+            try:
+                with open(exp_data,'r') as infile:
+                    exp_data = json.load(infile)
+            except:
+                raise RuntimeError(f'Could not read {exp_data} as json')
         else:
             raise RuntimeError(f'Unexpected data format for cb_data={cb_data}')
         model = self._create_parmest_model(exp_data)
@@ -388,7 +393,7 @@ class Estimator(object):
     
 
     def _Q_opt(self, ThetaVals=None, solver="ef_ipopt",
-               return_values=[], bootlist=None, calc_cov=False):
+               return_values=[], bootlist=None, calc_cov=False, cov_n=None):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
@@ -399,10 +404,10 @@ class Estimator(object):
 
         # (Bootstrap scenarios will use indirection through the bootlist)
         if bootlist is None:
-            scen_names = ["Scenario{}".format(i) for i in self._numbers_list]
+            senario_numbers = list(range(len(self.callback_data)))
+            scen_names = ["Scenario{}".format(i) for i in senario_numbers]
         else:
-            scen_names = ["Scenario{}".format(i)\
-                         for i in range(len(self._numbers_list))]
+            scen_names = ["Scenario{}".format(i) for i in range(len(bootlist))]
 
         # tree_model.CallbackModule = None
         outer_cb_data = dict()
@@ -479,8 +484,8 @@ class Estimator(object):
             if calc_cov:
                 # Calculate the covariance matrix
                 
-                # Extract number of data points considered
-                n = len(self.callback_data)
+                # Number of data points considered  
+                n = cov_n
                 
                 # Extract number of fitted parameters
                 l = len(thetavals)
@@ -579,7 +584,8 @@ class Estimator(object):
 
         WorstStatus = pyo.TerminationCondition.optimal
         totobj = 0
-        for snum in self._numbers_list:
+        senario_numbers = list(range(len(self.callback_data)))
+        for snum in senario_numbers:
             sname = "scenario_NODE"+str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
             if not sillylittle:
@@ -605,7 +611,7 @@ class Estimator(object):
             objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
             totobj += objval
-        retval = totobj / len(self._numbers_list) # -1??
+        retval = totobj / len(senario_numbers) # -1??
 
         return retval, thetavals, WorstStatus
 
@@ -613,9 +619,11 @@ class Estimator(object):
         
         samplelist = list()
         
+        senario_numbers = list(range(len(self.callback_data)))
+        
         if num_samples is None:
             # This could get very large
-            for i, l in enumerate(combinations(self._numbers_list, samplesize)):
+            for i, l in enumerate(combinations(senario_numbers, samplesize)):
                 samplelist.append((i, np.sort(l)))
         else:
             for i in range(num_samples):
@@ -623,7 +631,7 @@ class Estimator(object):
                 unique_samples = 0 # check for duplicates in each sample
                 duplicate = False # check for duplicates between samples
                 while (unique_samples <= len(self.theta_names)) and (not duplicate):
-                    sample = np.random.choice(self._numbers_list,
+                    sample = np.random.choice(senario_numbers,
                                                 samplesize,
                                                 replace=replacement)
                     sample = np.sort(sample).tolist()
@@ -641,7 +649,7 @@ class Estimator(object):
             
         return samplelist
     
-    def theta_est(self, solver="ef_ipopt", return_values=[], bootlist=None, calc_cov=False): 
+    def theta_est(self, solver="ef_ipopt", return_values=[], calc_cov=False, cov_n=None): 
         """
         Parameter estimation using all scenarios in the data
 
@@ -650,11 +658,12 @@ class Estimator(object):
         solver: string, optional
             Currently only "ef_ipopt" is supported. Default is "ef_ipopt".
         return_values: list, optional
-            List of Variable names used to return values from the model
-        bootlist: list, optional
-            List of bootstrap sample numbers, used internally when calling theta_est_bootstrap
+            List of Variable names, used to return values from the model for data reconciliation
         calc_cov: boolean, optional
             If True, calculate and return the covariance matrix (only for "ef_ipopt" solver)
+        cov_n: int, optional
+            If calc_cov=True, then the user needs to supply the number of datapoints 
+            that are used in the objective function
             
         Returns
         -------
@@ -669,10 +678,13 @@ class Estimator(object):
         """
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
-        assert isinstance(bootlist, (type(None), list))
+        assert isinstance(calc_cov, bool)
+        if calc_cov:
+            assert isinstance(cov_n, int), "The number of datapoints that are used in the objective function is required to calculate the covariance matrix"
+            assert cov_n > len(self.theta_names), "The number of datapoints must be greater than the number of parameters to estimate"
         
         return self._Q_opt(solver=solver, return_values=return_values,
-                           bootlist=bootlist, calc_cov=calc_cov)
+                           bootlist=None, calc_cov=calc_cov, cov_n=cov_n)
     
     
     def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 
@@ -707,7 +719,7 @@ class Estimator(object):
         assert isinstance(return_samples, bool)
         
         if samplesize is None:
-            samplesize = len(self._numbers_list)  
+            samplesize = len(self.callback_data)
         
         if seed is not None:
             np.random.seed(seed)
@@ -718,18 +730,12 @@ class Estimator(object):
         task_mgr = mpiu.ParallelTaskManager(bootstrap_samples)
         local_list = task_mgr.global_to_local_data(global_list)
 
-        # Reset numbers_list
-        self._numbers_list =  list(range(samplesize))
-        
         bootstrap_theta = list()
         for idx, sample in local_list:
-            objval, thetavals = self.theta_est(bootlist=list(sample))
+            objval, thetavals = self._Q_opt(bootlist=list(sample))
             thetavals['samples'] = sample
             bootstrap_theta.append(thetavals)
             
-        # Reset numbers_list (back to original)
-        self._numbers_list =  list(range(len(self.callback_data)))
-        
         global_bootstrap_theta = task_mgr.allgather_global_data(bootstrap_theta)
         bootstrap_theta = pd.DataFrame(global_bootstrap_theta)       
 
@@ -767,7 +773,7 @@ class Estimator(object):
         assert isinstance(seed, (type(None), int))
         assert isinstance(return_samples, bool)
         
-        samplesize = len(self._numbers_list)-lNo
+        samplesize = len(self.callback_data)-lNo
 
         if seed is not None:
             np.random.seed(seed)
@@ -777,18 +783,12 @@ class Estimator(object):
         task_mgr = mpiu.ParallelTaskManager(len(global_list))
         local_list = task_mgr.global_to_local_data(global_list)
         
-        # Reset numbers_list
-        self._numbers_list =  list(range(samplesize))
-        
         lNo_theta = list()
         for idx, sample in local_list:
-            objval, thetavals = self.theta_est(bootlist=list(sample))
+            objval, thetavals = self._Q_opt(bootlist=list(sample))
             lNo_s = list(set(range(len(self.callback_data))) - set(sample))
             thetavals['lNo'] = np.sort(lNo_s)
             lNo_theta.append(thetavals)
-        
-        # Reset numbers_list (back to original)
-        self._numbers_list =  list(range(len(self.callback_data)))
         
         global_bootstrap_theta = task_mgr.allgather_global_data(lNo_theta)
         lNo_theta = pd.DataFrame(global_bootstrap_theta)   
@@ -858,14 +858,14 @@ class Estimator(object):
         results = []
         for idx, sample in global_list:
             
-            # Reset callback_data and numbers_list
-            self.callback_data = data.loc[sample,:] 
-            self._numbers_list = self.callback_data.index
+            # Reset callback_data to only include the sample
+            self.callback_data = [data[i] for i in sample]
+
             obj, theta = self.theta_est()
             
-            # Reset callback_data and numbers_list
-            self.callback_data = data.drop(index=sample)
-            self._numbers_list = self.callback_data.index
+            # Reset callback_data to include all scenarios except the sample
+            self.callback_data = [data[i] for i in range(len(data)) if i not in sample]
+
             bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples)
             
             training, test = self.confidence_region_test(bootstrap_theta, 
@@ -874,9 +874,8 @@ class Estimator(object):
                 
             results.append((sample, test, training))
         
-        # Reset callback_data and numbers_list (back to original)
+        # Reset callback_data (back to full data set)
         self.callback_data = data
-        self._numbers_list = self.callback_data.index
         
         return results
     

@@ -8,13 +8,17 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.core.expr.current as EXPR
 from pyomo.gdp import GDP_Error, Disjunction
 from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 
-from pyomo.core import Block, TraversalStrategy, SortComponents
+import pyomo.core.expr.current as EXPR
+from pyomo.core.base.component import _ComponentBase
+from pyomo.core import (
+    Block, TraversalStrategy, SortComponents, LogicalConstraint)
 from pyomo.core.base.block import _BlockData
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.opt import TerminationCondition, SolverStatus
+
 from weakref import ref as weakref_ref
 from collections import defaultdict
 import logging
@@ -247,6 +251,11 @@ def is_child_of(parent, child, knownBlocks=None):
         else:
             node = container
 
+def _to_dict(val):
+    if isinstance(val, (dict, ComponentMap)):
+       return val
+    return {None: val}
+
 def get_src_disjunction(xor_constraint):
     """Return the Disjunction corresponding to xor_constraint
 
@@ -458,6 +467,16 @@ def check_model_algebraic(instance):
                                'transformed or deactivated before solving the '
                                'model.' % (disjunct.name,))
                 return False
+
+    for cons in instance.component_data_objects(LogicalConstraint,
+                                                descend_into=Block, 
+                                                active=True):
+        if cons.active:
+            logger.warning('LogicalConstraint "%s" is currently active. It '
+                           'must be transformed or deactivated before solving '
+                           'the model.' % cons.name)
+            return False
+
     # We didn't find anything bad.
     return True
 

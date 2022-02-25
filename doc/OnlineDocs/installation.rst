@@ -3,7 +3,7 @@ Installation
 
 Pyomo currently supports the following versions of Python:
 
-* CPython: 3.6, 3.7, 3.8, 3.9
+* CPython: 3.7, 3.8, 3.9, 3.10
 * PyPy: 3
 
 
@@ -42,13 +42,31 @@ Conditional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 Extensions to Pyomo, and many of the contributions in `pyomo.contrib`,
-also have conditional dependencies on a variety of third-party Python
-packages including but not limited to: numpy, scipy, sympy, networkx,
-openpxl, pyodbc, xlrd, pandas, matplotlib, pymysql, pyro4, and
-pint. Pyomo extensions that require any of these packages will generate
+often have conditional dependencies on a variety of third-party Python
+packages including but not limited to: matplotlib, networkx, numpy,
+openpyxl, pandas, pint, pymysql, pyodbc, pyro4, scipy, sympy, and
+xlrd. 
+
+A full list of conditional dependencies can be found in Pyomo's
+`setup.py` and displayed using:
+
+::
+
+   python setup.py dependencies --extra optional
+
+Pyomo extensions that require any of these packages will generate
 an error message for missing dependencies upon use.
 
-Many of the conditional dependencies are already distributed with
-Anaconda. You can check which Python packages you already have installed
-using the command ``conda list`` or ``pip list``. Additional Python
-packages may be installed as needed.
+When using *pip*, all conditional dependencies can be installed at once
+using the following command:
+
+::
+
+   pip install 'pyomo[optional]'
+
+When using *conda*, many of the conditional dependencies are included
+with the standard Anaconda installation.
+
+You can check which Python packages you have installed using the command
+``conda list`` or ``pip list``. Additional Python packages may be
+installed as needed.

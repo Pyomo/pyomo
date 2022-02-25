@@ -21,7 +21,8 @@ class TestReportScaling(unittest.TestCase):
     def test_report_scaling(self):
         m = pe.ConcreteModel()
         m.x = pe.Var(list(range(5)))
-        m.c = pe.Constraint(list(range(3)))
+        m.c = pe.Constraint(list(range(4)))
+        m.p = pe.Param(initialize=0, mutable=True)
 
         m.x[0].setlb(-1)
         m.x[0].setub(1)
@@ -38,6 +39,7 @@ class TestReportScaling(unittest.TestCase):
         m.c[0] = m.x[0] + m.x[3] == 0
         m.c[1] = 1 / m.x[1] == 1
         m.c[2] = m.x[1] * m.x[3] == 1
+        m.c[3] = m.x[3] + m.p*m.x[0] == 1
 
         out = StringIO()
         with LoggingIntercept(out, 'pyomo.util.report_scaling', level=logging.INFO):
