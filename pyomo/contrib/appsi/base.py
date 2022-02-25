@@ -464,6 +464,12 @@ class Solver(abc.ABC):
         def __bool__(self):
             return self._value_ > 0
 
+        def __format__(self, format_spec):
+            # We want general formatting of this Enum to return the
+            # formatted string value and not the int (which is the
+            # default implementation from IntEnum)
+            return format(str(self).split('.')[-1], format_spec)
+
     @abc.abstractmethod
     def solve(self, model: _BlockData, timer: HierarchicalTimer = None) -> Results:
         """
