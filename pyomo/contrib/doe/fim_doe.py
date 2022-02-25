@@ -1,7 +1,7 @@
 #################################################################################################################
 # Copyright (c) 2022
 # *** Copyright Notice ***
-# “SOFTWARE NAME” was produced under the DOE Carbon Capture Simulation Initiative (CCSI), and is
+# Pyomo.DOE was produced under the DOE Carbon Capture Simulation Initiative (CCSI), and is
 # copyright (c) 2022 by the software owners: TRIAD, LLNS, BERKELEY LAB, PNNL, UT-Battelle, LLC, NOTRE
 # DAME, PITT, UT Austin, TOLEDO, WVU, et al. All rights reserved.
 # 
@@ -13,7 +13,7 @@
 # 
 # *** License Agreement ***
 # 
-# “SOFTWARE NAME” Copyright (c) 2022, by the software owners: TRIAD, LLNS, BERKELEY LAB, PNNL, UT-
+# Pyomo.DOE Copyright (c) 2022, by the software owners: TRIAD, LLNS, BERKELEY LAB, PNNL, UT-
 # Battelle, LLC, NOTRE DAME, PITT, UT Austin, TOLEDO, WVU, et al. All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without modification, are permitted provided
@@ -44,7 +44,9 @@
 # the following license: a non-exclusive, royalty-free perpetual license to install, use, modify, prepare
 # derivative works, incorporate into other computer software, distribute, and sublicense such
 # enhancements or derivative works thereof, in binary and source code form.
-# 
+#
+# Lead Developers: Jialu Wang and Alexander Dowling, University of Notre Dame
+#
 #################################################################################################################
 
 import numpy as np
