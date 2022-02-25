@@ -199,13 +199,13 @@ class MPIBlockMatrix(BaseBlockMatrix):
     def is_row_size_defined(self, row, this_process_only=True):
         res = self._block_matrix.is_row_size_defined(row)
         if not this_process_only:
-            res = self.mpi_comm.allreduce(res, op=MPI.SUM)
+            res = self.mpi_comm.allreduce(res, op=MPI.LOR)
         return bool(res)
 
     def is_col_size_defined(self, col, this_process_only=True):
         res = self._block_matrix.is_col_size_defined(col)
         if not this_process_only:
-            res = self.mpi_comm.allreduce(res, op=MPI.SUM)
+            res = self.mpi_comm.allreduce(res, op=MPI.LOR)
         return bool(res)
 
     def get_block_mask(self, copy=True):
@@ -352,13 +352,8 @@ class MPIBlockMatrix(BaseBlockMatrix):
         """
         res = self._block_matrix.is_empty_block(idx, jdx)
         if not this_process_only:
-            if res:
-                res = 0
-            else:
-                res = 1
-            res = self.mpi_comm.allreduce(res, op=MPI.SUM)
-            res = res == 0
-        return res
+            res = self.mpi_comm.allreduce(res, op=MPI.LAND)
+        return bool(res)
 
     # Note: this requires communication
     def broadcast_block_sizes(self):
