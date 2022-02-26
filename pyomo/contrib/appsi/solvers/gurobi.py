@@ -328,9 +328,9 @@ class Gurobi(PersistentBase, PersistentSolver):
 
     def solve(self, model, timer: HierarchicalTimer = None) -> Results:
         StaleFlagManager.mark_all_as_stale()
-        avail = self.available()
-        if not avail:
-            raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')
+        # Note: solver availability check happens in set_instance(),
+        # which will be called (either by the user before this call, or
+        # below) before this method calls self._solve.
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
         if timer is None:
@@ -424,7 +424,10 @@ class Gurobi(PersistentBase, PersistentSolver):
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
         if not self.available():
-            raise ImportError('Could not import gurobipy')
+            c = self.__class__
+            raise PyomoException(
+                f'Solver {c.__module__}.{c.__qualname__} is not available '
+                f'({self.available()}).')
         saved_config = self.config
         saved_options = self.gurobi_options
         saved_update_config = self.update_config
