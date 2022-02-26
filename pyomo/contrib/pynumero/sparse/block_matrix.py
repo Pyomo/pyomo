@@ -1114,10 +1114,6 @@ class BlockMatrix(BaseBlockMatrix):
     def __rmatmul__(self, other):
         return self.__rmul__(other)
 
-    def pprint(self):
-        """Prints BlockMatrix in pretty format"""
-        print(str(self))
-
     def get_block_column_index(self, index):
         """
         Returns block-column idx from matrix column index.
