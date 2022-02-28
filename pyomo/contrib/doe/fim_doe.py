@@ -59,16 +59,18 @@ from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculati
 
 class Measurements:
     def __init__(self, measurement_index_time, variance=None, ind_string='_index_'):
-        '''
-        This class stores measurements' information
-        Parameters:
+        '''This class stores measurements' information
+
+        Parameters
         ----------
-        measurement_index_time: a dictionary, keys are measurement variable names,
+        measurement_index_time:  Dictionary
+            a dictionary, keys are measurement variable names,
                 values are a dictionary, keys are its extra index, values are its measuring time points
                 values are a list of measuring time point if there is no extra index for this measurement
                 For e.g., for the kinetics illustrative example, it should be {'C':{'CA':[0,1,..], 'CB':[0,2,...]}, 'k':[0,4,..]},
                 so the measurements are C[scenario, 'CA', 0]..., k[scenario, 0]....
-        variance: a dictionary, keys are measurement variable names, 
+        variance:  Dictionary
+            a dictionary, keys are measurement variable names,
                 values are a dictionary, keys are its extra index, values are its variance (a scalar number)
                 values are its variance if there is no extra index for this measurement 
                 For e.g., for the kinetics illustrative example, it should be {'C':{'CA': 10, 'CB': 1, 'CC': 2}}
@@ -284,29 +286,40 @@ class Measurements:
 class DesignOfExperiments:
     def __init__(self, param_init, design_variable_timepoints, measurement_object, create_model, solver=None,
                  prior_FIM=None, discretize_model=None, verbose=True, args=None):
-        '''
-        This package enables model-based design of experiments analysis with Pyomo. Both direct optimization and enumeration modes are supported.
+        """This package enables model-based design of experiments analysis with Pyomo. Both direct optimization and enumeration modes are supported.
         NLP sensitivity tools, e.g.,  sipopt and k_aug, are supported to accelerate analysis via enumeration.
         It can be applied to dynamic models, where design variables are controlled throughout the experiment.
 
-        Parameters:
-        -----------
-        param_init: a dictionary of parameter names and values. If they are an indexed variable, put the variable name and index, such as 'theta["A1"]'. Note: if sIPOPT is used, parameter shouldn't be indexed. 
-        design_variable_timepoints: a dictionary, keys are design variable names, values are its control time points.
+        Parameters
+        ----------
+        model: ConcreteModel
+            A ``ConcreteModel`` object representing the deterministic
+            model, cast as a minimization problem.
+        param_init:  dictionary
+            A  ``dictionary`` of parameter names and values. If they are an indexed variable, put the variable name and index, such as 'theta["A1"]'. Note: if sIPOPT is used, parameter shouldn't be indexed.
+        design_variable_timepoints: dictionary
+            A ``dictionary``, keys are design variable names, values are its control time points.
                 if this design var is independent of time (constant), set the time to [0]
-        measurement_object: the measurement object
-        create_model: a function that returns the model, where:
+        measurement_object:  object
+            A measurement ``object``.
+        create_model:  function
+            A  ``function`` that returns the model, where:
                       - parameter and design variables are defined as variables
                       - define every state variables dependent on parameters with a scenario index
                       - take scenarios as the first argument of this function
                       - define time index as 't'.
                       - design variables are defined with and only with a time index.
-        solver: User specified solver, default=None. If not specified, default solver is IPOPT MA57.
-        prior_FIM: Fisher information matrix (FIM) for prior experiments, default=None
-        discretize_model: A user-specified function that deiscretizes the model. Only use with Pyomo.DAE, default=None
-        verbose: if print statements are made
-        args: Other arguments of the create_model function, in a list
-        '''  
+        solver:  Solver
+            ``Solver`` object that User specified, default=None. If not specified, default solver is IPOPT MA57.
+        prior_FIM:  List[Param]
+            The list of ``Param`` represents for Fisher information matrix (FIM) for prior experiments, default=None
+        discretize_model:  function
+            A user-specified ``function`` that deiscretizes the model. Only use with Pyomo.DAE, default=None
+        verbose:  Var
+            A ``var`` if print statements are made
+        args:  Var
+            Other arguments as ``Var`` of the create_model function, in a list
+        """
         
         # parameters
         self.param_init = param_init
@@ -381,37 +394,51 @@ class DesignOfExperiments:
                      scale_nominal_param_value=False, scale_constant_value=1, optimize_opt=None, if_Cholesky=False, L_LB = 1E-10, L_initial=None,
                      jac_initial=None, fim_initial=None,
                      formula='central', step=0.001, check=True):
-        '''
-        Optimize DOE problem with design variables being the decisions.
+        '''Optimize DOE problem with design variables being the decisions.
         The DOE model is formed invasively and all scenarios are computed simultaneously.
         The function will first fun a square problem with design variable being fixed at
         the given initial points, and then unfix the design variable and do the
         optimization.
 
-        Parameters:
+        Parameters
         -----------
-        design_values: initial point for optimization, a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
-        if_optimize: if true, continue to do optimization. else, just run square problem with given design variable values
-        objective_option: supporting maximizing the 'det' determinant or the 'trace' trace of the FIM
-        jac_involved_measurement: the measurement class involved in calculation. If None, take the overall measurement class
-        scale_nominal_param_value: if scale Jacobian by the corresponding parameter nominal value
-        scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
-        optimize_opt: A dictionary, keys are design variables, values are True or False deciding if this design variable will be optimized as DOF or not
-        if_Cholesky: if true, cholesky decomposition is used for Objective function (to optimize determinant).
-            L_LB: if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
-            L_initial: initialize the L
-        jac_initial: a matrix used to initialize jacobian matrix
-        fim_initial: a matrix used to initialize FIM matrix
-        formula: Finite difference formula, choose from 'central', 'forward', 'backward', None
-        step: Finite difference sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
-        check: if True check input toggles consistency to be checked multiple times.
+        design_values:
+            initial point for optimization, a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
+        if_optimize:
+            if true, continue to do optimization. else, just run square problem with given design variable values
+        objective_option:
+            supporting maximizing the 'det' determinant or the 'trace' trace of the FIM
+        jac_involved_measurement:
+            the measurement class involved in calculation. If None, take the overall measurement class
+        scale_nominal_param_value:
+            if scale Jacobian by the corresponding parameter nominal value
+        scale_constant_value:
+            how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
+        optimize_opt:
+            A dictionary, keys are design variables, values are True or False deciding if this design variable will be optimized as DOF or not
+        if_Cholesky:
+            if true, cholesky decomposition is used for Objective function (to optimize determinant).
+            L_LB:
+                if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
+            L_initial:
+                initialize the L
+        jac_initial:
+            a matrix used to initialize jacobian matrix
+        fim_initial:
+            a matrix used to initialize FIM matrix
+        formula:
+            Finite difference formula, choose from 'central', 'forward', 'backward', None
+        step:
+            Finite difference sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        check:
+            if True check input toggles consistency to be checked multiple times.
 
-        Returns:
+        Returns
         --------
         analysis_square: result summary of the square problem solved at the initial point
         analysis_optimize: result summary of the optimization problem solved
 
-        Steps:
+        Steps
         ------
         1. Build two-stage stochastic programming optimization model where scenarios correspond to
         finite difference approximations for the Jacobian of the response variables with respect to calibrated model parameters
@@ -526,8 +553,7 @@ class DesignOfExperiments:
                     formula='central', step=0.001,
                     objective_option='det',
                     if_Cholesky=False, L_LB=1E-10, L_initial=None):
-        '''
-        This function solves a square Pyomo model with fixed design variables to compute the FIM.
+        '''This function solves a square Pyomo model with fixed design variables to compute the FIM.
         The problem is structured in one of the four following modes:
         1. simultaneous_finite: Calculate a multiple scenario model. Sensitivity info estimated by finite difference. This mode is accomplished by optimize_doe().
         2. sequential_finite: Calculates a one scenario model multiple times for
@@ -536,26 +562,38 @@ class DesignOfExperiments:
         4. sequential_kaug: calculate sensitivity by k_aug
         5. direct_kaug: calculate sensitivity by k_aug with direct sensitivity. **In construction**
 
-        Parameters:
+        Parameters
         -----------
-        design_values: a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
-        mode: use mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
-        FIM_store_name: if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
-        specified_prior: if user needs a different prior, replace this toggle without creating a new object
-        tee_opt: if IPOPT console output is printed
-        scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
-        scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
+        design_values:
+            a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
+        mode:
+            use mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
+        FIM_store_name:
+            if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
+        specified_prior:
+            if user needs a different prior, replace this toggle without creating a new object
+        tee_opt:
+            if IPOPT console output is printed
+        scale_nominal_param_value:
+            if True, the parameters are scaled by its own nominal value in param_init
+        scale_constant_value:
+            how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
 
         Only effective when finite=True:
-        formula: choose from 'central', 'forward', 'backward', None
-        step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        formula:
+            choose from 'central', 'forward', 'backward', None
+        step:
+            Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
         Cholesky option:
-        if_Cholesky: if true, Cholesky decomposition is used for Objective function (to optimize determinant).
-        L_LB: if FIM is positive definite, the diagonal element should be positive, so we can set a LB like 1E-10
-        L_initial: initialize the L
+        if_Cholesky:
+            if true, Cholesky decomposition is used for Objective function (to optimize determinant).
+        L_LB:
+            if FIM is positive definite, the diagonal element should be positive, so we can set a LB like 1E-10
+        L_initial:
+            initialize the L
 
-        Return:
+        Return
         -------
         FIM_analysis: result summary object of this solve
         '''
@@ -1131,8 +1169,7 @@ class DesignOfExperiments:
     def run_grid_search(self, design_values, design_ranges, design_dimension_names, design_control_time, mode='sequential_finite',
                         tee_option=False, scale_nominal_param_value=False, scale_constant_value=1, store_name= None, read_name=None,
                         filename=None, formula='central', step=0.001):
-        '''
-        Enumerate through full grid search for any number of design variables;
+        """Enumerate through full grid search for any number of design variables;
         solve square problems sequentially to compute FIMs.
         It calculates FIM with sensitivity information from four ways:
         1. Simultaneous: Calculate a multiple scenario model. Sensitivity info estimated by finite difference
@@ -1142,26 +1179,37 @@ class DesignOfExperiments:
         4. Sequential_kaug: calculate sensitivity by k_aug
         5, direct_kaug: calculate sensitivity by k_aug with direct sensitivity. **In construction**
 
-        Parameters:
+        Parameters
         -----------
-        design_values: a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
-        design_ranges: a list of design variable values to go over
-        design_dimension_names: a list of design variable names of each design range
-        deisgn_control_time: a list of control time points that should be fixed to the values in dv_ranges
-        mode: use mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
-        tee_option: if IPOPT console output is made
-        scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
-        scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
-        filename: if True, grid search results stored with this file name
+        design_values:
+            a dict whose keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
+        design_ranges:
+            a list of design variable values to go over
+        design_dimension_names:
+            a list of design variable names of each design range
+        deisgn_control_time:
+            a list of control time points that should be fixed to the values in dv_ranges
+        mode:
+            use mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
+        tee_option:
+            if IPOPT console output is made
+        scale_nominal_param_value:
+            if True, the parameters are scaled by its own nominal value in param_init
+        scale_constant_value:
+            how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
+        filename:
+            if True, grid search results stored with this file name
 
         Only effective when finite=True:
-        formula: choose from 'central', 'forward', 'backward', None
-        step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        formula:
+            choose from 'central', 'forward', 'backward', None
+        step:
+            Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
-        Return:
+        Return
         -------
         figure_draw_object: a combined result object of class Grid_search_result
-        '''
+        """
 
         # time 0
         t_enumeration_begin = time.time()
@@ -1696,7 +1744,7 @@ class Scenario_generator:
         DoE library first calls this function to generate scenarios.
         For sequential and simultaneous models, call different functions in this class.
 
-        Parameters:
+        Parameters
         -----------
         para_dict: a Dict of parameter, keys are names, values are their nominal value. for e.g.,
                         {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
@@ -1954,20 +2002,28 @@ class Scenario_data:
 class FIM_result:
     def __init__(self, para_name, measure_object, jacobian_info=None, all_jacobian_info=None, prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
                  verbose=True):
-        '''
-        Analyze the FIM result for a single run
+        '''Analyze the FIM result for a single run
 
-        Parameters:
+        Parameters
         -----------
-        para_name: parameter names
-        measure_object: measurement information object
-        jacobian_info: the jacobian for this measurement object
-        all_jacobian_info: the overall jacobian
-        prior_FIM: if there's prior FIM to be added
-        store_FIM: if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
-        scale_constant_value: the constant value used to scale the sensitivity
-        max_condition_number: max condition number
-        verbose: if print statements are used
+        para_name:
+            parameter names
+        measure_object:
+            measurement information object
+        jacobian_info:
+            the jacobian for this measurement object
+        all_jacobian_info:
+            the overall jacobian
+        prior_FIM:
+            if there's prior FIM to be added
+        store_FIM:
+            if storing the FIM in a .csv, give the file name here as a string, '**.csv' or '**.txt'.
+        scale_constant_value:
+            the constant value used to scale the sensitivity
+        max_condition_number:
+            max condition number
+        verbose:
+            if print statements are used
         '''
         self.para_name = para_name
         self.measure_object = measure_object
@@ -1989,15 +2045,17 @@ class FIM_result:
         self.verbose = verbose
 
     def calculate_FIM(self, dv_values, result=None):
-        '''
-        Calculate FIM from Jacobian information. This is for grid search (combined models) results
+        '''Calculate FIM from Jacobian information. This is for grid search (combined models) results
 
-        Parameters:
-        -----------
-        dv_values: design variable value dictionary
-        result: solver status returned by IPOPT
+        Parameters
+        ----------
+        dv_values:
+            design variable value dictionary
+        result:
+            solver status returned by IPOPT
 
-        Return:
+
+        Return
         ------
         fim_info: a FIM dictionary containing the following key:value pairs
             ~['FIM']: a list containing FIM itself
@@ -2264,18 +2322,23 @@ class FIM_result:
 
 class Grid_Search_Result:
     def __init__(self, design_ranges, design_dimension_names, design_control_time, FIM_result_list, store_optimality_name=None, verbose=True):
-        '''
-        This class deals with the FIM results from grid search, providing A, D, E, ME-criteria results for each design variable.
+        '''This class deals with the FIM results from grid search, providing A, D, E, ME-criteria results for each design variable.
         Can choose to draw 1D sensitivity curves and 2D heatmaps.
 
         Parameters:
         -----------
-        design_ranges: a dict whose keys are design variable names, values are a list of design variable values to go over
-        design_dimension_names: a list of design variables names
-        design_control_time: a list of design control timesets
-        FIM_result_list: a dictionary containing FIM results, keys are a tuple of design variable values, values are FIM result objects
-        store_optimality_name: a csv file name containing all four optimalities value
-        verbose: if print statements
+        design_ranges:
+            a dict whose keys are design variable names, values are a list of design variable values to go over
+        design_dimension_names:
+            a list of design variables names
+        design_control_time:
+            a list of design control timesets
+        FIM_result_list:
+            a dictionary containing FIM results, keys are a tuple of design variable values, values are FIM result objects
+        store_optimality_name:
+            a csv file name containing all four optimalities value
+        verbose:
+            if print statements
         '''
         # design variables
         self.design_names = design_dimension_names

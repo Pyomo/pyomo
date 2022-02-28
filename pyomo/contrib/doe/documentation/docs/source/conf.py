@@ -2,12 +2,16 @@
 
 # -- Project information
 
-project = 'Lumache'
-copyright = '2021, Graziella'
-author = 'Graziella'
+project = 'Pyomo'
+copyright = '2017, Sandia National Laboratory'
+author = 'Sandia National Laboratory'
 
 release = '0.1'
 version = '0.1.0'
+
+import os
+import sys
+sys.path.insert(0, os.path.abspath('/Users/wangjialu/pyomo/pyomo/contrib/doe'))
 
 # -- General configuration
 
