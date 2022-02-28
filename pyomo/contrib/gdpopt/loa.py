@@ -12,7 +12,10 @@ from pyomo.contrib.gdpopt.initialize_subproblems import (
     add_disjunct_list, add_variable_list, add_constraint_list, 
     save_initial_values)
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
-from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to)
+from pyomo.contrib.gdpopt.nlp_solve import solve_subproblem
+from pyomo.contrib.gdpopt.util import (
+    time_code, lower_logger_level_to, fix_master_solution_in_subproblem,
+    move_nonlinear_objective_to_constraints)
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs, 
@@ -52,8 +55,8 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
     def _solve_gdp_with_loa(self, original_model, config):
         logger = config.logger
 
-        # Make a block that we will store some component lists on so that after
-        # we clone we know who's who
+        # Make a block where we will store some component lists so that after we
+        # clone we know who's who
         util_block = add_util_block(original_model)
         # Needed for finding indicator_vars mainly
         add_disjunct_list(util_block)
@@ -61,6 +64,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
         add_variable_list(util_block)
         # We'll need these to get dual info after solving subproblems
         add_constraint_list(util_block)
+        move_nonlinear_objective_to_constraints(util_block, logger)
 
         # create model to hold the subproblems: We create this first because
         # certain initialization strategies for the master problem need it.
@@ -102,16 +106,23 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
                 break
 
             with time_code(self.timing, 'nlp'):
-                # TODO ESJ: You are finally here! Time to untangle the
-                # subproblem solves...
-                nlp_result = solve_local_subproblem(mip_result, solve_info,
-                                                    config)
-            if nlp_result.feasible:
-                add_outer_approximation_cuts(nlp_result, solve_info, config)
+                with fix_master_solution_in_subproblem(
+                        master_util_block, 
+                        subproblem_util_block,
+                        make_subproblem_continuous=config.force_subproblem_nlp):
+                    # TODO ESJ: You are finally here! Time to untangle the
+                    # subproblem solves...
+                    nlp_feasible = solve_subproblem(subproblem, config,
+                                                    self.timing)
+                    if nlp_feasible:
+                        set_trace()
+                        self._update_bounds(primal=TODO)
+                        add_outer_approximation_cuts(nlp_result, solve_info,
+                                                     config)
 
             # Add integer cut
-            add_integer_cut( mip_result.var_values, solve_info.linear_GDP,
-                             solve_info, config, feasible=nlp_result.feasible)
+            add_integer_cut(mip_result.var_values, solve_info.linear_GDP,
+                            solve_info, config, feasible=nlp_result.feasible)
 
             # Check termination conditions
             if any_termination_criterion_met(solve_info, config):

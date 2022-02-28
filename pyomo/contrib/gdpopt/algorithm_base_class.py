@@ -119,7 +119,7 @@ class _GDPoptAlgorithm(object):
     def _update_after_master_problem_solve(self, mip_feasible, obj_expr, 
                                            logger):
         if mip_feasible:
-            self._update_bounds(primal=value(obj_expr))
+            self._update_bounds(dual=value(obj_expr))
             # TODO: I'm going to change this anyway
             logger.info(
                 'ITER {:d}.{:d}.{:d}-MIP: OBJ: {:.10g}  LB: {:.10g}  UB: {:.10g}'.\
@@ -137,10 +137,10 @@ class _GDPoptAlgorithm(object):
                     'quality cuts.')
             # set optimistic bound to infinity
             if self.objective_sense == minimize:
-                self._update_bounds(primal=float('inf'))
+                self._update_bounds(dual=float('inf'))
             else:
-                self._update_bounds(primal=float('-inf'))
-        
+                self._update_bounds(dual=float('-inf'))
+
     def bounds_converged(self, config):
         if self.LB + config.bound_tolerance >= self.UB:
             config.logger.info(

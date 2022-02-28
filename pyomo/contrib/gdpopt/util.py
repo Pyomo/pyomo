@@ -403,7 +403,9 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
             subprob_var.set_value(
                 subproblem_util_block.initial_variable_values[var])
 
-    # TODO: Should we reset the values of the continuous Vars or no?
+    # [ESJ 2/25/22] I think we don't need to reset the values of the continuous
+    # variables because we will initialize them based on the master solution
+    # before we solve again.
 
 def is_feasible(model, config):
     """Checks to see if the algebraic model is feasible in its current state.
