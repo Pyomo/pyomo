@@ -5,11 +5,10 @@ from pyomo.common.collections import Bunch
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, NonNegativeInt, In, PositiveInt)
 from pyomo.opt import SolverResults, ProblemSense
+from pyomo.opt import TerminationCondition as tc
 from pyomo.core.base import Objective, value, minimize
 from pyomo.util.model_size import build_model_size_report
 from pyomo.contrib.gdpopt.util import a_logger, get_main_elapsed_time
-
-from nose.tools import set_trace
 
 # I don't know where to keep this, just avoiding circular import for now
 __version__ = (20, 2, 28)  # Note: date-based version number
@@ -88,7 +87,7 @@ class _GDPoptAlgorithm(object):
 
         self.pyomo_results = self._get_pyomo_results_object_with_problem_info(
             model, config)
-        self.obj_sense = self.pyomo_results.problem.sense
+        self.objective_sense = self.pyomo_results.problem.sense
 
         # Check if this problem actually has any discrete decisions. If not,
         # just solve it.
@@ -105,7 +104,7 @@ class _GDPoptAlgorithm(object):
         primal: bound from solving subproblem with fixed master solution
         dual: bound from solving master problem (relaxation of original problem)
         """
-        if self.obj_sense is minimize:
+        if self.objective_sense is minimize:
             if primal is not None:
                 self.UB = primal
             if dual is not None:
@@ -116,8 +115,25 @@ class _GDPoptAlgorithm(object):
             if dual is not None:
                 self.UB = dual
 
-    def _update_after_master_problem_solve(self, mip_feasible, obj_expr, 
-                                           logger):
+    def primal_bound(self):
+        if self.objective_sense is minimize:
+            return self.UB
+        else:
+            return self.LB
+
+    def primal_bound_improved(self, old, new):
+        if self.objective_sense is minimize:
+            if old < new:
+                return True
+        elif old > new:
+            return True
+        return False
+
+    def update_incumbent(self, util_block):
+        self.incumbent = [value(v) for v in util_block.variable_list]
+
+    def _update_bounds_after_master_problem_solve(self, mip_feasible, obj_expr,
+                                                  logger):
         if mip_feasible:
             self._update_bounds(dual=value(obj_expr))
             # TODO: I'm going to change this anyway
@@ -131,15 +147,18 @@ class _GDPoptAlgorithm(object):
                     self.LB, self.UB))
         else:
             # Master problem was infeasible.
-            if self.master_iteration == 1:
-                config.logger.warning(
-                    'GDPopt initialization may have generated poor '
-                    'quality cuts.')
-            # set optimistic bound to infinity
-            if self.objective_sense == minimize:
-                self._update_bounds(dual=float('inf'))
-            else:
-                self._update_bounds(dual=float('-inf'))
+            self._update_dual_bound_to_infeasible(logger)
+
+    def _update_dual_bound_to_infeasible(self, logger):
+        if self.master_iteration == 1:
+            logger.warning(
+                'GDPopt initialization may have generated poor '
+                'quality cuts.')
+        # set optimistic bound to infinity
+        if self.objective_sense == minimize:
+            self._update_bounds(dual=float('inf'))
+        else:
+            self._update_bounds(dual=float('-inf'))
 
     def bounds_converged(self, config):
         if self.LB + config.bound_tolerance >= self.UB:
@@ -148,11 +167,11 @@ class _GDPoptAlgorithm(object):
                 'LB: {:.10g} + (tol {:.10g}) >= UB: {:.10g}'.format(
                     self.LB, config.bound_tolerance, self.UB))
             if self.LB == float('inf') and self.UB == float('inf'):
-                self.results.solver.termination_condition = tc.infeasible
+                self.pyomo_results.solver.termination_condition = tc.infeasible
             elif self.LB == float('-inf') and self.UB == float('-inf'):
-                self.results.solver.termination_condition = tc.infeasible
+                self.pyomo_results.solver.termination_condition = tc.infeasible
             else:
-                self.results.solver.termination_condition = tc.optimal
+                self.pyomo_results.solver.termination_condition = tc.optimal
             return True
         return False
 
@@ -165,7 +184,7 @@ class _GDPoptAlgorithm(object):
             config.logger.info(
                 'Final bound values: LB: {:.10g}  UB: {:.10g}'.format(
                     self.LB, self.UB))
-            self.results.solver.termination_condition = tc.maxIterations
+            self.pyomo_results.solver.termination_condition = tc.maxIterations
             return True
         return False
 
@@ -243,6 +262,11 @@ class _GDPoptAlgorithm(object):
                                 else ProblemSense.maximize
 
         return results
+
+    def _transfer_incumbent_to_original_model(self):
+        for var, soln in zip(self.original_util_block.variable_list,
+                                 self.incumbent):
+            var.set_value(soln, skip_validation=True)
 
     def _get_final_pyomo_results_object(self):
         """

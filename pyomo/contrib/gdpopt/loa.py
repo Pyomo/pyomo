@@ -20,13 +20,15 @@ from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs, 
     _add_tolerance_configs)
+from pyomo.contrib.gdpopt.cut_generation import (
+    add_outer_approximation_cuts, add_no_good_cut)
 
-from pyomo.core import (Constraint, Block, Objective, minimize, Expression, Var)
+from pyomo.core import (
+    Constraint, Block, Objective, minimize, Expression, Var, value)
 from pyomo.opt.base import SolverFactory
 from pyomo.gdp import Disjunct
 
-## DEBUG 
-from nose.tools import set_trace
+from pytest import set_trace
 
 @SolverFactory.register(
     '_logic_based_oa',
@@ -57,7 +59,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
 
         # Make a block where we will store some component lists so that after we
         # clone we know who's who
-        util_block = add_util_block(original_model)
+        util_block = self.original_util_block = add_util_block(original_model)
         # Needed for finding indicator_vars mainly
         add_disjunct_list(util_block)
         # To transfer solutions between MILP and NLP
@@ -72,6 +74,10 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
         # TODO: use getname and a bufffer!
         subproblem_util_block = subproblem.component(util_block.name)
         save_initial_values(subproblem_util_block)
+        # TODO, not completely sure if this is what I should do
+        subproblem_obj = next(subproblem.component_data_objects(Objective,
+                                                           active=True,
+                                                           descend_into=True))
 
         # create master MILP
         master_util_block = initialize_master_problem(util_block,
@@ -96,8 +102,8 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
                      master_util_block, config)
                 mip_feasible = solve_linear_GDP(master_util_block, config,
                                                 self.timing)
-                self._update_after_master_problem_solve(mip_feasible, oa_obj,
-                                                        logger)
+                self._update_bounds_after_master_problem_solve(mip_feasible,
+                                                               oa_obj, logger)
                 # TODO: No idea what args these callbacks should actually take
                 config.call_after_master_solve(master_util_block, self)
 
@@ -110,25 +116,43 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
                         master_util_block, 
                         subproblem_util_block,
                         make_subproblem_continuous=config.force_subproblem_nlp):
-                    # TODO ESJ: You are finally here! Time to untangle the
-                    # subproblem solves...
                     nlp_feasible = solve_subproblem(subproblem, config,
                                                     self.timing)
                     if nlp_feasible:
-                        set_trace()
-                        self._update_bounds(primal=TODO)
-                        add_outer_approximation_cuts(nlp_result, solve_info,
-                                                     config)
+                        old_primal = self.primal_bound()
+                        new_primal = value(subproblem_obj)
+                        self._update_bounds(primal=new_primal)
+                        if self.master_iteration == 1 or \
+                           self.primal_bound_improved(old_primal, new_primal):
+                            self.update_incumbent(subproblem_util_block)
+                        with time_code(self.timing, 'OA cut generation'):
+                            add_outer_approximation_cuts(subproblem_util_block,
+                                                         master_util_block,
+                                                         self.objective_sense,
+                                                         config)
 
             # Add integer cut
-            add_integer_cut(mip_result.var_values, solve_info.linear_GDP,
-                            solve_info, config, feasible=nlp_result.feasible)
+            with time_code(self.timing, "integer cut generation"):
+                added = add_no_good_cut(master_util_block, config)
+                if not added:
+                    # We've run out of discrete solutions, so we're done.
+                    self._update_dual_bound_to_infeasible(logger)
+
+            if config.calc_disjunctive_bounds:
+                with time_code(solve_data.timing, 
+                               "disjunctive variable bounding"):
+                    TransformationFactory(
+                        'contrib.compute_disj_var_bounds').apply_to(
+                            m, solver=config.mip_solver if 
+                            config.obbt_disjunctive_bounds else None )
 
             # Check termination conditions
-            if any_termination_criterion_met(solve_info, config):
+            if self.any_termination_criterion_met(config):
                 break
 
-        return results
+        self._get_final_pyomo_results_object()
+        self._transfer_incumbent_to_original_model()
+        return self.pyomo_results
 
     def _setup_augmented_Lagrangian_objective(self, master_util_block, config):
         m = master_util_block.model()

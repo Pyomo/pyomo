@@ -34,8 +34,6 @@ from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.common.fileutils import PYOMO_ROOT_DIR
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
-from nose.tools import set_trace
-
 mip_solver = 'glpk'
 nlp_solver = 'ipopt'
 global_nlp_solver = 'baron'

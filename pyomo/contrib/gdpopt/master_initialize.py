@@ -4,7 +4,7 @@ in Logic-based outer approximation.
 from math import fabs
 
 from pyomo.contrib.gdpopt.cut_generation import (
-    add_integer_cut, add_subproblem_cuts)
+    add_no_good_cut, add_subproblem_cuts)
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.nlp_solve import solve_subproblem
 from pyomo.contrib.gdpopt.util import (
@@ -55,7 +55,7 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                                               config, timing)
                 if nlp_result.feasible:
                     add_subproblem_cuts(nlp_result, solve_data, config)
-                add_integer_cut(mip_result.var_values, solve_data.linear_GDP,
+                add_no_good_cut(mip_result.var_values, solve_data.linear_GDP,
                                 solve_data, config,
                                 feasible=nlp_result.feasible)
         else:
@@ -84,7 +84,7 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
                                                   config)
         if nlp_result.feasible:
             add_subproblem_cuts(nlp_result, solve_data, config)
-        add_integer_cut(
+        add_no_good_cut(
             mip_result.var_values, solve_data.linear_GDP, solve_data, config,
             feasible=nlp_result.feasible)
     else:
@@ -124,7 +124,7 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
                                                   config)
         if nlp_result.feasible:
             add_subproblem_cuts(nlp_result, solve_data, config)
-        add_integer_cut(mip_results.var_values, solve_data.linear_GDP,
+        add_no_good_cut(mip_results.var_values, solve_data.linear_GDP,
                         solve_data, config, feasible=nlp_result.feasible)
     else:
         config.logger.info(
@@ -185,10 +185,10 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                 for (needed_cover, was_active) in zip(disjunct_needs_cover,
                                                       active_disjuncts))
             add_subproblem_cuts(subprob_result, solve_data, config)
-        add_integer_cut(
+        add_no_good_cut(
             mip_result.var_values, solve_data.linear_GDP, solve_data, config,
             feasible=subprob_result.feasible)
-        add_integer_cut(
+        add_no_good_cut(
             mip_result.var_values, set_cover_mip, solve_data, config,
             feasible=subprob_result.feasible)
 

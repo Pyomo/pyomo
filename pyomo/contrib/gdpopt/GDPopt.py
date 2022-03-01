@@ -43,9 +43,6 @@ from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 #from pyomo.contrib.gdptopt.gloa import GDP_GLOA_Solver
 # etc...
 
-
-from nose.tools import set_trace
-
 @SolverFactory.register(
     'gdpopt',
     doc='The GDPopt decomposition-based '

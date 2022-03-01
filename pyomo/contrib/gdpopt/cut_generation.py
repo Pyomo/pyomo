@@ -33,113 +33,114 @@ def add_subproblem_cuts(subprob_result, solve_data, config):
     else:
         raise ValueError('Unrecognized strategy: ' + config.strategy)
 
-def add_outer_approximation_cuts(nlp_result, solve_data, config):
+def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
+                                 objective_sense, config):
     """Add outer approximation cuts to the linear GDP model."""
-    with time_code(solve_data.timing, 'OA cut generation'):
-        m = solve_data.linear_GDP
-        GDPopt = m.GDPopt_utils
-        sign_adjust = -1 if solve_data.objective_sense == minimize else 1
+    m = master_util_block.model()
+    nlp = subproblem_util_block.model()
+    sign_adjust = -1 if objective_sense == minimize else 1
 
-        # copy values over
-        for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
-            if val is not None and not var.fixed:
-                var.set_value(val, skip_validation=True)
+    for master_var, subprob_var in zip(subproblem_util_block.variable_list,
+                                       master_util_block.variable_list):
+        val = value(subprob_var)
+        if val is not None and not master_var.fixed:
+            master_var.set_value(val, skip_validation=True)
 
-        # TODO some kind of special handling if the dual is phenomenally small?
-        config.logger.debug('Adding OA cuts.')
+    # TODO some kind of special handling if the dual is phenomenally small?
+    config.logger.debug('Adding OA cuts.')
 
-        counter = 0
-        if not hasattr(GDPopt, 'jacobians'):
-            GDPopt.jacobians = ComponentMap()
-        for constr, dual_value in zip(GDPopt.constraint_list,
-                                      nlp_result.dual_values):
-            if dual_value is None or constr.body.polynomial_degree() in (1, 0):
-                continue
+    counter = 0
+    if not hasattr(master_util_block, 'jacobians'):
+        master_util_block.jacobians = ComponentMap()
+    for constr, subprob_constr in zip(master_util_block.constraint_list,
+                                      subproblem_util_block.constraint_list):
+        dual_value = nlp.dual.get(subprob_constr, None)
+        # TODO: This is a risky use of polynomial_degree I think
+        if dual_value is None or constr.body.polynomial_degree() in (1, 0):
+            continue
 
-            # Determine if the user pre-specified that OA cuts should not be
-            # generated for the given constraint.
-            parent_block = constr.parent_block()
-            ignore_set = getattr(parent_block, 'GDPopt_ignore_OA', None)
-            config.logger.debug('Ignore_set %s' % ignore_set)
-            if (ignore_set and (constr in ignore_set or
-                                constr.parent_component() in ignore_set)):
-                config.logger.debug(
-                    'OA cut addition for %s skipped because it is in '
-                    'the ignore set.' % constr.name)
-                continue
-
+        # Determine if the user pre-specified that OA cuts should not be
+        # generated for the given constraint.
+        parent_block = constr.parent_block()
+        ignore_set = getattr(parent_block, 'GDPopt_ignore_OA', None)
+        config.logger.debug('Ignore_set %s' % ignore_set)
+        if (ignore_set and (constr in ignore_set or
+                            constr.parent_component() in ignore_set)):
             config.logger.debug(
-                "Adding OA cut for %s with dual value %s"
-                % (constr.name, dual_value))
+                'OA cut addition for %s skipped because it is in '
+                'the ignore set.' % constr.name)
+            continue
 
-            # Cache jacobian
-            jacobian = GDPopt.jacobians.get(constr, None)
-            if jacobian is None:
-                constr_vars = list(identify_variables(
-                    constr.body, include_fixed=False))
-                if len(constr_vars) >= MAX_SYMBOLIC_DERIV_SIZE:
-                    mode = differentiate.Modes.reverse_numeric
-                else:
-                    mode = differentiate.Modes.sympy
+        # TODO: need a name buffer
+        config.logger.debug(
+            "Adding OA cut for %s with dual value %s"
+            % (constr.name, dual_value))
 
-                try:
-                    jac_list = differentiate(
-                        constr.body, wrt_list=constr_vars, mode=mode)
-                    jac_map = ComponentMap(zip(constr_vars, jac_list))
-                except:
-                    if mode is differentiate.Modes.reverse_numeric:
-                        raise
-                    mode = differentiate.Modes.reverse_numeric
-                    jac_map = ComponentMap()
-                jacobian = JacInfo(mode=mode, vars=constr_vars, jac=jac_map)
-                GDPopt.jacobians[constr] = jacobian
-            # Recompute numeric derivatives
-            if not jacobian.jac:
-                jac_list = differentiate(
-                    constr.body, wrt_list=jacobian.vars, mode=jacobian.mode)
-                jacobian.jac.update(zip(jacobian.vars, jac_list))
+        # Cache jacobian
+        jacobian = master_util_block.jacobians.get(constr, None)
+        if jacobian is None:
+            constr_vars = list(identify_variables(constr.body,
+                                                  include_fixed=False))
+            if len(constr_vars) >= MAX_SYMBOLIC_DERIV_SIZE:
+                mode = differentiate.Modes.reverse_numeric
+            else:
+                mode = differentiate.Modes.sympy
 
-            # Create a block on which to put outer approximation cuts.
-            oa_utils = parent_block.component('GDPopt_OA')
-            if oa_utils is None:
-                oa_utils = parent_block.GDPopt_OA = Block(
-                    doc="Block holding outer approximation cuts "
-                    "and associated data.")
-                oa_utils.GDPopt_OA_cuts = ConstraintList()
-                oa_utils.GDPopt_OA_slacks = VarList(
-                    bounds=(0, config.max_slack),
-                    domain=NonNegativeReals, initialize=0)
-
-            oa_cuts = oa_utils.GDPopt_OA_cuts
-            slack_var = oa_utils.GDPopt_OA_slacks.add()
-            rhs = value(constr.lower) if constr.has_lb() else value(
-                constr.upper)
             try:
-                new_oa_cut = (
-                    copysign(1, sign_adjust * dual_value) * (
-                        value(constr.body) - rhs + sum(
-                            value(jac) * (var - value(var))
-                            for var, jac in jacobian.jac.items())
-                        ) - slack_var <= 0)
-                if new_oa_cut.polynomial_degree() not in (1, 0):
-                    for var, jac in jacobian.jac.items():
-                        print(var.name, value(jac))
-                oa_cuts.add(expr=new_oa_cut)
-                counter += 1
-            except ZeroDivisionError:
-                config.logger.warning(
-                    "Zero division occured attempting to generate OA cut for "
-                    "constraint %s.\n"
-                    "Skipping OA cut generation for this constraint."
-                    % (constr.name,)
-                )
-                # Simply continue on to the next constraint.
-            # Clear out the numeric Jacobian values
-            if jacobian.mode is differentiate.Modes.reverse_numeric:
-                jacobian.jac.clear()
+                jac_list = differentiate( constr.body, wrt_list=constr_vars,
+                                          mode=mode)
+                jac_map = ComponentMap(zip(constr_vars, jac_list))
+            except:
+                if mode is differentiate.Modes.reverse_numeric:
+                    raise
+                mode = differentiate.Modes.reverse_numeric
+                jac_map = ComponentMap()
+            jacobian = JacInfo(mode=mode, vars=constr_vars, jac=jac_map)
+            master_util_block.jacobians[constr] = jacobian
+        # Recompute numeric derivatives
+        if not jacobian.jac:
+            jac_list = differentiate( constr.body, wrt_list=jacobian.vars,
+                                      mode=jacobian.mode)
+            jacobian.jac.update(zip(jacobian.vars, jac_list))
 
-        config.logger.info('Added %s OA cuts' % counter)
+        # Create a block on which to put outer approximation cuts.
+        oa_utils = parent_block.component('GDPopt_OA')
+        if oa_utils is None:
+            oa_utils = parent_block.GDPopt_OA = Block(
+                doc="Block holding outer approximation cuts "
+                "and associated data.")
+            oa_utils.GDPopt_OA_cuts = ConstraintList()
+            oa_utils.GDPopt_OA_slacks = VarList( bounds=(0, config.max_slack),
+                                                 domain=NonNegativeReals,
+                                                 initialize=0)
 
+        oa_cuts = oa_utils.GDPopt_OA_cuts
+        slack_var = oa_utils.GDPopt_OA_slacks.add()
+        rhs = value(constr.lower) if constr.has_lb() else value(
+            constr.upper)
+        try:
+            new_oa_cut = (
+                copysign(1, sign_adjust * dual_value) * (
+                    value(constr.body) - rhs + sum(
+                        value(jac) * (var - value(var))
+                        for var, jac in jacobian.jac.items())
+                    ) - slack_var <= 0)
+            assert new_oa_cut.polynomial_degree() in (1, 0)
+            oa_cuts.add(expr=new_oa_cut)
+            counter += 1
+        except ZeroDivisionError:
+            config.logger.warning(
+                "Zero division occured attempting to generate OA cut for "
+                "constraint %s.\n"
+                "Skipping OA cut generation for this constraint."
+                % (constr.name,)
+            )
+            # Simply continue on to the next constraint.
+        # Clear out the numeric Jacobian values
+        if jacobian.mode is differentiate.Modes.reverse_numeric:
+            jacobian.jac.clear()
+
+    config.logger.info('Added %s OA cuts' % counter)
 
 def add_affine_cuts(nlp_result, solve_data, config):
     with time_code(solve_data.timing, "affine cut generation"):
@@ -207,68 +208,49 @@ def add_affine_cuts(nlp_result, solve_data, config):
         config.logger.info("Added %s affine cuts" % counter)
 
 
-def add_integer_cut(var_values, target_model, solve_data, config,
-                    feasible=False):
-    """Add an integer cut to the target GDP model."""
-    with time_code(solve_data.timing, 'integer cut generation'):
-        m = target_model
-        GDPopt = m.GDPopt_utils
-        var_value_is_one = ComponentSet()
-        var_value_is_zero = ComponentSet()
-        indicator_vars = ComponentSet(
-            disj.binary_indicator_var for disj in GDPopt.disjunct_list)
-        for var, val in zip(GDPopt.variable_list, var_values):
-            if not var.is_binary():
+def add_no_good_cut(target_model_util_block, config):
+    """Cut the current integer solution from the target model."""
+    var_value_is_one = ComponentSet()
+    var_value_is_zero = ComponentSet()
+    indicator_vars = ComponentSet( disj.binary_indicator_var for disj in
+                                   target_model_util_block.disjunct_list)
+    for var in target_model_util_block.variable_list:
+        if not var.is_binary():
+            continue
+        val = value(var)
+        if var.fixed:
+            # Note: FBBT may cause some disjuncts to be fathomed, which can
+            # cause a fixed variable to be different than the subproblem value.
+            # In this case, we simply construct the integer cut as usual with
+            # the subproblem value rather than its fixed value.
+            if val is None:
+                val = var.value
+
+        if not config.force_subproblem_nlp:
+            # By default (config.force_subproblem_nlp = False), we only want
+            # the integer cuts to be over disjunct indicator vars.
+            if var not in indicator_vars:
                 continue
-            if var.fixed:
-                # if val is not None and var.value != val:
-                #     # val needs to be None or match var.value. Otherwise, we have a
-                #     # contradiction.
-                #     raise ValueError(
-                #         "Fixed variable %s has value %s != "
-                #         "provided value of %s." % (var.name, var.value, val))
 
-                # Note: FBBT may cause some disjuncts to be fathomed, which can cause
-                # a fixed variable to be different than the subproblem value.
-                # In this case, we simply construct the integer cut as usual with
-                # the subproblem value rather than its fixed value.
-                if val is None:
-                    val = var.value
+        if fabs(val - 1) <= config.integer_tolerance:
+            var_value_is_one.add(var)
+        elif fabs(val) <= config.integer_tolerance:
+            var_value_is_zero.add(var)
+        else:
+            raise ValueError(
+                'Binary %s = %s is not 0 or 1' % (var.name, val))
 
-            if not config.force_subproblem_nlp:
-                # By default (config.force_subproblem_nlp = False), we only want
-                # the integer cuts to be over disjunct indicator vars.
-                if var not in indicator_vars:
-                    continue
+    if not (var_value_is_one or var_value_is_zero):
+        # if no remaining binary variables, then terminate algorithm.
+        config.logger.info(
+            'No remaining discrete solutions to explore.')
+        return False
 
-            if fabs(val - 1) <= config.integer_tolerance:
-                var_value_is_one.add(var)
-            elif fabs(val) <= config.integer_tolerance:
-                var_value_is_zero.add(var)
-            else:
-                raise ValueError(
-                    'Binary %s = %s is not 0 or 1' % (var.name, val))
+    int_cut = (sum(1 - v for v in var_value_is_one) +
+               sum(v for v in var_value_is_zero)) >= 1
 
-        if not (var_value_is_one or var_value_is_zero):
-            # if no remaining binary variables, then terminate algorithm.
-            config.logger.info(
-                'Adding integer cut to a model without discrete variables. '
-                'Model is now infeasible.')
-            if solve_data.objective_sense == minimize:
-                solve_data.LB = float('inf')
-            else:
-                solve_data.UB = float('-inf')
-            return False
+    # Exclude the current binary combination
+    config.logger.info('Adding integer cut')
+    target_model_util_block.integer_cuts.add(expr=int_cut)
 
-        int_cut = (sum(1 - v for v in var_value_is_one) +
-                   sum(v for v in var_value_is_zero)) >= 1
-
-        # Exclude the current binary combination
-        config.logger.info('Adding integer cut')
-        GDPopt.integer_cuts.add(expr=int_cut)
-
-    if config.calc_disjunctive_bounds:
-        with time_code(solve_data.timing, "disjunctive variable bounding"):
-            TransformationFactory('contrib.compute_disj_var_bounds').apply_to(
-                m, solver=config.mip_solver if config.obbt_disjunctive_bounds
-                else None )
+    return True
