@@ -43,7 +43,8 @@ class RemoveZeroTerms(IsomorphicTransformation):
             if not repn.is_linear() or repn.is_constant():
                 continue  # we currently only process linear constraints, and we
                           # assume that trivial constraints have already been
-                          # deactivated
+                          # deactivated or will be deactivated in a different
+                          # step
 
             # get the index of all nonzero coefficient variables
             nonzero_vars_indx = [
