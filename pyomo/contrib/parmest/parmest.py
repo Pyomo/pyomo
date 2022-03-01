@@ -75,13 +75,13 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
     -----------
     scenario_name: `str` Scenario name should end with a number
     node_names: `None` ( Not used here )
-    cb_data : dict with ["callback"], ["BootList"], 
+    cb_data : dict with ["callback"], ["BootList"],
               ["theta_names"], ["cb_data"], etc.
               "cb_data" is passed through to user's callback function
                         that is the "callback" value.
               "BootList" is None or bootstrap experiment number list.
                        (called cb_data by mpisppy)
- 
+
 
     Returns:
     --------
@@ -99,7 +99,7 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
     basename = scenario_name[:-len(scen_num_str)] # to reconstruct name
 
     CallbackFunction = outer_cb_data["callback"]
-    
+
     if callable(CallbackFunction):
         callback = CallbackFunction
     else:
@@ -189,9 +189,9 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
 def _treemaker(scenlist):
     """
     Makes a scenario tree (avoids dependence on daps)
-    
+
     Parameters
-    ---------- 
+    ----------
     scenlist (list of `int`): experiment (i.e. scenario) numbers
 
     Returns
@@ -220,11 +220,11 @@ def _treemaker(scenlist):
 
     return m
 
-    
+
 def group_data(data, groupby_column_name, use_mean=None):
     """
     Group data by scenario
-    
+
     Parameters
     ----------
     data: DataFrame
@@ -232,9 +232,9 @@ def group_data(data, groupby_column_name, use_mean=None):
     groupby_column_name: strings
         Name of data column which contains scenario numbers
     use_mean: list of column names or None, optional
-        Name of data columns which should be reduced to a single value per 
+        Name of data columns which should be reduced to a single value per
         scenario by taking the mean
-        
+
     Returns
     ----------
     grouped_data: list of dictionaries
@@ -244,7 +244,7 @@ def group_data(data, groupby_column_name, use_mean=None):
         use_mean_list = []
     else:
         use_mean_list = use_mean
-        
+
     grouped_data = []
     for exp_num, group in data.groupby(data[groupby_column_name]):
         d = {}
@@ -276,17 +276,17 @@ class Estimator(object):
     Parameters
     ----------
     model_function: function
-        Function that generates an instance of the Pyomo model using 'data' 
+        Function that generates an instance of the Pyomo model using 'data'
         as the input argument
     data: pd.DataFrame, list of dictionaries, list of dataframes, or list of json file names
-        Data that is used to build an instance of the Pyomo model and build 
+        Data that is used to build an instance of the Pyomo model and build
         the objective function
     theta_names: list of strings
         List of Var names to estimate
     obj_function: function, optional
         Function used to formulate parameter estimation objective, generally
-        sum of squared error between measurements and model variables.  
-        If no function is specified, the model is used 
+        sum of squared error between measurements and model variables.
+        If no function is specified, the model is used
         "as is" and should be defined with a "FirstStageCost" and
         "SecondStageCost" expression that are used to build an objective.
     tee: bool, optional
@@ -296,11 +296,11 @@ class Estimator(object):
     solver_options: dict, optional
         Provides options to the solver (also the name of an attribute)
     """
-    def __init__(self, model_function, data, theta_names, obj_function=None, 
+    def __init__(self, model_function, data, theta_names, obj_function=None,
                  tee=False, diagnostic_mode=False, solver_options=None):
-        
+
         self.model_function = model_function
-        
+
         assert isinstance(data, (list, pd.DataFrame)), "Data must be a list or DataFrame"
         # convert dataframe into a list of dataframes, each row = one scenario
         if isinstance(data, pd.DataFrame):
@@ -308,17 +308,17 @@ class Estimator(object):
         else:
             self.callback_data = data
         assert isinstance(self.callback_data[0], (dict, pd.DataFrame, str)), "The scenarios in data must be a dictionary, DataFrame or filename"
-        
+
         if len(theta_names) == 0:
             self.theta_names = ['parmest_dummy_var']
         else:
-            self.theta_names = theta_names 
-            
-        self.obj_function = obj_function 
+            self.theta_names = theta_names
+
+        self.obj_function = obj_function
         self.tee = tee
         self.diagnostic_mode = diagnostic_mode
         self.solver_options = solver_options
-        
+
         self._second_stage_cost_exp = "SecondStageCost"
 
 
@@ -327,12 +327,12 @@ class Estimator(object):
         Modify the Pyomo model for parameter estimation
         """
         from pyomo.core import Objective
-        
+
         model = self.model_function(data)
-        
+
         if (len(self.theta_names) == 1) and (self.theta_names[0] == 'parmest_dummy_var'):
             model.parmest_dummy_var = pyo.Var(initialize = 1.0)
-            
+
         for i, theta in enumerate(self.theta_names):
             # First, leverage the parser in ComponentUID to locate the
             # component.  If that fails, fall back on the original
@@ -354,27 +354,27 @@ class Estimator(object):
                     self.theta_names[i] = repr(var_cuid)
                 except:
                     logger.warning(theta + ' is not a variable')
-        
+
         if self.obj_function:
             for obj in model.component_objects(Objective):
                 obj.deactivate()
-        
+
             def FirstStageCost_rule(model):
                 return 0
             model.FirstStageCost = pyo.Expression(rule=FirstStageCost_rule)
             model.SecondStageCost = pyo.Expression(rule=_SecondStageCostExpr(self.obj_function, data))
-            
+
             def TotalCost_rule(model):
                 return model.FirstStageCost + model.SecondStageCost
             model.Total_Cost_Objective = pyo.Objective(rule=TotalCost_rule, sense=pyo.minimize)
-        
+
         self.parmest_model = model
-        
+
         return model
-    
-    
+
+
     def _instance_creation_callback(self, experiment_number=None, cb_data=None):
-        
+
         # cb_data is a list of dictionaries, list of dataframes, OR list of json file names
         exp_data = cb_data[experiment_number]
         if isinstance(exp_data, (dict, pd.DataFrame)):
@@ -388,9 +388,9 @@ class Estimator(object):
         else:
             raise RuntimeError(f'Unexpected data format for cb_data={cb_data}')
         model = self._create_parmest_model(exp_data)
-        
+
         return model
-    
+
 
     def _Q_opt(self, ThetaVals=None, solver="ef_ipopt",
                return_values=[], bootlist=None, calc_cov=False, cov_n=None):
@@ -434,10 +434,62 @@ class Estimator(object):
                                     suppress_warnings=True,
                                     scenario_creator_kwargs=scenario_creator_options)
         self.ef_instance = ef
-        
+
+        for i, theta in enumerate(self.theta_names):
+            # First, leverage the parser in ComponentUID to locate the
+            # component.  If that fails, fall back on the original
+            # (insecure) use of 'eval'
+            var_cuid = ComponentUID(theta)
+            var_validate = var_cuid.find_component_on(self.parmest_model)
+            if var_validate is None:
+                logger.warning(
+                    "theta_name[%s] (%s) was not found on the model",
+                    (i, theta))
+            else:
+                try:
+                    # If the component that was found is not a variable,
+                    # this will generate an exception (and the warning
+                    # in the 'except')
+                    var_validate.fix()
+                    # We want to standardize on the CUID string
+                    # representation
+                    # self.theta_names[i] = repr(var_cuid)
+                except:
+                    logger.warning(theta + ' is not a variable')
+
+        init_solver = SolverFactory('ipopt')
+        if self.solver_options is not None:
+            for key in self.solver_options:
+                init_solver.options[key] = self.solver_options[key]
+
+        print("\n\n*********************  Initial Solve  *********************\n\n")
+        init_solver.solve(ef, tee = True)
+        ef.pprint()
+        for i, theta in enumerate(self.theta_names):
+            # First, leverage the parser in ComponentUID to locate the
+            # component.  If that fails, fall back on the original
+            # (insecure) use of 'eval'
+            var_cuid = ComponentUID(theta)
+            var_validate = var_cuid.find_component_on(self.parmest_model)
+            if var_validate is None:
+                logger.warning(
+                    "theta_name[%s] (%s) was not found on the model",
+                    (i, theta))
+            else:
+                try:
+                    # If the component that was found is not a variable,
+                    # this will generate an exception (and the warning
+                    # in the 'except')
+                    var_validate.unfix()
+                    # We want to standardize on the CUID string
+                    # representation
+                    # self.theta_names[i] = repr(var_cuid)
+                except:
+                    logger.warning(theta + ' is not a variable')
+
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-        
+
             if not calc_cov:
                 # Do not calculate the reduced hessian
 
@@ -466,7 +518,7 @@ class Estimator(object):
                         independent_variables= ind_vars,
                         solver_options=self.solver_options,
                         tee=self.tee)
-            
+
             if self.diagnostic_mode:
                 print('    Solver termination condition = ',
                        str(solve_result.solver.termination_condition))
@@ -480,35 +532,35 @@ class Estimator(object):
                 thetavals[vname] = solval
 
             objval = pyo.value(ef.EF_Obj)
-            
+
             if calc_cov:
                 # Calculate the covariance matrix
-                
-                # Number of data points considered  
+
+                # Number of data points considered
                 n = cov_n
-                
+
                 # Extract number of fitted parameters
                 l = len(thetavals)
-                
+
                 # Assumption: Objective value is sum of squared errors
                 sse = objval
-                
+
                 '''Calculate covariance assuming experimental observation errors are
-                independent and follow a Gaussian 
+                independent and follow a Gaussian
                 distribution with constant variance.
-                
+
                 The formula used in parmest was verified against equations (7-5-15) and
                 (7-5-16) in "Nonlinear Parameter Estimation", Y. Bard, 1974.
-                
+
                 This formula is also applicable if the objective is scaled by a constant;
                 the constant cancels out. (was scaled by 1/n because it computes an
                 expected value.)
                 '''
                 cov = 2 * sse / (n - l) * inv_red_hes
                 cov = pd.DataFrame(cov, index=thetavals.keys(), columns=thetavals.keys())
-            
+
             thetavals = pd.Series(thetavals)
-            
+
             if len(return_values) > 0:
                 var_values = []
                 for exp_i in self.ef_instance.component_objects(Block, descend_into=False):
@@ -523,7 +575,7 @@ class Estimator(object):
                         else:
                             vals[var] = temp
                     if len(vals) > 0:
-                        var_values.append(vals)                    
+                        var_values.append(vals)
                 var_values = pd.DataFrame(var_values)
                 if calc_cov:
                     return objval, thetavals, var_values, cov
@@ -531,19 +583,19 @@ class Estimator(object):
                     return objval, thetavals, var_values
 
             if calc_cov:
-                
+
                 return objval, thetavals, cov
             else:
                 return objval, thetavals
-        
+
         else:
             raise RuntimeError("Unknown solver in Q_Opt="+solver)
-        
+
 
     def _Q_at_theta(self, thetavals):
         """
         Return the objective function value with fixed theta values.
-        
+
         Parameters
         ----------
         thetavals: dict
@@ -557,7 +609,7 @@ class Estimator(object):
             A dictionary of all values for theta that were input.
         solvertermination: Pyomo TerminationCondition
             Tries to return the "worst" solver status across the scenarios.
-            pyo.TerminationCondition.optimal is the best and 
+            pyo.TerminationCondition.optimal is the best and
             pyo.TerminationCondition.infeasible is the worst.
         """
 
@@ -565,9 +617,9 @@ class Estimator(object):
                     "ThetaVals": thetavals,
                     "theta_names": self.theta_names,
                     "cb_data": self.callback_data}
-        
+
         optimizer = pyo.SolverFactory('ipopt')
-        
+
         if self.diagnostic_mode:
             print('    Compute objective at theta = ',str(thetavals))
 
@@ -577,7 +629,7 @@ class Estimator(object):
         try: # deal with special problems so Ipopt will not crash
             first = next(instance.component_objects(pyo.Constraint, active=True))
         except:
-            sillylittle = True 
+            sillylittle = True
         else:
             sillylittle = False
         # end block of code to deal with models with no constraints
@@ -607,7 +659,7 @@ class Estimator(object):
                     # DLW: Aug2018: not distinguishing "middlish" conditions
                     if WorstStatus != pyo.TerminationCondition.infeasible:
                         WorstStatus = results.solver.termination_condition
-                    
+
             objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
             totobj += objval
@@ -616,11 +668,11 @@ class Estimator(object):
         return retval, thetavals, WorstStatus
 
     def _get_sample_list(self, samplesize, num_samples, replacement=True):
-        
+
         samplelist = list()
-        
+
         senario_numbers = list(range(len(self.callback_data)))
-        
+
         if num_samples is None:
             # This could get very large
             for i, l in enumerate(combinations(senario_numbers, samplesize)):
@@ -638,18 +690,18 @@ class Estimator(object):
                     unique_samples = len(np.unique(sample))
                     if sample in samplelist:
                         duplicate = True
-                    
+
                     attempts += 1
                     if attempts > num_samples: # arbitrary timeout limit
-                        raise RuntimeError("""Internal error: timeout constructing 
-                                           a sample, the dim of theta may be too 
+                        raise RuntimeError("""Internal error: timeout constructing
+                                           a sample, the dim of theta may be too
                                            close to the samplesize""")
-    
+
                 samplelist.append((i, sample))
-            
+
         return samplelist
-    
-    def theta_est(self, solver="ef_ipopt", return_values=[], calc_cov=False, cov_n=None): 
+
+    def theta_est(self, solver="ef_ipopt", return_values=[], calc_cov=False, cov_n=None):
         """
         Parameter estimation using all scenarios in the data
 
@@ -662,9 +714,9 @@ class Estimator(object):
         calc_cov: boolean, optional
             If True, calculate and return the covariance matrix (only for "ef_ipopt" solver)
         cov_n: int, optional
-            If calc_cov=True, then the user needs to supply the number of datapoints 
+            If calc_cov=True, then the user needs to supply the number of datapoints
             that are used in the objective function
-            
+
         Returns
         -------
         objectiveval: float
@@ -682,12 +734,12 @@ class Estimator(object):
         if calc_cov:
             assert isinstance(cov_n, int), "The number of datapoints that are used in the objective function is required to calculate the covariance matrix"
             assert cov_n > len(self.theta_names), "The number of datapoints must be greater than the number of parameters to estimate"
-        
+
         return self._Q_opt(solver=solver, return_values=return_values,
                            bootlist=None, calc_cov=calc_cov, cov_n=cov_n)
-    
-    
-    def theta_est_bootstrap(self, bootstrap_samples, samplesize=None, 
+
+
+    def theta_est_bootstrap(self, bootstrap_samples, samplesize=None,
                             replacement=True, seed=None, return_samples=False):
         """
         Parameter estimation using bootstrap resampling of the data
@@ -697,7 +749,7 @@ class Estimator(object):
         bootstrap_samples: int
             Number of bootstrap samples to draw from the data
         samplesize: int or None, optional
-            Size of each bootstrap sample. If samplesize=None, samplesize will be 
+            Size of each bootstrap sample. If samplesize=None, samplesize will be
             set to the number of samples in the data
         replacement: bool, optional
             Sample with or without replacement
@@ -705,11 +757,11 @@ class Estimator(object):
             Random seed
         return_samples: bool, optional
             Return a list of sample numbers used in each bootstrap estimation
-        
+
         Returns
         -------
-        bootstrap_theta: pd.DataFrame 
-            Theta values for each sample and (if return_samples = True) 
+        bootstrap_theta: pd.DataFrame
+            Theta values for each sample and (if return_samples = True)
             the sample numbers used in each estimation
         """
         assert isinstance(bootstrap_samples, int)
@@ -717,14 +769,14 @@ class Estimator(object):
         assert isinstance(replacement, bool)
         assert isinstance(seed, (type(None), int))
         assert isinstance(return_samples, bool)
-        
+
         if samplesize is None:
             samplesize = len(self.callback_data)
-        
+
         if seed is not None:
             np.random.seed(seed)
-        
-        global_list = self._get_sample_list(samplesize, bootstrap_samples, 
+
+        global_list = self._get_sample_list(samplesize, bootstrap_samples,
                                             replacement)
 
         task_mgr = mpiu.ParallelTaskManager(bootstrap_samples)
@@ -735,17 +787,17 @@ class Estimator(object):
             objval, thetavals = self._Q_opt(bootlist=list(sample))
             thetavals['samples'] = sample
             bootstrap_theta.append(thetavals)
-            
+
         global_bootstrap_theta = task_mgr.allgather_global_data(bootstrap_theta)
-        bootstrap_theta = pd.DataFrame(global_bootstrap_theta)       
+        bootstrap_theta = pd.DataFrame(global_bootstrap_theta)
 
         if not return_samples:
             del bootstrap_theta['samples']
-            
+
         return bootstrap_theta
-    
-    
-    def theta_est_leaveNout(self, lNo, lNo_samples=None, seed=None, 
+
+
+    def theta_est_leaveNout(self, lNo, lNo_samples=None, seed=None,
                             return_samples=False):
         """
         Parameter estimation where N data points are left out of each sample
@@ -755,55 +807,55 @@ class Estimator(object):
         lNo: int
             Number of data points to leave out for parameter estimation
         lNo_samples: int
-            Number of leave-N-out samples. If lNo_samples=None, the maximum 
+            Number of leave-N-out samples. If lNo_samples=None, the maximum
             number of combinations will be used
         seed: int or None, optional
             Random seed
         return_samples: bool, optional
             Return a list of sample numbers that were left out
-        
+
         Returns
         -------
-        lNo_theta: pd.DataFrame 
-            Theta values for each sample and (if return_samples = True) 
+        lNo_theta: pd.DataFrame
+            Theta values for each sample and (if return_samples = True)
             the sample numbers left out of each estimation
         """
         assert isinstance(lNo, int)
         assert isinstance(lNo_samples, (type(None), int))
         assert isinstance(seed, (type(None), int))
         assert isinstance(return_samples, bool)
-        
+
         samplesize = len(self.callback_data)-lNo
 
         if seed is not None:
             np.random.seed(seed)
-        
+
         global_list = self._get_sample_list(samplesize, lNo_samples, replacement=False)
-            
+
         task_mgr = mpiu.ParallelTaskManager(len(global_list))
         local_list = task_mgr.global_to_local_data(global_list)
-        
+
         lNo_theta = list()
         for idx, sample in local_list:
             objval, thetavals = self._Q_opt(bootlist=list(sample))
             lNo_s = list(set(range(len(self.callback_data))) - set(sample))
             thetavals['lNo'] = np.sort(lNo_s)
             lNo_theta.append(thetavals)
-        
+
         global_bootstrap_theta = task_mgr.allgather_global_data(lNo_theta)
-        lNo_theta = pd.DataFrame(global_bootstrap_theta)   
-        
+        lNo_theta = pd.DataFrame(global_bootstrap_theta)
+
         if not return_samples:
             del lNo_theta['lNo']
-                    
+
         return lNo_theta
-    
-    
-    def leaveNout_bootstrap_test(self, lNo, lNo_samples, bootstrap_samples, 
+
+
+    def leaveNout_bootstrap_test(self, lNo, lNo_samples, bootstrap_samples,
                                      distribution, alphas, seed=None):
         """
-        Leave-N-out bootstrap test to compare theta values where N data points are 
-        left out to a bootstrap analysis using the remaining data, 
+        Leave-N-out bootstrap test to compare theta values where N data points are
+        left out to a bootstrap analysis using the remaining data,
         results indicate if theta is within a confidence region
         determined by the bootstrap analysis
 
@@ -812,33 +864,33 @@ class Estimator(object):
         lNo: int
             Number of data points to leave out for parameter estimation
         lNo_samples: int
-            Leave-N-out sample size. If lNo_samples=None, the maximum number 
+            Leave-N-out sample size. If lNo_samples=None, the maximum number
             of combinations will be used
         bootstrap_samples: int:
             Bootstrap sample size
         distribution: string
-            Statistical distribution used to define a confidence region,  
-            options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, 
+            Statistical distribution used to define a confidence region,
+            options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde,
             and 'Rect' for rectangular.
         alphas: list
-            List of alpha values used to determine if theta values are inside 
+            List of alpha values used to determine if theta values are inside
             or outside the region.
         seed: int or None, optional
             Random seed
-            
+
         Returns
         ----------
         List of tuples with one entry per lNo_sample:
-            
-        * The first item in each tuple is the list of N samples that are left 
+
+        * The first item in each tuple is the list of N samples that are left
           out.
-        * The second item in each tuple is a DataFrame of theta estimated using 
+        * The second item in each tuple is a DataFrame of theta estimated using
           the N samples.
-        * The third item in each tuple is a DataFrame containing results from 
+        * The third item in each tuple is a DataFrame containing results from
           the bootstrap analysis using the remaining samples.
-        
-        For each DataFrame a column is added for each value of alpha which 
-        indicates if the theta estimate is in (True) or out (False) of the 
+
+        For each DataFrame a column is added for each value of alpha which
+        indicates if the theta estimate is in (True) or out (False) of the
         alpha region for a given distribution (based on the bootstrap results)
         """
         assert isinstance(lNo, int)
@@ -847,39 +899,39 @@ class Estimator(object):
         assert distribution in ['Rect', 'MVN', 'KDE']
         assert isinstance(alphas, list)
         assert isinstance(seed, (type(None), int))
-        
+
         if seed is not None:
             np.random.seed(seed)
-            
+
         data = self.callback_data.copy()
-        
+
         global_list = self._get_sample_list(lNo, lNo_samples, replacement=False)
-            
+
         results = []
         for idx, sample in global_list:
-            
+
             # Reset callback_data to only include the sample
             self.callback_data = [data[i] for i in sample]
 
             obj, theta = self.theta_est()
-            
+
             # Reset callback_data to include all scenarios except the sample
             self.callback_data = [data[i] for i in range(len(data)) if i not in sample]
 
             bootstrap_theta = self.theta_est_bootstrap(bootstrap_samples)
-            
-            training, test = self.confidence_region_test(bootstrap_theta, 
-                                    distribution=distribution, alphas=alphas, 
+
+            training, test = self.confidence_region_test(bootstrap_theta,
+                                    distribution=distribution, alphas=alphas,
                                     test_theta_values=theta)
-                
+
             results.append((sample, test, training))
-        
+
         # Reset callback_data (back to full data set)
         self.callback_data = data
-        
+
         return results
-    
-    
+
+
     def objective_at_theta(self, theta_values):
         """
         Objective value for each theta
@@ -888,21 +940,21 @@ class Estimator(object):
         ----------
         theta_values: pd.DataFrame, columns=theta_names
             Values of theta used to compute the objective
-            
+
         Returns
         -------
         obj_at_theta: pd.DataFrame
-            Objective value for each theta (infeasible solutions are 
+            Objective value for each theta (infeasible solutions are
             omitted).
         """
         assert isinstance(theta_values, pd.DataFrame)
-        
+
         # for parallel code we need to use lists and dicts in the loop
         theta_names = theta_values.columns
         all_thetas = theta_values.to_dict('records')
         task_mgr = mpiu.ParallelTaskManager(len(all_thetas))
         local_thetas = task_mgr.global_to_local_data(all_thetas)
-        
+
         # walk over the mesh, return objective function
         all_obj = list()
         for Theta in local_thetas:
@@ -910,24 +962,24 @@ class Estimator(object):
             if worststatus != pyo.TerminationCondition.infeasible:
                  all_obj.append(list(Theta.values()) + [obj])
             # DLW, Aug2018: should we also store the worst solver status?
-            
+
         global_all_obj = task_mgr.allgather_global_data(all_obj)
         dfcols = list(theta_names) + ['obj']
         obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
-            
+
         return obj_at_theta
-    
-    
-    def likelihood_ratio_test(self, obj_at_theta, obj_value, alphas, 
+
+
+    def likelihood_ratio_test(self, obj_at_theta, obj_value, alphas,
                               return_thresholds=False):
         r"""
-        Likelihood ratio test to identify theta values within a confidence 
+        Likelihood ratio test to identify theta values within a confidence
         region using the :math:`\chi^2` distribution
-        
+
         Parameters
         ----------
         obj_at_theta: pd.DataFrame, columns = theta_names + 'obj'
-            Objective values for each theta value (returned by 
+            Objective values for each theta value (returned by
             objective_at_theta)
         obj_value: int or float
             Objective value from parameter estimation using all data
@@ -935,11 +987,11 @@ class Estimator(object):
             List of alpha values to use in the chi2 test
         return_thresholds: bool, optional
             Return the threshold value for each alpha
-            
+
         Returns
         -------
-        LR: pd.DataFrame 
-            Objective values for each theta value along with True or False for 
+        LR: pd.DataFrame
+            Objective values for each theta value along with True or False for
             each alpha
         thresholds: pd.Series
             If return_threshold = True, the thresholds are also returned.
@@ -948,7 +1000,7 @@ class Estimator(object):
         assert isinstance(obj_value, (int, float))
         assert isinstance(alphas, list)
         assert isinstance(return_thresholds, bool)
-            
+
         LR = obj_at_theta.copy()
         S = len(self.callback_data)
         thresholds = {}
@@ -956,92 +1008,92 @@ class Estimator(object):
             chi2_val = scipy.stats.chi2.ppf(a, 2)
             thresholds[a] = obj_value * ((chi2_val / (S - 2)) + 1)
             LR[a] = LR['obj'] < thresholds[a]
-        
+
         thresholds = pd.Series(thresholds)
-        
+
         if return_thresholds:
             return LR, thresholds
         else:
             return LR
 
-    def confidence_region_test(self, theta_values, distribution, alphas, 
+    def confidence_region_test(self, theta_values, distribution, alphas,
                                test_theta_values=None):
         """
-        Confidence region test to determine if theta values are within a 
-        rectangular, multivariate normal, or Gaussian kernel density distribution 
+        Confidence region test to determine if theta values are within a
+        rectangular, multivariate normal, or Gaussian kernel density distribution
         for a range of alpha values
-        
+
         Parameters
         ----------
         theta_values: pd.DataFrame, columns = theta_names
-            Theta values used to generate a confidence region 
+            Theta values used to generate a confidence region
             (generally returned by theta_est_bootstrap)
         distribution: string
-            Statistical distribution used to define a confidence region,  
-            options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde, 
+            Statistical distribution used to define a confidence region,
+            options = 'MVN' for multivariate_normal, 'KDE' for gaussian_kde,
             and 'Rect' for rectangular.
         alphas: list
-            List of alpha values used to determine if theta values are inside 
+            List of alpha values used to determine if theta values are inside
             or outside the region.
         test_theta_values: pd.Series or pd.DataFrame, keys/columns = theta_names, optional
             Additional theta values that are compared to the confidence region
             to determine if they are inside or outside.
-        
+
         Returns
-        training_results: pd.DataFrame 
-            Theta value used to generate the confidence region along with True 
+        training_results: pd.DataFrame
+            Theta value used to generate the confidence region along with True
             (inside) or False (outside) for each alpha
-        test_results: pd.DataFrame 
-            If test_theta_values is not None, returns test theta value along 
+        test_results: pd.DataFrame
+            If test_theta_values is not None, returns test theta value along
             with True (inside) or False (outside) for each alpha
         """
         assert isinstance(theta_values, pd.DataFrame)
         assert distribution in ['Rect', 'MVN', 'KDE']
         assert isinstance(alphas, list)
         assert isinstance(test_theta_values, (type(None), dict, pd.Series, pd.DataFrame))
-        
+
         if isinstance(test_theta_values, (dict, pd.Series)):
             test_theta_values = pd.Series(test_theta_values).to_frame().transpose()
-            
+
         training_results = theta_values.copy()
-        
+
         if test_theta_values is not None:
             test_result = test_theta_values.copy()
-        
+
         for a in alphas:
-            
+
             if distribution == 'Rect':
                 lb, ub = graphics.fit_rect_dist(theta_values, a)
                 training_results[a] = ((theta_values > lb).all(axis=1) & \
                                   (theta_values < ub).all(axis=1))
-                
+
                 if test_theta_values is not None:
                     # use upper and lower bound from the training set
                     test_result[a] = ((test_theta_values > lb).all(axis=1) & \
                                   (test_theta_values < ub).all(axis=1))
-                    
+
             elif distribution == 'MVN':
                 dist = graphics.fit_mvn_dist(theta_values)
                 Z = dist.pdf(theta_values)
-                score = scipy.stats.scoreatpercentile(Z, (1-a)*100) 
+                score = scipy.stats.scoreatpercentile(Z, (1-a)*100)
                 training_results[a] = (Z >= score)
-                
+
                 if test_theta_values is not None:
                     # use score from the training set
                     Z = dist.pdf(test_theta_values)
-                    test_result[a] = (Z >= score) 
-                
+                    test_result[a] = (Z >= score)
+
             elif distribution == 'KDE':
                 dist = graphics.fit_kde_dist(theta_values)
                 Z = dist.pdf(theta_values.transpose())
-                score = scipy.stats.scoreatpercentile(Z, (1-a)*100) 
+                score = scipy.stats.scoreatpercentile(Z, (1-a)*100)
                 training_results[a] = (Z >= score)
-                
+
                 if test_theta_values is not None:
                     # use score from the training set
                     Z = dist.pdf(test_theta_values.transpose())
-                    test_result[a] = (Z >= score) 
-                    
+                    test_result[a] = (Z >= score)
+
         if test_theta_values is not None:
             return training_results, test_result
         else:
