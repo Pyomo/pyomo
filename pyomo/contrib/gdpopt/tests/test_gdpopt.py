@@ -324,7 +324,7 @@ class TestGDPopt(unittest.TestCase):
             eight_process, strategy='LOA',
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
-            tee=False)
+            tee=True)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")

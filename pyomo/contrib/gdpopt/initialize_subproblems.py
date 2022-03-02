@@ -11,7 +11,7 @@
 from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.gdp.disjunct import Disjunct, Disjunction
 from pyomo.core import SortComponents, Constraint, Objective
-from pyomo.core.base import TransformationFactory, Suffix
+from pyomo.core.base import TransformationFactory, Suffix, ConstraintList
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.collections import ComponentMap
 from pyomo.util.vars_from_expressions import get_vars_from_components
@@ -25,9 +25,11 @@ def initialize_master_problem(util_block, subprob_util_block, config, solver):
     config.logger.info("---Starting GDPopt initialization---")
     # clone the original model
     master = util_block.model().clone()
+    master.name = master.name + ": master problem"
 
     # TODO: switch to getname and set up a name buffer
     master_util_block = master.component(util_block.name)
+    master_util_block.no_good_cuts = ConstraintList()
 
     # deactivate nonlinear constraints
     for c in master.component_data_objects(Constraint, active=True,
@@ -88,6 +90,7 @@ def get_subproblem(original_model):
     ## Debatably this could be a transformation in gdp...
 
     subproblem = original_model.clone()
+    subproblem.name = subproblem.name + ": subproblem"
 
     # Set up dual value reporting
     if not hasattr(subproblem, 'dual'):

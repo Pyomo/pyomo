@@ -2,16 +2,17 @@
 in Logic-based outer approximation.
 """
 from math import fabs
+from contextlib import contextmanager
 
 from pyomo.contrib.gdpopt.cut_generation import (
-    add_no_good_cut, add_subproblem_cuts)
+    add_no_good_cut, add_cuts_according_to_algorithm)
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.nlp_solve import solve_subproblem
 from pyomo.contrib.gdpopt.util import (
     _DoNothing, fix_master_solution_in_subproblem)
 from pyomo.core import (
     Block, Constraint, Objective, Suffix, TransformationFactory, Var, maximize,
-    minimize
+    minimize, value
 )
 from pyomo.gdp import Disjunct
 
@@ -132,6 +133,37 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
             "Problem is infeasible.")
         return False
 
+@contextmanager
+def use_master_for_set_covering(master_util_block):
+    original_objective = next(
+        master_util_block.model().component_data_objects(Objective, active=True,
+                                                         descend_into=True))
+    original_objective.deactivate()
+    # placeholder for the objective
+    master_util_block.set_cover_obj = Objective(expr=0)
+
+    yield
+
+    # clean up the objective. We don't clean up the no-good cuts because we
+    # still want them. We've already considered those solutions.
+    del master_util_block.set_cover_obj
+    original_objective.activate()
+
+def update_set_covering_objective(master_util_block, disj_needs_cover):
+    # number of disjuncts that still need to be covered
+    num_needs_cover = sum(1 for disj_bool in disj_needs_cover if disj_bool)
+    # number of disjuncts that have been covered
+    num_covered = len(disj_needs_cover) - num_needs_cover
+    # weights for the set covering problem
+    weights = list((num_covered + 1 if disj_bool else 1)
+                   for disj_bool in disj_needs_cover)
+    # Update set covering objective
+    if hasattr(master_util_block, "set_cover_obj"):
+        del master_util_block.set_cover_obj
+    master_util_block.set_cover_obj = Objective(
+        expr=sum(weight * disj.binary_indicator_var
+                 for (weight, disj) in zip(
+            weights, master_util_block.disjunct_list)), sense=maximize)
 
 def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                       solver):
@@ -152,99 +184,73 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
             for constr in disj.component_data_objects(
             ctype=Constraint, active=True, descend_into=True))
         for disj in util_block.disjunct_list)
+    subprob = subprob_util_block.model()
 
-    # Set up set covering mip
-    #set_cover_mip = solve_data.linear_GDP.clone()
-    # Deactivate nonlinear constraints
-    # for obj in set_cover_mip.component_data_objects(Objective, active=True):
-    #     obj.deactivate()
-    iter_count = 1
-    while (any(disjunct_needs_cover) and
-           iter_count <= config.set_cover_iterlim):
-        config.logger.info(
-            "%s disjuncts need to be covered." %
-            disjunct_needs_cover.count(True)
-        )
-        # Solve set covering MIP
-        mip_result = solve_set_cover_mip(
-            set_cover_mip, disjunct_needs_cover, solve_data, config)
-        if not mip_result.feasible:
-            # problem is infeasible. break
+    # borrow the master problem to be the set covering MIP. This is only a
+    # change of objective
+    with use_master_for_set_covering(master_util_block):
+        iter_count = 1
+        while (any(disjunct_needs_cover) and
+               iter_count <= config.set_cover_iterlim):
+            config.logger.info(
+                "%s disjuncts need to be covered." %
+                disjunct_needs_cover.count(True)
+            )
+            ## Solve set covering MIP
+            update_set_covering_objective(master_util_block,
+                                          disjunct_needs_cover)
+            mip_feasible = solve_linear_GDP(master_util_block, config,
+                                            solver.timing)
+            if not mip_feasible:
+                # problem is infeasible. break
+                return False
+                config.logger.info('Set covering problem is infeasible. '
+                                   'Problem may have no more feasible '
+                                   'disjunctive realizations.')
+                if solve_data.mip_iteration <= 1:
+                    config.logger.warning(
+                        'Set covering problem was infeasible. '
+                        'Check your linear and logical constraints '
+                        'for contradictions.')
+                solver._update_dual_bound_to_infeasible(config.logger)
+            else:
+                config.logger.info('Solved set covering MIP')
+
+            ## solve local NLP
+            with fix_master_solution_in_subproblem(
+                    master_util_block,
+                    subprob_util_block,
+                    make_subproblem_continuous=config.force_subproblem_nlp):
+                subprob_feasible = solve_subproblem(subprob_util_block, config,
+                                                    solver.timing)
+                if subprob_feasible:
+                    # if successful, updated sets
+                    active_disjuncts = list(
+                        fabs(value(disj.binary_indicator_var) - 1) <=
+                        config.integer_tolerance for disj in
+                        master_util_block.disjunct_list)
+                    # Update the disjunct needs cover list
+                    disjunct_needs_cover = list( 
+                        (needed_cover and not was_active) for 
+                        (needed_cover, was_active) in
+                        zip(disjunct_needs_cover, active_disjuncts))
+                    add_cuts_according_to_algorithm(subprob_util_block,
+                                                    master_util_block,
+                                                    solver.objective_sense,
+                                                    config)
+            add_no_good_cut(master_util_block, config)
+            iter_count += 1
+
+        if any(disjunct_needs_cover):
+            # Iteration limit was hit without a full covering of all nonlinear
+            # disjuncts
+            config.logger.warning(
+                'Iteration limit reached for set covering initialization '
+                'without covering all disjuncts.')
             return False
-        # solve local NLP
-        subprob_result = solve_disjunctive_subproblem(mip_result, solve_data,
-                                                      config)
-        if subprob_result.feasible:
-            # if successful, updated sets
-            active_disjuncts = list(
-                fabs(val - 1) <= config.integer_tolerance
-                for val in mip_result.disjunct_values)
-            # Update the disjunct needs cover list
-            disjunct_needs_cover = list(
-                (needed_cover and not was_active)
-                for (needed_cover, was_active) in zip(disjunct_needs_cover,
-                                                      active_disjuncts))
-            add_subproblem_cuts(subprob_result, solve_data, config)
-        add_no_good_cut(
-            mip_result.var_values, solve_data.linear_GDP, solve_data, config,
-            feasible=subprob_result.feasible)
-        add_no_good_cut(
-            mip_result.var_values, set_cover_mip, solve_data, config,
-            feasible=subprob_result.feasible)
-
-        iter_count += 1
-
-    if any(disjunct_needs_cover):
-        # Iteration limit was hit without a full covering of all nonlinear
-        # disjuncts
-        config.logger.warning(
-            'Iteration limit reached for set covering initialization '
-            'without covering all disjuncts.')
-        return False
 
     config.logger.info("Initialization complete.")
     return True
-
-
-def solve_set_cover_mip(master_util_block, disj_needs_cover, config, solver):
-    """Solve the set covering MIP to determine next configuration."""
-    m = master_util_block.model()
-
-    # number of disjuncts that still need to be covered
-    num_needs_cover = sum(1 for disj_bool in disj_needs_cover if disj_bool)
-    # number of disjuncts that have been covered
-    num_covered = len(disj_needs_cover) - num_needs_cover
-    # weights for the set covering problem
-    weights = list((num_covered + 1 if disj_bool else 1)
-                   for disj_bool in disj_needs_cover)
-    # Set up set covering objective
-    if hasattr(master_util_block, "set_cover_obj"):
-        del master_util_block.set_cover_obj
-    master_util_block.set_cover_obj = Objective(
-        expr=sum(weight * disj.binary_indicator_var
-                 for (weight, disj) in zip(
-            weights, master_util_block.disjunct_list)), sense=maximize)
-
-    mip_results = solve_linear_GDP(master_util_block, config, solver.timing)
-    if mip_results.feasible:
-        config.logger.info('Solved set covering MIP')
-    else:
-        config.logger.info(
-            'Set covering problem is infeasible. '
-            'Problem may have no more feasible '
-            'disjunctive realizations.')
-        if solve_data.mip_iteration <= 1:
-            config.logger.warning(
-                'Set covering problem was infeasible. '
-                'Check your linear and logical constraints '
-                'for contradictions.')
-        if solver.objective_sense == minimize:
-            solver._update_bounds(primal=float('inf'))
-        else:
-            solver._update_bounds(primal=float('-inf'))
-
-    return mip_results
-
 
 # Valid initialization strategies
 valid_init_strategies = {

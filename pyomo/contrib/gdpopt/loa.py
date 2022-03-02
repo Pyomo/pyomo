@@ -27,6 +27,7 @@ from pyomo.core import (
     Constraint, Block, Objective, minimize, Expression, Var, value)
 from pyomo.opt.base import SolverFactory
 from pyomo.gdp import Disjunct
+import logging
 
 from pytest import set_trace
 
@@ -116,8 +117,8 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
                         master_util_block, 
                         subproblem_util_block,
                         make_subproblem_continuous=config.force_subproblem_nlp):
-                    nlp_feasible = solve_subproblem(subproblem, config,
-                                                    self.timing)
+                    nlp_feasible = solve_subproblem(subproblem_util_block,
+                                                    config, self.timing)
                     if nlp_feasible:
                         old_primal = self.primal_bound()
                         new_primal = value(subproblem_obj)

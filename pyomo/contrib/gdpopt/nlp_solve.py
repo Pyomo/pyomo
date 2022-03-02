@@ -22,81 +22,25 @@ from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.fbbt.fbbt import fbbt
 
-# def solve_subproblem(subproblem, subproblem_util_block, config, timing):
-#     """Solve the (already set up) subproblem"""
-#     if config.strategy in {"LOA", "RIC"}:
-#         if config.force_subproblem_nlp:
-#             return solve_local_NLP(subproblem, config)
-#         else:
-#             return solve_local_subproblem(subproblem, subproblem_util_block,
-#                                           config, timing)
-#     elif config.strategy == 'GLOA':
-#         return solve_global_subproblem(subproblem, config)
-#     else:
-#         raise ValueError('Unrecognized strategy: ' + config.strategy)
-
-def solve_linear_subproblem(subproblem, config, timing):
-    mip_solver = SolverFactory(config.mip_solver)
-    if not mip_solver.available():
-        raise RuntimeError("MIP solver %s is not available." %
-                           config.mip_solver)
+def configure_and_call_solver(model, solver, args, problem_type, timing,
+                              time_limit):
+    opt = SolverFactory(solver)
+    if not opt.available():
+        raise RuntimeError("%s solver %s is not available." % (problem_type,
+                                                               solver))
     with SuppressInfeasibleWarning():
-        mip_args = dict(config.mip_solver_args)
+        solver_args = dict(args)
         elapsed = get_main_elapsed_time(timing)
-        remaining = max(config.time_limit - elapsed, 1)
-        if config.mip_solver == 'gams':
-            mip_args['add_options'] = mip_args.get('add_options', [])
-            mip_args['add_options'].append('option reslim=%s;' % remaining)
-        elif config.mip_solver == 'multisolve':
-            mip_args['time_limit'] = min(mip_args.get('time_limit',
-                                                      float('inf')), remaining)
-        results = mip_solver.solve(subproblem, **mip_args)
-
-    #subprob_result = SubproblemResult()
-    feasible = True
-    # subprob_result.var_values = list(v.value for v in GDPopt.variable_list)
-    # subprob_result.pyomo_results = results
-    # subprob_result.dual_values = list(mip_model.dual.get(c, None) for c in
-    #                                   GDPopt.constraint_list)
-
-    subprob_terminate_cond = results.solver.termination_condition
-    if subprob_terminate_cond is tc.optimal:
-        pass
-    elif subprob_terminate_cond is tc.infeasible:
-        config.logger.info('MIP subproblem was infeasible.')
-        feasible = False
-    else:
-        raise ValueError(
-            'GDPopt unable to handle MIP subproblem termination '
-            'condition of %s. Results: %s'
-            % (subprob_terminate_cond, results))
-
-    return feasible
-
-
-def solve_NLP(nlp_model, config, timing):
-    """Solve the NLP subproblem."""
-    config.logger.info(
-        'Solving nonlinear subproblem for '
-        'fixed binaries and logical realizations.')
-
-    nlp_solver = SolverFactory(config.nlp_solver)
-    if not nlp_solver.available():
-        raise RuntimeError("NLP solver %s is not available." % 
-                           config.nlp_solver)
-    with SuppressInfeasibleWarning():
+        remaining = max(time_limit - elapsed, 1)
+        if solver == 'gams':
+            solver_args['add_options'] = solver_args.get('add_options', [])
+            solver_args['add_options'].append('option reslim=%s;' % remaining)
+        elif solver == 'multisolve':
+            solver_args['time_limit'] = min(solver_args.get('time_limit',
+                                                            float('inf')),
+                                            remaining)
         try:
-            nlp_args = dict(config.nlp_solver_args)
-            elapsed = get_main_elapsed_time(timing)
-            remaining = max(config.time_limit - elapsed, 1)
-            if config.nlp_solver == 'gams':
-                nlp_args['add_options'] = nlp_args.get('add_options', [])
-                nlp_args['add_options'].append('option reslim=%s;' % remaining)
-            elif config.nlp_solver == 'multisolve':
-                nlp_args['time_limit'] = min(nlp_args.get('time_limit', 
-                                                          float('inf')), 
-                                             remaining)
-            results = nlp_solver.solve(nlp_model, **nlp_args)
+            results = opt.solve(model, **solver_args)
         except ValueError as err:
             if 'Cannot load a SolverResults object with bad status: error' in \
                str(err):
@@ -105,75 +49,106 @@ def solve_NLP(nlp_model, config, timing):
                 results.solver.message = str(err)
             else:
                 raise
+    return results
 
-    nlp_feasible = True
-    # nlp_result = SubproblemResult()
-    # nlp_result.feasible = True
-    # nlp_result.var_values = list(v.value for v in GDPopt.variable_list)
-    # nlp_result.pyomo_results = results
-    # nlp_result.dual_values = list(nlp_model.dual.get(c, None) for c in
-    #                               subprob_util_block.constraint_list)
-
+def process_nonlinear_problem_results(results, model, problem_type, config):
+    logger = config.logger
     term_cond = results.solver.termination_condition
     if any(term_cond == cond for cond in (tc.optimal, tc.locallyOptimal,
                                           tc.feasible)):
-        pass
+        return True
     elif term_cond == tc.infeasible:
-        config.logger.info('NLP subproblem was infeasible.')
-        nlp_feasible = False
+        logger.info('%s subproblem was infeasible.' % problem_type)
+        return False
     elif term_cond == tc.maxIterations:
         # TODO try something else? Reinitialize with different initial
         # value?
-        config.logger.info(
-            'NLP subproblem failed to converge within iteration limit.')
-        if is_feasible(nlp_model, config):
-            config.logger.info(
+        logger.info( '%s subproblem failed to converge within iteration limit.'
+                     % problem_type)
+        if is_feasible(model, config):
+            logger.info(
                 'NLP solution is still feasible. '
                 'Using potentially suboptimal feasible solution.')
-        else:
-            nlp_feasible = False
+            return True
+        return False
     elif term_cond == tc.internalSolverError:
         # Possible that IPOPT had a restoration failure
-        config.logger.info(
-            "NLP solver had an internal failure: %s" % results.solver.message)
-        nlp_feasible = False
+        logger.info( "%s solver had an internal failure: %s" % 
+                     (problem_type, results.solver.message))
+        return False
     elif (term_cond == tc.other and
           "Too few degrees of freedom" in str(results.solver.message)):
         # Possible IPOPT degrees of freedom error
-        config.logger.info(
-            "IPOPT has too few degrees of freedom: %s" %
+        logger.info(
+            "Perhaps the subproblem solver has too few degrees of freedom: %s" %
             results.solver.message)
-        nlp_feasible = False
+        return False
     elif term_cond == tc.other:
-        config.logger.info(
-            "NLP solver had a termination condition of 'other': %s" %
-            results.solver.message)
-        nlp_feasible = False
+        logger.info(
+            "%s solver had a termination condition of 'other': %s" %
+            (problem_type, results.solver.message))
+        return False
     elif term_cond == tc.error:
-        config.logger.info("NLP solver had a termination condition of 'error': "
-                           "%s" % results.solver.message)
-        nlp_feasible = False
+        logger.info("%s solver had a termination condition of 'error': "
+                    "%s" % (problem_type, results.solver.message))
+        return False
     elif term_cond == tc.maxTimeLimit:
-        # ESJ TODO: This seems like a really bad idea too...
-        config.logger.info("NLP solver ran out of time. Assuming infeasible "
-                           "for now.")
-        nlp_feasible = False
+        logger.info("%s subproblem failed to converge within time "
+                    "limit." % problem_type)
+        if is_feasible(model, config):
+            config.logger.info(
+                '%s solution is still feasible. '
+                'Using potentially suboptimal feasible solution.' % 
+                problem_type)
+            return True
+        return False
+    elif term_cond == tc.intermediateNonInteger:
+        config.logger.info( "%s solver could not find feasible integer"
+                            " solution: %s" % (problem_type, 
+                                               results.solver.message))
+        return False
+    else:
+        raise ValueError( 'GDPopt unable to handle %s subproblem termination '
+                          'condition of %s. Results: %s' % (problem_type,
+                                                            term_cond, results))
+
+def solve_linear_subproblem(subproblem, config, timing):
+    results = configure_and_call_solver(subproblem, config.mip_solver,
+                                        config.mip_solver_args, 'MIP', timing,
+                                        config.time_limit)
+    
+    subprob_terminate_cond = results.solver.termination_condition
+    if subprob_terminate_cond is tc.optimal:
+        return True
+    elif subprob_terminate_cond is tc.infeasible:
+        config.logger.info('MIP subproblem was infeasible.')
+        return False
     else:
         raise ValueError(
-            'GDPopt unable to handle NLP subproblem termination '
+            'GDPopt unable to handle MIP subproblem termination '
             'condition of %s. Results: %s'
-            % (term_cond, results))
+            % (subprob_terminate_cond, results))
 
-    return nlp_feasible
+def solve_NLP(nlp_model, config, timing):
+    """Solve the NLP subproblem."""
+    config.logger.info(
+        'Solving nonlinear subproblem for '
+        'fixed binaries and logical realizations.')
 
+    results = configure_and_call_solver(nlp_model, config.nlp_solver,
+                                        config.nlp_solver_args, 'NLP', timing,
+                                        config.time_limit)
+
+    return process_nonlinear_problem_results(results, nlp_model, 'NLP', config)
 
 def solve_MINLP(model, util_block, config, timing):
     """Solve the MINLP subproblem."""
     config.logger.info(
         "Solving MINLP subproblem for fixed logical realizations."
     )
-
-    initialize_subproblem(model, util_block)
+    # TODO: make this a callback, which probably means calling it somewhere else
+    # because it should have access to the master problem as well.
+    initialize_subproblem(util_block)
 
     # Callback immediately before solving MINLP subproblem
     config.call_before_subproblem_solve(model)
@@ -182,73 +157,21 @@ def solve_MINLP(model, util_block, config, timing):
     if not minlp_solver.available():
         raise RuntimeError("MINLP solver %s is not available." %
                            config.minlp_solver)
-    with SuppressInfeasibleWarning():
-        minlp_args = dict(config.minlp_solver_args)
-        elapsed = get_main_elapsed_time(timing)
-        remaining = max(config.time_limit - elapsed, 1)
-        if config.minlp_solver == 'gams':
-            minlp_args['add_options'] = minlp_args.get('add_options', [])
-            minlp_args['add_options'].append('option reslim=%s;' % remaining)
-        elif config.minlp_solver == 'multisolve':
-            minlp_args['time_limit'] = min(minlp_args.get('time_limit',
-                                                          float('inf')),
-                                           remaining)
-        results = minlp_solver.solve(model, **minlp_args)
-
-    subprob_result = SubproblemResult()
-    subprob_result.feasible = True
-    subprob_result.var_values = list(v.value for v in util_block.variable_list)
-    subprob_result.pyomo_results = results
-    subprob_result.dual_values = list(
-        model.dual.get(c, None)
-        for c in util_block.constraint_list)
-
-    term_cond = results.solver.termination_condition
-    if any(term_cond == cond for cond in (tc.optimal, tc.locallyOptimal,
-                                          tc.feasible)):
-        pass
-    elif term_cond == tc.infeasible:
-        config.logger.info('MINLP subproblem was infeasible.')
-        subprob_result.feasible = False
-    elif term_cond == tc.maxIterations:
-        # TODO try something else? Reinitialize with different initial
-        # value?
-        config.logger.info(
-            'MINLP subproblem failed to converge within iteration limit.')
-        if is_feasible(model, config):
-            config.logger.info(
-                'MINLP solution is still feasible. '
-                'Using potentially suboptimal feasible solution.')
-        else:
-            subprob_result.feasible = False
-    elif term_cond == tc.maxTimeLimit:
-        config.logger.info('MINLP subproblem failed to converge within time '
-                           'limit.')
-        if is_feasible(model, config):
-            config.logger.info(
-                'MINLP solution is still feasible. '
-                'Using potentially suboptimal feasible solution.')
-        else:
-            subprob_result.feasible = False
-    elif term_cond == tc.intermediateNonInteger:
-        config.logger.info( "MINLP solver could not find feasible integer"
-                            " solution: %s" % results.solver.message)
-        subprob_result.feasible = False
-    else:
-        raise ValueError(
-            'GDPopt unable to handle MINLP subproblem termination '
-            'condition of %s. Results: %s'
-            % (term_cond, results))
-
+                                    
+    results = configure_and_call_solver(model, config.minlp_solver,
+                                        config.minlp_solver_args, 'MINLP',
+                                        timing, config.time_limit)
+    subprob_feasible = process_nonlinear_problem_results(results, model,
+                                                         'MINLP', config)
+    
     # Call the subproblem post-solve callback
     config.call_after_subproblem_solve(model)
 
     # if feasible, call the subproblem post-feasible callback
-    if subprob_result.feasible:
+    if subprob_feasible:
         config.call_after_subproblem_feasible(model)
 
-    return subprob_result
-
+    return subprob_feasible
 
 def detect_unfixed_discrete_vars(model):
     """Detect unfixed discrete variables in use on the model."""
@@ -264,7 +187,6 @@ def detect_unfixed_discrete_vars(model):
                                                           include_fixed=False)
                        if not v.is_continuous())
     return var_set
-
 
 def preprocess_subproblem(m, config):
     """Applies preprocessing transformations to the model."""
@@ -305,7 +227,7 @@ def preprocess_subproblem(m, config):
     xfrm('contrib.deactivate_trivial_constraints').apply_to(
         m, tolerance=config.constraint_tolerance)
 
-def initialize_subproblem(model, util_block):
+def initialize_subproblem(util_block):
     """Perform initialization of the subproblem.
 
     Presently, this just restores the continuous variables to the original 
@@ -368,22 +290,11 @@ def update_subproblem_progress_indicators(solved_model, solve_data, config):
             solve_data.LB, lb_improved,
             solve_data.UB, ub_improved))
 
-
-# def solve_local_NLP(nlp_model, config):
-#     """Solve the local LOA subproblem."""
-#     # ESJ: Do I need to track this here??
-#     #solve_data.nlp_iteration += 1
-
-#     nlp_result = solve_NLP(nlp_model, config)
-#     if nlp_result.feasible:  # NLP is feasible
-#         update_subproblem_progress_indicators(nlp_model, config)
-#     return nlp_result
-
-
-def solve_subproblem(subprob, config, timing, solve_globally=False):
+def solve_subproblem(subprob_util_block, config, timing, solve_globally=False):
     """Set up and solve the local MINLP or NLP subproblem."""
     # ESJ: do we need this/do we need to track it here?
     #solve_data.nlp_iteration += 1
+    subprob = subprob_util_block.model()
 
     if config.subproblem_presolve:
         try:
@@ -405,7 +316,7 @@ def solve_subproblem(subprob, config, timing, solve_globally=False):
     # Is the subproblem linear?
     if not any(constr.body.polynomial_degree() not in (1, 0) for constr in
                subprob.component_data_objects(Constraint, active=True)):
-        subprob_result = solve_linear_subproblem(subprob, config, timing)
+        subprob_feasible = solve_linear_subproblem(subprob, config, timing)
     else:
         # Does it have any discrete variables, and is that allowed?
         unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
@@ -415,7 +326,8 @@ def solve_subproblem(subprob, config, timing, solve_globally=False):
         elif len(unfixed_discrete_vars) == 0:
             subprob_feasible = solve_NLP(subprob, config, timing)
         else:
-            subprob_feasible = solve_MINLP(subprob, config, timing)
+            subprob_feasible = solve_MINLP(subprob, subprob_util_block, config,
+                                           timing)
 
     # Call the NLP post-solve callback
     config.call_after_subproblem_solve(subprob)
@@ -425,7 +337,6 @@ def solve_subproblem(subprob, config, timing, solve_globally=False):
         config.call_after_subproblem_feasible(subprob)
 
     return subprob_feasible
-
 
 def solve_global_subproblem(mip_result, solve_data, config):
     subprob = solve_data.working_model.clone()
@@ -489,7 +400,6 @@ def solve_global_subproblem(mip_result, solve_data, config):
     if subprob_result.feasible:  # NLP is feasible
         update_subproblem_progress_indicators(subprob, solve_data, config)
     return subprob_result
-
 
 def get_infeasible_result_object(model, message=""):
     infeas_result = SubproblemResult()

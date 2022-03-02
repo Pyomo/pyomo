@@ -13,6 +13,8 @@ from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.opt import TerminationCondition as tc, SolverResults
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
+from pytest import set_trace
+
 def get_infeasible_master_result(util_block):
     mip_result = MasterProblemResult()
     mip_result.feasible = False
@@ -27,6 +29,7 @@ def get_infeasible_master_result(util_block):
 def solve_linear_GDP(util_block, config, timing):
     """Solves the linear GDP model and attempts to resolve solution issues."""
     m = util_block.model()
+    print("Going to solve: %s" % m.name)
 
     if config.mip_presolve:
         try:
@@ -69,6 +72,7 @@ def solve_linear_GDP(util_block, config, timing):
                                                            float('inf')),
                                              remaining)
             results = SolverFactory(config.mip_solver).solve(m, **mip_args)
+
     except RuntimeError as e:
         # ESJ TODO: How come GAMS is special? Doesn't seem safe to assume
         # infeasibility here if the error could be something else...?

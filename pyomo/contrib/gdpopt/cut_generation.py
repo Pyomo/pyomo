@@ -23,9 +23,12 @@ from pyomo.core.expr.visitor import identify_variables
 MAX_SYMBOLIC_DERIV_SIZE = 1000
 JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
 
-def add_subproblem_cuts(subprob_result, solve_data, config):
+def add_cuts_according_to_algorithm(subproblem_util_block, master_util_block,
+                                    objective_sense, config):
     if config.strategy == "LOA":
-        return add_outer_approximation_cuts(subprob_result, solve_data, config)
+        return add_outer_approximation_cuts(subproblem_util_block,
+                                            master_util_block, objective_sense,
+                                            config)
     elif config.strategy == "GLOA":
         return add_affine_cuts(subprob_result, solve_data, config)
     elif config.strategy == 'RIC':
@@ -55,7 +58,7 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
     for constr, subprob_constr in zip(master_util_block.constraint_list,
                                       subproblem_util_block.constraint_list):
         dual_value = nlp.dual.get(subprob_constr, None)
-        # TODO: This is a risky use of polynomial_degree I think
+        # ESJ TODO: This is a risky use of polynomial_degree I think
         if dual_value is None or constr.body.polynomial_degree() in (1, 0):
             continue
 
@@ -104,18 +107,23 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
             jacobian.jac.update(zip(jacobian.vars, jac_list))
 
         # Create a block on which to put outer approximation cuts.
-        oa_utils = parent_block.component('GDPopt_OA')
+        oa_utils = master_util_block.component('GDPopt_OA')
         if oa_utils is None:
-            oa_utils = parent_block.GDPopt_OA = Block(
+            oa_utils = master_util_block.GDPopt_OA = Block(
                 doc="Block holding outer approximation cuts "
                 "and associated data.")
             oa_utils.GDPopt_OA_cuts = ConstraintList()
+            print("Adding slacks! %s to model %s" % 
+                  (oa_utils, oa_utils.model()))
             oa_utils.GDPopt_OA_slacks = VarList( bounds=(0, config.max_slack),
                                                  domain=NonNegativeReals,
                                                  initialize=0)
+            oa_utils.GDPopt_OA_slacks.pprint()
 
         oa_cuts = oa_utils.GDPopt_OA_cuts
         slack_var = oa_utils.GDPopt_OA_slacks.add()
+        oa_utils.GDPopt_OA_slacks.pprint()
+        print(oa_utils.parent_block().name)
         rhs = value(constr.lower) if constr.has_lb() else value(
             constr.upper)
         try:
@@ -251,6 +259,6 @@ def add_no_good_cut(target_model_util_block, config):
 
     # Exclude the current binary combination
     config.logger.info('Adding integer cut')
-    target_model_util_block.integer_cuts.add(expr=int_cut)
+    target_model_util_block.no_good_cuts.add(expr=int_cut)
 
     return True
