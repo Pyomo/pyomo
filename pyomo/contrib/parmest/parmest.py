@@ -433,12 +433,10 @@ class Estimator(object):
                                     EF_name = "_Q_opt",
                                     suppress_warnings=True,
                                     scenario_creator_kwargs=scenario_creator_options)
-        self.ef_instance = ef
 
+        # Fix fitted parameters for initialization
         for i, theta in enumerate(self.theta_names):
-            # First, leverage the parser in ComponentUID to locate the
-            # component.  If that fails, fall back on the original
-            # (insecure) use of 'eval'
+            # Use parser in ComponentUID to locate the component
             var_cuid = ComponentUID(theta)
             var_validate = var_cuid.find_component_on(self.parmest_model)
             if var_validate is None:
@@ -462,13 +460,13 @@ class Estimator(object):
             for key in self.solver_options:
                 init_solver.options[key] = self.solver_options[key]
 
-        print("\n\n*********************  Initial Solve  *********************\n\n")
+        # Initial solve of square problem with ipopt
+        # Fitted parameters are fixed
         init_solver.solve(ef, tee = True)
-        ef.pprint()
+
+        # Un-fix fitted parameters for estimation
         for i, theta in enumerate(self.theta_names):
-            # First, leverage the parser in ComponentUID to locate the
-            # component.  If that fails, fall back on the original
-            # (insecure) use of 'eval'
+            # Use parser in ComponentUID to locate the component
             var_cuid = ComponentUID(theta)
             var_validate = var_cuid.find_component_on(self.parmest_model)
             if var_validate is None:
@@ -487,17 +485,20 @@ class Estimator(object):
                 except:
                     logger.warning(theta + ' is not a variable')
 
+        self.ef_instance = ef
+
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-
+            # ef.pprint()
             if not calc_cov:
                 # Do not calculate the reduced hessian
-
                 solver = SolverFactory('ipopt')
                 if self.solver_options is not None:
                     for key in self.solver_options:
                         solver.options[key] = self.solver_options[key]
-
+                solver.options['max_iter'] = 0
+                # Discuss: set bound_push to 10^-6 to start solve from solution
+                # of initial solve
                 solve_result = solver.solve(ef, tee = self.tee)
 
             # The import error will be raised when we attempt to use
