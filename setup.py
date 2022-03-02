@@ -247,6 +247,7 @@ setup_kwargs = dict(
     },
     packages = find_packages(exclude=("scripts",)),
     package_data = {
+        "pyomo.contrib.ampl_function_demo": ["src/*"],
         "pyomo.contrib.appsi.cmodel": ["src/*"],
         "pyomo.contrib.mcpp": ["*.cpp"],
         "pyomo.contrib.pynumero": ['src/*', 'src/tests/*'],
