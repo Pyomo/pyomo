@@ -168,9 +168,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest]
+        os: [windows-2019]
         include:
-        - os: windows-latest
+        - os: windows-2019
           TARGET: win
         python-version: [ 3.7, 3.8, 3.9, '3.10' ]
     steps:
