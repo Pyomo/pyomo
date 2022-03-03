@@ -44,6 +44,7 @@ from pyomo.core.base.initializer import (
 logger = logging.getLogger('pyomo.core')
 
 _inf = float('inf')
+_nonfinite_values = {_inf, -_inf, float('nan')}
 _rule_returned_none_error = """Constraint '%s': rule returned None.
 
 Constraint rules must return either a valid expression, a 2- or 3-member
@@ -314,14 +315,16 @@ class _GeneralConstraintData(_ConstraintData):
     def body(self):
         """Access the body of a constraint expression."""
         if self._body is not None:
-            body = self._body
+            return self._body
         else:
             # The incoming RangedInequality had a potentially variable
             # bound.  The "body" is fine, but the bounds may not be
             # (although the responsibility for those checks lies with the
             # lower/upper properties)
             body = self._expr.arg(1)
-        return as_numeric(body)
+            if body.__class__ in native_types and body is not None:
+                return as_numeric(body)
+            return body
 
     def _lb(self):
         if self._body is not None:
@@ -387,7 +390,7 @@ class _GeneralConstraintData(_ConstraintData):
         bound = self._lb()
         if bound.__class__ not in native_types:
             bound = value(bound)
-        if bound is not None and not math.isfinite(bound):
+        if bound in _nonfinite_values:
             if bound == -_inf:
                 bound = None
             else:
@@ -402,7 +405,7 @@ class _GeneralConstraintData(_ConstraintData):
         bound = self._ub()
         if bound.__class__ not in native_types:
             bound = value(bound)
-        if bound is not None and not math.isfinite(bound):
+        if bound in _nonfinite_values:
             if bound == _inf:
                 bound = None
             else:
@@ -616,21 +619,28 @@ class _GeneralConstraintData(_ConstraintData):
             raise DeveloperError("Unrecognized relational expression type: %s"
                                  % (self._expr.__class__.__name__,))
 
+        # We have historically forced the body to be a numeric expression.
+        # TODO: remove this requirement
+        if self._body.__class__ in native_types and self._body is not None:
+            self._body = as_numeric(self._body)
+
         # We have historically mapped incoming inf to None
         if self._lower.__class__ in native_numeric_types:
-            if self._lower == -_inf:
-                self._lower = None
-            elif not math.isfinite(self._lower):
-                raise ValueError(
-                    "Constraint '%s' created with an invalid non-finite "
-                    "lower bound (%s)." % (self.name, self._lower))
+            if self._lower in _nonfinite_values:
+                if self._lower == -_inf:
+                    self._lower = None
+                else:
+                    raise ValueError(
+                        "Constraint '%s' created with an invalid non-finite "
+                        "lower bound (%s)." % (self.name, self._lower))
         if self._upper.__class__ in native_numeric_types:
-            if self._upper == _inf:
-                self._upper = None
-            elif not math.isfinite(self._upper):
-                raise ValueError(
-                    "Constraint '%s' created with an invalid non-finite "
-                    "upper bound (%s)." % (self.name, self._upper))
+            if self._upper in _nonfinite_values:
+                if self._upper == _inf:
+                    self._upper = None
+                else:
+                    raise ValueError(
+                        "Constraint '%s' created with an invalid non-finite "
+                        "upper bound (%s)." % (self.name, self._upper))
 
 
 @ModelComponentFactory.register("General constraint expressions.")
