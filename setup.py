@@ -171,6 +171,10 @@ setup_kwargs = dict(
     maintainer = 'Pyomo Developer Team',
     maintainer_email = 'pyomo-developers@googlegroups.com',
     url = 'http://pyomo.org',
+    project_urls = {
+        'Documentation': 'https://pyomo.readthedocs.io/en/stable/',
+        'Source': 'https://github.com/Pyomo/pyomo',
+    },
     license = 'BSD',
     platforms = ["any"],
     description = 'Pyomo: Python Optimization Modeling Objects',
