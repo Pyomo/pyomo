@@ -66,6 +66,7 @@ if _mode == Mode.pyomo5_trees:
                                               NPV_UnaryFunctionExpression,
                                               AbsExpression, NPV_AbsExpression,
                                               LinearExpression,
+                                              QuadraticExpression,
                                               _MutableLinearExpression,
                                               decompose_term,
                                               LinearDecompositionError,

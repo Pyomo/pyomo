@@ -24,6 +24,8 @@ from pyomo.repn import generate_standard_repn
 from pyomo.environ import AbstractModel, ConcreteModel, Var, Param, Set, Expression, RangeSet, ExternalFunction, quicksum, cos, sin, summation, sum_product
 import pyomo.kernel
 from pyomo.core.expr.numvalue import native_numeric_types, as_numeric, value
+from pyomo.core.expr.numeric_expr import QuadraticExpression
+from pyomo.core.expr.compare import compare_expressions
 
 
 class frozendict(dict):
@@ -2695,6 +2697,65 @@ class Test(unittest.TestCase):
         s = pickle.dumps(rep)
         rep = pickle.loads(s)
         self.assertEqual(baseline1, repn_to_dict(rep))
+
+    def test_quadratic3(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[0,1,2])
+        m.x = Var(m.a)
+        m.y = Var(m.a)
+        coefs = [0.1, 20, 3]
+        e = QuadraticExpression(coefs=coefs, vars_1=m.x.values(), vars_2=m.y.values())
+
+        rep = generate_standard_repn(e)
+        self.assertFalse(rep.is_fixed())
+        self.assertEqual(rep.polynomial_degree(), 2)
+        self.assertFalse(rep.is_constant())
+        self.assertFalse(rep.is_linear())
+        self.assertTrue(rep.is_quadratic())
+        self.assertTrue(rep.is_nonlinear())
+        self.assertEqual(rep.constant, 0)
+        self.assertEqual(len(rep.linear_vars), 0)
+        self.assertEqual(len(rep.linear_coefs), 0)
+        self.assertEqual(len(rep.quadratic_vars), 3)
+        self.assertEqual(len(rep.quadratic_coefs), 3)
+        self.assertIsNone(rep.nonlinear_expr)
+        self.assertEqual(len(rep.nonlinear_vars), 0)
+        self.assertEqual(rep.quadratic_coefs, tuple(coefs))
+        expected = ((m.x[0], m.y[0]), (m.x[1], m.y[1]), (m.x[2], m.y[2]))
+        self.assertEqual(rep.quadratic_vars, expected)
+
+        rep = generate_standard_repn(e, quadratic=False)
+        self.assertFalse(rep.is_fixed())
+        self.assertEqual(rep.polynomial_degree(), None)
+        self.assertFalse(rep.is_constant())
+        self.assertFalse(rep.is_linear())
+        self.assertFalse(rep.is_quadratic())
+        self.assertTrue(rep.is_nonlinear())
+        self.assertEqual(rep.constant, 0)
+        self.assertEqual(len(rep.linear_vars), 0)
+        self.assertEqual(len(rep.linear_coefs), 0)
+        self.assertEqual(len(rep.quadratic_vars), 0)
+        self.assertEqual(len(rep.quadratic_coefs), 0)
+        self.assertEqual(rep.nonlinear_vars,
+                         (m.y[0], m.y[1], m.y[2], m.x[0], m.x[1], m.x[2]))
+        self.assertTrue(compare_expressions(rep.nonlinear_expr, sum(
+            coefs[i] * m.x[i] * m.y[i] for i in m.a)))
+
+        m.x.fix(2)
+        rep = generate_standard_repn(e)
+        self.assertFalse(rep.is_fixed())
+        self.assertEqual(rep.polynomial_degree(), 1)
+        self.assertFalse(rep.is_constant())
+        self.assertTrue(rep.is_linear())
+        self.assertFalse(rep.is_quadratic())
+        self.assertFalse(rep.is_nonlinear())
+        self.assertEqual(rep.constant, 0)
+        self.assertEqual(rep.linear_vars, (m.y[0], m.y[1], m.y[2]))
+        self.assertEqual(rep.linear_coefs, (0.2, 40, 6))
+        self.assertEqual(len(rep.quadratic_vars), 0)
+        self.assertEqual(len(rep.quadratic_coefs), 0)
+        self.assertIsNone(rep.nonlinear_expr)
+        self.assertEqual(len(rep.nonlinear_vars), 0)
 
     def test_pow(self):
         #       ^

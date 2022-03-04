@@ -41,7 +41,7 @@ from pyomo.core.expr.numvalue import (
 from pyomo.core.expr.numeric_expr import (
     ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
     ProductExpression, NegationExpression, linear_expression,
-    MonomialTermExpression, LinearExpression, DivisionExpression,
+    MonomialTermExpression, LinearExpression, QuadraticExpression, DivisionExpression,
     NPV_NegationExpression, NPV_ProductExpression, 
     NPV_PowExpression, NPV_DivisionExpression,
     decompose_term, clone_counter, nonlinear_expression,
@@ -57,6 +57,7 @@ from pyomo.core.base.label import NumericLabeler
 from pyomo.core.expr.template_expr import IndexTemplate
 from pyomo.core.expr import expr_common
 from pyomo.core.base.var import _GeneralVarData
+from pyomo.core.expr.compare import compare_expressions
 
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr.numvalue import NumericValue
@@ -4782,6 +4783,138 @@ class TestLinearExpression(unittest.TestCase):
             e = m.v[0] + m.v[1]
             e = m.v[0]**e
             self.assertIs(e.__class__, PowExpression)
+
+
+class TestQuadraticExpression(unittest.TestCase):
+    def test_init_without_args(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[0,1,2])
+        m.x = Var(m.a)
+        m.y = Var(m.a)
+        coefs = [0.1, 20, 3]
+        e = QuadraticExpression(coefs=coefs, vars_1=m.x.values(), vars_2=m.y.values())
+        self.assertEqual(e._args_cache_, tuple())
+        self.assertEqual(e.coefs, tuple(coefs))
+        self.assertEqual(e.vars_1, (m.x[0], m.x[1], m.x[2]))
+        self.assertEqual(e.vars_2, (m.y[0], m.y[1], m.y[2]))
+        self.assertTrue(compare_expressions(e.args[0], 0.1*m.x[0]*m.y[0]))
+        self.assertTrue(compare_expressions(e.args[1], 20*m.x[1]*m.y[1]))
+        self.assertTrue(compare_expressions(e.args[2], 3*m.x[2]*m.y[2]))
+        self.assertEqual(len(e._args_cache_), 3)
+
+    def test_init_with_args(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[0,1,2])
+        m.x = Var(m.a)
+        m.y = Var(m.a)
+        coefs = [0.1, 20, 3]
+        e = QuadraticExpression(args=[coefs[i]*m.x[i]*m.y[i] for i in m.a])
+        self.assertEqual(len(e._args_cache_), 3)
+        self.assertEqual(e.coefs, tuple(coefs))
+        self.assertEqual(e.vars_1, (m.x[0], m.x[1], m.x[2]))
+        self.assertEqual(e.vars_2, (m.y[0], m.y[1], m.y[2]))
+        print(e.args[0])
+        self.assertTrue(compare_expressions(e.args[0], 0.1*m.x[0]*m.y[0]))
+        self.assertTrue(compare_expressions(e.args[1], 20*m.x[1]*m.y[1]))
+        self.assertTrue(compare_expressions(e.args[2], 3*m.x[2]*m.y[2]))
+
+    def test_init_errors(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[0,1,2])
+        m.x = Var(m.a)
+        m.y = Var(m.a)
+        coefs = [0.1, 20, 3]
+        with self.assertRaisesRegex(ValueError, 'Cannot specify both args and any of {coefs, vars_1, vars_2}'):
+            e = QuadraticExpression(args=[coefs[i]*m.x[i]*m.y[i] for i in m.a], coefs=coefs)
+        with self.assertRaisesRegex(ValueError, 'Cannot specify both args and any of {coefs, vars_1, vars_2}'):
+            e = QuadraticExpression(args=[coefs[i]*m.x[i]*m.y[i] for i in m.a], vars_1=m.x.values())
+        with self.assertRaisesRegex(ValueError, 'Cannot specify both args and any of {coefs, vars_1, vars_2}'):
+            e = QuadraticExpression(args=[coefs[i]*m.x[i]*m.y[i] for i in m.a], vars_2=m.x.values())
+        with self.assertRaisesRegex(ValueError, 'The length of coefs, vars_1, and vars_2 must be the same.'):
+            e = QuadraticExpression(coefs=coefs, vars_1=[m.x[0]], vars_2=m.y.values())
+        with self.assertRaisesRegex(ValueError, 'The length of coefs, vars_1, and vars_2 must be the same.'):
+            e = QuadraticExpression(coefs=coefs, vars_1=m.x.values(), vars_2=[m.y[0]])
+        with self.assertRaisesRegex(ValueError, 'The length of coefs, vars_1, and vars_2 must be the same.'):
+            e = QuadraticExpression(coefs=coefs[0:2], vars_1=m.x.values(), vars_2=m.y.values())
+        with self.assertRaisesRegex(ValueError,
+                                    'When constructing a QuadraticExpression with '
+                                    'args, the args must all be ProductExpressions '
+                                    'containing a MonomialTermExpression for the first '
+                                    'argument and a variable for the second argument.'):
+            e = QuadraticExpression(args=[coefs[i]*(m.x[i]*m.y[i]) for i in m.a])
+
+    def test_to_string(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[0,1,2,3])
+        m.x = Var(m.a)
+        m.y = Var(m.a)
+        coefs = [1, -1, 2, -2]
+        e = QuadraticExpression(coefs=[], vars_1=[], vars_2=[])
+        self.assertEqual(e.to_string(), "0")
+        e = QuadraticExpression(coefs=coefs, vars_1=m.x.values(), vars_2=m.y.values())
+        self.assertEqual(e.to_string(), "x[0]*y[0] - x[1]*y[1] + 2*x[2]*y[2] - 2*x[3]*y[3]")
+
+    def test_polynomial_degree(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[0,1,2,3])
+        m.x = Var(m.a)
+        m.y = Var(m.a)
+        coefs = [1, -1, 2, -2]
+        e = QuadraticExpression(coefs=coefs, vars_1=m.x.values(), vars_2=m.y.values())
+        self.assertEqual(e.polynomial_degree(), 2)
+        m.x.fix(1)
+        m.y.fix(2)
+        self.assertEqual(e.polynomial_degree(), 0)
+        m.x.unfix()
+        self.assertEqual(e.polynomial_degree(), 1)
+        m.x.fix()
+        m.y.unfix()
+        self.assertEqual(e.polynomial_degree(), 1)
+
+    def test_is_constant_and_fixed(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[0,1,2,3])
+        m.x = Var(m.a)
+        m.y = Var(m.a)
+        coefs = [1, -1, 2, -2]
+        e = QuadraticExpression(coefs=coefs, vars_1=m.x.values(), vars_2=m.y.values())
+        self.assertFalse(e.is_constant())
+        self.assertFalse(e.is_fixed())
+        self.assertTrue(e.is_potentially_variable())
+        m.x.fix(1)
+        m.y.fix(2)
+        self.assertFalse(e.is_constant())
+        self.assertTrue(e.is_fixed())
+        self.assertTrue(e.is_potentially_variable())
+        m.x.unfix()
+        self.assertFalse(e.is_constant())
+        self.assertFalse(e.is_fixed())
+        self.assertTrue(e.is_potentially_variable())
+        m.x.fix()
+        m.y.unfix()
+        self.assertFalse(e.is_constant())
+        self.assertFalse(e.is_fixed())
+        self.assertTrue(e.is_potentially_variable())
+
+        e = QuadraticExpression(coefs=[], vars_1=[], vars_2=[])
+        self.assertTrue(e.is_constant())
+        self.assertTrue(e.is_fixed())
+        self.assertFalse(e.is_potentially_variable())
+
+    def test_apply_operation(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[0,1,2])
+        m.x = Var(m.a)
+        m.y = Var(m.a)
+        coefs = [0.1, 20, 3]
+        e = QuadraticExpression(coefs=coefs, vars_1=m.x.values(), vars_2=m.y.values())
+        m.x[0].value = 1.2
+        m.x[1].value = 2.3
+        m.x[2].value = 3.4
+        m.y[0].value = -1.5
+        m.y[1].value = 2.6
+        m.y[2].value = 3.8
+        self.assertAlmostEqual(value(e), sum(coefs[i]*m.x[i].value*m.y[i].value for i in m.a))
 
 
 class TestNonlinearExpression(unittest.TestCase):

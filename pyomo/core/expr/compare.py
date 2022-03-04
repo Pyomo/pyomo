@@ -16,7 +16,7 @@ from .numeric_expr import (
     NPV_ProductExpression, NPV_DivisionExpression, NPV_PowExpression,
     NPV_SumExpression, NPV_NegationExpression, NPV_UnaryFunctionExpression,
     NPV_ExternalFunctionExpression, Expr_ifExpression, AbsExpression,
-    NPV_AbsExpression, NumericValue)
+    NPV_AbsExpression, NumericValue, QuadraticExpression)
 from pyomo.core.expr.logical_expr import (
     RangedExpression, InequalityExpression, EqualityExpression
 )
@@ -29,6 +29,14 @@ def handle_linear_expression(node: LinearExpression, pn: List):
     pn.append(node.constant)
     pn.extend(node.linear_coefs)
     pn.extend(node.linear_vars)
+    return tuple()
+
+
+def handle_quadratic_expression(node: QuadraticExpression, pn: List):
+    pn.append((type(node), 3*node.nargs()))
+    pn.extend(node.coefs)
+    pn.extend(node.vars_1)
+    pn.extend(node.vars_2)
     return tuple()
 
 
@@ -76,6 +84,7 @@ handler[NPV_AbsExpression] = handle_unary_expression
 handler[RangedExpression] = handle_expression
 handler[InequalityExpression] = handle_expression
 handler[EqualityExpression] = handle_expression
+handler[QuadraticExpression] = handle_quadratic_expression
 
 
 class PrefixVisitor(StreamBasedExpressionVisitor):

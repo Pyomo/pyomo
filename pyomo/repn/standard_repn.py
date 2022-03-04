@@ -877,6 +877,7 @@ _repn_collectors = {
     EXPR.AbsExpression                          : _collect_nonl,
     EXPR.NegationExpression                     : _collect_negation,
     EXPR.LinearExpression                       : _collect_linear,
+    EXPR.QuadraticExpression                    : _collect_sum,
     EXPR.InequalityExpression                   : _collect_comparison,
     EXPR.RangedExpression                       : _collect_comparison,
     EXPR.EqualityExpression                     : _collect_comparison,

@@ -22,7 +22,7 @@ from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Expression, Exter
 from pyomo.core.expr.numvalue import nonpyomo_leaf_types, NumericConstant
 from pyomo.core.expr.numeric_expr import (
     SumExpression, ProductExpression, 
-    MonomialTermExpression, LinearExpression,
+    MonomialTermExpression, LinearExpression, QuadraticExpression,
     NPV_SumExpression, NPV_ProductExpression, NegationExpression,
     NPV_NegationExpression, PowExpression, NPV_PowExpression,
     MaxExpression, NPV_MaxExpression, MinExpression, NPV_MinExpression,
@@ -366,6 +366,30 @@ class WalkerTests(unittest.TestCase):
         self.assertTrue(compare_expressions(2*LinearExpression(linear_coefs=[i for i in M.z.values()],
                                                                linear_vars=[i for i in M.w.values()]), f))
 
+    def test_replacement_quadratic(self):
+        m = ConcreteModel()
+        m.x = Var(range(3))
+        m.w = VarList()
+        e = QuadraticExpression(coefs=[0.1, 3], vars_1=[m.x[0], m.x[1]],
+                                vars_2=[m.x[2], m.x[2]])
+        walker = ReplacementWalkerTest1(m)
+        f = walker.dfs_postorder_stack(e)
+        self.assertTrue(compare_expressions(
+            QuadraticExpression(coefs=[0.1, 3], vars_1=[m.w[1], m.w[3]],
+                                vars_2=[m.w[2], m.w[2]]), f))
+
+        del m.w
+        del m.w_index
+        m.w = VarList()
+        e = 2 * QuadraticExpression(coefs=[0.1, 3], vars_1=[m.x[0], m.x[1]],
+                                    vars_2=[m.x[2], m.x[2]])
+        walker = ReplacementWalkerTest1(m)
+        f = walker.dfs_postorder_stack(e)
+        self.assertTrue(compare_expressions(
+            2 * QuadraticExpression(coefs=[0.1, 3], vars_1=[m.w[1], m.w[3]],
+                                    vars_2=[m.w[2], m.w[2]]), f))
+
+
     def test_replace_expressions_with_monomial_term(self):
         M = ConcreteModel()
         M.x = Var()
@@ -529,6 +553,17 @@ class WalkerTests2(unittest.TestCase):
                                                                linear_vars=[i for i in M.x.values()]), e))
         self.assertTrue(compare_expressions(2*(M.z[0]*(2*M.w[4]) + M.z[1]*(2*M.w[5]) + M.z[2]*(2*M.w[6])), f))
 
+    def test_replacement_quadratic(self):
+        m = ConcreteModel()
+        m.x = Var(range(3))
+        m.w = VarList()
+        e = QuadraticExpression(coefs=[0.1, 3], vars_1=[m.x[0], m.x[1]],
+                                vars_2=[m.x[2], m.x[2]])
+        walker = ReplacementWalkerTest2(m)
+        f = walker.dfs_postorder_stack(e)
+        self.assertTrue(compare_expressions(0.1*(2*m.w[1])*(2*m.w[2]) + 3*(2*m.w[3])*(2*m.w[2]), f))
+
+
 #
 # Replace all mutable parameters with variables
 #
@@ -671,6 +706,18 @@ class WalkerTests3(unittest.TestCase):
         self.assertTrue(compare_expressions(2*LinearExpression(linear_coefs=[i for i in M.z.values()],
                                                                linear_vars=[i for i in M.x.values()]), e))
         self.assertTrue(compare_expressions(2*(2*M.w[4]*M.x[0] + 2*M.w[5]*M.x[1] + 2*M.w[6]*M.x[2]), f))
+
+    def test_replacement_quadratic(self):
+        m = ConcreteModel()
+        m.x = Var(range(3))
+        m.w = VarList()
+        m.z = Param(range(2), mutable=True)
+        e = QuadraticExpression(coefs=[m.z[0], m.z[1]], vars_1=[m.x[0], m.x[1]],
+                                vars_2=[m.x[2], m.x[2]])
+        walker = ReplacementWalkerTest3(m)
+        f = walker.dfs_postorder_stack(e)
+        self.assertTrue(compare_expressions(
+            2 * m.w[1] * m.x[0] * m.x[2] + 2 * m.w[2] * m.x[1] * m.x[2], f))
 
 
 #

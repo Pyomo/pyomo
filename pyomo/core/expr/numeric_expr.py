@@ -1518,6 +1518,160 @@ class LinearExpression(ExpressionBase):
         return self
 
 
+class QuadraticExpression(ExpressionBase):
+    """
+    An expression object for quadratic expressions
+
+    Args:
+        args: tuple or list
+            The children nodes
+    """
+    __slots__ = ('_coefs', '_vars_1', '_vars_2', '_args_cache_')
+
+    PRECEDENCE = 6
+
+    def __init__(self, args=None, coefs=None, vars_1=None, vars_2=None):
+        """
+        A quadratic expression of the form sum_i(c_i*x_i*y_i).
+
+        You can specify args OR (coefs, vars_1, and vars_2). If args is provided, it
+        should be a list or tuple that contains a series of
+        :py:class:`ProductExpression` objects with arguments
+        :py:class:`MonomialTermExpression` and :py:class:`_GeneralVarData`.
+        Alternatively, you can specify the lists of coefficients and variables
+        separately.
+        """
+        if args:
+            if any(arg is not None for arg in (coefs, vars_1, vars_2)):
+                raise ValueError('Cannot specify both args and any of '
+                                 '{coefs, vars_1, vars_2}')
+            self._args_ = args
+        else:
+            self._coefs = tuple(coefs)
+            self._vars_1 = tuple(vars_1)
+            self._vars_2 = tuple(vars_2)
+            self._args_cache_ = tuple()
+
+        if len(self.vars_1) != self.nargs() or len(self.vars_2) != self.nargs():
+            raise ValueError('The length of coefs, vars_1, and '
+                             'vars_2 must be the same.')
+
+    @property
+    def coefs(self):
+        return self._coefs
+
+    @property
+    def vars_1(self):
+        return self._vars_1
+
+    @property
+    def vars_2(self):
+        return self._vars_2
+
+    def nargs(self):
+        return len(self.coefs)
+
+    @property
+    def _args_(self):
+        nargs = self.nargs()
+        if len(self._args_cache_) != nargs:
+            tmp = map(MonomialTermExpression, zip(self.coefs, self.vars_1))
+            tmp = map(ProductExpression, zip(tmp, self.vars_2))
+            self._args_cache_ = tuple(tmp)
+        return self._args_cache_
+
+    @_args_.setter
+    def _args_(self, val):
+        self._args_cache_ = tuple(val)
+        coefs = list()
+        vars_1 = list()
+        vars_2 = list()
+        for term in val:
+            arg1, arg2 = term.args
+            if (type(arg1) is not MonomialTermExpression
+                    or type(arg2) in native_numeric_types
+                    or not arg2.is_variable_type()):
+                raise ValueError('When constructing a QuadraticExpression with args, '
+                                 'the args must all be ProductExpressions containing a '
+                                 'MonomialTermExpression for the first argument and a '
+                                 'variable for the second argument.')
+            c, v1 = arg1.args
+            v2 = arg2
+            coefs.append(c)
+            vars_1.append(v1)
+            vars_2.append(v2)
+        self._coefs = tuple(coefs)
+        self._vars_1 = tuple(vars_1)
+        self._vars_2 = tuple(vars_2)
+
+    def _precedence(self):
+        return QuadraticExpression.PRECEDENCE
+
+    def create_node_with_local_data(self, args, classtype=None):
+        if classtype is None:
+            if not args:
+                classtype = self.__class__
+            else:
+                correct_format = True
+                for arg in args:
+                    if (type(arg) is not ProductExpression
+                            or type(arg.args[0]) is not MonomialTermExpression
+                            or type(arg.args[1]) in native_numeric_types
+                            or not arg.args[1].is_variable_type()):
+                        correct_format = False
+                        break
+                if correct_format:
+                    classtype = self.__class__
+                else:
+                    classtype = SumExpression
+        return classtype(args)
+
+    def getname(self, *args, **kwds):
+        return 'sum'
+
+    def _compute_polynomial_degree(self, result):
+        res = 0
+        for v1, v2 in zip(self.vars_1, self.vars_2):
+            if v1.fixed:
+                if not v2.fixed:
+                    res = max(res, 1)
+            else:
+                if v2.fixed:
+                    res = max(res, 1)
+                else:
+                    res = max(res, 2)
+        return res
+
+    def is_constant(self):
+        return self.nargs() == 0
+
+    def _is_fixed(self, values=None):
+        return all(v.fixed for v in self.vars_1) and all(v.fixed for v in self.vars_2)
+
+    def is_fixed(self):
+        return self._is_fixed()
+
+    def _to_string(self, values, verbose, smap, compute_values):
+        if not values:
+            values = ['0']
+        if verbose:
+            return "%s(%s)" % (self.getname(), ', '.join(values))
+
+        for i in range(1, len(values)):
+            term = values[i]
+            if term[0] not in '+-':
+                values[i] = '+ ' + term
+            elif term[1] != ' ':
+                values[i] = term[0] + ' ' + term[1:]
+        return ' '.join(values)
+
+    def is_potentially_variable(self):
+        return self.nargs() > 0
+
+    def _apply_operation(self, result):
+        return sum(result)
+
+
 class _MutableLinearExpression(LinearExpression):
     __slots__ = ()
 
