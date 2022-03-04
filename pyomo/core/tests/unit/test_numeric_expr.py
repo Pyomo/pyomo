@@ -4561,8 +4561,8 @@ class TestLinearExpression(unittest.TestCase):
             constant=5, linear_vars=[m.x, m.y], linear_coefs=[2,3])
         self.assertEqual(e._args_cache_, [])
         self.assertEqual(e.constant, 5)
-        self.assertEqual(e.linear_vars, [m.x, m.y])
-        self.assertEqual(e.linear_coefs, [2, 3])
+        self.assertEqual(e.linear_vars, (m.x, m.y))
+        self.assertEqual(e.linear_coefs, (2, 3))
 
         args = [10,
                 MonomialTermExpression((4, m.y)),
@@ -4572,8 +4572,8 @@ class TestLinearExpression(unittest.TestCase):
         self.assertEqual(OUT.getvalue(), "")
         self.assertEqual(e._args_cache_, args)
         self.assertEqual(e.constant, 10)
-        self.assertEqual(e.linear_vars, [m.y, m.x])
-        self.assertEqual(e.linear_coefs, [4, 5])
+        self.assertEqual(e.linear_vars, (m.y, m.x))
+        self.assertEqual(e.linear_coefs, (4, 5))
 
         with LoggingIntercept() as OUT:
             e = LinearExpression([20, 6, 7, m.x, m.y])
@@ -4587,8 +4587,8 @@ class TestLinearExpression(unittest.TestCase):
         self.assertEqual(e._args_cache_[1].args, (6, m.x))
         self.assertEqual(e._args_cache_[2].args, (7, m.y))
         self.assertEqual(e.constant, 20)
-        self.assertEqual(e.linear_vars, [m.x, m.y])
-        self.assertEqual(e.linear_coefs, [6, 7])
+        self.assertEqual(e.linear_vars, (m.x, m.y))
+        self.assertEqual(e.linear_coefs, (6, 7))
 
         with LoggingIntercept() as OUT:
             e = LinearExpression([20, 6, 7, 8, m.x, m.y, m.x])
@@ -4603,8 +4603,8 @@ class TestLinearExpression(unittest.TestCase):
         self.assertEqual(e._args_cache_[2].args, (7, m.y))
         self.assertEqual(e._args_cache_[3].args, (8, m.x))
         self.assertEqual(e.constant, 20)
-        self.assertEqual(e.linear_vars, [m.x, m.y, m.x])
-        self.assertEqual(e.linear_coefs, [6, 7, 8])
+        self.assertEqual(e.linear_vars, (m.x, m.y, m.x))
+        self.assertEqual(e.linear_coefs, (6, 7, 8))
 
     def test_to_string(self):
         m = ConcreteModel()

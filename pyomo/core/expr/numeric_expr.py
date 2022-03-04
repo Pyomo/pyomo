@@ -1282,9 +1282,9 @@ class LinearExpression(ExpressionBase):
         args (tuple): Children nodes
     """
     __slots__ = (
-        'constant',          # The constant term
-        'linear_coefs',      # Linear coefficients
-        'linear_vars',       # Linear variables
+        '_constant',          # The constant term
+        '_linear_coefs',      # Linear coefficients
+        '_linear_vars',       # Linear variables
         '_args_cache_',
     )
 
@@ -1298,7 +1298,7 @@ class LinearExpression(ExpressionBase):
         contains the constant, followed by a series of
         :py:class:`MonomialTermExpression` objects. Alternatively, you
         can specify the constant, the list of linear_coeffs and the list
-        of linear_vars separately. Note that these lists are NOT copied.
+        of linear_vars separately.
 
         """
         # I am not sure why LinearExpression allows omitting args, but
@@ -1321,10 +1321,22 @@ class LinearExpression(ExpressionBase):
                     zip(args[1:1+len(args)//2], args[1+len(args)//2:])))
             self._args_ = args
         else:
-            self.constant = constant if constant is not None else 0
-            self.linear_coefs = linear_coefs if linear_coefs else []
-            self.linear_vars = linear_vars if linear_vars else []
+            self._constant = constant if constant is not None else 0
+            self._linear_coefs = tuple(linear_coefs) if linear_coefs else tuple()
+            self._linear_vars = tuple(linear_vars) if linear_vars else tuple()
             self._args_cache_ = []
+
+    @property
+    def constant(self):
+        return self._constant
+
+    @property
+    def linear_vars(self):
+        return self._linear_vars
+
+    @property
+    def linear_coefs(self):
+        return self._linear_coefs
 
     def nargs(self):
         return len(self.linear_vars) + (
@@ -1352,15 +1364,15 @@ class LinearExpression(ExpressionBase):
     def _args_(self, value):
         self._args_cache_ = list(value)
         if self._args_cache_[0].__class__ is not MonomialTermExpression:
-            self.constant = value[0]
+            self._constant = value[0]
             first_var = 1
         else:
-            self.constant = 0
+            self._constant = 0
             first_var = 0
-        self.linear_coefs, self.linear_vars = zip(
+        self._linear_coefs, self._linear_vars = zip(
             *map(attrgetter('args'), value[first_var:]))
-        self.linear_coefs = list(self.linear_coefs)
-        self.linear_vars = list(self.linear_vars)
+        self._linear_coefs = tuple(self._linear_coefs)
+        self._linear_vars = tuple(self._linear_vars)
 
     def _precedence(self):
         return LinearExpression.PRECEDENCE
@@ -1417,7 +1429,39 @@ class LinearExpression(ExpressionBase):
     def _apply_operation(self, result):
         return sum(result)
 
-    #@profile
+
+class _MutableLinearExpression(LinearExpression):
+    __slots__ = ()
+
+    def __init__(self, args=None, constant=None, linear_coefs=None, linear_vars=None):
+        super().__init__(args=args, constant=constant, linear_coefs=linear_coefs, linear_vars=linear_vars)
+        self._linear_vars = list(self._linear_vars)
+        self._linear_coefs = list(self._linear_coefs)
+
+    @property
+    def constant(self):
+        return self._constant
+
+    @constant.setter
+    def constant(self, val):
+        self._constant = val
+
+    @property
+    def linear_coefs(self):
+        return self._linear_coefs
+
+    @linear_coefs.setter
+    def linear_coefs(self, val):
+        self._linear_coefs = val
+
+    @property
+    def linear_vars(self):
+        return self._linear_vars
+
+    @linear_vars.setter
+    def linear_vars(self, val):
+        self._linear_vars = val
+
     def _combine_expr(self, etype, _other):
         if etype == _add or etype == _sub or etype == -_add or etype == -_sub:
             #
@@ -1516,10 +1560,6 @@ class LinearExpression(ExpressionBase):
             raise ValueError("Unallowed operation on mutable linear expression: %d" % etype)    #pragma: no cover
 
         return self
-
-
-class _MutableLinearExpression(LinearExpression):
-    __slots__ = ()
 
 
 #-------------------------------------------------------
