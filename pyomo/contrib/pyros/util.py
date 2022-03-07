@@ -711,7 +711,7 @@ def add_decision_rule_variables(model_data, config):
                     "decision_rule_var_" + str(i),
                     Var(initialize=value(second_stage_variables[i], exception=False),
                         bounds=bounds,domain=Reals)
-            )#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
+            )
             first_stage_variables.extend(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values())
             decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
     elif degree == 1:
@@ -721,7 +721,7 @@ def add_decision_rule_variables(model_data, config):
                     Var(index_set,
                         initialize=0,
                         bounds=bounds,
-                        domain=Reals))#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
+                        domain=Reals))
             # === For affine drs, the [0]th constant term is initialized to the control variable values, all other terms are initialized to 0
             getattr(model_data.working_model, "decision_rule_var_" + str(i))[0].set_value(value(second_stage_variables[i], exception=False), skip_validation=True)
             first_stage_variables.extend(list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values()))
