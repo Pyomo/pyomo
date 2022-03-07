@@ -658,6 +658,16 @@ def set_up_solve_data(model, config):
         if not hasattr(solve_data.working_model, 'ipopt_zU_out'):
             solve_data.working_model.ipopt_zU_out = Suffix(
                 direction=Suffix.IMPORT)
+    
+    if config.quadratic_strategy == 0:
+        solve_data.mip_objective_polynomial_degree = {0, 1}
+        solve_data.mip_constraint_polynomial_degree = {0, 1}
+    elif config.quadratic_strategy == 1:
+        solve_data.mip_objective_polynomial_degree = {0, 1, 2}
+        solve_data.mip_constraint_polynomial_degree = {0, 1}
+    elif config.quadratic_strategy == 2:
+        solve_data.mip_objective_polynomial_degree = {0, 1, 2}
+        solve_data.mip_constraint_polynomial_degree = {0, 1, 2}
 
     return solve_data
 

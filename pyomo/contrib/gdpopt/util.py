@@ -153,7 +153,8 @@ def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense
 
 def process_objective(solve_data, config, move_linear_objective=False,
                       use_mcpp=False, update_var_con_list=True,
-                      partition_nonlinear_terms=True):
+                      partition_nonlinear_terms=True,
+                      handleable_polynomial_degree={0, 1}):
     """Process model objective function.
 
     Check that the model has only 1 valid objective.
@@ -194,7 +195,7 @@ def process_objective(solve_data, config, move_linear_objective=False,
     solve_data.objective_sense = main_obj.sense
 
     # Move the objective to the constraints if it is nonlinear or move_linear_objective is True.
-    if main_obj.expr.polynomial_degree() not in (1, 0) or move_linear_objective:
+    if main_obj.expr.polynomial_degree() not in handleable_polynomial_degree or move_linear_objective:
         if move_linear_objective:
             config.logger.info("Moving objective to constraint set.")
         else:
@@ -202,7 +203,7 @@ def process_objective(solve_data, config, move_linear_objective=False,
                 "Objective is nonlinear. Moving it to constraint set.")
         util_blk.objective_value = VarList(domain=Reals, initialize=0)
         util_blk.objective_constr = ConstraintList()
-        if main_obj.expr.polynomial_degree() not in (1, 0) and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
+        if main_obj.expr.polynomial_degree() not in handleable_polynomial_degree and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
             repn = generate_standard_repn(main_obj.expr, quadratic=False)
             # the following code will also work if linear_subexpr is a constant.
             linear_subexpr = repn.constant + sum(coef*var for coef, var in zip(repn.linear_coefs, repn.linear_vars))
@@ -220,7 +221,7 @@ def process_objective(solve_data, config, move_linear_objective=False,
         main_obj.deactivate()
         util_blk.objective = Objective(expr=sum(util_blk.objective_value[:]), sense=main_obj.sense)
 
-        if main_obj.expr.polynomial_degree() not in (1, 0) or \
+        if main_obj.expr.polynomial_degree() not in handleable_polynomial_degree or \
            (move_linear_objective and update_var_con_list):
             util_blk.variable_list.extend(util_blk.objective_value[:])
             util_blk.continuous_variable_list.extend(util_blk.objective_value[:])

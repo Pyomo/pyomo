@@ -450,7 +450,7 @@ def setup_main(solve_data, config, fp, regularization_problem):
     MindtPy = solve_data.mip.MindtPy_utils
 
     for c in MindtPy.constraint_list:
-        if c.body.polynomial_degree() not in {1, 0}:
+        if c.body.polynomial_degree() not in solve_data.mip_constraint_polynomial_degree:
             c.deactivate()
 
     MindtPy.cuts.activate()
