@@ -2198,6 +2198,7 @@ class testUninitializedVars(unittest.TestCase):
         m.x = Var(bounds=(m.ell0, m.u0))
         m.z = Var(bounds=(m.ell0, m.p))
         m.t = Var(initialize=1, bounds=(0, m.r))
+        m.w = Var(bounds=(0, 1))
 
         # objectives
         m.obj = Objective(expr=-m.x ** 2 + m.z ** 2)
@@ -2208,6 +2209,7 @@ class testUninitializedVars(unittest.TestCase):
 
         # other constraints
         m.con1 = Constraint(expr=m.x - m.z >= 0.1)
+        m.eq_con = Constraint(expr=m.w == 0.5 * m.t)
 
         box_set = BoxSet(
                 bounds=((value(m.ell), value(m.u)),)
@@ -2227,8 +2229,6 @@ class testUninitializedVars(unittest.TestCase):
             # degree of freedom partitioning
             fsv = [model.x]
             ssv = [model.z, model.t]
-
-            # uncertainty
             uncertain_params = [model.p]
 
             res = pyros_solver.solve(
