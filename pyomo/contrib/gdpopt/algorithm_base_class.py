@@ -356,10 +356,11 @@ class _GDPoptAlgorithm(object):
         to_cite_text = """
         If you use this software, you may cite the following:
         - Implementation:
-        Chen, Q; Johnson, ES; Siirola, JD; Grossmann, IE.
-        Pyomo.GDP: Disjunctive Models in Python.
-        Proc. of the 13th Intl. Symposium on Process Systems Eng.
-        San Diego, 2018.
+        Chen, Q; Johnson, ES; Bernal, DE; Valentin, R; Kale, S;
+        Bates, J; Siirola, JD; Grossmann, IE.
+        Pyomo.GDP: an ecosystem for logic based modeling and optimization 
+        development.
+        Optimization and Engineering, 2021.
         """.strip()
         if config.strategy == "LOA":
             to_cite_text += "\n"

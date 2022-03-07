@@ -20,11 +20,15 @@ from pyomo.core.expr.numvalue import (
     value, is_constant, is_fixed, native_numeric_types,
 )
 from pyomo.repn import generate_standard_repn
-
+from pyomo.core.base.set import (Reals, NonNegativeReals, NonPositiveReals,
+                                 Integers, NonNegativeIntegers, NonPositiveIntegers,
+                                 Binary, PercentFraction, UnitInterval)
+from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.contrib.appsi.base import (
     PersistentSolver, Results, TerminationCondition, MIPSolverConfig,
     PersistentBase, PersistentSolutionLoader
 )
+from pyomo.contrib.appsi.cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 
 logger = logging.getLogger(__name__)
@@ -82,6 +86,24 @@ class GurobiResults(Results):
         super(GurobiResults, self).__init__()
         self.wallclock_time = None
         self.solution_loader = GurobiSolutionLoader(solver=solver)
+
+
+class _MutableLowerBound(object):
+    def __init__(self, expr):
+        self.var = None
+        self.expr = expr
+
+    def update(self):
+        self.var.setAttr('lb', value(self.expr))
+
+
+class _MutableUpperBound(object):
+    def __init__(self, expr):
+        self.var = None
+        self.expr = expr
+
+    def update(self):
+        self.var.setAttr('ub', value(self.expr))
 
 
 class _MutableLinearCoefficient(object):
@@ -201,6 +223,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         self._pyomo_sos_to_solver_sos_map = dict()
         self._range_constraints = OrderedSet()
         self._mutable_helpers = dict()
+        self._mutable_bounds = dict()
         self._mutable_quadratic_helpers = dict()
         self._mutable_objective = None
         self._needs_updated = True
@@ -222,6 +245,7 @@ class Gurobi(PersistentBase, PersistentSolver):
             # the environment
             with capture_output(capture_fd=True):
                 m = gurobipy.Model()
+                m.dispose()
         except ImportError:
             # Triggered if this is the first time the deferred import of
             # gurobipy is resolved. _import_gurobipy will have already
@@ -230,18 +254,22 @@ class Gurobi(PersistentBase, PersistentSolver):
         except gurobipy.GurobiError:
             cls._available = Gurobi.Availability.BadLicense
             return
-        m.setParam('OutputFlag', 0)
-        try:
-            # As of 3/2021, the limited-size Gurobi license was limited
-            # to 2000 variables.
-            m.addVars(range(2001))
+        if not cmodel_available:
+            cls._available = Gurobi.Availability.NeedsCompiledExtension
+        else:
+            m = gurobipy.Model()
             m.setParam('OutputFlag', 0)
-            m.optimize()
-            cls._available = Gurobi.Availability.FullLicense
-        except gurobipy.GurobiError:
-            cls._available = Gurobi.Availability.LimitedLicense
-        finally:
-            m.dispose()
+            try:
+                # As of 3/2021, the limited-size Gurobi license was limited
+                # to 2000 variables.
+                m.addVars(range(2001))
+                m.setParam('OutputFlag', 0)
+                m.optimize()
+                cls._available = Gurobi.Availability.FullLicense
+            except gurobipy.GurobiError:
+                cls._available = Gurobi.Availability.LimitedLicense
+            finally:
+                m.dispose()
 
     def version(self):
         version = (gurobipy.GRB.VERSION_MAJOR,
@@ -300,9 +328,9 @@ class Gurobi(PersistentBase, PersistentSolver):
 
     def solve(self, model, timer: HierarchicalTimer = None) -> Results:
         StaleFlagManager.mark_all_as_stale()
-        avail = self.available()
-        if not avail:
-            raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')
+        # Note: solver availability check happens in set_instance(),
+        # which will be called (either by the user before this call, or
+        # below) before this method calls self._solve.
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
         if timer is None:
@@ -321,23 +349,57 @@ class Gurobi(PersistentBase, PersistentSolver):
             logger.info('\n' + str(timer))
         return res
 
+    def _process_domain_and_bounds(self, var, var_id, mutable_lbs, mutable_ubs, ndx, gurobipy_var):
+        _v, _lb, _ub, _fixed, _domain_interval, _value = self._vars[id(var)]
+        lb, ub, step = _domain_interval
+        if lb is None:
+            lb = -gurobipy.GRB.INFINITY
+        if ub is None:
+            ub = gurobipy.GRB.INFINITY
+        if step == 0:
+            vtype = gurobipy.GRB.CONTINUOUS
+        elif step == 1:
+            if lb == 0 and ub == 1:
+                vtype = gurobipy.GRB.BINARY
+            else:
+                vtype = gurobipy.GRB.INTEGER
+        else:
+            raise ValueError(f'Unrecognized domain step: {step} (should be either 0 or 1)')
+        if _fixed:
+            lb = _value
+            ub = _value
+        else:
+            if _lb is not None:
+                if not is_constant(_lb):
+                    mutable_bound = _MutableLowerBound(NPV_MaxExpression((_lb, lb)))
+                    if gurobipy_var is None:
+                        mutable_lbs[ndx] = mutable_bound
+                    else:
+                        mutable_bound.var = gurobipy_var
+                    self._mutable_bounds[var_id, 'lb'] = (var, mutable_bound)
+                lb = max(value(_lb), lb)
+            if _ub is not None:
+                if not is_constant(_ub):
+                    mutable_bound = _MutableUpperBound(NPV_MinExpression((_ub, ub)))
+                    if gurobipy_var is None:
+                        mutable_ubs[ndx] = mutable_bound
+                    else:
+                        mutable_bound.var = gurobipy_var
+                    self._mutable_bounds[var_id, 'ub'] = (var, mutable_bound)
+                ub = min(value(_ub), ub)
+
+        return lb, ub, vtype
+
     def _add_variables(self, variables: List[_GeneralVarData]):
         var_names = list()
         vtypes = list()
         lbs = list()
         ubs = list()
-        for var in variables:
+        mutable_lbs = dict()
+        mutable_ubs = dict()
+        for ndx, var in enumerate(variables):
             varname = self._symbol_map.getSymbol(var, self._labeler)
-            vtype = self._gurobi_vtype_from_var(var)
-            lb = value(var.lb)
-            ub = value(var.ub)
-            if lb is None:
-                lb = -gurobipy.GRB.INFINITY
-            if ub is None:
-                ub = gurobipy.GRB.INFINITY
-            if var.is_fixed():
-                lb = value(var.value)
-                ub = value(var.value)
+            lb, ub, vtype = self._process_domain_and_bounds(var, id(var), mutable_lbs, mutable_ubs, ndx, None)
             var_names.append(varname)
             vtypes.append(vtype)
             lbs.append(lb)
@@ -348,6 +410,10 @@ class Gurobi(PersistentBase, PersistentSolver):
         for ndx, pyomo_var in enumerate(variables):
             gurobi_var = gurobi_vars[ndx]
             self._pyomo_var_to_solver_var_map[id(pyomo_var)] = gurobi_var
+        for ndx, mutable_bound in mutable_lbs.items():
+            mutable_bound.var = gurobi_vars[ndx]
+        for ndx, mutable_bound in mutable_ubs.items():
+            mutable_bound.var = gurobi_vars[ndx]
         self._vars_added_since_update.update(variables)
         self._needs_updated = True
 
@@ -355,8 +421,13 @@ class Gurobi(PersistentBase, PersistentSolver):
         pass
 
     def set_instance(self, model):
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
         if not self.available():
-            raise ImportError('Could not import gurobipy')
+            c = self.__class__
+            raise PyomoException(
+                f'Solver {c.__module__}.{c.__qualname__} is not available '
+                f'({self.available()}).')
         saved_config = self.config
         saved_options = self.gurobi_options
         saved_update_config = self.update_config
@@ -365,6 +436,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         self.gurobi_options = saved_options
         self.update_config = saved_update_config
         self._model = model
+        self._expr_types = cmodel.PyomoExprTypes()
 
         if self.config.symbolic_solver_labels:
             self._labeler = TextLabeler()
@@ -571,13 +643,15 @@ class Gurobi(PersistentBase, PersistentSolver):
 
     def _remove_variables(self, variables: List[_GeneralVarData]):
         for var in variables:
+            v_id = id(var)
             if var in self._vars_added_since_update:
                 self._update_gurobi_model()
-            solver_var = self._pyomo_var_to_solver_var_map[id(var)]
+            solver_var = self._pyomo_var_to_solver_var_map[v_id]
             self._solver_model.remove(solver_var)
             self._symbol_map.removeSymbol(var)
             self._labeler.remove_obj(var)
-            del self._pyomo_var_to_solver_var_map[id(var)]
+            del self._pyomo_var_to_solver_var_map[v_id]
+            self._mutable_bounds.pop(v_id, None)
         self._needs_updated = True
 
     def _remove_params(self, params: List[_ParamData]):
@@ -588,20 +662,10 @@ class Gurobi(PersistentBase, PersistentSolver):
             var_id = id(var)
             if var_id not in self._pyomo_var_to_solver_var_map:
                 raise ValueError('The Var provided to update_var needs to be added first: {0}'.format(var))
+            self._mutable_bounds.pop((var_id, 'lb'), None)
+            self._mutable_bounds.pop((var_id, 'ub'), None)
             gurobipy_var = self._pyomo_var_to_solver_var_map[var_id]
-            vtype = self._gurobi_vtype_from_var(var)
-            if var.is_fixed():
-                lb = var.value
-                ub = var.value
-            else:
-                lb = -gurobipy.GRB.INFINITY
-                ub = gurobipy.GRB.INFINITY
-                _lb = value(var.lb)
-                _ub = value(var.ub)
-                if _lb is not None:
-                    lb = _lb
-                if _ub is not None:
-                    ub = _ub
+            lb, ub, vtype = self._process_domain_and_bounds(var, var_id, None, None, None, gurobipy_var)
             gurobipy_var.setAttr('lb', lb)
             gurobipy_var.setAttr('ub', ub)
             gurobipy_var.setAttr('vtype', vtype)
@@ -611,6 +675,8 @@ class Gurobi(PersistentBase, PersistentSolver):
         for con, helpers in self._mutable_helpers.items():
             for helper in helpers:
                 helper.update()
+        for k, (v, helper) in self._mutable_bounds.items():
+            helper.update()
 
         for con, helper in self._mutable_quadratic_helpers.items():
             if con in self._constraints_added_since_update:
@@ -638,22 +704,6 @@ class Gurobi(PersistentBase, PersistentSolver):
             else:
                 sense = gurobipy.GRB.MAXIMIZE
             self._solver_model.setObjective(new_gurobi_expr, sense=sense)
-
-    def _gurobi_vtype_from_var(self, var):
-        """
-        This function takes a pyomo variable and returns the appropriate gurobi variable type
-        :param var: pyomo.core.base.var.Var
-        :return: gurobipy.GRB.CONTINUOUS or gurobipy.GRB.BINARY or gurobipy.GRB.INTEGER
-        """
-        if var.is_binary():
-            vtype = gurobipy.GRB.BINARY
-        elif var.is_integer():
-            vtype = gurobipy.GRB.INTEGER
-        elif var.is_continuous():
-            vtype = gurobipy.GRB.CONTINUOUS
-        else:
-            raise ValueError('Variable domain type is not recognized for {0}'.format(var.domain))
-        return vtype
 
     def _set_objective(self, obj):
         if obj is None:
@@ -804,7 +854,8 @@ class Gurobi(PersistentBase, PersistentSolver):
 
             res = ComponentMap()
             for var_id, val in zip(vars_to_load, vals):
-                if ref_vars[var_id] > 0:
+                using_cons, using_sos, using_obj = ref_vars[var_id]
+                if using_cons or using_sos or (using_obj is not None):
                     res[self._vars[var_id][0]] = val
             return res
 
@@ -817,12 +868,15 @@ class Gurobi(PersistentBase, PersistentSolver):
         res = ComponentMap()
         if vars_to_load is None:
             vars_to_load = self._pyomo_var_to_solver_var_map.keys()
+        else:
+            vars_to_load = [id(v) for v in vars_to_load]
 
         gurobi_vars_to_load = [var_map[pyomo_var_id] for pyomo_var_id in vars_to_load]
         vals = self._solver_model.getAttr("Rc", gurobi_vars_to_load)
 
         for var_id, val in zip(vars_to_load, vals):
-            if ref_vars[var_id] > 0:
+            using_cons, using_sos, using_obj = ref_vars[var_id]
+            if using_cons or using_sos or (using_obj is not None):
                 res[self._vars[var_id][0]] = val
 
         return res

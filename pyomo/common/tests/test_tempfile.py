@@ -30,7 +30,9 @@ import pyomo.common.unittest as unittest
 import pyomo.common.tempfiles as tempfiles
 
 from pyomo.common.log import LoggingIntercept
-from pyomo.common.tempfiles import TempfileManager, TempfileManagerClass
+from pyomo.common.tempfiles import (
+    TempfileManager, TempfileManagerClass, TempfileContextError,
+)
 
 try:
     from pyutilib.component.config.tempfiles import (
@@ -547,6 +549,14 @@ class Test_TempfileManager(unittest.TestCase):
         finally:
             self.TM.pop()
             pyutilib_mngr.tempdir = _orig
+
+    def test_context(self):
+        with self.assertRaisesRegex(
+                TempfileContextError,
+                "TempfileManager has no currently active context"):
+            self.TM.context()
+        ctx = self.TM.push()
+        self.assertIs(ctx, self.TM.context())
 
 if __name__ == "__main__":
     unittest.main()

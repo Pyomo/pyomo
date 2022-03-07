@@ -1,9 +1,11 @@
+from pyomo.common.errors import PyomoException
 import pyomo.common.unittest as unittest
 import pyomo.environ as pe
 from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.appsi.base import TerminationCondition
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.expr.taylor_series import taylor_series_expansion
+from pyomo.contrib.appsi.cmodel import cmodel_available
 
 
 opt = Gurobi()
@@ -12,6 +14,7 @@ if not opt.available():
 import gurobipy
 
 
+@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
     def setUp(self):
         self.m = pe.ConcreteModel()
@@ -74,7 +77,19 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         self.assertAlmostEqual(x, self.m.x.value)
         self.assertAlmostEqual(y, self.m.y.value)
 
+    def test_set_instance_not_available(self):
+        _avail = Gurobi._available
+        try:
+            Gurobi._available = Gurobi.Availability.NeedsCompiledExtension
+            with self.assertRaisesRegex(
+                    PyomoException,
+                    r'Solver pyomo.contrib.appsi.solvers.gurobi.Gurobi '
+                    r'is not available \(NeedsCompiledExtension\).'):
+                opt.set_instance(pe.ConcreteModel())
+        finally:
+            Gurobi._available = _avail
 
+@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestGurobiPersistent(unittest.TestCase):
     def test_range_constraints(self):
         m = pe.ConcreteModel()
@@ -287,6 +302,7 @@ class TestGurobiPersistent(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, -0.13397459621555508, 2)
 
 
+@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestManualModel(unittest.TestCase):
     def setUp(self):
         opt = Gurobi()

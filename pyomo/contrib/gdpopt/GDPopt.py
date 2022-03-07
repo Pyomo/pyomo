@@ -69,13 +69,14 @@ class GDPoptSolver(_GDPoptAlgorithm):
     For nonconvex problems, LOA may not report rigorous lower/upper bounds.
 
     Questions: Please make a post at StackOverflow and/or contact Qi Chen
-    <https://github.com/qtothec>.
+    <https://github.com/qtothec> or David Bernal <https://github.com/bernalde>.
 
     Several key GDPopt components were prototyped by BS and MS students:
 
     - Logic-based branch and bound: Sunjeev Kale
     - MC++ interface: Johnny Bates
     - LOA set-covering initialization: Eloy Fernandez
+    - Logic-to-linear transformation: Romeo Valentin
 
     """
     # Declare configuration options for the GDPopt solver

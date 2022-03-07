@@ -21,6 +21,7 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.expr.numvalue import value
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
+from pyomo.repn import generate_standard_repn
 
 logger = logging.getLogger('pyomo.contrib.preprocessing')
 
@@ -65,7 +66,8 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
 
     def _apply_to(self, instance, **kwargs):
         config = self.CONFIG(kwargs)
-        if config.tmp and not hasattr(instance, '_tmp_trivial_deactivated_constrs'):
+        if config.tmp and not hasattr(instance,
+                                      '_tmp_trivial_deactivated_constrs'):
             instance._tmp_trivial_deactivated_constrs = ComponentSet()
         elif config.tmp:
             logger.warning(
@@ -76,19 +78,20 @@ class TrivialConstraintDeactivator(IsomorphicTransformation):
 
         # Trivial constraints are those that do not contain any variables, ie.
         # the polynomial degree is 0
-        trivial_constraints = (
-            constr
-            for constr in instance.component_data_objects(
-                ctype=Constraint, active=True, descend_into=True)
-            if constr.body.polynomial_degree() == 0)
+        for constr in instance.component_data_objects(ctype=Constraint,
+                                                      active=True,
+                                                      descend_into=True):
+            repn = generate_standard_repn(constr.body)
+            if not repn.is_constant():
+                # This constraint is not trivial
+                continue
 
-        for constr in trivial_constraints:
             # We need to check each constraint to sure that it is not violated.
             constr_lb = value(
                 constr.lower) if constr.has_lb() else float('-inf')
             constr_ub = value(
                 constr.upper) if constr.has_ub() else float('inf')
-            constr_value = value(constr.body)
+            constr_value = repn.constant
 
             # Check if the lower bound is violated outside a given tolerance
             if (constr_value + config.tolerance <= constr_lb):

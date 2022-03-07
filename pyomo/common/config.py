@@ -822,8 +822,7 @@ to the ArgumentParser object:
     >>> print(parser.format_help())
     usage: tester [-h] [--iterlim INT] [--lbfgs] [--disable-linesearch]
                   [--reltol FLOAT] [--abstol FLOAT]
-    <BLANKLINE>
-    optional arguments:
+    ...
       -h, --help            show this help message and exit
       --iterlim INT         iteration limit
       --lbfgs               use limited memory BFGS update

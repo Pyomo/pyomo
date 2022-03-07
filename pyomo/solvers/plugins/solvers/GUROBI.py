@@ -543,7 +543,7 @@ class GUROBISHELL(ILMLicensedSystemCallSolver):
             #       anyway (we redirect everything), and are largely an
             #       annoyance.
             try:
-                if re.match('gurobi\.log', filename) != None:
+                if re.match(r'gurobi\.log', filename) != None:
                     os.remove(filename)
             except OSError:
                 pass

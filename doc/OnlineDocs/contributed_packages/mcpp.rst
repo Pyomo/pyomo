@@ -44,11 +44,11 @@ You will need to compile this file using the following command:
 
 .. code::
 
-    g++ -I $MCPP_PATH/src/3rdparty/fadbad++ -I $MCPP_PATH/src/mc -I /usr/include/python3.6 -fPIC -O2 -c mcppInterface.cpp
+    g++ -I $MCPP_PATH/src/3rdparty/fadbad++ -I $MCPP_PATH/src/mc -I /usr/include/python3.7 -fPIC -O2 -c mcppInterface.cpp
 
 This links the MC++ required library FADBAD++, MC++ itself, and Python to compile the Pyomo-MC++ interface.
 If successful, you will now have a file named ``mcppInterface.o`` in your working directory.
-If you are not using Python 3.6, you will need to link to the appropriate Python version.
+If you are not using Python 3.7, you will need to link to the appropriate Python version.
 You now need to create a shared object file with the following command:
 
 .. code::

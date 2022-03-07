@@ -93,7 +93,8 @@ def main():
     # Estimate both k1 and k2 and compute the covariance matrix
     theta_names = ['k']
     pest = parmest.Estimator(simple_reaction_model, data, theta_names)
-    obj, theta, cov = pest.theta_est(calc_cov=True)
+    n = 15 # total number of data points used in the objective (y in 15 scenarios)
+    obj, theta, cov = pest.theta_est(calc_cov=True, cov_n=n)
     print(obj)
     print(theta)
     print(cov)
