@@ -513,9 +513,12 @@ def solve_master(model_data, config):
     """
     Solve the master problem
     """
-    results = solve_master_feasibility_problem(model_data, config)
     master_soln = MasterResult()
-    master_soln.feasibility_problem_results = results
+
+    # no master feas problem for iteration 0
+    if model_data.iteration > 0:
+        results = solve_master_feasibility_problem(model_data, config)
+        master_soln.feasibility_problem_results = results
 
     solver = config.global_solver if config.solve_master_globally else config.local_solver
 
