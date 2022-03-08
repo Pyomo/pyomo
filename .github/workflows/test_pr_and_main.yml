@@ -102,6 +102,7 @@ jobs:
 
         - os: windows-latest
           python: 3.8
+          other: /pip
           skip_doctest: 1
           TARGET: win
           PYENV: pip
