@@ -85,6 +85,12 @@ jobs:
           PYENV: pip
           PACKAGES: cython
 
+        - os: windows-latest
+          python: 3.8
+          skip_doctest: 1
+          TARGET: win
+          PYENV: pip
+
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v2
@@ -293,15 +299,6 @@ jobs:
                 | tr ":" "\\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
                 | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
         done
-
-    - name: Setup TPL package directories
-      run: |
-        TPL_DIR="${GITHUB_WORKSPACE}/cache/tpl"
-        mkdir -p "$TPL_DIR"
-        DOWNLOAD_DIR="${GITHUB_WORKSPACE}/cache/download"
-        mkdir -p "$DOWNLOAD_DIR"
-        echo "TPL_DIR=$TPL_DIR" >> $GITHUB_ENV
-        echo "DOWNLOAD_DIR=$DOWNLOAD_DIR" >> $GITHUB_ENV
 
     - name: Install Ipopt
       if: ${{ ! matrix.slim }}
