@@ -197,9 +197,6 @@ def solve_master_feasibility_problem(model_data, config):
     Solve a slack variable based feasibility model for the master problem
     """
     model = construct_master_feasibility_problem(model_data, config)
-    # for o in model.component_data_objects(Objective):
-    #     o.deactivate()
-    # TransformationFactory("core.add_slack_variables").apply_to(model)
 
     if config.solve_master_globally:
         solver = config.global_solver
@@ -209,18 +206,17 @@ def solve_master_feasibility_problem(model_data, config):
     if not solver.available():
         raise RuntimeError("NLP solver %s is not available." %
                            config.solver)
+
     results = solver.solve(model, tee=config.tee, load_solutions=False)
 
     if check_optimal_termination(results):
         model.solutions.load_from(results)
 
-        # If this led to a feasible solution, continue with this model
-        # Load solution into master
-        if value(model._core_add_slack_variables._slack_objective) <= 0:
-            for v in model.component_data_objects(Var):
-                master_v = model_data.master_model.find_component(v)
-                if master_v is not None:
-                    master_v.set_value(v.value, skip_validation=True)
+        # load solution to master model
+        for v in model.component_data_objects(Var):
+            master_v = model_data.master_model.find_component(v)
+            if master_v is not None:
+                master_v.set_value(v.value, skip_validation=True)
     else:
         results.solver.termination_condition = tc.error
         results.solver.message = ("Cannot load a SolverResults object with "
@@ -517,9 +513,12 @@ def solve_master(model_data, config):
     """
     Solve the master problem
     """
-    results = solve_master_feasibility_problem(model_data, config)
     master_soln = MasterResult()
-    master_soln.feasibility_problem_results = results
+
+    # no master feas problem for iteration 0
+    if model_data.iteration > 0:
+        results = solve_master_feasibility_problem(model_data, config)
+        master_soln.feasibility_problem_results = results
 
     solver = config.global_solver if config.solve_master_globally else config.local_solver
 
