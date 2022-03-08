@@ -12,14 +12,19 @@
 #
 
 import os
-import pyomo.core.tests.unit.test_visitor
-from os.path import abspath, dirname
-currdir = dirname(abspath(__file__))+os.sep
+import sys
+
+#import pyomo.core.tests.unit.test_visitor
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import ConcreteModel, RangeSet, Param, Var, Expression, ExternalFunction, VarList, sum_product, inequality, quicksum, sin, tanh, value
-from pyomo.core.expr.numvalue import nonpyomo_leaf_types, NumericConstant
+from pyomo.environ import (
+    ConcreteModel, RangeSet, Set, Param, Var, Expression, ExternalFunction,
+    VarList, sum_product, inequality, quicksum, sin, tanh, value,
+)
+from pyomo.core.expr.numvalue import (
+    native_types, nonpyomo_leaf_types, NumericConstant,
+)
 from pyomo.core.expr.numeric_expr import (
     SumExpression, ProductExpression, 
     MonomialTermExpression, LinearExpression,
@@ -34,6 +39,7 @@ from pyomo.core.expr.visitor import (
     evaluate_expression, expression_to_string, replace_expressions,
     sizeof_expression,
     identify_variables, identify_components, identify_mutable_parameters,
+    RECURSION_LIMIT, get_stack_depth,
 )
 from pyomo.core.base.param import _ParamData, ScalarParam
 from pyomo.core.expr.template_expr import IndexTemplate
@@ -821,7 +827,7 @@ class TestReplacementWithNPV(unittest.TestCase):
         self.assertTrue(compare_expressions(e3, abs(m.x)))
 
 
-class TestStreamBasedExpressionVisitor(unittest.TestCase):
+class BaseStreamBasedVisitorTests(object):
     def setUp(self):
         self.m = m = ConcreteModel()
         m.x = Var()
@@ -836,7 +842,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
 
     def test_default(self):
         walker = StreamBasedExpressionVisitor()
-        ans = walker.walk_expression(self.e)
+        ans = self.walk(walker, self.e)
         ref = [
             [[],[]],
             [],
@@ -850,7 +856,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
                or not child.is_expression_type():
                 return False, [child]
         walker = StreamBasedExpressionVisitor(beforeChild=before)
-        ans = walker.walk_expression(self.e)
+        ans = self.walk(walker, self.e)
         m = self.m
         ref = [
             [[m.x], [2]],
@@ -859,12 +865,106 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ]
         self.assertEqual(str(ans), str(ref))
 
-        ans = walker.walk_expression(m.x)
+        ans = self.walk(walker, m.x)
         ref = []
         self.assertEqual(str(ans), str(ref))
 
-        ans = walker.walk_expression(2)
+        ans = self.walk(walker, 2)
         ref = []
+        self.assertEqual(str(ans), str(ref))
+
+    def test_initializeWalker_beforeChild(self):
+        def before(node, child, child_idx):
+            if type(child) in nonpyomo_leaf_types \
+               or not child.is_expression_type():
+                return False, child
+        def initialize(expr):
+            ans = before(None, expr, 0)
+            if ans is None:
+                return True, expr
+            else:
+                return ans
+        walker = StreamBasedExpressionVisitor(
+            beforeChild=before, initializeWalker=initialize)
+        ans = self.walk(walker, self.e)
+        m = self.m
+        ref = [
+            [m.x, 2],
+            m.y,
+            [m.z, [m.x, m.y]]
+        ]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = self.walk(walker, m.x)
+        ref = m.x
+        self.assertEqual(str(ans), str(ref))
+
+        ans = self.walk(walker, 2)
+        ref = 2
+        self.assertEqual(str(ans), str(ref))
+
+    def test_beforeChild_exitNode(self):
+        def before(node, child, child_idx):
+            if type(child) in nonpyomo_leaf_types \
+               or not child.is_expression_type():
+                return False, [child]
+        def exit(node, data):
+            if hasattr(node, 'getname'):
+                data.insert(0, node.getname())
+            else:
+                data.insert(0, str(node))
+            return data
+        walker = StreamBasedExpressionVisitor(
+            beforeChild=before, exitNode=exit)
+        ans = self.walk(walker, self.e)
+        m = self.m
+        ref = ['sum',
+               ['pow', [m.x], [2]],
+               [m.y],
+               ['prod', [m.z], ['sum', [m.x], [m.y]]]
+        ]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = self.walk(walker, m.x)
+        ref = ['x']
+        self.assertEqual(str(ans), str(ref))
+
+        ans = self.walk(walker, 2)
+        ref = ['2']
+        self.assertEqual(str(ans), str(ref))
+
+    def test_beforeChild_enterNode_exitNode(self):
+        i = [0]
+        def before(node, child, child_idx):
+            if type(child) in nonpyomo_leaf_types \
+               or not child.is_expression_type():
+                return False, [child]
+        def enter(node):
+            i[0] += 1
+            return None, [i[0]]
+        def exit(node, data):
+            if hasattr(node, 'getname'):
+                data.insert(0, node.getname())
+            else:
+                data.insert(0, str(node))
+            return data
+        walker = StreamBasedExpressionVisitor(
+            beforeChild=before, enterNode=enter, exitNode=exit)
+        ans = self.walk(walker, self.e)
+        m = self.m
+        ref = ['sum', 1,
+               ['pow', 2, [m.x], [2]],
+               [m.y],
+               ['prod', 3, [m.z], ['sum', 4, [m.x], [m.y]]]
+        ]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = self.walk(walker, m.x)
+        ref = ['x', 5]
+        self.assertEqual(str(ans), str(ref))
+
+        ans = self.walk(walker, 2)
+        ref = ['2', 6]
         self.assertEqual(str(ans), str(ref))
 
     def test_old_beforeChild(self):
@@ -880,7 +980,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             "has changed to include the child index for the beforeChild() "
             "method", os.getvalue().replace('\n',' '))
 
-        ans = walker.walk_expression(self.e)
+        ans = self.walk(walker, self.e)
         m = self.m
         ref = [
             [[m.x], [2]],
@@ -889,11 +989,11 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ]
         self.assertEqual(str(ans), str(ref))
 
-        ans = walker.walk_expression(m.x)
+        ans = self.walk(walker, m.x)
         ref = []
         self.assertEqual(str(ans), str(ref))
 
-        ans = walker.walk_expression(2)
+        ans = self.walk(walker, 2)
         ref = []
         self.assertEqual(str(ans), str(ref))
 
@@ -905,7 +1005,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         walker = StreamBasedExpressionVisitor(
             enterNode=enter, acceptChildResult=accept)
         # 4 operators, 6 leaf nodes
-        self.assertEqual(walker.walk_expression(self.e), 10)
+        self.assertEqual(self.walk(walker, self.e), 10)
 
     def test_sizeof_expression(self):
         self.assertEqual(sizeof_expression(self.e), 10)
@@ -921,7 +1021,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             enterNode=enter)
         m = self.m
 
-        ans = walker.walk_expression(self.e)
+        ans = self.walk(walker, self.e)
         ref = [
             [[m.x], [2]],
             [m.y],
@@ -929,11 +1029,11 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ]
         self.assertEqual(str(ans), str(ref))
 
-        ans = walker.walk_expression(m.x)
+        ans = self.walk(walker, m.x)
         ref = [m.x]
         self.assertEqual(str(ans), str(ref))
 
-        ans = walker.walk_expression(2)
+        ans = self.walk(walker, 2)
         ref = [2]
         self.assertEqual(str(ans), str(ref))
 
@@ -948,7 +1048,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             enterNode=enter)
         m = self.m
 
-        ans = walker.walk_expression(self.e)
+        ans = self.walk(walker, self.e)
         ref = [
             [m.x, 2],
             m.y,
@@ -956,11 +1056,11 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ]
         self.assertEqual(str(ans), str(ref))
 
-        ans = walker.walk_expression(m.x)
+        ans = self.walk(walker, m.x)
         ref = m.x
         self.assertEqual(str(ans), str(ref))
 
-        ans = walker.walk_expression(2)
+        ans = self.walk(walker, 2)
         ref = 2
         self.assertEqual(str(ans), str(ref))
 
@@ -980,7 +1080,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             enterNode=enter, finalizeResult=finalize)
         m = self.m
 
-        ans = walker.walk_expression(self.e)
+        ans = self.walk(walker, self.e)
         ref = [
             [m.x, 2],
             m.y,
@@ -988,11 +1088,11 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ]
         self.assertEqual(str(ans), str(ref))
 
-        ans = walker.walk_expression(m.x)
+        ans = self.walk(walker, m.x)
         ref = [m.x]
         self.assertEqual(str(ans), str(ref))
 
-        ans = walker.walk_expression(2)
+        ans = self.walk(walker, 2)
         ref = [2]
         self.assertEqual(str(ans), str(ref))
 
@@ -1006,7 +1106,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         walker = StreamBasedExpressionVisitor(exitNode=exit)
         m = self.m
 
-        ans = walker.walk_expression(self.e)
+        ans = self.walk(walker, self.e)
         ref = [
             [[m.x], [2]],
             [m.y],
@@ -1014,11 +1114,11 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         ]
         self.assertEqual(str(ans), str(ref))
 
-        ans = walker.walk_expression(m.x)
+        ans = self.walk(walker, m.x)
         ref = [m.x]
         self.assertEqual(str(ans), str(ref))
 
-        ans = walker.walk_expression(2)
+        ans = self.walk(walker, 2)
         ref = [2]
         self.assertEqual(str(ans), str(ref))
 
@@ -1035,7 +1135,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             counts[2] += 1
         walker = StreamBasedExpressionVisitor(
             beforeChild=before, acceptChildResult=accept, afterChild=after)
-        ans = walker.walk_expression(self.e)
+        ans = self.walk(walker, self.e)
         m = self.m
         self.assertEqual(ans, None)
         self.assertEqual(counts, [9,9,9])
@@ -1069,7 +1169,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             "has changed to include the child index for the "
             "afterChild() method", os.getvalue().replace('\n',' '))
 
-        ans = walker.walk_expression(self.e)
+        ans = self.walk(walker, self.e)
         m = self.m
         self.assertEqual(ans, None)
         self.assertEqual(counts, [9,9,9])
@@ -1088,7 +1188,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
             return node.args, ans
         walker = StreamBasedExpressionVisitor(
             enterNode=enter, beforeChild=before, acceptChildResult=accept)
-        ans = walker.walk_expression(self.e)
+        ans = self.walk(walker, self.e)
         m = self.m
         ref = [m.x, 2, m.y, m.z, m.x, m.y]
         self.assertEqual(str(ans), str(ref))
@@ -1110,7 +1210,7 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         walker = StreamBasedExpressionVisitor(
             enterNode=enter, beforeChild=before, acceptChildResult=accept,
             finalizeResult=finalize)
-        ans = walker.walk_expression(self.e)
+        ans = self.walk(walker, self.e)
         self.assertEqual(ans, 6)
 
     def test_all_function_pointers(self):
@@ -1120,6 +1220,9 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
                 return str(x)
             else:
                 return x.name
+        def initialize(expr):
+            ans.append("Initialize")
+            return True, None
         def enter(node):
             ans.append("Enter %s" % (name(node)))
         def exit(node, data):
@@ -1133,10 +1236,12 @@ class TestStreamBasedExpressionVisitor(unittest.TestCase):
         def finalize(result):
             ans.append("Finalize")
         walker = StreamBasedExpressionVisitor(
+            initializeWalker=initialize,
             enterNode=enter, exitNode=exit, beforeChild=before, 
             acceptChildResult=accept, afterChild=after, finalizeResult=finalize)
-        self.assertIsNone( walker.walk_expression(self.e) )
-        self.assertEqual("\n".join(ans),"""Enter sum
+        self.assertIsNone( self.walk(walker, self.e) )
+        self.assertEqual("\n".join(ans),"""Initialize
+Enter sum
 Before pow (from sum)
 Enter pow
 Before x (from pow)
@@ -1195,6 +1300,9 @@ Finalize""")
             def __init__(self):
                 self.ans = []
                 super(all_callbacks, self).__init__()
+            def initializeWalker(self, expr):
+                self.ans.append("Initialize")
+                return True, None
             def enterNode(self, node):
                 self.ans.append("Enter %s" % (name(node)))
             def exitNode(self, node, data):
@@ -1210,8 +1318,9 @@ Finalize""")
             def finalizeResult(self, result):
                 self.ans.append("Finalize")
         walker = all_callbacks()
-        self.assertIsNone( walker.walk_expression(self.e) )
-        self.assertEqual("\n".join(walker.ans),"""Enter sum
+        self.assertIsNone( self.walk(walker, self.e) )
+        self.assertEqual("\n".join(walker.ans),"""Initialize
+Enter sum
 Before pow (from sum)
 Enter pow
 Before x (from pow)
@@ -1300,7 +1409,7 @@ Finalize""")
             "has changed to include the child index for the "
             "afterChild() method", os.getvalue().replace('\n',' '))
 
-        self.assertIsNone( walker.walk_expression(self.e) )
+        self.assertIsNone( self.walk(walker, self.e) )
         self.assertEqual("\n".join(walker.ans),"""Enter sum
 Before pow (from sum)
 Enter pow
@@ -1349,6 +1458,123 @@ Accept into sum
 After prod (from sum)
 Exit sum
 Finalize""")
+
+
+class TestStreamBasedExpressionVisitor_Recursive(
+        BaseStreamBasedVisitorTests, unittest.TestCase):
+
+    def walk(self, walker, expr):
+        return walker.walk_expression(expr)
+
+
+class TestStreamBasedExpressionVisitor_NonRecursive(
+        BaseStreamBasedVisitorTests, unittest.TestCase):
+
+    def walk(self, walker, expr):
+        return walker.walk_expression_nonrecursive(expr)
+
+
+def fill_stack(n, fcn, *args):
+    if n:
+        return fill_stack(n-1, fcn, *args)
+    else:
+        return fcn(*args)
+
+class ExpressionDepth(StreamBasedExpressionVisitor):
+    def exitNode(self, node, data):
+        return max(data) + 1 if data else 1
+
+class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
+    def setUp(self):
+        self.m = m = ConcreteModel()
+        m.x = Var()
+        m.I = Set(initialize=range(2*RECURSION_LIMIT))
+        def _rule(m, i):
+            if i:
+                return m.e[i-1]
+            else:
+                return m.x
+        m.e = Expression(m.I, rule=_rule)
+
+    def evaluate_bx(self, fcn, expr):
+        def before(node, child, idx):
+            if type(child) in native_types or not child.is_expression_type():
+                return False, value(child)
+            return True, None
+        def exit(node, data):
+            return data[0] + 1
+        walker = StreamBasedExpressionVisitor(
+            beforeChild=before, exitNode=exit)
+        return getattr(walker, fcn)(expr)
+
+    def evaluate_bex(self, fcn, expr):
+        def before(node, child, idx):
+            if type(child) in native_types or not child.is_expression_type():
+                return False, value(child)
+            return True, None
+        def enter(node):
+            return None, []
+        def exit(node, data):
+            return data[0] + 1
+        walker = StreamBasedExpressionVisitor(
+            beforeChild=before, enterNode=enter, exitNode=exit)
+        return getattr(walker, fcn)(expr)
+
+    def evaluate_abex(self, fcn, expr):
+        def before(node, child, idx):
+            if type(child) in native_types or not child.is_expression_type():
+                return False, value(child)
+            return True, None
+        def enter(node):
+            return None, 0
+        def accept(node, data, child_result, child_idx):
+            return data + child_result
+        def exit(node, data):
+            return data + 1
+        walker = StreamBasedExpressionVisitor(
+            beforeChild=before, acceptChildResult=accept,
+            enterNode=enter, exitNode=exit)
+        return getattr(walker, fcn)(expr)
+
+    def run_walker(self, walker):
+        m = self.m
+        m.x = 10
+        self.assertEqual(
+            walker('walk_expression', m.e[2*RECURSION_LIMIT-1]),
+            2*RECURSION_LIMIT + 10
+        )
+        self.assertEqual(
+            walker('walk_expression_nonrecursive', m.e[2*RECURSION_LIMIT-1]),
+            2*RECURSION_LIMIT + 10
+        )
+
+        # This is a "magic parameter" that quantifies the overhead
+        # needed by the system to convert the recursive walker to a
+        # nonrecursive one.
+        TESTING_OVERHEAD = 14
+        warn_msg = "Unexpected RecursionError walking an expression tree.\n"
+
+        head_room = sys.getrecursionlimit() - get_stack_depth()
+        for n, msg in [(0, ""), (1, warn_msg)]:
+            with LoggingIntercept() as LOG:
+                self.assertEqual(
+                    fill_stack(
+                        head_room - RECURSION_LIMIT - TESTING_OVERHEAD + n,
+                        walker,
+                        'walk_expression',
+                        m.e[2*RECURSION_LIMIT-1]),
+                    2*RECURSION_LIMIT + 10
+                )
+            self.assertEqual(LOG.getvalue(), msg)
+
+    def test_evaluate_bx(self):
+        return self.run_walker(self.evaluate_bx)
+
+    def test_evaluate_bex(self):
+        return self.run_walker(self.evaluate_bex)
+
+    def test_evaluate_abex(self):
+        return self.run_walker(self.evaluate_abex)
 
 
 class TestEvaluateExpression(unittest.TestCase):
