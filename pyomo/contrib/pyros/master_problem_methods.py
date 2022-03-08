@@ -212,13 +212,11 @@ def solve_master_feasibility_problem(model_data, config):
     if check_optimal_termination(results):
         model.solutions.load_from(results)
 
-        # If this led to a feasible solution, continue with this model
-        # Load solution into master
-        if value(model._core_add_slack_variables._slack_objective) <= 0:
-            for v in model.component_data_objects(Var):
-                master_v = model_data.master_model.find_component(v)
-                if master_v is not None:
-                    master_v.set_value(v.value, skip_validation=True)
+        # load solution to master model
+        for v in model.component_data_objects(Var):
+            master_v = model_data.master_model.find_component(v)
+            if master_v is not None:
+                master_v.set_value(v.value, skip_validation=True)
     else:
         results.solver.termination_condition = tc.error
         results.solver.message = ("Cannot load a SolverResults object with "
