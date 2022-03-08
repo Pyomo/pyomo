@@ -197,9 +197,6 @@ def solve_master_feasibility_problem(model_data, config):
     Solve a slack variable based feasibility model for the master problem
     """
     model = construct_master_feasibility_problem(model_data, config)
-    # for o in model.component_data_objects(Objective):
-    #     o.deactivate()
-    # TransformationFactory("core.add_slack_variables").apply_to(model)
 
     if config.solve_master_globally:
         solver = config.global_solver
