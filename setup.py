@@ -104,12 +104,14 @@ if (('--with-distributable-extensions' in sys.argv)
         pass
     #
     # Import the APPSI extension builder
-    #
-    appsi_extension = import_pyomo_module(
-        'pyomo', 'contrib', 'appsi', 'build.py')['get_appsi_extension'](
-            in_setup=True, appsi_root=os.path.join(
-                os.path.dirname(__file__), 'pyomo', 'contrib', 'appsi'))
-    ext_modules.append(appsi_extension)
+    # NOTE: There is inconsistent behavior in Windows for APPSI.
+    # As a result, we will NOT include these extensions in Windows.
+    if not sys.platform.startswith('win'):
+        appsi_extension = import_pyomo_module(
+            'pyomo', 'contrib', 'appsi', 'build.py')['get_appsi_extension'](
+                in_setup=True, appsi_root=os.path.join(
+                    os.path.dirname(__file__), 'pyomo', 'contrib', 'appsi'))
+        ext_modules.append(appsi_extension)
 
 
 class DependenciesCommand(Command):
