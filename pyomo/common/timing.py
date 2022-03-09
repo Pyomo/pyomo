@@ -25,7 +25,10 @@ _logger = logging.getLogger('pyomo.common.timing')
 _logger.propagate = False
 _logger.setLevel(logging.WARNING)
 
-def report_timing(stream=True):
+_construction_logger = logging.getLogger('pyomo.common.timing.construction')
+_transform_logger = logging.getLogger('pyomo.common.timing.transformation')
+
+def report_timing(stream=True, level=logging.INFO):
     """Set reporting of Pyomo timing information.
 
     Parameters
@@ -49,19 +52,18 @@ def report_timing(stream=True):
         for h in _logger.handlers:
             _logger.removeHandler(h)
 
-_construction_logger = logging.getLogger('pyomo.common.timing.construction')
-
 
 class ConstructionTimer(object):
-    fmt = "%%6.%df seconds to construct %s %s; %d %s total"
+    msg = "%6.*f seconds to construct %s %s; %d %s total"
+    in_progress = "ConstructionTimer object for %s %s; %0.3f elapsed seconds"
     def __init__(self, obj):
         self.obj = obj
-        self.timer = TicTocTimer()
+        self.timer = -default_timer()
 
     def report(self):
         # Record the elapsed time, as some log handlers may not
         # immediately generate the messge string
-        self.timer = self.timer.toc(msg=None)
+        self.timer += default_timer()
         _construction_logger.info(self)
 
     def __str__(self):
@@ -83,51 +85,44 @@ class ConstructionTimer(object):
             _type = self.obj.ctype.__name__
         except AttributeError:
             _type = type(self.obj).__name__
-        try:
-            return self.fmt % ( 2 if total_time>=0.005 else 0,
-                                _type,
-                                name,
-                                idx,
-                                'indices' if idx > 1 else 'index',
-                            ) % total_time
-        except TypeError:
-            return "ConstructionTimer object for %s %s; %s elapsed seconds" % (
-                _type,
-                name,
-                self.timer.toc("") )
-
-
-_transform_logger = logging.getLogger('pyomo.common.timing.transformation')
+        if total_time < 0:
+            total_time += default_timer()
+            return self.in_progress % (_type, name, total_time)
+        return self.msg % ( 2 if total_time>=0.005 else 0,
+                            total_time,
+                            _type,
+                            name,
+                            idx,
+                            'indices' if idx > 1 else 'index' )
 
 
 class TransformationTimer(object):
-    fmt = "%%6.%df seconds to apply Transformation %s%s"
+    msg = "%6.*f seconds to apply Transformation %s%s"
+    in_progress = "TransformationTimer object for %s%s; %0.3f elapsed seconds"
     def __init__(self, obj, mode=None):
         self.obj = obj
         if mode is None:
             self.mode = ''
         else:
             self.mode = " (%s)" % (mode,)
-        self.timer = TicTocTimer()
+        self.timer = -default_timer()
 
     def report(self):
         # Record the elapsed time, as some log handlers may not
         # immediately generate the message string
-        self.timer = self.timer.toc(msg=None)
+        self.timer += default_timer()
         _transform_logger.info(self)
 
     def __str__(self):
         total_time = self.timer
         name = self.obj.__class__.__name__
-        try:
-            return self.fmt % ( 2 if total_time>=0.005 else 0,
-                                name,
-                                self.mode,
-                            ) % total_time
-        except TypeError:
-            return "TransformationTimer object for %s; %s elapsed seconds" % (
-                name,
-                self.timer.toc("") )
+        if total_time < 0:
+            total_time += default_timer()
+            return self.in_progress % (name, self.mode, total_time)
+        return self.msg % ( 2 if total_time>=0.005 else 0,
+                            total_time,
+                            name,
+                            self.mode )
 
 #
 # Setup the timer
