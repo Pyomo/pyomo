@@ -9,6 +9,7 @@
 #  ___________________________________________________________________________
 
 import enum
+import logging
 import sys
 from collections import deque
 from operator import itemgetter, attrgetter
@@ -226,7 +227,9 @@ class _NLWriter_impl(object):
             AMPLRepn.ActiveVisitor = None
 
     def _write_impl(self, model):
-        timer = TicTocTimer()
+        timer = TicTocTimer(
+            logger=logging.getLogger('pyomo.common.timing.writer')
+        )
 
         sorter = SortComponents.unsorted
         if self.config.file_determinism >= FileDeterminism.SORT_INDICES:
@@ -273,7 +276,8 @@ class _NLWriter_impl(object):
                     objectives.append((obj, expr))
                 else:
                     linear_objs.append((obj, expr))
-            timer.toc(f'Objective {obj_comp.name}')
+            timer.toc('Objective %s', obj_comp, level=logging.DEBUG)
+
         # Order the objectives, moving all nonlinear objectives to
         # the beginning
         n_nonlinear_objs = len(objectives)
@@ -310,7 +314,8 @@ class _NLWriter_impl(object):
                     constraints.append((con, expr, _type, lb, ub))
                 else:
                     linear_cons.append((con, expr, _type, lb, ub))
-            timer.toc(f'Constraint {con_comp.name}')
+            timer.toc('Constraint %s', con_comp, level=logging.DEBUG)
+
         # Order the constraints, moving all nonlinear constraints to
         # the beginning
         n_nonlinear_cons = len(constraints)
@@ -342,15 +347,12 @@ class _NLWriter_impl(object):
             linear_by_comp
         )
         n_subexpressions = self._count_subexpression_occurances()
-        timer.toc('subexpressions')
-
         obj_vars_linear, obj_vars_nonlinear, obj_nnz_by_var \
             = self._categorize_vars(objectives, linear_by_comp)
-        timer.toc('objectives')
-
         con_vars_linear, con_vars_nonlinear, con_nnz_by_var \
             = self._categorize_vars(constraints, linear_by_comp)
-        timer.toc('constraints')
+
+        timer.toc('Categorized model variables', level=logging.DEBUG)
 
         n_lcons = 0 # We do not yet support logical constraints
 
@@ -425,8 +427,13 @@ class _NLWriter_impl(object):
                 linear_only_vars & integer_vars,
                 key=column_order.__getitem__))
         assert len(variables) == n_vars
-        timer.toc(f'{len(variables)} variables, {len(constraints)} constraints'
-                  f' [{n_cons-n_nonlinear_cons} L, {n_nonlinear_cons} NL]')
+        timer.toc(
+            'Set row / column ordering: %s variables [%s, %s, %s R/B/Z], '
+            '%s constraints [%s, %s L,NL]',
+            n_vars, len(continuous_vars), len(binary_vars), len(integer_vars),
+            len(constraints), n_cons-n_nonlinear_cons, n_nonlinear_cons,
+            level=logging.DEBUG)
+
         # Fill in the variable list and update the new column order
         for idx, _id in enumerate(variables):
             v = var_map[_id]
@@ -437,7 +444,7 @@ class _NLWriter_impl(object):
             if ub is not None:
                 ub = repr(ub)
             variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
-        timer.toc("var bounds")
+        timer.toc("Computed variable bounds", level=logging.DEBUG)
 
         # Now that the row/column ordering is resolved, create the labels
         symbol_map = SymbolMap()
@@ -450,7 +457,6 @@ class _NLWriter_impl(object):
         symbol_map.addSymbols(
             (info[0], f"o{idx}") for idx, info in enumerate(objectives)
         )
-        timer.toc("symbols")
 
         if symbolic_solver_labels:
             labeler = NameLabeler()
@@ -476,8 +482,8 @@ class _NLWriter_impl(object):
             self.var_id_to_nl = {
                 info[1]: var_idx for var_idx, info in enumerate(variables)
             }
+        timer.toc("Generated row/col labels & comments", level=logging.DEBUG)
 
-        timer.toc("row/col labels & comments")
         #
         # Print Header
         #
@@ -738,7 +744,8 @@ class _NLWriter_impl(object):
                     f'{column_order[_id]} {linear[_id]!r}\n'
                 )
 
-        timer.toc("written")
+        timer.toc("Wrote NL stream", level=logging.DEBUG)
+        timer.toc("Generated NL representation", delta=False)
         return symbol_map, sorted(amplfunc_libraries)
 
 
