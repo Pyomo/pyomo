@@ -1554,12 +1554,15 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
         #
         # Note: this needs to be 14 if pytest is run as a script, and 15
         # if pytest is run as "python -m".  We will use 15, and then add
-        # 2 (instead of 1) to generate teh recursion error.
+        # 2 (instead of 1) to generate the recursion error.  Note that
+        # the stack handling is different on GHA, and we need to fill an
+        # additional frame to trigger the recursion error.
+        #
         TESTING_OVERHEAD = 15
         warn_msg = "Unexpected RecursionError walking an expression tree.\n"
 
         head_room = sys.getrecursionlimit() - get_stack_depth()
-        for n, msg in [(0, ""), (2, warn_msg)]:
+        for n, msg in [(0, ""), (3, warn_msg)]:
             with LoggingIntercept() as LOG:
                 self.assertEqual(
                     2*RECURSION_LIMIT + 10,
