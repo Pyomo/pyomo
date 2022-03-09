@@ -4,11 +4,13 @@ from textwrap import indent
 from pyomo.common.collections import Bunch
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, NonNegativeInt, In, PositiveInt)
-from pyomo.opt import SolverResults, ProblemSense
+from pyomo.opt import SolverResults
 from pyomo.opt import TerminationCondition as tc
-from pyomo.core.base import Objective, value, minimize
+from pyomo.core.base import Objective, value, minimize, maximize
 from pyomo.util.model_size import build_model_size_report
 from pyomo.contrib.gdpopt.util import a_logger, get_main_elapsed_time
+
+from pytest import set_trace
 
 # I don't know where to keep this, just avoiding circular import for now
 __version__ = (20, 2, 28)  # Note: date-based version number
@@ -66,7 +68,6 @@ class _GDPoptAlgorithm(object):
         self.nlp_iteration = 0
         
         self.incumbent = None
-        self.primal_bound_improved = False
 
     def solve(self, model, config):
         """Solve the model.
@@ -97,23 +98,39 @@ class _GDPoptAlgorithm(object):
             problem.number_of_disjunctions == 0):
             return solve_continuous_problem(model, problem)
 
-    def _update_bounds(self, primal=None, dual=None):
+    def _update_bounds(self, primal=None, dual=None, logger=None):
         """
         Update bounds correctly depending on objective sense.
 
         primal: bound from solving subproblem with fixed master solution
         dual: bound from solving master problem (relaxation of original problem)
         """
+        oldLB = self.LB
+        oldUB = self.UB
+        primal_bound_improved = False
+
         if self.objective_sense is minimize:
-            if primal is not None:
+            if primal is not None and primal < oldUB:
                 self.UB = primal
-            if dual is not None:
+                primal_bound_improved = True
+                #oldPrimal = oldUB
+            if dual is not None and dual > oldLB:
                 self.LB = dual
         else:
-            if primal is not None:
+            if primal is not None and primal > oldLB:
                 self.LB = primal
-            if dual is not None:
+                primal_bound_improved = True
+                #oldPrimal = oldLB
+            if dual is not None and dual < oldUB:
                 self.UB = dual
+
+        if logger is not None:
+            self.log_bounds(logger, oldLB, oldUB)
+
+        # if primal is not None:
+        #     return self.primal_bound_improved(oldPrimal, newPrimal)
+        # primal wasn't even updated
+        return primal_bound_improved
 
     def primal_bound(self):
         if self.objective_sense is minimize:
@@ -123,11 +140,23 @@ class _GDPoptAlgorithm(object):
 
     def primal_bound_improved(self, old, new):
         if self.objective_sense is minimize:
-            if old < new:
+            if old > new:
                 return True
-        elif old > new:
+        elif old < new:
             return True
         return False
+
+    def log_bounds(self, logger, oldLB=None, oldUB=None):
+        lb_improved = ""
+        ub_improved = ""
+        if oldLB is not None and self.LB > oldLB:
+            lb_improved = "(IMPROVED) "
+        if oldUB is not None and self.UB < oldUB:
+            ub_improved = "(IMPROVED) "
+        logger.info('LB: {:10g} {:s} UB: {:.10g} {:s}'.format(self.LB,
+                                                              lb_improved,
+                                                              self.UB,
+                                                              ub_improved))
 
     def update_incumbent(self, util_block):
         self.incumbent = [value(v) for v in util_block.variable_list]
@@ -135,16 +164,16 @@ class _GDPoptAlgorithm(object):
     def _update_bounds_after_master_problem_solve(self, mip_feasible, obj_expr,
                                                   logger):
         if mip_feasible:
-            self._update_bounds(dual=value(obj_expr))
-            # TODO: I'm going to change this anyway
-            logger.info(
-                'ITER {:d}.{:d}.{:d}-MIP: OBJ: {:.10g}  LB: {:.10g}  UB: {:.10g}'.\
-                format(
-                    self.master_iteration,
-                    self.mip_iteration,
-                    self.nlp_iteration,
-                    value(obj_expr),
-                    self.LB, self.UB))
+            self._update_bounds(dual=value(obj_expr), logger=logger)
+            # # TODO: I'm going to change this anyway
+            # logger.info(
+            #     'ITER {:d}.{:d}.{:d}-MIP: OBJ: {:.10g}  LB: {:.10g}  UB: {:.10g}'.\
+            #     format(
+            #         self.master_iteration,
+            #         self.mip_iteration,
+            #         self.nlp_iteration,
+            #         value(obj_expr),
+            #         self.LB, self.UB))
         else:
             # Master problem was infeasible.
             self._update_dual_bound_to_infeasible(logger)
@@ -258,8 +287,7 @@ class _GDPoptAlgorithm(object):
             raise ValueError('Model has multiple active objectives.')
         else:
             main_obj = active_objectives[0]
-        results.problem.sense = ProblemSense.minimize if main_obj.sense == 1 \
-                                else ProblemSense.maximize
+        results.problem.sense = minimize if main_obj.sense == 1 else maximize
 
         return results
 

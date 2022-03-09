@@ -29,7 +29,6 @@ def get_infeasible_master_result(util_block):
 def solve_linear_GDP(util_block, config, timing):
     """Solves the linear GDP model and attempts to resolve solution issues."""
     m = util_block.model()
-    print("Going to solve: %s" % m.name)
 
     if config.mip_presolve:
         try:

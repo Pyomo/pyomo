@@ -32,7 +32,7 @@ from pyomo.gdp.util import (
     is_child_of, get_src_disjunction, get_src_constraint, 
     get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
     _warn_for_active_disjunction, _warn_for_active_disjunct, preprocess_targets,
-    _to_dict)
+    _to_dict, _parent_disjunct)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
@@ -997,3 +997,31 @@ class BigM_Transformation(Transformation):
         # fails... (That is, it's a bug in the mapping.)
         lower, upper = transBlock.bigm_src[constraint]
         return (lower[0], upper[0])
+
+    def add_constraint_to_transformed_model(self, m, constraint, block,
+                                            bigm=None):
+        """Adds the given constraint to the transformed model as if it had
+        been on the model originally, before the transformation was called.
+
+        Parameters
+        ----------
+        m: A model that has been transformed with bigm.
+        constraint: Already-constructed constraint somewhere on m
+        block: the block to add 'constraint' to
+        """
+        parent_disjunct = block
+        if parent_disjunct.ctype is not Disjunct:
+            parent_disjunct = _parent_disjunct(block)
+
+        if parent_disjunct is None:
+            # the constraint is global, there's nothing to do.
+            return
+
+        # TODO: There's a bigger question here about when the transformation's
+        # state comes into being and if this should be an arg and I don't know.
+        self.assume_fixed_vars_permanent = False
+
+        bigm_arglist = self._get_bigm_arg_list(bigm, parent_disjunct)
+        suffix_list = self._get_bigm_suffix_list(parent_disjunct)
+        self._transform_constraint(constraint, parent_disjunct, bigm,
+                                   bigm_arglist, suffix_list)

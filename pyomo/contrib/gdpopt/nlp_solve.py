@@ -10,6 +10,7 @@
 
 """Functions for solving the nonlinear subproblem."""
 from math import fabs
+from contextlib import contextmanager
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
@@ -21,6 +22,8 @@ from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.fbbt.fbbt import fbbt
+
+from pytest import set_trace
 
 def configure_and_call_solver(model, solver, args, problem_type, timing,
                               time_limit):
@@ -188,20 +191,26 @@ def detect_unfixed_discrete_vars(model):
                        if not v.is_continuous())
     return var_set
 
-def preprocess_subproblem(m, config):
+@contextmanager
+def preprocess_subproblem(util_block, config):
     """Applies preprocessing transformations to the model."""
-    if not config.tighten_nlp_var_bounds:
-        original_bounds = ComponentMap()
-        # TODO: Switch this to the general utility function, but I hid it in
-        # #2221
-        for cons in m.component_data_objects(Constraint, active=True,
-                                             descend_into=Block):
-            for v in EXPR.identify_variables(cons.expr):
-                if v not in original_bounds.keys():
-                    original_bounds[v] = (v.lb, v.ub)
-        # We could miss if there is a variable that only appears in the
-        # objective, but its bounds are not going to get changed anyway if
-        # that's the case.
+    m = util_block.model()
+
+    # Save bounds so we can restore them
+    original_bounds = ComponentMap()
+    unfixed_vars = []
+    active_constraints = []
+    for cons in m.component_data_objects(Constraint, active=True,
+                                         descend_into=Block):
+        active_constraints.append(cons)
+        for v in EXPR.identify_variables(cons.expr):
+            if v not in original_bounds.keys():
+                original_bounds[v] = (v.lb, v.ub)
+                if not v.fixed:
+                    unfixed_vars.append(v)
+    # We could miss if there is a variable that only appears in the
+    # objective, but its bounds are not going to get changed anyway if
+    # that's the case.
 
     # First do FBBT
     fbbt(m, integer_tol=config.integer_tolerance,
@@ -226,6 +235,29 @@ def preprocess_subproblem(m, config):
     # Last, check if any constraints are now trivial and deactivate them
     xfrm('contrib.deactivate_trivial_constraints').apply_to(
         m, tolerance=config.constraint_tolerance)
+
+    yield
+
+    # restore the bounds if we didn't do it above
+    if config.tighten_nlp_var_bounds:
+        for v, (lb, ub) in original_bounds.items():
+            v.setlb(lb)
+            v.setub(ub)
+
+    # ESJ TODO: I think fbbt is messing with Vars that aren't its beeswax, but
+    # it tightens the bounds on the fixed indicator_vars, so restore the bounds
+    # here for now.
+    for disj in util_block.disjunct_list:
+        disj.binary_indicator_var.setlb(0)
+        disj.binary_indicator_var.setub(1)
+
+    # reactivate constraints
+    for cons in active_constraints:
+        cons.activate()
+
+    # unfix variables
+    for v in unfixed_vars:
+        v.unfix()
 
 def initialize_subproblem(util_block):
     """Perform initialization of the subproblem.
@@ -290,25 +322,9 @@ def update_subproblem_progress_indicators(solved_model, solve_data, config):
             solve_data.LB, lb_improved,
             solve_data.UB, ub_improved))
 
-def solve_subproblem(subprob_util_block, config, timing, solve_globally=False):
-    """Set up and solve the local MINLP or NLP subproblem."""
-    # ESJ: do we need this/do we need to track it here?
-    #solve_data.nlp_iteration += 1
-    subprob = subprob_util_block.model()
-
-    if config.subproblem_presolve:
-        try:
-            preprocess_subproblem(subprob, config)
-        except InfeasibleConstraintException as e:
-            config.logger.info("NLP subproblem determined to be infeasible "
-                               "during preprocessing.")
-            config.logger.debug("Message from preprocessing: %s" % e)
-            return get_infeasible_result_object(
-                subprob,
-                "Preprocessing determined problem to be infeasible.")
-
+def call_appropriate_subproblem_solver(subprob, config, timing):
     # TODO: If this is really here, then we need to have some very
-    # strongly-worded documentation thatabout how modifying the subproblem model
+    # strongly-worded documentation about how modifying the subproblem model
     # could have very serious consequences... I don't really want to expose it
     # at all, honestly...
     config.call_before_subproblem_solve(subprob)
@@ -326,6 +342,10 @@ def solve_subproblem(subprob_util_block, config, timing, solve_globally=False):
         elif len(unfixed_discrete_vars) == 0:
             subprob_feasible = solve_NLP(subprob, config, timing)
         else:
+            config.logger.debug(
+                "The following discrete variables are unfixed: %s"
+                "\nProceeding by solving the subproblem as a MINLP."
+                % ", ".join([v.name for v in unfixed_discrete_vars]))
             subprob_feasible = solve_MINLP(subprob, subprob_util_block, config,
                                            timing)
 
@@ -337,6 +357,26 @@ def solve_subproblem(subprob_util_block, config, timing, solve_globally=False):
         config.call_after_subproblem_feasible(subprob)
 
     return subprob_feasible
+
+def solve_subproblem(subprob_util_block, config, timing, solve_globally=False):
+    """Set up and solve the local MINLP or NLP subproblem."""
+    # ESJ: do we need this/do we need to track it here?
+    #solve_data.nlp_iteration += 1
+    subprob = subprob_util_block.model()
+
+    if config.subproblem_presolve:
+        try:
+            with preprocess_subproblem(subprob_util_block, config):
+                return call_appropriate_subproblem_solver(subprob, config,
+                                                          timing)
+        except InfeasibleConstraintException as e:
+            config.logger.info("NLP subproblem determined to be infeasible "
+                               "during preprocessing.")
+            config.logger.debug("Message from preprocessing: %s" % e)
+            return get_infeasible_result_object(
+                subprob,
+                "Preprocessing determined problem to be infeasible.")
+    return call_appropriate_subproblem_solver(subprob, config, timing)
 
 def solve_global_subproblem(mip_result, solve_data, config):
     subprob = solve_data.working_model.clone()

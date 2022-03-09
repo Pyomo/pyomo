@@ -14,7 +14,10 @@ from pyomo.core import (
     Block, Constraint, Objective, Suffix, TransformationFactory, Var, maximize,
     minimize, value
 )
+from pyomo.common.collections import ComponentMap
 from pyomo.gdp import Disjunct
+
+from pytest import set_trace
 
 def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                           config, solver):
@@ -186,6 +189,11 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
         for disj in util_block.disjunct_list)
     subprob = subprob_util_block.model()
 
+    if config.mip_presolve:
+        original_bounds = ComponentMap()
+        for v in master_util_block.variable_list:
+            original_bounds[v] = (v.lb, v.ub)
+
     # borrow the master problem to be the set covering MIP. This is only a
     # change of objective
     with use_master_for_set_covering(master_util_block):
@@ -199,8 +207,15 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
             ## Solve set covering MIP
             update_set_covering_objective(master_util_block,
                                           disjunct_needs_cover)
+            
             mip_feasible = solve_linear_GDP(master_util_block, config,
                                             solver.timing)
+            if config.mip_presolve:
+                # restore bounds
+                for v, (l, u) in original_bounds.items():
+                    v.setlb(l)
+                    v.setub(u)
+                
             if not mip_feasible:
                 # problem is infeasible. break
                 return False
@@ -224,6 +239,11 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                 subprob_feasible = solve_subproblem(subprob_util_block, config,
                                                     solver.timing)
                 if subprob_feasible:
+                    primal_improved = solver._update_bounds(
+                        primal=value(subprob_util_block.obj.expr),
+                        logger=config.logger)
+                    if primal_improved:
+                        solver.update_incumbent(subprob_util_block)
                     # if successful, updated sets
                     active_disjuncts = list(
                         fabs(value(disj.binary_indicator_var) - 1) <=

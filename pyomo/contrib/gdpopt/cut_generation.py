@@ -16,9 +16,12 @@ from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
-                        minimize, value, TransformationFactory)
+                        minimize, value, TransformationFactory, Constraint,
+                        NonNegativeIntegers, Reference)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr.visitor import identify_variables
+
+from pytest import set_trace
 
 MAX_SYMBOLIC_DERIV_SIZE = 1000
 JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
@@ -40,6 +43,7 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
                                  objective_sense, config):
     """Add outer approximation cuts to the linear GDP model."""
     m = master_util_block.model()
+    bigm = TransformationFactory('gdp.bigm')
     nlp = subproblem_util_block.model()
     sign_adjust = -1 if objective_sense == minimize else 1
 
@@ -106,24 +110,27 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
                                       mode=jacobian.mode)
             jacobian.jac.update(zip(jacobian.vars, jac_list))
 
-        # Create a block on which to put outer approximation cuts.
-        oa_utils = master_util_block.component('GDPopt_OA')
+        # Create a block on which to put outer approximation cuts.  TODO: This
+        # isn't particularly safe because we don't know that we can have this
+        # name...
+        oa_utils = parent_block.component('GDPopt_OA')
         if oa_utils is None:
-            oa_utils = master_util_block.GDPopt_OA = Block(
+            oa_utils = parent_block.GDPopt_OA = Block(
                 doc="Block holding outer approximation cuts "
                 "and associated data.")
-            oa_utils.GDPopt_OA_cuts = ConstraintList()
-            print("Adding slacks! %s to model %s" % 
-                  (oa_utils, oa_utils.model()))
-            oa_utils.GDPopt_OA_slacks = VarList( bounds=(0, config.max_slack),
-                                                 domain=NonNegativeReals,
-                                                 initialize=0)
-            oa_utils.GDPopt_OA_slacks.pprint()
+            oa_utils.GDPopt_OA_cuts = Constraint(NonNegativeIntegers)
+        master_oa_utils = master_util_block.component('GDPopt_OA')
+        if master_oa_utils is None:
+            master_oa_utils = master_util_block.GDPopt_OA = Block(
+                doc="Block holding outer approximation slacks for the "
+                "whole model (so that the writers can find them).")
+            master_oa_utils.GDPopt_OA_slacks = VarList(
+                bounds=(0, config.max_slack),
+                domain=NonNegativeReals,
+                initialize=0)
 
         oa_cuts = oa_utils.GDPopt_OA_cuts
-        slack_var = oa_utils.GDPopt_OA_slacks.add()
-        oa_utils.GDPopt_OA_slacks.pprint()
-        print(oa_utils.parent_block().name)
+        slack_var = master_oa_utils.GDPopt_OA_slacks.add()
         rhs = value(constr.lower) if constr.has_lb() else value(
             constr.upper)
         try:
@@ -134,7 +141,14 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
                         for var, jac in jacobian.jac.items())
                     ) - slack_var <= 0)
             assert new_oa_cut.polynomial_degree() in (1, 0)
-            oa_cuts.add(expr=new_oa_cut)
+            idx = len(oa_cuts)
+            oa_cuts[idx] = new_oa_cut
+            # ESJ TODO: bigm doesn't handle ConstraintDatas yet, so I'm cheating
+            # by making a Reference to a slice so that it will be an indexed
+            # component for now
+            bigm.add_constraint_to_transformed_model( m,
+                                                      Reference(oa_cuts[idx]),
+                                                      oa_cuts)
             counter += 1
         except ZeroDivisionError:
             config.logger.warning(

@@ -28,6 +28,8 @@ from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.util.model_size import build_model_size_report
 from pyomo.core.expr import current as EXPR
 
+from pytest import set_trace
+
 class _DoNothing(object):
     """Do nothing, literally.
 
@@ -338,6 +340,9 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
                                subproblem_util_block.disjunct_list):
         if not disjunct.indicator_var.value:
             block.deactivate()
+            block.binary_indicator_var.fix(0)
+        else:
+            block.binary_indicator_var.fix(1)
 
     # Fix subproblem discrete variables according to the master solution
     if make_subproblem_continuous:
@@ -360,6 +365,7 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
     # unfix all subproblem blocks
     for block in subproblem_util_block.disjunct_list:
         block.activate()
+        block.binary_indicator_var.unfix()
 
     # unfix all discrete variables and restore them to their original values
     if make_subproblem_continuous:
