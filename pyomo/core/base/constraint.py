@@ -44,7 +44,7 @@ from pyomo.core.base.initializer import (
 logger = logging.getLogger('pyomo.core')
 
 _inf = float('inf')
-_nonfinite_values = {_inf, -_inf, float('nan')}
+_nonfinite_values = {_inf, -_inf}
 _rule_returned_none_error = """Constraint '%s': rule returned None.
 
 Constraint rules must return either a valid expression, a 2- or 3-member
@@ -390,7 +390,7 @@ class _GeneralConstraintData(_ConstraintData):
         bound = self._lb()
         if bound.__class__ not in native_types:
             bound = value(bound)
-        if bound in _nonfinite_values:
+        if bound in _nonfinite_values or bound != bound:
             if bound == -_inf:
                 bound = None
             else:
@@ -405,7 +405,7 @@ class _GeneralConstraintData(_ConstraintData):
         bound = self._ub()
         if bound.__class__ not in native_types:
             bound = value(bound)
-        if bound in _nonfinite_values:
+        if bound in _nonfinite_values or bound != bound:
             if bound == _inf:
                 bound = None
             else:
@@ -626,16 +626,18 @@ class _GeneralConstraintData(_ConstraintData):
 
         # We have historically mapped incoming inf to None
         if self._lower.__class__ in native_numeric_types:
-            if self._lower in _nonfinite_values:
-                if self._lower == -_inf:
+            bound = self._lower
+            if bound in _nonfinite_values or bound != bound:
+                if bound == -_inf:
                     self._lower = None
                 else:
                     raise ValueError(
                         "Constraint '%s' created with an invalid non-finite "
                         "lower bound (%s)." % (self.name, self._lower))
         if self._upper.__class__ in native_numeric_types:
-            if self._upper in _nonfinite_values:
-                if self._upper == _inf:
+            bound = self._upper
+            if bound in _nonfinite_values or bound != bound:
+                if bound == _inf:
                     self._upper = None
                 else:
                     raise ValueError(
