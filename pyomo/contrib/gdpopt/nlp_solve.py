@@ -199,10 +199,8 @@ def preprocess_subproblem(util_block, config):
     # Save bounds so we can restore them
     original_bounds = ComponentMap()
     unfixed_vars = []
-    active_constraints = []
     for cons in m.component_data_objects(Constraint, active=True,
                                          descend_into=Block):
-        active_constraints.append(cons)
         for v in EXPR.identify_variables(cons.expr):
             if v not in original_bounds.keys():
                 original_bounds[v] = (v.lb, v.ub)
@@ -231,10 +229,14 @@ def preprocess_subproblem(util_block, config):
             v.setub(ub)
 
     # Now, if something got fixed to 0, we might have 0*var terms to remove
-    xfrm('contrib.remove_zero_terms').apply_to(m)
+    constraints_modified = {}
+    xfrm('contrib.remove_zero_terms').apply_to(
+        m, constraints_modified=constraints_modified)
+    constraints_deactivated = []
     # Last, check if any constraints are now trivial and deactivate them
-    xfrm('contrib.deactivate_trivial_constraints').apply_to(
-        m, tolerance=config.constraint_tolerance)
+    xfrm('contrib.deactivate_trivial_constraints').apply_to( 
+        m, tolerance=config.constraint_tolerance,
+        return_trivial=constraints_deactivated)
 
     yield
 
@@ -252,10 +254,14 @@ def preprocess_subproblem(util_block, config):
         disj.binary_indicator_var.setub(1)
 
     # reactivate constraints
-    for cons in active_constraints:
+    for cons in constraints_deactivated:
         cons.activate()
 
-    # unfix variables
+    for cons, (orig, modified) in constraints_modified.items():
+        cons.set_value(orig)
+
+    # unfix variables: TODO: Maybe I should modify preprocessing so we only have
+    # to go through the relevant ones here too
     for v in unfixed_vars:
         v.unfix()
 

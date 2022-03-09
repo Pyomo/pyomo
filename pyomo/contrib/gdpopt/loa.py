@@ -117,6 +117,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
                 with fix_master_solution_in_subproblem(
                         master_util_block, 
                         subproblem_util_block,
+                        logger,
                         make_subproblem_continuous=config.force_subproblem_nlp):
                     nlp_feasible = solve_subproblem(subproblem_util_block,
                                                     config, self.timing)

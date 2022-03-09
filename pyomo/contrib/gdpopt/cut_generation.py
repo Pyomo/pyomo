@@ -149,6 +149,7 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
             bigm.add_constraint_to_transformed_model( m,
                                                       Reference(oa_cuts[idx]),
                                                       oa_cuts)
+            config.logger.debug("Cut expression: %s" % new_oa_cut)
             counter += 1
         except ZeroDivisionError:
             config.logger.warning(

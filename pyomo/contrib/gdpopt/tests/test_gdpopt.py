@@ -342,13 +342,11 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        logger = logging.getLogger('pyomo.contrib.gdpopt')
-        logger.setLevel(logging.DEBUG)
         SolverFactory('gdpopt').solve(
             eight_process, strategy='LOA',
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
-            tee=True, logger=logger)
+            tee=False)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")

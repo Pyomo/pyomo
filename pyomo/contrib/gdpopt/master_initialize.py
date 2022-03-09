@@ -15,6 +15,7 @@ from pyomo.core import (
     minimize, value
 )
 from pyomo.common.collections import ComponentMap
+from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.gdp import Disjunct
 
 from pytest import set_trace
@@ -54,6 +55,7 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
         if mip_result.feasible:
             with fix_master_solution_in_subproblem(master_util_block,
                                                    subprob_util_block,
+                                                   config.logger,
                                                    config.force_subproblem_nlp):
                 nlp_result = solve_subproblem(subproblem, subprob_util_block,
                                               config, timing)
@@ -138,9 +140,18 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
 
 @contextmanager
 def use_master_for_set_covering(master_util_block):
-    original_objective = next(
-        master_util_block.model().component_data_objects(Objective, active=True,
-                                                         descend_into=True))
+    m = master_util_block.model()
+    original_bounds = ComponentMap()
+    for v in get_vars_from_components(m, ctype=(Constraint, Objective),
+                                      active=True, descend_into=Block):
+        original_bounds[v] = (v.lb, v.ub)
+    active_constraints = []
+    for c in m.component_data_objects(Constraint, active=True,
+                                      descend_into=Block):
+        active_constraints.append(c)
+
+    original_objective = next( m.component_data_objects(Objective, active=True,
+                                                        descend_into=True))
     original_objective.deactivate()
     # placeholder for the objective
     master_util_block.set_cover_obj = Objective(expr=0)
@@ -151,6 +162,13 @@ def use_master_for_set_covering(master_util_block):
     # still want them. We've already considered those solutions.
     del master_util_block.set_cover_obj
     original_objective.activate()
+
+    # undo what fbbt might have done in preprocessing
+    for v, (l, u) in original_bounds.items():
+        v.setlb(l)
+        v.setub(u)
+    for c in active_constraints:
+        c.activate()
 
 def update_set_covering_objective(master_util_block, disj_needs_cover):
     # number of disjuncts that still need to be covered
@@ -235,7 +253,9 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
             with fix_master_solution_in_subproblem(
                     master_util_block,
                     subprob_util_block,
+                    config.logger,
                     make_subproblem_continuous=config.force_subproblem_nlp):
+                m = subprob_util_block.model()
                 subprob_feasible = solve_subproblem(subprob_util_block, config,
                                                     solver.timing)
                 if subprob_feasible:

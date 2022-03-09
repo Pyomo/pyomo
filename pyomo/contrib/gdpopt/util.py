@@ -334,8 +334,9 @@ def fix_discrete_var(var, val, config):
 
 @contextmanager
 def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
-                                      make_subproblem_continuous=True):
+                                      logger, make_subproblem_continuous=True):
     # fix subproblem Blocks according to the master solution
+    fixed = []
     for disjunct, block in zip(master_util_block.disjunct_list,
                                subproblem_util_block.disjunct_list):
         if not disjunct.indicator_var.value:
@@ -343,6 +344,9 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
             block.binary_indicator_var.fix(0)
         else:
             block.binary_indicator_var.fix(1)
+            fixed.append(block.name)
+    logger.debug("Fixed the following Disjuncts to 'True': %s" 
+                 % ", ".join(fixed))
 
     # Fix subproblem discrete variables according to the master solution
     if make_subproblem_continuous:
