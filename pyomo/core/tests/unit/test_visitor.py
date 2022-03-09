@@ -1540,32 +1540,36 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
         m = self.m
         m.x = 10
         self.assertEqual(
+            2*RECURSION_LIMIT + 10,
             walker('walk_expression', m.e[2*RECURSION_LIMIT-1]),
-            2*RECURSION_LIMIT + 10
         )
         self.assertEqual(
+            2*RECURSION_LIMIT + 10,
             walker('walk_expression_nonrecursive', m.e[2*RECURSION_LIMIT-1]),
-            2*RECURSION_LIMIT + 10
         )
 
         # This is a "magic parameter" that quantifies the overhead
         # needed by the system to convert the recursive walker to a
         # nonrecursive one.
-        TESTING_OVERHEAD = 14
+        #
+        # Note: this needs to be 14 if pytest is run as a script, and 15
+        # if pytest is run as "python -m".  We will use 15, and then add
+        # 2 (instead of 1) to generate teh recursion error.
+        TESTING_OVERHEAD = 15
         warn_msg = "Unexpected RecursionError walking an expression tree.\n"
 
         head_room = sys.getrecursionlimit() - get_stack_depth()
-        for n, msg in [(0, ""), (1, warn_msg)]:
+        for n, msg in [(0, ""), (2, warn_msg)]:
             with LoggingIntercept() as LOG:
                 self.assertEqual(
+                    2*RECURSION_LIMIT + 10,
                     fill_stack(
                         head_room - RECURSION_LIMIT - TESTING_OVERHEAD + n,
                         walker,
                         'walk_expression',
                         m.e[2*RECURSION_LIMIT-1]),
-                    2*RECURSION_LIMIT + 10
                 )
-            self.assertEqual(LOG.getvalue(), msg)
+            self.assertEqual(msg, LOG.getvalue())
 
     def test_evaluate_bx(self):
         return self.run_walker(self.evaluate_bx)
