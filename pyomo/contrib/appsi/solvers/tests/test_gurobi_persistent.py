@@ -6,12 +6,45 @@ from pyomo.contrib.appsi.base import TerminationCondition
 from pyomo.core.expr.numeric_expr import LinearExpression
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 from pyomo.contrib.appsi.cmodel import cmodel_available
+import random
 
 
 opt = Gurobi()
 if not opt.available():
     raise unittest.SkipTest
 import gurobipy
+
+
+def create_pmedian_model():
+    random.seed(1000)
+
+    model = pe.ConcreteModel()
+    model.N = pe.Param(initialize=10)
+    model.Locations = pe.RangeSet(1,model.N)
+    model.P = pe.Param(initialize=3)
+    model.M = pe.Param(initialize=6)
+    model.Customers = pe.RangeSet(1,model.M)
+    model.d = pe.Param(model.Locations, model.Customers, initialize=lambda n, m, model : random.uniform(1.0,2.0), within=pe.Reals)
+    model.x = pe.Var(model.Locations, model.Customers, bounds=(0.0,1.0))
+    model.y = pe.Var(model.Locations, within=pe.Binary)
+
+    def rule(model):
+        return sum( model.d[n,m]*model.x[n,m] for n in model.Locations for m in model.Customers )
+    model.obj = pe.Objective(rule=rule)
+
+    def rule(model, m):
+        return (sum( model.x[n,m] for n in model.Locations ), 1.0)
+    model.single_x = pe.Constraint(model.Customers, rule=rule)
+
+    def rule(model, n,m):
+        return (None, model.x[n,m] - model.y[n], 0.0)
+    model.bound_y = pe.Constraint(model.Locations, model.Customers, rule=rule)
+
+    def rule(model):
+        return (sum( model.y[n] for n in model.Locations ) - model.P, 0.0)
+    model.num_facilities = pe.Constraint(rule=rule)
+
+    return model
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
@@ -300,6 +333,19 @@ class TestGurobiPersistent(unittest.TestCase):
         opt.solve(m)
         self.assertAlmostEqual(m.x.value, -0.3660254037844423, 2)
         self.assertAlmostEqual(m.y.value, -0.13397459621555508, 2)
+
+    def test_solution_number(self):
+        m = create_pmedian_model()
+        opt = Gurobi()
+        res = opt.solve(m)
+        num_solutions = opt.get_model_attr('SolCount')
+        self.assertEqual(num_solutions, 3)
+        res.solution_loader.load_vars(solution_number=0)
+        self.assertAlmostEqual(pe.value(m.obj.expr), 6.431184939357673)
+        res.solution_loader.load_vars(solution_number=1)
+        self.assertAlmostEqual(pe.value(m.obj.expr), 7.546880796046201)
+        res.solution_loader.load_vars(solution_number=2)
+        self.assertAlmostEqual(pe.value(m.obj.expr), 7.607295680844689)
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
