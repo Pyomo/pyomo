@@ -610,8 +610,15 @@ class _NLWriter_impl(object):
         # "C" lines (constraints: nonlinear expression)
         #
         for row_idx, info in enumerate(constraints):
-            for _id in single_use_subexpressions.get(id(info[0]), ()):
-                self._write_v_line(_id, row_idx)
+            if info[1].nonlinear is None:
+                # Only output nonlinear trees for constraints with
+                # nonlinear components (and since we order the
+                # constraints, we can stop as soon as we hit the first
+                # linear constraint)
+                break
+            if single_use_subexpressions:
+                for _id in single_use_subexpressions.get(id(info[0]), ()):
+                    self._write_v_line(_id, row_idx)
             ostream.write(f'C{row_idx}{row_comments[row_idx]}\n')
             self._write_nl_expression(info[1], False)
 
