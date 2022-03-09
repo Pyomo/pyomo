@@ -100,6 +100,13 @@ jobs:
           PYENV: pip
           PACKAGES: pyutilib
 
+        - os: windows-latest
+          python: 3.8
+          other: /pip
+          skip_doctest: 1
+          TARGET: win
+          PYENV: pip
+
         exclude:
         - {os: macos-latest, python: pypy3}
         - {os: windows-latest, python: pypy3}
