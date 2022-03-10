@@ -130,21 +130,21 @@ inconsistent state.  Users can avoid this by
    ...     exitNode=lambda node, data: max(data) + 1 if data else 1)
    >>> m = pyo.ConcreteModel()
    >>> m.x = pyo.Var()
-   >>> @m.Expression(range(25))
+   >>> @m.Expression(range(35))
    ... def e(m, i):
    ...     return m.e[i-1] if i else m.x
-   >>> expression_depth.walk_expression(m.e[24])
-   26
-   >>> fill_stack(sys.getrecursionlimit() - visitor.get_stack_depth() - 20,
+   >>> expression_depth.walk_expression(m.e[34])
+   36
+   >>> fill_stack(sys.getrecursionlimit() - visitor.get_stack_depth() - 30,
    ...            expression_depth.walk_expression,
-   ...            m.e[24])
+   ...            m.e[34])
    WARNING (W1003): Unexpected RecursionError walking an expression tree.
        See also https://pyomo.readthedocs.io/en/stable/errors.html#w1003
-   26
-   >>> fill_stack(sys.getrecursionlimit() - visitor.get_stack_depth() - 20,
+   36
+   >>> fill_stack(sys.getrecursionlimit() - visitor.get_stack_depth() - 30,
    ...            expression_depth.walk_expression_nonrecursive,
-   ...            m.e[24])
-   26
+   ...            m.e[34])
+   36
 
 
 .. ===================================================================
