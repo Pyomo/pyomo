@@ -1496,18 +1496,17 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
                 return m.x
         m.e = Expression(m.I, rule=_rule)
 
-    def evaluate_bx(self, fcn, expr):
+    def evaluate_bx(self):
         def before(node, child, idx):
             if type(child) in native_types or not child.is_expression_type():
                 return False, value(child)
             return True, None
         def exit(node, data):
             return data[0] + 1
-        walker = StreamBasedExpressionVisitor(
+        return StreamBasedExpressionVisitor(
             beforeChild=before, exitNode=exit)
-        return getattr(walker, fcn)(expr)
 
-    def evaluate_bex(self, fcn, expr):
+    def evaluate_bex(self):
         def before(node, child, idx):
             if type(child) in native_types or not child.is_expression_type():
                 return False, value(child)
@@ -1516,11 +1515,10 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
             return None, []
         def exit(node, data):
             return data[0] + 1
-        walker = StreamBasedExpressionVisitor(
+        return StreamBasedExpressionVisitor(
             beforeChild=before, enterNode=enter, exitNode=exit)
-        return getattr(walker, fcn)(expr)
 
-    def evaluate_abex(self, fcn, expr):
+    def evaluate_abex(self):
         def before(node, child, idx):
             if type(child) in native_types or not child.is_expression_type():
                 return False, value(child)
@@ -1531,57 +1529,56 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
             return data + child_result
         def exit(node, data):
             return data + 1
-        walker = StreamBasedExpressionVisitor(
+        return StreamBasedExpressionVisitor(
             beforeChild=before, acceptChildResult=accept,
             enterNode=enter, exitNode=exit)
-        return getattr(walker, fcn)(expr)
 
     def run_walker(self, walker):
         m = self.m
         m.x = 10
         self.assertEqual(
             2*RECURSION_LIMIT + 10,
-            walker('walk_expression', m.e[2*RECURSION_LIMIT-1]),
+            walker.walk_expression(m.e[2*RECURSION_LIMIT-1]),
         )
         self.assertEqual(
             2*RECURSION_LIMIT + 10,
-            walker('walk_expression_nonrecursive', m.e[2*RECURSION_LIMIT-1]),
+            walker.walk_expression_nonrecursive(m.e[2*RECURSION_LIMIT-1]),
         )
 
         # This is a "magic parameter" that quantifies the overhead
         # needed by the system to convert the recursive walker to a
         # nonrecursive one.
         #
-        # Note: this needs to be 14 if pytest is run as a script, and 15
-        # if pytest is run as "python -m".  We will use 15, and then add
+        # Note: this needs to be 13 if pytest is run as a script, and 14
+        # if pytest is run as "python -m".  We will use 14, and then add
         # 2 (instead of 1) to generate the recursion error.  Note that
         # the stack handling is different on GHA, and we need to fill an
-        # additional frame to trigger the recursion error.
+        # additional frame (for a total of 3) to trigger the recursion
+        # error.
         #
         TESTING_OVERHEAD = 15
         warn_msg = "Unexpected RecursionError walking an expression tree.\n"
 
         head_room = sys.getrecursionlimit() - get_stack_depth()
-        for n, msg in [(0, ""), (3, warn_msg)]:
+        for n, msg in [(0, ""), (4, warn_msg)]:
             with LoggingIntercept() as LOG:
                 self.assertEqual(
                     2*RECURSION_LIMIT + 10,
                     fill_stack(
                         head_room - RECURSION_LIMIT - TESTING_OVERHEAD + n,
-                        walker,
-                        'walk_expression',
+                        walker.walk_expression,
                         m.e[2*RECURSION_LIMIT-1]),
                 )
             self.assertEqual(msg, LOG.getvalue())
 
     def test_evaluate_bx(self):
-        return self.run_walker(self.evaluate_bx)
+        return self.run_walker(self.evaluate_bx())
 
     def test_evaluate_bex(self):
-        return self.run_walker(self.evaluate_bex)
+        return self.run_walker(self.evaluate_bex())
 
     def test_evaluate_abex(self):
-        return self.run_walker(self.evaluate_abex)
+        return self.run_walker(self.evaluate_abex())
 
 
 class TestEvaluateExpression(unittest.TestCase):
