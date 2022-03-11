@@ -10,6 +10,7 @@
 
 import enum
 import logging
+import os
 import sys
 from collections import deque
 from operator import itemgetter, attrgetter
@@ -128,10 +129,9 @@ class NLWriter(object):
     def __call__(self, model, filename, solver_capability, io_options):
         if filename is None:
             filename = model.name + ".nl"
-        elif not filename.lower().endswith('.nl'):
-            filename += '.nl'
-        row_fname = filename[:-2] + 'row'
-        col_fname = filename[:-2] + 'col'
+        filename_base = os.path.splitext(filename)[0]
+        row_fname = filename_base + '.row'
+        col_fname = filename_base + '.col'
 
         config = self.config(io_options)
         if config.symbolic_solver_labels:
