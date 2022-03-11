@@ -921,7 +921,10 @@ class _NLWriter_impl(object):
         #     used by one constraint,
         #     used by one objective ]
         n_subexpressions = [0]*5
-        for info in map(itemgetter(2), self.subexpression_cache.values()):
+        for info in map(itemgetter(2),
+                        map(self.subexpression_cache.__getitem__,
+                            filter(self.used_named_expressions.__contains__,
+                                   self.subexpression_order))):
             if info[2]:
                 pass
             elif info[1] is None:
