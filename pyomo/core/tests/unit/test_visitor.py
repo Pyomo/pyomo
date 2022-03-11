@@ -1572,7 +1572,7 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
             cases = [(0, ""), (3, warn_msg)]
 
         head_room = sys.getrecursionlimit() - get_stack_depth()
-        for n, msg in cases
+        for n, msg in cases:
             with LoggingIntercept() as LOG:
                 self.assertEqual(
                     2*RECURSION_LIMIT + 10,
