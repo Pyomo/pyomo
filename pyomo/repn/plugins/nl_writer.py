@@ -1421,7 +1421,7 @@ def handle_external_function_node(visitor, node, *args):
         visitor, visitor.template.external_fcn % (
             visitor.external_functions[func][0], len(args)))
     for arg in args[1:]:
-        nonlin = node_result_to_amplrepn(arg[0]).compile_repn(visitor, *nonlin)
+        nonlin = node_result_to_amplrepn(arg).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 
