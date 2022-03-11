@@ -59,6 +59,17 @@ class _CONSTANT(object): pass
 class _MONOMIAL(object): pass
 class _GENERAL(object): pass
 
+# TODO: make a proper base class
+class NLWriterInfo(object):
+    def __init__(self, var, con, obj, extlib, row_lbl, col_lbl):
+        self.variables = var
+        self.constraints = con
+        self.objectives = obj
+        self.external_function_libraries = extlib
+        self.row_labels = row_lbl
+        self.column_labels = col_lbl
+
+
 class FileDeterminism(enum.IntEnum):
     NONE = 0
     SORT_INDICES = 1
@@ -141,12 +152,14 @@ class NLWriter(object):
         with open(filename, 'w') as FILE, \
              _open(row_fname) as ROWFILE, \
              _open(col_fname) as COLFILE:
-            symbol_map, amplfuncs = self.write(
+            info = self.write(
                 model, FILE, ROWFILE, COLFILE, config=config)
         # Historically, the NL writer communicated the external function
         # libraries back to the ASL interface through the PYOMO_AMPLFUNC
         # environment variable.
-        set_pyomo_amplfunc_env(amplfuncs)
+        set_pyomo_amplfunc_env(info.external_function_libraries)
+        # Generate the symbol map expected by the old readers
+        symbol_map = self._generate_symbol_map(info)
         # The ProblemWriter callable interface returns the filename that
         # was generated and the symbol_map
         return filename, symbol_map
@@ -170,12 +183,29 @@ class NLWriter(object):
                     k, "\n\t\t".join(map(attrgetter('name'), v)))
                     for k, v in unknown.items())))
 
-        _impl = _NLWriter_impl(ostream, rowstream, colstream, config)
         # Pause the GC, as the walker that generates the compiled NL
         # representation generates (and disposes of) a large number of
         # small objects.
         with PauseGC():
-            return _impl.write(model)
+            _impl = _NLWriter_impl(ostream, rowstream, colstream, config)
+            info = _impl.write(model)
+            _impl = None
+        return info
+
+    def _generate_symbol_map(self, info):
+        # Now that the row/column ordering is resolved, create the labels
+        symbol_map = SymbolMap()
+        symbol_map.addSymbols(
+            (info[0], f"v{idx}") for idx, info in enumerate(info.variables)
+        )
+        symbol_map.addSymbols(
+            (info[0], f"c{idx}") for idx, info in enumerate(info.constraints)
+        )
+        symbol_map.addSymbols(
+            (info[0], f"o{idx}") for idx, info in enumerate(info.objectives)
+        )
+        return symbol_map
+
 
 def _RANGE_TYPE(lb, ub):
     if lb == ub:
@@ -447,18 +477,6 @@ class _NLWriter_impl(object):
                 ub = repr(ub)
             variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
         timer.toc("Computed variable bounds", level=logging.DEBUG)
-
-        # Now that the row/column ordering is resolved, create the labels
-        symbol_map = SymbolMap()
-        symbol_map.addSymbols(
-            (info[0], f"v{idx}") for idx, info in enumerate(variables)
-        )
-        symbol_map.addSymbols(
-            (info[0], f"c{idx}") for idx, info in enumerate(constraints)
-        )
-        symbol_map.addSymbols(
-            (info[0], f"o{idx}") for idx, info in enumerate(objectives)
-        )
 
         if symbolic_solver_labels:
             labeler = NameLabeler()
@@ -746,10 +764,13 @@ class _NLWriter_impl(object):
                     f'{column_order[_id]} {linear[_id]!r}\n'
                 )
 
+        # Generate the return information
+        info = NLWriterInfo(
+            variables, constraints, objectives, sorted(amplfunc_libraries),
+            row_labels, col_labels)
         timer.toc("Wrote NL stream", level=logging.DEBUG)
         timer.toc("Generated NL representation", delta=False)
-        return symbol_map, sorted(amplfunc_libraries)
-
+        return info
 
     def _categorize_vars(self, comp_list, linear_by_comp):
         """Categorize compiled expression vars into linear and nonlinear
