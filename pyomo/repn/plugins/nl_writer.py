@@ -637,10 +637,18 @@ class _NLWriter_impl(object):
         #
         for row_idx, info in enumerate(constraints):
             if info[1].nonlinear is None:
-                # Only output nonlinear trees for constraints with
-                # nonlinear components (and since we order the
-                # constraints, we can stop as soon as we hit the first
-                # linear constraint)
+                # Because we have moved the nonlinear constraints to the
+                # beginning, we can very quickly write all the linear
+                # constraints at the end (as their nonlinear expressions
+                # are the constant 0).
+                _expr = self.template.const % 0
+                ostream.write(
+                    _expr.join(f'C{i}{row_comments[i]}\n'
+                               for i in range(row_idx, len(constraints))))
+                # We know that there is at least one linear expression
+                # (row_idx), so we can unconditionally emit the last "0
+                # expression":
+                ostream.write(_expr)
                 break
             if single_use_subexpressions:
                 for _id in single_use_subexpressions.get(id(info[0]), ()):
