@@ -352,7 +352,9 @@ class _NLWriter_impl(object):
         con_vars_linear, con_vars_nonlinear, con_nnz_by_var \
             = self._categorize_vars(constraints, linear_by_comp)
 
-        timer.toc('Categorized model variables', level=logging.DEBUG)
+        con_nnz = sum(con_nnz_by_var.values())
+        timer.toc('Categorized model variables: %s nnz', con_nnz,
+                  level=logging.DEBUG)
 
         n_lcons = 0 # We do not yet support logical constraints
 
@@ -429,7 +431,7 @@ class _NLWriter_impl(object):
         assert len(variables) == n_vars
         timer.toc(
             'Set row / column ordering: %s variables [%s, %s, %s R/B/Z], '
-            '%s constraints [%s, %s L,NL]',
+            '%s constraints [%s, %s L/NL]',
             n_vars, len(continuous_vars), len(binary_vars), len(integer_vars),
             len(constraints), n_cons-n_nonlinear_cons, n_nonlinear_cons,
             level=logging.DEBUG)
