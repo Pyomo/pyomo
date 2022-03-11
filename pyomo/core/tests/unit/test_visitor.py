@@ -1480,18 +1480,7 @@ def fill_stack(n, fcn, *args):
     else:
         return fcn(*args)
 
-class ExpressionDepth(StreamBasedExpressionVisitor):
-    def exitNode(self, node, data):
-        return max(data) + 1 if data else 1
 
-# These tests appear to fail inexplicably on GHA/Windows under pytest:
-# the RecursionError that is supposed to be raised is not raised, and
-# instead the system actually dies on stack overflow error
-@unittest.skipIf(os.environ.get('GITHUB_ACTIONS', '') and
-                 sys.platform.startswith('win') and
-                 sys.version_info[:2] < (3, 10),
-                 'Tests fail inexplicably on GHA/Windows/Python%s.%s'
-                 % sys.version_info[:2])
 class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
     def setUp(self):
         self.m = m = ConcreteModel()
@@ -1567,8 +1556,23 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
         TESTING_OVERHEAD = 14
         warn_msg = "Unexpected RecursionError walking an expression tree.\n"
 
+        if platform.python_implementation().lower().startswith('pypy'):
+            # We have not yet determined how to trigger the
+            # RecursionError on PyPy
+            cases = [(0, "")]
+        elif (os.environ.get('GITHUB_ACTIONS', '')
+              and sys.platform.startswith('win')):
+            # The test for handling RecursionError appears to fail
+            # inexplicably on GHA/Windows under pytest: the
+            # RecursionError that is supposed to be raised is not
+            # raised, and instead the system actually dies on stack
+            # overflow error
+            cases = [(0, "")]
+        else:
+            cases = [(0, ""), (3, warn_msg)]
+
         head_room = sys.getrecursionlimit() - get_stack_depth()
-        for n, msg in [(0, ""), (4, warn_msg)]:
+        for n, msg in cases
             with LoggingIntercept() as LOG:
                 self.assertEqual(
                     2*RECURSION_LIMIT + 10,
