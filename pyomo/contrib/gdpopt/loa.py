@@ -8,9 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 from pyomo.contrib.gdpopt.initialize_subproblems import (
-    initialize_master_problem, get_subproblem, add_util_block, 
-    add_disjunct_list, add_variable_list, add_constraint_list, 
-    save_initial_values)
+    initialize_master_problem, get_subproblem, add_util_block,
+    add_disjunct_list, add_variable_list, add_discrete_variable_list,
+    add_boolean_variable_lists, add_constraint_list, save_initial_values)
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.nlp_solve import solve_subproblem
 from pyomo.contrib.gdpopt.util import (
@@ -26,6 +26,7 @@ from pyomo.contrib.gdpopt.cut_generation import (
 from pyomo.core import (
     Constraint, Block, Objective, minimize, Expression, Var, value)
 from pyomo.opt.base import SolverFactory
+from pyomo.opt import  TerminationCondition
 from pyomo.gdp import Disjunct
 import logging
 
@@ -63,10 +64,14 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
         util_block = self.original_util_block = add_util_block(original_model)
         # Needed for finding indicator_vars mainly
         add_disjunct_list(util_block)
+        add_boolean_variable_lists(util_block)
         # To transfer solutions between MILP and NLP
         add_variable_list(util_block)
         # We'll need these to get dual info after solving subproblems
         add_constraint_list(util_block)
+        if config.force_subproblem_nlp:
+            # We'll need to fix these too
+            add_discrete_variable_list(util_block)
         move_nonlinear_objective_to_constraints(util_block, logger)
 
         # create model to hold the subproblems: We create this first because
@@ -117,7 +122,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
                 with fix_master_solution_in_subproblem(
                         master_util_block, 
                         subproblem_util_block,
-                        logger,
+                        config,
                         make_subproblem_continuous=config.force_subproblem_nlp):
                     nlp_feasible = solve_subproblem(subproblem_util_block,
                                                     config, self.timing)
@@ -153,7 +158,9 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
                 break
 
         self._get_final_pyomo_results_object()
-        self._transfer_incumbent_to_original_model()
+        if not self.pyomo_results.solver.termination_condition == \
+           TerminationCondition.infeasible:
+            self._transfer_incumbent_to_original_model()
         return self.pyomo_results
 
     def _setup_augmented_Lagrangian_objective(self, master_util_block):

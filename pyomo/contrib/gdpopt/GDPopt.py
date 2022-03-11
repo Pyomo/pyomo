@@ -43,6 +43,15 @@ from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 #from pyomo.contrib.gdptopt.gloa import GDP_GLOA_Solver
 # etc...
 
+from pytest import set_trace
+
+_handlers = {
+    'LOA' : '_logic_based_oa',
+    'GLOA' : '_global_logic_based_oa',
+    'RIC' : '_relaxation_with_integer_cuts',
+    'LBB' : '_logic_based_branch_and_bound'
+}
+
 @SolverFactory.register(
     'gdpopt',
     doc='The GDPopt decomposition-based '
@@ -83,20 +92,22 @@ class GDPoptSolver(_GDPoptAlgorithm):
     def __new__(cls, *args, **kwds):
         config = cls.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
-        strategy = config.strategy
-        if strategy is None:
+        algorithm = config.algorithm
+        if algorithm is None:
+            algorithm = config.strategy
+        if algorithm is None:
             # raise deprecation warning
             deprecation_warning("Instantiating the gdpopt solver without "
                                 "specifying an algorithm is deprecated. "
                                 "For example, you should write: "
                                 "SolverFactory('gdpopt', algorithm='LOA'), "
                                 "replacing 'LOA' with a valid solution "
-                                "strategy.", version='TODO')
+                                "algorithm.", version='TODO')
             return _HACK_GDPoptSolver(*args, **kwds)
-        solver = self.handlers.get(strategy)
+        solver = _handlers.get(algorithm)
         if solver is None:
             # TODO: make this more general...
-            msg = 'Please specify a valid solution strategy. Options are: \n'
+            msg = 'Please specify a valid solution algorithm. Options are: \n'
             msg += '    LOA:  Logic-based Outer Approximation\n'
             msg += '    GLOA: Global Logic-based Outer Approximation\n'
             msg += '    LBB:  Logic-based Branch and Bound\n'
@@ -108,14 +119,14 @@ class GDPoptSolver(_GDPoptAlgorithm):
     '_HACK_gdpopt',
     doc='The GDPopt decomposition-based '
     'Generalized Disjunctive Programming (GDP) solver, supporting specifying'
-    'solution strategy in the call to solve.')
+    'solution algorithm in the call to solve.')
 class _HACK_GDPoptSolver(_GDPoptAlgorithm):
     # def __init__(self, **kwds):
     #     config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
     #     config.set_value(kwds)
 
     def solve(self, model, **kwds):
-        """Solve the model, depending on the value for config.strategy. Note
+        """Solve the model, depending on the value for config.algorithm. Note
         that this is merely a deprecation path and eventually setting the 
         algorithm in the call to solve will not be supported: It will need to
         be set when the solver is instantiated.
@@ -127,19 +138,14 @@ class _HACK_GDPoptSolver(_GDPoptAlgorithm):
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
 
-        strategy = config.strategy
-        if strategy == 'LOA':
-            return SolverFactory('_logic_based_oa').solve(model, **kwds)
-        elif strategy == 'GLOA':
-            return SolverFactory('_global_logic_based_oa').solve(model, **kwds)
-        elif strategy == 'RIC':
-            return SolverFactory('_relaxation_with_integer_cuts').solve(model,
-                                                                        **kwds)
-        elif strategy == 'LBB':
-            return SolverFactory('_logic_based_branch_and_bound').solve(model,
-                                                                        **kwds)
+        algorithm = config.algorithm
+        if algorithm is None:
+            algorithm = config.strategy
+
+        if algorithm in _handlers.keys():
+            return SolverFactory(_handlers[algorithm]).solve(model, **kwds)
         else:
-            msg = 'Please specify a valid solution strategy. Options are: \n'
+            msg = 'Please specify a valid solution algorithm. Options are: \n'
             msg += '    LOA:  Logic-based Outer Approximation\n'
             msg += '    GLOA: Global Logic-based Outer Approximation\n'
             msg += '    LBB:  Logic-based Branch and Bound\n'

@@ -4,6 +4,7 @@ from textwrap import indent
 from pyomo.common.collections import Bunch
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, NonNegativeInt, In, PositiveInt)
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.opt import SolverResults
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.base import Objective, value, minimize, maximize
@@ -20,6 +21,11 @@ _supported_strategies = {
         'LBB': '_logic_based_branch_and_bound',
         'RIC': '_relaxation_with_integer_cuts',
     }
+
+def _strategy_deprecation(strategy):
+    deprecation_warning("The argument 'strategy' has been deprecated "
+                        "in favor of 'algorithm.'", version="TODO")
+    return In(_supported_strategies)(strategy)
 
 class _GDPoptAlgorithm(object):
     """Base class for common elements of GDPopt algorithms"""
@@ -39,8 +45,12 @@ class _GDPoptAlgorithm(object):
             "need to set subsolver time limits as well."
     ))
     CONFIG.declare("strategy", ConfigValue(
+        default=None, domain=_strategy_deprecation,
+        description="DEPRECATED: Please use 'algorithm' instead."
+    ))
+    CONFIG.declare("algorithm", ConfigValue(
         default=None, domain=In(_supported_strategies),
-        description="Decomposition strategy to use."
+        description="Algorithm to use."
     ))
     CONFIG.declare("tee", ConfigValue(
         default=False,
@@ -78,8 +88,8 @@ class _GDPoptAlgorithm(object):
         """
         self._log_solver_intro_message(config)
 
-        if self.CONFIG.strategy is not None and \
-           self.CONFIG.strategy != config.strategy:
+        if self.CONFIG.algorithm is not None and \
+           self.CONFIG.algorithm != config.algorithm:
             deprecation_warning("Changing algorithms using "
                                 "arguments passed to "
                                 "the 'solve' method is deprecated. Please "
@@ -159,7 +169,7 @@ class _GDPoptAlgorithm(object):
                                                               ub_improved))
 
     def update_incumbent(self, util_block):
-        self.incumbent = [value(v) for v in util_block.variable_list]
+        self.incumbent = [v.value for v in util_block.variable_list]
 
     def _update_bounds_after_master_problem_solve(self, mip_feasible, obj_expr,
                                                   logger):
@@ -189,6 +199,7 @@ class _GDPoptAlgorithm(object):
         else:
             self._update_bounds(dual=float('-inf'))
 
+    # TODO: What about unbounded??
     def bounds_converged(self, config):
         if self.LB + config.bound_tolerance >= self.UB:
             config.logger.info(
@@ -245,7 +256,7 @@ class _GDPoptAlgorithm(object):
         results = SolverResults()
 
         results.solver.name = 'GDPopt %s - %s' % (self.version(),
-                                                  config.strategy)
+                                                  config.algorithm)
     
         prob = results.problem
         prob.name = original_model.name
@@ -337,7 +348,7 @@ class _GDPoptAlgorithm(object):
     def _log_solver_intro_message(self, config):
         config.logger.info(
             "Starting GDPopt version %s using %s algorithm"
-            % (".".join(map(str, self.version())), config.strategy)
+            % (".".join(map(str, self.version())), config.algorithm)
         )
         mip_args_output = StringIO()
         nlp_args_output = StringIO()
@@ -390,7 +401,7 @@ class _GDPoptAlgorithm(object):
         development.
         Optimization and Engineering, 2021.
         """.strip()
-        if config.strategy == "LOA":
+        if config.algorithm == "LOA":
             to_cite_text += "\n"
             to_cite_text += """
             - LOA algorithm:
@@ -399,7 +410,7 @@ class _GDPoptAlgorithm(object):
             networks. Comp. and Chem. Eng. 1996, 20(8), 959–978.
             DOI: 10.1016/0098-1354(95)00219-7.
             """.strip()
-        elif config.strategy == "GLOA":
+        elif config.algorithm == "GLOA":
             to_cite_text += "\n"
             to_cite_text += """
             - GLOA algorithm:
@@ -409,7 +420,7 @@ class _GDPoptAlgorithm(object):
             Comp. and Chem. Eng. 2001, 25, 1675-1697.
             DOI: 10.1016/S0098-1354(01)00732-3.
             """.strip()
-        elif config.strategy == "LBB":
+        elif config.algorithm == "LBB":
             to_cite_text += "\n"
             to_cite_text += """
             - LBB algorithm:

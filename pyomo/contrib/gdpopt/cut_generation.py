@@ -28,13 +28,13 @@ JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
 
 def add_cuts_according_to_algorithm(subproblem_util_block, master_util_block,
                                     objective_sense, config):
-    if config.strategy == "LOA":
+    if config.algorithm == "LOA":
         return add_outer_approximation_cuts(subproblem_util_block,
                                             master_util_block, objective_sense,
                                             config)
-    elif config.strategy == "GLOA":
+    elif config.algorithm == "GLOA":
         return add_affine_cuts(subprob_result, solve_data, config)
-    elif config.strategy == 'RIC':
+    elif config.algorithm == 'RIC':
         pass
     else:
         raise ValueError('Unrecognized strategy: ' + config.strategy)
@@ -49,7 +49,7 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
 
     for master_var, subprob_var in zip(subproblem_util_block.variable_list,
                                        master_util_block.variable_list):
-        val = value(subprob_var)
+        val = subprob_var.value
         if val is not None and not master_var.fixed:
             master_var.set_value(val, skip_validation=True)
 
@@ -113,24 +113,23 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
         # Create a block on which to put outer approximation cuts.  TODO: This
         # isn't particularly safe because we don't know that we can have this
         # name...
-        oa_utils = parent_block.component('GDPopt_OA')
+        oa_utils = parent_block.component('GDPopt_OA_cuts')
         if oa_utils is None:
-            oa_utils = parent_block.GDPopt_OA = Block(
+            oa_utils = parent_block.GDPopt_OA_cuts = Block(
                 doc="Block holding outer approximation cuts "
                 "and associated data.")
-            oa_utils.GDPopt_OA_cuts = Constraint(NonNegativeIntegers)
-        master_oa_utils = master_util_block.component('GDPopt_OA')
+            oa_utils.cuts = Constraint(NonNegativeIntegers)
+        master_oa_utils = master_util_block.component('GDPopt_OA_slacks')
         if master_oa_utils is None:
-            master_oa_utils = master_util_block.GDPopt_OA = Block(
+            master_oa_utils = master_util_block.GDPopt_OA_slacks = Block(
                 doc="Block holding outer approximation slacks for the "
                 "whole model (so that the writers can find them).")
-            master_oa_utils.GDPopt_OA_slacks = VarList(
-                bounds=(0, config.max_slack),
-                domain=NonNegativeReals,
-                initialize=0)
+            master_oa_utils.slacks = VarList( bounds=(0, config.max_slack),
+                                              domain=NonNegativeReals,
+                                              initialize=0)
 
-        oa_cuts = oa_utils.GDPopt_OA_cuts
-        slack_var = master_oa_utils.GDPopt_OA_slacks.add()
+        oa_cuts = oa_utils.cuts
+        slack_var = master_oa_utils.slacks.add()
         rhs = value(constr.lower) if constr.has_lb() else value(
             constr.upper)
         try:
@@ -235,13 +234,10 @@ def add_no_good_cut(target_model_util_block, config):
     """Cut the current integer solution from the target model."""
     var_value_is_one = ComponentSet()
     var_value_is_zero = ComponentSet()
-    indicator_vars = ComponentSet( disj.binary_indicator_var for disj in
-                                   target_model_util_block.disjunct_list)
-    for var in target_model_util_block.variable_list:
-        if not var.is_binary():
-            continue
+    for var in target_model_util_block.transformed_boolean_variable_list:
         val = value(var)
         if var.fixed:
+            # ESJ TODO: I don't understand this
             # Note: FBBT may cause some disjuncts to be fathomed, which can
             # cause a fixed variable to be different than the subproblem value.
             # In this case, we simply construct the integer cut as usual with
@@ -249,11 +245,13 @@ def add_no_good_cut(target_model_util_block, config):
             if val is None:
                 val = var.value
 
-        if not config.force_subproblem_nlp:
-            # By default (config.force_subproblem_nlp = False), we only want
-            # the integer cuts to be over disjunct indicator vars.
-            if var not in indicator_vars:
-                continue
+        # TODO: If this is true, we actually need to iterate through more stuff.
+        # if not config.force_subproblem_nlp:
+        #     # By default (config.force_subproblem_nlp = False), we only want
+        #     # the integer cuts to be over disjunct indicator vars.
+        #     # ESJ: Is the above true? Or should it be over all BooleanVars??
+        #     if var not in indicator_vars:
+        #         continue
 
         if fabs(val - 1) <= config.integer_tolerance:
             var_value_is_one.add(var)
@@ -273,7 +271,7 @@ def add_no_good_cut(target_model_util_block, config):
                sum(v for v in var_value_is_zero)) >= 1
 
     # Exclude the current binary combination
-    config.logger.info('Adding integer cut')
+    config.logger.debug('Adding no-good cut: %s' % int_cut)
     target_model_util_block.no_good_cuts.add(expr=int_cut)
 
     return True

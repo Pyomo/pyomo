@@ -15,15 +15,15 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 from pytest import set_trace
 
-def get_infeasible_master_result(util_block):
-    mip_result = MasterProblemResult()
-    mip_result.feasible = False
-    mip_result.var_values = list(v.value for v in util_block.variable_list)
-    mip_result.pyomo_results = SolverResults()
-    mip_result.pyomo_results.solver.termination_condition = tc.error
-    mip_result.disjunct_values = list(disj.binary_indicator_var.value
-                                      for disj in util_block.disjunct_list)
-    return mip_result
+# def get_infeasible_master_result(util_block):
+#     mip_result = MasterProblemResult()
+#     mip_result.feasible = False
+#     mip_result.var_values = list(v.value for v in util_block.variable_list)
+#     mip_result.pyomo_results = SolverResults()
+#     mip_result.pyomo_results.solver.termination_condition = tc.error
+#     mip_result.disjunct_values = list(disj.binary_indicator_var.value
+#                                       for disj in util_block.disjunct_list)
+#     return mip_result
 
 
 def solve_linear_GDP(util_block, config, timing):
@@ -40,7 +40,7 @@ def solve_linear_GDP(util_block, config, timing):
             # relaxation
         except InfeasibleConstraintException:
             config.logger.debug("MIP preprocessing detected infeasibility.")
-            return get_infeasible_master_result(util_block)
+            return False
 
     # Deactivate extraneous IMPORT/EXPORT suffixes 
     # ESJ TODO: Do we need to do this? Is this our problem? And, if you give 
@@ -78,7 +78,7 @@ def solve_linear_GDP(util_block, config, timing):
         if 'GAMS encountered an error during solve.' in str(e):
             config.logger.warning(
                 "GAMS encountered an error in solve. Treating as infeasible.")
-            return get_infeasible_master_result(util_block)
+            return False
         else:
             raise
     terminate_cond = results.solver.termination_condition

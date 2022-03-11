@@ -1025,3 +1025,6 @@ class BigM_Transformation(Transformation):
         suffix_list = self._get_bigm_suffix_list(parent_disjunct)
         self._transform_constraint(constraint, parent_disjunct, bigm,
                                    bigm_arglist, suffix_list)
+
+        # TODO: Hehehe, and this is yet another problem...
+        NAME_BUFFER.clear()

@@ -55,7 +55,7 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
         if mip_result.feasible:
             with fix_master_solution_in_subproblem(master_util_block,
                                                    subprob_util_block,
-                                                   config.logger,
+                                                   config,
                                                    config.force_subproblem_nlp):
                 nlp_result = solve_subproblem(subproblem, subprob_util_block,
                                               config, timing)
@@ -235,17 +235,17 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                     v.setub(u)
                 
             if not mip_feasible:
-                # problem is infeasible. break
-                return False
                 config.logger.info('Set covering problem is infeasible. '
                                    'Problem may have no more feasible '
                                    'disjunctive realizations.')
-                if solve_data.mip_iteration <= 1:
+                if solver.mip_iteration <= 1:
                     config.logger.warning(
                         'Set covering problem was infeasible. '
                         'Check your linear and logical constraints '
                         'for contradictions.')
                 solver._update_dual_bound_to_infeasible(config.logger)
+                # problem is infeasible. break
+                return False
             else:
                 config.logger.info('Solved set covering MIP')
 
@@ -253,7 +253,7 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
             with fix_master_solution_in_subproblem(
                     master_util_block,
                     subprob_util_block,
-                    config.logger,
+                    config,
                     make_subproblem_continuous=config.force_subproblem_nlp):
                 m = subprob_util_block.model()
                 subprob_feasible = solve_subproblem(subprob_util_block, config,

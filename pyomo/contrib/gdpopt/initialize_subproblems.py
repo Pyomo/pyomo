@@ -10,10 +10,10 @@
 
 from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.gdp.disjunct import Disjunct, Disjunction
-from pyomo.core import SortComponents, Constraint, Objective
+from pyomo.core import SortComponents, Constraint, Objective, LogicalConstraint
 from pyomo.core.base import TransformationFactory, Suffix, ConstraintList
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.collections import ComponentMap
+from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
 
@@ -39,6 +39,8 @@ def initialize_master_problem(util_block, subprob_util_block, config, solver):
 
     # Transform to a MILP
     TransformationFactory(config.master_problem_transformation).apply_to(master)
+    #add_boolean_variable_list(master_util_block)
+    add_transformed_boolean_variable_list(master_util_block)
 
     # Call the specified initialization strategy
     init_strategy = valid_init_strategies.get(config.init_strategy, None)
@@ -80,6 +82,36 @@ def add_variable_list(util_block):
     util_block.variable_list = list(get_vars_from_components(
         model, ctype=(Constraint, Objective), descend_into=(Block, Disjunct),
         active=True, sort=SortComponents.deterministic))
+
+def add_discrete_variable_list(util_block):
+    lst = util_block.discrete_variable_list = []
+    for v in util_block.variable_list:
+        if v.is_integer():
+            lst.append(v)
+
+# Must be collected after list of Disjuncts
+def add_boolean_variable_lists(util_block):
+    util_block.boolean_variable_list = []
+    util_block.non_indicator_boolean_variable_list = []
+    for disjunct in util_block.disjunct_list:
+        util_block.boolean_variable_list.append(disjunct.indicator_var)
+    ind_var_set = ComponentSet(util_block.boolean_variable_list)
+    # This will not necessarily include the indicator_vars if it is called
+    # before the GDP is transformed to a MIP.
+    for v in get_vars_from_components(util_block.model(),
+                                      ctype=LogicalConstraint,
+                                      descend_into=(Block, Disjunct),
+                                      active=True,
+                                      sort=SortComponents.deterministic):
+        if v not in ind_var_set:
+            util_block.boolean_variable_list.append(v)
+            util_block.non_indicator_boolean_variable_list.append(v)
+
+# For the master problem, we want the corresponding binaries for all of the
+# BooleanVars. This must be called after logical_to_linear has been called.
+def add_transformed_boolean_variable_list(util_block):
+    util_block.transformed_boolean_variable_list = [
+        v.get_associated_binary() for v in util_block.boolean_variable_list]
 
 def get_subproblem(original_model):
     """Clone the original, and reclassify all the Disjuncts to Blocks.

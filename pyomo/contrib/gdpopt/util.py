@@ -334,7 +334,7 @@ def fix_discrete_var(var, val, config):
 
 @contextmanager
 def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
-                                      logger, make_subproblem_continuous=True):
+                                      config, make_subproblem_continuous=True):
     # fix subproblem Blocks according to the master solution
     fixed = []
     for disjunct, block in zip(master_util_block.disjunct_list,
@@ -345,8 +345,32 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
         else:
             block.binary_indicator_var.fix(1)
             fixed.append(block.name)
-    logger.debug("Fixed the following Disjuncts to 'True': %s" 
-                 % ", ".join(fixed))
+    config.logger.debug("Fixed the following Disjuncts to 'True': %s" 
+                        % ", ".join(fixed))
+
+    fixed_bools = []
+    for master_bool, subprob_bool in zip(
+            master_util_block.non_indicator_boolean_variable_list, 
+            subproblem_util_block.non_indicator_boolean_variable_list):
+        master_binary = master_bool.get_associated_binary()
+        subprob_binary = subprob_bool.get_associated_binary()
+        val = master_binary.value
+        if val is None:
+            # If it's None, it's not yet constrained in master problem: make an
+            # arbitrary decision for now, and store it in the master problem so
+            # the no-good cut will be right.
+            master_binary.set_value(1)
+            subprob_binary.fix(1)
+            bool_val = True
+        elif val > 0.5:
+            subprob_binary.fix(1)
+            bool_val = True
+        else:
+            subprob_binary.fix(0)
+            bool_val = False
+        fixed_bools.append("%s = %s" % (subprob_bool.name, bool_val))
+    config.logger.debug("Fixed the following Boolean variables: %s"
+                        % ", ".join(fixed_bools))
 
     # Fix subproblem discrete variables according to the master solution
     if make_subproblem_continuous:
@@ -371,12 +395,14 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
         block.activate()
         block.binary_indicator_var.unfix()
 
+    # unfix all the formerly-Boolean variables
+    for bool_var in subproblem_util_block.non_indicator_boolean_variable_list:
+        bool_var.get_associated_binary().unfix()
+
     # unfix all discrete variables and restore them to their original values
     if make_subproblem_continuous:
         for var in subproblem_util_block.discrete_variable_list:
             subprob_var.fixed = False
-            subprob_var.set_value(
-                subproblem_util_block.initial_variable_values[var])
 
     # [ESJ 2/25/22] I think we don't need to reset the values of the continuous
     # variables because we will initialize them based on the master solution
