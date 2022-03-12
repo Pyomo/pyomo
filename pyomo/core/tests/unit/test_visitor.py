@@ -12,6 +12,7 @@
 #
 
 import os
+import platform
 import sys
 
 #import pyomo.core.tests.unit.test_visitor
