@@ -9,7 +9,7 @@ Pyomo.DOE
 using science-based models.
 
 It was developed by **Jialu Wang** and **Alexander W. Dowling** of University of Notre Dame. The developers gratefully
-acknowledge support from [TODO: acknowledgement].
+acknowledge support from [TODO: acknowledgement AND ].
 
 Methodology Overview
 ---------------------
@@ -155,11 +155,13 @@ prior_FIM : ``list``
 Pyomo.DOE Solver Interface
 ---------------------------
 
+
+
 .. autoclass:: fim_doe.DesignOfExperiments
-    :special-members:  __init__, optimize_doe, compute_FIM, run_grid_search
+    :members:  __init__, optimize_doe, compute_FIM, run_grid_search
 
 .. autoclass:: fim_doe.Measurements
-    :special-members:  __init__
+    :members:
 
 .. autoclass:: fim_doe.Scenario_generator
     :special-members: __init__

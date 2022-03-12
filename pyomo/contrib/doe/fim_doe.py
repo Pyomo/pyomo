@@ -292,7 +292,7 @@ class DesignOfExperiments:
 
         Parameters
         ----------
-        model: ConcreteModel
+        model
             A ``ConcreteModel`` object representing the deterministic
             model, cast as a minimization problem.
         param_init:  dictionary
@@ -2733,11 +2733,10 @@ def simulate_discretize_model(m,NFE,collo=True,initialize=True):
     ''' Simulation, discretize, and initialize the Pyomo model.
     This is only used with Pyomo.DAE models.
     
-    Parameters:
-    -----------
-    m: Pyomo model
-    NFE: number of finite elements to consider (integer)
-    initialize: if True, initialize the discretized model with the
+    Args:
+        m: Pyomo model
+        NFE: number of finite elements to consider (integer)
+        initialize: if True, initialize the discretized model with the
          integrator solution (boolean)
     
     Returns:
