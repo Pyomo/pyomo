@@ -155,8 +155,8 @@ def create_model(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300, 0.
         m.E2 = Var(m.scena, initialize = m.scena_all['E2'])
     
     # Concentration variables under perturbation
-    m.y_set = Set(initialize=['CA','CB','CC'])
-    m.C = Var(m.scena, m.y_set, m.t, initialize=C_init, within=NonNegativeReals)
+    m.C_set = Set(initialize=['CA','CB','CC'])
+    m.C = Var(m.scena, m.C_set, m.t, initialize=C_init, within=NonNegativeReals)
 
     # time derivative of C
     m.dCdt = DerivativeVar(m.C, wrt=m.t)  
@@ -244,7 +244,7 @@ def create_model(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300, 0.
     # calculating C, Jacobian, FIM
     m.k1_pert_rule = Constraint(m.scena, m.t, rule=cal_kp1)
     m.k2_pert_rule = Constraint(m.scena, m.t, rule=cal_kp2)
-    m.dCdt_rule = Constraint(m.scena,m.y_set, m.t, rule=dCdt_control)
+    m.dCdt_rule = Constraint(m.scena,m.C_set, m.t, rule=dCdt_control)
 
     m.alge_rule = Constraint(m.scena, m.t, rule=alge)
 
