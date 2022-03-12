@@ -54,7 +54,6 @@ DerivedBlock._Block_reserved_words = set(dir(DerivedBlock()))
 
 class TestGenerators(unittest.TestCase):
 
-    @ unittest.nottest
     def generate_model(self):
         #
         # ** DO NOT modify the model below without updating the
@@ -178,8 +177,7 @@ class TestGenerators(unittest.TestCase):
 
         return model
 
-    @unittest.nottest
-    def generator_test(self, ctype):
+    def generator_runner(self, ctype):
 
         model = self.generate_model()
 
@@ -306,32 +304,32 @@ class TestGenerators(unittest.TestCase):
                                  sorted([id(comp) for comp in block.component_data_lists[ctype]]))
 
     def test_Objective(self):
-        self.generator_test(Objective)
+        self.generator_runner(Objective)
 
     def test_Expression(self):
-        self.generator_test(Expression)
+        self.generator_runner(Expression)
 
     def test_Suffix(self):
-        self.generator_test(Suffix)
+        self.generator_runner(Suffix)
 
     def test_Constraint(self):
-        self.generator_test(Constraint)
+        self.generator_runner(Constraint)
 
     def test_Param(self):
-        self.generator_test(Param)
+        self.generator_runner(Param)
 
     def test_Var(self):
-        self.generator_test(Var)
+        self.generator_runner(Var)
 
     def test_Set(self):
-        self.generator_test(Set)
+        self.generator_runner(Set)
 
     def test_SOSConstraint(self):
-        self.generator_test(SOSConstraint)
+        self.generator_runner(SOSConstraint)
 
     def test_Block(self):
 
-        self.generator_test(Block)
+        self.generator_runner(Block)
 
         model = self.generate_model()
 

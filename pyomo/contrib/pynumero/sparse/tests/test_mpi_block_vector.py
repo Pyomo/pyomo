@@ -36,7 +36,7 @@ if not SKIPTESTS:
     from pyomo.contrib.pynumero.sparse.mpi_block_vector import MPIBlockVector
 
 
-@unittest.category("mpi")
+@unittest.pytest.mark.mpi
 class TestMPIBlockVector(unittest.TestCase):
 
     # Because the setUpClass is called before decorators around the

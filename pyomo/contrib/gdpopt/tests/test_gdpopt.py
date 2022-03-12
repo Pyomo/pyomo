@@ -401,7 +401,7 @@ class TestGDPopt(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 13) <= 1E-2)
 
-    @unittest.category('expensive')
+    @unittest.pytest.mark.expensive
     def test_LOA_constrained_layout_default_init(self):
         """Test LOA with constrained layout."""
         exfile = import_file(
@@ -695,7 +695,7 @@ class TestGDPoptRIC(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 13) <= 1E-2)
 
-    @unittest.category('expensive')
+    @unittest.pytest.mark.expensive
     def test_RIC_constrained_layout_default_init(self):
         """Test RIC with constrained layout."""
         exfile = import_file(
@@ -976,7 +976,7 @@ class TestGLOA(unittest.TestCase):
 
     @unittest.skipUnless(license_available, 
                          "Global NLP solver license not available.")
-    @unittest.category('expensive')
+    @unittest.pytest.mark.expensive
     def test_GLOA_constrained_layout_default_init(self):
         """Test LOA with constrained layout."""
         exfile = import_file(
@@ -1007,6 +1007,8 @@ class TestGLOA(unittest.TestCase):
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)
 
+    @unittest.skipUnless(license_available,
+                         "Global NLP solver license not available.")
     def test_GLOA_nonconvex_HENS(self):
         exfile = import_file(join(exdir, 'small_lit', 'nonconvex_HEN.py'))
         model = exfile.build_gdp_model()
@@ -1019,6 +1021,8 @@ class TestGLOA(unittest.TestCase):
         objective_value = value(model.objective.expr)
         self.assertAlmostEqual(objective_value * 1E-5, 1.14385, 2)
 
+    @unittest.skipUnless(license_available,
+                         "Global NLP solver license not available.")
     def test_GLOA_disjunctive_bounds(self):
         exfile = import_file(join(exdir, 'small_lit', 'nonconvex_HEN.py'))
         model = exfile.build_gdp_model()

@@ -61,8 +61,7 @@ class TestCase(unittest.TestCase):
     def failIfPyomoResultsDiffer(self, cmd, baseline, cwd=None):
         _failIfPyomoResultsDiffer(self, cmd=cmd, baseline=baseline, cwd=cwd)
 
-    @unittest.nottest
-    def add_pyomo_results_test(cls, name=None, cmd=None, fn=None, baseline=None, cwd=None):
+    def add_pyomo_results(cls, name=None, cmd=None, fn=None, baseline=None, cwd=None):
         if cmd is None and fn is None:
             print("ERROR: must specify either the 'cmd' or 'fn' option to define how the output file is generated")
             return
@@ -88,4 +87,4 @@ class TestCase(unittest.TestCase):
         func.__doc__ = "pyomo result test: "+func.__name__+ \
                        " ("+str(cls.__module__)+'.'+str(cls.__name__)+")"
         setattr(cls, "test_"+tmp, func)
-    add_pyomo_results_test=classmethod(add_pyomo_results_test)
+    add_pyomo_results=classmethod(add_pyomo_results)

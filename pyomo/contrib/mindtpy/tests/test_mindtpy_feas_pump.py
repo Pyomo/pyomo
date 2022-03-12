@@ -48,11 +48,10 @@ class TestMindtPy(unittest.TestCase):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                # print('\n Solving 8PP problem using feasibility pump')
                 results = opt.solve(model, strategy='FP',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
-                                    bound_tolerance=1E-5)
+                                    absolute_bound_tolerance=1E-5)
                 log_infeasible_constraints(model)
                 self.assertTrue(is_feasible(model, self.get_config(opt)))
 
@@ -64,7 +63,7 @@ class TestMindtPy(unittest.TestCase):
                                     init_strategy='FP',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
-                                    # bound_tolerance=1E-5
+                                    # absolute_bound_tolerance=1E-5
                                     )
                 self.assertIn(results.solver.termination_condition,
                               [TerminationCondition.optimal, TerminationCondition.feasible])

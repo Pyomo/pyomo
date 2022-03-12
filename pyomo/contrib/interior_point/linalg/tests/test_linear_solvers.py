@@ -8,7 +8,7 @@ if not np_available or not scipy_available:
 import numpy as np
 from scipy.sparse import coo_matrix, tril
 from pyomo.contrib import interior_point as ip
-from pyomo.contrib.interior_point.linalg.results import LinearSolverStatus
+from pyomo.contrib.pynumero.linalg.base import LinearSolverStatus
 if scipy_available:
     from pyomo.contrib.interior_point.linalg.scipy_interface import ScipyInterface
 if mumps_available:
@@ -77,11 +77,11 @@ class TestLinearSolvers(unittest.TestCase):
         self.assertEqual(stat.status, LinearSolverStatus.successful)
         x_true = np.array([1, 2, 3], dtype=np.double)
         rhs = mat * x_true
-        x = solver.do_back_solve(rhs)
+        x, res = solver.do_back_solve(rhs)
         self.assertTrue(np.allclose(x, x_true))
         x_true = np.array([4, 2, 3], dtype=np.double)
         rhs = mat * x_true
-        x = solver.do_back_solve(rhs)
+        x, res = solver.do_back_solve(rhs)
         self.assertTrue(np.allclose(x, x_true))
 
     @unittest.skipIf(not scipy_available, 'scipy is needed for interior point scipy tests')
@@ -109,7 +109,7 @@ class TestWrongNonzeroOrdering(unittest.TestCase):
         stat = solver.do_numeric_factorization(wrong_order_mat)
         x_true = np.array([1, 2, 3], dtype=np.double)
         rhs = mat * x_true
-        x = solver.do_back_solve(rhs)
+        x, res = solver.do_back_solve(rhs)
         self.assertTrue(np.allclose(x, x_true))
 
     @unittest.skipIf(not scipy_available, 'scipy is needed for interior point scipy tests')

@@ -21,24 +21,13 @@ from pyomo.common.dependencies import (
 )
 
 import pyomo.common.tests.dep_mod as dep_mod
-from pyomo.common.tests.dep_mod import (
-    bogus_nonexisting_module as bogus_nem,
-    bogus_nonexisting_module_available as has_bogus_nem,
-)
 
-bogus, bogus_available \
-    = attempt_import('nonexisting.module.bogus', defer_check=True)
+from . import deps
 
 # global objects for the submodule tests
 def _finalize_pyo(module, available):
     if available:
         import pyomo.core
-
-pyo, pyo_available = attempt_import(
-    'pyomo', alt_names=['pyo'],
-    deferred_submodules={'version': None,
-                         'common.tests.dep_mod': ['dm']})
-dm = pyo.common.tests.dep_mod
 
 class TestDependencies(unittest.TestCase):
     def test_import_error(self):
@@ -67,27 +56,27 @@ class TestDependencies(unittest.TestCase):
         self.assertTrue(module_obj is ply)
 
     def test_local_deferred_import(self):
-        self.assertIs(type(bogus_available), DeferredImportIndicator)
-        self.assertIs(type(bogus), DeferredImportModule)
-        if bogus_available:
+        self.assertIs(type(deps.bogus_available), DeferredImportIndicator)
+        self.assertIs(type(deps.bogus), DeferredImportModule)
+        if deps.bogus_available:
             self.fail("Casting bogus_available to bool returned True")
-        self.assertIs(bogus_available, False)
+        self.assertIs(deps.bogus_available, False)
         # Note: this also tests the implicit alt_names for dotted imports
-        self.assertIs(type(bogus), ModuleUnavailable)
+        self.assertIs(type(deps.bogus), ModuleUnavailable)
         with self.assertRaisesRegex(
                 DeferredImportError, "The nonexisting.module.bogus module "
                 r"\(an optional Pyomo dependency\) failed to import"):
-            bogus.hello
+            deps.bogus.hello
 
     def test_imported_deferred_import(self):
-        self.assertIs(type(has_bogus_nem), DeferredImportIndicator)
-        self.assertIs(type(bogus_nem), DeferredImportModule)
+        self.assertIs(type(deps.has_bogus_nem), DeferredImportIndicator)
+        self.assertIs(type(deps.bogus_nem), DeferredImportModule)
         with self.assertRaisesRegex(
                 DeferredImportError, "The bogus_nonexisting_module module "
                 r"\(an optional Pyomo dependency\) failed to import"):
-            bogus_nem.hello
-        self.assertIs(has_bogus_nem, False)
-        self.assertIs(type(bogus_nem), ModuleUnavailable)
+            deps.test_access_bogus_hello()
+        self.assertIs(deps.has_bogus_nem, False)
+        self.assertIs(type(deps.bogus_nem), ModuleUnavailable)
         self.assertIs(dep_mod.bogus_nonexisting_module_available, False)
         self.assertIs(type(dep_mod.bogus_nonexisting_module), ModuleUnavailable)
 
@@ -337,25 +326,25 @@ class TestDependencies(unittest.TestCase):
         import pyomo
         pyo_ver = pyomo.version.version
 
-        self.assertIsInstance(pyo, DeferredImportModule)
-        self.assertIsNone(pyo._submodule_name)
-        self.assertEqual(pyo_available._deferred_submodules,
+        self.assertIsInstance(deps.pyo, DeferredImportModule)
+        self.assertIsNone(deps.pyo._submodule_name)
+        self.assertEqual(deps.pyo_available._deferred_submodules,
                          ['.version',
                           '.common',
                           '.common.tests',
                           '.common.tests.dep_mod',])
         # This doesn't cause test_mod to be resolved
-        version = pyo.version
-        self.assertIsInstance(pyo, DeferredImportModule)
-        self.assertIsNone(pyo._submodule_name)
-        self.assertIsInstance(dm, DeferredImportModule)
-        self.assertEqual(dm._submodule_name, '.common.tests.dep_mod')
+        version = deps.pyo.version
+        self.assertIsInstance(deps.pyo, DeferredImportModule)
+        self.assertIsNone(deps.pyo._submodule_name)
+        self.assertIsInstance(deps.dm, DeferredImportModule)
+        self.assertEqual(deps.dm._submodule_name, '.common.tests.dep_mod')
         self.assertIsInstance(version, DeferredImportModule)
         self.assertEqual(version._submodule_name, '.version')
         # This causes the global objects to be resolved
         self.assertEqual(version.version, pyo_ver)
-        self.assertTrue(inspect.ismodule(pyo))
-        self.assertTrue(inspect.ismodule(dm))
+        self.assertTrue(inspect.ismodule(deps.pyo))
+        self.assertTrue(inspect.ismodule(deps.dm))
 
         with self.assertRaisesRegex(
                 ValueError,

@@ -19,6 +19,7 @@ from pyomo.core.expr.visitor import identify_variables, identify_mutable_paramet
 from pyomo.core.expr.sympy_tools import sympyify_expression, sympy2pyomo_expression
 from pyomo.common.dependencies import scipy as sp
 from pyomo.core.expr.numvalue import native_types
+from pyomo.util.vars_from_expressions import get_vars_from_components
 import itertools as it
 import timeit
 from contextlib import contextmanager
@@ -332,15 +333,8 @@ def get_vars_from_component(block, ctype):
 
     """
 
-    seen = set()
-    for compdata in block.component_data_objects(
-            ctype,
-            descend_into=True,
-            active=True):
-        for var in EXPR.identify_variables(compdata.expr):
-            if id(var) not in seen:
-                seen.add(id(var))
-                yield var
+    return get_vars_from_components(block, ctype, active=True,
+                                    descend_into=True)
 
 
 def replace_uncertain_bounds_with_constraints(model, uncertain_params):
@@ -440,6 +434,11 @@ def validate_kwarg_inputs(model, config):
     if not config.local_solver or not config.global_solver:
         raise ValueError("User must designate both a local and global optimization solver via the local_solver"
                          " and global_solver options.")
+
+    if config.bypass_local_separation and config.bypass_global_separation:
+        raise ValueError("User cannot simultaneously enable options "
+                         "'bypass_local_separation' and "
+                         "'bypass_global_separation'.")
 
     # === Degrees of freedom provided check
     if len(config.first_stage_variables) + len(config.second_stage_variables) == 0:
@@ -990,6 +989,13 @@ def output_logger(config, **kwargs):
                     "Please provide feedback and/or report any issues by opening a Pyomo ticket.\n"
                     "===========================================================================================\n")
     # === ALL LOGGER RETURN MESSAGES
+    if "bypass_global_separation" in kwargs:
+        if kwargs["bypass_global_separation"]:
+            config.progress_logger.info(
+                    "NOTE: Option to bypass global separation was chosen. "
+                    "Robust feasibility and optimality of the reported "
+                    "solution are not guaranteed."
+                    )
     if "robust_optimal" in kwargs:
         if kwargs["robust_optimal"]:
             config.progress_logger.info('Robust optimal solution identified. Exiting PyROS.')

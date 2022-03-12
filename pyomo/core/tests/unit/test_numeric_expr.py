@@ -101,9 +101,8 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         # Create the type of expression term that we are testing
         return NumericConstant(val)
 
-    @unittest.nottest
-    def value_test(self, exp, val):
-        """ Test the value of the expression. """
+    def value_check(self, exp, val):
+        """ Check the value of the expression. """
         #
         # Confirm whether 'exp' is an expression
         #
@@ -113,8 +112,7 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         #
         self.assertEqual(exp, val)
 
-    @unittest.nottest
-    def relation_test(self, exp, val):
+    def relation_check(self, exp, val):
         self.assertEqual(type(exp), bool)
         self.assertEqual(exp, val)
 
@@ -124,15 +122,15 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         #
         a=self.create(1.3, Reals)
         b=self.create(2.0, Reals)
-        self.relation_test(a<b, True)
-        self.relation_test(a<a, False) 
-        self.relation_test(b<a, False)
-        self.relation_test(a<2.0, True)
-        self.relation_test(a<1.3, False)
-        self.relation_test(b<1.3, False)
-        self.relation_test(1.3<b, True)
-        self.relation_test(1.3<a, False)
-        self.relation_test(2.0<a, False)
+        self.relation_check(a<b, True)
+        self.relation_check(a<a, False) 
+        self.relation_check(b<a, False)
+        self.relation_check(a<2.0, True)
+        self.relation_check(a<1.3, False)
+        self.relation_check(b<1.3, False)
+        self.relation_check(1.3<b, True)
+        self.relation_check(1.3<a, False)
+        self.relation_check(2.0<a, False)
 
     def test_gt(self):
         #
@@ -140,15 +138,15 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         #
         a=self.create(1.3, Reals)
         b=self.create(2.0, Reals)
-        self.relation_test(a>b, False)
-        self.relation_test(a>a, False)
-        self.relation_test(b>a, True)
-        self.relation_test(a>2.0, False)
-        self.relation_test(a>1.3, False)
-        self.relation_test(b>1.3, True)
-        self.relation_test(1.3>b, False)
-        self.relation_test(1.3>a, False)
-        self.relation_test(2.0>a, True)
+        self.relation_check(a>b, False)
+        self.relation_check(a>a, False)
+        self.relation_check(b>a, True)
+        self.relation_check(a>2.0, False)
+        self.relation_check(a>1.3, False)
+        self.relation_check(b>1.3, True)
+        self.relation_check(1.3>b, False)
+        self.relation_check(1.3>a, False)
+        self.relation_check(2.0>a, True)
 
     def test_eq(self):
         #
@@ -156,15 +154,15 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         #
         a=self.create(1.3, Reals)
         b=self.create(2.0, Reals)
-        self.relation_test(a==b, False)
-        self.relation_test(a==a, True)
-        self.relation_test(b==a, False)
-        self.relation_test(a==2.0, False)
-        self.relation_test(a==1.3, True)
-        self.relation_test(b==1.3, False)
-        self.relation_test(1.3==b, False)
-        self.relation_test(1.3==a, True)
-        self.relation_test(2.0==a, False)
+        self.relation_check(a==b, False)
+        self.relation_check(a==a, True)
+        self.relation_check(b==a, False)
+        self.relation_check(a==2.0, False)
+        self.relation_check(a==1.3, True)
+        self.relation_check(b==1.3, False)
+        self.relation_check(1.3==b, False)
+        self.relation_check(1.3==a, True)
+        self.relation_check(2.0==a, False)
 
     def test_arithmetic(self):
         #
@@ -173,27 +171,27 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         #
         a=self.create(-0.5, Reals)
         b=self.create(2.0, Reals)
-        self.value_test(a-b, -2.5)
-        self.value_test(a+b, 1.5)
-        self.value_test(a*b, -1.0)
-        self.value_test(b/a, -4.0)
-        self.value_test(a**b, 0.25)
+        self.value_check(a-b, -2.5)
+        self.value_check(a+b, 1.5)
+        self.value_check(a*b, -1.0)
+        self.value_check(b/a, -4.0)
+        self.value_check(a**b, 0.25)
 
-        self.value_test(a-2.0, -2.5)
-        self.value_test(a+2.0, 1.5)
-        self.value_test(a*2.0, -1.0)
-        self.value_test(b/(0.5), 4.0)
-        self.value_test(a**2.0, 0.25)
+        self.value_check(a-2.0, -2.5)
+        self.value_check(a+2.0, 1.5)
+        self.value_check(a*2.0, -1.0)
+        self.value_check(b/(0.5), 4.0)
+        self.value_check(a**2.0, 0.25)
 
-        self.value_test(0.5-b, -1.5)
-        self.value_test(0.5+b, 2.5)
-        self.value_test(0.5*b, 1.0)
-        self.value_test(2.0/a, -4.0)
-        self.value_test((0.5)**b, 0.25)
+        self.value_check(0.5-b, -1.5)
+        self.value_check(0.5+b, 2.5)
+        self.value_check(0.5*b, 1.0)
+        self.value_check(2.0/a, -4.0)
+        self.value_check((0.5)**b, 0.25)
 
-        self.value_test(-a, 0.5)
+        self.value_check(-a, 0.5)
         self.assertIs(+a, a)
-        self.value_test(abs(-a), 0.5)
+        self.value_check(abs(-a), 0.5)
 
 
 class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant):
@@ -203,9 +201,8 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
         tmp.construct()
         return tmp
 
-    @unittest.nottest
-    def relation_test(self, exp, val):
-        """ Test a relationship expression. """
+    def relation_check(self, exp, val):
+        """ Check a relationship expression. """
         #
         # Confirm that this is a relational expression
         #
@@ -229,9 +226,8 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
             with self.assertRaises(PyomoException):
                 bool(exp)
 
-    @unittest.nottest
-    def value_test(self, exp, val):
-        """ Test the value of the expression. """
+    def value_check(self, exp, val):
+        """ Check the value of the expression. """
         #
         # Confirm whether 'exp' is an expression
         #

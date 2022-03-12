@@ -11,6 +11,7 @@
 import weakref
 import logging
 
+from pyomo.common.deprecation import deprecated
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import Component, ComponentData
@@ -48,6 +49,9 @@ __all__ = ['Alias']
 #     could possibly never encounter Aliases (if we're
 #     careful).
 
+@deprecated("The Alias component was never completed/tested and will "
+            "be removed.  Consider using Reference()",
+            version='6.3.0', remove_in='6.3.1')
 class Alias(Component):
 
     __slots__ = ('_aliased_object')

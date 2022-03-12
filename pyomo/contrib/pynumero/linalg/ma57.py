@@ -97,10 +97,8 @@ class MA57Interface(object):
 
         self._ma57 = self.lib.new_MA57_struct()
 
-
     def __del__(self):
         self.lib.free_MA57_struct(self._ma57)
-
 
     def set_icntl(self, i, val):
         validate_index(i, self.icntl_len, 'ICNTL')
@@ -110,32 +108,26 @@ class MA57Interface(object):
         # functions use C indexing. Maybe this is too confusing.
         self.lib.set_icntl(self._ma57, i-1, val)
 
-
     def get_icntl(self, i):
         validate_index(i, self.icntl_len, 'ICNTL')
         return self.lib.get_icntl(self._ma57, i-1)
-
 
     def set_cntl(self, i, val):
         validate_index(i, self.cntl_len, 'CNTL')
         validate_value(val, float, 'CNTL')
         self.lib.set_cntl(self._ma57, i-1, val)
 
-
     def get_cntl(self, i):
         validate_index(i, self.cntl_len, 'CNTL')
         return self.lib.get_cntl(self._ma57, i-1)
-
 
     def get_info(self, i):
         validate_index(i, self.info_len, 'INFO')
         return self.lib.get_info(self._ma57, i-1)
 
-
     def get_rinfo(self, i):
         validate_index(i, self.rinfo_len, 'RINFO')
         return self.lib.get_info(self._ma57, i-1)
-
 
     def do_symbolic_factorization(self, dim, irn, jcn):
         irn = irn.astype(np.intc, casting='safe', copy=True)
@@ -148,7 +140,6 @@ class MA57Interface(object):
         self.lib.do_symbolic_factorization(self._ma57,
                 dim, ne, irn, jcn)
         return self.get_info(1)
-
 
     def do_numeric_factorization(self, dim, entries):
         entries = entries.astype(np.float64, casting='safe', copy=True)
@@ -173,9 +164,8 @@ class MA57Interface(object):
                 dim, ne, entries)
         return self.get_info(1)
 
-
-    def do_backsolve(self, rhs):
-        rhs = rhs.astype(np.double, casting='safe', copy=True)
+    def do_backsolve(self, rhs, copy=True):
+        rhs = rhs.astype(np.double, casting='safe', copy=copy)
         shape = rhs.shape
         if len(shape) == 1:
             rhs_dim = rhs.size

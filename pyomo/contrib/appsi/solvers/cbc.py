@@ -20,6 +20,7 @@ import sys
 from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
 from pyomo.common.errors import PyomoException
+from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 
 
@@ -66,11 +67,13 @@ class Cbc(PersistentSolver):
     def available(self):
         if self.config.executable.path() is None:
             return self.Availability.NotFound
+        elif not cmodel_available:
+            return self.Availability.NeedsCompiledExtension
         return self.Availability.FullLicense
 
     def version(self):
         results = subprocess.run([str(self.config.executable), '-stop'],
-                                 timeout=1,
+                                 timeout=5,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT,
                                  universal_newlines=True)
@@ -280,7 +283,8 @@ class Cbc(PersistentSolver):
         if (self.version() < (2, 10, 2) and
                 self._writer.get_active_objective() is not None and
                 self._writer.get_active_objective().sense == maximize):
-            obj_val = -obj_val
+            if obj_val is not None:
+                obj_val = -obj_val
             for con, dual_val in self._dual_sol.items():
                 self._dual_sol[con] = -dual_val
             for v_id, (v, rc_val) in self._reduced_costs.items():

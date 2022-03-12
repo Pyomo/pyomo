@@ -297,7 +297,7 @@ class CBCSHELL(SystemCallSolver):
         """
         results = subprocess.run(
             [self.executable(), "-stop"],
-            timeout=1,
+            timeout=5,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True
@@ -310,7 +310,7 @@ class CBCSHELL(SystemCallSolver):
     def _compiled_with_asl(self):
         results = subprocess.run(
             [self.executable(), "dummy", "-AMPL", "-stop"],
-            timeout=1,
+            timeout=5,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True
