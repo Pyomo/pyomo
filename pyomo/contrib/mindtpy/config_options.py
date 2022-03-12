@@ -211,7 +211,7 @@ def _get_MindtPy_config():
     ))
     CONFIG.declare('quadratic_strategy', ConfigValue(
         default=0,
-        domain=([0, 1, 2]),
+        domain=In([0, 1, 2]),
         description='How to treat the quadratic terms in MINLP.'
                     '0 : treat as nonlinear terms'
                     '1 : only keep quadratic terms in objective function'

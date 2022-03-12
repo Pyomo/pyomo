@@ -129,7 +129,9 @@ class MindtPySolver(object):
                                                      or config.add_regularization is not None),
                               use_mcpp=config.use_mcpp,
                               update_var_con_list=config.add_regularization is None,
-                              partition_nonlinear_terms=config.partition_obj_nonlinear_terms
+                              partition_nonlinear_terms=config.partition_obj_nonlinear_terms,
+                              obj_handleable_polynomial_degree=solve_data.mip_objective_polynomial_degree,
+                              constr_handleable_polynomial_degree=solve_data.mip_constraint_polynomial_degree
                               )
             # The epigraph constraint is very "flat" for branching rules.
             # If ROA/RLP-NLP is activated and the original objective function is linear, we will use the original objective for the main mip.

@@ -154,7 +154,8 @@ def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense
 def process_objective(solve_data, config, move_linear_objective=False,
                       use_mcpp=False, update_var_con_list=True,
                       partition_nonlinear_terms=True,
-                      handleable_polynomial_degree={0, 1}):
+                      obj_handleable_polynomial_degree={0, 1},
+                      constr_handleable_polynomial_degree={0, 1}):
     """Process model objective function.
 
     Check that the model has only 1 valid objective.
@@ -195,7 +196,7 @@ def process_objective(solve_data, config, move_linear_objective=False,
     solve_data.objective_sense = main_obj.sense
 
     # Move the objective to the constraints if it is nonlinear or move_linear_objective is True.
-    if main_obj.expr.polynomial_degree() not in handleable_polynomial_degree or move_linear_objective:
+    if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or move_linear_objective:
         if move_linear_objective:
             config.logger.info("Moving objective to constraint set.")
         else:
@@ -203,10 +204,11 @@ def process_objective(solve_data, config, move_linear_objective=False,
                 "Objective is nonlinear. Moving it to constraint set.")
         util_blk.objective_value = VarList(domain=Reals, initialize=0)
         util_blk.objective_constr = ConstraintList()
-        if main_obj.expr.polynomial_degree() not in handleable_polynomial_degree and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
-            repn = generate_standard_repn(main_obj.expr, quadratic=False)
+        if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
+            repn = generate_standard_repn(main_obj.expr, quadratic=2 in obj_handleable_polynomial_degree)
             # the following code will also work if linear_subexpr is a constant.
-            linear_subexpr = repn.constant + sum(coef*var for coef, var in zip(repn.linear_coefs, repn.linear_vars))
+            linear_subexpr = repn.constant + sum(coef*var for coef, var in zip(repn.linear_coefs, repn.linear_vars)) \
+                + sum(coef*var1*var2 for coef, (var1, var2) in zip(repn.quadratic_coefs, repn.quadratic_vars))
             # only need to generate one epigraph constraint for the sum of all linear terms and constant
             epigraph_reformulation(linear_subexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
             nonlinear_subexpr = repn.nonlinear_expr
@@ -221,14 +223,14 @@ def process_objective(solve_data, config, move_linear_objective=False,
         main_obj.deactivate()
         util_blk.objective = Objective(expr=sum(util_blk.objective_value[:]), sense=main_obj.sense)
 
-        if main_obj.expr.polynomial_degree() not in handleable_polynomial_degree or \
+        if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or \
            (move_linear_objective and update_var_con_list):
             util_blk.variable_list.extend(util_blk.objective_value[:])
             util_blk.continuous_variable_list.extend(util_blk.objective_value[:])
             util_blk.constraint_list.extend(util_blk.objective_constr[:])
             util_blk.objective_list.append(util_blk.objective)
             for constr in util_blk.objective_constr[:]:
-                if constr.body.polynomial_degree() in (0, 1):
+                if constr.body.polynomial_degree() in constr_handleable_polynomial_degree:
                     util_blk.linear_constraint_list.append(constr)
                 else:
                     util_blk.nonlinear_constraint_list.append(constr)
@@ -351,16 +353,20 @@ def build_ordered_component_lists(model, solve_data):
             model.component_data_objects(
                 ctype=Constraint, active=True,
                 descend_into=(Block, Disjunct))))
+    if hasattr(solve_data,'mip_constraint_polynomial_degree'):
+        mip_constraint_polynomial_degree = solve_data.mip_constraint_polynomial_degree
+    else:
+        mip_constraint_polynomial_degree=(0, 1)
     setattr(
         util_blk, 'linear_constraint_list', list(
             c for c in model.component_data_objects(
             ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() in (0, 1)))
+            if c.body.polynomial_degree() in mip_constraint_polynomial_degree))
     setattr(
         util_blk, 'nonlinear_constraint_list', list(
             c for c in model.component_data_objects(
             ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() not in (0, 1)))
+            if c.body.polynomial_degree() not in mip_constraint_polynomial_degree))
     setattr(
         util_blk, 'disjunct_list', list(
             model.component_data_objects(
