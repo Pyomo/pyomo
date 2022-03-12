@@ -27,7 +27,7 @@ from pyomo.core.expr.current import (
     MonomialTermExpression, LinearExpression, SumExpression,
     EqualityExpression, InequalityExpression, RangedExpression,
     Expr_ifExpression, ExternalFunctionExpression,
-    native_types, value,
+    native_types, native_numeric_types, value,
 )
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.base import (
@@ -1461,6 +1461,11 @@ _operator_handles = {
 def _before_native(visitor, child):
     return False, (_CONSTANT, child)
 
+def _before_string(visitor, child):
+    ans = AMPLRepn(None, None, None)
+    ans.nl = (visitor.template.string % (len(child), child), ())
+    return False, (_GENERAL, ans)
+
 def _before_var(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
@@ -1534,8 +1539,11 @@ def _before_general_expression(visitor, child):
 # Register an initial set of known expression types with the "before
 # child" expression handler lookup table.
 _before_child_handlers = {
-    _type: _before_native for _type in native_types
+    _type: _before_native for _type in native_numeric_types
 }
+for _type in native_types:
+    if issubclass(_type, str):
+        _before_child_handlers[_type] = _before_string
 # general operators
 for _type in _operator_handles:
     _before_child_handlers[_type] = _before_general_expression
@@ -1647,7 +1655,11 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
     def _register_new_before_child_processor(self, child):
         handlers = _before_child_handlers
         child_type = child.__class__
-        if child_type in native_types:
+        if child_type in native_numeric_types:
+            handlers[child_type] = _before_native
+        elif issubclass(child_type, str):
+            handlers[child_type] = _before_string
+        elif child_type in native_types:
             handlers[child_type] = _before_native
         elif not child.is_expression_type():
             if child.is_potentially_variable():
