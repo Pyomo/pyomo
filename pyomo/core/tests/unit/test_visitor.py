@@ -1557,7 +1557,7 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
         TESTING_OVERHEAD = 14
         warn_msg = "Unexpected RecursionError walking an expression tree.\n"
 
-        if platform.python_implementation().lower().startswith('pypy'):
+        if platform.python_implementation() == 'PyPy':
             # We have not yet determined how to trigger the
             # RecursionError on PyPy
             cases = [(0, "")]
@@ -1568,7 +1568,7 @@ class TestStreamBasedExpressionVisitor_Deep(unittest.TestCase):
             # RecursionError that is supposed to be raised is not
             # raised, and instead the system actually dies on stack
             # overflow error
-            cases = [(0, "")]
+            cases = []
         else:
             cases = [(0, ""), (3, warn_msg)]
 

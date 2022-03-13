@@ -247,7 +247,11 @@ doctest.OutputChecker = IgnoreResultOutputChecker
 doctest_global_setup = '''
 import os, platform, sys
 on_github_actions = bool(os.environ.get('GITHUB_ACTIONS', ''))
-system_info = (sys.platform, platform.machine())
+system_info = (
+    sys.platform,
+    platform.machine(),
+    platform.python_implementation()
+)
 
 from pyomo.common.dependencies import (
     attempt_import, numpy_available, scipy_available, pandas_available,
