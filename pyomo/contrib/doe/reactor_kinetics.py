@@ -65,7 +65,7 @@ def disc_for_measure(m, NFE=32):
 
 
 def create_model(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300, 0.375: 300, 0.5: 300, 0.625: 300, 0.75: 300, 0.875: 300, 1: 300}, 
-                     t_range=[0.0,1], CA_init=3, C_init=0.3, model_form='dae-index-1', args=[True]):
+                     t_range=[0.0,1], CA_init=1, C_init=0.1, model_form='dae-index-1', args=[True]):
     '''
     This is an example user model provided to DoE library. 
     It is a dynamic problem solved by Pyomo.DAE.
