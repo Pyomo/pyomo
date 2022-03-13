@@ -55,6 +55,26 @@ def report_timing(stream=True, level=logging.INFO):
             _logger.removeHandler(h)
 
 
+class GeneralTimer(object):
+    def __init__(self, fmt, data):
+        self.fmt = fmt
+        self.data = data
+
+    def report(self):
+        _logger.info(self)
+
+    @property
+    def obj(self):
+        return self.data[-1]
+
+    @property
+    def timer(self):
+        return self.data[:-1]
+
+    def __str__(self):
+        return self.fmt % self.data
+
+
 class ConstructionTimer(object):
     msg = "%6.*f seconds to construct %s %s; %d %s total"
     in_progress = "ConstructionTimer object for %s %s; %0.3f elapsed seconds"
@@ -257,16 +277,19 @@ class TicTocTimer(object):
             if self._lastTime:
                 ans += default_timer() - self._lastTime
             if msg is not None:
-                msg = "[%8.2f|%4d] %s" % (ans, self._start_count, msg)
+                fmt = "[%8.2f|%4d] %s"
+                data = (ans, self._start_count, msg)
         elif delta:
             ans = now - self._lastTime
             self._lastTime = now
             if msg is not None:
-                msg = "[+%7.2f] %s" % (ans, msg)
+                fmt = "[+%7.2f] %s"
+                data = (ans, msg)
         else:
             ans = now - self._loadTime
             if msg is not None:
-                msg = "[%8.2f] %s" % (ans, msg)
+                fmt = "[%8.2f] %s"
+                data = (ans, msg)
 
         if msg is not None:
             if logger is _NotSpecified:
@@ -274,7 +297,7 @@ class TicTocTimer(object):
             if logger is not None:
                 if level is _NotSpecified:
                     level = self.level
-                logger.log(level, msg, *args)
+                logger.log(level, GeneralTimer(fmt, data), *args)
 
             if ostream is _NotSpecified:
                 ostream = self.ostream
@@ -284,6 +307,7 @@ class TicTocTimer(object):
                     else:
                         ostream = None
             if ostream is not None:
+                msg = fmt % data
                 if args:
                     msg = msg % args
                 ostream.write(msg + '\n')
