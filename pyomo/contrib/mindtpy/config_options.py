@@ -213,8 +213,8 @@ def _get_MindtPy_config():
         domain=In([0, 1, 2]),
         description='How to treat the quadratic terms in MINLP.'
                     '0 : treat as nonlinear terms'
-                    '1 : only keep quadratic terms in objective function'
-                    '2 : keep quadratic terms in objective function and constraints',
+                    '1 : only use quadratic terms in objective function directly in main problem'
+                    '2 : use quadratic terms in objective function and constraints in main problem',
     ))
 
     _add_subsolver_configs(CONFIG)
