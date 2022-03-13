@@ -122,7 +122,8 @@ inconsistent state.  Users can avoid this by
   walker method
 
 .. doctest::
-   :skipif: (on_github_actions and system_info[0].startswith('win')) or system_info[2] == 'PyPy'
+   :skipif: (on_github_actions and system_info[0].startswith('win')) \
+            or system_info[2] == 'PyPy'
 
    >>> import sys
    >>> import pyomo.core.expr.visitor as visitor
