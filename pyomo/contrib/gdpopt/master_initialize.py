@@ -128,15 +128,52 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
                     logger=config.logger)
                 if primal_improved:
                     solver.update_incumbent(subprob_util_block)
-                add_cuts_according_to_algorithm(subprob_util_block,
-                                                master_util_block,
-                                                solver.objective_sense, config)
+            add_cuts_according_to_algorithm(subprob_util_block,
+                                            master_util_block,
+                                            solver.objective_sense, config)
     else:
         config.logger.error(
             'Linear GDP infeasible for initial user-specified '
             'disjunct values. '
             'Skipping initialization.')
     add_no_good_cut(master_util_block, config)
+
+@contextmanager
+def use_master_for_max_binary_initialization(master_util_block):
+    m = master_util_block.model()
+    original_bounds = ComponentMap()
+    for v in get_vars_from_components(m, ctype=(Constraint, Objective),
+                                      active=True, descend_into=Block):
+        original_bounds[v] = (v.lb, v.ub)
+    active_constraints = []
+    for c in m.component_data_objects(Constraint, active=True,
+                                      descend_into=Block):
+        active_constraints.append(c)
+
+    # Set up binary maximization objective
+    original_objective = next( m.component_data_objects(Objective, active=True,
+                                                        descend_into=True))
+    original_objective.deactivate()
+
+    binary_vars = (v for v in m.component_data_objects(
+        ctype=Var, descend_into=(Block, Disjunct)) if v.is_binary() 
+                   and not v.fixed)
+    master_util_block.max_binary_obj = Objective(expr=sum(binary_vars),
+                                                 sense=maximize)
+    
+    yield
+
+    # clean up the objective. We don't clean up the no-good cuts because we
+    # still want them. We've already considered those solutions.
+    del master_util_block.max_binary_obj
+    original_objective.activate()
+
+    # undo what fbbt might have done in preprocessing
+    for v, (l, u) in original_bounds.items():
+        v.setlb(l)
+        v.setub(u)
+    for c in active_constraints:
+        c.activate()
 
 def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
                       solver):
@@ -146,35 +183,37 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
     feasible.
 
     """
-    solve_data.mip_iteration += 1
-    linear_GDP = solve_data.linear_GDP.clone()
+    solver.mip_iteration += 1
     config.logger.info(
         "Generating initial linear GDP approximation by "
         "solving a subproblem that maximizes "
         "the sum of all binary and logical variables.")
-    # Set up binary maximization objective
-    next(linear_GDP.component_data_objects(Objective, active=True)).deactivate()
-    binary_vars = (
-        v for v in linear_GDP.component_data_objects(
-        ctype=Var, descend_into=(Block, Disjunct))
-        if v.is_binary() and not v.fixed)
-    linear_GDP.GDPopt_utils.max_binary_obj = Objective(
-        expr=sum(binary_vars), sense=maximize)
 
-    # Solve
-    mip_results = solve_linear_GDP(linear_GDP, solve_data, config)
-    if mip_results.feasible:
-        nlp_result = solve_disjunctive_subproblem(mip_results, solve_data,
-                                                  config)
-        if nlp_result.feasible:
-            add_subproblem_cuts(nlp_result, solve_data, config)
-        add_no_good_cut(mip_results.var_values, solve_data.linear_GDP,
-                        solve_data, config, feasible=nlp_result.feasible)
-    else:
-        config.logger.info(
-            "Linear relaxation for initialization was infeasible. "
-            "Problem is infeasible.")
-        return False
+    with use_master_for_max_binary_initialization(master_util_block):
+        mip_feasible = solve_linear_GDP(master_util_block, config,
+                                        solver.timing)
+        if mip_feasible:
+            with fix_master_solution_in_subproblem(master_util_block,
+                                           subprob_util_block, config,
+                                           config.force_subproblem_nlp):
+                nlp_feasible = solve_subproblem(subprob_util_block, config,
+                                                solver.timing)
+                if nlp_feasible:
+                    primal_improved = solver._update_bounds(
+                        primal=value(subprob_util_block.obj.expr),
+                        logger=config.logger)
+                    if primal_improved:
+                        solver.update_incumbent(subprob_util_block)
+                add_cuts_according_to_algorithm(subprob_util_block,
+                                                master_util_block,
+                                                solver.objective_sense, config)
+        else:
+            config.logger.info(
+                "Linear relaxation for initialization was infeasible. "
+                "Problem is infeasible.")
+            solver._update_dual_bound_to_infeasible(config.logger)
+            return False
+        add_no_good_cut(master_util_block, config)
 
 @contextmanager
 def use_master_for_set_covering(master_util_block):
