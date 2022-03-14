@@ -10,7 +10,8 @@
 from pyomo.contrib.gdpopt.initialize_subproblems import (
     initialize_master_problem, get_subproblem, add_util_block,
     add_disjunct_list, add_variable_list, add_discrete_variable_list,
-    add_boolean_variable_lists, add_constraint_list, save_initial_values)
+    add_boolean_variable_lists, add_constraint_list, save_initial_values,
+    add_transformed_boolean_variable_list)
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.nlp_solve import solve_subproblem
 from pyomo.contrib.gdpopt.util import (
@@ -80,6 +81,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
         # TODO: use getname and a bufffer!
         subproblem_util_block = subproblem.component(util_block.name)
         save_initial_values(subproblem_util_block)
+        add_transformed_boolean_variable_list(subproblem_util_block)
         # TODO, not completely sure if this is what I should do
         subproblem_obj = next(subproblem.component_data_objects(
             Objective, active=True, descend_into=True))

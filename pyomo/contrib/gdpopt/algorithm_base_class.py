@@ -77,7 +77,8 @@ class _GDPoptAlgorithm(object):
         self.mip_iteration = 0
         self.nlp_iteration = 0
         
-        self.incumbent = None
+        self.incumbent_boolean_soln = None
+        self.incumbent_continuous_soln = None
 
     def solve(self, model, config):
         """Solve the model.
@@ -169,7 +170,10 @@ class _GDPoptAlgorithm(object):
                                                               ub_improved))
 
     def update_incumbent(self, util_block):
-        self.incumbent = [v.value for v in util_block.variable_list]
+        self.incumbent_continuous_soln = [v.value for v in
+                                          util_block.variable_list]
+        self.incumbent_boolean_soln = [
+            v.value for v in util_block.transformed_boolean_variable_list]
 
     def _update_bounds_after_master_problem_solve(self, mip_feasible, obj_expr,
                                                   logger):
@@ -304,8 +308,23 @@ class _GDPoptAlgorithm(object):
 
     def _transfer_incumbent_to_original_model(self):
         for var, soln in zip(self.original_util_block.variable_list,
-                                 self.incumbent):
+                             self.incumbent_continuous_soln):
             var.set_value(soln, skip_validation=True)
+        for var, soln in zip(
+                self.original_util_block.boolean_variable_list,
+                self.incumbent_boolean_soln):
+            # TODO: There is probably centralized logic for binary -> Boolean
+            # right, and I should probably use it...
+            if soln is None:
+                var.set_value(soln, skip_validation=True)
+            elif soln > 0.5:
+                var.set_value(True)
+            else:
+                var.set_value(False)
+
+        # TODO: call logical to linear update Boolean thing or something.  Also
+        # TODO, you will need to create the transformed_boolean_variable_list on
+        # the subproblem too.
 
     def _get_final_pyomo_results_object(self):
         """

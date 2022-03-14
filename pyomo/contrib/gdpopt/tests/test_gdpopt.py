@@ -242,6 +242,9 @@ class TestGDPopt(unittest.TestCase):
         self.assertTrue(value(m.d1.indicator_var))
         self.assertFalse(value(m.d2.indicator_var))
 
+    # TODO: test that if there is a Var that only appears in nonlinear
+    # constraints, we don't have issues with it not being in the master problem
+
     def test_equality_propagation_infeasibility_in_subproblems(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-10, 10))
@@ -307,11 +310,9 @@ class TestGDPopt(unittest.TestCase):
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_logical_constraints_on_disjuncts_nonlinear_convex(self):
         m = models.makeLogicalConstraintsOnDisjuncts_NonlinearConvex()
-        logger = logging.getLogger('pyomo.contrib.gdpopt')
-        logger.setLevel(logging.DEBUG)
         SolverFactory('gdpopt', algorithm='LOA').solve(m, mip_solver=mip_solver,
                                                        nlp_solver=nlp_solver,
-                                                       tee=True, logger=logger)
+                                                       tee=True)
         self.assertAlmostEqual(value(m.x), 4)
 
     def test_nested_disjunctions_no_init(self):
