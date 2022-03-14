@@ -209,10 +209,14 @@ class IntervalTightener(PersistentBase):
                 self._vars[v_id] = (_v, _lb, cv_ub, _fixed, _domain, _value)
 
     def _deactivate_satisfied_cons(self):
+        cons_to_deactivate = list()
         if self.config.deactivate_satisfied_constraints:
             for c, cc in self._con_map.items():
                 if not cc.active:
-                    c.deactivate()
+                    cons_to_deactivate.append(c)
+        self.remove_constraints(cons_to_deactivate)
+        for c in cons_to_deactivate:
+            c.deactivate()
 
     def perform_fbbt(self, model: _BlockData, symbolic_solver_labels: Optional[bool] = None):
         if model is not self._model:
