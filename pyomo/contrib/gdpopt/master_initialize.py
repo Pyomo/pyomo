@@ -81,42 +81,62 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                                                     master_util_block,
                                                     solver.objective_sense,
                                                     config)
-                add_no_good_cut(master_util_block, config)
         else:
             config.logger.error(
                 'Linear GDP infeasible for user-specified '
                 'custom initialization disjunct set %s. '
                 'Skipping that set and continuing on.'
                 % list(disj.name for disj in active_disjunct_set))
-
+        add_no_good_cut(master_util_block, config)
 
 def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
                          config, solver):
     """Initialize by solving the problem with the current disjunct values."""
     # TODO error checking to make sure that the user gave proper disjuncts
 
-    # fix the disjuncts in the linear GDP and send for solution.
-    solve_data.mip_iteration += 1
+    # fix the disjuncts in the master problem and send for solution.
+    solver.mip_iteration += 1
     config.logger.info(
         "Generating initial linear GDP approximation by "
         "solving subproblem with original user-specified disjunct values.")
-    linear_GDP = solve_data.linear_GDP.clone()
-    TransformationFactory('gdp.fix_disjuncts').apply_to(linear_GDP)
-    mip_result = solve_linear_GDP(linear_GDP, solve_data, config)
-    if mip_result.feasible:
-        nlp_result = solve_disjunctive_subproblem(mip_result, solve_data,
-                                                  config)
-        if nlp_result.feasible:
-            add_subproblem_cuts(nlp_result, solve_data, config)
-        add_no_good_cut(
-            mip_result.var_values, solve_data.linear_GDP, solve_data, config,
-            feasible=nlp_result.feasible)
+
+    if config.mip_presolve:
+        original_bounds = ComponentMap()
+        for v in master_util_block.variable_list:
+            original_bounds[v] = (v.lb, v.ub)
+    
+    # We copied the variables over when we cloned, and because the Booleans are
+    # auto-linked to the binaries, we shouldn't have to change anything. So
+    # first we solve the master problem in case we need values for other
+    # discrete variables.
+    mip_feasible = solve_linear_GDP(master_util_block, config, solver.timing)
+    if config.mip_presolve:
+        # restore bounds
+        for v, (l, u) in original_bounds.items():
+            v.setlb(l)
+            v.setub(u)
+    
+    if mip_feasible:
+        with fix_master_solution_in_subproblem(master_util_block,
+                                           subprob_util_block, config,
+                                           config.force_subproblem_nlp):
+            nlp_feasible = solve_subproblem(subprob_util_block, config,
+                                            solver.timing)
+            if nlp_feasible:
+                primal_improved = solver._update_bounds(
+                    primal=value(subprob_util_block.obj.expr),
+                    logger=config.logger)
+                if primal_improved:
+                    solver.update_incumbent(subprob_util_block)
+                add_cuts_according_to_algorithm(subprob_util_block,
+                                                master_util_block,
+                                                solver.objective_sense, config)
     else:
         config.logger.error(
             'Linear GDP infeasible for initial user-specified '
             'disjunct values. '
             'Skipping initialization.')
-
+    add_no_good_cut(master_util_block, config)
 
 def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
                       solver):
