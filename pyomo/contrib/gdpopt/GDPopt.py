@@ -40,8 +40,10 @@ from pyomo.opt.base import SolverFactory
 #from pyomo.contrib.gdpopt.branch_and_bound import _perform_branch_and_bound
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
-#from pyomo.contrib.gdptopt.gloa import GDP_GLOA_Solver
-# etc...
+from pyomo.contrib.gdpopt.ric import GDP_RIC_Solver
+from pyomo.contrib.gdpopt.config_options import (
+    _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
+    _add_OA_configs, _add_BB_configs)
 
 from pytest import set_trace
 
@@ -121,9 +123,19 @@ class GDPoptSolver(_GDPoptAlgorithm):
     'Generalized Disjunctive Programming (GDP) solver, supporting specifying'
     'solution algorithm in the call to solve.')
 class _HACK_GDPoptSolver(_GDPoptAlgorithm):
-    # def __init__(self, **kwds):
-    #     config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
-    #     config.set_value(kwds)
+    # This has to declare all the CONFIG options because they can't be
+    # undeclared if they get populated in solve. And of course, by definition,
+    # we don't know what this is.
+    CONFIG = _GDPoptAlgorithm.CONFIG()
+    _add_OA_configs(CONFIG)
+    _add_mip_solver_configs(CONFIG)
+    _add_nlp_solver_configs(CONFIG)
+    _add_tolerance_configs(CONFIG)
+    _add_BB_configs(CONFIG)
+
+    def __init__(self, **kwds):
+        config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
+        config.set_value(kwds)
 
     def solve(self, model, **kwds):
         """Solve the model, depending on the value for config.algorithm. Note
@@ -141,6 +153,7 @@ class _HACK_GDPoptSolver(_GDPoptAlgorithm):
         algorithm = config.algorithm
         if algorithm is None:
             algorithm = config.strategy
+            kwds['algorithm'] = config.strategy
 
         if algorithm in _handlers.keys():
             return SolverFactory(_handlers[algorithm]).solve(model, **kwds)

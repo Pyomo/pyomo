@@ -27,7 +27,7 @@ from pyomo.contrib.gdpopt.cut_generation import (
 from pyomo.core import (
     Constraint, Block, Objective, minimize, Expression, Var, value)
 from pyomo.opt.base import SolverFactory
-from pyomo.opt import  TerminationCondition
+from pyomo.opt import TerminationCondition
 from pyomo.gdp import Disjunct
 import logging
 
@@ -37,7 +37,7 @@ from pytest import set_trace
     '_logic_based_oa',
     doc='GDP Logic-Based Outer Approximation (LOA) solver')
 class GDP_LOA_Solver(_GDPoptAlgorithm):
-    CONFIG = _GDPoptAlgorithm.CONFIG
+    CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_OA_configs(CONFIG)
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG)

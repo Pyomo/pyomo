@@ -14,6 +14,8 @@ from pyomo.common.config import (ConfigValue, NonNegativeInt,
 from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
 from pyomo.contrib.gdpopt.util import _DoNothing
 
+# TODO: the OA ones need to be further broken down.
+
 
 # def _get_GDPopt_config():
     
@@ -129,8 +131,6 @@ def _add_OA_configs(CONFIG):
         "bounds. False by default.",
         domain=bool
     ))
-    return CONFIG
-
 
 def _add_BB_configs(CONFIG):
     CONFIG.declare("check_sat", ConfigValue(

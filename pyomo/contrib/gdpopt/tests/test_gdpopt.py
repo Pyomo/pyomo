@@ -229,12 +229,10 @@ class TestGDPopt(unittest.TestCase):
         # initialization. This makes sure we get the correct answer anyway, as
         # there is a feasible solution.
         m = models.makeNestedNonlinearModel()
-        logger = logging.getLogger('pyomo.contrib.gdpopt')
-        logger.setLevel(logging.DEBUG)
         SolverFactory('gdpopt', algorithm='LOA').solve(
             m, mip_solver=mip_solver,
             nlp_solver=nlp_solver,
-            init_strategy='set_covering', tee=True, logger=logger)
+            init_strategy='set_covering')
         self.assertAlmostEqual(value(m.x), sqrt(2)/2)
         self.assertAlmostEqual(value(m.y), sqrt(2)/2)
         self.assertTrue(value(m.disj.disjuncts[1].indicator_var))
@@ -270,9 +268,12 @@ class TestGDPopt(unittest.TestCase):
         m.disj = Disjunction(expr=[[m.x == m.y, m.x + m.y >= 8],
                                    [m.x == 4]])
         m.obj = Objective(expr=m.x + m.y)
+        logger = logging.getLogger('pyomo.contrib.gdpopt')
+        logger.setLevel(logging.DEBUG)
         SolverFactory('gdpopt').solve(m, strategy='RIC', mip_solver=mip_solver,
                                       nlp_solver=nlp_solver,
-                                      init_strategy='set_covering')
+                                      init_strategy='set_covering', tee=True,
+                                      logger=logger)
         self.assertAlmostEqual(value(m.x), 4)
         self.assertAlmostEqual(value(m.y), 5)
         self.assertFalse(value(m.disj.disjuncts[0].indicator_var))

@@ -32,8 +32,14 @@ def solve_linear_GDP(util_block, config, timing):
 
     if config.mip_presolve:
         try:
+            # ESJ: deactivating satisfied constraints here is risky since it can
+            # result in sending no constraints to the solver and hence not
+            # actually filling in the values of the variables that got
+            # implicitly fixed by these bounds. We can fix this by calling some
+            # contrib.preprocessing transformations, but for now I'm just
+            # leaving the constraints in.
             fbbt(m, integer_tol=config.integer_tolerance,
-                 deactivate_satisfied_constraints=True)
+                 deactivate_satisfied_constraints=False)
             # [ESJ 1/28/22]: Despite being a little scary, this is okay to leave
             # in because if you tighten the bounds now, they could only get
             # tighter in later iterations, since you are tightening this

@@ -20,6 +20,10 @@ from pyomo.gdp import Disjunct
 
 from pytest import set_trace
 
+# ESJ TODO: These have a lot of redundant code in terms of not messing up the
+# m,aster problem when we are coopting it, and also just the usual "solve the
+# master, then solve the subproblem and do all the right things" routine.
+
 def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                           config, solver):
     """Initialize by using user-specified custom disjuncts."""
