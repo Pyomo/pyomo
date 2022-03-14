@@ -35,7 +35,6 @@ def add_cuts_according_to_algorithm(subproblem_util_block, master_util_block,
     elif config.algorithm == "GLOA":
         return add_affine_cuts(subprob_result, solve_data, config)
     elif config.algorithm == "RIC":
-        print(config.algorithm is None)
         pass
     else:
         raise ValueError('Unrecognized strategy: ' + config.strategy)

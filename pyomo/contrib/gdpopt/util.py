@@ -135,7 +135,8 @@ def move_nonlinear_objective_to_constraints(util_block, logger):
         if main_obj.expr.polynomial_degree() not in (1, 0):
             util_block.variable_list.append(util_block.objective_value)
             #util_blk.continuous_variable_list.append(util_blk.objective_value)
-            util_block.constraint_list.append(util_block.objective_constr)
+            if hasattr(util_block, 'constraint_list'):
+                util_block.constraint_list.append(util_block.objective_constr)
             #util_blk.objective_list.append(util_blk.objective)
             # if util_blk.objective_constr.body.polynomial_degree() in (0, 1):
             #     util_blk.linear_constraint_list.append(

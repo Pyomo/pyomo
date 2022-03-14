@@ -5,11 +5,13 @@ from pyomo.common.collections import Bunch
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, NonNegativeInt, In, PositiveInt)
 from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.modeling import unique_component_name
 from pyomo.opt import SolverResults
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.base import Objective, value, minimize, maximize
 from pyomo.util.model_size import build_model_size_report
-from pyomo.contrib.gdpopt.util import a_logger, get_main_elapsed_time
+from pyomo.contrib.gdpopt.util import (
+    a_logger, get_main_elapsed_time, solve_continuous_problem)
 
 from pytest import set_trace
 
@@ -107,7 +109,8 @@ class _GDPoptAlgorithm(object):
         if (problem.number_of_binary_variables == 0 and 
             problem.number_of_integer_variables == 0 and
             problem.number_of_disjunctions == 0):
-            return solve_continuous_problem(model, problem)
+            # TODO: This results object won't have the stuff above on it...
+            return solve_continuous_problem(model, config)
 
     def _update_bounds(self, primal=None, dual=None, logger=None):
         """
@@ -295,14 +298,17 @@ class _GDPoptAlgorithm(object):
             ctype=Objective, active=True, descend_into=True))
         number_of_objectives = len(active_objectives)
         if number_of_objectives == 0:
-            logger.warning(
+            config.logger.warning(
                 'Model has no active objectives. Adding dummy objective.')
-            main_obj = gdpopt_block.dummy_objective = Objective(expr=1)
+            main_obj = Objective(expr=1)
+            original_model.add_component(unique_component_name(original_model,
+                                                               'dummy_obj'),
+                                         main_obj)
         elif number_of_objectives > 1:
             raise ValueError('Model has multiple active objectives.')
         else:
             main_obj = active_objectives[0]
-        results.problem.sense = minimize if main_obj.sense == 1 else maximize
+        prob.sense = minimize if main_obj.sense == 1 else maximize
 
         return results
 
