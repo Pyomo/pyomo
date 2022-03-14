@@ -24,6 +24,10 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                           config, solver):
     """Initialize by using user-specified custom disjuncts."""
     used_disjuncts = {}
+    if config.mip_presolve:
+        original_bounds = ComponentMap()
+        for v in master_util_block.variable_list:
+            original_bounds[v] = (v.lb, v.ub)
     for count, active_disjunct_set in enumerate(config.custom_init_disjuncts):
         used_disjuncts = set()
         # custom_init_disjuncts contains a list of sets, giving the disjuncts
@@ -35,12 +39,14 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
         config.logger.info(
             "Generating initial linear GDP approximation by "
             "solving subproblems with user-specified active disjuncts.")
-        for orig_disj, clone_disj in zip(util_block.disjunct_list,
+        for orig_disj, master_disj in zip(util_block.disjunct_list,
                                          master_util_block.disjunct_list):
             if orig_disj in active_disjunct_set:
                 used_disjuncts.add(orig_disj)
-                clone_disj.indicator_var.fix(True)
-        unused = set(config.custom_init_disjuncts) - used_disjuncts
+                master_disj.indicator_var.fix(True)
+            else:
+                master_disj.indicator_var.fix(False)
+        unused = set(active_disjunct_set) - used_disjuncts
         if len(unused) > 0:
             disj_str = ""
             for disj in unused:
@@ -50,20 +56,32 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                                   '%s\nThey may not be Disjunct objects or '
                                   'they may not be on the active subtree being '
                                   'solved.' % (count, disj_str))
-        mip_result = solve_linear_GDP(master, util_block, config,
-                                      solver.timing)
-        if mip_result.feasible:
+        mip_feasible = solve_linear_GDP(master_util_block, config,
+                                        solver.timing)
+        if config.mip_presolve:
+            # restore bounds
+            for v, (l, u) in original_bounds.items():
+                v.setlb(l)
+                v.setub(u)
+
+        if mip_feasible:
             with fix_master_solution_in_subproblem(master_util_block,
                                                    subprob_util_block,
                                                    config,
                                                    config.force_subproblem_nlp):
-                nlp_result = solve_subproblem(subproblem, subprob_util_block,
-                                              config, timing)
-                if nlp_result.feasible:
-                    add_subproblem_cuts(nlp_result, solve_data, config)
-                add_no_good_cut(mip_result.var_values, solve_data.linear_GDP,
-                                solve_data, config,
-                                feasible=nlp_result.feasible)
+                nlp_feasible = solve_subproblem(subprob_util_block, config,
+                                                solver.timing)
+                if nlp_feasible:
+                    primal_improved = solver._update_bounds(
+                        primal=value(subprob_util_block.obj.expr),
+                        logger=config.logger)
+                    if primal_improved:
+                        solver.update_incumbent(subprob_util_block)
+                    add_cuts_according_to_algorithm(subprob_util_block,
+                                                    master_util_block,
+                                                    solver.objective_sense,
+                                                    config)
+                add_no_good_cut(master_util_block, config)
         else:
             config.logger.error(
                 'Linear GDP infeasible for user-specified '
@@ -255,7 +273,6 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                     subprob_util_block,
                     config,
                     make_subproblem_continuous=config.force_subproblem_nlp):
-                m = subprob_util_block.model()
                 subprob_feasible = solve_subproblem(subprob_util_block, config,
                                                     solver.timing)
                 if subprob_feasible:

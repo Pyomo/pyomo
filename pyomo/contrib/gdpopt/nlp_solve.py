@@ -377,7 +377,7 @@ def call_appropriate_subproblem_solver(subprob_util_block, config, timing):
 
     return subprob_feasible
 
-def solve_subproblem(subprob_util_block, config, timing, solve_globally=False):
+def solve_subproblem(subprob_util_block, config, timing):
     """Set up and solve the local MINLP or NLP subproblem."""
     # ESJ: do we need this/do we need to track it here?
     #solve_data.nlp_iteration += 1
