@@ -457,7 +457,7 @@ class DesignOfExperiments:
             self.__check_inputs(check_mode=False)
 
         # build the large DOE pyomo model
-        m = self.__create_doe_model()
+        m = self.__create_doe_model(no_obj=True)
 
         # solve model, achieve results for square problem, and results for optimization problem
 
@@ -484,6 +484,40 @@ class DesignOfExperiments:
         analysis_square.solve_time = time_solve1
 
         if self.optimize:
+
+            #m.Obj.deactivate()
+
+            #def cholesky_imp(m, c, d):
+            #    '''
+            #    Calculate Cholesky L matrix using algebraic constraints
+            #    '''
+                # If it is the left bottom half of L
+            #    if (self.param_name.index(c) >= self.param_name.index(d)):
+            #        return m.FIM[c, d] == sum(
+            #            m.L_ele[c, self.param_name[k]] * m.L_ele[d, self.param_name[k]] for k in range(self.param_name.index(d) + 1))
+            #    else:
+                    # This is the empty half of L above the diagonal
+            #        return Constraint.Skip
+
+
+
+            # if cholesky, calculating L and evaluate the OBJ with Cholesky decomposition
+            #if self.Cholesky_option:
+            #    m.cholesky_cons = Constraint(m.para_set, m.para_set, rule=cholesky_imp)
+            #    m.Obj = Objective(expr=2 * sum(log(m.L_ele[j, j]) for j in m.para_set), sense=maximize)
+            # if not cholesky but determinant, calculating det and evaluate the OBJ with det
+            #elif (self.objective_option == 'det'):
+            #    m.det_rule = Constraint(rule=det_general)
+            #    m.Obj = Objective(expr=log(m.det), sense=maximize)
+            # if not determinant or cholesky, calculating the OBJ with trace
+            #elif (self.objective_option == 'trace'):
+            #    m.trace_rule = Constraint(rule=trace_calc)
+            #    m.Obj = Objective(expr=log(m.trace), sense=maximize)
+            #elif (self.objective_option == 'zero'):
+            #    m.Obj = Objective(expr=0)
+
+            m = self.__add_objective(m, deactive_obj=True)
+
             # solve problem with DOF then
             time0_solve2 = time.time()
             result_doe = self.__solve_doe(m, fix=False)
@@ -509,9 +543,9 @@ class DesignOfExperiments:
                 print('Total wall clock time [s]:', time1-time0)
 
             return analysis_square, analysis_optimize
+            print('changed')
 
         else:
-            analysis_square.model = m
 
             time1 = time.time()
             # record square problem time
@@ -1283,7 +1317,7 @@ class DesignOfExperiments:
         return figure_draw_object
 
 
-    def __create_doe_model(self):
+    def __create_doe_model(self, no_obj=True):
         '''
         Add features for DOE.
 
@@ -1535,26 +1569,87 @@ class DesignOfExperiments:
         m.Obj.deactivate()
 
             # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
-        if self.optimize:
-            # if cholesky, calculating L and evaluate the OBJ with Cholesky decomposition
-            if self.Cholesky_option:
-                m.cholesky_cons = Constraint(m.para_set, m.para_set, rule=cholesky_imp)
-                m.Obj = Objective(expr=2*sum(log(m.L_ele[j,j]) for j in m.para_set), sense=maximize)
-            # if not cholesky but determinant, calculating det and evaluate the OBJ with det 
-            elif (self.objective_option=='det'):
-                m.det_rule =  Constraint(rule=det_general)
-                m.Obj = Objective(expr=log(m.det), sense=maximize)
-            # if not determinant or cholesky, calculating the OBJ with trace
-            elif (self.objective_option=='trace'):
-                m.trace_rule = Constraint(rule=trace_calc)
-                m.Obj = Objective(expr=log(m.trace), sense=maximize)
-            elif (self.objective_option=='zero'):
-                m.Obj = Objective(expr=0)
-        else:
+        if no_obj:
             m.Obj = Objective(expr=0)
+        else:
+            if self.optimize:
+                # if cholesky, calculating L and evaluate the OBJ with Cholesky decomposition
+                if self.Cholesky_option:
+                    m.cholesky_cons = Constraint(m.para_set, m.para_set, rule=cholesky_imp)
+                    m.Obj = Objective(expr=2*sum(log(m.L_ele[j,j]) for j in m.para_set), sense=maximize)
+                # if not cholesky but determinant, calculating det and evaluate the OBJ with det
+                elif (self.objective_option=='det'):
+                    m.det_rule =  Constraint(rule=det_general)
+                    m.Obj = Objective(expr=log(m.det), sense=maximize)
+                # if not determinant or cholesky, calculating the OBJ with trace
+                elif (self.objective_option=='trace'):
+                    m.trace_rule = Constraint(rule=trace_calc)
+                    m.Obj = Objective(expr=log(m.trace), sense=maximize)
+                elif (self.objective_option=='zero'):
+                    m.Obj = Objective(expr=0)
+            #else:
+            #    m.Obj = Objective(expr=0)
 
         return m
 
+    def __add_objective(self, m, deactive_obj= True):
+
+        if deactive_obj:
+            m.Obj.deactivate()
+
+        def cholesky_imp(m, c, d):
+            '''
+            Calculate Cholesky L matrix using algebraic constraints
+            '''
+        # If it is the left bottom half of L
+            if (self.param_name.index(c) >= self.param_name.index(d)):
+                return m.FIM[c, d] == sum(
+                    m.L_ele[c, self.param_name[k]] * m.L_ele[d, self.param_name[k]] for k in range(self.param_name.index(d) + 1))
+            else:
+        # This is the empty half of L above the diagonal
+                return Constraint.Skip
+
+
+        def det_general(m):
+            '''Calculate determinant. Can be applied to FIM of any size.
+            det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
+            Use permutation() to get permutations, sgn() to get signature
+            '''
+            r_list = list(range(len(m.para_set)))
+            # get all permutations
+            object_p = permutations(r_list)
+            list_p = list(object_p)
+
+            # generate a name_order to iterate \sigma_i
+            det_perm = 0
+            for i in range(len(list_p)):
+                name_order = []
+                x_order = list_p[i]
+                # sigma_i is the value in the i-th position after the reordering \sigma
+                for x in range(len(x_order)):
+                    for y, element in enumerate(m.para_set):
+                        if x_order[x] == y:
+                            name_order.append(element)
+
+            # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
+            det_perm = sum( self.__sgn(list_p[d])*sum(m.FIM[each, name_order[b]] for b, each in enumerate(m.para_set)) for d in range(len(list_p)))
+            return m.det == det_perm
+
+        if self.Cholesky_option:
+            m.cholesky_cons = Constraint(m.para_set, m.para_set, rule=cholesky_imp)
+            m.Obj = Objective(expr=2 * sum(log(m.L_ele[j, j]) for j in m.para_set), sense=maximize)
+        # if not cholesky but determinant, calculating det and evaluate the OBJ with det
+        elif (self.objective_option == 'det'):
+            m.det_rule = Constraint(rule=det_general)
+            m.Obj = Objective(expr=log(m.det), sense=maximize)
+        # if not determinant or cholesky, calculating the OBJ with trace
+        elif (self.objective_option == 'trace'):
+            m.trace_rule = Constraint(rule=trace_calc)
+            m.Obj = Objective(expr=log(m.trace), sense=maximize)
+        elif (self.objective_option == 'zero'):
+            m.Obj = Objective(expr=0)
+
+        return m
 
     def __fix_design(self, m, design_val, fix_opt=True, optimize_option=None):
         ''' Fix design variable
