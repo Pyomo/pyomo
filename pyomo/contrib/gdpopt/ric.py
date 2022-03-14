@@ -7,6 +7,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+
 from pyomo.opt.base import SolverFactory
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
@@ -134,14 +135,6 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
                 if not added:
                     # We've run out of discrete solutions, so we're done.
                     self._update_dual_bound_to_infeasible(logger)
-
-            if config.calc_disjunctive_bounds:
-                with time_code(solve_data.timing, 
-                               "disjunctive variable bounding"):
-                    TransformationFactory(
-                        'contrib.compute_disj_var_bounds').apply_to(
-                            m, solver=config.mip_solver if 
-                            config.obbt_disjunctive_bounds else None )
 
             # Check termination conditions
             if self.any_termination_criterion_met(config):

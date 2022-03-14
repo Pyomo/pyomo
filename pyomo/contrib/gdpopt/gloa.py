@@ -23,10 +23,11 @@ from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs, 
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.cut_generation import (
-    add_outer_approximation_cuts, add_no_good_cut)
+    add_affine_cuts, add_no_good_cut)
 
 from pyomo.core import (
-    Constraint, Block, Objective, minimize, Expression, Var, value)
+    Constraint, Block, Objective, minimize, Expression, Var, value, 
+    TransformationFactory)
 from pyomo.opt.base import SolverFactory
 from pyomo.opt import TerminationCondition
 from pyomo.gdp import Disjunct
@@ -35,9 +36,9 @@ import logging
 from pytest import set_trace
 
 @SolverFactory.register(
-    '_logic_based_oa',
-    doc='GDP Logic-Based Outer Approximation (LOA) solver')
-class GDP_LOA_Solver(_GDPoptAlgorithm):
+    '_global_logic_based_oa',
+    doc='GDP Global Logic-Based Outer Approximation (GLOA) solver')
+class GDP_GLOA_Solver(_GDPoptAlgorithm):
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_OA_configs(CONFIG)
     _add_mip_solver_configs(CONFIG)
@@ -46,7 +47,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
 
     def __init__(self, **kwds):
         self.CONFIG = self.CONFIG(kwds)
-        super(GDP_LOA_Solver, self).__init__()
+        super(GDP_GLOA_Solver, self).__init__()
 
     def solve(self, model, **kwds):
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
@@ -56,9 +57,9 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
         min_logging_level = logging.INFO if config.tee else None
         with time_code(self.timing, 'total', is_main_timer=True), \
             lower_logger_level_to(config.logger, min_logging_level):
-            return self._solve_gdp_with_loa(model, config)
+            return self._solve_gdp_with_gloa(model, config)
 
-    def _solve_gdp_with_loa(self, original_model, config):
+    def _solve_gdp_with_gloa(self, original_model, config):
         logger = config.logger
 
         # Make a block where we will store some component lists so that after we
@@ -92,8 +93,9 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
         master_util_block = initialize_master_problem(util_block,
                                                       subproblem_util_block,
                                                       config, self)
-        original_obj = self._setup_augmented_Lagrangian_objective(
-            master_util_block)
+        master = master_util_block.model()
+        master_obj = next(master.component_data_objects( Objective, active=True,
+                                                         descend_into=True))
 
         # main loop
         while self.master_iteration < config.iterlim:
@@ -108,12 +110,11 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
 
             # solve linear master problem
             with time_code(self.timing, 'mip'):
-                oa_obj = self._update_augmented_Lagrangian_objective(
-                    master_util_block, original_obj, config.OA_penalty_factor)
                 mip_feasible = solve_linear_GDP(master_util_block, config,
                                                 self.timing)
                 self._update_bounds_after_master_problem_solve(mip_feasible,
-                                                               oa_obj, logger)
+                                                               master_obj,
+                                                               logger)
                 # TODO: No idea what args these callbacks should actually take
                 config.call_after_master_solve(master_util_block, self)
 
@@ -135,11 +136,18 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
                                                               logger=logger)
                         if primal_improved:
                             self.update_incumbent(subproblem_util_block)
-                        with time_code(self.timing, 'OA cut generation'):
-                            add_outer_approximation_cuts(subproblem_util_block,
-                                                         master_util_block,
-                                                         self.objective_sense,
-                                                         config)
+                        if config.calc_disjunctive_bounds:
+                            with time_code(self.timing, 
+                                           "disjunctive variable bounding"):
+                                TransformationFactory(
+                                    'contrib.compute_disj_var_bounds').apply_to(
+                                        master, solver=config.mip_solver if
+                                        config.obbt_disjunctive_bounds else None
+                                    )
+                        with time_code(self.timing, 'affine cut generation'):
+                            add_affine_cuts(subproblem_util_block,
+                                            master_util_block, config,
+                                            self.timing)
 
             # Add integer cut
             with time_code(self.timing, "integer cut generation"):
@@ -148,6 +156,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
                     # We've run out of discrete solutions, so we're done.
                     self._update_dual_bound_to_infeasible(logger)
 
+            
             # Check termination conditions
             if self.any_termination_criterion_met(config):
                 break
@@ -157,28 +166,3 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
            TerminationCondition.infeasible:
             self._transfer_incumbent_to_original_model()
         return self.pyomo_results
-
-    def _setup_augmented_Lagrangian_objective(self, master_util_block):
-        m = master_util_block.model()
-        main_objective = next(m.component_data_objects(Objective, active=True))
-
-        # Set up augmented Lagrangean penalty objective
-        main_objective.deactivate()
-        # placeholder for oa objective
-        master_util_block.oa_obj = Objective(sense=minimize)
-
-        return main_objective
-
-    def _update_augmented_Lagrangian_objective(self, master_util_block,
-                                               main_objective,
-                                               OA_penalty_factor):
-        m = master_util_block.model()
-        sign_adjust = 1 if main_objective.sense == minimize else -1
-        OA_penalty_expr = sign_adjust * OA_penalty_factor * \
-                          sum(v for v in m.component_data_objects(
-                              ctype=Var, descend_into=(Block, Disjunct))
-                          if v.parent_component().local_name == 
-                              'GDPopt_OA_slacks')
-        master_util_block.oa_obj.expr = main_objective.expr + OA_penalty_expr
-
-        return master_util_block.oa_obj.expr

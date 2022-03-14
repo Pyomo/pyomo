@@ -84,7 +84,7 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                     add_cuts_according_to_algorithm(subprob_util_block,
                                                     master_util_block,
                                                     solver.objective_sense,
-                                                    config)
+                                                    config, solver.timing)
         else:
             config.logger.error(
                 'Linear GDP infeasible for user-specified '
@@ -134,7 +134,8 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
                     solver.update_incumbent(subprob_util_block)
             add_cuts_according_to_algorithm(subprob_util_block,
                                             master_util_block,
-                                            solver.objective_sense, config)
+                                            solver.objective_sense, config,
+                                            solver.timing)
     else:
         config.logger.error(
             'Linear GDP infeasible for initial user-specified '
@@ -210,7 +211,8 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
                         solver.update_incumbent(subprob_util_block)
                 add_cuts_according_to_algorithm(subprob_util_block,
                                                 master_util_block,
-                                                solver.objective_sense, config)
+                                                solver.objective_sense, config,
+                                                solver.timing)
         else:
             config.logger.info(
                 "Linear relaxation for initialization was infeasible. "
@@ -357,7 +359,7 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                     add_cuts_according_to_algorithm(subprob_util_block,
                                                     master_util_block,
                                                     solver.objective_sense,
-                                                    config)
+                                                    config, solver.timing)
             add_no_good_cut(master_util_block, config)
             iter_count += 1
 

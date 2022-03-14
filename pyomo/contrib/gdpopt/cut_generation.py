@@ -27,13 +27,14 @@ MAX_SYMBOLIC_DERIV_SIZE = 1000
 JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
 
 def add_cuts_according_to_algorithm(subproblem_util_block, master_util_block,
-                                    objective_sense, config):
+                                    objective_sense, config, timing):
     if config.algorithm == "LOA":
         return add_outer_approximation_cuts(subproblem_util_block,
                                             master_util_block, objective_sense,
                                             config)
     elif config.algorithm == "GLOA":
-        return add_affine_cuts(subprob_result, solve_data, config)
+        return add_affine_cuts(subproblem_util_block, master_util_block, config,
+                               timing)
     elif config.algorithm == "RIC":
         pass
     else:
@@ -164,70 +165,71 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
 
     config.logger.info('Added %s OA cuts' % counter)
 
-def add_affine_cuts(nlp_result, solve_data, config):
-    with time_code(solve_data.timing, "affine cut generation"):
-        m = solve_data.linear_GDP
-        if config.calc_disjunctive_bounds:
-            with time_code(solve_data.timing, "disjunctive variable bounding"):
-                TransformationFactory('contrib.compute_disj_var_bounds').\
-                    apply_to( m, solver=config.mip_solver if
-                              config.obbt_disjunctive_bounds else None )
-        config.logger.info("Adding affine cuts.")
-        GDPopt = m.GDPopt_utils
-        counter = 0
-        for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
-            if val is not None and not var.fixed:
-                var.set_value(val, skip_validation=True)
+def add_affine_cuts(subproblem_util_block, master_util_block, config, timing):
+    m = master_util_block.model()
+    bigm = TransformationFactory('gdp.bigm')
 
-        for constr in constraints_in_True_disjuncts(m, config):
-            # Note: this includes constraints that are deactivated in the
-            # current model (linear_GDP)
+    config.logger.info("Adding affine cuts.")
+    counter = 0
+    for master_var, subprob_var in zip(master_util_block.variable_list,
+                                       subproblem_util_block.variable_list):
+        val = subprob_var.value
+        if val is not None and not master_var.fixed:
+            master_var.set_value(val, skip_validation=True)
 
-            disjunctive_var_bounds = disjunctive_bounds(constr.parent_block())
+    for constr in constraints_in_True_disjuncts(m, config):
+        # Note: this includes constraints that are deactivated in the
+        # current model (linear_GDP)
 
-            if constr.body.polynomial_degree() in (1, 0):
-                continue
+        disjunctive_var_bounds = disjunctive_bounds(constr.parent_block())
 
-            vars_in_constr = list(
-                identify_variables(constr.body))
-            if any(var.value is None for var in vars_in_constr):
-                continue  # a variable has no values
+        if constr.body.polynomial_degree() in (1, 0):
+            continue
 
-            # mcpp stuff
-            try:
-                mc_eqn = mc(constr.body, disjunctive_var_bounds)
-            except MCPP_Error as e:
-                config.logger.debug("Skipping constraint %s due to MCPP "
-                                    "error %s" % (constr.name, str(e)))
-                continue  # skip to the next constraint
-            ccSlope = mc_eqn.subcc()
-            cvSlope = mc_eqn.subcv()
-            ccStart = mc_eqn.concave()
-            cvStart = mc_eqn.convex()
-            ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() \
-                     else mc_eqn.upper()
-            lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() \
-                     else mc_eqn.lower()
+        vars_in_constr = list(identify_variables(constr.body))
+        if any(var.value is None for var in vars_in_constr):
+            continue  # a variable has no values
 
-            parent_block = constr.parent_block()
-            # Create a block on which to put outer approximation cuts.
-            aff_utils = parent_block.component('GDPopt_aff')
-            if aff_utils is None:
-                aff_utils = parent_block.GDPopt_aff = Block(
-                    doc="Block holding affine constraints")
-                aff_utils.GDPopt_aff_cons = ConstraintList()
-            aff_cuts = aff_utils.GDPopt_aff_cons
-            concave_cut = sum(ccSlope[var] * (var - var.value)
-                              for var in vars_in_constr
-                              if not var.fixed) + ccStart >= lb_int
-            convex_cut = sum(cvSlope[var] * (var - var.value)
-                             for var in vars_in_constr
-                             if not var.fixed) + cvStart <= ub_int
-            aff_cuts.add(expr=concave_cut)
-            aff_cuts.add(expr=convex_cut)
-            counter += 2
+        # mcpp stuff
+        try:
+            mc_eqn = mc(constr.body, disjunctive_var_bounds)
+        except MCPP_Error as e:
+            config.logger.debug("Skipping constraint %s due to MCPP "
+                                "error %s" % (constr.name, str(e)))
+            continue  # skip to the next constraint
+        ccSlope = mc_eqn.subcc()
+        cvSlope = mc_eqn.subcv()
+        ccStart = mc_eqn.concave()
+        cvStart = mc_eqn.convex()
+        ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() \
+                 else mc_eqn.upper()
+        lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() \
+                 else mc_eqn.lower()
 
-        config.logger.info("Added %s affine cuts" % counter)
+        parent_block = constr.parent_block()
+        # Create a block on which to put outer approximation cuts.
+        aff_utils = parent_block.component('GDPopt_aff')
+        if aff_utils is None:
+            aff_utils = parent_block.GDPopt_aff = Block(
+                doc="Block holding affine constraints")
+            aff_utils.GDPopt_aff_cons = Constraint(NonNegativeIntegers)
+        aff_cuts = aff_utils.GDPopt_aff_cons
+        concave_cut = sum(ccSlope[var] * (var - var.value)
+                          for var in vars_in_constr
+                          if not var.fixed) + ccStart >= lb_int
+        convex_cut = sum(cvSlope[var] * (var - var.value)
+                         for var in vars_in_constr
+                         if not var.fixed) + cvStart <= ub_int
+        idx = len(aff_cuts)
+        aff_cuts[idx] = concave_cut
+        aff_cuts[idx+1] = convex_cut
+        bigm.add_constraint_to_transformed_model(m, Reference(aff_cuts[idx]),
+                                                 aff_cuts)
+        bigm.add_constraint_to_transformed_model(m, Reference(aff_cuts[idx+1]),
+                                                 aff_cuts)
+        counter += 2
+
+    config.logger.info("Added %s affine cuts" % counter)
 
 
 def add_no_good_cut(target_model_util_block, config):
