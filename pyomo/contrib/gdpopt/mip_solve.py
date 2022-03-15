@@ -5,26 +5,10 @@ from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
                                        get_main_elapsed_time)
-from pyomo.core import (Block, Expression, Objective, TransformationFactory,
-                        Var, minimize, value, Constraint)
-from pyomo.gdp import Disjunct
-from pyomo.network import Port
+from pyomo.core import Objective, Constraint
 from pyomo.opt import SolutionStatus, SolverFactory
-from pyomo.opt import TerminationCondition as tc, SolverResults
+from pyomo.opt import TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-
-from pytest import set_trace
-
-# def get_infeasible_master_result(util_block):
-#     mip_result = MasterProblemResult()
-#     mip_result.feasible = False
-#     mip_result.var_values = list(v.value for v in util_block.variable_list)
-#     mip_result.pyomo_results = SolverResults()
-#     mip_result.pyomo_results.solver.termination_condition = tc.error
-#     mip_result.disjunct_values = list(disj.binary_indicator_var.value
-#                                       for disj in util_block.disjunct_list)
-#     return mip_result
-
 
 def solve_linear_GDP(util_block, config, timing):
     """Solves the linear GDP model and attempts to resolve solution issues."""
@@ -145,7 +129,6 @@ def solve_linear_GDP(util_block, config, timing):
 
     return mip_feasible
 
-
 def distinguish_mip_infeasible_or_unbounded(m, config):
     """Distinguish between an infeasible or unbounded solution.
 
@@ -169,72 +152,3 @@ def distinguish_mip_infeasible_or_unbounded(m, config):
         results = mipopt.solve(m, **tmp_args)
     termination_condition = results.solver.termination_condition
     return results, termination_condition
-
-# ESJ: Going to abandon this method completely
-# def solve_LOA_master(master_util_block, config, solver):
-#     """Solve the augmented lagrangean outer approximation master problem."""
-#     m = master_util_block.model()
-#     solver.mip_iteration += 1
-#     main_objective = next(m.component_data_objects(Objective, active=True))
-
-#     if solve_data.active_strategy == 'LOA':
-#         # Set up augmented Lagrangean penalty objective
-#         main_objective.deactivate()
-#         sign_adjust = 1 if main_objective.sense == minimize else -1
-#         GDPopt.OA_penalty_expr = Expression(
-#             expr=sign_adjust * config.OA_penalty_factor *
-#             sum(v for v in m.component_data_objects(
-#                 ctype=Var, descend_into=(Block, Disjunct))
-#                 if v.parent_component().local_name == 'GDPopt_OA_slacks'))
-#         GDPopt.oa_obj = Objective(
-#             expr=main_objective.expr + GDPopt.OA_penalty_expr,
-#             sense=main_objective.sense)
-
-#         obj_expr = GDPopt.oa_obj.expr
-#         base_obj_expr = main_objective.expr
-#     elif solve_data.active_strategy in {'GLOA', 'RIC'}:
-#         obj_expr = base_obj_expr = main_objective.expr
-#     else:
-#         raise ValueError('Unrecognized strategy: ' + solve_data.active_strategy)
-
-#     mip_result = solve_linear_GDP(m, solve_data, config)
-
-#     if mip_result.feasible:
-#         if main_objective.sense == minimize:
-#             solve_data.LB = max(value(obj_expr), solve_data.LB)
-#         else:
-#             solve_data.UB = min(value(obj_expr), solve_data.UB)
-        
-#         # TODO: is this useful for anything??
-#         # solve_data.iteration_log[
-#         #     (solve_data.master_iteration,
-#         #      solve_data.mip_iteration,
-#         #      solve_data.nlp_iteration)
-#         # ] = (
-#         #     value(obj_expr),
-#         #     value(base_obj_expr),
-#         #     mip_result.var_values
-#         # )
-#         config.logger.info(
-#             'ITER {:d}.{:d}.{:d}-MIP: OBJ: {:.10g}  LB: {:.10g}  UB: {:.10g}'.\
-#             format(
-#                 solve_data.master_iteration,
-#                 solve_data.mip_iteration,
-#                 solve_data.nlp_iteration,
-#                 value(obj_expr),
-#                 solve_data.LB, solve_data.UB))
-#     else:
-#         # Master problem was infeasible.
-#         if solve_data.master_iteration == 1:
-#             config.logger.warning(
-#                 'GDPopt initialization may have generated poor '
-#                 'quality cuts.')
-#         # set optimistic bound to infinity
-#         if main_objective.sense == minimize:
-#             solve_data.LB = float('inf')
-#         else:
-#             solve_data.UB = float('-inf')
-#     # Call the MILP post-solve callback
-#     config.call_after_master_solve(m, solve_data)
-
-#     return mip_result

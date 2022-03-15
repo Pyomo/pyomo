@@ -13,15 +13,13 @@ from collections import namedtuple
 from math import copysign, fabs
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
-from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
+from pyomo.contrib.gdpopt.util import constraints_in_True_disjuncts
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
-from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
-                        minimize, value, TransformationFactory, Constraint,
-                        NonNegativeIntegers, Reference)
+from pyomo.core import (Block, NonNegativeReals, VarList, minimize, value,
+                        TransformationFactory, Constraint, NonNegativeIntegers,
+                        Reference)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr.visitor import identify_variables
-
-from pytest import set_trace
 
 MAX_SYMBOLIC_DERIV_SIZE = 1000
 JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])

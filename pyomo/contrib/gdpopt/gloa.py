@@ -24,16 +24,10 @@ from pyomo.contrib.gdpopt.config_options import (
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.cut_generation import (
     add_affine_cuts, add_no_good_cut)
-
-from pyomo.core import (
-    Constraint, Block, Objective, minimize, Expression, Var, value, 
-    TransformationFactory)
+from pyomo.core import Objective, Expression, value, TransformationFactory
 from pyomo.opt.base import SolverFactory
 from pyomo.opt import TerminationCondition
-from pyomo.gdp import Disjunct
 import logging
-
-from pytest import set_trace
 
 @SolverFactory.register(
     '_global_logic_based_oa',

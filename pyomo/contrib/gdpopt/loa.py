@@ -26,13 +26,11 @@ from pyomo.contrib.gdpopt.cut_generation import (
     add_outer_approximation_cuts, add_no_good_cut)
 
 from pyomo.core import (
-    Constraint, Block, Objective, minimize, Expression, Var, value)
+    Block, Objective, minimize, Expression, Var, value)
 from pyomo.opt.base import SolverFactory
 from pyomo.opt import TerminationCondition
 from pyomo.gdp import Disjunct
 import logging
-
-from pytest import set_trace
 
 @SolverFactory.register(
     '_logic_based_oa',

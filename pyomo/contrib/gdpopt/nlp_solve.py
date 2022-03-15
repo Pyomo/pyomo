@@ -16,14 +16,11 @@ from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
                                        is_feasible, get_main_elapsed_time)
-from pyomo.core import (Constraint, TransformationFactory, minimize, value,
-                        Objective, Block)
+from pyomo.core import Constraint, TransformationFactory, Objective, Block
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.fbbt.fbbt import fbbt
-
-from pytest import set_trace
 
 def configure_and_call_solver(model, solver, args, problem_type, timing,
                               time_limit):
@@ -296,51 +293,6 @@ def initialize_subproblem(util_block):
                 # Set the value
                 var.set_value(old_value)
 
-# ESJ TODO: YOU ARE HERE. I would rather return this info and process it
-# somewhere else, I think. But I need to think about this since it comes up in
-# initialization too.
-def update_subproblem_progress_indicators(solved_model, solve_data, config):
-    """Update the progress indicators for the subproblem."""
-    GDPopt = solved_model.GDPopt_utils
-    objective = next(solved_model.component_data_objects(Objective,
-                                                         active=True))
-    if objective.sense == minimize:
-        old_UB = solve_data.UB
-        solve_data.UB = min(value(objective.expr), solve_data.UB)
-        solve_data.feasible_solution_improved = (solve_data.UB < old_UB)
-    else:
-        old_LB = solve_data.LB
-        solve_data.LB = max(value(objective.expr), solve_data.LB)
-        solve_data.feasible_solution_improved = (solve_data.LB > old_LB)
-    solve_data.iteration_log[
-        (solve_data.master_iteration,
-         solve_data.mip_iteration,
-         solve_data.nlp_iteration)
-    ] = (
-        value(objective.expr),
-        value(objective.expr),
-        [v.value for v in GDPopt.variable_list]
-    )
-
-    if solve_data.feasible_solution_improved:
-        solve_data.best_solution_found = solved_model.clone()
-
-    improvement_tag = (
-        "(IMPROVED) " if solve_data.feasible_solution_improved else "")
-    lb_improved, ub_improved = (
-        ("", improvement_tag)
-        if objective.sense == minimize
-        else (improvement_tag, ""))
-    config.logger.info(
-        'ITER {:d}.{:d}.{:d}-NLP: OBJ: {:.10g}  LB: {:.10g} {:s} UB: {:.10g} '
-        '{:s}'.format(
-            solve_data.master_iteration,
-            solve_data.mip_iteration,
-            solve_data.nlp_iteration,
-            value(objective.expr),
-            solve_data.LB, lb_improved,
-            solve_data.UB, ub_improved))
-
 def call_appropriate_subproblem_solver(subprob_util_block, config, timing):
     subprob = subprob_util_block.model()
     # TODO: If this is really here, then we need to have some very
@@ -388,90 +340,6 @@ def solve_subproblem(subprob_util_block, config, timing):
                                                           config, timing)
             else:
                 return False
-        
-            
-        # try:
-        #     with preprocess_subproblem(subprob_util_block, config):
-        #         return call_appropriate_subproblem_solver(subprob, config,
-        #                                                   timing)
-        # except InfeasibleConstraintException as e:
-        #     config.logger.info("NLP subproblem determined to be infeasible "
-        #                        "during preprocessing.")
-        #     config.logger.debug("Message from preprocessing: %s" % e)
-        #     return False
+
     return call_appropriate_subproblem_solver(subprob_util_block, config,
                                               timing)
-
-def solve_global_subproblem(mip_result, solve_data, config):
-    subprob = solve_data.working_model.clone()
-    solve_data.nlp_iteration += 1
-
-    # copy in the discrete variable values
-    for disj, val in zip(subprob.GDPopt_utils.disjunct_list,
-                         mip_result.disjunct_values):
-        rounded_val = int(round(val))
-        if (fabs(val - rounded_val) > config.integer_tolerance or
-                rounded_val not in (0, 1)):
-            raise ValueError(
-                "Disjunct %s indicator value %s is not "
-                "within tolerance %s of 0 or 1." %
-                (disj.name, val.value, config.integer_tolerance)
-            )
-        else:
-            if config.round_discrete_vars:
-                disj.indicator_var.fix(bool(rounded_val))
-            else:
-                disj.indicator_var.fix(bool(val))
-
-    if config.force_subproblem_nlp:
-        # We also need to copy over the discrete variable values
-        for var, val in zip(subprob.GDPopt_utils.variable_list,
-                            mip_result.var_values):
-            if var.is_continuous():
-                continue
-            rounded_val = int(round(val))
-            if fabs(val - rounded_val) > config.integer_tolerance:
-                raise ValueError( "Discrete variable %s value %s is not "
-                                  "within tolerance %s of %s." % 
-                                  (var.name, var.value, 
-                                   config.integer_tolerance, rounded_val))
-            else:
-                # variable is binary and within tolerances
-                if config.round_discrete_vars:
-                    var.fix(rounded_val)
-                else:
-                    var.fix(val)
-
-    TransformationFactory('gdp.fix_disjuncts').apply_to(subprob)
-    subprob.dual.deactivate()  # global solvers may not give dual info
-
-    if config.subproblem_presolve:
-        try:
-            preprocess_subproblem(subprob, config)
-        except InfeasibleConstraintException:
-            # Preprocessing found the problem to be infeasible
-            return False
-
-    unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
-    if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:
-        raise RuntimeError("Unfixed discrete variables found on the NLP "
-                           "subproblem.")
-    elif len(unfixed_discrete_vars) == 0:
-        subprob_result = solve_NLP(subprob, solve_data, config)
-    else:
-        subprob_result = solve_MINLP(subprob, config)
-    if subprob_result.feasible:  # NLP is feasible
-        update_subproblem_progress_indicators(subprob, solve_data, config)
-    return subprob_result
-
-# def get_infeasible_result_object(model, message=""):
-#     infeas_result = SubproblemResult()
-#     infeas_result.feasible = False
-#     infeas_result.var_values = list(v.value for v in
-#                                     model.GDPopt_utils.variable_list)
-#     infeas_result.pyomo_results = SolverResults()
-#     infeas_result.pyomo_results.solver.termination_condition = tc.infeasible
-#     infeas_result.pyomo_results.message = message
-#     infeas_result.dual_values = list(None for _ in
-#                                      model.GDPopt_utils.constraint_list)
-#     return infeas_result

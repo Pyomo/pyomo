@@ -16,17 +16,6 @@ from pyomo.contrib.gdpopt.util import _DoNothing
 
 # TODO: the OA ones need to be further broken down.
 
-
-# def _get_GDPopt_config():
-    
-    
-#     _add_OA_configs(CONFIG)
-#     _add_BB_configs(CONFIG)
-#     _add_subsolver_configs(CONFIG)
-#     _add_tolerance_configs(CONFIG)
-#     return CONFIG
-
-
 def _add_OA_configs(CONFIG):
     CONFIG.declare("init_strategy", ConfigValue(
         default="set_covering", domain=In(valid_init_strategies.keys()),

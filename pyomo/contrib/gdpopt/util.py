@@ -13,22 +13,14 @@ import logging
 from contextlib import contextmanager
 from math import fabs
 
-from pyomo.common import deprecated, timing
-from pyomo.common.collections import ComponentSet, Bunch
+from pyomo.common import timing
+from pyomo.common.collections import ComponentSet
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
-from pyomo.core import (Block, Constraint,
-                        Objective, Reals, Var, minimize, value, ConstraintList)
-from pyomo.core.expr.current import identify_variables
-from pyomo.core.base.var import VarList
+from pyomo.core import (
+    Block, Constraint, Objective, Reals, Var, minimize, value)
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.opt import SolverFactory, SolverResults
-from pyomo.opt.results import ProblemSense
-from pyomo.repn.standard_repn import generate_standard_repn
-from pyomo.util.model_size import build_model_size_report
-from pyomo.core.expr import current as EXPR
-
-from pytest import set_trace
+from pyomo.opt import SolverFactory
 
 class _DoNothing(object):
     """Do nothing, literally.

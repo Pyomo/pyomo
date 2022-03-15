@@ -31,13 +31,8 @@
 
 """
 
-
-from pyomo.common.config import (
-    add_docstring_list
-)
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.opt.base import SolverFactory
-#from pyomo.contrib.gdpopt.branch_and_bound import _perform_branch_and_bound
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.ric import GDP_RIC_Solver
@@ -46,8 +41,6 @@ from pyomo.contrib.gdpopt.branch_and_bound import GDP_LBB_Solver
 from pyomo.contrib.gdpopt.config_options import (
     _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
     _add_OA_configs, _add_BB_configs)
-
-from pytest import set_trace
 
 _handlers = {
     'LOA' : '_logic_based_oa',
@@ -167,6 +160,7 @@ class _HACK_GDPoptSolver(_GDPoptAlgorithm):
             msg += '    RIC:  Relaxation with Integer Cuts'
             raise ValueError(msg)
 
+# TODO: How to do the docstring...?
 # Add the CONFIG arguments to the solve method docstring
 # GDPoptSolver.solve.__doc__ = add_docstring_list(
 #     GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)

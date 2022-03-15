@@ -13,8 +13,6 @@ from pyomo.util.model_size import build_model_size_report
 from pyomo.contrib.gdpopt.util import (
     a_logger, get_main_elapsed_time, solve_continuous_problem)
 
-from pytest import set_trace
-
 # I don't know where to keep this, just avoiding circular import for now
 __version__ = (20, 2, 28)  # Note: date-based version number
 _supported_strategies = {

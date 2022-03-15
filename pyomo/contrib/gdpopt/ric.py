@@ -28,8 +28,6 @@ from pyomo.contrib.gdpopt.nlp_solve import solve_subproblem
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
 import logging
 
-from pytest import set_trace
-
 # TODO: If we have a direct interface to cplex or gurobi, we should get the
 # integer solutions several-at-a-time with a solution pool or something.
 
