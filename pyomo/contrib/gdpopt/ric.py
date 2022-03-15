@@ -30,6 +30,9 @@ import logging
 
 from pytest import set_trace
 
+# TODO: If we have a direct interface to cplex or gurobi, we should get the
+# integer solutions several-at-a-time with a solution pool or something.
+
 @SolverFactory.register(
     '_relaxation_with_integer_cuts',
     doc='GDP Relaxation with Integer Cuts (RIC) solver')

@@ -42,6 +42,7 @@ from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.ric import GDP_RIC_Solver
 from pyomo.contrib.gdpopt.gloa import GDP_GLOA_Solver
+from pyomo.contrib.gdpopt.branch_and_bound import GDP_LBB_Solver
 from pyomo.contrib.gdpopt.config_options import (
     _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
     _add_OA_configs, _add_BB_configs)

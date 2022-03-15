@@ -71,6 +71,12 @@ def add_disjunct_list(util_block):
         ctype=Disjunct, active=True, descend_into=(Block, Disjunct),
         sort=SortComponents.deterministic))
 
+def add_disjunction_list(util_block):
+    model = util_block.model()
+    util_block.disjunction_list = list(model.component_data_objects(
+        ctype=Disjunction, active=True, descend_into=(Block, Disjunct),
+        sort=SortComponents.deterministic))
+
 def add_constraint_list(util_block):
     model = util_block.model()
     util_block.constraint_list = list(model.component_data_objects(
