@@ -38,7 +38,6 @@ _packages = [
     'pyomo.contrib.example',
     'pyomo.contrib.fme',
     'pyomo.contrib.gdp_bounds',
-    'pyomo.contrib.gdpbb',
     'pyomo.contrib.gdpopt',
     'pyomo.contrib.gjh',
     'pyomo.contrib.gdp_bounds',
