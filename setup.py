@@ -66,7 +66,7 @@ if using_cython:
             raise RuntimeError("Cython is only supported under CPython")
         from Cython.Build import cythonize
         #
-        # Note: The Cython developers recommend that you destribute C source
+        # Note: The Cython developers recommend that you distribute C source
         # files to users.  But this is fine for evaluating the utility of Cython
         #
         import shutil
@@ -174,7 +174,7 @@ setup_kwargs = dict(
     maintainer_email = 'pyomo-developers@googlegroups.com',
     url = 'http://pyomo.org',
     project_urls = {
-        'Documentation': 'https://pyomo.readthedocs.io/en/stable/',
+        'Documentation': 'https://pyomo.readthedocs.io/',
         'Source': 'https://github.com/Pyomo/pyomo',
     },
     license = 'BSD',

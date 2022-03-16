@@ -3,6 +3,34 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.4.0    16 Mar 2022
+-------------------------------------------------------------------------------
+
+- General
+  - Distribute the ampl_function_demo C source / cmake files (#2319)
+  - Add GitHub URL to setup.py for PyPI (#2325)
+  - Use constant indentation for long lines in the HierarchicalTimer (#2336)
+- Core
+  - Remove incomplete pyomo/core/base/alias.py module (#2284)
+  - Remove Python 3.6 support (#2312)
+- Solver Interfaces
+  - Remove PICO solver interface (#2341)
+- Testing
+  - Add Windows pip single test (#2334)
+  - Fix test docstrings in piecewise to silence warnings (#2342)
+- Contributed Packages
+  - APPSI: Update Gurobi solver unavailable message (#2320)
+  - APPSI: Remove distributables for Windows (#2326)
+  - APPSI: Fix bugs when working with the Gurobi solution pool (#2335)
+  - APPSI: Fix bug in persistent update for FBBT (#2340)
+  - Preprocessing: Stop using polynomial_degree to check for linear and
+    constant expressions (#2324)
+  - PyNumero: Improve coverage of mpi block matrix tests (#2318)
+  - PyNumero: Skip bound/domain validation in ExternalPyomoModel (#2323)
+  - PyNumero: Remove deprecated useage of numpy.bool (#2339)
+  - PyROS: Fix variable default initialization (#2331)
+
+-------------------------------------------------------------------------------
 Pyomo 6.3.0    23 Feb 2022
 -------------------------------------------------------------------------------
 
