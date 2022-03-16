@@ -20,8 +20,7 @@ from pyomo.opt import (AbstractProblemWriter, AbstractResultsReader,
                        SolverFactory, WriterFactory)
 from pyomo.opt.base.solvers import UnknownSolver
 from pyomo.opt.plugins.sol import ResultsReader_sol
-from pyomo.solvers.plugins.solvers import PICO
-
+from pyomo.solvers.plugins.solvers.CBCplugin import MockCBC
 
 class MockWriter(AbstractProblemWriter):
 
@@ -60,7 +59,7 @@ class OptFactoryDebug(unittest.TestCase):
         """
         SolverFactory.register('stest3')(MockSolver)
         ans = sorted(SolverFactory)
-        tmp = ['_mock_asl', '_mock_cbc', '_mock_cplex', '_mock_glpk', '_mock_pico', 'cbc', 'cplex', 'glpk', 'pico', 'stest3', 'asl']
+        tmp = ['_mock_asl', '_mock_cbc', '_mock_cplex', '_mock_glpk', 'cbc', 'cplex', 'glpk', 'stest3', 'asl']
         tmp.sort()
         self.assertTrue(set(tmp) <= set(ans), msg="Set %s is not a subset of set %s" %(tmp,ans))
 
@@ -70,10 +69,10 @@ class OptFactoryDebug(unittest.TestCase):
         """
         ans = SolverFactory("none")
         self.assertTrue(isinstance(ans, UnknownSolver))
-        ans = SolverFactory("_mock_pico")
-        self.assertEqual(type(ans), PICO.MockPICO)
-        ans = SolverFactory("_mock_pico", name="mymock")
-        self.assertEqual(type(ans), PICO.MockPICO)
+        ans = SolverFactory("_mock_cbc")
+        self.assertEqual(type(ans), MockCBC)
+        ans = SolverFactory("_mock_cbc", name="mymock")
+        self.assertEqual(type(ans), MockCBC)
         self.assertEqual(ans.name,  "mymock")
 
     def test_solver_registration(self):
@@ -84,7 +83,7 @@ class OptFactoryDebug(unittest.TestCase):
         self.assertTrue('stest3' not in SolverFactory)
         SolverFactory.register('stest3')(MockSolver)
         self.assertTrue('stest3' in SolverFactory)
-        self.assertTrue('_mock_pico' in SolverFactory)
+        self.assertTrue('_mock_cbc' in SolverFactory)
 
     def test_writer_factory(self):
         """

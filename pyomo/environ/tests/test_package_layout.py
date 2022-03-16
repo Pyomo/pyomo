@@ -36,7 +36,6 @@ _NON_MODULE_DIRS = {
     join('solvers', 'tests', 'mip', 'cbc'),
     join('solvers', 'tests', 'mip', 'cplex'),
     join('solvers', 'tests', 'mip', 'glpk'),
-    join('solvers', 'tests', 'mip', 'pico'),
     join('solvers', 'tests', 'piecewise_linear', 'baselines'),
     join('solvers', 'tests', 'piecewise_linear', 'kernel_baselines'),
     join('solvers', 'tests', 'piecewise_linear', 'kernel_problems'),

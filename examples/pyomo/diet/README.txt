@@ -95,7 +95,7 @@ Files:
   diet.dat
   diet2.mod     - The AMPL model
   diet2.ampl    - An AMPL script to solve the diet1 problem
-                  (This uses PICO, but other solvers could be used that
+                  (This uses CBC, but other solvers could be used that
                   can read in AMPL *.nl files.)
 
 Run: ampl diet2.ampl
