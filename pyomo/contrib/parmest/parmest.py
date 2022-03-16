@@ -740,7 +740,9 @@ class Estimator(object):
         assert isinstance(return_values, list)
         assert isinstance(calc_cov, bool)
         assert isinstance(pre_solve, bool)
-        assert isinstance(bound_push, float)
+        if bound_push is not None:
+            assert isinstance(bound_push, float)
+
         if calc_cov:
             assert isinstance(cov_n, int), "The number of datapoints that are used in the objective function is required to calculate the covariance matrix"
             assert cov_n > len(self.theta_names), "The number of datapoints must be greater than the number of parameters to estimate"
