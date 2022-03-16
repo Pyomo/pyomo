@@ -754,6 +754,7 @@ jobs:
         files: coverage.xml
         name: ${{ matrix.TARGET }}
         flags: ${{ matrix.TARGET }}
+        fail_ci_if_error: true
 
     - name: Upload other coverage reports
       if: |
@@ -764,3 +765,4 @@ jobs:
         files: coverage-other.xml
         name: ${{ matrix.TARGET }}/other
         flags: ${{ matrix.TARGET }},other
+        fail_ci_if_error: true
