@@ -393,7 +393,8 @@ class Estimator(object):
 
 
     def _Q_opt(self, ThetaVals=None, solver="ef_ipopt",
-               return_values=[], bootlist=None, calc_cov=False, cov_n=None):
+               return_values=[], bootlist=None, calc_cov=False, cov_n=None,
+               pre_solve=False, bound_push=None):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
@@ -434,71 +435,73 @@ class Estimator(object):
                                     suppress_warnings=True,
                                     scenario_creator_kwargs=scenario_creator_options)
 
-        # Fix fitted parameters for initialization
-        for i, theta in enumerate(self.theta_names):
-            # Use parser in ComponentUID to locate the component
-            var_cuid = ComponentUID(theta)
-            var_validate = var_cuid.find_component_on(self.parmest_model)
-            if var_validate is None:
-                logger.warning(
-                    "theta_name[%s] (%s) was not found on the model",
-                    (i, theta))
-            else:
-                try:
-                    # If the component that was found is not a variable,
-                    # this will generate an exception (and the warning
-                    # in the 'except')
-                    var_validate.fix()
-                    # We want to standardize on the CUID string
-                    # representation
-                    # self.theta_names[i] = repr(var_cuid)
-                except:
-                    logger.warning(theta + ' is not a variable')
+        # if pre_solve = True, solve square problem with parameters to be fitted
+        # fixed before solving parameter estimation problem
+        if pre_solve:
+            # Fix fitted parameters for initialization
+            for i, theta in enumerate(self.theta_names):
+                # Use parser in ComponentUID to locate the component
+                var_cuid = ComponentUID(theta)
+                var_validate = var_cuid.find_component_on(self.parmest_model)
+                if var_validate is None:
+                    logger.warning(
+                        "theta_name[%s] (%s) was not found on the model",
+                        (i, theta))
+                else:
+                    try:
+                        # If the component that was found is not a variable,
+                        # this will generate an exception (and the warning
+                        # in the 'except')
+                        var_validate.fix()
+                        # We want to standardize on the CUID string
+                        # representation
+                        # self.theta_names[i] = repr(var_cuid)
+                    except:
+                        logger.warning(theta + ' is not a variable')
 
-        init_solver = SolverFactory('ipopt')
-        if self.solver_options is not None:
-            for key in self.solver_options:
-                init_solver.options[key] = self.solver_options[key]
+            init_solver = SolverFactory('ipopt')
+            if self.solver_options is not None:
+                for key in self.solver_options:
+                    init_solver.options[key] = self.solver_options[key]
 
-        # Initial solve of square problem with ipopt
-        # Fitted parameters are fixed
-        init_solver.solve(ef, tee = True)
+            # Initial solve of square problem with ipopt
+            # Fitted parameters are fixed
+            init_solver.solve(ef, tee = True)
 
-        # Un-fix fitted parameters for estimation
-        for i, theta in enumerate(self.theta_names):
-            # Use parser in ComponentUID to locate the component
-            var_cuid = ComponentUID(theta)
-            var_validate = var_cuid.find_component_on(self.parmest_model)
-            if var_validate is None:
-                logger.warning(
-                    "theta_name[%s] (%s) was not found on the model",
-                    (i, theta))
-            else:
-                try:
-                    # If the component that was found is not a variable,
-                    # this will generate an exception (and the warning
-                    # in the 'except')
-                    var_validate.unfix()
-                    # We want to standardize on the CUID string
-                    # representation
-                    # self.theta_names[i] = repr(var_cuid)
-                except:
-                    logger.warning(theta + ' is not a variable')
+            # Un-fix fitted parameters for estimation
+            for i, theta in enumerate(self.theta_names):
+                # Use parser in ComponentUID to locate the component
+                var_cuid = ComponentUID(theta)
+                var_validate = var_cuid.find_component_on(self.parmest_model)
+                if var_validate is None:
+                    logger.warning(
+                        "theta_name[%s] (%s) was not found on the model",
+                        (i, theta))
+                else:
+                    try:
+                        # If the component that was found is not a variable,
+                        # this will generate an exception (and the warning
+                        # in the 'except')
+                        var_validate.unfix()
+                        # We want to standardize on the CUID string
+                        # representation
+                        # self.theta_names[i] = repr(var_cuid)
+                    except:
+                        logger.warning(theta + ' is not a variable')
 
         self.ef_instance = ef
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-            # ef.pprint()
+            if bound_push is not None:
+                self.solver_options['bound_push'] = bound_push
             if not calc_cov:
                 # Do not calculate the reduced hessian
                 solver = SolverFactory('ipopt')
                 if self.solver_options is not None:
                     for key in self.solver_options:
                         solver.options[key] = self.solver_options[key]
-                solver.options['max_iter'] = 0
-                # Discuss: set bound_push to 10^-6 to start solve from solution
-                # of initial solve
+
                 solve_result = solver.solve(ef, tee = self.tee)
 
             # The import error will be raised when we attempt to use
@@ -702,7 +705,8 @@ class Estimator(object):
 
         return samplelist
 
-    def theta_est(self, solver="ef_ipopt", return_values=[], calc_cov=False, cov_n=None):
+    def theta_est(self, solver="ef_ipopt", return_values=[], calc_cov=False, cov_n=None,
+                  pre_solve=False,bound_push=None):
         """
         Parameter estimation using all scenarios in the data
 
@@ -717,7 +721,10 @@ class Estimator(object):
         cov_n: int, optional
             If calc_cov=True, then the user needs to supply the number of datapoints
             that are used in the objective function
-
+        pre_solve: boolean, optional
+            If True, solve square problem with parameters fixed before solving parameter estimation
+        bound_push: float, optional
+            If True, set ipopt solver option 'bound_push' to value provided
         Returns
         -------
         objectiveval: float
@@ -732,12 +739,15 @@ class Estimator(object):
         assert isinstance(solver, str)
         assert isinstance(return_values, list)
         assert isinstance(calc_cov, bool)
+        assert isinstance(pre_solve, bool)
+        assert isinstance(bound_push, float)
         if calc_cov:
             assert isinstance(cov_n, int), "The number of datapoints that are used in the objective function is required to calculate the covariance matrix"
             assert cov_n > len(self.theta_names), "The number of datapoints must be greater than the number of parameters to estimate"
 
         return self._Q_opt(solver=solver, return_values=return_values,
-                           bootlist=None, calc_cov=calc_cov, cov_n=cov_n)
+                           bootlist=None, calc_cov=calc_cov, cov_n=cov_n,
+                           pre_solve=pre_solve, bound_push=bound_push)
 
 
     def theta_est_bootstrap(self, bootstrap_samples, samplesize=None,
