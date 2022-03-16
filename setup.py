@@ -174,7 +174,7 @@ setup_kwargs = dict(
     maintainer_email = 'pyomo-developers@googlegroups.com',
     url = 'http://pyomo.org',
     project_urls = {
-        'Documentation': 'https://pyomo.readthedocs.io/en/stable/',
+        'Documentation': 'https://pyomo.readthedocs.io/',
         'Source': 'https://github.com/Pyomo/pyomo',
     },
     license = 'BSD',
