@@ -1229,11 +1229,11 @@ class MPIBlockVector(np.ndarray, BaseBlockVector):
         num_processors = self._mpiw.Get_size()
         local_mask = self._owned_mask.flatten()
         receive_data = np.empty(num_processors * self.nblocks,
-                                dtype=np.bool)
+                                dtype=bool)
         self._mpiw.Allgather(local_mask, receive_data)
         processor_to_mask = np.split(receive_data, num_processors)
 
-        global_mask = np.zeros(self.nblocks, dtype=np.bool)
+        global_mask = np.zeros(self.nblocks, dtype=bool)
 
         for bid in range(self.nblocks):
             owner = self._rank_owner[bid]

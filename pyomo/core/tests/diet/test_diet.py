@@ -17,7 +17,8 @@ import pyomo.scripting.pyomo_main as main
 from pyomo.opt import check_available_solvers
 
 currdir = os.path.dirname(os.path.abspath(__file__))
-exdir = os.path.abspath(os.path.join(currdir, '..', '..', '..', '..', 'examples', 'pyomo', 'diet'))
+exdir = os.path.abspath(os.path.join(
+    currdir, '..', '..', '..', '..', 'examples', 'pyomo', 'diet'))
 
 sqlite3_available = pyodbc_available = False
 try:
@@ -46,7 +47,6 @@ class Test(unittest.TestCase):
         import pyomo.environ
         solvers = check_available_solvers('glpk')
 
-    @unittest.nottest
     def run_pyomo(self, *args, **kwargs):
         """
         Run Pyomo with the given arguments. `args` should be a list with
@@ -60,7 +60,8 @@ class Test(unittest.TestCase):
         args = list(map(str, args))
 
         outputpath = kwargs.pop('outputpath', os.path.join(exdir, 'results.jsn'))
-        args = ['solve', '--solver=glpk', '--results-format=json', '-c', '--logging=quiet', '--save-results', outputpath] + args
+        args = ['solve', '--solver=glpk', '--results-format=json',
+                '-c', '--logging=quiet', '--save-results', outputpath] + args
 
         old_path = os.getcwd()
         os.chdir(exdir)
@@ -76,18 +77,20 @@ class Test(unittest.TestCase):
                                          allow_second_superset=True)
 
     def test_pyomo_dat(self):
-        results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'), os.path.join(exdir, 'diet.dat'), outputpath=os.path.join(currdir, 'pyomo_dat.jsn'))
+        results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'),
+                                      os.path.join(exdir, 'diet.dat'),
+                                      outputpath=os.path.join(currdir, 'pyomo_dat.jsn'))
         baseline_file = os.path.join(currdir, 'baselines', 'diet1_pyomo_dat.jsn')
         self.compare_json(results_file, baseline_file)
 
-    @unittest.category('nightly')
     @unittest.skipUnless(pyodbc_available, "Requires PyODBC")
     def test_pyomo_mdb(self):
-        results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'), os.path.join(exdir, 'diet1.db.dat'), outputpath=os.path.join(currdir, 'pyomo_mdb.jsn'))
+        results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'),
+                                      os.path.join(exdir, 'diet1.db.dat'),
+                                      outputpath=os.path.join(currdir, 'pyomo_mdb.jsn'))
         baseline_file = os.path.join(currdir, 'baselines', 'diet1_pyomo_mdb.jsn')
         self.compare_json(results_file, baseline_file)
 
-    @unittest.category('nightly')
     @unittest.skipUnless(pyodbc_available, "Requires PyODBC")
     def test_mdb_equality(self):
         dat_results_file = self.run_pyomo(
@@ -110,7 +113,9 @@ class Test(unittest.TestCase):
 
     @unittest.skipUnless(sqlite3_available, "Requires SQLite3")
     def test_pyomo_sqlite3(self):
-        results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'), os.path.join(exdir, 'diet1.sqlite.dat'), outputpath=os.path.join(currdir, 'pyomo_sqlite3.jsn'))
+        results_file = self.run_pyomo(os.path.join(exdir, 'diet1.py'),
+                                      os.path.join(exdir, 'diet1.sqlite.dat'),
+                                      outputpath=os.path.join(currdir, 'pyomo_sqlite3.jsn'))
         baseline_file = os.path.join(currdir, 'baselines', 'diet1_pyomo_sqlite3.jsn')
         self.compare_json(results_file, baseline_file)
 

@@ -16,7 +16,7 @@ import os
 
 logger = logging.getLogger(__name__)
 
-CURRENT_INTERFACE_VERSION = 2
+CURRENT_INTERFACE_VERSION = 3
 
 class _NotSet:
     pass
@@ -37,6 +37,11 @@ def _LoadASLInterface(libname):
         interface_version = ASLib.EXTERNAL_AmplInterface_version()
     except AttributeError:
         interface_version = 1
+
+    # ASL version
+    if interface_version >= 3:
+        ASLib.EXTERNAL_get_asl_date.argtypes = []
+        ASLib.EXTERNAL_get_asl_date.restype = ctypes.c_long
 
     # constructor
     ASLib.EXTERNAL_AmplInterface_new.argtypes = [ctypes.c_char_p]
@@ -201,6 +206,7 @@ class AmplInterface(object):
     libname = _NotSet
     ASLib = None
     interface_version = None
+    asl_date = None
 
     @classmethod
     def available(cls):
@@ -228,6 +234,11 @@ class AmplInterface(object):
         if AmplInterface.ASLib is None:
             AmplInterface.ASLib, AmplInterface.interface_version \
                 = _LoadASLInterface(AmplInterface.libname)
+            if AmplInterface.interface_version >= 3:
+                AmplInterface.asl_date \
+                    = AmplInterface.ASLib.EXTERNAL_get_asl_date()
+            else:
+                AmplInterface.asl_date = 0
 
         if filename is not None:
             if nl_buffer is not None:

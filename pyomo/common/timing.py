@@ -540,8 +540,23 @@ class HierarchicalTimer(object):
         return stage_lengths
 
     def __str__(self):
+        const_indent = 4
+        max_name_length = 200 - 36
         stage_identifier_lengths = self._get_identifier_len()
-        name_formatter = '{name:<' + str(sum(stage_identifier_lengths)) + '}'
+        name_field_width = sum(stage_identifier_lengths)
+        if name_field_width > max_name_length:
+            # switch to a constant indentation of const_indent spaces
+            # (to hopefully shorten the line lengths
+            name_field_width = max(
+                const_indent*i + l
+                for i, l in enumerate(stage_identifier_lengths)
+            )
+            for i in range(len(stage_identifier_lengths) - 1):
+                stage_identifier_lengths[i] = const_indent
+            stage_identifier_lengths[-1] = (
+                name_field_width -
+                const_indent*(len(stage_identifier_lengths) - 1) )
+        name_formatter = '{name:<' + str(name_field_width) + '}'
         s = ( name_formatter + '{ncalls:>9} {cumtime:>9} '
               '{percall:>9} {percent:>6}\n').format(
                   name='Identifier',
@@ -549,7 +564,7 @@ class HierarchicalTimer(object):
                   cumtime='cumtime',
                   percall='percall',
                   percent='%')
-        underline = '-' * (sum(stage_identifier_lengths) + 36) + '\n'
+        underline = '-' * (name_field_width + 36) + '\n'
         s += underline
         sub_stage_identifier_lengths = stage_identifier_lengths[1:]
         for name, timer in sorted(self.timers.items()):

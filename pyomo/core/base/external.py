@@ -18,8 +18,10 @@ from ctypes import (
     Structure, POINTER, CFUNCTYPE, cdll, byref,
     c_int, c_long, c_ulong, c_double, c_byte, c_char_p, c_void_p )
 
+from pyomo.common.fileutils import find_library
 from pyomo.core.expr.numvalue import (
-    native_types, pyomo_constant_types, NonNumericValue, NumericConstant,
+    native_types, native_numeric_types, pyomo_constant_types,
+    NonNumericValue, NumericConstant,
 )
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import Component
@@ -324,6 +326,16 @@ class AMPLExternalFunction(ExternalFunction):
         self._function = kwargs.pop('function', None)
         self._known_functions = None
         self._so = None
+        # Convert the specified library name to an absolute path, and
+        # warn the user if we couldn't find it
+        if self._library is not None:
+            _lib = find_library(self._library)
+            if _lib is not None:
+                self._library = _lib
+            else:
+                logger.warning(
+                    'Defining AMPL external function, but cannot locate '
+                    f'specified library "{self._library}"')
         ExternalFunction.__init__(self, *args, **kwargs)
 
     def __getstate__(self):
@@ -358,19 +370,18 @@ class AMPLExternalFunction(ExternalFunction):
         return f, g, h
 
     def load_library(self):
-        try:
-            self._so = cdll.LoadLibrary(self._library)
-        except OSError:
-            # On Linux, it is uncommon for "." to be in the
-            # LD_LIBRARY_PATH, so if things fail to load, attempt to
-            # locate the library via a relative path
-            try:
-                self._so = cdll.LoadLibrary(os.path.join('.',self._library))
-            except OSError:
-                # Re-try with the original library name and allow the
-                # exception to propagate up.
-                self._so = cdll.LoadLibrary(self._library)
-
+        # Note that the library was located in __init__ and converted to
+        # an absolute path (including checking the CWD).  However, we
+        # previously tested that changing the environment (i.e.,
+        # changing directories) between defining the ExternalFunction
+        # and loading it would cause the library to still be correctly
+        # loaded.  We will re-search for the library here.  If it was
+        # previously found, we will be searching for an absolute path
+        # (and the same path will be found again).
+        _abs_lib = find_library(self._library)
+        if _abs_lib is not None:
+            self._library = _abs_lib
+        self._so = cdll.LoadLibrary(self._library)
         self._known_functions = {}
         AE = _AMPLEXPORTS()
         AE.ASLdate = 20160307
@@ -604,26 +615,52 @@ class _ARGLIST(Structure):
 
     def __init__(self, args, fgh=0, fixed=None):
         super().__init__()
-        N = len(args)
-        self.n = self.nr = N
-        self.at = (c_int*N)()
-        self.ra = (c_double*N)()
-        self.sa = None
+        self._encoded_strings = []
+        self.n = len(args)
+        self.at = (c_int*self.n)()
+        _reals = []
+        _strings = []
+        nr = 0
+        ns = 0
+        for i, arg in enumerate(args):
+            if arg.__class__ in native_numeric_types:
+                _reals.append(arg)
+                self.at[i] = nr
+                nr += 1
+                continue
+            if isinstance(arg, str):
+                # String arguments need to be converted to bytes
+                # (encoded as plain ASCII characters).  We will
+                # explicitly cache the resulting bytes object to make
+                # absolutely sure that the Python garbage collector
+                # doesn't accidentally clean up the object before we
+                # call the external function.
+                arg = arg.encode('ascii')
+                self._encoded_strings.append(arg)
+            if isinstance(arg, bytes):
+                _strings.append(arg)
+                # Note increment first, as at[i] starts at -1 for strings
+                ns += 1
+                self.at[i] = -ns
+            else:
+                raise RuntimeError(
+                    f"Unknown data type, {type(arg).__name__}, passed as "
+                    f"argument {i} for an ASL ExternalFunction")
+        self.nr = nr
+        self.ra = (c_double*nr)(*_reals)
+        self.sa = (c_char_p*ns)(*_strings)
         if fgh >= 1:
-            self.derivs = (c_double*N)(0.)
+            self.derivs = (c_double*nr)(0.)
         if fgh >= 2:
-            self.hes = (c_double*((N+N*N)//2))(0.)
-
-        for i,v in enumerate(args):
-            self.at[i] = i
-            self.ra[i] = v
+            self.hes = (c_double*((nr + nr*nr)//2))(0.)
 
         if fixed:
-            # This has to be revisited if nr != ra
-            self.dig = (c_byte*N)(0)
-            for i,v in enumerate(fixed):
+            self.dig = (c_byte*nr)(0)
+            for i, v in enumerate(fixed):
                 if v:
-                    self.dig[i] = 1
+                    r_idx = self.at[i]
+                    if r_idx >= 0:
+                        self.dig[r_idx] = 1
 
 # The following "fake" class resolves a circular reference issue in the
 # _AMPLEXPORTS datastructure

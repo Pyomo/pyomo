@@ -32,6 +32,7 @@ _packages = [
     'pyomo.dae',
     'pyomo.scripting',
     'pyomo.network',
+    'pyomo.contrib.ampl_function_demo',
     'pyomo.contrib.appsi',
     'pyomo.contrib.community_detection',
     'pyomo.contrib.example',

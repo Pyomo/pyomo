@@ -510,7 +510,7 @@ void _inverse_power1(double zl, double zu, double yl, double yu, double orig_xl,
   interval_exp(*xl, *xu, xl, xu);
 
   // if y is an integer, then x can be negative
-  if (yl == yu and yl == round(yl)) // y is a fixed integer
+  if ((yl == yu) && (yl == round(yl))) // y is a fixed integer
   {
     int y = static_cast<int>(yl);
     if (y == 0) {
@@ -727,7 +727,7 @@ void interval_tan(double xl, double xu, double *res_lb, double *res_ub) {
   // minimum value of i such that pi*i + pi/2 >= xl. Then round i up. If pi*i +
   // pi/2 is still less than or equal to xu, then there is an undefined point
   // between xl and xu.
-  if (xl <= -inf or xu >= inf) {
+  if ((xl <= -inf) || (xu >= inf)) {
     *res_lb = -inf;
     *res_ub = inf;
   } else if (_is_inf(xl) || _is_inf(xu))
