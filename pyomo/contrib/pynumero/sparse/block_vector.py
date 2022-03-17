@@ -347,7 +347,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         assert_block_structure(self)
         results = np.array([self.get_block(i).all() for i in range(self.nblocks)],
-                            dtype=np.bool)
+                            dtype=bool)
         return results.all(axis=axis, out=out, keepdims=keepdims)
 
     def any(self, axis=None, out=None, keepdims=False):
@@ -356,7 +356,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         assert_block_structure(self)
         results = np.array([self.get_block(i).any() for i in range(self.nblocks)],
-                            dtype=np.bool)
+                            dtype=bool)
         return results.any(axis=axis, out=out, keepdims=keepdims)
 
     def max(self, axis=None, out=None, keepdims=False):

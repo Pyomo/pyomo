@@ -1,4 +1,4 @@
-We are pleased to announce the release of Pyomo 6.3.0.
+We are pleased to announce the release of Pyomo 6.4.0.
 
 Pyomo is a collection of Python software packages that supports a
 diverse set of optimization capabilities for formulating and analyzing
@@ -10,6 +10,7 @@ The following are highlights of the 6.0 release series:
  - Integration of Boolean variables into GDP
  - Integration of NumPy support into the Pyomo expression system
  - Added support for Python 3.10
+ - Removed support for Python 3.6
  - New packages:
     - APPSI (Auto-Persistent Pyomo Solver Interfaces)
     - External grey box models
