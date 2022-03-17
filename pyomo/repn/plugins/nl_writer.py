@@ -72,8 +72,9 @@ class NLWriterInfo(object):
 
 class FileDeterminism(enum.IntEnum):
     NONE = 0
-    SORT_INDICES = 1
-    SORT_SYMBOLS = 2
+    ORDERED = 1
+    SORT_INDICES = 2
+    SORT_SYMBOLS = 3
 
 def _activate_nl_writer_version(n):
     """DEBUGGING TOOL to switch the "default" NL writer"""
@@ -81,25 +82,34 @@ def _activate_nl_writer_version(n):
     WriterFactory.unregister('nl')
     WriterFactory.register('nl', doc)(WriterFactory.get_class(f'nl_v{n}'))
 
-def identify_unrecognized_components(model, active=True, valid=set()):
+def categorize_valid_components(
+        model, active=True, sort=None, valid=set(), targets=set()):
     assert active in (True, None)
     unrecognized = {}
+    component_map = {k: [] for k in targets}
     for block in model.block_data_objects(active=active,
                                           descend_into=True,
-                                          sort=SortComponents.unsorted):
+                                          sort=sort):
         local_ctypes = block.collect_ctypes(active=None, descend_into=False)
-        for ctype in local_ctypes - valid:
+        for ctype in local_ctypes:
+            if ctype in targets:
+                component_map[ctype].append(block)
+                continue
+            if ctype in valid:
+                continue
             # TODO: we should rethink the definition of "active" for
             # Components that are not subclasses of ActiveComponent
             if not issubclass(ctype, ActiveComponent):
                 continue
-            unrecognized.setdefault(ctype, []).extend(
+            if cytpe not in unrecognized:
+                unrecognized[ctype] = []
+            unrecognized[ctype].extend(
                 block.component_data_objects(
                     ctype=ctype,
                     active=active,
                     descend_into=False,
                     sort=SortComponents.unsorted))
-    return {k:v for k,v in unrecognized.items() if v}
+    return component_map, {k:v for k,v in unrecognized.items() if v}
 
 @WriterFactory.register(
     'nl_v2', 'Generate the corresponding AMPL NL file (version 2).')
@@ -116,7 +126,7 @@ class NLWriter(object):
         description='Skip writing constraints whose body is constant'
     ))
     CONFIG.declare('file_determinism', ConfigValue(
-        default=FileDeterminism.NONE,
+        default=FileDeterminism.ORDERED,
         domain=InEnum(FileDeterminism),
         description='How much effort to ensure file is deterministic',
         doc="""
@@ -167,30 +177,11 @@ class NLWriter(object):
     def write(self, model, ostream, rowstream=None, colstream=None, **options):
         config = options.pop('config', self.config)(options)
 
-        unknown = identify_unrecognized_components(model, active=True, valid={
-            Block, Objective, Constraint, Var, Param, Expression,
-            ExternalFunction,
-            # FIXME: Non-active components should not report as Active
-            Set, RangeSet, Port,
-            # TODO: Suffix, Piecewise, SOSConstraint, Complementarity
-            Suffix,
-        })
-        if unknown:
-            raise ValueError(
-                "The model ('%s') contains the following active components "
-                "that the NL writer does not know how to process:\n\t%s" %
-                (model.name, "\n\t".join("%s:\n\t\t%s" % (
-                    k, "\n\t\t".join(map(attrgetter('name'), v)))
-                    for k, v in unknown.items())))
-
         # Pause the GC, as the walker that generates the compiled NL
         # representation generates (and disposes of) a large number of
         # small objects.
-        with PauseGC():
-            _impl = _NLWriter_impl(ostream, rowstream, colstream, config)
-            info = _impl.write(model)
-            _impl = None
-        return info
+        with _NLWriter_impl(ostream, rowstream, colstream, config) as impl:
+            return impl.write(model)
 
     def _generate_symbol_map(self, info):
         # Now that the row/column ordering is resolved, create the labels
@@ -220,6 +211,7 @@ def _RANGE_TYPE(lb, ub):
     else:
         return 0 # L <= c <= U
 
+
 class _NLWriter_impl(object):
 
     def __init__(self, ostream, rowstream, colstream, config):
@@ -246,17 +238,20 @@ class _NLWriter_impl(object):
             self.used_named_expressions,
         )
         self.next_V_line_id = 0
+        self.pause_gc = None
+
+    def __enter__(self):
+        assert AMPLRepn.ActiveVisitor is None
+        AMPLRepn.ActiveVisitor = self.visitor
+        self.pause_gc = PauseGC()
+        self.pause_gc.__enter__()
+
+    def __exit__(self, exc_type, exc_value, tb):
+        self.pause_gc.__exit__(exc_type, exc_value, tb)
+        assert AMPLRepn.ActiveVisitor is self.visitor
+        AMPLRepn.ActiveVisitor = None
 
     def write(self, model):
-        try:
-            assert AMPLRepn.ActiveVisitor is None
-            AMPLRepn.ActiveVisitor = self.visitor
-            return self._write_impl(model)
-        finally:
-            assert AMPLRepn.ActiveVisitor is self.visitor
-            AMPLRepn.ActiveVisitor = None
-
-    def _write_impl(self, model):
         timer = TicTocTimer(
             logger=logging.getLogger('pyomo.common.timing.writer')
         )
@@ -267,13 +262,37 @@ class _NLWriter_impl(object):
             if self.config.file_determinism  >= FileDeterminism.SORT_SYMBOLS:
                 sorter = sorter | SortComponents.alphabetical
 
+        component_map, unknown = categorize_valid_components(
+            model,
+            active=True,
+            sort=sorter,
+            valid={
+                Block, Objective, Constraint, Var, Param, Expression,
+                ExternalFunction,
+                # FIXME: Non-active components should not report as Active
+                Set, RangeSet, Port,
+                # TODO: Suffix, Piecewise, SOSConstraint, Complementarity
+                Suffix,
+            },
+            targets={
+                Objective, Constraint, Var, Suffix,
+            }
+        )
+        if unknown:
+            raise ValueError(
+                "The model ('%s') contains the following active components "
+                "that the NL writer does not know how to process:\n\t%s" %
+                (model.name, "\n\t".join("%s:\n\t\t%s" % (
+                    k, "\n\t\t".join(map(attrgetter('name'), v)))
+                    for k, v in unknown.items())))
+
         # Caching some frequently-used objects into the locals()
         symbolic_solver_labels = self.symbolic_solver_labels
         visitor = self.visitor
         ostream = self.ostream
         var_map = self.var_map
 
-        if self.config.file_determinism > FileDeterminism.NONE:
+        if self.config.file_determinism > FileDeterminism.ORDERED:
             # We will pre-gather the variables so that their order
             # matches the file_determinism flag.
             #
@@ -291,22 +310,23 @@ class _NLWriter_impl(object):
         #
         objectives = []
         linear_objs = []
-        for obj_comp in model.component_objects(
-                Objective, active=True, descend_into=True, sort=sorter):
-            try:
-                obj_vals = obj_comp.values()
-            except AttributeError:
-                # kernel does not define values() for scalar objectives
-                obj_vals = (obj_comp,)
-            for obj in obj_vals:
-                if not obj.active:
-                    continue
-                expr = visitor.walk_expression((obj.expr, obj, 1))
-                if expr.nonlinear:
-                    objectives.append((obj, expr))
-                else:
-                    linear_objs.append((obj, expr))
-            timer.toc('Objective %s', obj_comp, level=logging.DEBUG)
+        for block in component_map.get(Objective, ()):
+            for obj_comp in block.component_objects(
+                    Objective, active=True, descend_into=True, sort=sorter):
+                try:
+                    obj_vals = obj_comp.values()
+                except AttributeError:
+                    # kernel does not define values() for scalar objectives
+                    obj_vals = (obj_comp,)
+                for obj in obj_vals:
+                    if not obj.active:
+                        continue
+                    expr = visitor.walk_expression((obj.expr, obj, 1))
+                    if expr.nonlinear:
+                        objectives.append((obj, expr))
+                    else:
+                        linear_objs.append((obj, expr))
+                timer.toc('Objective %s', obj_comp, level=logging.DEBUG)
 
         # Order the objectives, moving all nonlinear objectives to
         # the beginning
@@ -318,33 +338,37 @@ class _NLWriter_impl(object):
         linear_cons = []
         n_ranges = 0
         n_equality = 0
-        for con_comp in model.component_objects(
-                Constraint, active=True, descend_into=True, sort=sorter):
-            try:
-                con_vals = con_comp.values()
-            except AttributeError:
-                # kernel does not define values() for scalar constraints
-                con_vals = (con_comp,)
-            for con in con_vals:
-                if not con.active:
-                    continue
-                expr = visitor.walk_expression((con.body, con, 0))
-                lb = con.lb
-                if lb is not None:
-                    lb = repr(lb - expr.const)
-                ub = con.ub
-                if ub is not None:
-                    ub = repr(ub - expr.const)
-                _type = _RANGE_TYPE(lb, ub)
-                if _type == 4:
-                    n_equality += 1
-                elif _type == 0:
-                    n_ranges += 1
-                if expr.nonlinear:
-                    constraints.append((con, expr, _type, lb, ub))
-                else:
-                    linear_cons.append((con, expr, _type, lb, ub))
-            timer.toc('Constraint %s', con_comp, level=logging.DEBUG)
+        for block in component_map.get(Constraint, ()):
+            for con_comp in block.component_objects(
+                    Constraint, active=True, descend_into=True, sort=sorter):
+                try:
+                    con_vals = con_comp.values()
+                except AttributeError:
+                    # kernel does not define values() for scalar constraints
+                    con_vals = (con_comp,)
+                for con in con_vals:
+                    if not con.active:
+                        continue
+                    expr = visitor.walk_expression((con.body, con, 0))
+                    lb = con.lb
+                    if lb is not None:
+                        lb = repr(lb - expr.const)
+                    ub = con.ub
+                    if ub is not None:
+                        ub = repr(ub - expr.const)
+                    _type = _RANGE_TYPE(lb, ub)
+                    if _type == 4:
+                        n_equality += 1
+                    elif _type == 0:
+                        n_ranges += 1
+                    if expr.nonlinear:
+                        constraints.append((con, expr, _type, lb, ub))
+                    elif expr.linear:
+                        linear_cons.append((con, expr, _type, lb, ub))
+                    elif not self.config.skip_trivial_constraints:
+                        linear_cons.append((con, expr, _type, lb, ub))
+                    # else: constrant constraint and skip_trivial_constraints
+                timer.toc('Constraint %s', con_comp, levellogging.DEBUG)
 
         # Order the constraints, moving all nonlinear constraints to
         # the beginning
