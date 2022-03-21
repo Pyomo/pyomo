@@ -8,13 +8,19 @@ Pyomo.DOE
 **Pyomo.DOE** (Pyomo Design of Experiments) is a Python library for model-based design of experiments
 using science-based models.
 
-It was developed by **Jialu Wang** and **Alexander W. Dowling** of University of Notre Dame. The developers gratefully
-acknowledge support from [TODO: acknowledgement AND ].
+It was developed by **Jialu Wang** and **Alexander W. Dowling** of University of Notre Dame as part of the Carbon Capture Simulation for Industry Impact (CCSI2)
+(https://www.acceleratecarboncapture.org/ ) project, 
+funded through the U.S. DOE Office of Fossil Energy by the Lawrence Berkeley National Laboratory through contract
+DE-AC02-05CH11231 and the National Energy Technology Laboratory, an agency of the United States Government, through a support contract.
+
+If you use Pyomo.DOE, please cite:
+
+Jialu Wang, Alexander Dowling (2022), Pyomo.DOE: An Open-Source Package for Model-Based Design of Experiments in Python. (under review)
 
 Methodology Overview
 ---------------------
 
-Model-based Design of Experiments (MBDoE) is a technique numerically maximizing the information gain of experiments by directly using
+Model-based Design of Experiments (MBDoE) is a technique to maximize the information gain of experiments by directly using
 science-based models with physically meaningful parameters. It is one key component in the model calibration and uncertainty quantification workflow
 shown below:
 
@@ -67,7 +73,7 @@ where:
 
 .. note::
     * Process models provided to Pyomo.DOE should define an extra scenario index for all state variables and all parameters, as the first index before any other index.
-    * Process models define time as 't'.
+    * Process models define time as t.
     * Parameter and design variables should defined as variables.
     * Create model function should take scenarios as the first argument of this function.
     * Design variables are defined with and only with a time index.
@@ -118,9 +124,7 @@ Pyomo.DOE provides four design criteria  :math:`\Psi` to measure the size of FIM
       -   :math:`\text{cond}({\mathbf{M}})`
       - Ratio of the longest axis to the shortest axis of the confidence ellipse
 
-In order to solve problems of the above, Pyomo.DOE implements the 2-stage stochastic program developed in [Paper].
-
-When using Pyomo.DOE, please consider citing the above paper.
+In order to solve problems of the above, Pyomo.DOE implements the 2-stage stochastic program developed in [Wang and Dowling, 2022].
 
 Pyomo.DOE Required Inputs
 --------------------------------
@@ -135,11 +139,11 @@ The required inputs to the Pyomo.DOE solver are the following:
 
 Below is a list of arguments that Pyomo.DOE expects the user to provide.
 
-param_init : ``Dictionary``
-    A ``Dictionary`` of parameter names and values. If they are an indexed variable, put the variable name and index in a nested ``Dictionary``.
+param_init : ``dictionary``
+    A ``dictionary`` of parameter names and values. If they are an indexed variable, put the variable name and index in a nested ``Dictionary``.
 
-design_variable_timepoints : ``Dictionary``
-    A ``Dictionary`` of design variable names and its control time points. If this design var is independent of time (constant), set the time to [0]
+design_variable_timepoints : ``dictionary``
+    A ``dictionary`` of design variable names and its control time points. If this design var is independent of time (constant), set the time to [0]
 
 measurement_object : ``object``
     A ``object`` of the measurements, provided by the measurement class.
@@ -160,8 +164,15 @@ Pyomo.DOE Solver Interface
 .. autoclass:: fim_doe.DesignOfExperiments
     :members:  __init__, optimize_doe, compute_FIM, run_grid_search
 
+
+.. Note::
+    Optimize_doe() includes the following steps:
+        #.  Build two-stage stochastic programming optimization model where scenarios correspond to finite difference approximations for the Jacobian of the response variables with respect to calibrated model parameters
+        #.  Fix the experiment design decisions and solve a square (i.e., zero degrees of freedom) instance of the two-stage DOE problem. This step is for initialization.
+        #.  Unfix the experiment design decisions and solve the two-stage DOE problem.
+
 .. autoclass:: fim_doe.Measurements
-    :members:
+    :members: __init__, check_subset
 
 .. autoclass:: fim_doe.Scenario_generator
     :special-members: __init__
@@ -172,15 +183,20 @@ Pyomo.DOE Solver Interface
 .. autoclass:: fim_doe.Grid_Search_Result
     :special-members: __init__
 
-.. note::
-    Formulate and solve the MBDoE problem.
-
 
 
 Pyomo.DOE Usage Example
 ------------------------
 
-We will use an example to illustrate the usage of PyROS. The problem we will use is a reaction kinetics example.
+We will use an example to illustrate the usage of Pyomo.DOE. The problem we will use is a reaction kinetics example.
+The Arrhenius equations model the temperature dependence of the reaction rate coefficient  :math:`k_1, k_2`. Assuming a first-order reaction mechanism gives the reaction rate model. Further, we assume only sepcies A is fed to the reactor.
+
+
+.. figure:: reactor.png
+   :scale: 40 %
+   :alt: map to buried treasure
+
+
 
 
 Step 0: Import Pyomo and the Pyomo.DOE module
@@ -204,7 +220,9 @@ The process model for the reaction kinetics problem is shown below.
 
     >>> # === Create model ==
     >>> m = ConcreteModel()
-    >>> m.R = 8.31446261815324
+    >>> m.R = 8.31446261815324  # J/K/mol
+
+.. doctest::
 
     >>> # === Define set ===
     >>> m.t0 = Set(initialize=[0])
@@ -212,6 +230,8 @@ The process model for the reaction kinetics problem is shown below.
     >>> m.t_con = Set(iniitalize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
     >>> m.scena = Set(initialize=scena['scena-name'])
     >>> m.y_set = Set(initialize=['CA', 'CB', 'CC'])
+
+.. doctest::
 
     >>> # === Define variables ===
     >>> m.CA0 = Var(m.t0, initialize = CA_init, bounds=(1.0,5.0), within=NonNegativeReals) # mol/L
@@ -221,11 +241,15 @@ The process model for the reaction kinetics problem is shown below.
     >>> m.kp1 = Var(m.scena, m.t, initialize=kp1_init)
     >>> m.kp2 = Var(m.scena, m.t, initialize=kp2_init)
 
+.. doctest::
+
     >>> # === Define Param ===
     >>> m.A1 = Param(m.scena, initialize=scena['A1'],mutable=True)
     >>> m.A2 = Param(m.scena, initialize=scena['A2'],mutable=True)
     >>> m.E1 = Param(m.scena, initialize=scena['E1'],mutable=True)
     >>> m.E2 = Param(m.scena, initialize=scena['E2'],mutable=True)
+
+.. doctest::
 
     >>> # === Constraints ===
     >>> def T_control(m,t):
@@ -260,6 +284,17 @@ The process model for the reaction kinetics problem is shown below.
     >>>     m.C[z,'CB',0.0].fix(0.0)
     >>>     m.C[z,'CC',0.0].fix(0.0)
 
+.. doctest::
+
+    >>> # === Discretization ===
+    >>> def disc(m, NFE=32):
+    >>>     discretizer = TransformationFactory('dae.collocation')
+    >>>     discretizer.apply_to(m, nfe=NFE, ncp=3, wrt=m.t)
+    >>>     for z in m.scena:
+    >>>         for t in m.t:
+    >>>             m.dCdt_rule[z,'CC',t].deactivate()
+    >>>     return m
+
 .. note::
     The first argument of the ``create_model`` function should be ``scena``.
 
@@ -270,12 +305,6 @@ Step 2: Define the inputs for Pyomo.DOE
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
-
-    >>> # === Create model function ===
-    >>> createmod = create_model
-
-    >>> # === Discretization by Pyomo.DAE ===
-    >>> disc = disc_for_measure
 
     >>> # === Design variables, time points
     >>> t_control = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]    # Control time set [h]
@@ -291,8 +320,7 @@ Step 2: Define the inputs for Pyomo.DOE
     >>> parameter_dict = {'A1': 84.79085853498033, 'A2': 371.71773413976416, 'E1': 7.777032028026428, 'E2': 15.047135137500822}
 
     >>> # === Define prior information ==
-    >>> prior_all = np.zeros((4,4))
-    >>> prior_pass=np.asarray(prior_all)
+    >>> prior_none = np.zeros((4,4))
 
 
 Step 3: Compute the FIM of a square MBDoE problem
@@ -307,18 +335,31 @@ This method computes an MBDoE optimization problem with no Degree of Freedom.
     >>> # === Specify an experiment ===
     >>> exp1 = {'CA0': {0: 5}, 'T': {0: 570, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}}
     >>> # === Create the DOE object ===
-    >>> doe_object = DesignOfExperiments(parameter_dict, dv_pass, measure_class, createmod,
-    ...                            prior_FIM=prior_pass, discretize_model=disc)
+    >>> doe_object = DesignOfExperiments(parameter_dict, dv_pass, measure_class, create_model,
+    ...                            prior_FIM=prior_none, discretize_model=disc)
     >>> # === Use ``compute_FIM`` to compute one MBDoE square problem ===
     >>> result = doe_object.compute_FIM(exp1,mode=sensi_opt, FIM_store_name = 'dynamic.csv',
     ...                            store_output = 'store_output')
+
+The MBDoE results are stored in this result object. This object can be analyzed as:
+
+.. doctest::
+
     >>> # === Analyze result ===
     >>> result.calculate_FIM(doe_object.design_values)
-    >>> print('Four design criteria log10() value:')
-    >>> print('A-optimality:', np.log10(result.trace))
-    >>> print('D-optimality:', np.log10(result.det))
-    >>> print('E-optimality:', np.log10(result.min_eig))
-    >>> print('Modified E-optimality:', np.log10(result.cond))
+
+FIM information is then available.
+
+.. doctest::
+
+    >>> result.FIM  # FIM matrix
+    >>> result.design_variable_name # design variable values at each time point
+    >>> result.trace # a scalar number of Trace
+    >>> result.det # a scalar number of determinant
+    >>> result.cond # a scalar number of condition number
+    >>> result.min_eig  # a scalar number of minimal eigen value
+    >>> result.eig # a list of all eigen values
+    >>> result.eigvals # a list of all eigen vectors
 
 .. note::
     To use the mode ``direct_kaug``, model parameters need to be defined as ``Var`` object instead of ``Param`` object.
@@ -332,21 +373,20 @@ Exploratory analysis is suggested to enumerate the design space to check if the 
 Pyomo.DOE accomplishes the exploratory analysis with the ``run_grid_search`` function.
 It allows to define any number of design decisions. Heatmaps can be drawn by two design variables, fixing other design variables.
 1D curve can be drawn by one design variable, fixing all other variables.
+The function ``run_grid_search`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method. Therefore, ``run_grid_search`` can also choose from the two modes, ``sequential_finite`` and ``direct_kaug``.
+
 
 .. doctest::
 
     >>> # === Specify inputs===
-    >>> design_ranges = [[1,2,3,4,5], [300,400,500,600,700]]]
+    >>> design_ranges = [[1,2,3,4,5], [300,400,500,600,700]]] # [CA0 [M], T [K]]
     >>> dv_apply_name = ['CA0','T']
     >>> dv_apply_time = [[0],t_control]
-    >>> exp1 = {'CA0': {0: 5}, 'T': {0: 570, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}}
+    >>> exp1 = {'CA0': {0: 5}, 'T': {0: 570, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}} # CA0 in [M], T in [K]
     >>> sensi_opt = 'sequential_finite'
     >>> prior_all = np.zeros((4,4))
     >>> prior_pass=np.asarray(prior_all)
 
-    >>> # === Define DOE object===
-    >>> doe_object = DesignOfExperiments(parameter_dict, dv_pass, measure_class, createmod,
-    ...                            prior_FIM=prior_pass, discretize_model=disc)
     >>> # === Run enumeration ===
     >>> all_fim = doe_object.run_grid_search(exp1, design_ranges, dv_apply_name, dv_apply_time, mode=sensi_opt)
 
@@ -359,8 +399,12 @@ It allows to define any number of design decisions. Heatmaps can be drawn by two
     >>> fixed = {} # do not need to fix
     >>> all_fim.figure_drawing(fixed, ['CA0','T'], 'Reactor case','$C_{A0}$ [M]', 'T [K]' )
 
-.. note::
-    The function ``run_grid_search`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method. Therefore, ``run_grid_search`` can also choose from the two modes, ``sequential_finite`` and ``direct_kaug``.
+
+Successful run of the above code shows the following figure:
+
+.. figure:: grid-1.png
+   :scale: 35 %
+   :alt: map to buried treasure
 
 
 Step 5: Gradient-based optimization
@@ -380,8 +424,12 @@ and then unfixes the design variables as degree of freedoms and solves again. In
     >>> doe_object = DesignOfExperiments(parameter_dict, dv_pass, measure_class, createmod,
     ...                            prior_FIM=prior_pass, discretize_model=disc)
     >>> # === Optimize ===
-    >>> square_result, optimize_result= doe_object.optimize_doe(exp1, if_optimize=True, if_Cholesky=True,
-                                                         scale_nominal_param_value=True, objective_option='det', L_initial=None)
+    >>> square_result, optimize_result= doe_object.optimize_doe(exp1,
+    ...                                                         if_optimize=True,
+    ...                                                          if_Cholesky=True,
+    ...                                                         scale_nominal_param_value=True,
+    ...                                                         objective_option='det',
+    ...                                                         L_initial=None)
     >>> # === Analyze results===
     >>> print('This optimization is solved with status:', optimize_result.status)
     >>> print('The result FIM is:', optimize_result.FIM)
