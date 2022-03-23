@@ -284,6 +284,7 @@ class _NLWriter_impl(object):
             self.external_functions,
             self.var_map,
             self.used_named_expressions,
+            config.symbolic_solver_labels,
         )
         self.next_V_line_id = 0
         self.pause_gc = None
@@ -616,7 +617,7 @@ class _NLWriter_impl(object):
         # LINE 3
         #
         ostream.write(
-            " %d %d %d %d %d %d \t"
+            " %d %d %d %d %d %d\t"
             "# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb\n"
             % ( n_nonlinear_cons,
                 n_nonlinear_objs,
@@ -1283,19 +1284,19 @@ class text_nl_debug_template(object):
         'floor':  'o13\t#floor\n',
     }
 
-    binary_sum = 'o0\t# +\n'
-    product = 'o2\t# *\n'
+    binary_sum = 'o0\t#+\n'
+    product = 'o2\t#*\n'
     division = 'o3\t# /\n'
     pow = 'o5\t#^\n'
     abs = 'o15\t# abs\n'
-    negation = 'o16\t# -\n'
+    negation = 'o16\t#-\n'
     nary_sum = 'o54\t# sumlist\n%d\t# (n)\n'
     exprif = 'o35\t# if\n'
     and_expr = 'o21\t# and\n'
     less_than = 'o22\t# lt\n'
     less_equal = 'o23\t# le\n'
     equality = 'o24\t# eq\n'
-    external_fcn = 'f%d %d\n'
+    external_fcn = 'f%d %d%s\n'
     var = 'v%s\n'
     const = 'n%r\n'
     string = 'h%d:%s\n'
@@ -1556,9 +1557,10 @@ def handle_external_function_node(visitor, node, *args):
             len(visitor.external_functions),
             node._fcn,
         )
+    comment = f'\t#{node.local_name}' if visitor.symbolic_solver_labels else ''
     nonlin = node_result_to_amplrepn(args[0]).compile_repn(
         visitor, visitor.template.external_fcn % (
-            visitor.external_functions[func][0], len(args)))
+            visitor.external_functions[func][0], len(args), comment))
     for arg in args[1:]:
         nonlin = node_result_to_amplrepn(arg).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
@@ -1687,7 +1689,8 @@ _before_child_handlers[SumExpression] = _before_general_expression
 class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def __init__(self, template, subexpression_cache, subexpression_order,
-                 external_functions, var_map, used_named_expressions):
+                 external_functions, var_map, used_named_expressions,
+                 symbolic_solver_labels):
         super().__init__()
         self.template = template
         self.subexpression_cache = subexpression_cache
@@ -1696,6 +1699,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.active_expression_source = None
         self.var_map = var_map
         self.used_named_expressions = used_named_expressions
+        self.symbolic_solver_labels = symbolic_solver_labels
         #self.value_cache = {}
         self._before_child_handlers = _before_child_handlers
         self._operator_handles = _operator_handles
