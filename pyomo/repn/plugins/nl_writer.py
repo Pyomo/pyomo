@@ -137,8 +137,9 @@ class NLWriter(object):
         How much effort do we want to put into ensuring the
         NL file is written deterministically for a Pyomo model:
             NONE (0) : None
-            SORT_INDICES (1) : sort keys of indexed components (default)
-            SORT_SYMBOLS (2) : sort keys AND sort names (over declaration order)
+            ORDERED (1): rely on underlying component ordering (default)
+            SORT_INDICES (2) : sort keys of indexed components
+            SORT_SYMBOLS (3) : sort keys AND sort names (over declaration order)
         """
     ))
     CONFIG.declare('symbolic_solver_labels', ConfigValue(
@@ -301,6 +302,7 @@ class _NLWriter_impl(object):
         AMPLRepn.ActiveVisitor = self.visitor
         self.pause_gc = PauseGC()
         self.pause_gc.__enter__()
+        return self
 
     def __exit__(self, exc_type, exc_value, tb):
         self.pause_gc.__exit__(exc_type, exc_value, tb)
@@ -424,7 +426,7 @@ class _NLWriter_impl(object):
                     elif not self.config.skip_trivial_constraints:
                         linear_cons.append((con, expr, _type, lb, ub))
                     # else: constrant constraint and skip_trivial_constraints
-                timer.toc('Constraint %s', con_comp, levellogging.DEBUG)
+                timer.toc('Constraint %s', con_comp, level=logging.DEBUG)
 
         # Order the constraints, moving all nonlinear constraints to
         # the beginning
