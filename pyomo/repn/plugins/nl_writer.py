@@ -216,6 +216,50 @@ def _RANGE_TYPE(lb, ub):
         return 0 # L <= c <= U
 
 
+class _SuffixData(object):
+    def __init__(self, name, column_order, row_order, obj_order, model_id):
+        self._name = name
+        self._column_order = column_order
+        self._row_order = row_order
+        self._obj_order = obj_order
+        self._model_id = model_id
+        self.obj = {}
+        self.con = {}
+        self.var = {}
+        self.prob = {}
+        self.datatype = set()
+
+    def update(self, suffix):
+        self.datatype.add(suffix.datatype)
+        for obj, val in suffix.items():
+            self._store(obj, val)
+
+    def _store(self, obj, val):
+        _id = id(obj)
+        if _id in self._column_order:
+            self.var[self._column_order[_id]] = val
+        elif _id in self._row_order:
+            self.con[self._row_order[_id]] = val
+        elif _id in self._obj_order:
+            self.obj[self._obj_order[_id]] = val
+        elif _id == self._model_id:
+            self.prob[0] = val
+        elif isinstance(obj, PyomoObject):
+            if obj.is_indexed():
+                for o in obj.values():
+                    self._store(o, val)
+            else:
+                logger.warning(
+                    f"model contained export suffix {self.name} with "
+                    f"{obj.ctype.__name__} key '{obj.name}', but that "
+                    "object is not part of the NL file.  Skipping.")
+        else:
+            logger.warning(
+                f"model contained export suffix {self.name} with "
+                f"{obj.__class__.__name__} key '{obj}', but that "
+                "object is not part of the NL file.  Skipping.")
+
+
 class _NLWriter_impl(object):
 
     def __init__(self, ostream, rowstream, colstream, config):
@@ -279,7 +323,7 @@ class _NLWriter_impl(object):
                 Suffix,
             },
             targets={
-                Objective, Constraint, Var, Suffix,
+                Objective, Constraint, Suffix,
             }
         )
         if unknown:
@@ -314,7 +358,7 @@ class _NLWriter_impl(object):
         #
         objectives = []
         linear_objs = []
-        for block in component_map.get(Objective, ()):
+        for block in component_map[Objective]:
             for obj_comp in block.component_objects(
                     Objective, active=True, descend_into=True, sort=sorter):
                 try:
@@ -342,7 +386,7 @@ class _NLWriter_impl(object):
         linear_cons = []
         n_ranges = 0
         n_equality = 0
-        for block in component_map.get(Constraint, ()):
+        for block in component_map[Constraint]:
             for con_comp in block.component_objects(
                     Constraint, active=True, descend_into=True, sort=sorter):
                 try:
@@ -506,6 +550,24 @@ class _NLWriter_impl(object):
             variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
         timer.toc("Computed variable bounds", level=logging.DEBUG)
 
+        suffix_data = {}
+        if component_map[Suffix]:
+            row_order = {id(con[0]): i for i, con in enumerate(constraints)}
+            obj_order = {id(obj[0]): i for i, obj in enumerate(objectives)}
+            model_id = id(model)
+            # Note: reverse the block list so that higher-level Suffix
+            # components override lower level ones.
+            for block in reversed(component_map[Suffix]):
+                for suffix in block.component_objects(Suffix, active=True):
+                    if not (suffix.direction & Suffix.EXPORT):
+                        continue
+                    name = suffix.local_name
+                    if name not in suffix_data:
+                        suffix_data[name] = _SuffixData(
+                            name, column_order, row_order, obj_order, model_id)
+                    suffix_data[name].update(suffix)
+            timer.toc("Collected suffixes", level=logging.DEBUG)
+
         if symbolic_solver_labels:
             labeler = NameLabeler()
             row_labels = [labeler(info[0]) for info in constraints] \
@@ -635,6 +697,32 @@ class _NLWriter_impl(object):
         #
         # "S" lines (suffixes)
         #
+        for name, data in suffix_data.items():
+            if name == 'dual':
+                continue
+            if len(data.datatype) > 1:
+                raise ValueError(
+                    "The NL file writer found multiple active export "
+                    "suffix components with name '{name}' and different "
+                    "datatypes. A single datatype must be declared.")
+            _type = next(iter(data.datatype))
+            if _type == Suffix.FLOAT:
+                _float = 4
+            elif _type == Suffix.INT:
+                _float = 0
+            else:
+                raise ValueError(
+                    "The NL file writer only supports export suffixes "
+                    "declared with a numeric datatype.  Suffix "
+                    f"component '{name}' declares type '{_type}'")
+            for _field, _vals in zip(
+                    range(4),
+                    (data.var, data.con, data.obj, data.prob)):
+                if not _vals:
+                    continue
+                ostream.write(f"S{_field|_float} {len(_vals)} {name}\n")
+                ostream.write(''.join(f"{_id} {_vals[_id]!r}\n"
+                                      for _id in sorted(_vals)))
 
         #
         # "V" lines (common subexpressions)
@@ -698,6 +786,18 @@ class _NLWriter_impl(object):
         #
         # "d" lines (dual initialization)
         #
+        if 'dual' in suffix_data:
+            _data = suffix_data['dual']
+            if _data.var:
+                logger.warning("ignoring 'dual' suffix for Var types")
+            if _data.obj:
+                logger.warning("ignoring 'dual' suffix for Objective types")
+            if _data.prob:
+                logger.warning("ignoring 'dual' suffix for Model")
+            if _data.con:
+                ostream.write(f"d{len(_data.con)}\n")
+                ostream.write(''.join(f"{_id} {_data.con[_id]!r}\n"
+                                      for _id in sorted(_data.con)))
 
         #
         # "x" lines (variable initialization)
