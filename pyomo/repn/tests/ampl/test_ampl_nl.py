@@ -11,6 +11,7 @@
 # Test the canonical expressions
 #
 import difflib
+import itertools
 import os
 import re
 
@@ -41,11 +42,30 @@ def _to_float_list(line):
             ans.append(field)
     return ans
 
+def _update_subsets(subset, base, test):
+    for i, j in zip(*subset):
+        # Try checking for numbers
+        if base[i][0] == 'n' and test[j][0] == 'n':
+            if float(base[i][1:]) == float(test[j][1:]):
+                test[j] = base[i]
+        elif _to_float_list(base[i]) == _to_float_list(test[j]):
+            test[j] = base[i]
+        else:
+            # try stripping comments, but only if it results in a match
+            base_nc = _strip_comment.sub('', base[i])
+            test_nc = _strip_comment.sub('', test[j])
+            if base_nc == test_nc or \
+               _to_float_list(base_nc) == _to_float_list(test_nc):
+                if len(base_nc) > len(test_nc):
+                    test[j] = base[i]
+                else:
+                    base[i] = test[j]
+
+
 class TestNLWriter(unittest.TestCase):
 
     def _cleanup(self, fname):
         for x in (fname, fname+'.row', fname+'.col'):
-            print(x)
             try:
                 os.remove(x)
             except OSError:
@@ -74,28 +94,26 @@ class TestNLWriter(unittest.TestCase):
         if test == base:
             return
         i = j = -1
+        subset = ([], [])
         for line in difflib.ndiff(base, test):
             if line[0] == '?':
                 continue
             if line[0] == ' ':
+                _update_subsets(subset, base, test)
+                subset = ([], [])
                 i += 1
                 j += 1
                 continue
             if line[0] == '-':
                 i += 1
+                subset[0].append(i)
             if line[0] == '+':
                 j += 1
-            # Try checking for numbers
-            if base[i][0] == 'n' and test[j][0] == 'n':
-                if float(base[i][1:]) == float(test[j][1:]):
-                    test[j] = base[i]
-            elif _to_float_list(base[i]) == _to_float_list(test[j]):
-                test[j] = base[i]
-            else:
-                # try stripping comments, but only if it results in a match
-                tmp = _strip_comment.sub('', base[i])
-                if tmp == _strip_comment.sub('', test[j]):
-                    base[i] = test[j] = tmp
+                subset[1].append(j)
+
+        if subset[0] or subset[1]:
+            _update_subsets(subset, base, test)
+
         if test == base:
             return
         print(''.join(difflib.unified_diff(
@@ -274,7 +292,8 @@ class TestNLWriter(unittest.TestCase):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
-                    io_options={'symbolic_solver_labels':True})
+                    io_options={'symbolic_solver_labels':True,
+                                'column_order': True})
         self._compare_nl_baseline(baseline_fname, test_fname)
         self._cleanup(test_fname)
 
@@ -285,7 +304,8 @@ class TestNLWriter(unittest.TestCase):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
-                    io_options={'symbolic_solver_labels':True})
+                    io_options={'symbolic_solver_labels':True,
+                                'column_order': True})
         self._compare_nl_baseline(baseline_fname, test_fname)
         self._cleanup(test_fname)
 
@@ -297,7 +317,8 @@ class TestNLWriter(unittest.TestCase):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
-                    io_options={'symbolic_solver_labels':True})
+                    io_options={'symbolic_solver_labels':True,
+                                'column_order': True})
         self._compare_nl_baseline(baseline_fname, test_fname)
         self._cleanup(test_fname)
 
@@ -308,7 +329,8 @@ class TestNLWriter(unittest.TestCase):
         variable_baseline = baseline_fname.replace('rewrite_fixed','variable')
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
-                    io_options={'symbolic_solver_labels':True})
+                    io_options={'symbolic_solver_labels':True,
+                                'column_order': True})
         self._compare_nl_baseline(variable_baseline, test_fname)
 
         m.x.fix()
