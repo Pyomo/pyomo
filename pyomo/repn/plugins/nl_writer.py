@@ -560,10 +560,18 @@ class _NLWriter_impl(object):
             len(constraints), n_cons-n_nonlinear_cons, n_nonlinear_cons,
             level=logging.DEBUG)
 
-        # Fill in the variable list and update the new column order
+        # Fill in the variable list and update the new column order.
+        #
+        # Note that as we allow var_map to contain "known" variables
+        # that are not needed in the NL file (and column_order was
+        # originally generated from var_map), we will rebuild the
+        # column_order to *just* contain the variables that we are
+        # sending to the NL.
+        self.column_order = column_order = {
+            _id: i for i, _id in enumerate(variables)
+        }
         for idx, _id in enumerate(variables):
             v = var_map[_id]
-            column_order[_id] = idx
             lb, ub = v.bounds
             if lb is not None:
                 lb = repr(lb)
