@@ -155,6 +155,29 @@ class NLWriter(object):
         List of variables to ensure are in the NL file (even if they
         don't appear in any constraints)."""
     ))
+    CONFIG.declare('row_order', ConfigValue(
+        default=None,
+        description='Preferred constraint ordering',
+        doc="""
+        List of constraints in the order that they should appear in the
+        NL file.  Note that this is only a suggestion, as the NL writer
+        will move all nonlinear constraints before linear ones
+        (preserving row_order within each group)."""
+    ))
+    CONFIG.declare('column_order', ConfigValue(
+        default=None,
+        description='Preferred variable ordering',
+        doc="""
+        List of variables in the order that they should appear in the NL
+        file.  Note that this is only a suggestion, as the NL writer
+        will move all nonlinear variables before linear ones, and within
+        nonlinear variables, variables appearing in both objectives and
+        constraints before variables appearing only in constraints,
+        which appear before variables appearing only in objectives.
+        Within each group, continuous variables appear before discrete
+        variables.  In all cases, column_order is preserved within each
+        group."""
+    ))
 
     def __init__(self):
         self.config = self.CONFIG()
@@ -326,11 +349,10 @@ class _NLWriter_impl(object):
             sort=sorter,
             valid={
                 Block, Objective, Constraint, Var, Param, Expression,
-                ExternalFunction,
+                ExternalFunction, Suffix,
                 # FIXME: Non-active components should not report as Active
                 Set, RangeSet, Port,
-                # TODO: Suffix, Piecewise, SOSConstraint, Complementarity
-                Suffix,
+                # TODO: Piecewise, SOSConstraint, Complementarity
             },
             targets={
                 Objective, Constraint, Suffix,
@@ -350,17 +372,27 @@ class _NLWriter_impl(object):
         ostream = self.ostream
         var_map = self.var_map
 
-        if self.config.file_determinism > FileDeterminism.ORDERED:
+        if self.config.column_order == True:
+            self.config.column_order = list(model.component_data_objects(
+                Var, descend_into=True, sort=sorter))
+        elif self.config.file_determinism > FileDeterminism.ORDERED:
             # We will pre-gather the variables so that their order
-            # matches the file_determinism flag.
-            #
-            # This is a little cumbersome, but is implemented this way
-            # for consistency with the original NL writer.  Note that
-            # Vars that appear twice (e.g., through a Reference) will be
-            # sorted with the LAST occurance.
-            for var in model.component_data_objects(
-                    Var, descend_into=True, sort=sorter):
-                if not var.fixed:
+            # matches the file_determinism flag.  This is a little
+            # cumbersome, but is implemented this way for consistency
+            # with the original NL writer.
+            if self.config.column_order is None:
+                self.config.column_order = []
+            self.config.column_order.extend(model.component_data_objects(
+                Var, descend_into=True, sort=sorter))
+        if self.config.column_order is not None:
+            # Note that Vars that appear twice (e.g., through a
+            # Reference) will be sorted with the FIRST occurance.
+            for var in self.config.column_order:
+                if var.is_indexed():
+                    for _v in var.values():
+                        if not _v.fixed:
+                            var_map[id(_v)] = _v
+                elif not var.fixed:
                     var_map[id(var)] = var
 
         #
@@ -427,6 +459,24 @@ class _NLWriter_impl(object):
                         linear_cons.append((con, expr, _type, lb, ub))
                     # else: constrant constraint and skip_trivial_constraints
                 timer.toc('Constraint %s', con_comp, level=logging.DEBUG)
+
+        if self.config.row_order:
+            row_order = {}
+            for con in self.config.row_order:
+                if con.is_indexed():
+                    for c in con.values():
+                        row_order[id(c)] = _c
+                else:
+                    row_order[id(con)] = _c
+            for c in constraints:
+                row_order[id(c)] = _c
+            for c in linear_cons:
+                row_order[id(c)] = _c
+            row_order = {_id: i for i, _id in enumerate(row_order.keys())}
+            constraints.sort(key=itemgetter(row_order))
+            linear_cons.sort(key=itemgetter(row_order))
+        else:
+            row_order = {}
 
         # Order the constraints, moving all nonlinear constraints to
         # the beginning
@@ -582,7 +632,8 @@ class _NLWriter_impl(object):
 
         suffix_data = {}
         if component_map[Suffix]:
-            row_order = {id(con[0]): i for i, con in enumerate(constraints)}
+            if not row_order:
+                row_order = {id(con[0]): i for i, con in enumerate(constraints)}
             obj_order = {id(obj[0]): i for i, obj in enumerate(objectives)}
             model_id = id(model)
             # Note: reverse the block list so that higher-level Suffix
