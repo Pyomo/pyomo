@@ -707,8 +707,8 @@ class _NLWriter_impl(object):
         #
         ostream.write(
             " %d %d\t# max name lengths: constraints, variables\n"
-            % ( max(map(len, row_labels)),
-                max(map(len, col_labels)),
+            % ( max(map(len, row_labels), default=0),
+                max(map(len, col_labels), default=0),
             ))
         #
         # LINE 10
