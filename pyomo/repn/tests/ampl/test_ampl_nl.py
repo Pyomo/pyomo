@@ -10,10 +10,10 @@
 #
 # Test the canonical expressions
 #
-
+import difflib
 import os
+import re
 
-from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.common.getGSL import find_GSL
@@ -27,6 +27,19 @@ import pyomo.repn.plugins.ampl.ampl_ as ampl_
 gsr = ampl_.generate_standard_repn
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
+
+_norm_whitespace = re.compile(r'\s+')
+_norm_comment = re.compile(r'\s*#\s*')
+_strip_comment = re.compile(r'\s*#.*')
+
+def _to_float_list(line):
+    ans = []
+    for field in line.split():
+        try:
+            ans.append(float(field))
+        except:
+            ans.append(field)
+    return ans
 
 class TestNLWriter(unittest.TestCase):
 
@@ -42,6 +55,55 @@ class TestNLWriter(unittest.TestCase):
         class_name, test_name = self.id().split('.')[-2:]
         prefix = os.path.join(thisdir, test_name.replace("test_", "", 1))
         return prefix+".nl.baseline", prefix+".nl.out"
+
+    def _compare_nl_baseline(self, baseline, testfile):
+        with open(testfile, 'r') as FILE:
+            test = FILE.read().splitlines()
+        with open(baseline, 'r') as FILE:
+            base = FILE.read().splitlines()
+        if test == base:
+            return
+        for i in range(min(len(test), len(base))):
+            if test[i] == base[i]:
+                continue
+            # normalize comment whitespace
+            base[i] = _norm_comment.sub(
+                '\t#', _norm_whitespace.sub(' ', base[i]))
+            test[i] = _norm_comment.sub(
+                '\t#', _norm_whitespace.sub(' ', test[i]))
+        if test == base:
+            return
+        i = j = -1
+        for line in difflib.ndiff(base, test):
+            if line[0] == '?':
+                continue
+            if line[0] == ' ':
+                i += 1
+                j += 1
+                continue
+            if line[0] == '-':
+                i += 1
+            if line[0] == '+':
+                j += 1
+            # Try checking for numbers
+            if base[i][0] == 'n' and test[j][0] == 'n':
+                if float(base[i][1:]) == float(test[j][1:]):
+                    test[j] = base[i]
+            elif _to_float_list(base[i]) == _to_float_list(test[j]):
+                test[j] = base[i]
+            else:
+                # try stripping comments, but only if it results in a match
+                tmp = _strip_comment.sub('', base[i])
+                if tmp == _strip_comment.sub('', test[j]):
+                    base[i] = test[j] = tmp
+        if test == base:
+            return
+        print(''.join(difflib.unified_diff(
+            [_+"\n" for _ in base],
+            [_+"\n" for _ in test],
+            fromfile=baseline,
+            tofile=testfile)))
+        self.assertEqual(test, base)
 
     def test_export_nonlinear_variables(self):
         model = ConcreteModel()
@@ -148,10 +210,7 @@ class TestNLWriter(unittest.TestCase):
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
         model.write(test_fname, format='nl')
-        self.assertTrue(cmp(
-            test_fname,
-            baseline_fname),
-            msg="Files %s and %s differ" % (test_fname, baseline_fname))
+        self._compare_nl_baseline(baseline_fname, test_fname)
         self._cleanup(test_fname)
 
     def test_var_on_nonblock(self):
@@ -206,10 +265,7 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertTrue(cmp(
-            test_fname,
-            baseline_fname),
-            msg="Files %s and %s differ" % (test_fname, baseline_fname))
+        self._compare_nl_baseline(baseline_fname, test_fname)
         self._cleanup(test_fname)
 
     def test_external_expression_variable(self):
@@ -219,10 +275,7 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertTrue(cmp(
-            test_fname,
-            baseline_fname),
-            msg="Files %s and %s differ" % (test_fname, baseline_fname))
+        self._compare_nl_baseline(baseline_fname, test_fname)
         self._cleanup(test_fname)
 
     def test_external_expression_partial_fixed(self):
@@ -233,10 +286,7 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertTrue(cmp(
-            test_fname,
-            baseline_fname),
-            msg="Files %s and %s differ" % (test_fname, baseline_fname))
+        self._compare_nl_baseline(baseline_fname, test_fname)
         self._cleanup(test_fname)
 
     def test_external_expression_fixed(self):
@@ -248,10 +298,7 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertTrue(cmp(
-            test_fname,
-            baseline_fname),
-            msg="Files %s and %s differ" % (test_fname, baseline_fname))
+        self._compare_nl_baseline(baseline_fname, test_fname)
         self._cleanup(test_fname)
 
     def test_external_expression_rewrite_fixed(self):
@@ -262,10 +309,7 @@ class TestNLWriter(unittest.TestCase):
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
-        self.assertTrue(cmp(
-            test_fname,
-            variable_baseline),
-            msg="Files %s and %s differ" % (test_fname, baseline_fname))
+        self._compare_nl_baseline(variable_baseline, test_fname)
 
         m.x.fix()
         self._cleanup(test_fname)
@@ -273,20 +317,14 @@ class TestNLWriter(unittest.TestCase):
                 io_options={'symbolic_solver_labels':True})
         partial_baseline = baseline_fname.replace(
             'rewrite_fixed','partial_fixed')
-        self.assertTrue(cmp(
-            test_fname,
-            partial_baseline),
-            msg="Files %s and %s differ" % (test_fname, baseline_fname))
+        self._compare_nl_baseline(partial_baseline, test_fname)
 
         m.y.fix()
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                 io_options={'symbolic_solver_labels':True})
         fixed_baseline = baseline_fname.replace('rewrite_fixed','fixed')
-        self.assertTrue(cmp(
-            test_fname,
-            fixed_baseline),
-            msg="Files %s and %s differ" % (test_fname, baseline_fname))
+        self._compare_nl_baseline(fixed_baseline, test_fname)
         self._cleanup(test_fname)
 
     def test_obj_con_cache(self):
