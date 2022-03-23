@@ -76,6 +76,7 @@ class FileDeterminism(enum.IntEnum):
     SORT_INDICES = 2
     SORT_SYMBOLS = 3
 
+
 def _activate_nl_writer_version(n):
     """DEBUGGING TOOL to switch the "default" NL writer"""
     doc = WriterFactory.doc('nl')
@@ -92,6 +93,8 @@ def categorize_valid_components(
                                           sort=sort):
         local_ctypes = block.collect_ctypes(active=None, descend_into=False)
         for ctype in local_ctypes:
+            if ctype in kernel.base._kernel_ctype_backmap:
+                ctype = kernel.base._kernel_ctype_backmap[ctype]
             if ctype in targets:
                 component_map[ctype].append(block)
                 continue
@@ -99,9 +102,10 @@ def categorize_valid_components(
                 continue
             # TODO: we should rethink the definition of "active" for
             # Components that are not subclasses of ActiveComponent
-            if not issubclass(ctype, ActiveComponent):
+            if not issubclass(ctype, ActiveComponent) and \
+               not issubclass(ctype, kernel.base.ICategorizedObject):
                 continue
-            if cytpe not in unrecognized:
+            if ctype not in unrecognized:
                 unrecognized[ctype] = []
             unrecognized[ctype].extend(
                 block.component_data_objects(

@@ -33,6 +33,7 @@ class _no_ctype(object):
 # AML classes (which are the ctypes used by all of the
 # solver interfaces) to Kernel classes
 _convert_ctype = {}
+_kernel_ctype_backmap = {}
 
 def _convert_descend_into(value):
     """Converts the descend_into keyword to a function"""

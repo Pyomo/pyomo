@@ -165,12 +165,11 @@ del _convert_ctype
 # Hacks needed for this interface to work with Pyomo solvers
 #
 #
+from pyomo.core.kernel.base import _convert_ctype, _kernel_ctype_backmap
 
 #
 # Set up mappings between AML and Kernel ctypes
 #
-
-from pyomo.core.kernel.base import _convert_ctype
 _convert_ctype[pyomo.environ.Block] = \
     pyomo.core.kernel.block.IBlock
 _convert_ctype[pyomo.environ.Var] = \
@@ -187,7 +186,17 @@ _convert_ctype[pyomo.environ.SOSConstraint] = \
     pyomo.core.kernel.sos.ISOS
 _convert_ctype[pyomo.environ.Suffix] = \
     pyomo.core.kernel.suffix.ISuffix
+
+#
+# Set up back mappings from Kernel back to AML ctypes
+#
+_kernel_ctype_backmap.update(
+    {v: k for k, v in _convert_ctype.items()
+     if not issubclass(k, pyomo.core.kernel.base.ICategorizedObject)}
+)
+
 del _convert_ctype
+del _kernel_ctype_backmap
 
 #
 # Now cleanup the namespace a bit
