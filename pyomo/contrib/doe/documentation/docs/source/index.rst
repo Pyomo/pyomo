@@ -15,7 +15,7 @@ DE-AC02-05CH11231 and the National Energy Technology Laboratory, an agency of th
 
 If you use Pyomo.DOE, please cite:
 
-Jialu Wang, Alexander Dowling (2022), Pyomo.DOE: An Open-Source Package for Model-Based Design of Experiments in Python. (under review)
+[Wang and Dowling, 2022] Jialu Wang, Alexander Dowling (2022), Pyomo.DOE: An Open-Source Package for Model-Based Design of Experiments in Python. (under review)
 
 Methodology Overview
 ---------------------
@@ -28,23 +28,23 @@ shown below:
    :scale: 25 %
    :alt: map to buried treasure
 
-   The exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE are combined into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty.
+   The exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE are combined into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty. The goal of this workflow is to achieve a confident parameter estimation.
 
-Pyomo.DOE provides the exploratory anlaysis and MBDoE given one Pyomo model, a set of parameter nominal values,
+Pyomo.DOE provides the exploratory anlaysis and MBDoE capabilities to the Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
 the allowable design spaces for design variables, and the assumed observation error model.
-The exploratory analysis checks if this model parameters can be inferred from the postulated measurements or preliminary data.
-MBDoE generates new experiments for collecting more data.
-The goal of this workflow is to achieve a confident parameter estimation.
+During exploratory analysis, Pyomo.DOE checks if this model parameters can be inferred from the postulated measurements or preliminary data.
+MBDoE then recommends optimized experimental conditions for collecting more data.
 Parameter estimation packages such as **Parmest** can perform parameter estimation using the available data to infer values for parameters,
 and facilitate an uncertainty analysis to approximate the parameter covariance matrix.
 If the parameter uncertainties are sufficiently small, the workflow terminates and returns the final model with quantified parametric uncertainty.
-If not, MBDoE is performed to generate new experiments and new data.
+If not, MBDoE is performed to recommend new experiments to generate new data.
 
 Below is an overview of the type of optimization models Pyomo.DOE can accomodate:
 
 * Pyomo.DOE is suitable for optimization models of **continuous** variables
 * Pyomo.DOE can handle **equality constraints** defining state variables
-* Pyomo.DOE allows for (Partial) Differential-Algebraic Equations (DAE) models which can be discretized and solved by Pyomo.DAE, and also just algebraic models
+* Pyomo.DOE allows for (Partial) Differential-Algebraic Equations (PDAE) models which can be discretized and solved by Pyomo.DAE
+* Pyomo.DOE also supports only algebraic models
 
 The general form of a DAE problem that can be passed into Pyomo.DOE is shown below:
 
@@ -73,7 +73,7 @@ where:
 
 .. note::
     * Process models provided to Pyomo.DOE should define an extra scenario index for all state variables and all parameters, as the first index before any other index.
-    * Process models define time as t.
+    * Process models define time as t. For steady-state models, t should be [0].
     * Parameter and design variables should defined as variables.
     * Create model function should take scenarios as the first argument of this function.
     * Design variables are defined with and only with a time index.
@@ -84,7 +84,7 @@ Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DO
     \begin{equation}
     \begin{aligned}
         \underset{\boldsymbol{\varphi}}{\max} \quad & \Psi (\mathbf{M}(\mathbf{\hat{y}}, \boldsymbol{\varphi})) \\
-        \text{s.t.} \quad & \mathbf{M}(\boldsymbol{\hat{\theta}}, \boldsymbol{\varphi}) = \sum_r^{N_r} \sum_{r'}^{N_r} \tilde{\sigma}_{(r,r')}\mathbf{Q}_r^\mathbf{T} \mathbf{Q}_{r'} + \mathbf{V}_{\boldsymbol{\theta}}(\boldsymbol{\hat{\theta}})^{-1} \\
+        \text{s.t.} \quad & \mathbf{M}(\boldsymbol{\hat{\theta}}, \boldsymbol{\varphi}) = \sum_r^{N_r} \sum_{r'}^{N_r} \tilde{\sigma}_{(r,r')}\mathbf{Q}_r^\mathbf{T} \mathbf{Q}_{r'} + \mathbf{V}^{-1}_{\boldsymbol{\theta}}(\boldsymbol{\hat{\theta}}) \\
         & \dot{\mathbf{x}}(t) = \mathbf{f}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}}, \boldsymbol{\theta}) \\
         & \mathbf{g}(\mathbf{x}(t),  \mathbf{z}(t), \mathbf{y}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\theta})=\mathbf{0} \\
         & \mathbf{y} =\mathbf{h}(\mathbf{x}(t), \mathbf{z}(t), \mathbf{u}(t), \overline{\mathbf{w}},\boldsymbol{\theta}) \\
@@ -96,7 +96,7 @@ Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DO
 
 where:
 
-*  :math:`\boldsymbol{\varphi}` are design variables, which are manipulated to maximize the information content of experiments. It should consist one or more of  :math:`\mathbf{u}(t), \mathbf{y}^{\mathbf{0}}({t_0}),\overline{\mathbf{w}}, \mathbf{t}`.
+*  :math:`\boldsymbol{\varphi}` are design variables, which are manipulated to maximize the information content of experiments. It should consist one or more of  :math:`\mathbf{u}(t), \mathbf{y}^{\mathbf{0}}({t_0}),\overline{\mathbf{w}}`. With a proper model formulation, the timepoints for control or measurements :math:`\mathbf{t}` can also be degree of freedoms.
 *  :math:`\mathbf{M}` is Fisher information matrix (FIM), estimated as the inverse of the covariance matrix of parameter estimates  :math:`\boldsymbol{\hat{\theta}}`. A large FIM indicates more information contained in the experiment for parameter estimation.
 *  :math:`\mathbf{Q}` is dynamic sensitivity matrix, containing the partial derivatives of  :math:`\mathbf{y}` with respect to  :math:`\boldsymbol{\theta}`.
 *  :math:`\Psi` is the design criteria to measure FIM.
@@ -124,13 +124,13 @@ Pyomo.DOE provides four design criteria  :math:`\Psi` to measure the size of FIM
       -   :math:`\text{cond}({\mathbf{M}})`
       - Ratio of the longest axis to the shortest axis of the confidence ellipse
 
-In order to solve problems of the above, Pyomo.DOE implements the 2-stage stochastic program developed in [Wang and Dowling, 2022].
+In order to solve problems of the above, Pyomo.DOE implements the 2-stage stochastic program. Please see Wang and Dowling (2022) for details.
 
 Pyomo.DOE Required Inputs
 --------------------------------
 The required inputs to the Pyomo.DOE solver are the following:
 
-* A process model
+* A function that creates the process model
 * Dictionary of parameters and their nominal value
 * Dictionary of measurements and their measurement time points
 * Dictionary of design variables and their control time points
@@ -159,6 +159,9 @@ prior_FIM : ``list``
 Pyomo.DOE Solver Interface
 ---------------------------
 
+.. figure:: uml.png
+   :scale: 25 %
+   :alt: map to buried treasure
 
 
 .. autoclass:: fim_doe.DesignOfExperiments
@@ -188,15 +191,29 @@ Pyomo.DOE Solver Interface
 Pyomo.DOE Usage Example
 ------------------------
 
-We will use an example to illustrate the usage of Pyomo.DOE. The problem we will use is a reaction kinetics example.
+We will use an example to illustrate the usage of Pyomo.DOE to a reaction kinetics example.
 The Arrhenius equations model the temperature dependence of the reaction rate coefficient  :math:`k_1, k_2`. Assuming a first-order reaction mechanism gives the reaction rate model. Further, we assume only sepcies A is fed to the reactor.
 
 
-.. figure:: reactor.png
-   :scale: 40 %
-   :alt: map to buried treasure
+.. math::
+    \begin{equation}
+    \begin{aligned}
+        k_1 & = A_1 e^{-\frac{E_1}{RT}} \\
+        k_2 & = A_2 e^{-\frac{E_2}{RT}} \\
+        \frac{d{C_A}}{dt} & = -k_1{C_A}$  \\
+        \frac{d{C_B}}{dt} &  = k_1{C_A} - k_2{C_B}  \\
+        C_{A0}& = C_A + C_B + C_C \\
+        C_B(t_0) & = 0 \\
+        C_C(t_0) & = 0 \\
+    \end{aligned}
+    \end{equation}
 
 
+
+:math:`C_A(t), C_B(t), C_C(t)` are the time-varying concentrations of the species A, B, C, respectively.
+:math:`k_1, k_2` are the rates for the two chemical reactions using an Arrhenius equation with activation energies :math:`E_1, E_2` and pre-exponential factors :math:`A_1, A_2`.
+The goal of MBDoE is to optimize the experiment design variables :math:`\boldsymbol{\varphi} = (C_{A0}, T(t))`, where :math:`C_{A0},T(t)` are the initial concentration of species A and the time-varying reactor temperature, to maximize the precision of unknown model parameters :math:`\boldsymbol{\theta} = (A_1, E_1, A_2, E_2)` by measuring :math:`\mathbf{y}(t)=(C_A(t), C_B(t), C_C(t))`.
+The observation errors are assumed to be independent both in time and across measurements with a constant standard deviation of 1 M for each species.
 
 
 Step 0: Import Pyomo and the Pyomo.DOE module
@@ -209,7 +226,7 @@ In anticipation of using the Pyomo.DOE and building the Pyomo process model:
     >>> # === Required import ===
     >>> import pyomo.environ as pyo
     >>> from pyomo.dae import *
-    >>> from pyomo.contrib.doe.fim_doe import *
+    >>> import pyomo.contrib.doe.fim_doe as doe
 
 Step 1: Define the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -219,35 +236,35 @@ The process model for the reaction kinetics problem is shown below.
 .. doctest::
 
     >>> # === Create model ==
-    >>> m = ConcreteModel()
+    >>> m = pyo.ConcreteModel()
     >>> m.R = 8.31446261815324  # J/K/mol
 
 .. doctest::
 
     >>> # === Define set ===
-    >>> m.t0 = Set(initialize=[0])
-    >>> m.t = ContinuousSet(bounds=(0, 1))
-    >>> m.t_con = Set(iniitalize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
-    >>> m.scena = Set(initialize=scena['scena-name'])
-    >>> m.y_set = Set(initialize=['CA', 'CB', 'CC'])
+    >>> m.t0 = pyo.Set(initialize=[0])
+    >>> m.t = pyo.ContinuousSet(bounds=(0, 1))
+    >>> m.t_con = pyo.Set(iniitalize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
+    >>> m.scena = pyo.Set(initialize=scena['scena-name'])
+    >>> m.y_set = pyo.Set(initialize=['CA', 'CB', 'CC'])
 
 .. doctest::
 
     >>> # === Define variables ===
-    >>> m.CA0 = Var(m.t0, initialize = CA_init, bounds=(1.0,5.0), within=NonNegativeReals) # mol/L
-    >>> m.T = Var(m.t, initialize =T_initial, bounds=(300, 700), within=NonNegativeReals)
-    >>> m.C = Var(m.scena, m.y_set, m.t, initialize=C_init, within=NonNegativeReals)
-    >>> m.dCdt = DerivativeVar(m.C, wrt=m.t)
-    >>> m.kp1 = Var(m.scena, m.t, initialize=kp1_init)
-    >>> m.kp2 = Var(m.scena, m.t, initialize=kp2_init)
+    >>> m.CA0 = pyo.Var(m.t0, initialize = CA_init, bounds=(1.0,5.0), within=NonNegativeReals) # mol/L
+    >>> m.T = pyo.Var(m.t, initialize =T_initial, bounds=(300, 700), within=NonNegativeReals)
+    >>> m.C = pyo.Var(m.scena, m.y_set, m.t, initialize=C_init, within=NonNegativeReals)
+    >>> m.dCdt = pyo.DerivativeVar(m.C, wrt=m.t)
+    >>> m.kp1 = pyo.Var(m.scena, m.t, initialize=kp1_init)
+    >>> m.kp2 = pyo.Var(m.scena, m.t, initialize=kp2_init)
 
 .. doctest::
 
     >>> # === Define Param ===
-    >>> m.A1 = Param(m.scena, initialize=scena['A1'],mutable=True)
-    >>> m.A2 = Param(m.scena, initialize=scena['A2'],mutable=True)
-    >>> m.E1 = Param(m.scena, initialize=scena['E1'],mutable=True)
-    >>> m.E2 = Param(m.scena, initialize=scena['E2'],mutable=True)
+    >>> m.A1 = pyo.Param(m.scena, initialize=scena['A1'],mutable=True)
+    >>> m.A2 = pyo.Param(m.scena, initialize=scena['A2'],mutable=True)
+    >>> m.E1 = pyo.Param(m.scena, initialize=scena['E1'],mutable=True)
+    >>> m.E2 = pyo.Param(m.scena, initialize=scena['E2'],mutable=True)
 
 .. doctest::
 
@@ -272,14 +289,14 @@ The process model for the reaction kinetics problem is shown below.
     >>>     elif y=='CB':
     >>>         return m.dCdt[z,y,t] == m.kp1[z,t]*m.C[z,'CA',t] - m.kp2[z,t]*m.C[z,'CB',t]
     >>>     elif y=='CC':
-    >>>         return m.dCdt[z,y,t] == m.kp2[z,t]*m.C[z,'CB',t]
+    >>>         return Constraint.Skip
     >>> def alge(m,z,t):
     >>>     return m.C[z,'CA',t] + m.C[z,'CB',t] + m.C[z,'CC', t] == m.CA0[0]
-    >>> m.T_rule = Constraint(m.t, rule=T_control)
-    >>> m.k1_pert_rule = Constraint(m.scena, m.t, rule=cal_kp1)
-    >>> m.k2_pert_rule = Constraint(m.scena, m.t, rule=cal_kp2)
-    >>> m.dCdt_rule = Constraint(m.scena,m.y_set, m.t, rule=dCdt_control)
-    >>> m.alge_rule = Constraint(m.scena, m.t, rule=alge)
+    >>> m.T_rule = pyo.Constraint(m.t, rule=T_control)
+    >>> m.k1_pert_rule = pyo.Constraint(m.scena, m.t, rule=cal_kp1)
+    >>> m.k2_pert_rule = pyo.Constraint(m.scena, m.t, rule=cal_kp2)
+    >>> m.dCdt_rule = pyo.Constraint(m.scena,m.y_set, m.t, rule=dCdt_control)
+    >>> m.alge_rule = pyo.Constraint(m.scena, m.t, rule=alge)
     >>> for z in m.scena:
     >>>     m.C[z,'CB',0.0].fix(0.0)
     >>>     m.C[z,'CC',0.0].fix(0.0)
@@ -290,9 +307,6 @@ The process model for the reaction kinetics problem is shown below.
     >>> def disc(m, NFE=32):
     >>>     discretizer = TransformationFactory('dae.collocation')
     >>>     discretizer.apply_to(m, nfe=NFE, ncp=3, wrt=m.t)
-    >>>     for z in m.scena:
-    >>>         for t in m.t:
-    >>>             m.dCdt_rule[z,'CC',t].deactivate()
     >>>     return m
 
 .. note::
@@ -314,10 +328,10 @@ Step 2: Define the inputs for Pyomo.DOE
     >>> t_measure = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]   # Measurement time points [h]
     >>> measure_pass = {'C':{'CA': t_measure, 'CB': t_measure, 'CC': t_measure}}
     >>> measure_variance = {'C': {'CA': 1, 'CB': 1, 'CC': 1}} # provide measurement uncertainty
-    >>> measure_class =  Measurements(measure_pass, variance=measure_variance)  # Use Pyomo.DoE.Measurements to achieve a measurement object
+    >>> measure_class =  doe.Measurements(measure_pass, variance=measure_variance)  # Use Pyomo.DoE.Measurements to achieve a measurement object
 
     >>> # === Parameter dictionary ===
-    >>> parameter_dict = {'A1': 84.79085853498033, 'A2': 371.71773413976416, 'E1': 7.777032028026428, 'E2': 15.047135137500822}
+    >>> parameter_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
 
     >>> # === Define prior information ==
     >>> prior_none = np.zeros((4,4))
@@ -335,10 +349,10 @@ This method computes an MBDoE optimization problem with no Degree of Freedom.
     >>> # === Specify an experiment ===
     >>> exp1 = {'CA0': {0: 5}, 'T': {0: 570, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}}
     >>> # === Create the DOE object ===
-    >>> doe_object = DesignOfExperiments(parameter_dict, dv_pass, measure_class, create_model,
+    >>> doe_object = doe.DesignOfExperiments(parameter_dict, dv_pass, measure_class, create_model,
     ...                            prior_FIM=prior_none, discretize_model=disc)
     >>> # === Use ``compute_FIM`` to compute one MBDoE square problem ===
-    >>> result = doe_object.compute_FIM(exp1,mode=sensi_opt, FIM_store_name = 'dynamic.csv',
+    >>> result = doe.doe_object.compute_FIM(exp1,mode=sensi_opt, FIM_store_name = 'dynamic.csv',
     ...                            store_output = 'store_output')
 
 The MBDoE results are stored in this result object. This object can be analyzed as:
@@ -346,7 +360,7 @@ The MBDoE results are stored in this result object. This object can be analyzed 
 .. doctest::
 
     >>> # === Analyze result ===
-    >>> result.calculate_FIM(doe_object.design_values)
+    >>> doe.result.calculate_FIM(doe_object.design_values)
 
 FIM information is then available.
 
@@ -360,9 +374,6 @@ FIM information is then available.
     >>> result.min_eig  # a scalar number of minimal eigen value
     >>> result.eig # a list of all eigen values
     >>> result.eigvals # a list of all eigen vectors
-
-.. note::
-    To use the mode ``direct_kaug``, model parameters need to be defined as ``Var`` object instead of ``Param`` object.
 
 
 Step 4: Exploratory analysis (Enumeration)
@@ -388,16 +399,16 @@ The function ``run_grid_search`` enumerates over the design space, each MBDoE pr
     >>> prior_pass=np.asarray(prior_all)
 
     >>> # === Run enumeration ===
-    >>> all_fim = doe_object.run_grid_search(exp1, design_ranges, dv_apply_name, dv_apply_time, mode=sensi_opt)
+    >>> all_fim = doe.doe_object.run_grid_search(exp1, design_ranges, dv_apply_name, dv_apply_time, mode=sensi_opt)
 
     >>> # === Analyze results ===
-    >>> test = all_fim.extract_criteria()
+    >>> test = doe.all_fim.extract_criteria()
     >>> # === Draw 1D sensitivity curve===
     >>> fixed = {"'CA0'": 5.0} # fix a dimension
-    >>> all_fim.figure_drawing(fixed, ['T'], 'Reactor case','T [K]','$C_{A0}$ [M]' )
+    >>> doe.all_fim.figure_drawing(fixed, ['T'], 'Reactor case','T [K]','$C_{A0}$ [M]' )
     >>> # === Draw 2D heatmap ===
     >>> fixed = {} # do not need to fix
-    >>> all_fim.figure_drawing(fixed, ['CA0','T'], 'Reactor case','$C_{A0}$ [M]', 'T [K]' )
+    >>> doe.all_fim.figure_drawing(fixed, ['CA0','T'], 'Reactor case','$C_{A0}$ [M]', 'T [K]' )
 
 
 Successful run of the above code shows the following figure:
