@@ -146,7 +146,14 @@ class NLWriter(object):
         domain=bool,
         description='Write the corresponding .row and .col files',
     ))
-
+    CONFIG.declare('export_nonlinear_variables', ConfigValue(
+        default=None,
+        domain=list,
+        description='Extra variables to include in NL file',
+        doc="""
+        List of variables to ensure are in the NL file (even if they
+        don't appear in any constraints)."""
+    ))
 
     def __init__(self):
         self.config = self.CONFIG()
@@ -454,6 +461,18 @@ class _NLWriter_impl(object):
             = self._categorize_vars(objectives, linear_by_comp)
         con_vars_linear, con_vars_nonlinear, con_nnz_by_var \
             = self._categorize_vars(constraints, linear_by_comp)
+
+        if self.config.export_nonlinear_variables:
+            for v in self.config.export_nonlinear_variables:
+                if v.is_indexed():
+                    _iter = v.values()
+                else:
+                    _iter = (v,)
+                for _v in _iter:
+                    _id = id(_v)
+                    if _id not in var_map:
+                        var_map[_id] = _v
+                    con_vars_nonlinear.add(_id)
 
         con_nnz = sum(con_nnz_by_var.values())
         timer.toc('Categorized model variables: %s nnz', con_nnz,
