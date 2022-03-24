@@ -18,6 +18,7 @@ from ctypes import (
     Structure, POINTER, CFUNCTYPE, cdll, byref,
     c_int, c_long, c_ulong, c_double, c_byte, c_char_p, c_void_p )
 
+from pyomo.common.fileutils import find_library
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, pyomo_constant_types,
     NonNumericValue, NumericConstant,
@@ -325,6 +326,16 @@ class AMPLExternalFunction(ExternalFunction):
         self._function = kwargs.pop('function', None)
         self._known_functions = None
         self._so = None
+        # Convert the specified library name to an absolute path, and
+        # warn the user if we couldn't find it
+        if self._library is not None:
+            _lib = find_library(self._library)
+            if _lib is not None:
+                self._library = _lib
+            else:
+                logger.warning(
+                    'Defining AMPL external function, but cannot locate '
+                    f'specified library "{self._library}"')
         ExternalFunction.__init__(self, *args, **kwargs)
 
     def __getstate__(self):
@@ -359,19 +370,18 @@ class AMPLExternalFunction(ExternalFunction):
         return f, g, h
 
     def load_library(self):
-        try:
-            self._so = cdll.LoadLibrary(self._library)
-        except OSError:
-            # On Linux, it is uncommon for "." to be in the
-            # LD_LIBRARY_PATH, so if things fail to load, attempt to
-            # locate the library via a relative path
-            try:
-                self._so = cdll.LoadLibrary(os.path.join('.',self._library))
-            except OSError:
-                # Re-try with the original library name and allow the
-                # exception to propagate up.
-                self._so = cdll.LoadLibrary(self._library)
-
+        # Note that the library was located in __init__ and converted to
+        # an absolute path (including checking the CWD).  However, we
+        # previously tested that changing the environment (i.e.,
+        # changing directories) between defining the ExternalFunction
+        # and loading it would cause the library to still be correctly
+        # loaded.  We will re-search for the library here.  If it was
+        # previously found, we will be searching for an absolute path
+        # (and the same path will be found again).
+        _abs_lib = find_library(self._library)
+        if _abs_lib is not None:
+            self._library = _abs_lib
+        self._so = cdll.LoadLibrary(self._library)
         self._known_functions = {}
         AE = _AMPLEXPORTS()
         AE.ASLdate = 20160307

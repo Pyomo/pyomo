@@ -3,6 +3,114 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.4.0    16 Mar 2022
+-------------------------------------------------------------------------------
+
+- General
+  - Distribute the ampl_function_demo C source / cmake files (#2319)
+  - Add GitHub URL to setup.py for PyPI (#2325)
+  - Use constant indentation for long lines in the HierarchicalTimer (#2336)
+- Core
+  - Remove incomplete pyomo/core/base/alias.py module (#2284)
+  - Remove Python 3.6 support (#2312)
+- Solver Interfaces
+  - Remove PICO solver interface (#2341)
+- Testing
+  - Add Windows pip single test (#2334)
+  - Fix test docstrings in piecewise to silence warnings (#2342)
+- Contributed Packages
+  - APPSI: Update Gurobi solver unavailable message (#2320)
+  - APPSI: Remove distributables for Windows (#2326)
+  - APPSI: Fix bugs when working with the Gurobi solution pool (#2335)
+  - APPSI: Fix bug in persistent update for FBBT (#2340)
+  - Preprocessing: Stop using polynomial_degree to check for linear and
+    constant expressions (#2324)
+  - PyNumero: Improve coverage of mpi block matrix tests (#2318)
+  - PyNumero: Skip bound/domain validation in ExternalPyomoModel (#2323)
+  - PyNumero: Remove deprecated useage of numpy.bool (#2339)
+  - PyROS: Fix variable default initialization (#2331)
+
+-------------------------------------------------------------------------------
+Pyomo 6.3.0    23 Feb 2022
+-------------------------------------------------------------------------------
+
+ADVANCE CHANGE NOTICE
+  - This will be the last release to support Python 3.6.
+
+- General
+  - Construct slices with normalized indices in slicing utility (#2223)
+  - Remove hard-coded project name from default attempt_import() message (#2237)
+  - Add --with-distributable-extensions option to setup.py (#2260)
+  - Update Pyomo versioning to always include the micro version number (#2265)
+  - Remove optional_packages from pyomo.environ (#2195)
+  - Add Python 3.10 as an officially-supported interpreter (#2302)
+  - `TempfileManager` updates (deletion order, add context) (#2297)
+  - Add `report_scaling` utility to detect potential scaling issues (#2252)
+- Core
+  - Check Var bounds when setting values (#2196)
+  - Fix bug in implicit Var construction (#2210)
+  - Add support for user-defined Component List starting index (#2215)
+  - Switch Var.value setter to validate values (#2214)
+  - Overload component initializers with named keyword params (#2212, #2230)
+  - Resolve errors when creating Reference to a scalar Set (#2229)
+  - Standardize scalar-valued external function interfaces (#2231)
+  - Resolve bugs in cloning _ImplicitAny domains (#2233)
+  - Redesign Var.stale handling to use a global state flag (#2249)
+  - Update differentiate() to accept string mode identifiers (#2266)
+  - Add `as_quantity`: evaluate a Pyomo expression to a pint `Quantity` (#2222)
+  - NPV_SumExpression to inherit from NPV_Mixin (#2209)
+  - Add support for `abs` in numeric differentiation (#2232)
+  - Search filesystem for AMPLExternalFunction library (#2305)
+- Documentation
+  - Updates to installation documentation (#2259)
+  - Update GDP references (#2300)
+  - Add example AMPL external function library (#2295)
+- Solver Interfaces
+  - Disable log file in gurobi_direct when keepfiles=False (#2203)
+  - Remove old GLPK interfaces (#2256)
+  - Support gurobi lp interface through gurobipy module (#2262)
+  - Update CBC version identification (#2250)
+  - Increase CBC timeout when getting version/asl compatibility (#2293)
+  - Deprecate the `Alias` component (#2288)
+  - Remove XPRESS interface (#2273)
+  - Support string arguments in NL external functions (#2295)
+  - Fix reversed NL operator codes for floor/ceil (#2216)
+- Testing
+  - Skip some fileutils tests on OSX Big Sur and Python<3.8 (#2224)
+  - Fix Windows/Python 3.6 testing dependency (#2234)
+  - Update test suite for BARON 22.1.19 (#2268)
+  - Rework coverage uploads to use GitHub Actions (#2225)
+  - Add option to test driver for turning off log capture (#2198)
+  - Relaxing timing target for Windows GHA (#2303)
+  - Resolve GDP test failure for missing solvers (#2306)
+  - Testing infrastructure Refactor: `nosetests` to `pytest` (#2298)
+  - Make time limit more robust for APPSI (#2296)
+  - Resolve failing floating-point comparison failures in FBBT (#2244)
+  - Check gurobipy availability in doctests (#2253)
+- GDP Updates
+  - Ensure gdp.fix_disjuncts always creates a fully algebraic model (#2263)
+  - Add `partition_disjuncts` and `between_steps` transformations (#2221)
+- Contributed Packages
+  - APPSI: Fix bug with CBC options (#2243)
+  - APPSI: Correctly identify changes to constraints (#2299)
+  - APPSI: Improvements to persistent interface (#2246)
+  - APPSI: Implement FBBT in C++ module (#2248)
+  - APPSI: Resolve build errors on Windows (#2309)
+  - GDPopt: Fix bugs in preprocessing (#2211)
+  - GDPopt: Switch preprocessing to use FBBT (#2264)
+  - incidence_analysis: General improvements (#2239, #2240)
+  - MindtPy: Update online docs and logging (#2219, #2207)
+  - MindtPy: Add Primal/Dual Integral (#2285)
+  - MindtPy: Nonlinear sum reformulation of objective of MINLP (#2276)
+  - Parmest: Covariance matrix (#2287), Add examples (#2274)
+  - PyNumero: Add scaling factor support to ExternalPyomoModel (#2269)
+  - PyNumero: Use projected NLPs for ExternalPyomoModel inner problems (#2283)
+  - PyNumero: Add SQP example (#2291)
+  - PyROS: Support ConstraintList and range constraints (#2206)
+  - PyROS: Add optional bypassing of global separation subproblems (#2254)
+  - TrustRegion: New implementation of Trust Region Framework (#2238, #2279)
+
+-------------------------------------------------------------------------------
 Pyomo 6.2    17 Nov 2021
 -------------------------------------------------------------------------------
 

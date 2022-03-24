@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [3.6, 3.7, 3.8, 3.9, '3.10', pypy3]
+        python: [3.7, 3.8, 3.9, '3.10', pypy3]
         other: [""]
         category: [""]
 
@@ -99,6 +99,13 @@ jobs:
           TARGET: linux
           PYENV: pip
           PACKAGES: pyutilib
+
+        - os: windows-latest
+          python: 3.8
+          other: /pip
+          skip_doctest: 1
+          TARGET: win
+          PYENV: pip
 
         exclude:
         - {os: macos-latest, python: pypy3}
@@ -312,17 +319,6 @@ jobs:
                 | tr ":" "\\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
                 | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
         done
-
-    #############################################################
-    # TODO: Delete this once Python 3.6 is deprecated - 12/2021 #
-    #############################################################
-    - name: Windows Python 3.6 Temporary Fix (conda)
-      if: |
-        (matrix.PYENV == 'conda' &&
-        matrix.TARGET == 'win' &&
-        matrix.python == '3.6')
-      run: |
-        conda install tomli==1.2.2 --force-reinstall
 
     - name: Setup TPL package directories
       run: |
@@ -582,17 +578,17 @@ jobs:
 
 
   bare-python-env:
-    name: linux/3.6/bare-env
+    name: linux/3.8/bare-env
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v2
 
-    - name: Set up Python 3.6
+    - name: Set up Python 3.8
       uses: actions/setup-python@v2
       with:
-        python-version: 3.6
+        python-version: 3.8
 
     - name: Install Pyomo
       run: |
@@ -758,6 +754,7 @@ jobs:
         files: coverage.xml
         name: ${{ matrix.TARGET }}
         flags: ${{ matrix.TARGET }}
+        fail_ci_if_error: true
 
     - name: Upload other coverage reports
       if: |
@@ -768,3 +765,4 @@ jobs:
         files: coverage-other.xml
         name: ${{ matrix.TARGET }}/other
         flags: ${{ matrix.TARGET }},other
+        fail_ci_if_error: true
