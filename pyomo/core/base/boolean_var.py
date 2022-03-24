@@ -483,7 +483,7 @@ class BooleanVar(IndexedComponent):
             Print component information.
         """
         return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
+                  ("Index", self._index_set if self.is_indexed() else None),
                   ],
                  self._data.items(),
                  ( "Value","Fixed","Stale"),
