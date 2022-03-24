@@ -143,7 +143,7 @@ class GLPKSHELL(SystemCallSolver):
             raise RuntimeError(
                 "Pyomo only supports versions of GLPK since 4.58; "
                 "found version %s.  Please upgrade your installation "
-                "of GLPK" % ('.'.join(map(str, _glpk_version)),)
+                "of GLPK" % ('.'.join(map(str, _ver)),)
             )
 
         #
