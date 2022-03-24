@@ -9,7 +9,9 @@
 #  ___________________________________________________________________________
 
 import pyomo.kernel as pmo
-from pyomo.core import ConcreteModel, Var, Objective, Constraint, RealInterval, ConstraintList
+from pyomo.core import (
+    ConcreteModel, Var, Objective, Constraint, RangeSet, ConstraintList
+)
 from pyomo.solvers.tests.models.base import _BaseTestModel, register_model
 
 @register_model
@@ -32,7 +34,7 @@ class LP_trivial_constraints(_BaseTestModel):
         model = self.model
         model._name = self.description
 
-        model.x = Var(domain=RealInterval(bounds=(float('-inf'), None)))
+        model.x = Var(domain=RangeSet(float('-inf'), None, 0))
         model.y = Var(bounds=(None, float('inf')))
         model.obj = Objective(expr=model.x - model.y)
         model.c = ConstraintList()
@@ -49,9 +51,9 @@ class LP_trivial_constraints(_BaseTestModel):
         assert cdata.body() == 2
         assert not cdata.equality
         cdata = model.c.add((0, 1, None))
-        assert cdata.lower == 0
-        assert cdata.upper is None
-        assert cdata.body() == 1
+        assert cdata.lower is None
+        assert cdata.upper == 1
+        assert cdata.body() == 0
         assert not cdata.equality
         cdata = model.c.add((None, 0, 1))
         assert cdata.lower is None
@@ -92,7 +94,7 @@ class LP_trivial_constraints_kernel(LP_trivial_constraints):
         model = self.model
         model._name = self.description
 
-        model.x = pmo.variable(domain=RealInterval(bounds=(float('-inf'), None)))
+        model.x = pmo.variable(domain=RangeSet(float('-inf'), None, 0))
         model.y = pmo.variable(ub=float('inf'))
         model.obj = pmo.objective(model.x - model.y)
         model.c = pmo.constraint_dict()
@@ -109,9 +111,9 @@ class LP_trivial_constraints_kernel(LP_trivial_constraints):
         assert cdata.body() == 2
         assert not cdata.equality
         cdata = model.c[5] = pmo.constraint((0, 1, None))
-        assert cdata.lb == 0
-        assert cdata.ub is None
-        assert cdata.body() == 1
+        assert cdata.lb is None
+        assert cdata.ub == 1
+        assert cdata.body() == 0
         assert not cdata.equality
         cdata = model.c[6] = pmo.constraint((None, 0, 1))
         assert cdata.lb is None

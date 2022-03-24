@@ -14,7 +14,10 @@ import importlib
 import logging
 import sys
 
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from .deprecation import (
+    deprecated, deprecation_warning, in_testing_environment,
+)
+from . import numeric_types
 
 class DeferredImportError(ImportError):
     pass
@@ -43,6 +46,8 @@ class ModuleUnavailable(object):
         A string to add to the message documenting the Exception
         raised when the module failed to import.
 
+    package: str
+        The module name that originally attempted the import
     """
 
     # We need special handling for Sphinx here, as it will look for the
@@ -50,9 +55,11 @@ class ModuleUnavailable(object):
     # that to raise an AttributeError and not a DeferredImportError
     _getattr_raises_attributeerror = {'__sphinx_mock__',}
 
-    def __init__(self, name, message, version_error, import_error):
+    def __init__(self, name, message, version_error, import_error, package):
         self.__name__ = name
-        self._moduleunavailable_info_ = (message, version_error, import_error)
+        self._moduleunavailable_info_ = (
+            message, version_error, import_error, package,
+        )
 
     def __getattr__(self, attr):
         if attr in ModuleUnavailable._getattr_raises_attributeerror:
@@ -61,22 +68,25 @@ class ModuleUnavailable(object):
         raise DeferredImportError(self._moduleunavailable_message())
 
     def _moduleunavailable_message(self, msg=None):
-        _err, _ver, _imp = self._moduleunavailable_info_
+        _err, _ver, _imp, _package = self._moduleunavailable_info_
         if msg is None:
             msg = _err
         if _imp:
-            if not msg:
+            if not msg or not str(msg):
+                _pkg_str = _package.split('.')[0].capitalize()
+                if _pkg_str:
+                    _pkg_str += ' '
                 msg = (
-                    "The %s module (an optional Pyomo dependency) " \
-                    "failed to import: %s" % (self.__name__, _imp)
+                    "The %s module (an optional %sdependency) "
+                    "failed to import: %s" % (self.__name__, _pkg_str, _imp)
                 )
             else:
-                msg += " (import raised %s)" % (_imp,)
+                msg = "%s (import raised %s)" % (msg, _imp,)
         if _ver:
-            if not msg:
+            if not msg or not str(msg):
                 msg = "The %s module %s" % (self.__name__, _ver)
             else:
-                msg += " (%s)" % (_ver,)
+                msg = "%s (%s)" % (msg, _ver,)
         return msg
 
     def log_import_warning(self, logger='pyomo', msg=None):
@@ -90,7 +100,7 @@ class ModuleUnavailable(object):
         """
         logging.getLogger(logger).warning(self._moduleunavailable_message(msg))
 
-    @deprecated("use :py:class:`log_import_warning()`", version='TBD')
+    @deprecated("use :py:class:`log_import_warning()`", version='6.0')
     def generate_import_warning(self, logger='pyomo.common'):
         self.log_import_warning(logger)
 
@@ -191,15 +201,16 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
     def resolve(self):
         # Only attempt the import once, then cache some form of result
         if self._module is None:
+            package = self._original_globals.get('__name__', '')
             try:
-                self._module, self._available = attempt_import(
+                self._module, self._available = _perform_import(
                     name=self._names[0],
                     error_message=self._error_message,
-                    catch_exceptions=self._catch_exceptions,
                     minimum_version=self._minimum_version,
                     callback=self._callback,
                     importer=self._importer,
-                    defer_check=False,
+                    catch_exceptions=self._catch_exceptions,
+                    package=package,
                 )
             except Exception as e:
                 # make sure that we cache the result
@@ -208,6 +219,7 @@ class DeferredImportIndicator(_DeferredImportIndicatorBase):
                     "Exception raised when importing %s" % (self._names[0],),
                     None,
                     "%s: %s" % (type(e).__name__, e),
+                    package,
                 )
                 self._available = False
                 raise
@@ -280,17 +292,23 @@ def check_min_version(module, min_version):
             module = indicator._module
         else:
             return False
-    try:
-        from packaging import version as _version
-        _parser = _version.parse
-    except ImportError:
-        # pkg_resources is an order of magnitude slower to import than
-        # packaging.  Only use it if the preferred (but optional)
-        # packaging library is not present
-        from pkg_resources import parse_version as _parser
+    if check_min_version._parser is None:
+        try:
+            from packaging import version as _version
+            _parser = _version.parse
+        except ImportError:
+            # pkg_resources is an order of magnitude slower to import than
+            # packaging.  Only use it if the preferred (but optional)
+            # packaging library is not present
+            from pkg_resources import parse_version as _parser
+        check_min_version._parser = _parser
+    else:
+        _parser = check_min_version._parser
 
     version = getattr(module, '__version__', '0.0.0')
     return _parser(min_version) <= _parser(version)
+
+check_min_version._parser = None
 
 
 def attempt_import(name, error_message=None, only_catch_importerror=None,
@@ -320,8 +338,9 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
        >>> try:
        ...     import numpy
        ...     numpy_available = True
-       ... except ImportError:
-       ...     numpy = ModuleUnavailable('numpy', 'Numpy is not available')
+       ... except ImportError as e:
+       ...     numpy = ModuleUnavailable('numpy', 'Numpy is not available',
+       ...                               '', str(e), globals()['__name__'])
        ...     numpy_available = False
 
     The import can be "deferred" until the first time the code either
@@ -385,7 +404,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         ``deferred_submodules=['pyplot', 'pylab']`` for ``matplotlib``.
 
     catch_exceptions: Iterable[Exception], optional
-        If provide, this is the list of exceptions that will be caught
+        If provided, this is the list of exceptions that will be caught
         when importing the target module, resulting in
         ``attempt_import`` returning a :py:class:`ModuleUnavailable`
         instance.  The default is to only catch :py:class:`ImportError`.
@@ -405,7 +424,7 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
     """
     if alt_names is not None:
         deprecation_warning('alt_names=%s no longer needs to be specified '
-                            'and is ignored' % (alt_names,), version='TBD')
+                            'and is ignored' % (alt_names,), version='6.0')
 
     if only_catch_importerror is not None:
         deprecation_warning(
@@ -429,14 +448,14 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
                 deprecation_warning(
                     'attempt_import(): deferred_submodules takes an iterable '
                     'and not a mapping (the alt_names supplied by the mapping '
-                    'are no longer needed and are ignored).', version='TBD')
+                    'are no longer needed and are ignored).', version='6.0')
                 deferred_submodules = list(deferred_submodules)
 
             # Ensures all names begin with '.'
             #
             # Fill in any missing submodules.  For example, if a user
-            # provides {'foo.bar.baz': ['bz']}, then expand the dict to
-            # {'.foo': None, '.foo.bar': None, '.foo.bar.baz': ['bz']}
+            # provides ['foo.bar.baz'], then expand the list to
+            # ['.foo', '.foo.bar', '.foo.bar.baz']
             deferred = []
             for _submod in deferred_submodules:
                 if _submod[0] != '.':
@@ -466,6 +485,19 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
         raise ValueError(
             "deferred_submodules is only valid if defer_check==True")
 
+    return _perform_import(
+        name=name,
+        error_message=error_message,
+        minimum_version=minimum_version,
+        callback=callback,
+        importer=importer,
+        catch_exceptions=catch_exceptions,
+        package=inspect.currentframe().f_back.f_globals.get('__name__', ''),
+    )
+
+
+def _perform_import(name, error_message, minimum_version, callback,
+                    importer, catch_exceptions, package):
     import_error = None
     version_error = None
     try:
@@ -486,7 +518,9 @@ def attempt_import(name, error_message=None, only_catch_importerror=None,
     except catch_exceptions as e:
         import_error = "%s: %s" % (type(e).__name__, e)
 
-    module = ModuleUnavailable(name, error_message, version_error, import_error)
+    module = ModuleUnavailable(
+        name, error_message, version_error, import_error, package,
+    )
     if callback is not None:
         callback(module, False)
     return module, False
@@ -579,21 +613,37 @@ def _finalize_matplotlib(module, available):
     # we are in the middle of testing, we need to switch the backend to
     # 'Agg', otherwise attempts to generate plots on CI services without
     # terminal windows will fail.
-    if any(m in sys.modules for m in ('nose', 'nose2', 'sphinx', 'pytest')):
+    if in_testing_environment():
         module.use('Agg')
     import matplotlib.pyplot
 
+def _finalize_numpy(np, available):
+    if not available:
+        return
+    numeric_types.RegisterBooleanType(np.bool_)
+    for t in (np.int_, np.intc, np.intp,
+              np.int8, np.int16, np.int32, np.int64,
+              np.uint8, np.uint16, np.uint32, np.uint64):
+        numeric_types.RegisterIntegerType(t)
+        numeric_types.RegisterBooleanType(t)
+    for t in (np.float_, np.float16, np.float32, np.float64, np.ndarray):
+        numeric_types.RegisterNumericType(t)
+        numeric_types.RegisterBooleanType(t)
 
-yaml, yaml_available = attempt_import('yaml', callback=_finalize_yaml)
+
+yaml, yaml_available = attempt_import(
+    'yaml', callback=_finalize_yaml)
 pympler, pympler_available = attempt_import(
     'pympler', callback=_finalize_pympler)
-numpy, numpy_available = attempt_import('numpy')
+numpy, numpy_available = attempt_import(
+    'numpy', callback=_finalize_numpy)
 scipy, scipy_available = attempt_import(
     'scipy', callback=_finalize_scipy,
     deferred_submodules=['stats', 'sparse', 'spatial', 'integrate'])
 networkx, networkx_available = attempt_import('networkx')
 pandas, pandas_available = attempt_import('pandas')
 dill, dill_available = attempt_import('dill')
+pyutilib, pyutilib_available = attempt_import('pyutilib')
 
 # Note that matplotlib.pyplot can generate a runtime error on OSX when
 # not installed as a Framework (as is the case in the CI systems)

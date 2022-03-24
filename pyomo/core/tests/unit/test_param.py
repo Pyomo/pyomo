@@ -24,13 +24,14 @@ import sys
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (Set, RangeSet, Param, ConcreteModel,
-                           AbstractModel, Constraint, Var,
-                           NonNegativeIntegers, Integers,
-                           NonNegativeReals, Boolean, Reals, Any, display,
-                           value, set_options, sin, cos, tan, log, log10,
-                           exp, sqrt, ceil, floor, asin, acos, atan, sinh,
-                           cosh, tanh, asinh, acosh, atanh)
+from pyomo.environ import (
+    Set, RangeSet, Param, ConcreteModel, AbstractModel, Block, Constraint, Var,
+    NonNegativeIntegers, Integers, NonNegativeReals, Boolean, Reals, Any,
+    display, value, set_options,
+    sin, cos, tan, log, log10, exp, sqrt, ceil, floor, asin, acos, atan,
+    sinh, cosh, tanh, asinh, acosh, atanh,
+)
+from pyomo.common.errors import PyomoException
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.param import _ParamData 
@@ -147,7 +148,7 @@ class ParamTester(object):
             return
 
         idx = sorted(keys)[0]
-        self.assertEqual(self.instance.A[idx], self.data[idx])
+        self.assertEqual(value(self.instance.A[idx]), self.data[idx])
         if self.instance.A.mutable:
             self.assertTrue( isinstance( self.instance.A[idx],
                                          _ParamData ) )
@@ -159,7 +160,7 @@ class ParamTester(object):
             if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
-            self.assertEqual( self.instance.A[idx], 4.3)
+            self.assertEqual( value(self.instance.A[idx]), 4.3)
             self.assertTrue( isinstance(self.instance.A[idx],
                                         _ParamData ) )
         except TypeError:
@@ -175,7 +176,7 @@ class ParamTester(object):
             if self.expectNegativeDomainError:
                 self.fail("Expected setitem[%s] to fail with negative data"
                           % (idx,))
-            self.assertEqual( self.instance.A[idx], -4.3 )
+            self.assertEqual( value(self.instance.A[idx]), -4.3 )
         except ValueError:
             if not self.expectNegativeDomainError:
                 self.fail(
@@ -234,7 +235,7 @@ class ParamTester(object):
             if not self.instance.A.mutable:
                 self.fail("Expected setitem[%s] to fail for immutable Params"
                           % (idx,))
-            self.assertEqual( self.instance.A[idx], 4.3)
+            self.assertEqual( self.instance.A[idx].value, 4.3)
             self.assertIsInstance( self.instance.A[idx],
                                    _ParamData )
         except TypeError:
@@ -250,7 +251,7 @@ class ParamTester(object):
             if self.expectNegativeDomainError:
                 self.fail("Expected setitem[%s] to fail with negative data"
                           % (idx,))
-            self.assertEqual( self.instance.A[idx], -4.3 )
+            self.assertEqual( self.instance.A[idx].value, -4.3 )
         except ValueError:
             if not self.expectNegativeDomainError:
                 self.fail(
@@ -775,7 +776,7 @@ class ArrayParam6(unittest.TestCase):
         model.C = Set(dimen=1, initialize=[9,8,7,6,5])
         model.x = Param(model.A, model.B, model.C, initialize=-1)
         #model.y = Param(model.B, initialize=(1,1))
-        model.y = Param(model.B, initialize=((1,1,7),2))
+        model.y = Param(model.B, initialize=1)
         instance=model.create_instance()
         self.assertEqual( instance.x.dim(), 6)
         self.assertEqual( instance.y.dim(), 3)
@@ -863,7 +864,7 @@ class ScalarTester(ParamTester):
             except ValueError:
                 pass
         else:
-            self.assertEqual( self.instance.A, self.data[None])
+            self.assertEqual( self.instance.A.value, self.data[None])
 
     def test_set_value(self):
         self.instance.A = 4.3
@@ -1128,28 +1129,26 @@ class TestParamConditional(unittest.TestCase):
     def tearDown(self):
         self.model = None
 
-    def test1(self):
+    def test_if_const_param_1value(self):
         self.model.p = Param(initialize=1.0)
-        try:
+        with self.assertRaisesRegex(
+                PyomoException, r"Cannot convert non-constant Pyomo "
+                r"numeric value \(p\) to bool"):
             if self.model.p:
                 pass
-            self.fail("Expected ValueError because parameter was undefined")
-        except ValueError:
-            pass
         instance = self.model.create_instance()
         if instance.p:
             pass
         else:
             self.fail("Wrong condition value")
 
-    def test2(self):
+    def test_if_const_param_0value(self):
         self.model.p = Param(initialize=0.0)
-        try:
+        with self.assertRaisesRegex(
+                PyomoException, r"Cannot convert non-constant Pyomo "
+                r"numeric value \(p\) to bool"):
             if self.model.p:
                 pass
-            self.fail("Expected ValueError because parameter was undefined")
-        except ValueError:
-            pass
         instance = self.model.create_instance()
         if instance.p:
             self.fail("Wrong condition value")
@@ -1186,6 +1185,23 @@ class MiscParamTests(unittest.TestCase):
             return 0.0
         model.p = Param(model.A, initialize=rule)
 
+    def test_invalid_default(self):
+        # Verify that we can initialize a parameter with an empty set.
+        model = ConcreteModel()
+        with self.assertRaisesRegex(
+                ValueError, r'Default value \(-1\) is not valid for '
+                r'Param p domain NonNegativeIntegers'):
+            model.p = Param(default=-1, within=NonNegativeIntegers)
+
+    def test_invalid_data(self):
+        # Verify that we can initialize a parameter with an empty set.
+        model = AbstractModel()
+        model.p = Param()
+        with self.assertRaisesRegex(
+                ValueError,
+                r'Attempting to initialize parameter=p with data=\[\]'):
+            model.create_instance(data={None: {'p': []}})
+
     def test_param_validate(self):
         """Test Param `validate` and `within` throw ValueError when not valid.
 
@@ -1204,12 +1220,14 @@ class MiscParamTests(unittest.TestCase):
             return False
 
         # 1. Immutable Param (unindexed)
-        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+        with self.assertRaisesRegex(
+                ValueError, "Value not in parameter domain"):
             m = ConcreteModel()
             m.p1 = Param(initialize=-3, within=NonNegativeReals)
 
         # 2. Immutable Param (indexed)
-        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+        with self.assertRaisesRegex(
+                ValueError, "Value not in parameter domain"):
             m = ConcreteModel()
             m.A = RangeSet(1, 2)
             m.p2 = Param(m.A, initialize=-3, within=NonNegativeReals)
@@ -1220,13 +1238,15 @@ class MiscParamTests(unittest.TestCase):
             m.p5 = Param(initialize=1, validate=validation_rule)
 
         # 4. Mutable Param (unindexed)
-        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+        with self.assertRaisesRegex(
+                ValueError, "Value not in parameter domain"):
             m = ConcreteModel()
             m.p3 = Param(within=NonNegativeReals, mutable=True)
             m.p3 = -3
 
         # 5. Mutable Param (indexed)
-        with self.assertRaisesRegex(ValueError, "Value not in parameter domain"):
+        with self.assertRaisesRegex(
+                ValueError, "Value not in parameter domain"):
             m = ConcreteModel()
             m.A = RangeSet(1, 2)
             m.p4 = Param(m.A, within=NonNegativeReals, mutable=True)
@@ -1237,6 +1257,21 @@ class MiscParamTests(unittest.TestCase):
             m = ConcreteModel()
             m.p6 = Param(mutable=True, validate=validation_rule)
             m.p6 = 1
+
+        # If we initialize a mutable Param and override it with data
+        # that is not valid, the param should be left with the original
+        # valid value
+        a = AbstractModel()
+        a.p = Param(within=NonNegativeReals)
+        a.p = 1
+        with self.assertRaisesRegex(
+                ValueError, "Value not in parameter domain"):
+            a.p = -2
+        with self.assertRaisesRegex(
+                RuntimeError, "Value not in parameter domain"):
+            m = a.create_instance({None: {'p': {None: -1}}})
+        m = a.create_instance()
+        self.assertEqual(value(m.p), 1)
 
     def test_get_uninitialized(self):
         model=AbstractModel()
@@ -1281,8 +1316,8 @@ class MiscParamTests(unittest.TestCase):
             #self.fail("can't set the value of an unitialized parameter")
         #except AttributeError:
             #pass
-        instance=model.create_instance()
-        instance.a.value=3
+        instance = model.create_instance()
+        instance.a.value = 3
         #try:
             #instance.a.default='2'
             #self.fail("can't set a bad default value")
@@ -1305,6 +1340,8 @@ class MiscParamTests(unittest.TestCase):
             self.fail("can't set a parameter with a bad value")
         except ValueError:
             pass
+        # check that the value was preserved
+        self.assertEqual(value(instance.c[3]), 2)
 
     def test_iter(self):
         model=AbstractModel()
@@ -1374,12 +1411,28 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
         with LoggingIntercept(log, 'pyomo.core'):
             m.p = 'a'
         self.assertIn(
-            "DEPRECATED: The default domain for Param objects is 'Any'",
-            log.getvalue())
+            "The default domain for Param objects is 'Any'",
+            log.getvalue().replace('\n', ' '))
         self.assertIn(
-            "domain of this Param (p) to be 'Any'",
-            log.getvalue())
+            "DEPRECATED: Param 'p' declared with an implicit domain of 'Any'",
+            log.getvalue().replace('\n', ' '))
         self.assertEqual(value(m.p), 'a')
+
+        m.b = Block()
+        m.b.q = Param()
+        buf = StringIO()
+        m.b.q.pprint(ostream=buf)
+        self.assertEqual(
+            buf.getvalue().strip(),
+            """
+q : Size=0, Index=None, Domain=Any, Default=None, Mutable=False
+    Key : Value
+            """.strip())
+
+        i = m.clone()
+        self.assertIsNot(m.p.domain, i.p.domain)
+        self.assertIs(m.p.domain._owner(), m.p)
+        self.assertIs(i.p.domain._owner(), i.p)
 
     @unittest.skipUnless(pint_available, "units test requires pint module")
     def test_set_value_units(self):
@@ -1404,6 +1457,32 @@ q : Size=3, Index=Any, Domain=Any, Default=None, Mutable=True
 
 1 Declarations: p
         """.strip())
+
+    def test_scalar_get_mutable_when_not_present(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
+        self.assertEqual(m.p._data, {})
+        m.x_p = Var(bounds=(0, m.p))
+        self.assertEqual(m.p._data, {})
+        self.assertIs(m.p[None], m.p)
+        self.assertEqual(len(m.p._data), 1)
+        self.assertIs(m.p._data[None], m.p)
+        m.p = 10
+        self.assertEqual(m.x_p.bounds, (0, 10))
+        m.p = 20
+        self.assertEqual(m.x_p.bounds, (0, 20))
+
+    def test_scalar_set_mutable_when_not_present(self):
+        m = ConcreteModel()
+        m.p = Param(mutable=True)
+        self.assertEqual(m.p._data, {})
+        m.p = 10
+        self.assertEqual(len(m.p._data), 1)
+        self.assertIs(m.p._data[None], m.p)
+        m.x_p = Var(bounds=(0, m.p))
+        self.assertEqual(m.x_p.bounds, (0, 10))
+        m.p = 20
+        self.assertEqual(m.x_p.bounds, (0, 20))
 
 
 def createNonIndexedParamMethod(func, init_xy, new_xy, tol=1e-10):
@@ -1498,42 +1577,41 @@ class MiscNonIndexedParamBehaviorTests(unittest.TestCase):
 
     # Test that display actually displays the correct param value
     def test_mutable_display(self):
-        tmp_stream = TempfileManager.create_tempfile(suffix = '.param_display.test')
         model = ConcreteModel()
         model.Q = Param(initialize=0.0, mutable=True)
-        self.assertEqual(model.Q, 0.0)
+        self.assertEqual(model.Q.value, 0.0)
         #print model.Q._data
         #print value(model.Q)
         f = StringIO()
         display(model.Q, f)
         tmp = f.getvalue().splitlines()
         val = float(tmp[-1].split(':')[-1].strip())
-        self.assertEqual(model.Q, val)
+        self.assertEqual(model.Q.value, val)
 
         model.Q = 1.0
-        self.assertEqual(model.Q,1.0)
+        self.assertEqual(model.Q.value,1.0)
         f = StringIO()
         display(model.Q,f)
         tmp = f.getvalue().splitlines()
         val = float(tmp[-1].split(':')[-1].strip())
-        self.assertEqual(model.Q, val)
+        self.assertEqual(model.Q.value, val)
 
     # Test that pprint actually displays the correct param value
     def test_mutable_pprint(self):
         model = ConcreteModel()
         model.Q = Param(initialize=0.0, mutable=True)
-        self.assertEqual(model.Q, 0.0)
+        self.assertEqual(model.Q.value, 0.0)
         buf = StringIO()
         model.Q.pprint(ostream=buf)
         val = float(buf.getvalue().splitlines()[-1].split(':')[-1].strip())
-        self.assertEqual(model.Q, val)
+        self.assertEqual(model.Q.value, val)
 
         buf.buf = ''
         model.Q = 1.0
-        self.assertEqual(model.Q,1.0)
+        self.assertEqual(model.Q.value,1.0)
         model.Q.pprint(ostream=buf)
         val = float(buf.getvalue().splitlines()[-1].split(':')[-1].strip())
-        self.assertEqual(model.Q, val)
+        self.assertEqual(model.Q.value, val)
 
     # Test mutability of non-indexed
     # params involved in sum expression
@@ -1652,22 +1730,21 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         model = ConcreteModel()
         model.P = Param([1,2],default=1.0, mutable=True)
 
-        self.assertEqual(model.P[1],1.0)
-        self.assertEqual(model.P[2],1.0)
+        self.assertEqual(model.P[1].value,1.0)
+        self.assertEqual(model.P[2].value,1.0)
         model.P[1].value = 0.0
-        self.assertEqual(model.P[1],0.0)
-        self.assertEqual(model.P[2],1.0)
+        self.assertEqual(model.P[1].value,0.0)
+        self.assertEqual(model.P[2].value,1.0)
 
         model.Q = Param([1,2],default=1.0, mutable=True)
-        self.assertEqual(model.Q[1],1.0)
-        self.assertEqual(model.Q[2],1.0)
+        self.assertEqual(model.Q[1].value,1.0)
+        self.assertEqual(model.Q[2].value,1.0)
         model.Q[1] = 0.0
-        self.assertEqual(model.Q[1],0.0)
-        self.assertEqual(model.Q[2],1.0)
+        self.assertEqual(model.Q[1].value,0.0)
+        self.assertEqual(model.Q[2].value,1.0)
 
     # Test that display actually displays the correct param value
     def test_mutable_display(self):
-        tmp_stream = TempfileManager.create_tempfile(suffix = '.param_display.test')
         model = ConcreteModel()
         model.P = Param([1,2],default=0.0, mutable=True)
         model.Q = Param([1,2],initialize=0.0, mutable=True)
@@ -1698,7 +1775,7 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         #     changes display output
         for Item in [model.P, model.Q, model.R]:
             for i in [1,2]:
-                self.assertEqual(Item[i],0.0)
+                self.assertEqual(Item[i].value,0.0)
 
         # check that the correct value is printed
         # Treat the param using default a little differently
@@ -1730,7 +1807,6 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
 
     # Test that pprint actually displays the correct param value
     def test_mutable_pprint(self):
-        tmp_stream = TempfileManager.create_tempfile(suffix = '.param_display.test')
         model = ConcreteModel()
         model.P = Param([1,2],default=0.0, mutable=True)
         model.Q = Param([1,2],initialize=0.0, mutable=True)
@@ -1761,7 +1837,7 @@ class MiscIndexedParamBehaviorTests(unittest.TestCase):
         #     changes pprint output
         for Item in [model.P, model.Q, model.R]:
             for i in [1,2]:
-                self.assertEqual(Item[i],0.0)
+                self.assertEqual(Item[i].value,0.0)
 
         for Item in [model.P, model.Q, model.R]:
             f = StringIO()

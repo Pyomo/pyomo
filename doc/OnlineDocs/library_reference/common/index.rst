@@ -11,4 +11,7 @@ or rely on any other parts of Pyomo.
    config.rst
    dependencies.rst
    deprecation.rst
+   fileutils.rst
+   formatting.rst
+   tempfiles.rst
    timing.rst

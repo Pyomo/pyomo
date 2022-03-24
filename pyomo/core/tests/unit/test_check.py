@@ -11,7 +11,7 @@
 # Unit Tests for BuildCheck() Objects
 #
 # PyomoModel                Base test class
-# Simple                    Test scalar parameter
+# Scalar                    Test scalar parameter
 # Array1                    Test arrays of parameters
 #
 
@@ -56,7 +56,7 @@ def action2b_fn(model, i):
     return True
 
 
-class Simple(PyomoModel):
+class Scalar(PyomoModel):
 
     def setUp(self):
         #
@@ -88,7 +88,6 @@ class Simple(PyomoModel):
             self.fail("expected failure")
         except ValueError:
             pass
-
 
 
 class Array1(PyomoModel):

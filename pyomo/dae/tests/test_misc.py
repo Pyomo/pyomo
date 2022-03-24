@@ -547,8 +547,8 @@ class TestDaeMisc(unittest.TestCase):
         self.assertEqual(len(model.blk[2, 'B'].con1), 18)
         self.assertEqual(len(model.blk[10, 'C'].v2), 4)
 
-        self.assertEqual(model.blk[2, 'A'].p1['A', 2], 4)
-        self.assertEqual(model.blk[8, 'C'].p1['B', 6], 12)
+        self.assertEqual(model.blk[2, 'A'].p1['A', 2].value, 4)
+        self.assertEqual(model.blk[8, 'C'].p1['B', 6].value, 12)
         
         self.assertEqual(model.blk[4, 'B'].con1['B', 4](), 15)
         self.assertEqual(model.blk[6, 'A'].con1['C', 8](), 55)
@@ -657,8 +657,8 @@ class TestDaeMisc(unittest.TestCase):
         self.assertEqual(len(model.blk[2, 'B'].con1), 18)
         self.assertEqual(len(model.blk[10, 'C'].v2), 4)
 
-        self.assertEqual(model.blk[2, 'A'].p1['A', 2], 4)
-        self.assertEqual(model.blk[8, 'C'].p1['B', 6], 12)
+        self.assertEqual(model.blk[2, 'A'].p1['A', 2].value, 4)
+        self.assertEqual(model.blk[8, 'C'].p1['B', 6].value, 12)
         
         self.assertEqual(model.blk[4, 'B'].con1['B', 4](), 15)
         self.assertEqual(model.blk[6, 'A'].con1['C', 8](), 55)

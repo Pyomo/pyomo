@@ -17,12 +17,14 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.core.base.indexed_component import UnindexedComponent_set
 from pyomo.core.base import Transformation, Block, SortComponents, TransformationFactory
+from pyomo.gdp import Disjunct
 
 from pyomo.network import Arc
 from pyomo.network.util import replicate_var
 
 # keyword arguments for component_objects and component_data_objects
-obj_iter_kwds = dict(ctype=Arc, active=True, sort=SortComponents.deterministic)
+obj_iter_kwds = dict(ctype=Arc, active=True, sort=SortComponents.deterministic,
+        descend_into=(Block,Disjunct))
 
 
 @TransformationFactory.register('network.expand_arcs',

@@ -51,7 +51,7 @@ Pyomo is available under the BSD License, see the LICENSE.txt file.
 
 Pyomo is currently tested with the following Python implementations:
 
-* CPython: 3.6, 3.7, 3.8, 3.9
+* CPython: 3.7, 3.8, 3.9, 3.10
 * PyPy: 3
 
 ### Installation
@@ -91,3 +91,8 @@ following terms and conditions for your contributions:
    includes your contributions, you represent that you have received
    permission to make contributions and grant the required license on
    behalf of that employer.
+
+
+### Related Packages
+
+See https://pyomo.readthedocs.io/en/latest/related_packages.html.

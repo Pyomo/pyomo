@@ -1063,64 +1063,38 @@ class ArraySet(PyomoModel):
 
     def test_or(self):
         """Check that set union works"""
-        # In the set rewrite, the following now works!
-        # try:
-        #     self.instance.A | self.instance.tmpset3
-        # except TypeError:
-        #     pass
-        # else:
-        #     self.fail("fail test_or")
-        self.assertEqual(self.instance.A | self.instance.tmpset3,
-                         self.instance.A)
+        with self.assertRaisesRegex(
+                TypeError, r'Cannot apply a Set operator to an indexed Set '
+                r'component \(A\)'):
+            self.instance.A | self.instance.tmpset3
 
     def test_and(self):
         """Check that set intersection works"""
-        # In the set rewrite, the following now works!
-        # try:
-        #     self.instance.tmp = self.instance.A & self.instance.tmpset3
-        # except TypeError:
-        #     pass
-        # else:
-        #     self.fail("fail test_and")
-        self.assertEqual(self.instance.A & self.instance.tmpset3,
-                         EmptySet)
+        with self.assertRaisesRegex(
+                TypeError, r'Cannot apply a Set operator to an indexed Set '
+                r'component \(A\)'):
+            self.instance.A & self.instance.tmpset3
 
     def test_xor(self):
         """Check that set exclusive or works"""
-        # In the set rewrite, the following now works!
-        # try:
-        #     self.instance.A ^ self.instance.tmpset3
-        # except TypeError:
-        #     pass
-        # else:
-        #     self.fail("fail test_xor")
-        self.assertEqual(self.instance.A ^ self.instance.tmpset3,
-                         self.instance.A)
+        with self.assertRaisesRegex(
+                TypeError, r'Cannot apply a Set operator to an indexed Set '
+                r'component \(A\)'):
+            self.instance.A ^ self.instance.tmpset3
 
     def test_diff(self):
         """Check that set difference works"""
-        # In the set rewrite, the following now works!
-        # try:
-        #     self.instance.A - self.instance.tmpset3
-        # except TypeError:
-        #     pass
-        # else:
-        #     self.fail("fail test_diff")
-        self.assertEqual(self.instance.A - self.instance.tmpset3,
-                         self.instance.A)
+        with self.assertRaisesRegex(
+                TypeError, r'Cannot apply a Set operator to an indexed Set '
+                r'component \(A\)'):
+            self.instance.A - self.instance.tmpset3
 
     def test_mul(self):
         """Check that set cross-product works"""
-        # In the set rewrite, the following now works!
-        # try:
-        #     self.instance.A * self.instance.tmpset3
-        # except TypeError:
-        #     pass
-        # else:
-        #     self.fail("fail test_mul")
-        # Note: cross product with an empty set is an empty set
-        self.assertEqual(self.instance.A * self.instance.tmpset3,
-                         [])
+        with self.assertRaisesRegex(
+                TypeError, r'Cannot apply a Set operator to an indexed Set '
+                r'component \(A\)'):
+            self.instance.A * self.instance.tmpset3
 
     def test_override_values(self):
         m = ConcreteModel()
@@ -1515,7 +1489,8 @@ class TestRealSet(unittest.TestCase):
 
     def test_RealInterval(self):
         x = RealInterval()
-        self.assertEqual(x.name, "RealInterval(None, None)")
+        self.assertEqual(x.name, "'RealInterval(None, None)'")
+        self.assertEqual(x.local_name, "RealInterval(None, None)")
         self.assertFalse(None in x)
         self.assertTrue(10 in x)
         self.assertTrue(1.1 in x)
@@ -1528,7 +1503,8 @@ class TestRealSet(unittest.TestCase):
         self.assertTrue(-10 in x)
 
         x = RealInterval(bounds=(-1,1))
-        self.assertEqual(x.name, "RealInterval(-1, 1)")
+        self.assertEqual(x.name, "'RealInterval(-1, 1)'")
+        self.assertEqual(x.local_name, "RealInterval(-1, 1)")
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1668,7 +1644,8 @@ class TestIntegerSet(unittest.TestCase):
     def test_IntegerInterval(self):
         x = IntegerInterval()
         self.assertFalse(None in x)
-        self.assertEqual(x.name, "IntegerInterval(None, None)")
+        self.assertEqual(x.name, "'IntegerInterval(None, None)'")
+        self.assertEqual(x.local_name, "IntegerInterval(None, None)")
         self.assertTrue(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -1681,7 +1658,8 @@ class TestIntegerSet(unittest.TestCase):
 
         x = IntegerInterval(bounds=(-1,1))
         self.assertFalse(None in x)
-        self.assertEqual(x.name, "IntegerInterval(-1, 1)")
+        self.assertEqual(x.name, "'IntegerInterval(-1, 1)'")
+        self.assertEqual(x.local_name, "IntegerInterval(-1, 1)")
         self.assertFalse(10 in x)
         self.assertFalse(1.1 in x)
         self.assertTrue(1 in x)
@@ -2999,7 +2977,9 @@ class TestSetErrors(PyomoModel):
         a=Set()
         b=Set(a)
         with self.assertRaisesRegex(
-                TypeError, "Cannot apply a Set operator to an indexed"):
+                #TypeError, "Cannot apply a Set operator to an indexed"):
+                ValueError, r"Error retrieving component IndexedSet\[None\]: "
+                r"The component has not been constructed."):
             c=Set(within=b, dimen=2)
             c.construct()
 
@@ -3312,8 +3292,8 @@ class TestSetErrors(PyomoModel):
         self.assertNotIn(1, X)
         with self.assertRaisesRegex(
                 RangeDifferenceError, r"We do not support subtracting an "
-                r"infinite discrete range \[0:None\] from an infinite "
-                r"continuous range \[None..None\]"):
+                r"infinite discrete range \[0:inf\] from an infinite "
+                r"continuous range \[-inf..inf\]"):
             X < Reals
         # In the set rewrite, the following now works!
         # try:
@@ -3345,8 +3325,8 @@ class TestSetErrors(PyomoModel):
         self.assertNotIn(1, X)
         with self.assertRaisesRegex(
                 RangeDifferenceError, r"We do not support subtracting an "
-                r"infinite discrete range \[0:None\] from an infinite "
-                r"continuous range \[None..None\]"):
+                r"infinite discrete range \[0:inf\] from an infinite "
+                r"continuous range \[-inf..inf\]"):
             X < Reals
         # In the set rewrite, the following now works!
         # try:

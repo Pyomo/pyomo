@@ -1,5 +1,6 @@
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
 from pyomo.common.collections import ComponentSet
+from pyomo.core.expr import current as _expr
 
 
 class _NamedExpressionVisitor(ExpressionValueVisitor):
@@ -7,6 +8,7 @@ class _NamedExpressionVisitor(ExpressionValueVisitor):
         self.named_expressions = dict()
         self.variables = dict()
         self.fixed_vars = dict()
+        self._external_functions = dict()
 
     def visit(self, node, values):
         pass
@@ -25,6 +27,10 @@ class _NamedExpressionVisitor(ExpressionValueVisitor):
             self.named_expressions[id(node)] = node
             return False, None
 
+        if type(node) is _expr.ExternalFunctionExpression:
+            self._external_functions[id(node)] = node
+            return False, None
+
         if node.is_expression_type():
             return False, None
 
@@ -39,4 +45,5 @@ def identify_named_expressions(expr):
     _visitor.dfs_postorder_stack(expr)
     return (list(_visitor.named_expressions.values()),
             list(_visitor.variables.values()),
-            list(_visitor.fixed_vars.values()))
+            list(_visitor.fixed_vars.values()),
+            list(_visitor._external_functions.values()))

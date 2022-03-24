@@ -15,10 +15,21 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
+from pyomo.util.subsystems import create_subsystem_block
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import scipy_available
+from pyomo.common.dependencies import networkx as nx
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
-from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
+from pyomo.contrib.incidence_analysis.triangularize import (
+    block_triangularize,
+    get_diagonal_blocks,
+    get_blocks_from_maps,
+    )
+from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
+    dulmage_mendelsohn,
+    RowPartition,
+    ColPartition,
+    )
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
     import scipy as sp
@@ -40,14 +51,57 @@ def _check_unindexed(complist):
                     )
 
 
+def get_incidence_graph(variables, constraints, include_fixed=True):
+    """
+    This function gets the incidence graph of Pyomo variables and constraints.
+
+    Arguments:
+    ----------
+    variables: List of Pyomo VarData objects
+        Variables that will appear in incidence graph
+    constraints: List of Pyomo ConstraintData objects
+        Constraints that will appear in incidence graph
+    include_fixed: Bool
+        Flag for whether fixed variable should be included in the incidence
+
+    Returns:
+    --------
+    NetworkX Graph
+        
+    """
+    _check_unindexed(variables+constraints)
+    N, M = len(variables), len(constraints)
+    graph = nx.Graph()
+    graph.add_nodes_from(range(M), bipartite=0)
+    graph.add_nodes_from(range(M, M+N), bipartite=1)
+    var_node_map = ComponentMap((v, M+i) for i, v in enumerate(variables))
+    for i, con in enumerate(constraints):
+        for var in identify_variables(con.expr, include_fixed=include_fixed):
+            if var in var_node_map:
+                graph.add_edge(i, var_node_map[var])
+    return graph
+
+
+def _generate_variables_in_constraints(constraints, include_fixed=False):
+    known_vars = ComponentSet()
+    for con in constraints:
+        for var in identify_variables(con.expr, include_fixed=include_fixed):
+            if var not in known_vars:
+                known_vars.add(var)
+                yield var
+
+
 def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
     """
     This function gets the incidence matrix of Pyomo constraints and variables.
 
     Arguments
     ---------
-    variables: A list of Pyomo variable data objects
-    constraints: A list of Pyomo constraint data objects
+    variables: List of Pyomo VarData objects
+    constraints: List of Pyomo ConstraintData objects
+    include_fixed: Bool
+        Flag for whether fixed variables should be included in the matrix
+        nonzeros
 
     Returns
     -------
@@ -63,7 +117,7 @@ def get_structural_incidence_matrix(variables, constraints, include_fixed=True):
     cols = []
     for i, con in enumerate(constraints):
         cols.extend(var_idx_map[v] for v in
-                identify_variables(con.body, include_fixed=include_fixed)
+                identify_variables(con.expr, include_fixed=include_fixed)
                 if v in var_idx_map)
         rows.extend([i]*(len(cols) - len(rows)))
     assert len(rows) == len(cols)
@@ -78,39 +132,14 @@ def get_numeric_incidence_matrix(variables, constraints):
     constraints with respect to variables.
     """
     # NOTE: There are several ways to get a numeric incidence matrix
-    # from a Pyomo model. This function implements a somewhat roundabout
-    # method, which is to construct a dummy Block with the necessary
-    # variables and constraints, then construct a PyNumero PyomoNLP
-    # from the block and have PyNumero evaluate the desired Jacobian
-    # via ASL.
+    # from a Pyomo model. Here we get the numeric incidence matrix by
+    # creating a temporary block and using the PyNumero ASL interface.
     comps = list(variables) + list(constraints)
     _check_unindexed(comps)
-    M, N = len(constraints), len(variables)
-    _block = Block()
-    _block.construct()
-    _block.obj = Objective(expr=0)
-    _block.vars = Reference(variables)
-    _block.cons = Reference(constraints)
-    var_set = ComponentSet(variables)
-    other_vars = []
-    for con in constraints:
-        for var in identify_variables(con.body, include_fixed=False):
-            # Fixed vars will be ignored by the nl file write, so
-            # there is no point to including them here.
-            # A different method of assembling this matrix, e.g.
-            # Pyomo's automatic differentiation, could support taking
-            # derivatives with respect to fixed variables.
-            if var not in var_set:
-                other_vars.append(var)
-                var_set.add(var)
-    # These variables are necessary due to the nl writer's philosophy
-    # about what constitutes a model. Note that we take derivatives with
-    # respect to them even though this is not necessary. We could fix them
-    # here to avoid doing this extra work, but that would alter the user's
-    # model, which we would rather not do.
-    _block.other_vars = Reference(other_vars)
-    _nlp = PyomoNLP(_block)
-    return _nlp.extract_submatrix_jacobian(variables, constraints)
+    block = create_subsystem_block(constraints, variables)
+    block._obj = Objective(expr=0)
+    nlp = PyomoNLP(block)
+    return nlp.extract_submatrix_jacobian(variables, constraints)
 
 
 class IncidenceGraphInterface(object):
@@ -120,7 +149,7 @@ class IncidenceGraphInterface(object):
     model without constructing multiple PyomoNLPs.
     """
 
-    def __init__(self, model=None):
+    def __init__(self, model=None, active=True, include_fixed=False):
         """
         """
         # If the user gives us a model or an NLP, we assume they want us
@@ -128,8 +157,21 @@ class IncidenceGraphInterface(object):
         # later on.
         # WARNING: This cache will become invalid if the user alters their
         #          model.
-        self.cached = IncidenceMatrixType.NONE
-        if isinstance(model, PyomoNLP):
+        if model is None:
+            self.cached = IncidenceMatrixType.NONE
+        elif isinstance(model, PyomoNLP):
+            if not active:
+                raise ValueError(
+                    "Cannot get the Jacobian of inactive constraints from the "
+                    "nl interface (PyomoNLP).\nPlease set the `active` flag "
+                    "to True."
+                )
+            if include_fixed:
+                raise ValueError(
+                    "Cannot get the Jacobian with respect to fixed variables "
+                    "from the nl interface (PyomoNLP).\nPlease set the "
+                    "`include_fixed` flag to False."
+                )
             nlp = model
             self.cached = IncidenceMatrixType.NUMERIC
             self.variables = nlp.get_pyomo_variables()
@@ -141,8 +183,14 @@ class IncidenceGraphInterface(object):
             self.incidence_matrix = nlp.evaluate_jacobian_eq()
         elif isinstance(model, Block):
             self.cached = IncidenceMatrixType.STRUCTURAL
-            self.variables = list(model.component_data_objects(Var))
-            self.constraints = list(model.component_data_objects(Constraint))
+            self.constraints = list(
+                model.component_data_objects(Constraint, active=active)
+            )
+            self.variables = list(
+                _generate_variables_in_constraints(
+                    self.constraints, include_fixed=include_fixed
+                )
+            )
             self.var_index_map = ComponentMap(
                     (var, i) for i, var in enumerate(self.variables))
             self.con_index_map = ComponentMap(
@@ -151,12 +199,15 @@ class IncidenceGraphInterface(object):
                     self.variables,
                     self.constraints,
                     )
-        elif model is not None:
+        else:
             raise TypeError(
                 "Unsupported type for incidence matrix. Expected "
                 "%s or %s but got %s."
                 % (PyomoNLP, Block, type(model))
                 )
+
+        self.row_block_map = None
+        self.col_block_map = None
 
     def _validate_input(self, variables, constraints):
         if variables is None:
@@ -230,6 +281,10 @@ class IncidenceGraphInterface(object):
         matrix = self._extract_submatrix(variables, constraints)
 
         row_block_map, col_block_map = block_triangularize(matrix.tocoo())
+        # Cache maps in case we want to get diagonal blocks quickly in the
+        # future.
+        self.row_block_map = row_block_map
+        self.col_block_map = col_block_map
         con_block_map = ComponentMap((constraints[i], idx)
                 for i, idx in row_block_map.items())
         var_block_map = ComponentMap((variables[j], idx)
@@ -237,3 +292,105 @@ class IncidenceGraphInterface(object):
         # Switch the order of the maps here to match the method call.
         # Hopefully this does not get too confusing...
         return var_block_map, con_block_map
+
+    def get_diagonal_blocks(self, variables=None, constraints=None):
+        """
+        Returns the diagonal blocks in a block triangularization of the
+        incidence matrix of the provided constraints with respect to the
+        provided variables.
+
+        Returns
+        -------
+        tuple of lists
+        The first list contains lists that partition the variables,
+        the second lists contains lists that partition the constraints.
+
+        """
+        variables, constraints = self._validate_input(variables, constraints)
+        matrix = self._extract_submatrix(variables, constraints)
+
+        if self.row_block_map is None or self.col_block_map is None:
+            block_rows, block_cols = get_diagonal_blocks(matrix)
+        else:
+            block_rows, block_cols = get_blocks_from_maps(
+                self.row_block_map, self.col_block_map
+            )
+        block_cons = [[constraints[i] for i in block] for block in block_rows]
+        block_vars = [[variables[i] for i in block] for block in block_cols]
+        return block_vars, block_cons
+
+    def dulmage_mendelsohn(self, variables=None, constraints=None):
+        """
+        Returns the Dulmage-Mendelsohn partition of the incidence graph
+        of the provided variables and constraints.
+
+        Returns:
+        --------
+        ColPartition namedtuple and RowPartition namedtuple.
+        The ColPartition is returned first to match the order of variables
+        and constraints in the method arguments.
+        These partition variables (columns) and constraints (rows)
+        into overconstrained, underconstrained, unmatched, and square.
+
+        """
+        variables, constraints = self._validate_input(variables, constraints)
+        matrix = self._extract_submatrix(variables, constraints)
+
+        row_partition, col_partition = dulmage_mendelsohn(matrix.tocoo())
+        con_partition = RowPartition(
+                *[[constraints[i] for i in subset] for subset in row_partition]
+                )
+        var_partition = ColPartition(
+                *[[variables[i] for i in subset] for subset in col_partition]
+                )
+        # Switch the order of the maps here to match the method call.
+        # Hopefully this does not get too confusing...
+        return var_partition, con_partition
+
+    def remove_nodes(self, nodes, constraints=None):
+        """
+        Removes the specified variables and constraints (columns and
+        rows) from the cached incidence matrix. This is a "projection"
+        of the variable and constraint vectors, rather than something
+        like a vertex elimination.
+        For the puropse of this method, there is no need to distinguish
+        between variables and constraints. However, we provide the
+        "constraints" argument so a call signature similar to other methods
+        in this class is still valid.
+
+        Arguments:
+        ----------
+        nodes: List
+            VarData or ConData objects whose columns or rows will be
+            removed from the incidence matrix.
+        constraints: List
+            VarData or ConData objects whose columns or rows will be
+            removed from the incidence matrix.
+
+        """
+        if constraints is None:
+            constraints = []
+        if self.cached is IncidenceMatrixType.NONE:
+            raise RuntimeError(
+                "Attempting to remove variables and constraints from cached "
+                "incidence matrix,\nbut no incidence matrix has been cached."
+            )
+        to_exclude = ComponentSet(nodes)
+        to_exclude.update(constraints)
+        vars_to_include = [v for v in self.variables if v not in to_exclude]
+        cons_to_include = [c for c in self.constraints if c not in to_exclude]
+        incidence_matrix = self._extract_submatrix(
+            vars_to_include, cons_to_include
+        )
+        # update attributes
+        self.variables = vars_to_include
+        self.constraints = cons_to_include
+        self.incidence_matrix = incidence_matrix
+        self.var_index_map = ComponentMap(
+            (var, i) for i, var in enumerate(self.variables)
+        )
+        self.con_index_map = ComponentMap(
+            (con, i) for i, con in enumerate(self.constraints)
+        )
+        self.row_block_map = None
+        self.col_block_map = None

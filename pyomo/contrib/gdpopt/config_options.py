@@ -110,32 +110,49 @@ def _add_OA_configs(CONFIG):
     ))
     CONFIG.declare("round_discrete_vars", ConfigValue(
         default=True,
-        description="flag to round subproblem discrete variable values to the nearest integer. "
-                    "Rounding is done before fixing disjuncts."
+        description="flag to round subproblem discrete variable values to the "
+        "nearest integer. Rounding is done before fixing disjuncts."
     ))
     CONFIG.declare("force_subproblem_nlp", ConfigValue(
         default=False,
-        description="Force subproblems to be NLP, even if discrete variables exist."
+        description="Force subproblems to be NLP, even if discrete variables "
+        "exist."
     ))
     CONFIG.declare("mip_presolve", ConfigValue(
         default=True,
-        description="Flag to enable or diable GDPopt MIP presolve. Default=True.",
+        description="Flag to enable or diable GDPopt MIP presolve. "
+        "Default=True.",
         domain=bool
     ))
     CONFIG.declare("subproblem_presolve", ConfigValue(
         default=True,
-        description="Flag to enable or disable subproblem presolve. Default=True.",
+        description="Flag to enable or disable subproblem presolve. "
+        "Default=True.",
+        domain=bool
+    ))
+    CONFIG.declare("max_fbbt_iterations", ConfigValue(
+        default=3,
+        description="Maximum number of feasibility-based bounds tightening "
+        "iterations to do during NLP subproblem preprocessing.",
+        domain=PositiveInt
+    ))
+    CONFIG.declare("tighten_nlp_var_bounds", ConfigValue(
+        default=False,
+        description="Whether or not to do feasibility-based bounds tightening "
+        "on the variables in the NLP subproblem before solving it.",
         domain=bool
     ))
     CONFIG.declare("calc_disjunctive_bounds", ConfigValue(
         default=False,
-        description="Calculate special disjunctive variable bounds for GLOA. False by default.",
+        description="Calculate special disjunctive variable bounds for GLOA. "
+        "False by default.",
         domain=bool
     ))
     CONFIG.declare("obbt_disjunctive_bounds", ConfigValue(
         default=False,
-        description="Use optimality-based bounds tightening rather than feasibility-based bounds tightening "
-                    "to compute disjunctive variable bounds. False by default.",
+        description="Use optimality-based bounds tightening rather than "
+        "feasibility-based bounds tightening to compute disjunctive variable "
+        "bounds. False by default.",
         domain=bool
     ))
     return CONFIG
@@ -151,7 +168,8 @@ def _add_BB_configs(CONFIG):
     CONFIG.declare("solve_local_rnGDP", ConfigValue(
         default=False,
         domain=bool,
-        description="When True, GDPopt-LBB will solve a local MINLP at each node."
+        description="When True, GDPopt-LBB will solve a local MINLP at each "
+        "node."
     ))
 
 
@@ -206,7 +224,11 @@ def _add_tolerance_configs(CONFIG):
     ))
     CONFIG.declare("constraint_tolerance", ConfigValue(
         default=1E-6,
-        description="Tolerance on constraint satisfaction."
+        description="""Tolerance on constraint satisfaction.
+
+        Increasing this tolerance corresponds to being more conservative in
+        declaring the model or an NLP subproblem to be infeasible.
+        """
     ))
     CONFIG.declare("variable_tolerance", ConfigValue(
         default=1E-8,

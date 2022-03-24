@@ -14,20 +14,21 @@ import logging, sys
 from weakref import ref as weakref_ref
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.deprecation import RenamedClass
+from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name, NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.component import ComponentData
+from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import \
     IndexedComponent, UnindexedComponent_set
-from pyomo.core.base.misc import apply_indexed_rule, tabular_writer
+from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.numvalue import as_numeric, value
 from pyomo.core.expr.current import identify_variables
 from pyomo.core.base.label import alphanum_label_from_name
-from pyomo.core.base.plugin import ModelComponentFactory
 
 from pyomo.network.util import create_var, tighten_var_domain
 
@@ -327,7 +328,7 @@ class Port(IndexedComponent):
         if cls != Port:
             return super(Port, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return SimplePort.__new__(SimplePort)
+            return ScalarPort.__new__(ScalarPort)
         else:
             return IndexedPort.__new__(IndexedPort)
 
@@ -725,11 +726,16 @@ class Port(IndexedComponent):
             evar = create_var(member, name, eblock, index_set)
         return evar
 
-class SimplePort(Port, _PortData):
+class ScalarPort(Port, _PortData):
 
     def __init__(self, *args, **kwd):
         _PortData.__init__(self, component=self)
         Port.__init__(self, *args, **kwd)
+
+
+class SimplePort(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarPort
+    __renamed__version__ = '6.0'
 
 
 class IndexedPort(Port):

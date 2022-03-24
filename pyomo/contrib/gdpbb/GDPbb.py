@@ -30,7 +30,8 @@ class GDPbbSolveData(object):
     pass
 
 
-@SolverFactory.register('gdpbb', doc='Branch and Bound based GDP Solver')
+@SolverFactory.register(
+    'gdpbb', doc='[DEPRECATED] Branch and Bound based GDP Solver')
 @deprecated("GDPbb has been merged into GDPopt. "
             "You can use the algorithm using GDPopt with strategy='LBB'.",
             logger="pyomo.solvers",
@@ -256,7 +257,7 @@ class GDPbbSolver(object):
                     # Model is solved. Copy over solution values.
                     original_model = solve_data.original_model
                     for orig_var, val in zip(original_model.GDPbb_utils.variable_list, incumbent_var_values):
-                        orig_var.value = val
+                        orig_var.set_value(val, skip_validation=True)
 
                     solve_data.results.problem.lower_bound = incumbent_results.problem.lower_bound
                     solve_data.results.problem.upper_bound = incumbent_results.problem.upper_bound

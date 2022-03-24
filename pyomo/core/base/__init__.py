@@ -10,33 +10,9 @@
 
 # TODO: this import is for historical backwards compatibility and should
 # probably be removed
-
-import pyomo.core.expr.numvalue
-import pyomo.core.expr.logical_expr
 from pyomo.common.collections import ComponentMap
-from pyomo.core.expr.symbol_map import SymbolMap
-import pyomo.core.base.action
-import pyomo.core.base.boolean_var
-import pyomo.core.base.check
-import pyomo.core.base.component
-import pyomo.core.base.config
-import pyomo.core.base.constraint
-import pyomo.core.base.expression
-import pyomo.core.base.global_set
-import pyomo.core.base.indexed_component
-import pyomo.core.base.indexed_component_slice
-import pyomo.core.base.label
-import pyomo.core.base.logical_constraint
-import pyomo.core.base.misc
-import pyomo.core.base.param
-import pyomo.core.base.plugin
-import pyomo.core.base.range
-import pyomo.core.base.set_types
-import pyomo.core.base.set
-import pyomo.core.base.units_container
-import pyomo.core.base.util
-import pyomo.core.base.var
 
+from pyomo.core.expr.symbol_map import SymbolMap
 from pyomo.core.expr.numvalue import (nonpyomo_leaf_types,
                                       native_types,
                                       native_numeric_types,
@@ -63,7 +39,7 @@ from pyomo.core.base.label import (CuidLabeler,
 #
 # Components
 #
-from pyomo.core.base.component import (name, Component)
+from pyomo.core.base.component import (name, Component, ModelComponentFactory)
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.action import BuildAction
 from pyomo.core.base.check import BuildCheck
@@ -72,10 +48,10 @@ from pyomo.core.base.set import (
 )
 from pyomo.core.base.param import Param
 from pyomo.core.base.var import (Var, _VarData, _GeneralVarData,
-                                 SimpleVar, VarList)
+                                 ScalarVar, VarList)
 from pyomo.core.base.boolean_var import (
     BooleanVar,  _BooleanVarData,  _GeneralBooleanVarData,
-    BooleanVarList, SimpleBooleanVar)
+    BooleanVarList, ScalarBooleanVar)
 from pyomo.core.base.constraint import (simple_constraint_rule,
                                         simple_constraintlist_rule,
                                         ConstraintList, Constraint,
@@ -105,35 +81,17 @@ from pyomo.core.base.set import (Reals, PositiveReals, NonPositiveReals,
                                  IntegerInterval)
 from pyomo.core.base.misc import display
 from pyomo.core.base.block import (SortComponents, TraversalStrategy,
-                                   Block, SimpleBlock, active_components,
+                                   Block, ScalarBlock, active_components,
                                    components, active_components_data,
                                    components_data)
 from pyomo.core.base.PyomoModel import (global_option,
                                         ModelSolution,
                                         ModelSolutions, Model, ConcreteModel,
                                         AbstractModel)
-from pyomo.core.base.plugin import (pyomo_callback,
-                                    IPyomoExpression, ExpressionFactory,
-                                    ExpressionRegistration, IPyomoPresolver,
-                                    IPyomoPresolveAction,
-                                    IParamRepresentation,
-                                    ParamRepresentationFactory,
-                                    IPyomoScriptPreprocess,
-                                    IPyomoScriptCreateModel,
-                                    IPyomoScriptCreateDataPortal,
-                                    IPyomoScriptModifyInstance,
-                                    IPyomoScriptPrintModel,
-                                    IPyomoScriptPrintInstance,
-                                    IPyomoScriptSaveInstance,
-                                    IPyomoScriptPrintResults,
-                                    IPyomoScriptSaveResults,
-                                    IPyomoScriptPostprocess,
-                                    ModelComponentFactory, Transformation,
-                                    TransformationFactory)
-#
-import pyomo.core.base._pyomo
-#
-import pyomo.core.base.util
+from pyomo.core.base.transformation import (
+    Transformation,
+    TransformationFactory,
+)
 
 from pyomo.core.base.instance2dat import instance2dat
 
@@ -142,12 +100,13 @@ from pyomo.core.base.set import (
     set_options, RealSet, IntegerSet, BooleanSet,
 )
 
-from weakref import ref as weakref_ref
-
-#
-# This is a hack to strip out modules, which shouldn't have been included in these imports
-#
-import types
-_locals = locals()
-__all__ = [__name for __name in _locals.keys() if (not __name.startswith('_') and not isinstance(_locals[__name],types.ModuleType)) or __name == '_' ]
-__all__.append('pyomo')
+from pyomo.common.deprecation import relocated_module_attribute
+relocated_module_attribute(
+    'SimpleBlock', 'pyomo.core.base.block.SimpleBlock', version='6.0')
+relocated_module_attribute(
+    'SimpleVar', 'pyomo.core.base.var.SimpleVar', version='6.0')
+relocated_module_attribute(
+    'SimpleBooleanVar', 'pyomo.core.base.boolean_var.SimpleBooleanVar',
+    version='6.0'
+)
+del relocated_module_attribute

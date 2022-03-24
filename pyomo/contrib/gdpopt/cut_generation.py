@@ -45,7 +45,7 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
         # copy values over
         for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
             if val is not None and not var.fixed:
-                var.value = val
+                var.set_value(val, skip_validation=True)
 
         # TODO some kind of special handling if the dual is phenomenally small?
         config.logger.debug('Adding OA cuts.')
@@ -114,7 +114,8 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
 
             oa_cuts = oa_utils.GDPopt_OA_cuts
             slack_var = oa_utils.GDPopt_OA_slacks.add()
-            rhs = value(constr.lower) if constr.has_lb() else value(constr.upper)
+            rhs = value(constr.lower) if constr.has_lb() else value(
+                constr.upper)
             try:
                 new_oa_cut = (
                     copysign(1, sign_adjust * dual_value) * (
@@ -129,7 +130,8 @@ def add_outer_approximation_cuts(nlp_result, solve_data, config):
                 counter += 1
             except ZeroDivisionError:
                 config.logger.warning(
-                    "Zero division occured attempting to generate OA cut for constraint %s.\n"
+                    "Zero division occured attempting to generate OA cut for "
+                    "constraint %s.\n"
                     "Skipping OA cut generation for this constraint."
                     % (constr.name,)
                 )
@@ -146,19 +148,19 @@ def add_affine_cuts(nlp_result, solve_data, config):
         m = solve_data.linear_GDP
         if config.calc_disjunctive_bounds:
             with time_code(solve_data.timing, "disjunctive variable bounding"):
-                TransformationFactory('contrib.compute_disj_var_bounds').apply_to(
-                    m,
-                    solver=config.mip_solver if config.obbt_disjunctive_bounds else None
-                )
+                TransformationFactory('contrib.compute_disj_var_bounds').\
+                    apply_to( m, solver=config.mip_solver if
+                              config.obbt_disjunctive_bounds else None )
         config.logger.info("Adding affine cuts.")
         GDPopt = m.GDPopt_utils
         counter = 0
         for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
             if val is not None and not var.fixed:
-                var.value = val
+                var.set_value(val, skip_validation=True)
 
         for constr in constraints_in_True_disjuncts(m, config):
-            # Note: this includes constraints that are deactivated in the current model (linear_GDP)
+            # Note: this includes constraints that are deactivated in the
+            # current model (linear_GDP)
 
             disjunctive_var_bounds = disjunctive_bounds(constr.parent_block())
 
@@ -174,14 +176,17 @@ def add_affine_cuts(nlp_result, solve_data, config):
             try:
                 mc_eqn = mc(constr.body, disjunctive_var_bounds)
             except MCPP_Error as e:
-                config.logger.debug("Skipping constraint %s due to MCPP error %s" % (constr.name, str(e)))
+                config.logger.debug("Skipping constraint %s due to MCPP "
+                                    "error %s" % (constr.name, str(e)))
                 continue  # skip to the next constraint
             ccSlope = mc_eqn.subcc()
             cvSlope = mc_eqn.subcv()
             ccStart = mc_eqn.concave()
             cvStart = mc_eqn.convex()
-            ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() else mc_eqn.upper()
-            lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() else mc_eqn.lower()
+            ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() \
+                     else mc_eqn.upper()
+            lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() \
+                     else mc_eqn.lower()
 
             parent_block = constr.parent_block()
             # Create a block on which to put outer approximation cuts.
@@ -204,7 +209,8 @@ def add_affine_cuts(nlp_result, solve_data, config):
         config.logger.info("Added %s affine cuts" % counter)
 
 
-def add_integer_cut(var_values, target_model, solve_data, config, feasible=False):
+def add_integer_cut(var_values, target_model, solve_data, config,
+                    feasible=False):
     """Add an integer cut to the target GDP model."""
     with time_code(solve_data.timing, 'integer cut generation'):
         m = target_model
@@ -266,6 +272,5 @@ def add_integer_cut(var_values, target_model, solve_data, config, feasible=False
     if config.calc_disjunctive_bounds:
         with time_code(solve_data.timing, "disjunctive variable bounding"):
             TransformationFactory('contrib.compute_disj_var_bounds').apply_to(
-                m,
-                solver=config.mip_solver if config.obbt_disjunctive_bounds else None
-            )
+                m, solver=config.mip_solver if config.obbt_disjunctive_bounds
+                else None )

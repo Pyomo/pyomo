@@ -10,7 +10,7 @@
 #
 # Unit Tests for Elements of a Model
 #
-# TestSimpleObj                Class for testing single objective
+# TestScalarObj                Class for testing single objective
 # TestArrayObj                Class for testing array of objective
 #
 
@@ -22,7 +22,7 @@ import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, AbstractModel, Objective, ObjectiveList, Var, Param, Set, RangeSet, value, maximize, minimize, simple_objective_rule, simple_objectivelist_rule
 
-class TestSimpleObj(unittest.TestCase):
+class TestScalarObj(unittest.TestCase):
 
     def test_singleton_get_set(self):
         model = ConcreteModel()
@@ -48,7 +48,7 @@ class TestSimpleObj(unittest.TestCase):
         a = Objective()
         a.construct()
         #
-        # Even though we construct a SimpleObjective,
+        # Even though we construct a ScalarObjective,
         # if it is not initialized that means it is "empty"
         # and we should encounter errors when trying to access the
         # _ObjectiveData interface methods until we assign
@@ -188,7 +188,7 @@ class TestSimpleObj(unittest.TestCase):
         self.assertEqual(value(model.obj._data[None]), 8)
 
     def test_arguments(self):
-        """Test that arguments notare of type SimpleSet"""
+        """Test that arguments notare of type ScalarSet"""
         model = ConcreteModel()
         def rule(model):
             return 1
@@ -197,7 +197,7 @@ class TestSimpleObj(unittest.TestCase):
         except TypeError:
             pass
         else:
-            self.fail("Objective should only accept SimpleSets")
+            self.fail("Objective should only accept ScalarSets")
 
     def test_sense_option(self):
         """Test sense option"""

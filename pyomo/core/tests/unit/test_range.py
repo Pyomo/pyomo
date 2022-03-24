@@ -20,21 +20,23 @@ from pyomo.core.base.set import (
     Any
 )
 
+_inf = float('inf')
+
 class TestNumericRange(unittest.TestCase):
     def test_init(self):
         a = NR(None, None, 0)
-        self.assertIsNone(a.start)
-        self.assertIsNone(a.end)
+        self.assertEqual(a.start, -_inf)
+        self.assertEqual(a.end, _inf)
         self.assertEqual(a.step, 0)
 
-        a = NR(-float('inf'), float('inf'), 0)
-        self.assertIsNone(a.start)
-        self.assertIsNone(a.end)
+        a = NR(-_inf, _inf, 0)
+        self.assertEqual(a.start, -_inf)
+        self.assertEqual(a.end, _inf)
         self.assertEqual(a.step, 0)
 
         a = NR(0, None, 0)
         self.assertEqual(a.start, 0)
-        self.assertIsNone(a.end)
+        self.assertEqual(a.end, _inf)
         self.assertEqual(a.step, 0)
 
         a = NR(0, 0, 0)
@@ -70,8 +72,13 @@ class TestNumericRange(unittest.TestCase):
 
         a = NR(0, None, 1)
         self.assertEqual(a.start, 0)
-        self.assertEqual(a.end, None)
+        self.assertEqual(a.end, _inf)
         self.assertEqual(a.step, 1)
+
+        a = NR(0, None, -1)
+        self.assertEqual(a.start, 0)
+        self.assertEqual(a.end, -_inf)
+        self.assertEqual(a.step, -1)
 
         a = NR(0, 5, 1)
         self.assertEqual(a.start, 0)
@@ -213,6 +220,61 @@ class TestNumericRange(unittest.TestCase):
         self.assertNotIn(1.1, NR(0, -10, -2))
         self.assertNotIn(-1.1, NR(10, None, -2))
         self.assertNotIn(1.1, NR(0, None, 2))
+
+        # test special cases (for implicit numpy ndarray compatibility)
+        self.assertNotIn('z', NR(0, None, 0))
+        self.assertNotIn(['z'], NR(0, None, 0))
+        self.assertIn([1], NR(0, None, 0))
+        self.assertNotIn([-1], NR(0, None, 0))
+        self.assertIn({0:1}, NR(0, None, 0))
+        self.assertNotIn({0:-1}, NR(0, None, 0))
+        self.assertNotIn({1:1}, NR(0, None, 0))
+
+        class _Unrelated(object):
+            pass
+        self.assertNotIn(_Unrelated(), NR(0, None, 0))
+        self.assertNotIn(_Unrelated, NR._types_comparable_to_int)
+
+        class _NonComparable(_Unrelated):
+            def __init__(self, val):
+                self.val = val
+            def __sub__(self, other):
+                return self
+            def __gt__(self, other):
+                return True
+            def __le__(self, other):
+                return True
+        self.assertNotIn(_NonComparable(1), NR(0, None, 0))
+        self.assertNotIn(_NonComparable, NR._types_comparable_to_int)
+
+        class _NotCastable(_NonComparable):
+            def __lt__(self, other):
+                return True
+            def __eq__(self, other):
+                return True
+            def __ne__(self, other):
+                return True
+        self.assertNotIn(_NotCastable(1), NR(0, None, 0))
+        self.assertNotIn(_NotCastable, NR._types_comparable_to_int)
+
+        class _Custom(object):
+            def __init__(self, val):
+                self.val = val
+            def __lt__(self, other):
+                return self.val < other
+            def __gt__(self, other):
+                return self.val > other
+            def __le__(self, other):
+                return self.val <= other
+            def __ge__(self, other):
+                return self.val >= other
+            def __eq__(self, other):
+                return self.val == other
+            def __sub__(self, other):
+                return self.val - other
+        self.assertIn(_Custom(1), NR(0, None, 0))
+        self.assertIn(_Custom, NR._types_comparable_to_int)
+        NR._types_comparable_to_int.discard(_Custom)
 
     def test_isdisjoint(self):
         def _isdisjoint(expected_result, a, b):
@@ -514,8 +576,12 @@ class TestNumericRange(unittest.TestCase):
             [NR(None,-5,0,'[)')],
         )
         self.assertEqual(
-            NR(None,0,0).range_difference([NR(-5,0,0,'[)')]),
+            NR(None,0,0).range_difference([NR(-5,0,0,'[]')]),
             [NR(None,-5,0,'[)')],
+        )
+        self.assertEqual(
+            NR(None,0,0).range_difference([NR(-5,0,0,'[)')]),
+            [NR(None,-5,0,'[)'), NR(0,0,0)],
         )
         self.assertEqual(
             NR(0,10,0).range_difference([NR(None,5,0,'[)')]),
@@ -560,11 +626,21 @@ class TestNumericRange(unittest.TestCase):
         a = NR(0.25, None, 1)
         self.assertEqual(a.range_difference([NR(0.5, None, 1)]), [a])
 
-        # And the onee thing we don't support:
+        # open/closed infinite ranges
+        a = NR(None, None, 0)
+        self.assertEqual(
+            a.range_difference([NR(None, None, 0, "()")]),
+            [NR(-_inf, -_inf, 0), NR(_inf, _inf, 0)])
+        self.assertEqual(
+            a.range_difference([NR(None, None, 0, "()"),
+                                NR(None, None, 0, "[)")]),
+            [NR(_inf, _inf, 0)])
+
+        # And the one thing we don't support:
         with self.assertRaisesRegex(
                 RangeDifferenceError, 'We do not support subtracting an '
-                r'infinite discrete range \[0:None\] from an infinite '
-                r'continuous range \[None..None\]'):
+                r'infinite discrete range \[0:inf\] from an infinite '
+                r'continuous range \[-inf..inf\]'):
             NR(None,None,0).range_difference([NR(0,None,1)])
 
     def test_range_intersection(self):
@@ -841,13 +917,14 @@ class TestRangeProduct(unittest.TestCase):
     def test_range_difference(self):
         a = NNR('a')
         b = NR(0,5,0)
+        b1 = NR(0,5,0,'[)') # Note: b & c overlap, so [b,c]-c != b
         c = NR(5,10,1)
         x = RP([[a],[b,c]])
         y = RP([[a],[c]])
         z = RP([[a],[b],[c]])
         w = RP([list(Any.ranges()), [b]])
         self.assertEqual(x.range_difference([x]), [])
-        self.assertEqual(x.range_difference([y]), [RP([[a],[b]])])
+        self.assertEqual(x.range_difference([y]), [RP([[a],[b1]])])
         self.assertEqual(x.range_difference([z]), [x])
         self.assertEqual(x.range_difference(Any.ranges()), [])
         self.assertEqual(x.range_difference([w]), [RP([[a],[NR(6,10,1)]])])

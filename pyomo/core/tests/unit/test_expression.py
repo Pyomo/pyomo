@@ -331,16 +331,6 @@ class TestExpression(unittest.TestCase):
         self.assertEqual(a.is_fixed(), True)
 
 
-    def test_bad_init_wrong_type(self):
-        model = ConcreteModel()
-        def _some_rule(model):
-            return 1.0
-        with self.assertRaises(TypeError):
-            model.e = Expression(expr=_some_rule)
-        with self.assertRaises(TypeError):
-            model.e = Expression([1], expr=_some_rule)
-        del _some_rule
-
     def test_display(self):
         model = ConcreteModel()
         model.e = Expression()
@@ -429,18 +419,18 @@ E : Size=2
         model = ConcreteModel()
         model.E = Expression([1])
         model.E[1] = 1
-        self.assertEqual(model.E[1], 1)
+        self.assertEqual(value(model.E[1]), 1)
         with self.assertRaises(KeyError):
             model.E[2] = 1
         model.del_component(model.E)
         model.Index = Set(dimen=3, initialize=[(1,2,3)])
         model.E = Expression(model.Index)
         model.E[(1,2,3)] = 1
-        self.assertEqual(model.E[(1,2,3)], 1)
+        self.assertEqual(value(model.E[(1,2,3)]), 1)
         # GH: testing this ludicrous behavior simply for
         #     coverage in expression.py.
         model.E[(1,(2,3))] = 1
-        self.assertEqual(model.E[(1,2,3)], 1)
+        self.assertEqual(value(model.E[(1,2,3)]), 1)
         with self.assertRaises(KeyError):
             model.E[2] = 1
 
@@ -454,17 +444,14 @@ E : Size=2
         del _some_rule
         def _some_rule(model):
             return Expression.Skip
-        # non-indexed Expression does not recognized
-        # Expression.Skip
-        with self.assertRaises(ValueError):
-            model.e = Expression(rule=_some_rule)
+        model.e = Expression(rule=_some_rule)
+        self.assertEqual(len(model.e), 0)
 
     def test_nonindexed_construct_expr(self):
         model = ConcreteModel()
-        # non-indexed Expression does not recognized
-        # Expression.Skip
-        with self.assertRaises(ValueError):
-            model.e = Expression(expr=Expression.Skip)
+        model.e = Expression(expr=Expression.Skip)
+        self.assertEqual(len(model.e), 0)
+        model.del_component(model.e)
         model.e = Expression()
         self.assertEqual(model.e.extract_values(),
                          {None: None})
@@ -500,11 +487,33 @@ E : Size=2
     def test_implicit_definition(self):
         model = ConcreteModel()
         model.idx = Set(initialize=[1,2,3])
-        model.E = Expression(model.idx, rule=lambda m,i: Expression.Skip)
-        self.assertEqual(len(model.E), 0)
+        model.E = Expression(model.idx)
+        self.assertEqual(len(model.E), 3)
         expr = model.E[1]
         self.assertIs(type(expr), _GeneralExpressionData)
-        self.assertIs(expr.value, None)
+        model.E[1] = None
+        self.assertIs(expr, model.E[1])
+        self.assertIs(type(expr), _GeneralExpressionData)
+        self.assertIs(expr.expr, None)
+        model.E[1] = 5
+        self.assertIs(expr, model.E[1])
+        self.assertEqual(model.E.extract_values(), {1:5, 2:None, 3:None})
+        model.E[2] = 6
+        self.assertIsNot(expr, model.E[2])
+        self.assertEqual(model.E.extract_values(), {1:5, 2:6, 3:None})
+
+    def test_explicit_skip_definition(self):
+        model = ConcreteModel()
+        model.idx = Set(initialize=[1,2,3])
+        model.E = Expression(model.idx, rule=lambda m,i: Expression.Skip)
+        self.assertEqual(len(model.E), 0)
+        with self.assertRaises(KeyError):
+            expr = model.E[1]
+
+        model.E[1] = None
+        expr = model.E[1]
+        self.assertIs(type(expr), _GeneralExpressionData)
+        self.assertIs(expr.expr, None)
         model.E[1] = 5
         self.assertIs(expr, model.E[1])
         self.assertEqual(model.E.extract_values(), {1:5})

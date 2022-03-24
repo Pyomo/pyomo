@@ -39,6 +39,7 @@ finally:
 # -- Options for intersphinx ---------------------------------------------
 
 intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
     'matplotlib': ('https://matplotlib.org/stable/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
@@ -142,7 +143,7 @@ on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 html_theme = 'sphinx_rtd_theme'
 
 # Force HTML4: If we don't explicitly force HTML4, then the background
-# of the Paramters/Returns/Return type headers is shaded the same as the
+# of the Parameters/Returns/Return type headers is shaded the same as the
 # method prototype (tested 15 April 21 with Sphinx=3.5.4 and
 # sphinx-rtd-theme=0.5.2).
 html4_writer = True
@@ -151,22 +152,6 @@ html4_writer = True
 if not on_rtd:  # only import and set the theme if we're building docs locally
     import sphinx_rtd_theme
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-    # Override default css to get a larger width for local build
-    def setup(app):
-        app.add_css_file('theme_overrides.css')
-    html_context = {
-        'css_files': [
-            '_static/theme_overrides.css',
-        ],
-    }
-else:
-    html_context = {
-        'css_files': [
-            'https://media.readthedocs.org/css/sphinx_rtd_theme.css',
-            'https://media.readthedocs.org/css/readthedocs-doc-embed.css',
-            '_static/theme_overrides.css',
-        ],
-    }
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -178,6 +163,9 @@ else:
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+html_css_files = [
+    'theme_overrides.css',
+]
 
 html_favicon = "../logos/pyomo/favicon.ico"
 
@@ -248,8 +236,15 @@ doctest_default_flags = (
     doctest.ELLIPSIS + doctest.NORMALIZE_WHITESPACE +
     doctest.IGNORE_EXCEPTION_DETAIL + doctest.DONT_ACCEPT_TRUE_FOR_1
 )
-doctest_global_setup = '''
+class IgnoreResultOutputChecker(doctest.OutputChecker):
+    IGNORE_RESULT = doctest.register_optionflag('IGNORE_RESULT')
+    def check_output(self, want, got, optionflags):
+        if optionflags & self.IGNORE_RESULT:
+            return True
+        return super().check_output(want, got, optionflags)
+doctest.OutputChecker = IgnoreResultOutputChecker
 
+doctest_global_setup = '''
 from pyomo.common.dependencies import (
     attempt_import, numpy_available, scipy_available, pandas_available,
     yaml_available, networkx_available, matplotlib_available,
@@ -264,13 +259,12 @@ import pyomo.opt
 # solvers are not available
 ipopt_available = bool(pyomo.opt.check_available_solvers('ipopt'))
 sipopt_available = bool(pyomo.opt.check_available_solvers('ipopt_sens'))
+k_aug_available = bool(pyomo.opt.check_available_solvers('k_aug'))
+dot_sens_available = bool(pyomo.opt.check_available_solvers('dot_sens'))
 baron_available = bool(pyomo.opt.check_available_solvers('baron'))
 glpk_available = bool(pyomo.opt.check_available_solvers('glpk'))
-try:
-    import gurobipy
-    gurobipy_available = True
-except ImportError:
-    gurobipy_available = False
+baron = pyomo.opt.SolverFactory('baron')
+gurobipy_available = bool(pyomo.opt.check_available_solvers('gurobi_direct'))
 if numpy_available and scipy_available:
     from pyomo.contrib.pynumero.asl import AmplInterface
     asl_available = AmplInterface.available()

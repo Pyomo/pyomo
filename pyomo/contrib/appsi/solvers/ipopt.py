@@ -1,6 +1,6 @@
-from pyutilib.services import TempfileManager
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.fileutils import Executable
-from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, SolverConfig
+from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, SolverConfig, PersistentSolutionLoader
 from pyomo.contrib.appsi.writers import NLWriter
 from pyomo.common.log import LogStream
 import logging
@@ -19,16 +19,29 @@ from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.tee import TeeStream
 import sys
-import os
+from typing import Dict
 from pyomo.common.config import ConfigValue, NonNegativeInt
+from pyomo.common.errors import PyomoException
+import os
+from pyomo.contrib.appsi.cmodel import cmodel_available
+from pyomo.core.staleflag import StaleFlagManager
 
 
 logger = logging.getLogger(__name__)
 
 
 class IpoptConfig(SolverConfig):
-    def __init__(self):
-        super(IpoptConfig, self).__init__()
+    def __init__(self,
+                 description=None,
+                 doc=None,
+                 implicit=False,
+                 implicit_domain=None,
+                 visibility=0):
+        super(IpoptConfig, self).__init__(description=description,
+                                          doc=doc,
+                                          implicit=implicit,
+                                          implicit_domain=implicit_domain,
+                                          visibility=visibility)
 
         self.declare('executable', ConfigValue())
         self.declare('filename', ConfigValue(domain=str))
@@ -110,13 +123,14 @@ class Ipopt(PersistentSolver):
         self._dual_sol = dict()
         self._primal_sol = ComponentMap()
         self._reduced_costs = ComponentMap()
+        self._last_results_object: Optional[Results] = None
 
-    def available(self, exception_flag=False):
+    def available(self):
         if self.config.executable.path() is None:
-            if exception_flag:
-                raise RuntimeError('Could not find Ipopt executable')
-            return False
-        return True
+            return self.Availability.NotFound
+        elif not cmodel_available:
+            return self.Availability.NeedsCompiledExtension
+        return self.Availability.FullLicense
 
     def version(self):
         results = subprocess.run([str(self.config.executable), '--version'],
@@ -152,13 +166,36 @@ class Ipopt(PersistentSolver):
     def config(self):
         return self._config
 
+    @config.setter
+    def config(self, val):
+        self._config = val
+
     @property
-    def solver_options(self):
+    def ipopt_options(self):
+        """
+        Returns
+        -------
+        ipopt_options: dict
+            A dictionary mapping solver options to values for those options. These
+            are solver specific.
+        """
         return self._solver_options
+
+    @ipopt_options.setter
+    def ipopt_options(self, val: Dict):
+        self._solver_options = val
 
     @property
     def update_config(self):
         return self._writer.update_config
+
+    @property
+    def writer(self):
+        return self._writer
+
+    @property
+    def symbol_map(self):
+        return self._writer.symbol_map
 
     def set_instance(self, model):
         self._writer.set_instance(model)
@@ -198,13 +235,18 @@ class Ipopt(PersistentSolver):
 
     def _write_options_file(self):
         f = open(self._filename + '.opt', 'w')
-        for k, val in self.solver_options.items():
+        for k, val in self.ipopt_options.items():
             if k not in ipopt_command_line_options:
                 f.write(str(k) + ' ' + str(val) + '\n')
         f.close()
 
     def solve(self, model, timer: HierarchicalTimer = None):
-        self.available(exception_flag=True)
+        StaleFlagManager.mark_all_as_stale()
+        avail = self.available()
+        if not avail:
+            raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
         if timer is None:
             timer = HierarchicalTimer()
         try:
@@ -222,6 +264,7 @@ class Ipopt(PersistentSolver):
             self._writer.write(model, self._filename+'.nl', timer=timer)
             timer.stop('write nl file')
             res = self._apply_solver(timer)
+            self._last_results_object = res
             if self.config.report_timing:
                 logger.info('\n' + str(timer))
             return res
@@ -311,7 +354,7 @@ class Ipopt(PersistentSolver):
 
         if results.termination_condition == TerminationCondition.optimal and self.config.load_solution:
             for v, val in self._primal_sol.items():
-                v.value = val
+                v.set_value(val, skip_validation=True)
 
             if self._writer.get_active_objective() is None:
                 results.best_feasible_objective = None
@@ -332,6 +375,8 @@ class Ipopt(PersistentSolver):
                                'results.termination_condition and '
                                'resutls.best_feasible_objective before loading a solution.')
 
+        results.solution_loader = PersistentSolutionLoader(solver=self)
+
         return results
 
     def _apply_solver(self, timer: HierarchicalTimer):
@@ -350,11 +395,18 @@ class Ipopt(PersistentSolver):
                self._filename + '.nl',
                '-AMPL',
                'option_file_name=' + self._filename + '.opt']
-        if 'option_file_name' in self.solver_options:
+        if 'option_file_name' in self.ipopt_options:
             raise ValueError('Use Ipopt.config.filename to specify the name of the options file. '
-                             'Do not use Ipopt.solver_options["option_file_name"].')
-        for k, v in self.solver_options.items():
+                             'Do not use Ipopt.ipopt_options["option_file_name"].')
+        ipopt_options = dict(self.ipopt_options)
+        if config.time_limit is not None:
+            ipopt_options['max_cpu_time'] = config.time_limit
+        for k, v in ipopt_options.items():
             cmd.append(str(k) + '=' + str(v))
+
+        env = os.environ.copy()
+        if 'PYOMO_AMPLFUNC' in env:
+            env['AMPLFUNC'] = "\n".join(filter(None, (env.get('AMPLFUNC', None), env.get('PYOMO_AMPLFUNC', None))))
 
         with TeeStream(*ostreams) as t:
             timer.start('subprocess')
@@ -362,6 +414,7 @@ class Ipopt(PersistentSolver):
                                 timeout=timeout,
                                 stdout=t.STDOUT,
                                 stderr=t.STDERR,
+                                env=env,
                                 universal_newlines=True)
             timer.stop('subprocess')
 
@@ -391,13 +444,15 @@ class Ipopt(PersistentSolver):
 
         return results
 
-    def load_vars(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> NoReturn:
+    def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
+        res = ComponentMap()
         if vars_to_load is None:
             for v, val in self._primal_sol.items():
-                v.value = val
+                res[v] = val
         else:
             for v in vars_to_load:
-                v.value = self._primal_sol[v]
+                res[v] = self._primal_sol[v]
+        return res
 
     def get_duals(self, cons_to_load = None):
         if cons_to_load is None:

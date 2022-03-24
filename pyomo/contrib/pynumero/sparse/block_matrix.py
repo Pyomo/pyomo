@@ -804,7 +804,7 @@ class BlockMatrix(BaseBlockMatrix):
                     raise ValueError(msg)
                 msg = 'blocks need to be sparse matrices or BlockMatrices; a numpy array was given; copying the numpy array to a coo_matrix'
                 logger.warning(msg)
-                warnings.warning(msg)
+                warnings.warn(msg)
                 value = coo_matrix(value)
             else:
                 assert isspmatrix(value), 'blocks need to be sparse matrices or BlockMatrices'
@@ -1113,10 +1113,6 @@ class BlockMatrix(BaseBlockMatrix):
 
     def __rmatmul__(self, other):
         return self.__rmul__(other)
-
-    def pprint(self):
-        """Prints BlockMatrix in pretty format"""
-        print(str(self))
 
     def get_block_column_index(self, index):
         """

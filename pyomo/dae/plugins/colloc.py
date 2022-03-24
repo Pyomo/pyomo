@@ -159,7 +159,7 @@ def calc_cp(alpha, beta, k):
             poly = [sum(pair) for pair in zip(poly, prod)]
 
     cp = numpy.roots(poly)
-    return cp
+    return numpy.sort(cp).tolist()
 
 # BLN: This is a legacy function that was used to calculate the collocation
 # constants for an alternative form of the collocation equations described
@@ -229,7 +229,7 @@ def calc_afinal(cp):
         p = [1]
         for j in range(len(cp) - 1):
             p = conv(p, ptmp[j])
-        afinal.append(numpy.polyval(p, 1.0))
+        afinal.append(float(numpy.polyval(p, 1.0)))
     return afinal
 
 
@@ -301,7 +301,7 @@ class Collocation_Discretization_Transformation(Transformation):
             alpha = 1
             beta = 0
             k = self._ncp[currentds] - 1
-            cp = sorted(list(calc_cp(alpha, beta, k)))
+            cp = calc_cp(alpha, beta, k)
             cp.insert(0, 0.0)
             cp.append(1.0)
             adot = calc_adot(cp, 1)
@@ -336,7 +336,7 @@ class Collocation_Discretization_Transformation(Transformation):
             alpha = 0
             beta = 0
             k = self._ncp[currentds]
-            cp = sorted(list(calc_cp(alpha, beta, k)))
+            cp = calc_cp(alpha, beta, k)
             cp.insert(0, 0.0)
             adot = calc_adot(cp, 1)
             adotdot = calc_adot(cp, 2)
@@ -499,14 +499,26 @@ class Collocation_Discretization_Transformation(Transformation):
 
             if block.contains_component(Integral):
                 for i in block.component_objects(Integral, descend_into=True):
-                    i.reconstruct()
                     i.parent_block().reclassify_component_type(i, Expression)
+                    # TODO: The following reproduces the old behavior of
+                    # "reconstruct()".  We should come up with an
+                    # implementation that does not rely on manipulating
+                    # private attributes
+                    i.clear()
+                    i._constructed = False
+                    i.construct()
                 # If a model contains integrals they are most likely to appear
                 # in the objective function which will need to be reconstructed
                 # after the model is discretized.
                 for k in block.component_objects(Objective, descend_into=True):
                     # TODO: check this, reconstruct might not work
-                    k.reconstruct()
+                    # TODO: The following reproduces the old behavior of
+                    # "reconstruct()".  We should come up with an
+                    # implementation that does not rely on manipulating
+                    # private attributes
+                    k.clear()
+                    k._constructed = False
+                    k.construct()
 
     def reduce_collocation_points(self, instance, var=None, ncp=None,
                                   contset=None):
@@ -581,11 +593,11 @@ class Collocation_Discretization_Transformation(Transformation):
             raise IndexError("ContinuousSet '%s' is not an indexing set of"
                              " the variable '%s'" % (ds.name, var.name))
         varidx = var.index_set()
-        if not hasattr(varidx, 'set_tuple'):
+        if not varidx.subsets():
             if ds is not varidx:
                 raise IndexError("ContinuousSet '%s' is not an indexing set of"
                                  " the variable '%s'" % (ds.name, var.name))
-        elif ds not in varidx.set_tuple:
+        elif ds not in varidx.subsets():
             raise IndexError("ContinuousSet '%s' is not an indexing set of the"
                              " variable '%s'" % (ds.name, var.name))
 

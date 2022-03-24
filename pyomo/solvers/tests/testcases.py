@@ -11,11 +11,9 @@
 import sys
 import logging
 
-import pyomo.common.unittest as unittest
-
 from pyomo.common.collections import Bunch
 from pyomo.opt import TerminationCondition
-from pyomo.solvers.tests.models.base import test_models
+from pyomo.solvers.tests.models.base import all_models
 from pyomo.solvers.tests.solvers import test_solver_cases
 from pyomo.core.kernel.block import IBlock
 
@@ -40,6 +38,11 @@ ExpectedFailures = {}
 # the missing suffix was found.  Set enforcing to false for tests where
 # the solver is inconsistent in returning duals.
 MissingSuffixFailures = {}
+
+# These are tests that must be skipped for certain solvers / versions
+# because attempting the solve will break the test suite (usually due to
+# infinite loops / timeouts)
+SkipTests = {}
 
 #
 # MOSEK
@@ -127,81 +130,6 @@ ExpectedFailures['cbc', 'nl', 'SOS2_simple'] = \
      "(reported upstream as coin-or/Cbc#388)")
 
 #
-# PICO
-#
-
-ExpectedFailures['pico', 'lp', 'MILP_discrete_var_bounds'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico ignores bounds on Binary variables through the "
-    "LP file interface. A ticket has been filed.")
-
-ExpectedFailures['pico', 'nl', 'LP_piecewise'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico reports an incorrect dual solution for this "
-    "problem when using the NL file interface.")
-
-ExpectedFailures['pico', 'nl', 'LP_duals_maximize'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico classifies certain models with equality "
-    "constraints as infeasible when using the NL "
-    "file interface. A ticket has been filed.")
-
-ExpectedFailures['pico', 'nl', 'LP_duals_minimize'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico classifies certain models with equality "
-    "constraints as infeasible when using the NL "
-    "file interface. A ticket has been filed.")
-
-ExpectedFailures['pico', 'nl', 'LP_inactive_index'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico reports the wrong objective function value.")
-
-ExpectedFailures['pico', 'nl', 'LP_simple'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'LP_compiled'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'LP_trivial_constraints'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'MILP_unbounded'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'lp', 'MILP_unbounded'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'LP_unbounded'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'lp', 'LP_unbounded'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-
-ExpectedFailures['pico', 'lp', 'MILP_infeasible1'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'MILP_infeasible1'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'LP_infeasible1'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'LP_infeasible2'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-#
 # XPRESS
 #
 # NO EXPECTED FAILURES
@@ -273,6 +201,28 @@ ExpectedFailures['scip', 'nl', 'SOS1_simple'] = \
 #
 # BARON
 #
+SkipTests['baron', 'bar', 'LP_trivial_constraints'] = (
+    lambda v: v[:3] == (22, 1, 19),
+    'BARON 22.1.19 hits an infinite loop for this test case'
+)
+
+for prob in ('QP_simple_nosuffixes', 'QP_simple_nosuffixes_kernel',
+             'QP_simple', 'QP_simple_kernel',
+             'MIQP_simple', 'MIQP_simple_kernel',
+             'MILP_simple', 'MILP_simple_kernel',
+             'LP_simple', 'LP_simple_kernel',
+             'LP_block', 'LP_block_kernel'):
+    ExpectedFailures['baron', 'bar', prob] = (
+        lambda v: v[:3] == (22, 1, 19),
+        'BARON 22.1.19 reports model as infeasible'
+    )
+
+for prob in ('LP_unbounded', 'LP_unbounded_kernel'):
+    ExpectedFailures['baron', 'bar', prob] = (
+        lambda v: v[:3] == (22, 1, 19),
+        'BARON 22.1.19 reports model as optimal'
+    )
+
 #
 # The following were necessary before we started adding the 'WantDual'
 # option when a user explicitly defines a 'dual' or 'rc' suffix to
@@ -360,17 +310,17 @@ ExpectedFailures['scip', 'nl', 'SOS1_simple'] = \
 #
 
 
-@unittest.nottest
-def test_scenarios(arg=None):
+def generate_scenarios(arg=None):
     """
     Generate scenarios
     """
-    for model in sorted(test_models()):
-        _model = test_models(model)
+    for model in sorted(all_models()):
+        _model = all_models(model)
         if not arg is None and not arg(_model):
             continue
         for solver, io in sorted(test_solver_cases()):
             _solver_case = test_solver_cases(solver, io)
+            _ver = _solver_case.version
 
             # Skip this test case if the solver doesn't support the
             # capabilities required by the model
@@ -379,27 +329,33 @@ def test_scenarios(arg=None):
 
             # Set status values for expected failures
             exclude_suffixes = {}
-            status='ok'
-            msg=""
+            status = 'ok'
+            msg = ""
+            case_skip = SkipTests.get((solver, io, _model.description), None)
+            case_suffix = MissingSuffixFailures.get(
+                (solver, io, _model.description), None)
+            case_fail = ExpectedFailures.get(
+                (solver, io, _model.description), None)
             if not _solver_case.available:
-                status='skip'
-                msg="Skipping test because solver %s (%s) is unavailable" % (solver,io)
-            if (solver,io,_model.description) in ExpectedFailures:
-                case = ExpectedFailures[solver,io,_model.description]
-                if _solver_case.version is not None and\
-                   case[0](_solver_case.version):
-                    status='expected failure'
-                    msg=case[1]
-            if (solver,io,_model.description) in MissingSuffixFailures:
-                case = MissingSuffixFailures[solver,io,_model.description]
-                if _solver_case.version is not None and\
-                   case[0](_solver_case.version):
-                    if type(case[1]) is dict:
-                        exclude_suffixes.update(case[1])
-                    else:
-                        for x in case[1]:
-                            exclude_suffixes[x] = (True, {})
-                    msg=case[2]
+                status = 'skip'
+                msg = ("Skipping test because solver %s (%s) is unavailable"
+                       % (solver, io))
+            elif (case_skip is not None and
+                  _ver is not None and case_skip[0](_ver)):
+                status = 'skip'
+                msg = case_skip[1]
+            elif (case_fail is not None and
+                  _ver is not None and case_fail[0](_ver)):
+                status = 'expected failure'
+                msg = case_fail[1]
+            elif (case_suffix is not None and
+                  _ver is not None and case_suffix[0](_ver)):
+                if type(case_suffix[1]) is dict:
+                    exclude_suffixes.update(case_suffix[1])
+                else:
+                    for x in case_suffix[1]:
+                        exclude_suffixes[x] = (True, {})
+                msg = case_suffix[2]
 
             # Return scenario dimensions and scenario information
             yield (model, solver, io), Bunch(
@@ -408,14 +364,13 @@ def test_scenarios(arg=None):
                 exclude_suffixes=exclude_suffixes)
 
 
-@unittest.nottest
-def run_test_scenarios(options):
+def run_scenarios(options):
     logging.disable(logging.WARNING)
 
     solvers = set(options.solver)
     stat = {}
 
-    for key, test_case in test_scenarios():
+    for key, test_case in generate_scenarios():
         model, solver, io = key
         if len(solvers) > 0 and not solver in solvers:
             continue
@@ -535,21 +490,19 @@ def run_test_scenarios(options):
 
 
 if __name__ == "__main__":
-    from pyomo.solvers.tests.models.base import test_models
-
     print("")
     print("Testing model generation")
     print("-"*30)
-    for key in sorted(test_models()):
+    for key in sorted(all_models()):
         print(key)
-        obj = test_models(key)()
+        obj = all_models(key)()
         obj.generate_model()
         obj.warmstart_model()
 
     print("")
     print("Testing scenario generation")
     print("-"*30)
-    for key, value in test_scenarios():
+    for key, value in generate_scenarios():
         print(", ".join(key))
         print("   %s: %s" % (value.status, value.msg))
 

@@ -39,6 +39,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         # this is done over *all* variables in active blocks, even
         # if they are not included in this model
         self._pyomo_model_var_names_to_datas = None
+        _name_buffer = {}
         try:
             # We support Pynumero's ExternalGreyBoxBlock modeling
             # objects that are provided through ExternalGreyBoxBlock objects
@@ -56,10 +57,22 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             # build a PyomoNLP object (will include the "pyomo"
             # part of the model only)
             self._pyomo_nlp = PyomoNLP(pyomo_model)
-            self._pyomo_model_var_names_to_datas = \
-                {v.getname(fully_qualified=True):v for v in pyomo_model.component_data_objects(ctype=pyo.Var, descend_into=True)}
-            self._pyomo_model_constraint_names_to_datas = \
-                {c.getname(fully_qualified=True):c for c in pyomo_model.component_data_objects(ctype=pyo.Constraint, descend_into=True)}
+            self._pyomo_model_var_names_to_datas = {
+                v.getname(
+                    fully_qualified=True, name_buffer=_name_buffer
+                ): v
+                for v in pyomo_model.component_data_objects(
+                    ctype=pyo.Var, descend_into=True
+                )
+            }
+            self._pyomo_model_constraint_names_to_datas = {
+                c.getname(
+                    fully_qualified=True, name_buffer=_name_buffer
+                ): c 
+                for c in pyomo_model.component_data_objects(
+                    ctype=pyo.Constraint, descend_into=True
+                )
+            }
 
         finally:
             # Restore the ctypes of the ExternalGreyBoxBlock components
@@ -83,7 +96,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
                     # check that no variables are fixed
                     fixed_vars.extend(v for v in data.inputs.values() if v.fixed)
                     fixed_vars.extend(v for v in data.outputs.values() if v.fixed)
-                    greybox_nlp = _ExternalGreyBoxAsNLP(greybox)
+                    greybox_nlp = _ExternalGreyBoxAsNLP(data)
                     greybox_nlps.append(greybox_nlp)
 
         if fixed_vars:
@@ -95,6 +108,8 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             raise NotImplementedError('PyomoNLPWithGreyBoxBlocks does not support fixed inputs or outputs')
 
         # let's build up the union of all the primal variables names
+        # RBP: Why use names here? Why not just ComponentSet of all
+        # data objects?
         primals_names = set(self._pyomo_nlp.primals_names())
         for gbnlp in greybox_nlps:
             primals_names.update(gbnlp.primals_names())
@@ -360,6 +375,8 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
     def evaluate_hessian_lag(self, out=None):
         list_of_hessians = [nlp.evaluate_hessian_lag() for nlp in self._nlps]
         if self._sparse_hessian_summation is None:
+            # This is assuming that the nonzero structures of Hessians
+            # do not change
             self._sparse_hessian_summation = CondensedSparseSummation(list_of_hessians)
         ret = self._sparse_hessian_summation.sum(list_of_hessians)
 
@@ -444,22 +461,31 @@ class _ExternalGreyBoxAsNLP(NLP):
 
         # create the list of primals and constraint names
         # primals will be ordered inputs, followed by outputs
-        self._primals_names = \
-            [self._block.inputs[k].getname(fully_qualified=True) \
-             for k in self._block.inputs]
+        _name_buffer = dict()
+        self._primals_names = [
+            self._block.inputs[k].getname(
+                fully_qualified=True, name_buffer=_name_buffer
+            ) for k in self._block.inputs
+        ]
         self._primals_names.extend(
-            [self._block.outputs[k].getname(fully_qualified=True) \
-             for k in self._block.outputs]
+            self._block.outputs[k].getname(
+                fully_qualified=True, name_buffer=_name_buffer
+            )
+            for k in self._block.outputs
         )
         n_primals = len(self._primals_names)
 
-        prefix = self._block.getname(fully_qualified=True)
+        prefix = self._block.getname(
+            fully_qualified=True, name_buffer=_name_buffer
+        )
         self._constraint_names = \
             ['{}.{}'.format(prefix, nm) \
              for nm in self._ex_model.equality_constraint_names()]
-        output_var_names = \
-            [self._block.outputs[k].getname(fully_qualified=False) \
-             for k in self._block.outputs]
+        output_var_names = [
+            self._block.outputs[k].getname(
+                fully_qualified=False, name_buffer=_name_buffer
+            ) for k in self._block.outputs
+        ]
         self._constraint_names.extend(
             ['{}.output_constraints[{}]'.format(prefix, nm) \
              for nm in self._ex_model.output_names()])

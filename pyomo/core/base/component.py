@@ -17,9 +17,12 @@ from weakref import ref as weakref_ref
 import pyomo.common
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
-from pyomo.common.fileutils import StreamIndenter
+from pyomo.common.factory import Factory
+from pyomo.common.formatting import tabular_writer, StreamIndenter
+from pyomo.common.modeling import NOTSET
+from pyomo.common.sorting import sorted_robust
 from pyomo.core.pyomoobject import PyomoObject
-from pyomo.core.base.misc import tabular_writer, sorted_robust
+from pyomo.core.base.component_namer import name_repr, index_repr
 
 logger = logging.getLogger('pyomo.core')
 
@@ -27,44 +30,34 @@ relocated_module_attribute(
     'ComponentUID', 'pyomo.core.base.componentuid.ComponentUID',
     version='5.7.2')
 
-def _name_index_generator(idx):
-    """
-    Return a string representation of an index.
-    """
-    def _escape(val):
-        if type(val) is tuple:
-            ans = "(" + ','.join(_escape(_) for _ in val) + ")"
-        else:
-            # We need to quote set members (because people put things
-            # like spaces - or worse commas - in their set names).  Our
-            # plan is to put the strings in single quotes... but that
-            # requires escaping any single quotes in the string... which
-            # in turn requires escaping the escape character.
-            ans = "%s" % (val,)
-            if isinstance(val, str):
-                ans = ans.replace("\\", "\\\\").replace("'", "\\'")
-                if ',' in ans or "'" in ans:
-                    ans = "'"+ans+"'"
-        return ans
-    if idx.__class__ is tuple:
-        return "[" + ",".join(_escape(i) for i in idx) + "]"
-    else:
-        return "[" + _escape(idx) + "]"
+_ref_types = {type(None), weakref_ref}
+
+class ModelComponentFactoryClass(Factory):
+
+    def register(self, doc=None):
+        def fn(cls):
+            return super(ModelComponentFactoryClass, self).register(
+                cls.__name__, doc)(cls)
+        return fn
+
+ModelComponentFactory = ModelComponentFactoryClass('model component')
 
 
-def name(component, index=None, fully_qualified=False, relative_to=None):
+def name(component, index=NOTSET, fully_qualified=False, relative_to=None):
     """
     Return a string representation of component for a specific
     index value.
     """
-    base = component.getname(fully_qualified=fully_qualified, relative_to=relative_to)
-    if index is None:
+    base = component.getname(
+        fully_qualified=fully_qualified, relative_to=relative_to
+    )
+    if index is NOTSET:
         return base
     else:
         if index not in component.index_set():
             raise KeyError( "Index %s is not valid for component %s"
                             % (index, component.name) )
-        return base + _name_index_generator( index )
+        return base + index_repr( index )
 
 
 @deprecated(msg="The cname() function has been renamed to name()",
@@ -331,6 +324,10 @@ class _ComponentBase(PyomoObject):
             # The first line should be a hanging indent (i.e., not indented)
             ostream.newline = False
 
+        if self.is_reference():
+            _attr = list(_attr) if _attr else []
+            _attr.append(('ReferenceTo', self.referent))
+
         if _name:
             ostream.write(_name+" : ")
         if _doc:
@@ -445,8 +442,7 @@ class Component(_ComponentBase):
         This method must be defined to support pickling because this class
         owns weakrefs for '_parent'.
         """
-        if state['_parent'] is not None and \
-                type(state['_parent']) is not weakref_ref:
+        if state['_parent'].__class__ not in _ref_types:
             state['_parent'] = weakref_ref(state['_parent'])
         #
         # Note: our model for setstate is for derived classes to modify
@@ -485,9 +481,23 @@ class Component(_ComponentBase):
         return self._constructed
 
     def reconstruct(self, data=None):
-        """Re-construct model expressions"""
-        self._constructed = False
-        self.construct(data=data)
+        """REMOVED: reconstruct() was removed in Pyomo 6.0.
+
+        Re-constructing model components was fragile and did not
+        correctly update instances of the component used in other
+        components or contexts (this was particularly problemmatic for
+        Var, Param, and Set).  Users who wish to reproduce the old
+        behavior of reconstruct(), are comfortable manipulating
+        non-public interfaces, and who take the time to verify that the
+        correct thing happens to their model can approximate the old
+        behavior of reconstruct with:
+
+            component.clear()
+            component._constructed = False
+            component.construct()
+
+        """
+        raise AttributeError(self.reconstruct.__doc__)
 
     def valid_model_component(self):
         """Return True if this can be used as a model component."""
@@ -539,15 +549,6 @@ class Component(_ComponentBase):
         """Return the component name"""
         return self.name
 
-    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
-        """Return the component name"""
-        if compute_values:
-            try:
-                return str(self())
-            except:
-                pass
-        return self.name
-
     def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """Returns the component name associated with this object.
 
@@ -564,21 +565,25 @@ class Component(_ComponentBase):
         relative_to: Block
             Generate fully_qualified names reletive to the specified block.
         """
+        local_name = self._name
         if fully_qualified:
             pb = self.parent_block()
             if relative_to is None:
                 relative_to = self.model()
             if pb is not None and pb is not relative_to:
                 ans = pb.getname(fully_qualified, name_buffer, relative_to) \
-                      + "." + self._name
+                      + "." + name_repr(local_name)
             elif pb is None and relative_to != self.model():
                 raise RuntimeError(
                     "The relative_to argument was specified but not found "
                     "in the block hierarchy: %s" % str(relative_to))
             else:
-                ans = self._name
+                ans = name_repr(local_name)
         else:
-            ans = self._name
+            # Note: we want "getattr(x.parent_block(), x.local_name) == x"
+            # so we do not want to call _safe_name_str, as that could
+            # add quotes or otherwise escape the string.
+            ans = local_name
         if name_buffer is not None:
             name_buffer[id(self)] = ans
         return ans
@@ -760,8 +765,7 @@ class ComponentData(_ComponentBase):
         # we don't the model cloning appears to fail (in the Benders
         # example)
         #
-        if state['_component'] is not None and \
-                type(state['_component']) is not weakref_ref:
+        if state['_component'].__class__ not in _ref_types:
             state['_component'] = weakref_ref(state['_component'])
         #
         # Note: our model for setstate is for derived classes to modify
@@ -843,23 +847,6 @@ class ComponentData(_ComponentBase):
         """Return a string with the component name and index"""
         return self.name
 
-    def to_string(self, verbose=None, labeler=None, smap=None, compute_values=False):
-        """
-        Return a string representation of this component,
-        applying the labeler if passed one.
-        """
-        if compute_values:
-            try:
-                return str(self())
-            except:
-                pass
-        if smap:
-            return smap.getSymbol(self, labeler)
-        if labeler is not None:
-            return labeler(self)
-        else:
-            return self.__str__()
-
     def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """Return a string with the component name and index"""
 
@@ -885,7 +872,7 @@ class ComponentData(_ComponentBase):
             #
             return '[Unattached %s]' % (type(self).__name__,)
 
-        myname = base + _name_index_generator(self.index())
+        myname = base + index_repr(self.index())
         if name_buffer is not None:
             name_buffer[id(self)] = myname
         return myname

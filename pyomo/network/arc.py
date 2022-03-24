@@ -12,11 +12,11 @@ __all__ = [ 'Arc' ]
 
 from pyomo.common.modeling import NoArgumentGiven
 from pyomo.network.port import Port
-from pyomo.core.base.component import ActiveComponentData
+from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
     UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.plugin import ModelComponentFactory
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from weakref import ref as weakref_ref
@@ -270,7 +270,7 @@ class Arc(ActiveIndexedComponent):
         if cls != Arc:
             return super(Arc, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return SimpleArc.__new__(SimpleArc)
+            return ScalarArc.__new__(ScalarArc)
         else:
             return IndexedArc.__new__(IndexedArc)
 
@@ -359,7 +359,7 @@ class Arc(ActiveIndexedComponent):
                           v.active])
 
 
-class SimpleArc(_ArcData, Arc):
+class ScalarArc(_ArcData, Arc):
 
     def __init__(self, *args, **kwds):
         _ArcData.__init__(self, self)
@@ -379,11 +379,16 @@ class SimpleArc(_ArcData, Arc):
         if len(self._data) == 0:
             self._data[None] = self
         try:
-            super(SimpleArc, self).set_value(vals)
+            super(ScalarArc, self).set_value(vals)
         except:
             # don't allow model walker to find poorly constructed arcs
             del self._data[None]
             raise
+
+
+class SimpleArc(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarArc
+    __renamed__version__ = '6.0'
 
 
 class IndexedArc(Arc):

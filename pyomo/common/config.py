@@ -18,42 +18,72 @@
 import argparse
 import builtins
 import enum
+import importlib
 import inspect
 import io
 import logging
 import os
 import pickle
-import platform
 import re
 import sys
 from textwrap import wrap
 import types
 
-from pyomo.common.deprecation import deprecated
+from pyomo.common.collections import Sequence, Mapping
+from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.fileutils import import_file
 from pyomo.common.modeling import NoArgumentGiven
 
 logger = logging.getLogger('pyomo.common.config')
 
-if 'PYOMO_CONFIG_DIR' in os.environ:
-    PYOMO_CONFIG_DIR = os.path.abspath(os.environ['PYOMO_CONFIG_DIR'])
-elif platform.system().lower().startswith(('windows','cygwin')):
-    PYOMO_CONFIG_DIR = os.path.abspath(
-        os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Pyomo'))
-else:
-    PYOMO_CONFIG_DIR = os.path.abspath(
-        os.path.join(os.environ.get('HOME', ''), '.pyomo'))
-
-# Note that alternative platform-independent implementation of the above
-# could be to use:
-#
-#   PYOMO_CONFIG_DIR = os.path.abspath(appdirs.user_data_dir('pyomo'))
-#
-# But would require re-adding the hard dependency on appdirs.  For now
-# (13 Jul 20), the above appears to be sufficiently robust.
+relocated_module_attribute(
+    'PYOMO_CONFIG_DIR', 'pyomo.common.envvar.PYOMO_CONFIG_DIR',
+    version='6.1')
 
 USER_OPTION = 0
 ADVANCED_OPTION = 1
 DEVELOPER_OPTION = 2
+
+def Bool(val):
+    """Domain validator for bool-like objects.
+
+    This is a more strict domain than ``bool``, as it will error on
+    values that do not "look" like a Boolean value (i.e., it accepts
+    ``True``, ``False``, 0, 1, and the case insensitive strings
+    ``'true'``, ``'false'``, ``'yes'``, ``'no'``, ``'t'``, ``'f'``,
+    ``'y'``, and ``'n'``)
+
+    """
+    if type(val) is bool:
+        return val
+    if isinstance(val, str):
+        v = val.upper()
+        if v in {'TRUE', 'YES', 'T', 'Y', '1'}:
+            return True
+        if v in {'FALSE', 'NO', 'F', 'N', '0'}:
+            return False
+    elif int(val) == float(val):
+        v = int(val)
+        if v in {0, 1}:
+            return bool(v)
+    raise ValueError(
+        "Expected Boolean, but received %s" % (val,))
+
+def Integer(val):
+    """Domain validation function admitting integers
+
+    This domain will admit integers, as well as any values that are
+    "reasonably exactly" convertible to integers.  This is more strict
+    than ``int``, as it will generate errors for floating point values
+    that are not integer.
+
+    """
+    ans = int(val)
+    # We want to give an error for floating point numbers...
+    if ans != float(val):
+        raise ValueError(
+            "Expected integer, but received %s" % (val,))
+    return ans
 
 def PositiveInt(val):
     """Domain validation function admitting strictly positive integers
@@ -249,6 +279,105 @@ class InEnum(object):
             value, self._domain.__name__))
 
 
+class ListOf(object):
+    """Domain validator for lists of a specified type
+
+    Parameters
+    ----------
+    itemtype: type
+        The type for each element in the list
+
+    domain: Callable
+        A domain validator (callable that takes the incoming value,
+        validates it, and returns the appropriate domain type) for each
+        element in the list.  If not specified, defaults to the
+        `itemtype`.
+
+    """
+    def __init__(self, itemtype, domain=None):
+        self.itemtype = itemtype
+        if domain is None:
+            self.domain = self.itemtype
+        else:
+            self.domain = domain
+        self.__name__ = 'ListOf(%s)' % (
+            getattr(self.domain, '__name__', self.domain),)
+
+    def __call__(self, value):
+        if hasattr(value, '__iter__') and not isinstance(value, self.itemtype):
+            return [self.domain(v) for v in value]
+        else:
+            return [self.domain(value)]
+
+
+class Module(object):
+    """ Domain validator for modules.
+
+    Modules can be specified as module objects, by module name,
+    or by the path to the module's file. If specified by path, the
+    path string has the same path expansion features supported by
+    the :py:class:`Path` class.
+
+    Note that modules imported by file path may not be recognized as
+    part of a package, and as such they should not use relative package
+    importing (such as ``from . import foo``).
+
+    Parameters
+    ----------
+    basePath: None, str, ConfigValue
+        The base path that will be prepended to any non-absolute path
+        values provided.  If None, defaults to :py:attr:`Path.BasePath`.
+
+    expandPath: bool
+        If True, then the value will be expanded and normalized.  If
+        False, the string representation of the value will be used
+        unchanged.  If None, expandPath will defer to the (negated)
+        value of :py:attr:`Path.SuppressPathExpansion`.
+
+    The following code shows the three ways you can specify a module: by file
+    name, by module name, or by module object. Regardless of how the module is
+    specified, what is stored in the configuration is a module object.
+
+    .. doctest::
+        >>> from pyomo.common.config import (
+        ...     ConfigDict, ConfigValue, Module
+        ... )
+        >>> config = ConfigDict()
+        >>> config.declare('my_module', ConfigValue(
+        ...     domain=Module(),
+        ... ))
+        >>> # Set using file path
+        >>> config.my_module = '../../pyomo/common/tests/config_plugin.py'
+        >>> # Set using python module name, as a string
+        >>> config.my_module = 'os.path'
+        >>> # Set using an imported module object
+        >>> import os.path
+        >>> config.my_module = os.path
+    """
+    def __init__(self, basePath=None, expandPath=None):
+        self.basePath = basePath
+        self.expandPath = expandPath
+
+    def __call__(self, module_id):
+        # If it's already a module, just return it
+        if inspect.ismodule(module_id):
+            return module_id
+
+        # Try to import it as a module
+        try:
+            return importlib.import_module(str(module_id))
+        except (ModuleNotFoundError, TypeError):
+            # This wasn't a module name
+            # Ignore the exception and move on to path-based loading
+            pass
+        # Any other kind of exception will be thrown out of this method
+
+        # If we're still here, try loading by path
+        path_domain = Path(self.basePath, self.expandPath)
+        path = path_domain(str(module_id))
+        return import_file(path)
+
+
 class Path(object):
     """Domain validator for path-like options.
 
@@ -339,6 +468,62 @@ class PathList(Path):
             return [ super(PathList, self).__call__(data) ]
 
 
+class DynamicImplicitDomain(object):
+    """Implicit domain that can return a custom domain based on the key.
+
+    This provides a mechanism for managing plugin-like systems, where
+    the key specifies a source for additional configuration information.
+    For example, given the plugin module,
+    ``pyomo/common/tests/config_plugin.py``:
+
+    .. literalinclude:: /../../pyomo/common/tests/config_plugin.py
+       :lines: 10-
+
+    .. doctest::
+       :hide:
+
+       >>> import importlib
+       >>> import pyomo.common.fileutils
+       >>> from pyomo.common.config import ConfigDict, DynamicImplicitDomain
+
+    .. doctest::
+
+       >>> def _pluginImporter(name, config):
+       ...     mod = importlib.import_module(name)
+       ...     return mod.get_configuration(config)
+       >>> config = ConfigDict()
+       >>> config.declare('plugins', ConfigDict(
+       ...     implicit=True,
+       ...     implicit_domain=DynamicImplicitDomain(_pluginImporter)))
+       <pyomo.common.config.ConfigDict object at ...>
+       >>> config.plugins['pyomo.common.tests.config_plugin'] = {'key1': 5}
+       >>> config.display()
+       plugins:
+         pyomo.common.tests.config_plugin:
+           key1: 5
+           key2: '5'
+
+    .. note::
+
+       This initializer is only useful for the :py:class:`ConfigDict`
+       ``implicit_domain`` argument (and not for "regular" ``domain``
+       arguments)
+
+    Parameters
+    ----------
+    callback: Callable[[str, object], ConfigBase]
+        A callable (function) that is passed the ConfigDict key and
+        value, and is expected to return the appropriate Config object
+        (ConfigValue, ConfigList, or ConfigDict)
+
+    """
+    def __init__(self, callback):
+        self.callback = callback
+
+    def __call__(self, key, value):
+        return self.callback(key, value)
+
+
 def add_docstring_list(docstring, configdict, indent_by=4):
     """Returns the docstring with a formatted configuration arguments listing."""
     return docstring + (" " * indent_by).join(
@@ -351,6 +536,7 @@ def add_docstring_list(docstring, configdict, indent_by=4):
             indent_spacing=0,
             width=256
         ).splitlines(True))
+
 
 # Note: Enum uses a metaclass to work its magic.  To get a deprecation
 # warning when creating a subclass of ConfigEnum, we need to decorate
@@ -367,7 +553,7 @@ class ConfigEnum(enum.Enum):
                 "Directly inherit from enum.Enum and then use "
                 "In() or InEnum() as the ConfigValue 'domain' for "
                 "validation and int/string type conversions.",
-                version='TBD')
+                version='6.0')
     def __new__(cls, value, *args):
         member = object.__new__(cls)
         member._value_ = value
@@ -472,6 +658,8 @@ validators for common use cases:
 
 .. autosummary::
 
+   Bool
+   Integer
    PositiveInt
    NegativeInt
    NonNegativeInt
@@ -482,6 +670,8 @@ validators for common use cases:
    NonNegativeFloat
    In
    InEnum
+   ListOf
+   Module
    Path
    PathList
 
@@ -632,8 +822,7 @@ to the ArgumentParser object:
     >>> print(parser.format_help())
     usage: tester [-h] [--iterlim INT] [--lbfgs] [--disable-linesearch]
                   [--reltol FLOAT] [--abstol FLOAT]
-    <BLANKLINE>
-    optional arguments:
+    ...
       -h, --help            show this help message and exit
       --iterlim INT         iteration limit
       --lbfgs               use limited memory BFGS update
@@ -961,7 +1150,7 @@ class ConfigBase(object):
         #    state[i] = getattr(self,i)
         # return state
         #
-        # Hoewever, in this case, the (nominal) parent class is
+        # However, in this case, the (nominal) parent class is
         # 'object', and object does not implement __getstate__.  Since
         # super() doesn't actually return a class, we are going to check
         # the *derived class*'s MRO and see if this is the second to
@@ -969,10 +1158,11 @@ class ConfigBase(object):
         # can allocate the state dictionary.  If it is not, then we call
         # the super-class's __getstate__ (since that class is NOT
         # 'object').
-        if self.__class__.__mro__[-2] is ConfigBase:
-            state = {}
+        _base = super()
+        if hasattr(_base, '__getstate__'):
+            state = _base.__getstate__()
         else:
-            state = super(ConfigBase, self).__getstate__()
+            state = {}
         state.update((key, getattr(self, key)) for key in ConfigBase.__slots__)
         state['_domain'] = _picklable(state['_domain'], self)
         state['_parent'] = None
@@ -1408,6 +1598,7 @@ ConfigBase.generate_documentation.formats = {
     }
 }
 
+
 class ConfigValue(ConfigBase):
     """Store and manipulate a single configuration value.
 
@@ -1531,7 +1722,7 @@ class MarkImmutable(object):
         self.release_lock()
 
 
-class ConfigList(ConfigBase):
+class ConfigList(ConfigBase, Sequence):
     """Store and manipulate a list of configuration values.
 
     Parameters
@@ -1706,7 +1897,7 @@ class ConfigList(ConfigBase):
                 yield v
 
 
-class ConfigDict(ConfigBase):
+class ConfigDict(ConfigBase, Mapping):
     """Store and manipulate a dictionary of configuration values.
 
     Parameters
@@ -1753,7 +1944,9 @@ class ConfigDict(ConfigBase):
         self._decl_order = []
         self._declared = set()
         self._implicit_declaration = implicit
-        if implicit_domain is None or isinstance(implicit_domain, ConfigBase):
+        if ( implicit_domain is None
+             or type(implicit_domain) is DynamicImplicitDomain
+             or isinstance(implicit_domain, ConfigBase) ):
             self._implicit_domain = implicit_domain
         else:
             self._implicit_domain = ConfigValue(None, domain=implicit_domain)
@@ -1791,7 +1984,10 @@ class ConfigDict(ConfigBase):
         if default is NoArgumentGiven:
             return None
         if self._implicit_domain is not None:
-            return self._implicit_domain(default)
+            if type(self._implicit_domain) is DynamicImplicitDomain:
+                return self._implicit_domain(key, default)
+            else:
+                return self._implicit_domain(default)
         else:
             return ConfigValue(default)
 
@@ -1874,17 +2070,17 @@ class ConfigDict(ConfigBase):
             yield (self._data[key]._name, self[key])
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
-                version='TBD')
+                version='6.0')
     def iterkeys(self):
         return self.keys()
 
     @deprecated('The itervalues method is deprecated. Use dict.keys().',
-                version='TBD')
+                version='6.0')
     def itervalues(self):
         return self.values()
 
     @deprecated('The iteritems method is deprecated. Use dict.keys().',
-                version='TBD')
+                version='6.0')
     def iteritems(self):
         return self.items()
 
@@ -1900,10 +2096,6 @@ class ConfigDict(ConfigBase):
             raise ValueError(
                 "duplicate config '%s' defined for ConfigDict '%s'" %
                 (name, self.name(True)))
-        if '.' in name or '[' in name or ']' in name:
-            raise ValueError(
-                "Illegal character in config '%s' for ConfigDict '%s': "
-                "'.[]' are not allowed." % (name, self.name(True)))
         self._data[_name] = config
         self._decl_order.append(_name)
         config._parent = self
@@ -1941,6 +2133,8 @@ class ConfigDict(ConfigBase):
                 ans = self._add(name, config)
             else:
                 ans = self._add(name, ConfigValue(config))
+        elif type(self._implicit_domain) is DynamicImplicitDomain:
+            ans = self._add(name, self._implicit_domain(name, config))
         else:
             ans = self._add(name, self._implicit_domain(config))
         ans._userSet = True

@@ -10,7 +10,6 @@
 
 import os
 from os.path import join, dirname, abspath
-import warnings
 import types
 try:
     import new
@@ -20,8 +19,8 @@ except:
 
 import pyomo.common.unittest as unittest
 from pyomo.opt import TerminationCondition
-from pyomo.solvers.tests.models.base import test_models
-from pyomo.solvers.tests.testcases import test_scenarios
+from pyomo.solvers.tests.models.base import all_models
+from pyomo.solvers.tests.testcases import generate_scenarios
 from pyomo.core.kernel.block import IBlock
 
 # The test directory
@@ -30,13 +29,11 @@ thisDir = dirname(abspath( __file__ ))
 # Cleanup Expected Failure Results Files
 _cleanup_expected_failures = True
 
-
 #
 # A function that returns a function that gets
 # added to a test class.
 #
-@unittest.nottest
-def create_test_method(model,
+def create_method(test_name, model,
                        solver,
                        io,
                        test_case,
@@ -89,14 +86,16 @@ def create_test_method(model,
 
         if is_expected_failure:
             if rc[0]:
-                warnings.warning("\nTest model '%s' was marked as an expected "
-                              "failure but no failure occured. The "
-                              "reason given for the expected failure "
-                              "is:\n\n****\n%s\n****\n\n"
-                              "Please remove this case as an expected "
-                              "failure if the above issue has been "
-                              "corrected in the latest version of the "
-                              "solver." % (model_class.description, test_case.msg))
+                self.fail(
+                    "\nTest model '%s' was marked as an expected "
+                    "failure but no failure occured. The "
+                    "reason given for the expected failure "
+                    "is:\n\n****\n%s\n****\n\n"
+                    "Please remove this case as an expected "
+                    "failure if the above issue has been "
+                    "corrected in the latest version of the "
+                    "solver." % (model_class.description, test_case.msg)
+                )
             if _cleanup_expected_failures:
                 os.remove(save_filename)
 
@@ -120,29 +119,25 @@ def create_test_method(model,
 
     # Skip this test if the status is 'skip'
     if test_case.status == 'skip':
-        def skipping_test(self):
-            self.skipTest(test_case.msg)
-        return skipping_test
-
-    # If this solver is in demo mode
-    size = getattr(test_case.model, 'size', (None, None, None))
-    for prb, sol in zip(size, test_case.demo_limits):
-        if prb is None or sol is None:
-            continue
-        if prb > sol:
-            def skipping_test(self):
-                self.skipTest("Problem is too large for unlicensed %s solver" % solver)
-            return skipping_test
-
-    if is_expected_failure:
+        def return_test(self):
+            return self.skipTest(test_case.msg)
+    elif is_expected_failure:
         @unittest.expectedFailure
-        def failing_writer_test(self):
+        def return_test(self):
             return writer_test(self)
-        # Return a test that is expected to fail
-        return failing_writer_test
-
-    # Return a normal test
-    return writer_test
+    else:
+        # Skip if solver is in demo mode
+        size = getattr(test_case.model, 'size', (None, None, None))
+        for prb, sol in zip(size, test_case.demo_limits):
+            if (prb and sol) and prb > sol:
+                def return_test(self):
+                    return self.skipTest("Problem is too large for unlicensed %s solver" % solver)
+                break
+            else:
+                def return_test(self):
+                    return writer_test(self)
+    unittest.pytest.mark.solver(solver)(return_test)
+    return return_test
 
 cls = None
 
@@ -150,9 +145,9 @@ cls = None
 # Create test driver classes for each test model
 #
 driver = {}
-for model in test_models():
+for model in all_models():
     # Get the test case for the model
-    case = test_models(model)
+    case = all_models(model)
 
     # Create the test class
     name = "Test_%s" % model
@@ -161,30 +156,27 @@ for model in test_models():
     else:
         cls = types.new_class(name, (unittest.TestCase,))
         cls.__module__ = __name__
-    cls = unittest.category(*case.level)(cls)
     driver[model] = cls
     globals()[name] = cls
 
 #
 # Iterate through all test scenarios and add test methods
 #
-for key, value in test_scenarios():
+for key, value in generate_scenarios():
     model, solver, io = key
     cls = driver[model]
 
     # Symbolic labels
     test_name = "test_"+solver+"_"+io +"_symbolic_labels"
-    test_method = create_test_method(model, solver, io, value, True)
+    test_method = create_method(test_name, model, solver, io, value, True)
     if test_method is not None:
-        test_method = unittest.category('smoke','nightly',solver)(test_method)
         setattr(cls, test_name, test_method)
         test_method = None
 
     # Non-symbolic labels
     test_name = "test_"+solver+"_"+io +"_nonsymbolic_labels"
-    test_method = create_test_method(model, solver, io, value, False)
+    test_method = create_method(test_name, model, solver, io, value, False)
     if test_method is not None:
-        test_method = unittest.category('smoke','nightly',solver)(test_method)
         setattr(cls, test_name, test_method)
         test_method = None
 

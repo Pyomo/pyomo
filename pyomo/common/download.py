@@ -17,7 +17,7 @@ import re
 import sys
 import subprocess
 
-from .config import PYOMO_CONFIG_DIR
+from . import envvar
 from .deprecation import deprecated
 from .errors import DeveloperError
 import pyomo.common
@@ -90,7 +90,7 @@ class FileDownloader(object):
             dist = FILE.readline().lower().strip()
             ver = ''
             for word in dist.split():
-                if re.match('^[0-9\.]+', word):
+                if re.match(r'^[0-9\.]+', word):
                     ver = word
                     break
         return cls._map_dist(dist), ver
@@ -261,7 +261,7 @@ class FileDownloader(object):
         if self.target is not None:
             self._fname = self.target
         else:
-            self._fname = PYOMO_CONFIG_DIR
+            self._fname = envvar.PYOMO_CONFIG_DIR
             if not os.path.isdir(self._fname):
                 os.makedirs(self._fname)
         if os.path.isdir(self._fname):

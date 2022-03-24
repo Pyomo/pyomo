@@ -8,13 +8,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.plugin import ModelComponentFactory
-from pyomo.dae.contset import ContinuousSet
-from pyomo.dae.diffvar import DAE_Error
+from pyomo.common.deprecation import RenamedClass
+from pyomo.core.base.component import ModelComponentFactory
+from pyomo.core.base.indexed_component import rule_wrapper
 from pyomo.core.base.expression import (Expression,
                                         _GeneralExpressionData,
-                                        SimpleExpression,
+                                        ScalarExpression,
                                         IndexedExpression)
+from pyomo.dae.contset import ContinuousSet
+from pyomo.dae.diffvar import DAE_Error
 
 __all__ = ('Integral', )
 
@@ -50,7 +52,7 @@ class Integral(Expression):
         if len(args) == 0:
             raise ValueError("Integral must be indexed by a ContinuousSet")
         elif len(args) == 1:
-            return SimpleIntegral.__new__(SimpleIntegral)
+            return ScalarIntegral.__new__(ScalarIntegral)
         else:
             return IndexedIntegral.__new__(IndexedIntegral)
 
@@ -109,14 +111,19 @@ class Integral(Expression):
             raise ValueError(
                 "Must specify an integral expression")
 
-        def _trap_rule(m, *a):
+        _is_indexed = bool(len(arg))
+
+        def _trap_rule(rule, m, *a):
             ds = sorted(m.find_component(wrt.local_name))
             return sum(0.5 * (ds[i + 1] - ds[i]) *
-                       (intexp(m, * (a[0:loc] + (ds[i + 1],) + a[loc:])) +
-                        intexp(m, * (a[0:loc] + (ds[i],) + a[loc:])))
+                       (rule(m, * (a[0:loc] + (ds[i + 1],) + a[loc:])) +
+                        rule(m, * (a[0:loc] + (ds[i],) + a[loc:])))
                        for i in range(len(ds) - 1))
 
-        kwds['rule'] = _trap_rule    
+        # Note that position_map is mapping arguments (block, *args), so
+        # must be 1 more than len(args), and loc has to be offset by one
+        kwds['rule'] = rule_wrapper(intexp, _trap_rule, positional_arg_map=(
+            i for i in range(len(args)+1) if i != loc+1))
         kwds.setdefault('ctype', Integral)
         Expression.__init__(self, *arg, **kwds)
 
@@ -127,7 +134,7 @@ class Integral(Expression):
         return self._wrt
 
 
-class SimpleIntegral(SimpleExpression, Integral):
+class ScalarIntegral(ScalarExpression, Integral):
     """
         An integral that will have no indexing sets after applying a numerical
         integration transformation
@@ -137,6 +144,9 @@ class SimpleIntegral(SimpleExpression, Integral):
         _GeneralExpressionData.__init__(self, None, component=self)
         Integral.__init__(self, *args, **kwds)
 
+    def clear(self):
+        self._data = {}
+
     def is_fully_discretized(self):
         """
         Checks to see if all ContinuousSets indexing this Integral have been
@@ -145,6 +155,11 @@ class SimpleIntegral(SimpleExpression, Integral):
         if 'scheme' not in self._wrt.get_discretization_info():
             return False
         return True
+
+
+class SimpleIntegral(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarIntegral
+    __renamed__version__ = '6.0'
 
 
 class IndexedIntegral(IndexedExpression, Integral):

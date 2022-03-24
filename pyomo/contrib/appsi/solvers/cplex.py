@@ -1,5 +1,5 @@
-from pyutilib.services import TempfileManager
-from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, MIPSolverConfig
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.contrib.appsi.base import PersistentSolver, Results, TerminationCondition, MIPSolverConfig, PersistentSolutionLoader
 from pyomo.contrib.appsi.writers import LPWriter
 import logging
 import math
@@ -15,14 +15,26 @@ import sys
 import time
 from pyomo.common.log import LogStream
 from pyomo.common.config import ConfigValue, NonNegativeInt
+from pyomo.common.errors import PyomoException
+from pyomo.contrib.appsi.cmodel import cmodel_available
+from pyomo.core.staleflag import StaleFlagManager
 
 
 logger = logging.getLogger(__name__)
 
 
 class CplexConfig(MIPSolverConfig):
-    def __init__(self):
-        super(CplexConfig, self).__init__()
+    def __init__(self,
+                 description=None,
+                 doc=None,
+                 implicit=False,
+                 implicit_domain=None,
+                 visibility=0):
+        super(CplexConfig, self).__init__(description=description,
+                                          doc=doc,
+                                          implicit=implicit,
+                                          implicit_domain=implicit_domain,
+                                          visibility=visibility)
 
         self.declare('filename', ConfigValue(domain=str))
         self.declare('keepfiles', ConfigValue(domain=bool))
@@ -36,17 +48,21 @@ class CplexConfig(MIPSolverConfig):
 
 
 class CplexResults(Results):
-    def __init__(self):
+    def __init__(self, solver):
         super(CplexResults, self).__init__()
         self.wallclock_time = None
+        self.solution_loader = PersistentSolutionLoader(solver=solver)
 
 
 class Cplex(PersistentSolver):
+    _available = None
+
     def __init__(self):
         self._config = CplexConfig()
         self._solver_options = dict()
         self._writer = LPWriter()
         self._filename = None
+        self._last_results_object: Optional[CplexResults] = None
 
         try:
             import cplex
@@ -58,10 +74,39 @@ class Cplex(PersistentSolver):
             self._cplex_model = None
             self._cplex_available = False
 
-    def available(self, exception_flag=False):
-        if exception_flag and not self._cplex_available:
-            raise RuntimeError('Cplex is not available')
-        return self._cplex_available
+    @property
+    def writer(self):
+        return self._writer
+
+    @property
+    def symbol_map(self):
+        return self._writer.symbol_map
+
+    def available(self):
+        if Cplex._available is None:
+            self._check_license()
+        return Cplex._available
+
+    def _check_license(self):
+        if self._cplex_available:
+            if not cmodel_available:
+                Cplex._available = self.Availability.NeedsCompiledExtension
+            else:
+                try:
+                    m = self._cplex.Cplex()
+                    m.variables.add(lb=[0]*1001)
+                    m.solve()
+                    Cplex._available = self.Availability.FullLicense
+                except self._cplex.exceptions.errors.CplexSolverError:
+                    try:
+                        m = self._cplex.Cplex()
+                        m.variables.add(lb=[0])
+                        m.solve()
+                        Cplex._available = self.Availability.LimitedLicense
+                    except:
+                        Cplex._available = self.Availability.BadLicense
+        else:
+            Cplex._available = self.Availability.NotFound
 
     def version(self):
         return tuple(int(k) for k in self._cplex.Cplex().get_version().split('.'))
@@ -82,9 +127,24 @@ class Cplex(PersistentSolver):
     def config(self):
         return self._config
 
+    @config.setter
+    def config(self, val):
+        self._config = val
+
     @property
-    def solver_options(self):
+    def cplex_options(self):
+        """
+        Returns
+        -------
+        cplex_options: dict
+            A dictionary mapping solver options to values for those options. These
+            are solver specific.
+        """
         return self._solver_options
+
+    @cplex_options.setter
+    def cplex_options(self, val: Dict):
+        self._solver_options = val
 
     @property
     def update_config(self):
@@ -127,7 +187,12 @@ class Cplex(PersistentSolver):
         self._writer.update_params()
 
     def solve(self, model, timer: HierarchicalTimer = None):
-        self.available(exception_flag=True)
+        StaleFlagManager.mark_all_as_stale()
+        avail = self.available()
+        if not avail:
+            raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')
+        if self._last_results_object is not None:
+            self._last_results_object.solution_loader.invalidate()
         if timer is None:
             timer = HierarchicalTimer()
         try:
@@ -142,6 +207,7 @@ class Cplex(PersistentSolver):
             self._writer.write(model, self._filename+'.lp', timer=timer)
             timer.stop('write lp file')
             res = self._apply_solver(timer)
+            self._last_results_object = res
             if self.config.report_timing:
                 logger.info('\n' + str(timer))
             return res
@@ -170,7 +236,7 @@ class Cplex(PersistentSolver):
         else:
             cplex_model.set_results_stream(log_stream)
 
-        for key, option in self.solver_options.items():
+        for key, option in self.cplex_options.items():
             opt_cmd = cplex_model.parameters
             key_pieces = key.split('_')
             for key_piece in key_pieces:
@@ -194,7 +260,7 @@ class Cplex(PersistentSolver):
         config = self.config
         cpxprob = self._cplex_model
 
-        results = CplexResults()
+        results = CplexResults(solver=self)
         results.wallclock_time = solve_time
         status = cpxprob.solution.get_status()
 
@@ -248,7 +314,7 @@ class Cplex(PersistentSolver):
 
         return results
 
-    def load_vars(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> NoReturn:
+    def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
         if self._cplex_model.solution.get_solution_type() == self._cplex_model.solution.type.none:
             raise RuntimeError('Cannot load variable values - no feasible solution was found.')
         symbol_map = self._writer.symbol_map
@@ -257,11 +323,14 @@ class Cplex(PersistentSolver):
         else:
             var_names = [symbol_map.byObject[id(v)] for v in vars_to_load]
         var_vals = self._cplex_model.solution.get_values(var_names)
+        res = ComponentMap()
         for name, val in zip(var_names, var_vals):
             if name == 'obj_const':
                 continue
             v = symbol_map.bySymbol[name]()
-            v.value = val
+            if self._writer._referenced_variables[id(v)]:
+                res[v] = val
+        return res
 
     def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
         if self._cplex_model.solution.get_solution_type() == self._cplex_model.solution.type.none:

@@ -1,4 +1,5 @@
-"""Problem B in paper "Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs"
+# -*- coding: utf-8 -*-
+"""Problem B in paper 'Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs'
 
 Ref:
 Kesavan P, Allgor R J, Gatzke E P, et al. Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs[J]. Mathematical Programming, 2004, 100(3): 517-535.
@@ -45,3 +46,4 @@ class Nonconvex2(ConcreteModel):
         m.c6 = Constraint(expr=-m.y7 - m.y8 <= -1)
         m.c7 = Constraint(expr=3 * m.y1 + m.y2 + 2 * m.y3 + 3 *
                           m.y4 + 2 * m.y5 + m.y6 + 3 * m.y7 + 2 * m.y8 <= 10)
+        m.optimal_value = -0.94347

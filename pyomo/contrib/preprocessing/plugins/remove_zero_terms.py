@@ -14,7 +14,7 @@ from __future__ import division
 
 from pyomo.core import quicksum
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.plugin import TransformationFactory
+from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.expr import current as EXPR
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
@@ -39,9 +39,12 @@ class RemoveZeroTerms(IsomorphicTransformation):
 
         for constr in m.component_data_objects(
                 ctype=Constraint, active=True, descend_into=True):
-            if not constr.body.polynomial_degree() == 1:
-                continue  # we currently only process linear constraints
             repn = generate_standard_repn(constr.body)
+            if not repn.is_linear() or repn.is_constant():
+                continue  # we currently only process linear constraints, and we
+                          # assume that trivial constraints have already been
+                          # deactivated or will be deactivated in a different
+                          # step
 
             # get the index of all nonzero coefficient variables
             nonzero_vars_indx = [

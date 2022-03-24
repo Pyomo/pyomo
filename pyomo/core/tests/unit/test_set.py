@@ -29,7 +29,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr import native_numeric_types, native_types
 import pyomo.core.base.set as SetModule
 from pyomo.core.base.indexed_component import normalize_index
-from pyomo.core.base.util import (
+from pyomo.core.base.initializer import (
     ConstantInitializer, ItemInitializer, IndexedCallInitializer,
 )
 from pyomo.core.base.set import (
@@ -39,10 +39,10 @@ from pyomo.core.base.set import (
     Integers, PositiveIntegers, NegativeIntegers,
     NonNegativeIntegers,
     Set,
-    SetOf, OrderedSetOf, UnorderedSetOf,
+    SetOf, OrderedSetOf, FiniteSetOf, InfiniteSetOf,
     RangeSet, _FiniteRangeSetData, _InfiniteRangeSetData,
-    FiniteSimpleRangeSet, InfiniteSimpleRangeSet,
-    AbstractFiniteSimpleRangeSet,
+    FiniteScalarRangeSet, InfiniteScalarRangeSet,
+    AbstractFiniteScalarRangeSet,
     SetUnion_InfiniteSet, SetUnion_FiniteSet, SetUnion_OrderedSet,
     SetIntersection_InfiniteSet, SetIntersection_FiniteSet,
     SetIntersection_OrderedSet,
@@ -829,9 +829,29 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(i, j)
 
         i = SetOf({1,2,3})
-        self.assertIs(type(i), UnorderedSetOf)
-        j = UnorderedSetOf([1,2,3])
-        self.assertIs(type(i), UnorderedSetOf)
+        self.assertIs(type(i), FiniteSetOf)
+        j = FiniteSetOf([1,2,3])
+        self.assertIs(type(i), FiniteSetOf)
+        self.assertEqual(i, j)
+
+        i = SetOf(NonNegativeReals)
+        self.assertIs(type(i), InfiniteSetOf)
+        j = InfiniteSetOf(NonNegativeReals)
+        self.assertIs(type(i), InfiniteSetOf)
+        self.assertEqual(i, j)
+
+        i = SetOf(Binary)
+        self.assertIs(type(i), OrderedSetOf)
+        j = OrderedSetOf(Binary)
+        self.assertIs(type(i), OrderedSetOf)
+        self.assertEqual(i, j)
+
+        I = Set(initialize={1,3,2}, ordered=False)
+        I.construct()
+        i = SetOf(I)
+        self.assertIs(type(i), FiniteSetOf)
+        j = FiniteSetOf(I)
+        self.assertIs(type(i), FiniteSetOf)
         self.assertEqual(i, j)
 
         i = RangeSet(3)
@@ -851,7 +871,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         i = RangeSet(1,3,0)
         with self.assertRaisesRegex(
-                TypeError, ".*'InfiniteSimpleRangeSet' has no len"):
+                TypeError, ".*'InfiniteScalarRangeSet' has no len"):
             len(i)
         self.assertEqual(len(list(i.ranges())), 1)
 
@@ -880,6 +900,21 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 "with a non-integer step"):
             RangeSet(0,None,0.5)
 
+        with LoggingIntercept() as LOG:
+            m = ConcreteModel()
+            m.p = Param(initialize=5, mutable=False)
+            m.I = RangeSet(0, m.p)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(RangeSet(0,5,1), m.I)
+
+        with LoggingIntercept() as LOG:
+            m = ConcreteModel()
+            m.p = Param(initialize=5, mutable=True)
+            m.I = RangeSet(0, m.p)
+        self.assertIn("Constructing RangeSet 'I' from non-constant data",
+                      LOG.getvalue())
+        self.assertEqual(RangeSet(0,5,1), m.I)
+
         class _AlmostNumeric(object):
             def __init__(self, val):
                 self.val = val
@@ -899,16 +934,16 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         p = Param(initialize=5)
         i = RangeSet(p)
         self.assertFalse(i.is_constructed())
-        self.assertIs(type(i), AbstractFiniteSimpleRangeSet)
+        self.assertIs(type(i), AbstractFiniteScalarRangeSet)
         p.construct()
         with LoggingIntercept(output, 'pyomo.core', logging.DEBUG):
             self.assertEqual(output.getvalue(), "")
             i.construct()
             ref = 'Constructing RangeSet, ' \
-                  'name=FiniteSimpleRangeSet, from data=None\n'
+                  'name=FiniteScalarRangeSet, from data=None\n'
             self.assertEqual(output.getvalue(), ref)
             self.assertTrue(i.is_constructed())
-            self.assertIs(type(i), FiniteSimpleRangeSet)
+            self.assertIs(type(i), FiniteScalarRangeSet)
             # Calling construct() twice bypasses construction the second
             # time around
             i.construct()
@@ -939,35 +974,35 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # Test non-finite RangeSets
         i = RangeSet(1,10)
-        self.assertIs(type(i), FiniteSimpleRangeSet)
+        self.assertIs(type(i), FiniteScalarRangeSet)
         i = RangeSet(1,10,0)
-        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIs(type(i), InfiniteScalarRangeSet)
         i = RangeSet(1,1,0)
-        self.assertIs(type(i), FiniteSimpleRangeSet)
+        self.assertIs(type(i), FiniteScalarRangeSet)
         j = RangeSet(1, float('inf'))
-        self.assertIs(type(j), InfiniteSimpleRangeSet)
+        self.assertIs(type(j), InfiniteScalarRangeSet)
         i = RangeSet(1,None)
-        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIs(type(i), InfiniteScalarRangeSet)
         self.assertEqual(i,j)
         self.assertIn(1, i)
         self.assertIn(100, i)
         self.assertNotIn(0, i)
         self.assertNotIn(1.5, i)
         i = RangeSet(None,1)
-        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIs(type(i), InfiniteScalarRangeSet)
         self.assertIn(1, i)
         self.assertNotIn(100, i)
         self.assertIn(0, i)
         self.assertNotIn(0.5, i)
         i = RangeSet(None,None)
-        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIs(type(i), InfiniteScalarRangeSet)
         self.assertIn(1, i)
         self.assertIn(100, i)
         self.assertIn(0, i)
         self.assertNotIn(0.5, i)
 
         i = RangeSet(None,None,bounds=(-5,10))
-        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIs(type(i), InfiniteScalarRangeSet)
         self.assertIn(10, i)
         self.assertNotIn(11, i)
         self.assertIn(-5, i)
@@ -976,10 +1011,10 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         p = Param(initialize=float('inf'))
         i = RangeSet(1, p, 1)
-        self.assertIs(type(i), AbstractFiniteSimpleRangeSet)
+        self.assertIs(type(i), AbstractFiniteScalarRangeSet)
         p.construct()
         i = RangeSet(1, p, 1)
-        self.assertIs(type(i), InfiniteSimpleRangeSet)
+        self.assertIs(type(i), InfiniteScalarRangeSet)
 
 
         # Test abstract RangeSets
@@ -988,10 +1023,10 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         m.q = Param()
         m.s = Param()
         m.i = RangeSet(m.p, m.q, m.s, finite=True)
-        self.assertIs(type(m.i), AbstractFiniteSimpleRangeSet)
+        self.assertIs(type(m.i), AbstractFiniteScalarRangeSet)
         i = m.create_instance(
             data={None: {'p': {None: 1}, 'q': {None: 5}, 's': {None: 2}}})
-        self.assertIs(type(i.i), FiniteSimpleRangeSet)
+        self.assertIs(type(i.i), FiniteScalarRangeSet)
         self.assertEqual(list(i.i), [1,3,5])
 
         with self.assertRaisesRegex(
@@ -1071,7 +1106,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(
             output.getvalue(),
             "Exception raised while validating element "
-            "'1' for Set FiniteSimpleRangeSet\n")
+            "'1' for Set FiniteScalarRangeSet\n")
 
     def test_bounds(self):
         r = RangeSet(100, bounds=(2.5, 5.5))
@@ -1278,9 +1313,9 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         b = Param(initialize=3)
         oo = RangeSet(b)
-        self.assertEqual(str(oo), "AbstractFiniteSimpleRangeSet")
+        self.assertEqual(str(oo), "AbstractFiniteScalarRangeSet")
         pp = RangeSet(b, finite=False)
-        self.assertEqual(str(pp), "AbstractInfiniteSimpleRangeSet")
+        self.assertEqual(str(pp), "AbstractInfiniteScalarRangeSet")
 
         b.construct()
         m.OO = oo
@@ -1304,18 +1339,11 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-hashable objects (that can't be cast
         # to set())
-        m = ConcreteModel()
-        m.p = Param(initialize=2)
-        m.q = Var(initialize=2)
-        _NonHashable = (1,3,5,m.p)
-        self.assertFalse(SetOf({2,4}).isdisjoint(_NonHashable))
-        self.assertTrue(SetOf({0,4}).isdisjoint(_NonHashable))
+        _NonHashable = (1, 3, 5, [2, 3])
+        self.assertFalse(SetOf([[2, 3], 4]).isdisjoint(_NonHashable))
+        self.assertTrue(SetOf({0, 4}).isdisjoint(_NonHashable))
         self.assertFalse(SetOf(_NonHashable).isdisjoint(_NonHashable))
-        self.assertFalse(SetOf((m.q,1,3,5,m.p)).isdisjoint(_NonHashable))
-        # Note: membership in tuples is done through
-        # __bool__(a.__eq__(b)), so Params/Vars with equivalent values will
-        # match
-        self.assertFalse(SetOf((m.q,)).isdisjoint(_NonHashable))
+        self.assertFalse(SetOf((1, 3, 5)).isdisjoint(_NonHashable))
 
         # It can even work for non-iterable objects (that can't be cast
         # to set())
@@ -1351,18 +1379,12 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-hashable objects (that can't be cast
         # to set())
-        m = ConcreteModel()
-        m.p = Param(initialize=2)
-        m.q = Var(initialize=2)
-        _NonHashable = (1,3,5,m.p)
-        self.assertFalse(SetOf({0,1,3,5}).issubset(_NonHashable))
-        self.assertTrue(SetOf({1,3,5}).issubset(_NonHashable))
+        _NonHashable = (1, 3, 5, [2, 3])
+        self.assertFalse(SetOf({0, 1, 3, 5}).issubset(_NonHashable))
+        self.assertTrue(SetOf({1, 3, 5}).issubset(_NonHashable))
         self.assertTrue(SetOf(_NonHashable).issubset(_NonHashable))
-        self.assertTrue(SetOf((m.q,1,3,5,m.p)).issubset(_NonHashable))
-        # Note: membership in tuples is done through
-        # __bool__(a.__eq__(b)), so Params/Vars with equivalent values will
-        # match
-        self.assertTrue(SetOf((m.q,1,3,5)).issubset(_NonHashable))
+        self.assertTrue(SetOf((1, 3, 5, [2, 3])).issubset(_NonHashable))
+        self.assertFalse(SetOf(([2, 4])).issubset(_NonHashable))
 
         # It can even work for non-iterable objects (that can't be cast
         # to set())
@@ -1398,17 +1420,12 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
 
         # It can even work for non-hashable objects (that can't be cast
         # to set())
-        m = ConcreteModel()
-        m.p = Param(initialize=2)
-        m.q = Var(initialize=2)
-        _NonHashable = (1,3,5,m.p)
-        self.assertFalse(SetOf({1,3,5}).issuperset(_NonHashable))
+        _NonHashable = (1, 3, 5, [2, 3])
+        self.assertFalse(SetOf({0, 1, 3, 5}).issuperset(_NonHashable))
+        self.assertTrue(SetOf(([2, 3], 1, 2, 3, 5)).issuperset(_NonHashable))
         self.assertTrue(SetOf(_NonHashable).issuperset(_NonHashable))
-        self.assertTrue(SetOf((m.q,1,3,5,m.p)).issuperset(_NonHashable))
-        # Note: membership in tuples is done through
-        # __bool__(a.__eq__(b)), so Params/Vars with equivalent values will
-        # match
-        self.assertTrue(SetOf((m.q,1,3,5)).issuperset(_NonHashable))
+        self.assertTrue(SetOf((1, 3, 5, [2, 3])).issuperset(_NonHashable))
+        self.assertFalse(SetOf((1, 3, 5, [2, 4])).issuperset(_NonHashable))
 
         # But NOT non-iterable objects: we assume that everything that
         # does not implement isfinite() is a discrete set.
@@ -1634,6 +1651,13 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
         self.assertEqual(SetOf([(1,2),(2,3),(4,5)]).dimen, 2)
         self.assertEqual(SetOf([1,(2,3)]).dimen, None)
 
+        self.assertEqual(SetOf(Integers).dimen, 1)
+        self.assertEqual(SetOf(Binary).dimen, 1)
+
+        m = ConcreteModel()
+        m.I = Set(initialize=[(1,2), (3,4)])
+        self.assertEqual(SetOf(m.I).dimen, 2)
+
         a = [1,2,3,'abc']
         SetOf_a = SetOf(a)
         self.assertEqual(SetOf_a.dimen, 1)
@@ -1675,7 +1699,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
             r[0]
         with self.assertRaisesRegex(
-                IndexError, "FiniteSimpleRangeSet index out of range"):
+                IndexError, "FiniteScalarRangeSet index out of range"):
             r[10]
         with self.assertRaisesRegex(
                 ValueError, "Cannot identify position of 5 in Set"):
@@ -1690,7 +1714,7 @@ class Test_SetOf_and_RangeSet(unittest.TestCase):
                 r"\[1 .. len\(Set\)\] or \[-1 .. -len\(Set\)\]"):
             r[0]
         with self.assertRaisesRegex(
-                IndexError, "FiniteSimpleRangeSet index out of range"):
+                IndexError, "FiniteScalarRangeSet index out of range"):
             r[10]
         with self.assertRaisesRegex(
                 ValueError, "Cannot identify position of 5 in Set"):
@@ -1735,7 +1759,7 @@ class Test_SetOperator(unittest.TestCase):
             i.construct()
             ref = ('Constructing SetOperator, name=SetProduct_OrderedSet, '
                    'from data=None\n'
-                   'Constructing RangeSet, name=FiniteSimpleRangeSet, '
+                   'Constructing RangeSet, name=FiniteScalarRangeSet, '
                    'from data=None\n'
                    'Constructing Set, name=SetProduct_OrderedSet, '
                    'from data=None\n')
@@ -2045,11 +2069,19 @@ A : Size=1, Index=None, Ordered=True
                 TypeError, "Cannot apply a Set operator to an "
                 r"indexed Set component \(J\)"):
             m.I | m.J
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to an "
+                r"indexed Set component \(J\)"):
+            m.J | m.I
         m.x = Suffix()
         with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to a "
                 r"non-Set Suffix component \(x\)"):
             m.I | m.x
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to a "
+                r"non-Set Suffix component \(x\)"):
+            m.x | m.I
         m.y = Var([1,2])
         with self.assertRaisesRegex(
                 TypeError, "Cannot apply a Set operator to an "
@@ -2059,6 +2091,14 @@ A : Size=1, Index=None, Ordered=True
                 TypeError, "Cannot apply a Set operator to a "
                 r"non-Set component data \(y\[1\]\)"):
             m.I | m.y[1]
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to an "
+                r"indexed Var component \(y\)"):
+            m.y | m.I
+        with self.assertRaisesRegex(
+                TypeError, "Cannot apply a Set operator to a "
+                r"non-Set component data \(y\[1\]\)"):
+            m.y[1] | m.I
 
 class TestSetIntersection(unittest.TestCase):
     def test_pickle(self):
@@ -2859,7 +2899,7 @@ A : Size=1, Index=None, Ordered=True
         ref="""
 J : Size=1, Index=None, Ordered=False
     Key  : Dimen : Domain  : Size : Members
-    None :     2 : Reals*I :  Inf : <[None..None], ([1], [2], [3])>
+    None :     2 : Reals*I :  Inf : <[-inf..inf], ([1], [2], [3])>
 """.strip()
         self.assertEqual(output.getvalue().strip(), ref)
 
@@ -3293,6 +3333,22 @@ class TestGlobalSets(unittest.TestCase):
         self.assertEqual(str(Reals), 'Reals')
         self.assertEqual(str(Integers), 'Integers')
 
+    def test_block_independent(self):
+        m = ConcreteModel()
+        with self.assertRaisesRegex(
+                RuntimeError,
+                "Cannot assign a GlobalSet 'Reals' to model 'unknown'"):
+            m.a_set = Reals
+        self.assertEqual(str(Reals), 'Reals')
+        self.assertIsNone(Reals._parent)
+        m.blk = Block()
+        with self.assertRaisesRegex(
+                RuntimeError,
+                "Cannot assign a GlobalSet 'Reals' to block 'blk'"):
+            m.blk.a_set = Reals
+        self.assertEqual(str(Reals), 'Reals')
+        self.assertIsNone(Reals._parent)
+
     def test_iteration(self):
         with self.assertRaisesRegex(
                 TypeError, "'GlobalSet' object is not iterable "
@@ -3516,10 +3572,21 @@ class TestSet(unittest.TestCase):
 
         m = ConcreteModel()
         m.I = Set(initialize=(1,3,2,4))
+        self.assertTrue(m.I._init_values.constant())
         self.assertEqual(list(m.I), [1,3,2,4])
         self.assertEqual(list(reversed(m.I)), [4,2,3,1])
         self.assertEqual(m.I.data(), (1,3,2,4))
         self.assertEqual(m.I.dimen, 1)
+
+        m = ConcreteModel()
+        with self.assertRaisesRegex(
+                ValueError, 'Set rule or initializer returned None'):
+            m.I = Set(initialize=lambda m: None, dimen=2)
+        self.assertTrue(m.I._init_values.constant())
+        self.assertEqual(list(m.I), [])
+        self.assertEqual(list(reversed(m.I)), [])
+        self.assertEqual(m.I.data(), ())
+        self.assertIs(m.I.dimen, 2)
 
         def I_init(m):
             yield 1
@@ -3599,23 +3666,30 @@ class TestSet(unittest.TestCase):
                    "of type int.")
             self.assertIn(ref, output.getvalue())
 
+    def test_scalar_indexed_api(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=range(3))
+        self.assertEqual(list(m.I.keys()), [None])
+        self.assertEqual(list(m.I.values()), [m.I])
+        self.assertEqual(list(m.I.items()), [(None, m.I)])
+
     def test_insertion_deletion(self):
         def _verify(_s, _l):
             self.assertTrue(_s.isordered())
             self.assertTrue(_s.isfinite())
             for i,v in enumerate(_l):
-                self.assertEqual(_s[i+1], v)
+                self.assertEqual(_s.at(i+1), v)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
-                _s[len(_l)+1]
+                _s.at(len(_l)+1)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
-                _s[len(_l)+2]
+                _s.at(len(_l)+2)
 
             for i,v in enumerate(reversed(_l)):
-                self.assertEqual(_s[-(i+1)], v)
+                self.assertEqual(_s.at(-(i+1)), v)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
-                _s[-len(_l)-1]
+                _s.at(-len(_l)-1)
             with self.assertRaisesRegex(IndexError, "I index out of range"):
-                _s[-len(_l)-2]
+                _s.at(-len(_l)-2)
 
             for i,v in enumerate(_l):
                 self.assertEqual(_s.ord(v), i+1)
@@ -3966,14 +4040,14 @@ class TestSet(unittest.TestCase):
         m = ConcreteModel()
 
         i = Set()
-        self.assertEqual(str(i), "AbstractOrderedSimpleSet")
+        self.assertEqual(str(i), "AbstractOrderedScalarSet")
         i.construct()
         self.assertEqual(str(i), "{}")
         m.I = i
         self.assertEqual(str(i), "I")
 
         j = Set(initialize=[1,2,3])
-        self.assertEqual(str(j), "AbstractOrderedSimpleSet")
+        self.assertEqual(str(j), "AbstractOrderedScalarSet")
         j.construct()
         self.assertEqual(str(j), "{1, 2, 3}")
         m.J = j
@@ -4216,7 +4290,7 @@ class TestSet(unittest.TestCase):
         None :     2 :    Any :    2 : {(3, 4), (1, 2)}
     M : Size=1, Index=None, Ordered=False
         Key  : Dimen : Domain            : Size : Members
-        None :     1 : Reals - M_index_1 :  Inf : ([None..0) | (0..None])
+        None :     1 : Reals - M_index_1 :  Inf : ([-inf..0) | (0..inf])
     N : Size=1, Index=None, Ordered=False
         Key  : Dimen : Domain           : Size : Members
         None :     1 : Integers - Reals :  Inf :      []
@@ -4369,7 +4443,7 @@ JJ : Size=0, Index=JJ_index, Ordered=Insertion
             })
 
         ref = """
-Constructing AbstractOrderedSimpleSet 'I' on [Model] from data=None
+Constructing AbstractOrderedScalarSet 'I' on [Model] from data=None
 Constructing Set, name=I, from data=None
 Constructed component ''[Model].I'':
 I : Size=1, Index=None, Ordered=Insertion
@@ -4415,58 +4489,58 @@ I : Size=1, Index=None, Ordered=Insertion
 
         with self.assertRaisesRegex(
                 RuntimeError,
-                r"Cannot iterate over AbstractFiniteSimpleSet 'I'"
+                r"Cannot iterate over AbstractFiniteScalarSet 'I'"
                 r" before it has been constructed \(initialized\)"):
             for i in m.I:
                 pass
 
         with self.assertRaisesRegex(
                 RuntimeError,
-                r"Cannot iterate over AbstractOrderedSimpleSet 'J'"
+                r"Cannot iterate over AbstractOrderedScalarSet 'J'"
                 r" before it has been constructed \(initialized\)"):
             for i in m.J:
                 pass
 
         with self.assertRaisesRegex(
                 RuntimeError,
-                r"Cannot iterate over AbstractSortedSimpleSet 'K'"
+                r"Cannot iterate over AbstractSortedScalarSet 'K'"
                 r" before it has been constructed \(initialized\)"):
             for i in m.K:
                 pass
 
         with self.assertRaisesRegex(
                 RuntimeError,
-                r"Cannot test membership in AbstractFiniteSimpleSet 'I'"
+                r"Cannot test membership in AbstractFiniteScalarSet 'I'"
                 r" before it has been constructed \(initialized\)"):
             1 in m.I
 
         with self.assertRaisesRegex(
                 RuntimeError,
-                r"Cannot test membership in AbstractOrderedSimpleSet 'J'"
+                r"Cannot test membership in AbstractOrderedScalarSet 'J'"
                 r" before it has been constructed \(initialized\)"):
             1 in m.J
 
         with self.assertRaisesRegex(
                 RuntimeError,
-                r"Cannot test membership in AbstractSortedSimpleSet 'K'"
+                r"Cannot test membership in AbstractSortedScalarSet 'K'"
                 r" before it has been constructed \(initialized\)"):
             1 in m.K
 
         with self.assertRaisesRegex(
                 RuntimeError,
-                r"Cannot access '__len__' on AbstractFiniteSimpleSet 'I'"
+                r"Cannot access '__len__' on AbstractFiniteScalarSet 'I'"
                 r" before it has been constructed \(initialized\)"):
             len(m.I)
 
         with self.assertRaisesRegex(
                 RuntimeError,
-                r"Cannot access '__len__' on AbstractOrderedSimpleSet 'J'"
+                r"Cannot access '__len__' on AbstractOrderedScalarSet 'J'"
                 r" before it has been constructed \(initialized\)"):
             len(m.J)
 
         with self.assertRaisesRegex(
                 RuntimeError,
-                r"Cannot access '__len__' on AbstractSortedSimpleSet 'K'"
+                r"Cannot access '__len__' on AbstractSortedScalarSet 'K'"
                 r" before it has been constructed \(initialized\)"):
             len(m.K)
 
@@ -5562,6 +5636,28 @@ class TestDeprecation(unittest.TestCase):
             r"^DEPRECATED: check_values\(\) is deprecated: Sets only "
             r"contain valid")
 
+    def test_getitem(self):
+        m = ConcreteModel()
+        m.I = Set(initialize=['a','b'])
+        with LoggingIntercept() as OUT:
+            self.assertIs(m.I[None], m.I)
+        self.assertEqual(OUT.getvalue(), "")
+
+        with LoggingIntercept() as OUT:
+            self.assertEqual(m.I[2], 'b')
+        self.assertRegex(
+            OUT.getvalue().replace('\n', ' '),
+            r"^DEPRECATED: Using __getitem__ to return a set value from "
+            r"its \(ordered\) position is deprecated.  Please use at\(\)")
+
+        with LoggingIntercept() as OUT:
+            self.assertEqual(m.I.card(2), 'b')
+        self.assertRegex(
+            OUT.getvalue().replace('\n', ' '),
+            r"^DEPRECATED: card\(\) was incorrectly added to the Set API.  "
+            r"Please use at\(\)")
+
+
 
 class TestIssues(unittest.TestCase):
     def test_issue_43(self):
@@ -5597,8 +5693,8 @@ class TestIssues(unittest.TestCase):
             output.getvalue()
         )
         # Note that pypy raises a different exception from cpython
-        err = ("((unhashable type: 'OrderedSimpleSet')"
-               "|('OrderedSimpleSet' objects are unhashable))")
+        err = ("((unhashable type: 'OrderedScalarSet')"
+               "|('OrderedScalarSet' objects are unhashable))")
         with self.assertRaisesRegex(TypeError, err):
             self.assertFalse(m.s in m.t)
         with self.assertRaisesRegex(TypeError, err):
@@ -5830,6 +5926,7 @@ c : Size=3, Index=CHOICES, Active=True
 
     @unittest.skipIf(NamedTuple is None, "typing module not available")
     def test_issue_938(self):
+        self.maxDiff = None
         NodeKey = NamedTuple('NodeKey', [('id', int)])
         ArcKey = NamedTuple('ArcKey',
                             [('node_from', NodeKey), ('node_to', NodeKey)])
@@ -5938,3 +6035,19 @@ c : Size=3, Index=CHOICES, Active=True
         self.assertEqual(len(m.a), 0)
         m.b = Set(initialize=b_rule, dimen=2)
         self.assertEqual(len(m.b), 0)
+
+    def test_issue_1112(self):
+        m = ConcreteModel()
+        m.a = Set(initialize=[1,2,3])
+        #
+        vals = list(m.a.values())
+        self.assertEqual(len(vals), 1)
+        self.assertIs(vals[0], m.a)
+        #
+        cross = m.a.cross(m.a)
+        self.assertIs(type(cross), SetProduct_OrderedSet)
+        #
+        vals = list(m.a.cross(m.a).values())
+        self.assertEqual(len(vals), 1)
+        self.assertIsInstance(vals[0], SetProduct_OrderedSet)
+        self.assertIsNot(vals[0], cross)

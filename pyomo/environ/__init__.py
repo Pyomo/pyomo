@@ -10,15 +10,9 @@
 
 import sys as _sys
 
-if _sys.version_info[0] >= 3:
-    import importlib
-
-
-    def _do_import(pkg_name):
+import importlib
+def _do_import(pkg_name):
         importlib.import_module(pkg_name)
-else:
-    def _do_import(pkg_name):
-        __import__(pkg_name, globals(), locals(), [], -1)
 
 #
 # These packages contain plugins that need to be loaded
@@ -36,32 +30,25 @@ _packages = [
     'pyomo.gdp',
     'pyomo.mpec',
     'pyomo.dae',
-    'pyomo.bilevel',
     'pyomo.scripting',
     'pyomo.network',
-]
-#
-#
-# These packages also contain plugins that need to be loaded, but
-# we silently ignore any import errors because these
-# packages are optional and/or under development.
-#
-_optional_packages = {
+    'pyomo.contrib.ampl_function_demo',
     'pyomo.contrib.appsi',
+    'pyomo.contrib.community_detection',
     'pyomo.contrib.example',
     'pyomo.contrib.fme',
+    'pyomo.contrib.gdp_bounds',
     'pyomo.contrib.gdpbb',
     'pyomo.contrib.gdpopt',
+    'pyomo.contrib.gjh',
     'pyomo.contrib.gdp_bounds',
     'pyomo.contrib.mcpp',
     'pyomo.contrib.mindtpy',
     'pyomo.contrib.multistart',
-    'pyomo.contrib.petsc',
     'pyomo.contrib.preprocessing',
     'pyomo.contrib.pynumero',
     'pyomo.contrib.trustregion',
-    'pyomo.contrib.community_detection',
-}
+]
 
 
 def _import_packages():
@@ -87,17 +74,6 @@ def _import_packages():
 
         pkg = _sys.modules[pname]
         pkg.load()
-    #
-    # Import optional packages
-    #
-    for _package in _optional_packages:
-        pname = _package + '.plugins'
-        try:
-            _do_import(pname)
-        except ImportError:
-            continue
-        pkg = _sys.modules[pname]
-        pkg.load()
 
 
 _import_packages()
@@ -107,18 +83,14 @@ _import_packages()
 #
 from pyomo.dataportal import DataPortal
 import pyomo.core.kernel
-import pyomo.core.base._pyomo
 from pyomo.common.collections import ComponentMap
 import pyomo.core.base.indexed_component
-import pyomo.core.base._pyomo
-from six import iterkeys, iteritems
 import pyomo.core.base.util
-from pyomo.core import expr, base, beta, kernel, plugins, preprocess
+from pyomo.core import expr, base, beta, kernel, plugins
 from pyomo.core.base import util
-import pyomo.core.preprocess
 
 from pyomo.core import (numvalue, numeric_expr, boolean_value,
-                             current, symbol_map, sympy_tools, 
+                             current, symbol_map, sympy_tools,
                              taylor_series, visitor, expr_common, expr_errors,
                              calculus, native_types,
                              linear_expression, nonlinear_expression,
@@ -136,20 +108,20 @@ from pyomo.core import (numvalue, numeric_expr, boolean_value,
                              maximize, PyomoOptions, Expression, CuidLabeler,
                              CounterLabeler, NumericLabeler,
                              CNameLabeler, TextLabeler,
-                             AlphaNumericTextLabeler, NameLabeler, ShortNameLabeler, 
-                             name, Component, ComponentUID, BuildAction, 
+                             AlphaNumericTextLabeler, NameLabeler, ShortNameLabeler,
+                             name, Component, ComponentUID, BuildAction,
                              BuildCheck, Set, SetOf, simple_set_rule, RangeSet,
-                             Param, Var, VarList, SimpleVar, 
-                             BooleanVar, BooleanVarList, SimpleBooleanVar, 
+                             Param, Var, VarList, ScalarVar,
+                             BooleanVar, BooleanVarList, ScalarBooleanVar,
                              logical_expr, simple_constraint_rule,
                              simple_constraintlist_rule, ConstraintList,
-                             Constraint, LogicalConstraint, 
+                             Constraint, LogicalConstraint,
                              LogicalConstraintList, simple_objective_rule,
                              simple_objectivelist_rule, Objective,
                              ObjectiveList, Connector, SOSConstraint,
                              Piecewise, active_export_suffix_generator,
-                             active_import_suffix_generator, Suffix, 
-                             ExternalFunction, symbol_map_from_instance, 
+                             active_import_suffix_generator, Suffix,
+                             ExternalFunction, symbol_map_from_instance,
                              Reference, Reals, PositiveReals, NonPositiveReals,
                              NegativeReals, NonNegativeReals, Integers,
                              PositiveIntegers, NonPositiveIntegers,
@@ -157,28 +129,13 @@ from pyomo.core import (numvalue, numeric_expr, boolean_value,
                              Boolean, Binary, Any, AnyWithNone, EmptySet,
                              UnitInterval, PercentFraction, RealInterval,
                              IntegerInterval, display, SortComponents,
-                             TraversalStrategy, Block, SimpleBlock,
-                             active_components, components, 
-                             active_components_data, components_data, 
+                             TraversalStrategy, Block, ScalarBlock,
+                             active_components, components,
+                             active_components_data, components_data,
                              global_option, Model, ConcreteModel,
-                             AbstractModel, pyomo_callback,
-                             IPyomoExpression, ExpressionFactory,
-                             ExpressionRegistration, IPyomoPresolver,
-                             IPyomoPresolveAction,
-                             IParamRepresentation,
-                             ParamRepresentationFactory,
-                             IPyomoScriptPreprocess,
-                             IPyomoScriptCreateModel,
-                             IPyomoScriptCreateDataPortal,
-                             IPyomoScriptModifyInstance,
-                             IPyomoScriptPrintModel,
-                             IPyomoScriptPrintInstance,
-                             IPyomoScriptSaveInstance,
-                             IPyomoScriptPrintResults,
-                             IPyomoScriptSaveResults,
-                             IPyomoScriptPostprocess,
+                             AbstractModel,
                              ModelComponentFactory, Transformation,
-                             TransformationFactory, instance2dat, 
+                             TransformationFactory, instance2dat,
                              set_options, RealSet, IntegerSet, BooleanSet,
                              prod, quicksum, sum_product, dot_product,
                              summation, sequence)
@@ -188,5 +145,16 @@ from pyomo.opt import (
     TerminationCondition, SolverStatus, check_optimal_termination,
     assert_optimal_termination
     )
-from pyomo.core.base.units_container import units
-from weakref import ref as weakref_ref
+from pyomo.core.base.units_container import units, as_quantity
+
+# These APIs are deprecated and should be removed in the near future
+from pyomo.common.deprecation import relocated_module_attribute
+relocated_module_attribute(
+    'SimpleBlock', 'pyomo.core.base.block.SimpleBlock', version='6.0')
+relocated_module_attribute(
+    'SimpleVar', 'pyomo.core.base.var.SimpleVar', version='6.0')
+relocated_module_attribute(
+    'SimpleBooleanVar', 'pyomo.core.base.boolean_var.SimpleBooleanVar',
+    version='6.0'
+)
+del relocated_module_attribute

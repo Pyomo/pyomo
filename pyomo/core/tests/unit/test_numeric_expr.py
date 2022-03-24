@@ -25,11 +25,19 @@ import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from io import StringIO
 
-from pyomo.environ import ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint, ConstraintList, Expression, Objective, Reals, ExternalFunction, PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos, asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value, quicksum, sum_product, is_fixed, is_constant
+from pyomo.environ import (
+    ConcreteModel, AbstractModel, RangeSet, Var, Param, Set, Constraint,
+    ConstraintList, Expression, Objective, Reals, ExternalFunction,
+    PositiveReals, log10, exp, floor, ceil, log, cos, sin, tan, acos,
+    asin, atan, sinh, cosh, tanh, acosh, asinh, atanh, sqrt, value,
+    quicksum, sum_product, is_fixed, is_constant
+)
 from pyomo.kernel import variable, expression, objective
-from pyomo.core.expr.numvalue import (NumericConstant, as_numeric,
-                                      native_numeric_types,
-                                      is_potentially_variable, polynomial_degree)
+
+from pyomo.core.expr.numvalue import (
+    NumericConstant, as_numeric, native_numeric_types,
+    is_potentially_variable, polynomial_degree
+)
 from pyomo.core.expr.numeric_expr import (
     ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
     ProductExpression, NegationExpression, linear_expression,
@@ -38,9 +46,10 @@ from pyomo.core.expr.numeric_expr import (
     NPV_PowExpression, NPV_DivisionExpression,
     decompose_term, clone_counter, nonlinear_expression,
     _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms,
-    LinearDecompositionError,
+    LinearDecompositionError, MaxExpression, MinExpression,
 )
 import pyomo.core.expr.logical_expr as logical_expr
+from pyomo.common.errors import PyomoException
 from pyomo.core.expr.visitor import (expression_to_string, 
                                      clone_expression)
 from pyomo.core.expr.current import Expr_if
@@ -50,44 +59,150 @@ from pyomo.core.expr import expr_common
 from pyomo.core.base.var import _GeneralVarData
 
 from pyomo.repn import generate_standard_repn
+from pyomo.core.expr.numvalue import NumericValue
+
+
+class decompose_linear_term_wrapper(object):
+    def __init__(self, pairs):
+        self.pairs = pairs
+
+    def __eq__(self, other):
+        if self.pairs is None:
+            if other.pairs is not None:
+                return False
+        else:
+            if other.pairs is None:
+                return False
+            if len(self.pairs) != len(other.pairs):
+                return False
+            for ndx in range(len(self.pairs)):
+                if value(self.pairs[ndx][0]) != value(other.pairs[ndx][0]):
+                    return False
+                if self.pairs[ndx][1] is not other.pairs[ndx][1]:
+                    return False
+        return True
+
+
+class decompose_term_wrapper(decompose_linear_term_wrapper):
+    def __init__(self, decomposed_term):
+        lin, pairs = decomposed_term
+        super().__init__(pairs)
+        self.linear = lin
+
+    def __eq__(self, other):
+        if self.linear != other.linear:
+            return False
+        return super().__eq__(other)
+
 
 class TestExpression_EvaluateNumericConstant(unittest.TestCase):
-
-    def setUp(self):
-        # Do we expect arithmetic operations to return expressions?
-        self.expectExpression = False
-        # Do we expect relational tests to return constant expressions?
-        self.expectConstExpression = True
 
     def create(self, val, domain):
         # Create the type of expression term that we are testing
         return NumericConstant(val)
 
-    @unittest.nottest
-    def value_test(self, exp, val, expectExpression=None):
-        """ Test the value of the expression. """
-        #
-        # Override the class value of 'expectExpression'
-        #
-        if expectExpression is None:
-            expectExpression = self.expectExpression
+    def value_check(self, exp, val):
+        """ Check the value of the expression. """
         #
         # Confirm whether 'exp' is an expression
         #
-        self.assertEqual(isinstance(exp,ExpressionBase), expectExpression)
+        self.assertEqual(isinstance(exp, ExpressionBase), False)
         #
         # Confirm that 'exp' has the expected value
         #
-        self.assertEqual(value(exp), val)
+        self.assertEqual(exp, val)
 
-    @unittest.nottest
-    def relation_test(self, exp, val, expectConstExpression=None):
-        """ Test a relationship expression. """
+    def relation_check(self, exp, val):
+        self.assertEqual(type(exp), bool)
+        self.assertEqual(exp, val)
+
+    def test_lt(self):
         #
-        # Override the class value of 'expectConstExpression'
+        # Test the 'less than' operator
         #
-        if expectConstExpression is None:
-            expectConstExpression = self.expectConstExpression
+        a=self.create(1.3, Reals)
+        b=self.create(2.0, Reals)
+        self.relation_check(a<b, True)
+        self.relation_check(a<a, False) 
+        self.relation_check(b<a, False)
+        self.relation_check(a<2.0, True)
+        self.relation_check(a<1.3, False)
+        self.relation_check(b<1.3, False)
+        self.relation_check(1.3<b, True)
+        self.relation_check(1.3<a, False)
+        self.relation_check(2.0<a, False)
+
+    def test_gt(self):
+        #
+        # Test the 'greater than' operator
+        #
+        a=self.create(1.3, Reals)
+        b=self.create(2.0, Reals)
+        self.relation_check(a>b, False)
+        self.relation_check(a>a, False)
+        self.relation_check(b>a, True)
+        self.relation_check(a>2.0, False)
+        self.relation_check(a>1.3, False)
+        self.relation_check(b>1.3, True)
+        self.relation_check(1.3>b, False)
+        self.relation_check(1.3>a, False)
+        self.relation_check(2.0>a, True)
+
+    def test_eq(self):
+        #
+        # Test the 'equals' operator
+        #
+        a=self.create(1.3, Reals)
+        b=self.create(2.0, Reals)
+        self.relation_check(a==b, False)
+        self.relation_check(a==a, True)
+        self.relation_check(b==a, False)
+        self.relation_check(a==2.0, False)
+        self.relation_check(a==1.3, True)
+        self.relation_check(b==1.3, False)
+        self.relation_check(1.3==b, False)
+        self.relation_check(1.3==a, True)
+        self.relation_check(2.0==a, False)
+
+    def test_arithmetic(self):
+        #
+        #
+        # Test binary arithmetic operators
+        #
+        a=self.create(-0.5, Reals)
+        b=self.create(2.0, Reals)
+        self.value_check(a-b, -2.5)
+        self.value_check(a+b, 1.5)
+        self.value_check(a*b, -1.0)
+        self.value_check(b/a, -4.0)
+        self.value_check(a**b, 0.25)
+
+        self.value_check(a-2.0, -2.5)
+        self.value_check(a+2.0, 1.5)
+        self.value_check(a*2.0, -1.0)
+        self.value_check(b/(0.5), 4.0)
+        self.value_check(a**2.0, 0.25)
+
+        self.value_check(0.5-b, -1.5)
+        self.value_check(0.5+b, 2.5)
+        self.value_check(0.5*b, 1.0)
+        self.value_check(2.0/a, -4.0)
+        self.value_check((0.5)**b, 0.25)
+
+        self.value_check(-a, 0.5)
+        self.assertIs(+a, a)
+        self.value_check(abs(-a), 0.5)
+
+
+class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant):
+
+    def create(self, val, domain):
+        tmp = Var(name='unknown', initialize=val, domain=domain)
+        tmp.construct()
+        return tmp
+
+    def relation_check(self, exp, val):
+        """ Check a relationship expression. """
         #
         # Confirm that this is a relational expression
         #
@@ -100,133 +215,30 @@ class TestExpression_EvaluateNumericConstant(unittest.TestCase):
         #
         # Check that the expression evaluates correctly in a Boolean context
         #
-        try:
-            if expectConstExpression:
-                #
-                # The relational expression should be a constant.
-                #
-                # Check that 'val' equals the boolean value of the expression.
-                #
-                self.assertEqual(bool(exp), val)
-                #
-                # The 'chainedInequality' value is None
-                #
-                if logical_expr._using_chained_inequality:
-                    self.assertIsNone(logical_expr._chainedInequality.prev)
-            else:
-                #
-                # The relational expression may not be constant
-                #
-                # Check that the expression evaluates to 'val'
-                #
-                if logical_expr._using_chained_inequality:
-                    self.assertEqual(bool(exp), True)
-                else:
-                    self.assertEqual(bool(exp), val)
-                #
-                # Check that the 'chainedInequality' value is the current expression
-                #
-                if logical_expr._using_chained_inequality:
-                    self.assertIs(exp,logical_expr._chainedInequality.prev)
-        finally:
-            #
-            # TODO: Why would we get here?  Because the expression isn't constant?
-            #
-            # Check that the 'chainedInequality' value is None
-            #
-            if logical_expr._using_chained_inequality:
-                logical_expr._chainedInequality.prev = None
+        #
+        # The relational expression may not be constant
+        #
+        # Check that the expression evaluates to 'val'
+        #
+        if isinstance(exp, logical_expr.EqualityExpression) and exp.args[0] is exp.args[1]:
+            self.assertEqual(bool(exp), val)
+        else:
+            with self.assertRaises(PyomoException):
+                bool(exp)
 
-    def test_lt(self):
+    def value_check(self, exp, val):
+        """ Check the value of the expression. """
         #
-        # Test the 'less than' operator
+        # Confirm whether 'exp' is an expression
         #
-        a=self.create(1.3, Reals)
-        b=self.create(2.0, Reals)
-        self.relation_test(a<b, True)
-        self.relation_test(a<a, False) 
-        self.relation_test(b<a, False)
-        self.relation_test(a<2.0, True)
-        self.relation_test(a<1.3, False)
-        self.relation_test(b<1.3, False)
-        self.relation_test(1.3<b, True)
-        self.relation_test(1.3<a, False)
-        self.relation_test(2.0<a, False)
-
-    def test_gt(self):
+        self.assertEqual(isinstance(exp, ExpressionBase), True)
         #
-        # Test the 'greater than' operator
+        # Confirm that 'exp' has the expected value
         #
-        a=self.create(1.3, Reals)
-        b=self.create(2.0, Reals)
-        self.relation_test(a>b, False)
-        self.relation_test(a>a, False)
-        self.relation_test(b>a, True)
-        self.relation_test(a>2.0, False)
-        self.relation_test(a>1.3, False)
-        self.relation_test(b>1.3, True)
-        self.relation_test(1.3>b, False)
-        self.relation_test(1.3>a, False)
-        self.relation_test(2.0>a, True)
-
-    def test_eq(self):
-        #
-        # Test the 'equals' operator
-        #
-        a=self.create(1.3, Reals)
-        b=self.create(2.0, Reals)
-        self.relation_test(a==b, False, True)
-        self.relation_test(a==a, True, True)
-        self.relation_test(b==a, False, True)
-        self.relation_test(a==2.0, False, True)
-        self.relation_test(a==1.3, True, True)
-        self.relation_test(b==1.3, False, True)
-        self.relation_test(1.3==b, False, True)
-        self.relation_test(1.3==a, True, True)
-        self.relation_test(2.0==a, False, True)
-
-    def test_arithmetic(self):
-        #
-        #
-        # Test binary arithmetic operators
-        #
-        a=self.create(-0.5, Reals)
-        b=self.create(2.0, Reals)
-        self.value_test(a-b, -2.5)
-        self.value_test(a+b, 1.5)
-        self.value_test(a*b, -1.0)
-        self.value_test(b/a, -4.0)
-        self.value_test(a**b, 0.25)
-
-        self.value_test(a-2.0, -2.5)
-        self.value_test(a+2.0, 1.5)
-        self.value_test(a*2.0, -1.0)
-        self.value_test(b/(0.5), 4.0)
-        self.value_test(a**2.0, 0.25)
-
-        self.value_test(0.5-b, -1.5)
-        self.value_test(0.5+b, 2.5)
-        self.value_test(0.5*b, 1.0)
-        self.value_test(2.0/a, -4.0)
-        self.value_test((0.5)**b, 0.25)
-
-        self.value_test(-a, 0.5)
-        self.value_test(+a, -0.5, False)        # This doesn't generate an expression
-        self.value_test(abs(-a), 0.5)
+        self.assertEqual(value(exp), val)
 
 
-class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        TestExpression_EvaluateNumericConstant.setUp(self)
-        #
-        # Create model instance
-        #
-        self.expectExpression = True
-        self.expectConstExpression = False
+class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericValue):
 
     def create(self, val, domain):
         tmp=_GeneralVarData()
@@ -235,18 +247,7 @@ class TestExpression_EvaluateVarData(TestExpression_EvaluateNumericConstant):
         return tmp
 
 
-class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        TestExpression_EvaluateNumericConstant.setUp(self)
-        #
-        # Create model instance
-        #
-        self.expectExpression = True
-        self.expectConstExpression = False
+class TestExpression_EvaluateVar(TestExpression_EvaluateNumericValue):
 
     def create(self, val, domain):
         tmp=Var(name="unknown",domain=domain)
@@ -255,18 +256,7 @@ class TestExpression_EvaluateVar(TestExpression_EvaluateNumericConstant):
         return tmp
 
 
-class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        TestExpression_EvaluateNumericConstant.setUp(self)
-        #
-        # Create model instance
-        #
-        self.expectExpression = True
-        self.expectConstExpression = False
+class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericValue):
 
     def create(self, val, domain):
         tmp=Var(name="unknown", domain=domain)
@@ -278,35 +268,13 @@ class TestExpression_EvaluateFixedVar(TestExpression_EvaluateNumericConstant):
 
 class TestExpression_EvaluateImmutableParam(TestExpression_EvaluateNumericConstant):
 
-    def setUp(self):
-        #
-        # Create Model
-        #
-        TestExpression_EvaluateNumericConstant.setUp(self)
-        #
-        # Create model instance
-        #
-        self.expectExpression = False
-        self.expectConstExpression = True
-
     def create(self, val, domain):
         tmp=Param(default=val, mutable=False, within=domain)
         tmp.construct()
         return tmp
 
 
-class TestExpression_Evaluate_MutableParam(TestExpression_EvaluateNumericConstant):
-
-    def setUp(self):
-        #
-        # Create Model
-        #
-        TestExpression_EvaluateNumericConstant.setUp(self)
-        #
-        # Create model instance
-        #
-        self.expectExpression = True
-        self.expectConstExpression = False
+class TestExpression_Evaluate_MutableParam(TestExpression_EvaluateNumericValue):
 
     def create(self, val, domain):
         tmp=Param(default=val, mutable=True, within=domain)
@@ -1964,19 +1932,19 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.p = Param(A, initialize=2, mutable=True)
 
         expr = quicksum(i*model.a[i] for i in A)
-        self.assertEqual("sum(a[1], prod(2, a[2]), prod(3, a[3]), prod(4, a[4]))", str(expr))
+        self.assertEqual("sum(mon(1, a[1]), mon(2, a[2]), mon(3, a[3]), mon(4, a[4]))", str(expr))
 
         expr = quicksum((i-2)*model.a[i] for i in A)
-        self.assertEqual("sum(prod(-2, a[0]), prod(-1, a[1]), a[3], prod(2, a[4]))", str(expr))
+        self.assertEqual("sum(mon(-2, a[0]), mon(-1, a[1]), mon(1, a[3]), mon(2, a[4]))", str(expr))
 
         expr = quicksum(model.a[i] for i in A)
-        self.assertEqual("sum(a[0], a[1], a[2], a[3], a[4])", str(expr))
+        self.assertEqual("sum(mon(1, a[0]), mon(1, a[1]), mon(1, a[2]), mon(1, a[3]), mon(1, a[4]))", str(expr))
 
         model.p[1].value = 0
         model.p[3].value = 3
         expr = quicksum(model.p[i]*model.a[i] if i != 3 else model.p[i] for i in A)
-        self.assertEqual("sum(3, prod(2, a[0]), prod(2, a[2]), prod(2, a[4]))", expression_to_string(expr, compute_values=True))
-        self.assertEqual("sum(p[3], prod(p[0], a[0]), prod(p[1], a[1]), prod(p[2], a[2]), prod(p[4], a[4]))", expression_to_string(expr, compute_values=False))
+        self.assertEqual("sum(3, mon(2, a[0]), mon(0, a[1]), mon(2, a[2]), mon(2, a[4]))", expression_to_string(expr, compute_values=True))
+        self.assertEqual("sum(p[3], mon(p[0], a[0]), mon(p[1], a[1]), mon(p[2], a[2]), mon(p[4], a[4]))", expression_to_string(expr, compute_values=False))
 
     def test_expr(self):
         #
@@ -2025,19 +1993,19 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         model.a = Var()
 
         expr = 5 < model.a
-        self.assertEqual( "5.0  <  a", str(expr) )
+        self.assertEqual( "5  <  a", str(expr) )
 
         expr = model.a >= 5
-        self.assertEqual( "5.0  <=  a", str(expr) )
+        self.assertEqual( "5  <=  a", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5.0  <=  a  <  10.0", str(expr) )
+        self.assertEqual( "5  <=  a  <  10", str(expr) )
 
         expr = 5 <= model.a + 5
-        self.assertEqual( "5.0  <=  sum(a, 5)", str(expr) )
+        self.assertEqual( "5  <=  sum(a, 5)", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5.0  <=  sum(a, 5)  <  10.0", str(expr) )
+        self.assertEqual( "5  <=  sum(a, 5)  <  10", str(expr) )
 
     def test_equality(self):
         #
@@ -2056,16 +2024,16 @@ class TestPrettyPrinter_oldStyle(unittest.TestCase):
         # NB: since there is no "reverse equality" operator, explicit
         # constants will always show up second.
         expr = 5 == model.a
-        self.assertEqual( "a  ==  5.0", str(expr) )
+        self.assertEqual( "a  ==  5", str(expr) )
 
         expr = model.a == 10
-        self.assertEqual( "a  ==  10.0", str(expr) )
+        self.assertEqual( "a  ==  10", str(expr) )
 
         expr = 5 == model.a + 5
-        self.assertEqual( "sum(a, 5)  ==  5.0", str(expr) )
+        self.assertEqual( "sum(a, 5)  ==  5", str(expr) )
 
         expr = model.a + 5 == 5
-        self.assertEqual( "sum(a, 5)  ==  5.0", str(expr) )
+        self.assertEqual( "sum(a, 5)  ==  5", str(expr) )
 
     def test_getitem(self):
         m = ConcreteModel()
@@ -2151,8 +2119,8 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         self.assertEqual("a[1] + 2*a[2] + 3*a[3] + 4*a[4] + 3", expression_to_string(expr, compute_values=True))
 
         expr = quicksum((i-2)*model.a[i] for i in A) + 3
-        self.assertEqual("- 2.0*a[0] - a[1] + a[3] + 2*a[4] + 3", str(expr))
-        self.assertEqual("- 2.0*a[0] - a[1] + a[3] + 2*a[4] + 3", expression_to_string(expr, compute_values=True))
+        self.assertEqual("-2*a[0] - a[1] + a[3] + 2*a[4] + 3", str(expr))
+        self.assertEqual("-2*a[0] - a[1] + a[3] + 2*a[4] + 3", expression_to_string(expr, compute_values=True))
 
         expr = quicksum(model.a[i] for i in A) + 3
         self.assertEqual("a[0] + a[1] + a[2] + a[3] + a[4] + 3", str(expr))
@@ -2165,7 +2133,7 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.p[1].value = 0
         model.p[3].value = 3
         expr = quicksum(model.p[i]*model.a[i] if i != 3 else model.p[i] for i in A)
-        self.assertEqual("3 + 2*a[0] + 2*a[2] + 2*a[4]", expression_to_string(expr, compute_values=True))
+        self.assertEqual("3 + 2*a[0] + 0*a[1] + 2*a[2] + 2*a[4]", expression_to_string(expr, compute_values=True))
         expr = quicksum(model.p[i]*model.a[i] if i != 3 else -3 for i in A)
         self.assertEqual("-3 + p[0]*a[0] + p[1]*a[1] + p[2]*a[2] + p[4]*a[4]", expression_to_string(expr, compute_values=False))
         
@@ -2228,19 +2196,19 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         model.a = Var()
 
         expr = 5 < model.a
-        self.assertEqual( "5.0  <  a", str(expr) )
+        self.assertEqual( "5  <  a", str(expr) )
 
         expr = model.a >= 5
-        self.assertEqual( "5.0  <=  a", str(expr) )
+        self.assertEqual( "5  <=  a", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5.0  <=  a  <  10.0", str(expr) )
+        self.assertEqual( "5  <=  a  <  10", str(expr) )
 
         expr = 5 <= model.a + 5
-        self.assertEqual( "5.0  <=  a + 5", str(expr) )
+        self.assertEqual( "5  <=  a + 5", str(expr) )
 
         expr = expr < 10
-        self.assertEqual( "5.0  <=  a + 5  <  10.0", str(expr) )
+        self.assertEqual( "5  <=  a + 5  <  10", str(expr) )
 
     def test_equality(self):
         #
@@ -2259,16 +2227,16 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         # NB: since there is no "reverse equality" operator, explicit
         # constants will always show up second.
         expr = 5 == model.a
-        self.assertEqual( "a  ==  5.0", str(expr) )
+        self.assertEqual( "a  ==  5", str(expr) )
 
         expr = model.a == 10
-        self.assertEqual( "a  ==  10.0", str(expr) )
+        self.assertEqual( "a  ==  10", str(expr) )
 
         expr = 5 == model.a + 5
-        self.assertEqual( "a + 5  ==  5.0", str(expr) )
+        self.assertEqual( "a + 5  ==  5", str(expr) )
 
         expr = model.a + 5 == 5
-        self.assertEqual( "a + 5  ==  5.0", str(expr) )
+        self.assertEqual( "a + 5  ==  5", str(expr) )
 
 
     def test_linear(self):
@@ -2300,9 +2268,9 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         m.a = Var()
         m.b = Var()
         expr = Expr_if(IF=m.a + m.b < 20, THEN=m.a, ELSE=m.b)
-        self.assertEqual("Expr_if( ( a + b  <  20.0 ), then=( a ), else=( b ) )", str(expr))
+        self.assertEqual("Expr_if( ( a + b  <  20 ), then=( a ), else=( b ) )", str(expr))
         expr = Expr_if(IF=m.a + m.b < 20, THEN=1, ELSE=m.b)
-        self.assertEqual("Expr_if( ( a + b  <  20.0 ), then=( 1 ), else=( b ) )", str(expr))
+        self.assertEqual("Expr_if( ( a + b  <  20 ), then=( 1 ), else=( b ) )", str(expr))
 
     def test_getitem(self):
         m = ConcreteModel()
@@ -2485,14 +2453,14 @@ class TestPrettyPrinter_newStyle(unittest.TestCase):
         labeler = NumericLabeler('x')
         self.assertEqual(
             expression_to_string(e, labeler=labeler),
-            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (q[0]*x3 + q[1]*x4 + q[2]*x5)/x1")
+            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (x6*x3 + x7*x4 + x8*x5)/x1")
 
         from pyomo.core.expr.symbol_map import SymbolMap
         labeler = NumericLabeler('x')
         smap = SymbolMap(labeler)
         self.assertEqual(
             expression_to_string(e, smap=smap),
-            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (q[0]*x3 + q[1]*x4 + q[2]*x5)/x1")
+            "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (x6*x3 + x7*x4 + x8*x5)/x1")
         self.assertEqual(
             expression_to_string(e, smap=smap, compute_values=True),
             "x1*x2 + (2*x3 + 2*x4 + 2*x5) + (3*x3 + 3*x4 + 3*x5)/x1")
@@ -2706,40 +2674,34 @@ class TestGeneralExpressionGeneration(unittest.TestCase):
 class TestExprConditionalContext(unittest.TestCase):
 
 
-    def tearDown(self):
-        # Make sure errors here don't bleed over to other tests
-        if logical_expr._using_chained_inequality:
-            logical_expr._chainedInequality.prev = None
-
-    def checkCondition(self, expr, expectedValue):
+    def checkCondition(self, expr, expectedValue, use_value=False):
+        if use_value:
+            expr = value(expr)
         try:
             if expr:
-                if not logical_expr._using_chained_inequality and expectedValue != True:
-                    self.fail("__nonzero__ returned the wrong condition value"
+                if expectedValue != True:
+                    self.fail("__bool__ returned the wrong condition value"
                               " (expected %s)" % expectedValue)
             else:
                 if expectedValue != False:
-                    self.fail("__nonzero__ returned the wrong condition value"
+                    self.fail("__bool__ returned the wrong condition value"
                               " (expected %s)" % expectedValue)
             if expectedValue is None:
                 self.fail("Expected ValueError because component was undefined")
-        except ValueError:
+        except (ValueError, PyomoException):
             if expectedValue is not None:
                 raise
-        finally:
-            if logical_expr._using_chained_inequality:
-                logical_expr._chainedInequality.prev = None
 
     def test_immutable_paramConditional(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
-        #
-        try:
+        # Immutable Params appear mutable (non-constant) before they are
+        # constructed
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(model.p > 0, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the parameter is unconstructed.")
-        except ValueError:
-            pass
         #self.checkCondition(model.p >= 0, True)
         #self.checkCondition(model.p < 1, True)
         #self.checkCondition(model.p <= 1, True)
@@ -2749,12 +2711,11 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         # Inequalities evaluate normally when the parameter is initialized
         #
-        try:
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(model.p > 0, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the parameter is unconstructed.")
-        except ValueError:
-            pass
         #self.checkCondition(model.p >= 0, True)
         #self.checkCondition(model.p < 1, True)
         #self.checkCondition(model.p <= 1, True)
@@ -2775,14 +2736,38 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_immutable_paramConditional_reversed(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
-        #
-        # TODO: Inequalities evaluate True when the parameter is unconstructed?
-        #
-        self.checkCondition(0 < model.p, True)
-        self.checkCondition(0 <= model.p, True)
-        self.checkCondition(1 > model.p, True)
-        self.checkCondition(1 >= model.p, True)
-        self.checkCondition(0 == model.p, None)
+        # Immutable Params appear mutable (non-constant) before they are
+        # constructed
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
+            self.checkCondition(0 < model.p, True)
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <=  p\) to bool."):
+            self.checkCondition(0 <= model.p, True)
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(p  <  1\) to bool."):
+            self.checkCondition(1 > model.p, True)
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(p  <=  1\) to bool."):
+            self.checkCondition(1 >= model.p, True)
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  ==  p\) to bool."):
+            self.checkCondition(0 == model.p, None)
+        self.checkCondition(0 < model.p, True, use_value=True)
+        self.checkCondition(0 <= model.p, True, use_value=True)
+        self.checkCondition(1 > model.p, True, use_value=True)
+        self.checkCondition(1 >= model.p, True, use_value=True)
+        self.checkCondition(0 == model.p, None, use_value=True)
 
         instance = model.create_instance()
         #
@@ -2805,13 +2790,13 @@ class TestExprConditionalContext(unittest.TestCase):
     def test_immutable_paramConditional_reversed(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=False)
-        #
-        try:
+        # Immutable Params appear mutable (non-constant) before they are
+        # constructed
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(0 < model.p, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the parameter value is being accessed before it is constructed.")
-        except ValueError:
-            pass
         #self.checkCondition(0 <= model.p, True)
         #self.checkCondition(1 > model.p, True)
         #self.checkCondition(1 >= model.p, True)
@@ -2836,72 +2821,103 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=True)
         #
-        try:
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(model.p > 0, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the parameter value is being accessed before it is constructed.")
-        except ValueError:
-            pass
         #self.checkCondition(model.p >= 0, True)
         #self.checkCondition(model.p < 1, True)
         #self.checkCondition(model.p <= 1, True)
         #self.checkCondition(model.p == 0, None)
 
         instance = model.create_instance()
-        #
-        # Inequalities evaluate normally when the parameter is initialized
-        #
-        self.checkCondition(instance.p > 0, True)
-        self.checkCondition(instance.p > 2, False)
-        self.checkCondition(instance.p >= 1, True)
-        self.checkCondition(instance.p >= 2, False)
-        self.checkCondition(instance.p < 2, True)
-        self.checkCondition(instance.p < 0, False)
-        self.checkCondition(instance.p <= 1, True)
-        self.checkCondition(instance.p <= 0, False)
-        self.checkCondition(instance.p == 1, True)
-        self.checkCondition(instance.p == 2, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p > 0, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p > 2, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p >= 1, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p >= 2, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p < 2, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p < 0, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p <= 1, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p <= 0, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p == 1, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.p == 2, False)
+        self.checkCondition(instance.p > 0, True, use_value=True)
+        self.checkCondition(instance.p > 2, False, use_value=True)
+        self.checkCondition(instance.p >= 1, True, use_value=True)
+        self.checkCondition(instance.p >= 2, False, use_value=True)
+        self.checkCondition(instance.p < 2, True, use_value=True)
+        self.checkCondition(instance.p < 0, False, use_value=True)
+        self.checkCondition(instance.p <= 1, True, use_value=True)
+        self.checkCondition(instance.p <= 0, False, use_value=True)
+        self.checkCondition(instance.p == 1, True, use_value=True)
+        self.checkCondition(instance.p == 2, False, use_value=True)
 
     def test_mutable_paramConditional_reversed(self):
         model = AbstractModel()
         model.p = Param(initialize=1.0, mutable=True)
         #
-        try:
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  p\) to bool."):
             self.checkCondition(0 < model.p, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the parameter value is being accessed before it is constructed.")
-        except ValueError:
-            pass
         #self.checkCondition(0 <= model.p, True)
         #self.checkCondition(1 > model.p, True)
         #self.checkCondition(1 >= model.p, True)
         #self.checkCondition(0 == model.p, None)
 
         instance = model.create_instance()
-        #
-        # Inequalities evaluate normally when the parameter is initialized
-        #
-        self.checkCondition(0 < instance.p, True)
-        self.checkCondition(2 < instance.p, False)
-        self.checkCondition(1 <= instance.p, True)
-        self.checkCondition(2 <= instance.p, False)
-        self.checkCondition(2 > instance.p, True)
-        self.checkCondition(0 > instance.p, False)
-        self.checkCondition(1 >= instance.p, True)
-        self.checkCondition(0 >= instance.p, False)
-        self.checkCondition(1 == instance.p, True)
-        self.checkCondition(2 == instance.p, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 < instance.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 < instance.p, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 <= instance.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 <= instance.p, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 > instance.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 > instance.p, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 >= instance.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 >= instance.p, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 == instance.p, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 == instance.p, False)
+        self.checkCondition(0 < instance.p, True, use_value=True)
+        self.checkCondition(2 < instance.p, False, use_value=True)
+        self.checkCondition(1 <= instance.p, True, use_value=True)
+        self.checkCondition(2 <= instance.p, False, use_value=True)
+        self.checkCondition(2 > instance.p, True, use_value=True)
+        self.checkCondition(0 > instance.p, False, use_value=True)
+        self.checkCondition(1 >= instance.p, True, use_value=True)
+        self.checkCondition(0 >= instance.p, False, use_value=True)
+        self.checkCondition(1 == instance.p, True, use_value=True)
+        self.checkCondition(2 == instance.p, False, use_value=True)
 
     def test_varConditional(self):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        try:
+        with self.assertRaisesRegex(
+                PyomoException,
+                r"Cannot convert non-constant Pyomo expression "
+                r"\(0  <  v\) to bool."):
             self.checkCondition(model.v > 0, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the variable value is being accessed before it is constructed.")
-        except:
-            pass
         #self.checkCondition(model.v >= 0, True)
         #self.checkCondition(model.v < 1, True)
         #self.checkCondition(model.v <= 1, True)
@@ -2911,27 +2927,45 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         # Inequalities evaluate normally when the variable is initialized
         #
-        self.checkCondition(instance.v > 0, True)
-        self.checkCondition(instance.v > 2, False)
-        self.checkCondition(instance.v >= 1, True)
-        self.checkCondition(instance.v >= 2, False)
-        self.checkCondition(instance.v < 2, True)
-        self.checkCondition(instance.v < 0, False)
-        self.checkCondition(instance.v <= 1, True)
-        self.checkCondition(instance.v <= 0, False)
-        self.checkCondition(instance.v == 1, True)
-        self.checkCondition(instance.v == 2, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v > 0, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v > 2, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v >= 1, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v >= 2, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v < 2, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v < 0, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v <= 1, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v <= 0, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v == 1, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(instance.v == 2, False)
+        self.checkCondition(instance.v > 0, True, use_value=True)
+        self.checkCondition(instance.v > 2, False, use_value=True)
+        self.checkCondition(instance.v >= 1, True, use_value=True)
+        self.checkCondition(instance.v >= 2, False, use_value=True)
+        self.checkCondition(instance.v < 2, True, use_value=True)
+        self.checkCondition(instance.v < 0, False, use_value=True)
+        self.checkCondition(instance.v <= 1, True, use_value=True)
+        self.checkCondition(instance.v <= 0, False, use_value=True)
+        self.checkCondition(instance.v == 1, True, use_value=True)
+        self.checkCondition(instance.v == 2, False, use_value=True)
 
     def test_varConditional_reversed(self):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        try:
+        with self.assertRaisesRegex(
+                PyomoException, r"Cannot convert non-constant Pyomo "
+                r"expression \(0  <  v\) to bool."):
             self.checkCondition(0 < model.v, True)
-            if not logical_expr._using_chained_inequality:
-                self.fail("Expected ValueError because the variable value is being accessed before it is constructed.")
-        except:
-            pass
         #self.checkCondition(0 <= model.v, True)
         #self.checkCondition(1 > model.v, True)
         #self.checkCondition(1 >= model.v, True)
@@ -2941,48 +2975,64 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         # Inequalities evaluate normally when the variable is initialized
         #
-        self.checkCondition(0 < instance.v, True)
-        self.checkCondition(2 < instance.v, False)
-        self.checkCondition(1 <= instance.v, True)
-        self.checkCondition(2 <= instance.v, False)
-        self.checkCondition(2 > instance.v, True)
-        self.checkCondition(0 > instance.v, False)
-        self.checkCondition(1 >= instance.v, True)
-        self.checkCondition(0 >= instance.v, False)
-        self.checkCondition(1 == instance.v, True)
-        self.checkCondition(2 == instance.v, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 < instance.v, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 < instance.v, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 <= instance.v, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 <= instance.v, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 > instance.v, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 > instance.v, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 >= instance.v, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(0 >= instance.v, False)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(1 == instance.v, True)
+        with self.assertRaises(PyomoException):
+            self.checkCondition(2 == instance.v, False)
+        self.checkCondition(0 < instance.v, True, use_value=True)
+        self.checkCondition(2 < instance.v, False, use_value=True)
+        self.checkCondition(1 <= instance.v, True, use_value=True)
+        self.checkCondition(2 <= instance.v, False, use_value=True)
+        self.checkCondition(2 > instance.v, True, use_value=True)
+        self.checkCondition(0 > instance.v, False, use_value=True)
+        self.checkCondition(1 >= instance.v, True, use_value=True)
+        self.checkCondition(0 >= instance.v, False, use_value=True)
+        self.checkCondition(1 == instance.v, True, use_value=True)
+        self.checkCondition(2 == instance.v, False, use_value=True)
 
     def test_eval_sub_varConditional(self):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        # The value() function generates an exception when the variable is unconstructed!
+        # The value() function generates an exception when the variable
+        # is unconstructed!
         #
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v) > 0, None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v) >= 0, None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v) < 1, None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v) <= 1, None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v) == 0, None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
 
         instance = model.create_instance()
         #
@@ -3003,33 +3053,29 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        # The value() function generates an exception when the variable is unconstructed!
+        # The value() function generates an exception when the variable
+        # is unconstructed!
         #
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(0 < value(model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(0 <= value(model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(1 > value(model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(1 >= value(model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(0 == value(model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
 
         instance = model.create_instance()
         #
@@ -3050,23 +3096,21 @@ class TestExprConditionalContext(unittest.TestCase):
         model = AbstractModel()
         model.v = Var(initialize=1.0)
         #
-        # The value() function generates an exception when the variable is unconstructed!
+        # The value() function generates an exception when the variable
+        # is unconstructed!
         #
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v > 0), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v >= 0), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(model.v == 0), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
 
         instance = model.create_instance()
         self.checkCondition(value(instance.v > 0), True)
@@ -3082,21 +3126,18 @@ class TestExprConditionalContext(unittest.TestCase):
         #
         # The value() function generates an exception when the variable is unconstructed!
         #
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(0 < model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(0 <= model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
-        try:
+        with self.assertRaisesRegex(
+                RuntimeError, r"Cannot access property 'value' on "
+                r"AbstractScalarVar 'v' before it has been constructed"):
             self.checkCondition(value(0 == model.v), None)
-            self.fail("Expected ValueError because component was undefined")
-        except ValueError:
-            pass
 
         instance = model.create_instance()
         #
@@ -3116,13 +3157,13 @@ class TestPolynomialDegree(unittest.TestCase):
         # This class tests the Pyomo 5.x expression trees
         def d_fn(model):
             return model.c+model.c
-        self.model = AbstractModel()
+        self.model = ConcreteModel()
         self.model.a = Var(initialize=1.0)
         self.model.b = Var(initialize=2.0)
         self.model.c = Param(initialize=0, mutable=True)
         self.model.d = Param(initialize=d_fn, mutable=True)
         self.model.e = Param(mutable=True)
-        self.instance = self.model.create_instance()
+        self.instance = self.model
 
     def tearDown(self):
         self.model = None
@@ -3416,7 +3457,7 @@ class TestPolynomialDegree(unittest.TestCase):
         expr = Expr_if(m.e,1,0)
         self.assertEqual(expr.polynomial_degree(), 0)
         #
-        # A nonconstant expression has degree if both arguments have the
+        # A non-constant expression has degree if both arguments have the
         # same degree, as long as the IF is fixed (even if it is not
         # defined)
         #
@@ -3425,7 +3466,7 @@ class TestPolynomialDegree(unittest.TestCase):
         expr = Expr_if(m.e,5*m.b,1+m.b)
         self.assertEqual(expr.polynomial_degree(), 1)
         #
-        # A nonconstant expression has degree None because
+        # A non-constant expression has degree None because
         # m.e is an uninitialized parameter
         #
         expr = Expr_if(m.e,m.b,0)
@@ -3491,7 +3532,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
         self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
-        self.assertEqual(e.size(), 1)
+        self.assertEqual(e.size(), 16)
 
     def test_summation2(self):
         e = sum_product(self.m.p, self.m.a)
@@ -3499,7 +3540,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
         self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
-        self.assertEqual(e.size(), 1)
+        self.assertEqual(e.size(), 16)
 
     def test_summation3(self):
         e = sum_product(self.m.q, self.m.a)
@@ -3507,7 +3548,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
         self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
-        self.assertEqual(e.size(), 1)
+        self.assertEqual(e.size(), 16)
 
     def test_summation4(self):
         e = sum_product(self.m.a, self.m.b)
@@ -3527,9 +3568,9 @@ class TestSummationExpression(unittest.TestCase):
         e = sum_product(self.m.a, denom=self.m.p)
         self.assertEqual( e(), 25 )
         self.assertIs(type(e), LinearExpression)
-        #self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(0)) )
-        #self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(0)) )
-        #self.assertEqual(e.size(), 21)
+        self.assertEqual( id(self.m.a[1]), id(e.linear_vars[0]) )
+        self.assertEqual( id(self.m.a[2]), id(e.linear_vars[1]) )
+        self.assertEqual(e.size(), 26)
 
     def test_summation7(self):
         e = sum_product(self.m.p, self.m.q, index=self.m.I)
@@ -3545,7 +3586,7 @@ class TestSummationExpression(unittest.TestCase):
         self.assertEqual( e(), 75 )
         self.assertIs(type(e), SumExpression)
         self.assertEqual( e.nargs(), 2)
-        self.assertEqual(e.size(), 3)
+        self.assertEqual(e.size(), 33)
 
 
 class TestSumExpression(unittest.TestCase):
@@ -3767,7 +3808,7 @@ class TestCloneExpression(unittest.TestCase):
             self.assertEqual( expr1(), 25 )
             self.assertEqual( expr2(), 25 )
             self.assertNotEqual( id(expr1),        id(expr2) )
-            self.assertEqual( id(expr1._args_), id(expr2._args_) )
+            self.assertNotEqual( id(expr1._args_), id(expr2._args_) )
             self.assertNotEqual( id(expr1.linear_vars[0]), id(expr2.linear_vars[0]) )
             self.assertNotEqual( id(expr1.linear_vars[1]), id(expr2.linear_vars[1]) )
             expr1 += self.m.b
@@ -4512,6 +4553,74 @@ class TestIsFixedIsConstant(unittest.TestCase):
 # It's probably worth confirming the final linear expression that is generated.
 class TestLinearExpression(unittest.TestCase):
 
+    def test_init(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        e = LinearExpression(
+            constant=5, linear_vars=[m.x, m.y], linear_coefs=[2,3])
+        self.assertEqual(e._args_cache_, [])
+        self.assertEqual(e.constant, 5)
+        self.assertEqual(e.linear_vars, [m.x, m.y])
+        self.assertEqual(e.linear_coefs, [2, 3])
+
+        args = [10,
+                MonomialTermExpression((4, m.y)),
+                MonomialTermExpression((5, m.x))]
+        with LoggingIntercept() as OUT:
+            e = LinearExpression(args)
+        self.assertEqual(OUT.getvalue(), "")
+        self.assertEqual(e._args_cache_, args)
+        self.assertEqual(e.constant, 10)
+        self.assertEqual(e.linear_vars, [m.y, m.x])
+        self.assertEqual(e.linear_coefs, [4, 5])
+
+        with LoggingIntercept() as OUT:
+            e = LinearExpression([20, 6, 7, m.x, m.y])
+        self.assertIn("LinearExpression has been updated to expect args= "
+                      "to be a constant followed by MonomialTermExpressions",
+                      OUT.getvalue().replace("\n", " "))
+        self.assertIsNotNone(e._args_cache_)
+        self.assertEqual(len(e._args_cache_), 3)
+        self.assertEqual(e._args_cache_[0], 20)
+        self.assertIs(e._args_cache_[1].__class__, MonomialTermExpression)
+        self.assertEqual(e._args_cache_[1].args, (6, m.x))
+        self.assertEqual(e._args_cache_[2].args, (7, m.y))
+        self.assertEqual(e.constant, 20)
+        self.assertEqual(e.linear_vars, [m.x, m.y])
+        self.assertEqual(e.linear_coefs, [6, 7])
+
+        with LoggingIntercept() as OUT:
+            e = LinearExpression([20, 6, 7, 8, m.x, m.y, m.x])
+        self.assertIn("LinearExpression has been updated to expect args= "
+                      "to be a constant followed by MonomialTermExpressions",
+                      OUT.getvalue().replace("\n", " "))
+        self.assertIsNotNone(e._args_cache_)
+        self.assertEqual(len(e._args_cache_), 4)
+        self.assertEqual(e._args_cache_[0], 20)
+        self.assertIs(e._args_cache_[1].__class__, MonomialTermExpression)
+        self.assertEqual(e._args_cache_[1].args, (6, m.x))
+        self.assertEqual(e._args_cache_[2].args, (7, m.y))
+        self.assertEqual(e._args_cache_[3].args, (8, m.x))
+        self.assertEqual(e.constant, 20)
+        self.assertEqual(e.linear_vars, [m.x, m.y, m.x])
+        self.assertEqual(e.linear_coefs, [6, 7, 8])
+
+    def test_to_string(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        e = LinearExpression()
+        self.assertEqual(e.to_string(), "0")
+        e = LinearExpression(constant=0,
+                             linear_coefs=[-1, 1, -2, 2],
+                             linear_vars=[m.x, m.y, m.x, m.y])
+        self.assertEqual(e.to_string(), "- x + y - 2*x + 2*y")
+        e = LinearExpression(constant=10,
+                             linear_coefs=[-1, 1, -2, 2],
+                             linear_vars=[m.x, m.y, m.x, m.y])
+        self.assertEqual(e.to_string(), "10 - x + y - 2*x + 2*y")
+
     def test_sum_other(self):
         m = ConcreteModel()
         m.v = Var(range(5))
@@ -4624,7 +4733,7 @@ class TestLinearExpression(unittest.TestCase):
         with linear_expression() as e:
             e += m.v[0]
             e /= m.p
-            self.assertEqual("(1/p)*v[0]", str(e))
+            self.assertEqual("1/p*v[0]", str(e))
             self.assertIs(e.__class__, _MutableLinearExpression)
 
         with linear_expression() as e:
@@ -4687,6 +4796,43 @@ class TestNonlinearExpression(unittest.TestCase):
             e += e_
             self.assertIs(e.__class__, _MutableSumExpression)
             self.assertEqual(e.nargs(), 2)
+
+class TestMinMaxExpression(unittest.TestCase):
+    def test_max_expression(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=5)
+        m.y = Param(initialize=3)
+        e = MaxExpression((4, m.x, m.y))
+        self.assertTrue(e.is_potentially_variable())
+        self.assertEqual(e.nargs(), 3)
+        self.assertEqual(value(e), 5)
+        self.assertEqual(e.to_string(), "max(4, x, y)")
+        self.assertEqual(e.polynomial_degree(), None)
+
+        e = MaxExpression((MaxExpression((10, 20)), MaxExpression((m.x, m.y))))
+        self.assertTrue(e.is_potentially_variable())
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(value(e), 20)
+        self.assertEqual(e.to_string(), "max(max(10, 20), max(x, y))")
+        self.assertEqual(e.polynomial_degree(), None)
+
+    def test_min_expression(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=5)
+        m.y = Param(initialize=3)
+        e = MinExpression((4, m.x, m.y))
+        self.assertTrue(e.is_potentially_variable())
+        self.assertEqual(e.nargs(), 3)
+        self.assertEqual(value(e), 3)
+        self.assertEqual(e.to_string(), "min(4, x, y)")
+        self.assertEqual(e.polynomial_degree(), None)
+
+        e = MinExpression((MinExpression((10, 20)), MinExpression((m.x, m.y))))
+        self.assertTrue(e.is_potentially_variable())
+        self.assertEqual(e.nargs(), 2)
+        self.assertEqual(value(e), 3)
+        self.assertEqual(e.to_string(), "min(min(10, 20), min(x, y))")
+        self.assertEqual(e.polynomial_degree(), None)
 
 
 #
@@ -4762,13 +4908,13 @@ class TestLinearDecomp(unittest.TestCase):
         M.w = Var()
         M.q = Param(initialize=2)
         e = SumExpression([2])
-        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None)])
+        self.assertEqual(decompose_linear_term_wrapper(list(_decompose_linear_terms(e))), decompose_linear_term_wrapper([(2,None)]))
         e = SumExpression([2,M.v])
-        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None), (1,M.v)])
+        self.assertEqual(decompose_linear_term_wrapper(list(_decompose_linear_terms(e))), decompose_linear_term_wrapper([(2,None), (1,M.v)]))
         e = SumExpression([2,M.q+M.v])
-        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None), (2,None), (1,M.v)])
+        self.assertEqual(decompose_linear_term_wrapper(list(_decompose_linear_terms(e))), decompose_linear_term_wrapper([(2,None), (2,None), (1,M.v)]))
         e = SumExpression([2,M.q+M.v,M.w])
-        self.assertEqual(list(_decompose_linear_terms(e)), [(2,None), (2,None), (1,M.v), (1,M.w)])
+        self.assertEqual(decompose_linear_term_wrapper(list(_decompose_linear_terms(e))), decompose_linear_term_wrapper([(2,None), (2,None), (1,M.v), (1,M.w)]))
         
 
 #
@@ -4836,13 +4982,13 @@ class Test_decompose_linear_terms(unittest.TestCase):
         M.w = Var()
         M.q = Param(initialize=3)
         e = SumExpression([2])
-        self.assertEqual(decompose_term(e), (True, [(2,None)]))
+        self.assertEqual(decompose_term_wrapper(decompose_term(e)), decompose_term_wrapper((True, [(2,None)])))
         e = SumExpression([2,M.v])
-        self.assertEqual(decompose_term(e), (True, [(2,None), (1,M.v)]))
+        self.assertEqual(decompose_term_wrapper(decompose_term(e)), decompose_term_wrapper((True, [(2,None), (1,M.v)])))
         e = SumExpression([2,M.q+M.v])
-        self.assertEqual(decompose_term(e), (True, [(2,None), (3,None), (1,M.v)]))
+        self.assertEqual(decompose_term_wrapper(decompose_term(e)), decompose_term_wrapper((True, [(2,None), (3,None), (1,M.v)])))
         e = SumExpression([2,M.q+M.v,M.w])
-        self.assertEqual(decompose_term(e), (True, [(2,None), (3,None), (1,M.v), (1,M.w)]))
+        self.assertEqual(decompose_term_wrapper(decompose_term(e)), decompose_term_wrapper((True, [(2,None), (3,None), (1,M.v), (1,M.w)])))
 
     def test_linear(self):
         M = ConcreteModel()
@@ -4944,8 +5090,8 @@ class Test_pickle(unittest.TestCase):
         e_ = pickle.loads(s)
         flag, terms = decompose_term(e_)
         self.assertTrue(flag)
-        self.assertEqual(terms[0][0], 0.5)
-        self.assertEqual(terms[0][1], None)
+        self.assertEqual(value(terms[0][0]), 0.5)
+        self.assertEqual(value(terms[0][1]), None)
         
     def test_multisum(self):
         M = ConcreteModel()

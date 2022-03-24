@@ -10,7 +10,7 @@
 
 __all__ = ['Block', 'TraversalStrategy', 'SortComponents',
            'active_components', 'components', 'active_components_data',
-           'components_data', 'SimpleBlock']
+           'components_data', 'SimpleBlock', 'ScalarBlock']
 
 import copy
 import logging
@@ -21,24 +21,24 @@ import textwrap
 from inspect import isclass
 from operator import itemgetter
 from io import StringIO
+from typing import overload
 
 from pyomo.common.collections import Mapping
-from pyomo.common.deprecation import deprecated, deprecation_warning
-from pyomo.common.fileutils import StreamIndenter
+from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
+from pyomo.common.formatting import StreamIndenter
 from pyomo.common.log import is_debug_set
+from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.base.plugin import ModelComponentFactory
 from pyomo.core.base.component import (
-    Component, ActiveComponentData,
+    Component, ActiveComponentData, ModelComponentFactory,
 )
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.set import GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
-from pyomo.core.base.util import Initializer
+from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent, UnindexedComponent_set,
 )
-from pyomo.core.base.misc import sorted_robust
 
 from pyomo.opt.base import ProblemFormat, guess_format
 from pyomo.opt import WriterFactory
@@ -213,8 +213,7 @@ def _levelWalker(list_of_generators):
     generators.
     """
     for gen in list_of_generators:
-        for item in gen:
-            yield item
+        yield from gen
 
 
 class _BlockConstruction(object):
@@ -419,7 +418,7 @@ class PseudoMap(object):
             yield (obj._name, obj)
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
-                version='TBD')
+                version='6.0')
     def iterkeys(self):
         """
         Generator returning the component names defined on the Block
@@ -427,7 +426,7 @@ class PseudoMap(object):
         return self.keys()
 
     @deprecated('The itervalues method is deprecated. Use dict.values().',
-                version='TBD')
+                version='6.0')
     def itervalues(self):
         """
         Generator returning the components defined on the Block
@@ -435,7 +434,7 @@ class PseudoMap(object):
         return self.values()
 
     @deprecated('The iteritems method is deprecated. Use dict.items().',
-                version='TBD')
+                version='6.0')
     def iteritems(self):
         """
         Generator returning (name, component) tuples for components
@@ -816,23 +815,6 @@ class _BlockData(ActiveComponentData):
                 and not isinstance(val.domain, GlobalSetBase):
             self.add_component("%s_domain" % (val.local_name,), val.domain)
 
-    def _flag_vars_as_stale(self):
-        """
-        Configure *all* variables (on active blocks) and
-        their composite _VarData objects as stale. This
-        method is used prior to loading solver
-        results. Variable that did not particpate in the
-        solution are flagged as stale.  E.g., it most cases
-        fixed variables will be flagged as stale since they
-        are compiled out of expressions; however, many
-        solver plugins support including fixed variables in
-        the output problem by overriding bounds in order to
-        minimize preprocessing requirements, meaning fixed
-        variables are not necessarily always stale.
-        """
-        for variable in self.component_objects(Var, active=True):
-            variable.flag_as_stale()
-
     def collect_ctypes(self,
                        active=None,
                        descend_into=True):
@@ -901,9 +883,26 @@ class _BlockData(ActiveComponentData):
 
     def find_component(self, label_or_component):
         """
-        Return a block component given a name.
+        Returns a component in the block given a name.
+
+        Parameters
+        ----------
+        label_or_component : str, Component, or ComponentUID
+            The name of the component to find in this block. String or
+            Component arguments are first converted to ComponentUID.
+
+        Returns
+        -------
+        Component
+            Component on the block identified by the ComponentUID. If
+            a matching component is not found, None is returned.
+
         """
-        return ComponentUID(label_or_component).find_component_on(self)
+        if type(label_or_component) is ComponentUID:
+            cuid = label_or_component
+        else:
+            cuid = ComponentUID(label_or_component)
+        return cuid.find_component_on(self)
 
     def add_component(self, name, val):
         """
@@ -970,8 +969,8 @@ component, use the block del_component() and add_component() methods.
         #
         # Set the name and parent pointer of this component.
         #
-        val._name = name
         val._parent = weakref.ref(self)
+        val._name = name
         #
         # We want to add the temporary / implicit sets first so that
         # they get constructed before this component
@@ -1402,12 +1401,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         generator recursively descends into sub-blocks.
         """
         if not descend_into:
-            for x in self.component_map(ctype, active, sort).values():
-                yield x
+            yield from self.component_map(ctype, active, sort).values()
             return
         for _block in self.block_data_objects(active, sort, descend_into, descent_order):
-            for x in _block.component_map(ctype, active, sort).values():
-                yield x
+            yield from _block.component_map(ctype, active, sort).values()
 
     def component_data_objects(self,
                                ctype=None,
@@ -1461,10 +1458,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             block_generator = (self,)
 
         for _block in block_generator:
-            for x in _block._component_data_iter(ctype=ctype,
-                                                 active=active,
-                                                 sort=sort):
-                yield x
+            yield from _block._component_data_iter(ctype=ctype,
+                                                   active=active,
+                                                   sort=sort)
 
     @deprecated("The all_blocks method is deprecated.  "
                 "Use the Block.block_data_objects() method.",
@@ -1851,9 +1847,14 @@ class Block(ActiveIndexedComponent):
         if cls != Block:
             return super(Block, cls).__new__(cls)
         if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return SimpleBlock.__new__(SimpleBlock)
+            return ScalarBlock.__new__(ScalarBlock)
         else:
             return IndexedBlock.__new__(IndexedBlock)
+
+    # `options` is ignored since it is deprecated
+    @overload
+    def __init__(self, *indexes, rule=None, concrete=False, dense=True,
+                 name=None, doc=None): ...
 
     def __init__(self, *args, **kwargs):
         """Constructor"""
@@ -1974,6 +1975,8 @@ class Block(ActiveIndexedComponent):
                         # itself (i.e., they are not set up to support
                         # Abstract models)
                         self._data[_idx] = self
+                        # ESJ TODO: dunno?
+                        self._data[_idx]._index = _idx
                     if data is not None:
                         data = data.get(_idx, None)
                     if data is None:
@@ -2028,7 +2031,7 @@ class Block(ActiveIndexedComponent):
             _BlockData.display(self[key], filename, ostream, prefix)
 
 
-class SimpleBlock(_BlockData, Block):
+class ScalarBlock(_BlockData, Block):
 
     def __init__(self, *args, **kwds):
         _BlockData.__init__(self, component=self)
@@ -2042,6 +2045,11 @@ class SimpleBlock(_BlockData, Block):
 
     # We want scalar Blocks to pick up the Block display method
     display = Block.display
+
+
+class SimpleBlock(metaclass=RenamedClass):
+    __renamed__new_class__ = ScalarBlock
+    __renamed__version__ = '6.0'
 
 
 class IndexedBlock(Block):

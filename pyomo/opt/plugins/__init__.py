@@ -12,5 +12,4 @@ def load():
     import pyomo.opt.plugins.driver
     import pyomo.opt.plugins.res
     import pyomo.opt.plugins.sol
-    import pyomo.opt.plugins.problem_config
 

@@ -10,16 +10,23 @@
 
 __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 
+import inspect
 import logging
+import sys
+import textwrap
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
-from pyomo.core.expr.numvalue import native_types
+from pyomo.core.expr.numvalue import native_types, NumericNDArray
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
+from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.deprecation import deprecated
+from pyomo.common.modeling import NOTSET
+from pyomo.common.sorting import sorted_robust
 
 from collections.abc import Sequence
 
@@ -133,6 +140,92 @@ def _get_indexed_component_data_name(component, index):
             del component._data[index]
     return ans
 
+_rule_returned_none_error = """%s '%s': rule returned None.
+
+%s rules must return either a valid expression, numeric value, or
+%s.Skip.  The most common cause of this error is forgetting to
+include the "return" statement at the end of your rule.
+"""
+
+def rule_result_substituter(result_map):
+    _map = result_map
+    _map_types = set(type(key) for key in result_map)
+
+    def rule_result_substituter_impl(rule, *args, **kwargs):
+        if rule.__class__ in _map_types:
+            #
+            # The argument is a trivial type and will be mapped
+            #
+            value = rule
+        else:
+            #
+            # Otherwise, the argument is a functor, so call it to
+            # generate the rule result.
+            #
+            value = rule( *args, **kwargs )
+        #
+        # Map the returned value:
+        #
+        if value.__class__ in _map_types and value in _map:
+            return _map[value]
+        return value
+
+    return rule_result_substituter_impl
+
+_map_rule_funcdef = \
+"""def wrapper_function%s:
+    args, varargs, kwds, local_env = inspect.getargvalues(
+        inspect.currentframe())
+    args = tuple(local_env[_] for _ in args) + (varargs or ())
+    return wrapping_fcn(rule, *args, **(kwds or {}))
+"""
+
+def rule_wrapper(rule, wrapping_fcn, positional_arg_map=None):
+    """Wrap a rule with another function
+
+    This utility method provides a way to wrap a function (rule) with
+    another function while preserving the original function signature.
+    This is important for rules, as the :py:func:`Initializer`
+    argument processor relies on knowing the number of positional
+    arguments.
+
+    Parameters
+    ----------
+    rule: function
+        The original rule being wrapped
+    wrapping_fcn: function or Dict
+        The wrapping function.  The `wrapping_fcn` will be called with
+        ``(rule, *args, **kwargs)``.  For convenience, if a `dict` is
+        passed as the `wrapping_fcn`, then the result of
+        :py:func:`rule_result_substituter(wrapping_fcn)` is used as the
+        wrapping function.
+    positional_arg_map: iterable[int]
+        An iterable of indices of rule positional arguments to expose in
+        the wrapped function signature.  For example,
+        `positional_arg_map=(2, 0)` and `rule=fcn(a, b, c)` would produce a
+        wrapped function with a signature `wrapper_function(c, a)`
+
+    """
+    if isinstance(wrapping_fcn, dict):
+        wrapping_fcn = rule_result_substituter(wrapping_fcn)
+        if not inspect.isfunction(rule):
+            return wrapping_fcn(rule)
+    # Because some of our processing of initializer functions relies on
+    # knowing the number of positional arguments, we will go to extra
+    # effort here to preserve the original function signature.
+    rule_sig = inspect.signature(rule)
+    if positional_arg_map is not None:
+        param = list(rule_sig.parameters.values())
+        rule_sig = rule_sig.replace(
+            parameters=(param[i] for i in positional_arg_map))
+    _funcdef = _map_rule_funcdef % (str(rule_sig),)
+    # Create the wrapper in a temporary environment that mimics this
+    # function's environment.
+    _env = dict(globals())
+    _env.update(locals())
+    exec(_funcdef, _env)
+    return _env['wrapper_function']
+
 
 class IndexedComponent(Component):
     """
@@ -235,8 +328,13 @@ class IndexedComponent(Component):
     def to_dense_data(self):
         """TODO"""
         for idx in self._index_set:
-            if idx not in self._data:
+            if idx in self._data:
+                continue
+            try:
                 self._getitem_when_not_present(idx)
+            except KeyError:
+                # Rule could have returned Skip, which we will silently ignore
+                pass
 
     def clear(self):
         """Clear the data in this component"""
@@ -279,8 +377,32 @@ class IndexedComponent(Component):
         """Return true if the index is in the dictionary"""
         return idx in self._data
 
+    # The default implementation is for keys() and __iter__ to be
+    # synonyms.  The logic is implemented in keys() so that
+    # keys/values/items continue to work for components that implement
+    # other definitions for __iter__ (e.g., Set)
     def __iter__(self):
-        """Iterate over the keys in the dictionary"""
+        """Return an iterator of the component data keys"""
+        return self.keys()
+
+    def keys(self, ordered=False):
+        """Return an iterator over the component data keys
+
+        This method sets the ordering of component data objects within
+        this IndexedComponent container.  For consistency,
+        :py:meth:`__init__()`, :py:meth:`values`, and :py:meth:`items`
+        all leverage this method to ensure consistent ordering.
+
+        Parameters
+        ----------
+        ordered: bool
+            If True, then the keys are returned in a deterministic
+            order.  If the underlying indexing set is ordered then that
+            ordering is used.  Otherwise, the keys are sorted using
+            :py:func:`sorted_robust`.
+
+        """
+        sort_needed = ordered
 
         if not getattr(self._index_set, 'concrete', True):
             #
@@ -289,16 +411,20 @@ class IndexedComponent(Component):
             # of the underlying Set, there should be no warning if the
             # user iterates over the set when the _data dict is empty.
             #
-            return self._data.__iter__()
+            ans = self._data.__iter__()
         elif self.is_reference():
-            return self._data.__iter__()
-        elif len(self._data) == len(self._index_set):
+            ans = self._data.__iter__()
+        elif len(self) == len(self._index_set):
             #
             # If the data is dense then return the index iterator.
             #
-            return self._index_set.__iter__()
+            ans = self._index_set.__iter__()
+            if ordered and self._index_set.isordered():
+                # As this iterator is ordered, we do not need to sort it
+                sort_needed = False
         else:
-            if not self._data and self._index_set and PyomoOptions.paranoia_level:
+            if not self._data and self._index_set and \
+               PyomoOptions.paranoia_level:
                 logger.warning(
 """Iterating over a Component (%s)
 defined by a non-empty concrete set before any data objects have
@@ -319,13 +445,14 @@ You can silence this warning by one of three ways:
        where it is empty.
 """ % (self.name,) )
 
-            if not hasattr(self._index_set, 'isordered') or not self._index_set.isordered():
+            if not hasattr(self._index_set, 'isordered') or \
+               not self._index_set.isordered():
                 #
                 # If the index set is not ordered, then return the
                 # data iterator.  This is in an arbitrary order, which is
                 # fine because the data is unordered.
                 #
-                return self._data.__iter__()
+                ans = self._data.__iter__()
             else:
                 #
                 # Test each element of a sparse data with an ordered
@@ -335,41 +462,59 @@ You can silence this warning by one of three ways:
                 # small number of indices.  However, this provides a
                 # consistent ordering that the user expects.
                 #
-                def _sparse_iter_gen(self):
-                    for idx in self._index_set.__iter__():
-                        if idx in self._data:
-                            yield idx
-                return _sparse_iter_gen(self)
+
+                ans = filter(self._data.__contains__, self._index_set)
+                # As the iterator is ordered, we do not need to sort it
+                sort_needed = False
+        if sort_needed:
+            return iter(sorted_robust(ans))
+        else:
+            return ans
+
+    def values(self, ordered=False):
+        """Return an iterator of the component data objects
+
+        Parameters
+        ----------
+        ordered: bool
+            If True, then the values are returned in a deterministic
+            order.  If the underlying indexing set is ordered then that
+            ordering is used.  Otherwise, the component keys are sorted
+            using :py:func:`sorted_robust` and the values are returned
+            in that order.
+        """
+        return map(self.__getitem__, self.keys(ordered))
+
+    def items(self, ordered=False):
+        """Return an iterator of (index,data) component data tuples
+
+        Parameters
+        ----------
+        ordered: bool
+            If True, then the items are returned in a deterministic
+            order.  If the underlying indexing set is ordered then that
+            ordering is used.  Otherwise, the items are sorted using
+            :py:func:`sorted_robust`.
+        """
+        return((s, self[s]) for s in self.keys(ordered))
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
-                version='TBD')
+                version='6.0')
     def iterkeys(self):
         """Return a list of keys in the dictionary"""
         return self.keys()
 
     @deprecated('The itervalues method is deprecated. Use dict.values().',
-                version='TBD')
+                version='6.0')
     def itervalues(self):
         """Return a list of the component data objects in the dictionary"""
         return self.values()
 
     @deprecated('The iteritems method is deprecated. Use dict.items().',
-                version='TBD')
+                version='6.0')
     def iteritems(self):
         """Return a list (index,data) tuples from the dictionary"""
         return self.items()
-
-    def keys(self):
-        """Return an iterator of the keys in the dictionary"""
-        return [ x for x in self ]
-
-    def values(self):
-        """Return an iterator of the component data objects in the dictionary"""
-        return [ self[x] for x in self ]
-
-    def items(self):
-        """Return an iterator of (index,data) tuples from the dictionary"""
-        return [ (x, self[x]) for x in self ]
 
     def __getitem__(self, index):
         """
@@ -456,6 +601,7 @@ You can silence this warning by one of three ways:
                 index = self._validate_index(index)
         else:
             return self._setitem_impl(index, obj, val)
+
         #
         # Call the _setitem_impl helper to populate the _data
         # dictionary and set the value
@@ -511,6 +657,72 @@ You can silence this warning by one of three ways:
                 # Remove reference to this object
                 self._data[index]._component = None
             del self._data[index]
+
+    def _pop_from_kwargs(self, name, kwargs, namelist, notset=None):
+        args = [arg for arg in (kwargs.pop(name, notset) for name in namelist)
+                if arg is not notset]
+        if len(args) == 1:
+            return args[0]
+        elif not args:
+            return notset
+        else:
+            argnames = "%s%s '%s='" % (
+                ', '.join("'%s='" % _ for _ in namelist[:-1]),
+                ',' if len(namelist) > 2 else '',
+                namelist[-1]
+            )
+            raise ValueError(
+                "Duplicate initialization: %s() only accepts one of %s" %
+                (name, argnames))
+
+    def _construct_from_rule_using_setitem(self):
+        if self._rule is None:
+            return
+        index = None
+        rule = self._rule
+        block = self.parent_block()
+        try:
+            if rule.constant() and self.is_indexed():
+                # A constant rule could return a dict-like thing or
+                # matrix that we would then want to process with
+                # Initializer().  If the rule actually returned a
+                # constant, then this is just a little overhead.
+                self._rule = rule = Initializer(
+                    rule(block, None),
+                    treat_sequences_as_mappings=False,
+                    arg_not_specified=NOTSET
+                )
+
+            if rule.contains_indices():
+                # The index is coming in externally; we need to validate it
+                for index in rule.indices():
+                    self[index] = rule(block, index)
+            elif not self.index_set().isfinite():
+                # If the index is not finite, then we cannot iterate
+                # over it.  Since the rule doesn't provide explicit
+                # indices, then there is nothing we can do (the
+                # assumption is that the user will trigger specific
+                # indices to be created at a later time).
+                pass
+            elif rule.constant():
+                # Slight optimization: if the initializer is known to be
+                # constant, then only call the rule once.
+                val = rule(block, None)
+                for index in self.index_set():
+                    self._setitem_when_not_present(index, val)
+            else:
+                for index in self.index_set():
+                    self._setitem_when_not_present(index, rule(block, index))
+        except:
+            err = sys.exc_info()[1]
+            logger.error(
+                "Rule failed for %s '%s' with index %s:\n%s: %s"
+                % (self.ctype.__name__,
+                   self.name,
+                   str(index),
+                   type(err).__name__,
+                   err))
+            raise
 
     def _not_constructed_error(self, idx):
         # Generate an error because the component is not constructed
@@ -578,7 +790,7 @@ You can silence this warning by one of three ways:
         There are three basic ways to get here:
           1) the index contains one or more slices or ellipsis
           2) the index contains an unhashable type (e.g., a Pyomo
-             (Simple)Component
+             (Scalar)Component
           3) the index contains an IndexTemplate
         """
         from pyomo.core.expr import current as EXPR
@@ -600,16 +812,11 @@ You can silence this warning by one of three ways:
 
         for i,val in enumerate(idx):
             if type(val) is slice:
-                if val.start is not None or val.stop is not None:
+                if val.start is not None or val.stop is not None \
+                   or val.step is not None:
                     raise IndexError(
                         "Indexed components can only be indexed with simple "
                         "slices: start and stop values are not allowed.")
-                if val.step is not None:
-                    deprecation_warning(
-                        "The special wildcard slice (::0) is deprecated.  "
-                        "Please use an ellipsis (...) to indicate "
-                        "'0 or more' indices", version='4.4')
-                    val = Ellipsis
                 else:
                     if ellipsis is None:
                         sliced[i] = val
@@ -694,6 +901,8 @@ value() function.""" % ( self.name, i ))
             structurally_valid = False
             if slice_dim == set_dim or set_dim is None:
                 structurally_valid = True
+            elif type(set_dim) is type:
+                pass # UnknownSetDimen
             elif ellipsis is not None and slice_dim < set_dim:
                 structurally_valid = True
             elif set_dim == 0 and idx == (slice(None),):
@@ -707,10 +916,23 @@ value() function.""" % ( self.name, i ))
                 structurally_valid = True
 
             if not structurally_valid:
-                raise IndexError(
-                    "Index %s contains an invalid number of entries for "
-                    "component %s. Expected %s, got %s." 
-                    % (idx, self.name, set_dim, slice_dim))
+                msg = ("Index %s contains an invalid number of entries for "
+                       "component '%s'. Expected %s, got %s.")
+                if type(set_dim) is type:
+                    set_dim = set_dim.__name__
+                    msg += '\n    ' + '\n    '.join(
+                        textwrap.wrap(textwrap.dedent("""
+                        Slicing components relies on knowing the
+                        underlying set dimensionality (even if the
+                        dimensionality is None).  The underlying
+                        component set ('%s') dimensionality has not been
+                        determined (likely because it is an empty Set).
+                        You can avoid this error by specifying the Set
+                        dimensionality (with the 'dimen=' keyword).""" % (
+                            self.index_set(), )).strip()))
+                raise IndexError(msg % (
+                    IndexedComponent_slice._getitem_args_to_str(list(idx)),
+                    self.name, set_dim, slice_dim))
             return IndexedComponent_slice(self, fixed, sliced, ellipsis)
         elif _found_numeric:
             if len(idx) == 1:
@@ -763,7 +985,7 @@ value() function.""" % ( self.name, i ))
         should override this method.
 
         Implementations may assume that the index has already been
-        validated and is a legitimate entry in the _data dict.
+        validated and is a legitimate entry to add to the _data dict.
         """
         # If the value is "Skip" do not add anything
         if value is IndexedComponent.Skip:
@@ -775,12 +997,14 @@ value() function.""" % ( self.name, i ))
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
+        # The ComponentData needs to know its index before the try-except so
+        # that the error messages there will be able to use it.
+        obj._index = index
         try:
             if value is not _NotSpecified:
                 obj.set_value(value)
-                obj._index = index
         except:
-            del self._data[index]
+            self._data.pop(index, None)
             raise
         return obj
 
@@ -852,3 +1076,44 @@ class ActiveIndexedComponent(IndexedComponent, ActiveComponent):
             for component_data in self.values():
                 component_data.deactivate()
 
+
+# Ideally, this would inherit from np.lib.mixins.NDArrayOperatorsMixin,
+# but doing so overrides things like __contains__ in addition to the
+# operators that we are interested in.
+class IndexedComponent_NDArrayMixin(object):
+    """Support using IndexedComponent with numpy.ndarray
+
+    This IndexedComponent mixin class adds support for implicitly using
+    the IndexedComponent as a term in an expression with numpy ndarray
+    objects.
+
+    """
+
+    def __array__(self, dtype=None):
+        if not self.is_indexed():
+            ans = NumericNDArray(shape=(1,), dtype=object)
+            ans[0] = self
+            return ans
+
+        _dim = self.dim()
+        if _dim is None:
+            raise TypeError(
+                "Cannot convert a non-dimensioned Pyomo IndexedComponent "
+                "(%s) into a numpy array" % (self,))
+        bounds = self.index_set().bounds()
+        if not isinstance(bounds[0], Sequence):
+            bounds = ((bounds[0],), (bounds[1],))
+        if any(b != 0 for b in bounds[0]):
+            raise TypeError(
+                "Cannot convert a Pyomo IndexedComponent "
+                "(%s) with bounds [%s, %s] into a numpy array" % (
+                    self, bounds[0], bounds[1]))
+        shape = tuple(b+1 for b in bounds[1])
+        ans = NumericNDArray(shape=shape, dtype=object)
+        for k, v in self.items():
+            ans[k] = v
+        return ans
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        return NumericNDArray.__array_ufunc__(
+            None, ufunc, method, *inputs, **kwargs)

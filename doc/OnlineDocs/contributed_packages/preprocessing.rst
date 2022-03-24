@@ -1,5 +1,5 @@
-Pyomo Nonlinear Preprocessing
-=============================
+Nonlinear Preprocessing Transformations
+=======================================
 
 ``pyomo.contrib.preprocessing`` is a contributed library of preprocessing
 transformations intended to operate upon nonlinear and mixed-integer nonlinear

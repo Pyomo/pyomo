@@ -13,11 +13,11 @@ from __future__ import division
 __all__ = ['compute_standard_repn']
 
 
-import pyomo.common
-from pyomo.repn.standard_repn import preprocess_block_constraints, preprocess_block_objectives
+from pyomo.repn.standard_repn import (
+    preprocess_block_constraints, preprocess_block_objectives
+)
 
 
-@pyomo.common.pyomo_api(namespace='pyomo.repn')
 def compute_standard_repn(data, model=None):
     """
     This plugin computes the standard representation for all objectives

@@ -11,6 +11,7 @@
 # The log should be imported first so that the Pyomo LogHandler can be
 # set up as soon as possible
 from . import log
+from . import envvar
 
 from .factory import Factory
 
@@ -22,5 +23,4 @@ from .fileutils import (
 from . import config, dependencies, timing
 from .deprecation import deprecated
 from .errors import DeveloperError
-from ._task import pyomo_api, PyomoAPIData, PyomoAPIFactory
 from ._command import pyomo_command, get_pyomo_commands

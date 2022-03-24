@@ -3,6 +3,414 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.4.0    16 Mar 2022
+-------------------------------------------------------------------------------
+
+- General
+  - Distribute the ampl_function_demo C source / cmake files (#2319)
+  - Add GitHub URL to setup.py for PyPI (#2325)
+  - Use constant indentation for long lines in the HierarchicalTimer (#2336)
+- Core
+  - Remove incomplete pyomo/core/base/alias.py module (#2284)
+  - Remove Python 3.6 support (#2312)
+- Solver Interfaces
+  - Remove PICO solver interface (#2341)
+- Testing
+  - Add Windows pip single test (#2334)
+  - Fix test docstrings in piecewise to silence warnings (#2342)
+- Contributed Packages
+  - APPSI: Update Gurobi solver unavailable message (#2320)
+  - APPSI: Remove distributables for Windows (#2326)
+  - APPSI: Fix bugs when working with the Gurobi solution pool (#2335)
+  - APPSI: Fix bug in persistent update for FBBT (#2340)
+  - Preprocessing: Stop using polynomial_degree to check for linear and
+    constant expressions (#2324)
+  - PyNumero: Improve coverage of mpi block matrix tests (#2318)
+  - PyNumero: Skip bound/domain validation in ExternalPyomoModel (#2323)
+  - PyNumero: Remove deprecated useage of numpy.bool (#2339)
+  - PyROS: Fix variable default initialization (#2331)
+
+-------------------------------------------------------------------------------
+Pyomo 6.3.0    23 Feb 2022
+-------------------------------------------------------------------------------
+
+ADVANCE CHANGE NOTICE
+  - This will be the last release to support Python 3.6.
+
+- General
+  - Construct slices with normalized indices in slicing utility (#2223)
+  - Remove hard-coded project name from default attempt_import() message (#2237)
+  - Add --with-distributable-extensions option to setup.py (#2260)
+  - Update Pyomo versioning to always include the micro version number (#2265)
+  - Remove optional_packages from pyomo.environ (#2195)
+  - Add Python 3.10 as an officially-supported interpreter (#2302)
+  - `TempfileManager` updates (deletion order, add context) (#2297)
+  - Add `report_scaling` utility to detect potential scaling issues (#2252)
+- Core
+  - Check Var bounds when setting values (#2196)
+  - Fix bug in implicit Var construction (#2210)
+  - Add support for user-defined Component List starting index (#2215)
+  - Switch Var.value setter to validate values (#2214)
+  - Overload component initializers with named keyword params (#2212, #2230)
+  - Resolve errors when creating Reference to a scalar Set (#2229)
+  - Standardize scalar-valued external function interfaces (#2231)
+  - Resolve bugs in cloning _ImplicitAny domains (#2233)
+  - Redesign Var.stale handling to use a global state flag (#2249)
+  - Update differentiate() to accept string mode identifiers (#2266)
+  - Add `as_quantity`: evaluate a Pyomo expression to a pint `Quantity` (#2222)
+  - NPV_SumExpression to inherit from NPV_Mixin (#2209)
+  - Add support for `abs` in numeric differentiation (#2232)
+  - Search filesystem for AMPLExternalFunction library (#2305)
+- Documentation
+  - Updates to installation documentation (#2259)
+  - Update GDP references (#2300)
+  - Add example AMPL external function library (#2295)
+- Solver Interfaces
+  - Disable log file in gurobi_direct when keepfiles=False (#2203)
+  - Remove old GLPK interfaces (#2256)
+  - Support gurobi lp interface through gurobipy module (#2262)
+  - Update CBC version identification (#2250)
+  - Increase CBC timeout when getting version/asl compatibility (#2293)
+  - Deprecate the `Alias` component (#2288)
+  - Remove XPRESS interface (#2273)
+  - Support string arguments in NL external functions (#2295)
+  - Fix reversed NL operator codes for floor/ceil (#2216)
+- Testing
+  - Skip some fileutils tests on OSX Big Sur and Python<3.8 (#2224)
+  - Fix Windows/Python 3.6 testing dependency (#2234)
+  - Update test suite for BARON 22.1.19 (#2268)
+  - Rework coverage uploads to use GitHub Actions (#2225)
+  - Add option to test driver for turning off log capture (#2198)
+  - Relaxing timing target for Windows GHA (#2303)
+  - Resolve GDP test failure for missing solvers (#2306)
+  - Testing infrastructure Refactor: `nosetests` to `pytest` (#2298)
+  - Make time limit more robust for APPSI (#2296)
+  - Resolve failing floating-point comparison failures in FBBT (#2244)
+  - Check gurobipy availability in doctests (#2253)
+- GDP Updates
+  - Ensure gdp.fix_disjuncts always creates a fully algebraic model (#2263)
+  - Add `partition_disjuncts` and `between_steps` transformations (#2221)
+- Contributed Packages
+  - APPSI: Fix bug with CBC options (#2243)
+  - APPSI: Correctly identify changes to constraints (#2299)
+  - APPSI: Improvements to persistent interface (#2246)
+  - APPSI: Implement FBBT in C++ module (#2248)
+  - APPSI: Resolve build errors on Windows (#2309)
+  - GDPopt: Fix bugs in preprocessing (#2211)
+  - GDPopt: Switch preprocessing to use FBBT (#2264)
+  - incidence_analysis: General improvements (#2239, #2240)
+  - MindtPy: Update online docs and logging (#2219, #2207)
+  - MindtPy: Add Primal/Dual Integral (#2285)
+  - MindtPy: Nonlinear sum reformulation of objective of MINLP (#2276)
+  - Parmest: Covariance matrix (#2287), Add examples (#2274)
+  - PyNumero: Add scaling factor support to ExternalPyomoModel (#2269)
+  - PyNumero: Use projected NLPs for ExternalPyomoModel inner problems (#2283)
+  - PyNumero: Add SQP example (#2291)
+  - PyROS: Support ConstraintList and range constraints (#2206)
+  - PyROS: Add optional bypassing of global separation subproblems (#2254)
+  - TrustRegion: New implementation of Trust Region Framework (#2238, #2279)
+
+-------------------------------------------------------------------------------
+Pyomo 6.2    17 Nov 2021
+-------------------------------------------------------------------------------
+
+- General
+  - Add ListOf domain validator for ConfigValue (#2103)
+  - Remove deprecated calls to warnings.warning (#2106)
+  - Add Bool and Integer domain validators (#2110)
+  - Overhaul of Pyomo TempfileManager (#2109)
+  - Allow passing tuples and expressions to 
+    calculate_variable_from_constraint() (#2133)
+  - Add external functions to block in create_subsystem_block (#2142)
+  - Track changes in pint 0.18 and Xpress 8.13.0 (#2168)
+  - Remove code deprecated in Pyomo version 5.6 or older (#1992)
+  - Add Linux aarch64 wheel build support (#2076)
+  - Update wheel creation GitHub Actions version (#2192)
+  - Remove optional_packages from pyomo.environ (#2195)
+  - Ignore bounds/domain when updating variable value in 
+    calculate_variable_from_constraint() (#2177)
+- Core
+  - Fix Expression.getitem when initialized with Skip (#2136)
+  - Support hierarchical models in logical_to_linear transformation (#2135)
+  - Add ordered=True API for iterating over IndexedComponents (#2149)
+  - Fix bug in differentiate module related to reused subexpressions (#2148)
+  - Rework expression replacement and LinearExpression object (#2143)
+  - Add support for custom pint registries (#2153)
+  - Add support for solving blocks and targets in logical_to_linear 
+    transformation (#2147)
+  - Add support for finding components with a ComponentUID (#2178)
+  - Fix bugs with open NumericRanges (#2170, #2179)
+  - Fix bugs with References (#2158)
+  - Fix Initializer by treating pandas.Series as sequences (#2151)
+  - Fix Initializer support for ConfigList/ConfigDict (#2200)
+  - Add a DataFrameInitializer (#2150)
+  - Add a public API for retrieving variable bound expressions (#2172)
+  - Rework Var component to leverage Initializer (#2184)
+- Documentation
+  - Expand documentation of pyomo.common (#2104)
+  - Minor documentation fixes (#2117)
+- Solver Interfaces
+  - Issue warning when using the Xpress LP/MPS interface (#2125)
+  - Disable implicit repn cache for LP and NL writers (#2144)
+  - Add option to force variables into an NL file (#2152)
+  - Add the exception to the NEOS connection failure warning message (#2166)
+  - Improve GAMS writer performance (#2191)
+- Testing
+  - Resolve test failures when no solvers are available (#2146)
+  - Resolve NumericValue support in assertStructuredAlmostEqual (#2200)
+  - Fix typo in booktest skip declaration (#2186)
+- DAE Updates
+  - Utility function to slice individual components in flatten module (#2141)
+  - Fix errors and deprecation warnings in some DAE examples (#2189)
+  - Fix bug allowing numpy.float64 types to end up in a ContinuousSet (#2193)
+- GDP Updates
+  - Update GDP transformations to handle logical constraints (#2175)
+- Contributed Packages
+  - APPSI: Add support for external functions in NL writer (#2111)
+  - APPSI: Improved handling of immutable parameters (#2112)
+  - PyNumero: Pass AMPLFUNC directly to pynumero_ASL and not through 
+    environment (#2114, #2129)
+  - PyNumero: ExternalPyomoModel performance improvements (#2155)
+  - PyNumero: Remove exception when variable bounds are equal (#2121)
+  - Parmest: Add support for indexed variables (#2108)
+  - incidence_analysis: Simplify extraction of diagonal blocks from a block 
+    triangularization (#2128)
+  - GDPopt: Make line endings PEP8 compliant (#2173)
+  - MindtPy: Add support for MIP solver solution pools (#2164)
+  - MindtPy: Skip specific tests due to failure with Gurobi 9.5.0 on 
+    Windows (#2183)
+  - MindtPy: Fix feasibility pump and fixed variable detection (#2185, #2187)
+  - PyROS: Add uncertain variable bounds detection (#2159)
+
+-------------------------------------------------------------------------------
+Pyomo 6.1.2  20 Aug 2021
+-------------------------------------------------------------------------------
+
+- General
+  - Add test for missing/extra __init__.py files (#2090)
+  - Update deprecation warnings to only be emitted once per context (#2095)
+- Core
+  - Replace Set.card() with Set.at() (#2096)
+- DAE
+  - Remove use of OrderedSet.__getitem__ from contset.py (#2091)
+- Contributed Packages
+  - APPSI: Build/install APPSI extension outside of source tree (#2092)
+  - MindtPy: Support gurobi_persistent in LP/NLP-based B&B algorithm (#2071)
+
+-------------------------------------------------------------------------------
+Pyomo 6.1.1  17 Aug 2021
+-------------------------------------------------------------------------------
+
+- General
+  - Adding missing __init__.py files across Pyomo (#2086)
+
+-------------------------------------------------------------------------------
+Pyomo 6.1    17 Aug 2021
+-------------------------------------------------------------------------------
+
+- General
+  - Support using TicTocTimer as a context manager (#2012)
+  - Add optional dependency target in setup.py (#2017)
+  - Added utilities for subsets of model components (#1998)
+  - Improvements in deprecation warning system (#2045, #2058, #2056)
+  - Resolve TeeStream deadlock issues (#2072)
+  - Move PYOMO_CONFIG_DIR into pyomo.common.envvar (#2065)
+  - Add a DynamicImplicitDomain domain validator (#2043)
+  - Generate standard repn misidentifies nonlinear expr (#2074)
+  - Add Module() validator to the config system (#2062)
+- Core
+  - Yield Iterator from IndexedComponent (#2007)
+  - Use yield from in pyomo.core (#1984)
+  - Improvements to sorted_robust and string formatting (#2020, #2024)
+  - Integrating numpy with the Pyomo expression system (#2027, #2034, #2070)
+  - Resolve Set bugs (#2048)
+  - Prevent attaching global Sets to Blocks (#2042)
+  - Correct scalar mutable param getitem implementation (#2066)
+  - Fix Var bounds with unitted mutable Params (#2067)
+  - Improve @disable_methods decorator (#2069)
+  - Allow native numeric types in relational expressions (#2073)
+  - Fixing symbol names in Initializer deprecation layer (#2079)
+  - Deprecate OrderedSet.__getitem__ in favor of OrderedSet.card() (#2053)
+- Documentation
+  - Create a list of related packages (#2016)
+- Solver Interfaces
+  - Clean up dependencies and solver.available() IO (#2011)
+  - Update Baron writer to recognize priority Suffix (#2035)
+  - Add OCTERACT to the list of known NEOS solvers (#2064)
+  - Resolve tee issues with Xpress 8.9+ (#2059)
+  - Increase timeout for ASL version request (#2083)
+- Testing
+  - Miscellaneous testing fixes (#2023)
+  - Improve management of tempfiles in tests (#2036)
+  - Update GHA to ubuntu-latest; resolve ampl/mp build error (#2015)
+  - Move constrained_layout tests to 'expensive' suite (#2018)
+  - Update xpress, appsi tests to manage CWD (#2031)
+  - Improve comparison of Book examples to baselines (#2044)
+  - Add retry/timeout to powershell downloads (#2077)
+- GDP Updates
+  - gdp.hull: Only create one disaggregated variable for all Disjuncts in
+    which a Var does not appear (#2005)
+- Contributed Packages
+  - FBBT: descend_into option for FBBT (#2025)
+  - FBBT: Interval arithmetic edge cases for FBBT (#2026)
+  - FBBT: Improved handling for product expressions (#2038)
+  - incidence_analysis: methods for generating and solving strongly
+    connected components of a square model (#2009)
+  - incidence_analysis: Add Dulmage-Mendelsohn partition (#2063)
+  - PETSc: Remove PETSc solver (#1986)
+  - PyROS: Pyomo Robust Optimization Solver (#2006, #2061)
+  - sensitivity_toolbox: Add kaug dsdp mode (#1613)
+  - APPSI: API Cleanup (#1944), bug-fix in update_variables (#2051)
+  - MindtPy: Increase code coverage (#2021)
+  - MindtPy: Replace is not by != (#2081)
+  - PyNumero: ExternalGreyBox subclass to embed implicit functions (#2022)
+
+
+-------------------------------------------------------------------------------
+Pyomo 6.0.1   4 Jun 2021
+-------------------------------------------------------------------------------
+
+- General
+  - Catch non-standard file.write() implementations (#1999)
+- Testing
+  - Fix miscellaneous tests caught by peripheral test suites (#1991)
+- GDP Updates
+  - Switch bigm's M value calculation to always use fbbt (#2000)
+- Contributed Packages
+  - FBBT: Add support for LinearExpression (#1994)
+  - PyNumero: Improve management of stdout in cyipopt solver (#2001)
+  - GDPopt: Fix implicit conversion warnings (#2002)
+
+-------------------------------------------------------------------------------
+Pyomo 6.0    20 May 2021
+-------------------------------------------------------------------------------
+
+BACKWARDS COMPATIBILITY WARNINGS
+  - Moved PySP into a separate package available at
+    https://github.com/Pyomo/pysp
+  - Renamed "Simple" components to "Scalar" components
+  - Removed support for implicit ranged inequalities
+  - Removed support for component reconstruct method
+  - Removed support for casting relational expressions to bool
+  - Removed support for Python 2.7, 3.5, and pypy2
+
+- Drop PyUtilib Dependency
+  - Replace pyutilib.misc.import_file with pyomo.common.fileutils (#1815)
+  - Replace pyutilib.math with Python math package (#1809)
+  - Remove or replaced pyutilib.misc items (#1814, #1822)
+  - Replace pyutilib.subprocess with Python subprocess (#1812)
+  - Replace pyutilib.th with unittest and pyomo.common.unittest (#1859, #1898)
+  - Remove pyutilib.pyro (#1869)
+  - Remove pyutilib dependencies from Pyomo script (#1976)
+  - Remove hard pyutilib dependency (#1980)
+
+- General
+  - Drop support and testing for Python 2.7, 3.5, and pypy2 (#1763, #1818)
+  - Remove PySP (#1819)
+  - Clean up code for Python 2/3 cross-compatibility, remove use of six
+    (#1829, #1833, #1901, #1908, #1910, #1911, #1876, #1915, #1919,
+    #1931, #1938, #1937)
+  - Standardize usage of string type comparison (#1826)
+  - Switch default branch of Pyomo from master to main (#1843)
+  - Cleanup console scripts (#1830)
+  - Update import_file to recognize module context (#1871)
+  - Remove 2nd edition Pyomo Book examples (#1883)
+  - Move Container/Options/Bunch into just Bunch (#1838)
+  - Improve handling of enum.Enum domains in ConfigValue (#1893)
+  - Add MANIFEST.in file to include cpp files in PyPI package (#1851)
+  - Add GitHub issue templates for bug reports and feature requests (#1920)
+  - Fix identification of Pyomo root dir in unittest.runtests (#1922)
+  - Update the Config system (#1916)
+  - Resolve numerous deprecation warnings (#1935)
+  - Timing and timing test improvements (#1939, #1894, #1945)
+  - Overhaul @deprecated decorator to work better with class, enum, and
+    sphinx (#1906)
+  - Improve attempt_import mechanism (#1940, #1948)
+  - Stop caching the picklability of function types (#1959)
+  - Support explicit constants in ExternalFunction arguments (#1967)
+  - Add RenameClass metaclass (#1973)
+  - Add 3rd edition Pyomo Book examples and tests (#1914)
+  - Promote assertStructuredAlmostEqual to a module function (#1979)
+- Core
+  - Improve sorted_robust for (nested) tuple items (#1842)
+  - Update _component_data_iter to use sorted_robust (#1852)
+  - Disable implicit ranged inequalities (#1840)
+  - Improve error message when constructing a RangeSet with external
+    data (#1875)
+  - Fix bug in scaling transformation (#1854)
+  - Fix bug in identify_mutable_parameters (#1878)
+  - Fix inequality function to work with floats (#1841)
+  - Update test_model to skip tests if GLPK is not available (#1917)
+  - Rename param._NotValid to param.Param.NoValue (#1927)
+  - Improve error message for disabled methods on Abstract components (#1896)
+  - Propagate exception flag to _EvaluationVisitor (#1946)
+  - Define pprint() for ExternalFunction components (#1965)
+  - Support setting Var and Param values with unit expressions (#1966)
+  - Allow assigning None to a unitted variable (#1977)
+  - Update to only allow constant expressions to be cast to bool (#1954)
+  - Rename "Simple" components to "Scalar" components (#1971)
+  - Add utility for comparing expressions (#1981)
+  - Improve quoting in component names and indices (#1982, #1985)
+  - Remove component.reconstruct() (#1983)
+- Documentation
+  - Add documentation and doctests for pyomo.common.timing (#1924)
+  - Update the ReadTheDocs configuration (#1929)
+  - Improve robustness of doctest tests (#1942)
+- Solver Interfaces
+  - Track changes in NEOS/RAPOSa expected behavior (#1816)
+  - Fix quadratic term handling for QCQO problems in mosek_direct (#1835)
+  - Remove pyomo.opt.blackbox and the COLIN solver interface (#1872)
+  - Add support for SHOT solver to GAMS interface (#1889)
+  - Fix sign convention in CBC for maximization problems (#1848)
+  - Update gurobi available() checks (#1921)
+  - Update CBC interface to handle infinite gap (#1907)
+  - Preserve CWD when xpress import fails (#1958)
+  - Update baron interface to prevent infinite loop when no solution is
+    found (#1963)
+  - Remove pyomo.solvers.tests.core (#1897)
+- Testing
+  - Clean up Jenkins test driver (#1813)
+  - Update  unittest.timeout to work on Windows (#1825)
+  - Manually add commit HASH to codecov upload on GitHub Actions (#1824)
+  - Relax tee/timeout test timing to improve robustness (#1831)
+  - Update Mosek tests (#1844)
+  - Add Casadi to GitHub Actions test environment (#1849)
+  - Disable codecov uploads from forks (#1863)
+  - Update IDAES-ext version used in our GitHub Actions jobs workflows (#1882)
+  - Rewrite test driver script (#1870, #1902)
+  - Rebuild GitHub Actions caches (#1934)
+  - Update expected CBC test failures (#1943)
+  - Update merged reader test to reduce failures in OSX (#1953)
+  - Add non-fatal timeout for nightly NEOS test (#1964)
+  - Do not download/build extensions for slim builds (#1988)
+- DAE Updates
+  - Split get_index_set_except into two functions (#1879)
+- GDP Updates
+  - Fix multiple References to local variables in nested disjuncts (#1968)
+  - Fix GDP error when using a disjunction with nested disjunctions as a
+    target (#1969)
+  - Convert Disjunct.indicator_var from binary to boolean variable (#1960)
+- Network Updates
+  - Fix bug in cloning Ports (#1899)
+  - Updates to improve interoperability with pyomo.gdp (#1961)
+- Contributed Packages
+  - PyNumero: add Hessian support for grey box models, support multiple
+    grey box models in a single Pyomo model, add callback functionality
+    to cyipopt interface, track changes in cyipopt API, expose nl file
+    options in PyomoNLP, add documentation and doctests (#1810, #1832,
+    #1873, #1913, #1930, #1936)
+  - Update contrib.viewer tests (#1820)
+  - Add new Auto-Persistent Pyomo Solver Interfaces (APPSI) package (#1793)
+  - GDPopt: add option to solve a relaxation with integer cuts, remove default
+    strategy (#1837)
+  - Benders: rename master problem to root problem (#1828)
+  - FBBT: Improve interval arithmetic for some special cases (#1949)
+  - Parmest: remove dependency on PySP and add interface to mpi-sppy (#1778)
+  - Add new incidence_analysis package for maximum matching and block
+    triangularization (#1888)
+  - MindtPy: general improvements and add feasibility pump (#1847)
+
+-------------------------------------------------------------------------------
 Pyomo 5.7.3   29 Jan 2021
 -------------------------------------------------------------------------------
 
@@ -43,9 +451,9 @@ ADVANCE CHANGE NOTICE:
 - Testing
   - Fix Jenkins test script (#1771)
   - Fix GHA tests to work with PyMySQL 1.0.0 (#1777)
-- Contrib
-  - PyNumero: resolve portability issue with Cyipopt exception handling, 
-    add PyomoNLP methods for accessing equality/inequality constraints (#1781, 
+- Contributed Packages
+  - PyNumero: resolve portability issue with Cyipopt exception handling,
+    add PyomoNLP methods for accessing equality/inequality constraints (#1781,
     #1791)
   - Parmest: update pairwise plot to use the covariance matrix (#1774)
 

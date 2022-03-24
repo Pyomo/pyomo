@@ -87,7 +87,6 @@ class TestAddSlacks(unittest.TestCase):
         
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 5)
-        
         self.assertEqual(cons.body.nargs(), 2)
 
         self.assertIs(cons.body.arg(0), m.x)
@@ -181,8 +180,14 @@ class TestAddSlacks(unittest.TestCase):
         self.assertFalse(cons.active)
         self.assertEqual(cons.lower, 1)
         self.assertEqual(cons.upper, 3)
-        # cons.body is a SimpleVar
+        # cons.body is a ScalarVar
         self.assertIs(cons.body, m.y)
+
+    def checkTargetSlackVar(self, transBlock):
+        self.assertIsNone(transBlock.component("_slack_minus_rule2"))
+        self.assertIsNone(transBlock.component("_slack_plus_rule2"))
+        self.assertFalse(hasattr(transBlock, "_slack_minus_rule3"))
+        self.assertIsInstance(transBlock.component("_slack_plus_rule3"), Var)
 
     def checkTargetSlackVars(self, transBlock):
         self.assertIsInstance(transBlock.component("_slack_minus_rule1"), Var)
@@ -216,7 +221,7 @@ class TestAddSlacks(unittest.TestCase):
         cons = m.rule2
         self.assertEqual(cons.lower, 1)
         self.assertEqual(cons.upper, 3)
-        # cons.body is a SimpleVar
+        # cons.body is a ScalarVar
         self.assertIs(cons.body, m.y)
 
     def test_nontarget_constraint_same(self):
@@ -252,6 +257,11 @@ class TestAddSlacks(unittest.TestCase):
 
         self.checkRule1(m2)
         self.checkRule3(m2)
+
+    def checkTargetObj(self, m):
+        transBlock = m._core_add_slack_variables
+        obj = transBlock.component("_slack_objective")
+        self.assertIs(obj.expr, transBlock._slack_plus_rule3)
 
     def checkTargetsObj(self, m):
         transBlock = m._core_add_slack_variables
@@ -293,7 +303,7 @@ class TestAddSlacks(unittest.TestCase):
         m.indexedVar = Var([1, 2])
         self.assertRaisesRegex(
             ValueError,
-            "Expected Constraint or list of Constraints.\n\tRecieved "
+            "Expected Constraint or list of Constraints.\n\tReceived "
             "<class 'pyomo.core.base.var._GeneralVarData'>",
             TransformationFactory('core.add_slack_variables').apply_to,
             m,
@@ -304,12 +314,34 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         self.assertRaisesRegex(
             ValueError,
-            "Expected Constraint or list of Constraints.\n\tRecieved "
-            "<class 'pyomo.core.base.var.SimpleVar'>",
+            "Expected Constraint or list of Constraints.\n\tReceived "
+            "<class 'pyomo.core.base.var.ScalarVar'>",
             TransformationFactory('core.add_slack_variables').apply_to,
             m,
             targets=[m.rule1, m.x]
             )
+
+    def test_deprecation_warning_for_cuid_target(self):
+        m = self.makeModel()
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.core'):
+            TransformationFactory('core.add_slack_variables').apply_to(
+                m,
+                targets=ComponentUID(m.rule3))
+        self.assertRegex(out.getvalue(),
+                                 "DEPRECATED: In future releases ComponentUID "
+                                 "targets will no longer be\nsupported in the "
+                                 "core.add_slack_variables transformation. "
+                                 "Specify\ntargets as a Constraint or list of "
+                                 "Constraints.*")
+        
+        # make sure that it still worked though
+        self.checkNonTargetCons(m)
+        self.checkRule3(m)
+        self.assertFalse(m.obj.active)
+        self.checkTargetObj(m)
+        transBlock = m.component("_core_add_slack_variables")
+        self.checkTargetSlackVar(transBlock)
 
     def test_deprecation_warning_for_cuid_targets(self):
         m = self.makeModel()
@@ -318,7 +350,7 @@ class TestAddSlacks(unittest.TestCase):
             TransformationFactory('core.add_slack_variables').apply_to(
                 m,
                 targets=[ComponentUID(m.rule1), ComponentUID(m.rule3)])
-        self.assertRegex(out.getvalue(), 
+        self.assertRegex(out.getvalue(),
                                  "DEPRECATED: In future releases ComponentUID "
                                  "targets will no longer be\nsupported in the "
                                  "core.add_slack_variables transformation. "
@@ -357,7 +389,7 @@ class TestAddSlacks(unittest.TestCase):
 
     def test_transformed_constraint_scalar_body(self):
         m = self.makeModel()
-        m.p = Param(initialize=6)
+        m.p = Param(initialize=6, mutable=True)
         m.rule4 = Constraint(expr=m.p <= 9)
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
@@ -368,7 +400,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertIsNone(c.lower)
         self.assertEqual(c.upper, 9)
         self.assertEqual(c.body.nargs(), 2)
-        self.assertEqual(c.body.arg(0), 6)
+        self.assertEqual(c.body.arg(0).value, 6)
         self.assertIs(c.body.arg(1).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(c.body.arg(1).arg(0), -1)
         self.assertIs(c.body.arg(1).arg(1), transBlock._slack_minus_rule4)

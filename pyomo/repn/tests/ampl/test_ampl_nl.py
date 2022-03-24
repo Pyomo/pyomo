@@ -17,7 +17,14 @@ from filecmp import cmp
 import pyomo.common.unittest as unittest
 
 from pyomo.common.getGSL import find_GSL
-from pyomo.environ import ConcreteModel, Var, Constraint, Objective, Param, Block, ExternalFunction, value
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.environ import (
+    ConcreteModel, Var, Constraint, Objective, Param, Block,
+    ExternalFunction, value,
+)
+
+import pyomo.repn.plugins.ampl.ampl_ as ampl_
+gsr = ampl_.generate_standard_repn
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 
@@ -36,6 +43,81 @@ class TestNLWriter(unittest.TestCase):
         prefix = os.path.join(thisdir, test_name.replace("test_", "", 1))
         return prefix+".nl.baseline", prefix+".nl.out"
 
+    def test_export_nonlinear_variables(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.y = Var()
+        model.z = Var()
+        model.w = Var([1,2,3])
+        model.c = Constraint(expr=model.x == model.y**2)
+
+        model.y.fix(3)
+        test_fname = "export_nonlinear_variables"
+        model.write(
+            test_fname,
+            format='nl',
+            io_options={'symbolic_solver_labels':True}
+        )
+        with open(test_fname + '.col') as f:
+            names = list(map(str.strip, f.readlines()))
+        assert "z" not in names # z is not in a constraint
+        assert "y" not in names # y is fixed
+        assert "x" in names
+        self._cleanup(test_fname)
+        model.write(
+            test_fname,
+            format='nl',
+            io_options={
+                'symbolic_solver_labels':True,
+                'export_nonlinear_variables':[model.z]
+            }
+        )
+        with open(test_fname + '.col') as f:
+            names = list(map(str.strip, f.readlines()))
+        assert "z" in names
+        assert "y" not in names
+        assert "x" in names
+        assert "w[1]" not in names
+        assert "w[2]" not in names
+        assert "w[3]" not in names
+        self._cleanup(test_fname)
+        model.write(
+            test_fname,
+            format='nl',
+            io_options={
+                'symbolic_solver_labels':True,
+                'export_nonlinear_variables':[model.z, model.w]
+            }
+        )
+        with open(test_fname + '.col') as f:
+            names = list(map(str.strip, f.readlines()))
+        assert "z" in names
+        assert "y" not in names
+        assert "x" in names
+        assert "w[1]" in names
+        assert "w[2]" in names
+        assert "w[3]" in names
+
+        self._cleanup(test_fname)
+
+        model.write(
+            test_fname,
+            format='nl',
+            io_options={
+                'symbolic_solver_labels':True,
+                'export_nonlinear_variables':[model.z, model.w[2]]
+            }
+        )
+        with open(test_fname + '.col') as f:
+            names = list(map(str.strip, f.readlines()))
+        assert "z" in names
+        assert "y" not in names
+        assert "x" in names
+        assert "w[1]" not in names
+        assert "w[2]" in names
+        assert "w[3]" not in names
+
+        self._cleanup(test_fname)
 
     def test_var_on_other_model(self):
         other = ConcreteModel()
@@ -185,8 +267,6 @@ class TestNLWriter(unittest.TestCase):
             variable_baseline),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
 
-        self.assertIsNot(m._repn, None)
-
         m.x.fix()
         self._cleanup(test_fname)
         m.write(test_fname, format='nl',
@@ -208,6 +288,124 @@ class TestNLWriter(unittest.TestCase):
             fixed_baseline),
             msg="Files %s and %s differ" % (test_fname, baseline_fname))
         self._cleanup(test_fname)
+
+    def test_obj_con_cache(self):
+        model = ConcreteModel()
+        model.x = Var()
+        model.c = Constraint(expr=model.x**2 >= 1)
+        model.obj = Objective(expr=model.x**2)
+
+        with TempfileManager.new_context() as TMP:
+            nl_file = TMP.create_tempfile(suffix='.nl')
+            model.write(nl_file, format='nl')
+            self.assertFalse(hasattr(model, '_repn'))
+            with open(nl_file) as FILE:
+                nl_ref = FILE.read()
+
+            nl_file = TMP.create_tempfile(suffix='.nl')
+            model._gen_obj_repn = True
+            model.write(nl_file)
+            self.assertEqual(len(model._repn), 1)
+            self.assertIn(model.obj, model._repn)
+            obj_repn = model._repn[model.obj]
+            with open(nl_file) as FILE:
+                nl_test = FILE.read()
+            self.assertEqual(nl_ref, nl_test)
+
+            nl_file = TMP.create_tempfile(suffix='.nl')
+            del model._repn
+            model._gen_obj_repn = None
+            model._gen_con_repn = True
+            model.write(nl_file)
+            self.assertEqual(len(model._repn), 1)
+            self.assertIn(model.c, model._repn)
+            c_repn = model._repn[model.c]
+            with open(nl_file) as FILE:
+                nl_test = FILE.read()
+            self.assertEqual(nl_ref, nl_test)
+
+            nl_file = TMP.create_tempfile(suffix='.nl')
+            del model._repn
+            model._gen_obj_repn = True
+            model._gen_con_repn = True
+            model.write(nl_file)
+            self.assertEqual(len(model._repn), 2)
+            self.assertIn(model.obj, model._repn)
+            self.assertIn(model.c, model._repn)
+            obj_repn = model._repn[model.obj]
+            c_repn = model._repn[model.c]
+            with open(nl_file) as FILE:
+                nl_test = FILE.read()
+            self.assertEqual(nl_ref, nl_test)
+
+            nl_file = TMP.create_tempfile(suffix='.nl')
+            model._gen_obj_repn = None
+            model._gen_con_repn = None
+            model.write(nl_file)
+            self.assertEqual(len(model._repn), 2)
+            self.assertIn(model.obj, model._repn)
+            self.assertIn(model.c, model._repn)
+            self.assertIs(obj_repn, model._repn[model.obj])
+            self.assertIs(c_repn, model._repn[model.c])
+            with open(nl_file) as FILE:
+                nl_test = FILE.read()
+            self.assertEqual(nl_ref, nl_test)
+
+            nl_file = TMP.create_tempfile(suffix='.nl')
+            model._gen_obj_repn = True
+            model._gen_con_repn = True
+            model.write(nl_file)
+            self.assertEqual(len(model._repn), 2)
+            self.assertIn(model.obj, model._repn)
+            self.assertIn(model.c, model._repn)
+            self.assertIsNot(obj_repn, model._repn[model.obj])
+            self.assertIsNot(c_repn, model._repn[model.c])
+            obj_repn = model._repn[model.obj]
+            c_repn = model._repn[model.c]
+            with open(nl_file) as FILE:
+                nl_test = FILE.read()
+            self.assertEqual(nl_ref, nl_test)
+
+            nl_file = TMP.create_tempfile(suffix='.nl')
+            model._gen_obj_repn = False
+            model._gen_con_repn = False
+            try:
+                def dont_call_gsr(*args, **kwargs):
+                    self.fail("generate_standard_repn should not be called")
+                ampl_.generate_standard_repn = dont_call_gsr
+                model.write(nl_file)
+            finally:
+                ampl_.generate_standard_repn = gsr
+            self.assertEqual(len(model._repn), 2)
+            self.assertIn(model.obj, model._repn)
+            self.assertIn(model.c, model._repn)
+            self.assertIs(obj_repn, model._repn[model.obj])
+            self.assertIs(c_repn, model._repn[model.c])
+            with open(nl_file) as FILE:
+                nl_test = FILE.read()
+            self.assertEqual(nl_ref, nl_test)
+
+            # Check that repns generated by the LP wrter will be
+            # processed correctly
+            model._repn[model.c] = c_repn = gsr(model.c.body, quadratic=True)
+            model._repn[model.obj] = obj_repn = gsr(
+                model.obj.expr, quadratic=True)
+            nl_file = TMP.create_tempfile(suffix='.nl')
+            try:
+                def dont_call_gsr(*args, **kwargs):
+                    self.fail("generate_standard_repn should not be called")
+                ampl_.generate_standard_repn = dont_call_gsr
+                model.write(nl_file)
+            finally:
+                ampl_.generate_standard_repn = gsr
+            self.assertEqual(len(model._repn), 2)
+            self.assertIn(model.obj, model._repn)
+            self.assertIn(model.c, model._repn)
+            self.assertIs(obj_repn, model._repn[model.obj])
+            self.assertIs(c_repn, model._repn[model.c])
+            with open(nl_file) as FILE:
+                nl_test = FILE.read()
+            self.assertEqual(nl_ref, nl_test)
 
 
 if __name__ == "__main__":
