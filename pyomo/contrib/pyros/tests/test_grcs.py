@@ -2175,5 +2175,83 @@ class testBypassingSeparation(unittest.TestCase):
                          msg="Returned termination condition is not return robust_optimal.")
 
 
+@unittest.skipUnless(SolverFactory('baron').available(exception_flag=False)
+                     and SolverFactory('baron').license_is_valid(),
+                     "Global NLP solver is not available and licensed.")
+class testUninitializedVars(unittest.TestCase):
+    def test_uninitialized_vars(self):
+        """
+        Test a simple PyROS model instance with uninitialized
+        first-stage and second-stage variables.
+        """
+        m = ConcreteModel()
+
+        # parameters
+        m.ell0 = Param(initialize=1)
+        m.u0 = Param(initialize=3)
+        m.ell = Param(initialize=1)
+        m.u = Param(initialize=5)
+        m.p = Param(initialize=m.u0, mutable=True)
+        m.r = Param(initialize=0.1)
+
+        # variables
+        m.x = Var(bounds=(m.ell0, m.u0))
+        m.z = Var(bounds=(m.ell0, m.p))
+        m.t = Var(initialize=1, bounds=(0, m.r))
+        m.w = Var(bounds=(0, 1))
+
+        # objectives
+        m.obj = Objective(expr=-m.x ** 2 + m.z ** 2)
+
+        # auxiliary constraints
+        m.t_lb_con = Constraint(expr=m.x - m.z <= m.t)
+        m.t_ub_con = Constraint(expr=-m.t <= m.x - m.z)
+
+        # other constraints
+        m.con1 = Constraint(expr=m.x - m.z >= 0.1)
+        m.eq_con = Constraint(expr=m.w == 0.5 * m.t)
+
+        box_set = BoxSet(
+                bounds=((value(m.ell), value(m.u)),)
+        )
+
+        # solvers
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("baron")
+
+        # pyros setup
+        pyros_solver = SolverFactory("pyros")
+
+        # solve for different decision rule orders
+        for dr_order in [0, 1, 2]:
+            model = m.clone()
+
+            # degree of freedom partitioning
+            fsv = [model.x]
+            ssv = [model.z, model.t]
+            uncertain_params = [model.p]
+
+            res = pyros_solver.solve(
+                    model=model,
+                    first_stage_variables=fsv,
+                    second_stage_variables=ssv,
+                    uncertain_params=uncertain_params,
+                    uncertainty_set=box_set,
+                    local_solver=local_solver,
+                    global_solver=global_solver,
+                    objective_focus=ObjectiveType.worst_case,
+                    decision_rule_order=2,
+                    solve_master_globally=True
+            )
+
+            self.assertEqual(
+                    res.pyros_termination_condition,
+                    pyrosTerminationCondition.robust_optimal,
+                    msg=("Returned termination condition for solve with"
+                         f"decision rule order {dr_order} is not return "
+                         "robust_optimal.")
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

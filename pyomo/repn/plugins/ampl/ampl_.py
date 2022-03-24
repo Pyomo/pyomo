@@ -21,6 +21,7 @@ import os
 import time
 from math import isclose
 
+from pyomo.common.fileutils import find_library
 from pyomo.common.gc_manager import PauseGC
 from pyomo.opt import ProblemFormat, AbstractProblemWriter, WriterFactory
 from pyomo.core.expr import current as EXPR
@@ -58,6 +59,10 @@ def set_pyomo_amplfunc_env(external_libs):
     env_str = ''
     for _lib in external_libs:
         _lib = _lib.strip()
+        # Convert the library to an absolute path
+        _abs_lib = find_library(_lib)
+        if _abs_lib is not None:
+            _lib = _abs_lib
         if ( ' ' not in _lib
              or ( _lib[0]=='"' and _lib[-1]=='"'
                   and '"' not in _lib[1:-1] )

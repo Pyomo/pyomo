@@ -281,7 +281,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         input_vars = self.input_vars
 
         for var, val in zip(input_vars, input_values):
-            var.set_value(val)
+            var.set_value(val, skip_validation=True)
 
         vector_scc_idx = 0
         for block, inputs in self._scc_list:
@@ -325,7 +325,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
                     new_primals = nlp.get_primals()
                     assert len(new_primals) == len(variables)
                     for var, val in zip(variables, new_primals):
-                        var.set_value(val)
+                        var.set_value(val, skip_validation=True)
 
                 else:
                     # Use a Pyomo solver to solve this strongly connected

@@ -31,7 +31,8 @@ def main():
     pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE)
     
     # Parameter estimation and covariance
-    obj, theta, cov = pest.theta_est(calc_cov=True)
+    n = 6 # total number of data points used in the objective (y in 6 scenarios)
+    obj, theta, cov = pest.theta_est(calc_cov=True, cov_n=n)
     
     # Plot theta estimates using a multivariate Gaussian distribution
     parmest.graphics.pairwise_plot((theta, cov, 100), theta_star=theta, alpha=0.8, 

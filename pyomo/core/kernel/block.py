@@ -8,16 +8,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import sys
 import logging
 import math
-
-if sys.version_info[:2] >= (3,7):
-    # dict became ordered in CPython 3.6 and added to the standard in 3.7
-    _ordered_dict_ = dict
-else:
-    import collections
-    _ordered_dict_ = collections.OrderedDict
 
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.symbol_map import SymbolMap
@@ -98,16 +90,16 @@ class block(IBlock):
         d['_storage_key'] = None
         d['_active'] = True
         d['_block__byctype'] = None
-        d['_block__order'] = _ordered_dict_()
+        d['_block__order'] = dict()
 
     def _activate_large_storage_mode(self):
-        if self.__byctype.__class__ is not _ordered_dict_:
+        if self.__byctype.__class__ is not dict:
             self_byctype = \
-                self.__dict__['_block__byctype'] = _ordered_dict_()
+                self.__dict__['_block__byctype'] = dict()
             for key, obj in self.__order.items():
                 ctype = obj.ctype
                 if ctype not in self_byctype:
-                    self_byctype[ctype] = _ordered_dict_()
+                    self_byctype[ctype] = dict()
                 self_byctype[ctype][key] = obj
 
     #
@@ -132,7 +124,7 @@ class block(IBlock):
                     ctypes_set.add(child_ctype)
                     ctypes.append(child_ctype)
             return tuple(ctypes)
-        elif self_byctype.__class__ is _ordered_dict_:
+        elif self_byctype.__class__ is dict:
             # large-block storage
             return tuple(self_byctype)
         else:
@@ -165,7 +157,7 @@ class block(IBlock):
 
         if ctype is _no_ctype:
             yield from self.__order.values()
-        elif self_byctype.__class__ is _ordered_dict_:
+        elif self_byctype.__class__ is dict:
             # large-block storage
             if ctype in self_byctype:
                 yield from self_byctype[ctype].values()
@@ -227,10 +219,10 @@ class block(IBlock):
                 if self_byctype is None:
                     # storing a single ctype
                     self.__dict__['_block__byctype'] = ctype
-                elif self_byctype.__class__ is _ordered_dict_:
+                elif self_byctype.__class__ is dict:
                     # large-block storage
                     if ctype not in self_byctype:
-                        self_byctype[ctype] = _ordered_dict_()
+                        self_byctype[ctype] = dict()
                     self_byctype[ctype][name] = obj
                 elif self_byctype.__class__ is int:
                     # small-block storage
@@ -269,7 +261,7 @@ class block(IBlock):
             del self_order[name]
             obj._clear_parent_and_storage_key()
             self_byctype = self.__byctype
-            if self_byctype.__class__ is _ordered_dict_:
+            if self_byctype.__class__ is dict:
                 # large-block storage
                 ctype = obj.ctype
                 del self_byctype[ctype][name]
