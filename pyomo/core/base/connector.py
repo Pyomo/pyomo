@@ -14,11 +14,11 @@ import logging
 import sys
 from weakref import ref as weakref_ref
 
-from pyomo.common.modeling import NoArgumentGiven
-from pyomo.common.timing import ConstructionTimer
-from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecated, RenamedClass
 from pyomo.common.formatting import tabular_writer
+from pyomo.common.log import is_debug_set
+from pyomo.common.modeling import NoArgumentGiven
+from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import IndexedComponent

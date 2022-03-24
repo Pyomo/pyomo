@@ -43,21 +43,19 @@ class TestComponent(unittest.TestCase):
         self.assertEqual(m.b[2].c[2,4].getname(fully_qualified=False),
                          "c[2,4]")
 
-        # cache = {}
-        # self.assertEqual(
-        #     m.b[2].c[2,4].getname(fully_qualified=True, name_buffer=cache),
-        #     "b[2].c[2,4]")
-        # self.assertEqual(len(cache), 8)
-        # self.assertIn(id(m.b[2].c[2,4]), cache)
-        # self.assertIn(id(m.b[2].c[1,3]), cache)
-        # self.assertIn(id(m.b[2].c), cache)
-        # self.assertIn(id(m.b[2]), cache)
-        # self.assertIn(id(m.b[1]), cache)
-        # self.assertIn(id(m.b), cache)
-        # self.assertNotIn(id(m), cache)
-        # self.assertEqual(
-        #     m.b[2].c[1,3].getname(fully_qualified=True, name_buffer=cache),
-        #     "b[2].c[1,3]")
+        cache = {}
+        self.assertEqual(
+            m.b[2].c[2,4].getname(fully_qualified=True, name_buffer=cache),
+            "b[2].c[2,4]")
+        self.assertEqual(len(cache), 4)
+        self.assertIn(id(m.b[2].c[2,4]), cache)
+        self.assertIn(id(m.b[2].c), cache)
+        self.assertIn(id(m.b[2]), cache)
+        self.assertIn(id(m.b), cache)
+        self.assertNotIn(id(m), cache)
+        self.assertEqual(
+            m.b[2].c[1,3].getname(fully_qualified=True, name_buffer=cache),
+            "b[2].c[1,3]")
 
         m.b[2]._component = None
         self.assertEqual(m.b[2].getname(fully_qualified=True),
@@ -76,7 +74,10 @@ class TestComponent(unittest.TestCase):
         self.assertEqual(m.b[2].c[2,4].getname(fully_qualified=False),
                          "c[2,4]")
 
-        # # Cached names still work...
+        # [ESJ 3/24/22]: Apparently this was expected behavior, but this looks
+        # like a bug to me: Nothing has changed the state of the model, but you
+        # get a different name depending on whether you use a name_buffer or
+        # not...? Why would this be the desired outcome?
         # self.assertEqual(
         #     m.b[2].getname(fully_qualified=True, name_buffer=cache),
         #     "b[2]")

@@ -18,11 +18,11 @@ import math
 from weakref import ref as weakref_ref
 from typing import overload
 
-from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import DeveloperError
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
 from pyomo.core.expr.numvalue import (
@@ -765,13 +765,10 @@ class Constraint(ActiveIndexedComponent):
     def _getitem_when_not_present(self, idx):
         if self.rule is None:
             raise KeyError(idx)
-        print("getitem when not present for %s" % self.name)
-        print(self._data.keys())
         con = self._setitem_when_not_present(
             idx, self.rule(self.parent_block(), idx))
         if con is None:
             raise KeyError(idx)
-        print(self._data.keys())
         return con
 
     def _pprint(self):
@@ -1011,6 +1008,7 @@ class ConstraintList(IndexedConstraint):
         if is_debug_set(logger):
             logger.debug("Constructing constraint list %s"
                          % (self.name))
+
         self.index_set().construct()
 
         if self.rule is not None:

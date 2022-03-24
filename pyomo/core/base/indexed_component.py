@@ -403,8 +403,8 @@ class IndexedComponent(Component):
 
         """
         sort_needed = ordered
-
-        if not getattr(self._index_set, 'concrete', True):
+        if hasattr(self._index_set, 'isfinite') and not \
+           self._index_set.isfinite():
             #
             # If the index set is virtual (e.g., Any) then return the
             # data iterator.  Note that since we cannot check the length
@@ -462,7 +462,6 @@ You can silence this warning by one of three ways:
                 # small number of indices.  However, this provides a
                 # consistent ordering that the user expects.
                 #
-
                 ans = filter(self._data.__contains__, self._index_set)
                 # As the iterator is ordered, we do not need to sort it
                 sort_needed = False
@@ -997,8 +996,8 @@ value() function.""" % ( self.name, i ))
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
-        # The ComponentData needs to know its index before the try-except so
-        # that the error messages there will be able to use it.
+        # [ESJ 3/24/22]: The ComponentData needs to know its index before the
+        # try-except so that the error messages there will be able to use it.
         obj._index = index
         try:
             if value is not _NotSpecified:

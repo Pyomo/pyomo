@@ -791,6 +791,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
+        obj._index = index
         parent = self.parent_block()
         # We can directly set the attribute (not the property) because
         # the SetInitializer ensures that the value is a proper Set.
@@ -799,9 +800,6 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             obj.lower, obj.upper = self._rule_bounds(parent, index)
         if self._rule_init is not None:
             obj.set_value(self._rule_init(parent, index))
-        # ESJ TODO: maybe we need this?
-        obj._index = index
-
         return obj
 
     #

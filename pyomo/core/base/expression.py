@@ -15,10 +15,9 @@ import logging
 from weakref import ref as weakref_ref
 from typing import overload
 
-from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecated, RenamedClass
-from pyomo.common.modeling import NOTSET
+from pyomo.common.modeling import NOTSET, NoArgumentGiven
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 

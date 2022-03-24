@@ -549,13 +549,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             # reasonable values produces an informative error.
             if self._mutable:
                 # Note: _ParamData defaults to Param.NoValue
-
                 if self.is_indexed():
                     ans = self._data[index] = _ParamData(self)
                 else:
                     ans = self._data[index] = self
-                # ESJ TODO: Not sure if this belongs in just the if or if it
-                # applies to both!
                 ans._index = index
 
                 return ans
@@ -683,7 +680,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             if index is None and not self.is_indexed():
                 self._data[None] = self
                 self.set_value(value, index)
-                self._index = index
+                self._index = None
                 return self
             elif self._mutable:
                 obj = self._data[index] = _ParamData(self)
@@ -819,7 +816,6 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             dataGen = lambda k, v: [ v._value, ]
         else:
             dataGen = lambda k, v: [ v, ]
-
         headers = [
             ("Size", len(self)),
             ("Index", self._index_set if self.is_indexed() else None),

@@ -2079,7 +2079,7 @@ class Set(IndexedComponent):
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
         obj._index = index
-        # ESJ: I don't get why this PR adds this check...?
+        # ESJ TODO: I don't get why this PR adds this check...?
         if self._init_dimen is not None:
             _d = self._init_dimen(self, index)
             if _d is not UnknownSetDimen and (not normalize_index.flatten) \
