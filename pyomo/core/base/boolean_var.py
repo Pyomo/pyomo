@@ -14,7 +14,7 @@ from weakref import ref as weakref_ref, ReferenceType
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from pyomo.common.modeling import unique_component_name, NOTSET
+from pyomo.common.modeling import unique_component_name, NOTSET, NoArgumentGiven
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
@@ -82,6 +82,7 @@ class _BooleanVarData(ComponentData, BooleanValue):
     def __init__(self, component=None):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
 
     def is_fixed(self):
         """Returns True if this variable is fixed, otherwise returns False."""
@@ -207,6 +208,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         self._value = None
         self.fixed = False
         self._stale = 0 # True
+        self._index = NoArgumentGiven
 
         self._associated_binary = None
 
@@ -386,17 +388,19 @@ class BooleanVar(IndexedComponent):
         #
         if not self.is_indexed():
             self._data[None] = self
+            self._data[None]._index = None
             self._initialize_members((None,))
         elif self._dense:
             # This loop is optimized for speed with pypy.
             # Calling dict.update((...) for ...) is roughly
             # 30% slower
             self_weakref = weakref_ref(self)
-            for ndx in self._index:
+            for ndx in self._index_set:
                 cdata = self._ComponentDataClass(component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
-            self._initialize_members(self._index)
+                cdata._index = ndx
+            self._initialize_members(self._index_set)
         timer.report()
 
     def add(self, index):
@@ -413,8 +417,10 @@ class BooleanVar(IndexedComponent):
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
+        obj._index = index
         self._initialize_members((index,))
         return obj
+
     def _setitem_when_not_present(self, index, value):
         """Perform the fundamental component item creation and storage.
 
@@ -625,7 +631,7 @@ class BooleanVarList(IndexedBooleanVar):
         # then let _validate_index complain when we set the value.
         if self._value_init_value.__class__ is dict:
             for i in range(len(self._value_init_value)):
-                self._index.add(i + self._starting_index)
+                self._index_set.add(i + self._starting_index)
         super(BooleanVarList,self).construct(data)
         # Note that the current Var initializer silently ignores
         # initialization data that is not in the underlying index set.  To
@@ -638,10 +644,8 @@ class BooleanVarList(IndexedBooleanVar):
 
     def add(self):
         """Add a variable to this list."""
-        next_idx = len(self._index) + self._starting_index
-        self._index.add(next_idx)
-        return self[next_idx]
-
-
-
-
+        next_idx = len(self._index_set) + self._starting_index
+        self._index_set.add(next_idx)
+        obj = self[next_idx]
+        obj._index = next_idx
+        return obj
