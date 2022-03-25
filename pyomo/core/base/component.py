@@ -697,7 +697,11 @@ class ComponentData(_ComponentBase):
     __slots__ = __pickle_slots__ + ('__weakref__',)
 
     # NOTE: This constructor is in-lined in the constructors for the following
-    # classes: _BooleanVarData, _ConnectorData, _ConstraintData, _GeneralExpressionData, _LogicalConstraintData, _GeneralLogicalConstraintData, _GeneralObjectiveData, _ParamData,_GeneralVarData Changes made here need to be made in those
+    # classes: _BooleanVarData, _ConnectorData, _ConstraintData,
+    # _GeneralExpressionData, _LogicalConstraintData,
+    # _GeneralLogicalConstraintData, _GeneralObjectiveData,
+    # _ParamData,_GeneralVarData, _GeneralBooleanVarData, _DisjunctionData,
+    # _ArcData, and _PortData. Changes made here need to be made in those
     # constructors as well!
     def __init__(self, component):
         #
