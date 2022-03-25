@@ -398,6 +398,11 @@ class BooleanVar(IndexedComponent):
                 cdata = self._ComponentDataClass(component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
+                # NOTE: This is a special case where a key, value pair is added
+                # to the _data dictionary without calling
+                # _getitem_when_not_present, which is why we need to set the
+                # index here.
+                cdata._index = ndx
             self._initialize_members(self._index_set)
         timer.report()
 
