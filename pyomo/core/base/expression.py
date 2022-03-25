@@ -280,7 +280,7 @@ class Expression(IndexedComponent):
         return (
             [('Size', len(self)),
              ('Index', None if (not self.is_indexed())
-                  else self._index)
+                  else self._index_set)
              ],
             self.items(),
             ("Expression",),
@@ -467,7 +467,7 @@ class IndexedExpression(Expression):
 
     #
     # Leaving this method for backward compatibility reasons
-    # Note: It allows adding members outside of self._index.
+    # Note: It allows adding members outside of self._index_set.
     #       This has always been the case. Not sure there is
     #       any reason to maintain a reference to a separate
     #       index set if we allow this.

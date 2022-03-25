@@ -327,7 +327,7 @@ class LogicalConstraint(ActiveIndexedComponent):
                     "of a logical constraint with a single expression" %
                     (self.name,))
 
-            for ndx in self._index:
+            for ndx in self._index_set:
                 try:
                     tmp = apply_indexed_rule(self,
                                              _init_rule,
@@ -352,7 +352,7 @@ class LogicalConstraint(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active),
              ],
             self.items(),
@@ -570,7 +570,7 @@ class LogicalConstraintList(IndexedLogicalConstraint):
             _generator = _init_rule
         if _generator is None:
             while True:
-                val = len(self._index) + 1
+                val = len(self._index_set) + 1
                 if generate_debug_messages:
                     logger.debug(
                         "   Constructing logical constraint index " + str(val))
@@ -601,7 +601,7 @@ class LogicalConstraintList(IndexedLogicalConstraint):
 
     def add(self, expr):
         """Add a logical constraint with an implicit index."""
-        next_idx = len(self._index) + 1
-        self._index.add(next_idx)
+        next_idx = len(self._index_set) + 1
+        self._index_set.add(next_idx)
         return self.__setitem__(next_idx, expr)
 

@@ -265,7 +265,7 @@ Error thrown for Complementarity "%s".""" % ( b.name, ) )
 
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active),
              ],
             self._data.items(),
@@ -326,7 +326,7 @@ class ComplementarityList(IndexedComplementarity):
         Add a complementarity condition with an implicit index.
         """
         self._nconditions += 1
-        self._index.add(self._nconditions)
+        self._index_set.add(self._nconditions)
         return Complementarity.add(self, self._nconditions, expr)
 
     def construct(self, data=None):

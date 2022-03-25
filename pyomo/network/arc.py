@@ -330,7 +330,7 @@ class Arc(ActiveIndexedComponent):
                 raise IndexError(
                     "Arc '%s': Cannot initialize multiple indices "
                     "of an arc with single ports" % self.name)
-            for idx in self._index:
+            for idx in self._index_set:
                 try:
                     tmp = apply_indexed_rule(self, self._rule, self_parent, idx)
                 except Exception:
@@ -348,7 +348,7 @@ class Arc(ActiveIndexedComponent):
         """Return data that will be printed for this component."""
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active)],
             self.items(),
             ("Ports", "Directed", "Active"),

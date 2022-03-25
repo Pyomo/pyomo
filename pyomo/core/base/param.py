@@ -322,7 +322,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         """
         if self._default_val is Param.NoValue:
             return len(self._data)
-        return len(self._index)
+        return len(self._index_set)
 
     def __contains__(self, idx):
         """
@@ -331,7 +331,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         """
         if self._default_val is Param.NoValue:
             return idx in self._data
-        return idx in self._index
+        return idx in self._index_set
 
     # We do not need to override keys(), as the __len__ override will
     # cause the base class keys() to correctly correctly handle default
@@ -457,7 +457,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 for index, new_value in new_values.items():
                     self[index] = new_value
             else:
-                for index in self._index:
+                for index in self._index_set:
                     self[index] = new_values
             return
         #
@@ -478,14 +478,14 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 # For scalars, we will choose an approach based on
                 # how "dense" the Param is
                 if not self._data: # empty
-                    for index in self._index:
+                    for index in self._index_set:
                         p = self._data[index] = _ParamData(self)
                         p._value = new_values
-                elif len(self._data) == len(self._index):
-                    for index in self._index:
+                elif len(self._data) == len(self._index_set):
+                    for index in self._index_set:
                         self._data[index]._value = new_values
                 else:
-                    for index in self._index:
+                    for index in self._index_set:
                         if index not in self._data:
                             self._data[index] = _ParamData(self)
                         self._data[index]._value = new_values
@@ -792,7 +792,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             self._constructed = True
 
             # populate all other indices with default data
-            # (avoids calling _set_contains on self._index at runtime)
+            # (avoids calling _set_contains on self._index_set at runtime)
             if self._dense_initialize:
                 self.to_dense_data()
         finally:
@@ -814,7 +814,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             dataGen = lambda k, v: [ v, ]
         headers = [
             ("Size", len(self)),
-            ("Index", self._index if self.is_indexed() else None),
+            ("Index", self._index_set if self.is_indexed() else None),
             ("Domain", self.domain.name),
             ("Default", default),
             ("Mutable", self._mutable),

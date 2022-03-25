@@ -272,7 +272,7 @@ class SOSConstraint(ActiveIndexedComponent):
         else:
             _self_rule = self._rule
             _self_parent = self._parent()
-            for index in self._index:
+            for index in self._index_set:
                 try:
                     tmp = apply_indexed_rule(self, _self_rule, _self_parent, index)
                 except Exception:
@@ -323,7 +323,7 @@ class SOSConstraint(ActiveIndexedComponent):
             ostream.write("  ")
         ostream.write("\tSize="+str(len(self._data.keys()))+' ')
         if self.is_indexed():
-            ostream.write("\tIndex= "+self._index.name+'\n')
+            ostream.write("\tIndex= "+self._index_set.name+'\n')
         else:
             ostream.write("\n")
         for val in self._data:

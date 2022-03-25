@@ -637,7 +637,7 @@ class Disjunction(ActiveIndexedComponent):
                 (self.name,) )
         elif self._init_rule is not None:
             _init_rule = self._init_rule
-            for ndx in self._index:
+            for ndx in self._index_set:
                 try:
                     expr = apply_indexed_rule(self,
                                              _init_rule,
@@ -667,7 +667,7 @@ class Disjunction(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active),
              ],
             self.items(),

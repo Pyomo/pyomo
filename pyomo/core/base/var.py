@@ -817,7 +817,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         """Print component information."""
         headers = [
             ("Size", len(self)),
-            ("Index", self._index if self.is_indexed() else None),
+            ("Index", self._index_set if self.is_indexed() else None),
         ]
         if self._units is not None:
             headers.append(('Units', str(self._units)))
@@ -950,11 +950,11 @@ class VarList(IndexedVar):
         # then let _validate_index complain when we set the value.
         if self._rule_init is not None and self._rule_init.contains_indices():
             for i, idx in enumerate(self._rule_init.indices()):
-                self._index.add(i + self._starting_index)
+                self._index_set.add(i + self._starting_index)
         super(VarList,self).construct(data)
 
     def add(self):
         """Add a variable to this list."""
-        next_idx = len(self._index) + self._starting_index
-        self._index.add(next_idx)
+        next_idx = len(self._index_set) + self._starting_index
+        self._index_set.add(next_idx)
         return self[next_idx]

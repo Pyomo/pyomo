@@ -392,11 +392,11 @@ class BooleanVar(IndexedComponent):
             # Calling dict.update((...) for ...) is roughly
             # 30% slower
             self_weakref = weakref_ref(self)
-            for ndx in self._index:
+            for ndx in self._index_set:
                 cdata = self._ComponentDataClass(component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
-            self._initialize_members(self._index)
+            self._initialize_members(self._index_set)
         timer.report()
 
     def add(self, index):
@@ -477,7 +477,7 @@ class BooleanVar(IndexedComponent):
             Print component information.
         """
         return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
+                  ("Index", self._index_set if self.is_indexed() else None),
                   ],
                  self._data.items(),
                  ( "Value","Fixed","Stale"),
@@ -625,7 +625,7 @@ class BooleanVarList(IndexedBooleanVar):
         # then let _validate_index complain when we set the value.
         if self._value_init_value.__class__ is dict:
             for i in range(len(self._value_init_value)):
-                self._index.add(i + self._starting_index)
+                self._index_set.add(i + self._starting_index)
         super(BooleanVarList,self).construct(data)
         # Note that the current Var initializer silently ignores
         # initialization data that is not in the underlying index set.  To
@@ -638,8 +638,8 @@ class BooleanVarList(IndexedBooleanVar):
 
     def add(self):
         """Add a variable to this list."""
-        next_idx = len(self._index) + self._starting_index
-        self._index.add(next_idx)
+        next_idx = len(self._index_set) + self._starting_index
+        self._index_set.add(next_idx)
         return self[next_idx]
 
 

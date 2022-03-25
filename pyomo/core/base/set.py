@@ -2213,7 +2213,7 @@ class Set(IndexedComponent):
                 _ordered = "Insertion"
         return (
             [("Size", len(self._data)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Ordered", _ordered),],
             self._data.items(),
             ("Dimen","Domain","Size","Members",),

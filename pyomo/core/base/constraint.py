@@ -774,7 +774,7 @@ class Constraint(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active),
              ],
             self.items(),
@@ -1020,7 +1020,7 @@ class ConstraintList(IndexedConstraint):
 
     def add(self, expr):
         """Add a constraint with an implicit index."""
-        next_idx = len(self._index) + self._starting_index
-        self._index.add(next_idx)
+        next_idx = len(self._index_set) + self._starting_index
+        self._index_set.add(next_idx)
         return self.__setitem__(next_idx, expr)
 
