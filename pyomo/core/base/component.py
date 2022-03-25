@@ -18,7 +18,7 @@ import pyomo.common
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.common.factory import Factory
 from pyomo.common.formatting import tabular_writer, StreamIndenter
-from pyomo.common.modeling import NOTSET
+from pyomo.common.modeling import NOTSET, NoArgumentGiven
 from pyomo.common.sorting import sorted_robust
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.component_namer import name_repr, index_repr
@@ -690,11 +690,15 @@ class ComponentData(_ComponentBase):
 
     Private class attributes:
         _component      A weakref to the component that owns this data object
+        _index          The index of this data object
         """
 
-    __pickle_slots__ = ('_component',)
+    __pickle_slots__ = ('_component', '_index')
     __slots__ = __pickle_slots__ + ('__weakref__',)
 
+    # NOTE: This constructor is in-lined in the constructors for the following
+    # classes: _BooleanVarData, _ConnectorData, _ConstraintData, _GeneralExpressionData, _LogicalConstraintData, _GeneralLogicalConstraintData, _GeneralObjectiveData, _ParamData,_GeneralVarData Changes made here need to be made in those
+    # constructors as well!
     def __init__(self, component):
         #
         # ComponentData objects are typically *private* objects for
@@ -704,6 +708,7 @@ class ComponentData(_ComponentBase):
         # this assumption is significantly faster.
         #
         self._component = weakref_ref(component)
+        self._index = NoArgumentGiven
 
     def __getstate__(self):
         """Prepare a picklable state of this instance for pickling.
@@ -741,6 +746,7 @@ class ComponentData(_ComponentBase):
             state['_component'] = None
         else:
             state['_component'] = self._component()
+        state['_index'] = self._index
         return state
 
     def __setstate__(self, state):
@@ -832,17 +838,11 @@ class ComponentData(_ComponentBase):
         to the parent component index set. None is returned if
         this instance does not have a parent component, or if
         - for some unknown reason - this instance does not belong
-        to the parent component's index set. This method is not
-        intended to be a fast method;  it should be used rarely,
-        primarily in cases of label formulation.
+        to the parent component's index set.
         """
-        self_component = self.parent_component()
-        if self_component is None:
+        if self.parent_component() is None:
             return None
-        for idx, component_data in self_component.items():
-            if component_data is self:
-                return idx
-        return None
+        return self._index
 
     def __str__(self):
         """Return a string with the component name and index"""
@@ -956,6 +956,7 @@ class ActiveComponentData(ComponentData):
 
     Private class attributes:
         _component      A weakref to the component that owns this data object
+        _index          The index of this data object
         _active         A boolean that indicates whether this data is active
     """
 

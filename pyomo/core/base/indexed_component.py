@@ -981,7 +981,7 @@ value() function.""" % ( self.name, i ))
         should override this method.
 
         Implementations may assume that the index has already been
-        validated and is a legitimate entry in the _data dict.
+        validated and is a legitimate entry to add to the _data dict.
         """
         # If the value is "Skip" do not add anything
         if value is IndexedComponent.Skip:
@@ -993,6 +993,7 @@ value() function.""" % ( self.name, i ))
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
+        obj._index = index
         try:
             if value is not _NotSpecified:
                 obj.set_value(value)

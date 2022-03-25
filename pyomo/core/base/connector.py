@@ -17,6 +17,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.deprecation import deprecated, RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
@@ -42,6 +43,7 @@ class _ConnectorData(ComponentData, NumericValue):
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
 
         self.vars = {}
         self.aggregators = {}
@@ -261,6 +263,7 @@ class ScalarConnector(Connector, _ConnectorData):
     def __init__(self, *args, **kwd):
         _ConnectorData.__init__(self, component=self)
         Connector.__init__(self, *args, **kwd)
+        self._index = None
 
     #
     # Since this class derives from Component and Component.__getstate__

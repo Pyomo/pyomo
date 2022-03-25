@@ -22,6 +22,7 @@ from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import DeveloperError
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import logical_expr
 from pyomo.core.expr.numvalue import (
@@ -137,6 +138,7 @@ class _ConstraintData(ActiveComponentData):
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
         self._active = True
 
     #
@@ -820,6 +822,7 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
     def __init__(self, *args, **kwds):
         _GeneralConstraintData.__init__(self, component=self, expr=None)
         Constraint.__init__(self, *args, **kwds)
+        self._index = None
 
     #
     # Since this class derives from Component and

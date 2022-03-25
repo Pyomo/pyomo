@@ -2078,6 +2078,7 @@ class Set(IndexedComponent):
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
+        obj._index = index
         if _d is not UnknownSetDimen:
             obj._dimen = _d
         if domain is not None:
@@ -2235,6 +2236,7 @@ class FiniteScalarSet(_FiniteSetData, Set):
     def __init__(self, **kwds):
         _FiniteSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
+        self._index = None
 
 
 class FiniteSimpleSet(metaclass=RenamedClass):
@@ -2265,6 +2267,7 @@ class SortedScalarSet(_ScalarOrderedSetMixin, _SortedSetData, Set):
 
         _SortedSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
+        self._index = None
 
 
 class SortedSimpleSet(metaclass=RenamedClass):
@@ -3012,6 +3015,7 @@ class InfiniteScalarRangeSet(_InfiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
         _InfiniteRangeSetData.__init__(self, component=self)
         RangeSet.__init__(self, *args, **kwds)
+        self._index = None
 
     # We want the RangeSet.__str__ to override the one in _FiniteSetMixin
     __str__ = RangeSet.__str__
@@ -3027,6 +3031,7 @@ class FiniteScalarRangeSet(_ScalarOrderedSetMixin,
     def __init__(self, *args, **kwds):
         _FiniteRangeSetData.__init__(self, component=self)
         RangeSet.__init__(self, *args, **kwds)
+        self._index = None
 
     # We want the RangeSet.__str__ to override the one in _FiniteSetMixin
     __str__ = RangeSet.__str__

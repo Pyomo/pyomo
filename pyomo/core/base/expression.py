@@ -17,7 +17,7 @@ from typing import overload
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecated, RenamedClass
-from pyomo.common.modeling import NOTSET
+from pyomo.common.modeling import NOTSET, NoArgumentGiven
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 
@@ -228,6 +228,7 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
         # Inlining ComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
 
 
 @ModelComponentFactory.register(
@@ -373,6 +374,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     def __init__(self, *args, **kwds):
         _GeneralExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)
+        self._index = None
 
     #
     # Since this class derives from Component and

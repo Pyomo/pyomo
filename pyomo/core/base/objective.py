@@ -22,6 +22,7 @@ from weakref import ref as weakref_ref
 from typing import overload
 
 from pyomo.common.log import is_debug_set
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
@@ -150,6 +151,7 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
         # Inlining ActiveComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
         self._active = True
         self._sense = sense
 
@@ -405,6 +407,7 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
     def __init__(self, *args, **kwd):
         _GeneralObjectiveData.__init__(self, expr=None, component=self)
         Objective.__init__(self, *args, **kwd)
+        self._index = None
 
     #
     # Since this class derives from Component and

@@ -14,7 +14,7 @@ from weakref import ref as weakref_ref, ReferenceType
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from pyomo.common.modeling import unique_component_name, NOTSET
+from pyomo.common.modeling import unique_component_name, NOTSET, NoArgumentGiven
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
@@ -82,6 +82,7 @@ class _BooleanVarData(ComponentData, BooleanValue):
     def __init__(self, component=None):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
 
     def is_fixed(self):
         """Returns True if this variable is fixed, otherwise returns False."""
@@ -414,7 +415,9 @@ class BooleanVar(IndexedComponent):
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
         self._initialize_members((index,))
+        obj._index = index
         return obj
+
     def _setitem_when_not_present(self, index, value):
         """Perform the fundamental component item creation and storage.
 
@@ -494,6 +497,7 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
     def __init__(self, *args, **kwd):
         _GeneralBooleanVarData.__init__(self, component=self)
         BooleanVar.__init__(self, *args, **kwd)
+        self._index = None
 
     """
     # Since this class derives from Component and Component.__getstate__

@@ -18,7 +18,7 @@ from typing import overload
 
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import NOTSET
+from pyomo.common.modeling import NOTSET, NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.indexed_component import (
@@ -135,6 +135,7 @@ class _ParamData(ComponentData, NumericValue):
         # the base ComponentData constructor.
         #
         self._component = weakref_ref(component)
+        self._index = NoArgumentGiven
         #
         # The following is equivalent to calling the
         # base NumericValue constructor.
@@ -552,6 +553,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                     ans = self._data[index] = _ParamData(self)
                 else:
                     ans = self._data[index] = self
+                ans._index = index
                 return ans
             if self.is_indexed():
                 idx_str = '%s[%s]' % (self.name, index,)
@@ -677,10 +679,12 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             if index is None and not self.is_indexed():
                 self._data[None] = self
                 self.set_value(value, index)
+                self._index = None
                 return self
             elif self._mutable:
                 obj = self._data[index] = _ParamData(self)
                 obj.set_value(value, index)
+                obj._index = index
                 return obj
             else:
                 self._data[index] = value
@@ -833,6 +837,7 @@ class ScalarParam(_ParamData, Param):
     def __init__(self, *args, **kwds):
         Param.__init__(self, *args, **kwds)
         _ParamData.__init__(self, component=self)
+        self._index = None
 
     #
     # Since this class derives from Component and Component.__getstate__

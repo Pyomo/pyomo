@@ -295,6 +295,7 @@ class _GeneralVarData(_VarData):
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
         self._value = None
         #
         # The type of the lower and upper bound attributes can either be
@@ -318,6 +319,7 @@ class _GeneralVarData(_VarData):
         self._domain = src._domain
         self._fixed = src._fixed
         self._stale = src._stale
+        self._index = src._index
         return self
 
     def __getstate__(self):
@@ -745,6 +747,11 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                 # Initialize all the component datas with the common data
                 for index in self.index_set():
                     self._data[index] = self._ComponentDataClass.copy(ref)
+                    # NOTE: This is a special case where a key, value pair is
+                    # added to the _data dictionary without calling
+                    # _getitem_when_not_present, which is why we need to set the
+                    # index here.
+                    self._data[index]._index = index
                 # Now go back and initialize any index-specific data
                 block = self.parent_block()
                 if call_domain_rule:
@@ -795,6 +802,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             obj.lower, obj.upper = self._rule_bounds(parent, index)
         if self._rule_init is not None:
             obj.set_value(self._rule_init(parent, index))
+        obj._index = index
         return obj
 
     #
@@ -840,6 +848,7 @@ class ScalarVar(_GeneralVarData, Var):
     def __init__(self, *args, **kwd):
         _GeneralVarData.__init__(self, component=self)
         Var.__init__(self, *args, **kwd)
+        self._index = None
 
     # Since this class derives from Component and Component.__getstate__
     # just packs up the entire __dict__ into the state dict, we do not

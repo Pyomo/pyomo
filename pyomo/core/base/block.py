@@ -2039,6 +2039,7 @@ class ScalarBlock(_BlockData, Block):
         # get/setitem_when_not_present so that we do not (implicitly)
         # trigger the Block rule
         self._data[None] = self
+        self._index = None
 
     # We want scalar Blocks to pick up the Block display method
     display = Block.display

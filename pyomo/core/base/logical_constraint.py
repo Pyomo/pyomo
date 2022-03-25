@@ -18,6 +18,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
+from pyomo.common.modeling import NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
@@ -71,6 +72,7 @@ class _LogicalConstraintData(ActiveComponentData):
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
             else None
+        self._index = NoArgumentGiven
         self._active = True
 
     #
@@ -123,11 +125,12 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - _LogicalStatmentData,
+        #   - _LogicalConstraintData,
         #   - ActiveComponentData
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
             else None
+        self._index = NoArgumentGiven
         self._active = True
 
         self._expr = None
@@ -217,7 +220,7 @@ class LogicalConstraint(ActiveIndexedComponent):
             A boolean that is true if this component has been constructed
         _data
             A dictionary from the index set to component data objects
-        _index
+        _index_set
             The set of valid indices
         _implicit_subsets
             A tuple of set objects that represents the index set
@@ -424,6 +427,7 @@ class ScalarLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
         _GeneralLogicalConstraintData.__init__(
             self, component=self, expr=None)
         LogicalConstraint.__init__(self, *args, **kwds)
+        self._index = None
 
     #
     # Since this class derives from Component and
