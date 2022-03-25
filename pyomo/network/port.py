@@ -17,7 +17,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import unique_component_name
+from pyomo.common.modeling import unique_component_name, NoArgumentGiven
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.var import Var
@@ -55,6 +55,7 @@ class _PortData(ComponentData):
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
 
         self.vars = {}
         self._arcs = []
@@ -344,6 +345,7 @@ class Port(IndexedComponent):
     def _getitem_when_not_present(self, idx):
         """Returns the default component data value."""
         tmp = self._data[idx] = _PortData(component=self)
+        tmp._index = idx
         return tmp
 
     def construct(self, data=None):
@@ -729,6 +731,7 @@ class ScalarPort(Port, _PortData):
     def __init__(self, *args, **kwd):
         _PortData.__init__(self, component=self)
         Port.__init__(self, *args, **kwd)
+        self._index = None
 
 
 class SimplePort(metaclass=RenamedClass):
