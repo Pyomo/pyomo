@@ -370,6 +370,7 @@ class _LinearConstraintData(_ConstraintData):
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = index
         self._active = True
 
 class _LinearMatrixConstraintData(_LinearConstraintData):
