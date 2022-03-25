@@ -205,6 +205,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         #   - BooleanValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NoArgumentGiven
         self._value = None
         self.fixed = False
         self._stale = 0 # True
