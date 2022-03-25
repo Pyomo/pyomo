@@ -701,7 +701,8 @@ class ComponentData(_ComponentBase):
     # _GeneralExpressionData, _LogicalConstraintData,
     # _GeneralLogicalConstraintData, _GeneralObjectiveData,
     # _ParamData,_GeneralVarData, _GeneralBooleanVarData, _DisjunctionData,
-    # _ArcData, and _PortData. Changes made here need to be made in those
+    # _ArcData, _PortData, _LinearConstraintData, and
+    # _LinearMatrixConstraintData. Changes made here need to be made in those
     # constructors as well!
     def __init__(self, component):
         #
@@ -854,6 +855,13 @@ class ComponentData(_ComponentBase):
 
     def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """Return a string with the component name and index"""
+        # NOTE: There are bugs with name buffers if a user always gives the same
+        # dictionary but switches from fully-qualified to local names or changes
+        # the component the name is relative to. We will simply deprecate the
+        # buffer in a future PR, but for now we will leave this method so it
+        # behaves the same when a buffer is given, and, in the absence of a
+        # buffer it will construct the name using the index (woohoo!)
+
         #
         # Using the buffer, which is a dictionary:  id -> string
         #
@@ -893,13 +901,10 @@ class ComponentData(_ComponentBase):
                 return name_buffer[id(self)]
         else:
             #
-            # No buffer, so we iterate through the component _data
-            # dictionary until we find this object.  This can be much
-            # more expensive than if a buffer is provided.
+            # No buffer, we can do what we are going to do all the time after we
+            # deprecate the buffer.
             #
-            for idx, obj in c.items():
-                if obj is self:
-                    return base + index_repr(idx)
+            return base + index_repr(self.index())
         #
         raise RuntimeError("Fatal error: cannot find the component data in "
                            "the owning component's _data dictionary.")
