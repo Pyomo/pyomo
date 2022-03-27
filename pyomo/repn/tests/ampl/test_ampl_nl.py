@@ -18,6 +18,7 @@ import re
 import pyomo.common.unittest as unittest
 
 from pyomo.common.getGSL import find_GSL
+from pyomo.common.fileutils import this_file_dir
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.environ import (
     ConcreteModel, Var, Constraint, Objective, Param, Block,
@@ -27,7 +28,7 @@ from pyomo.environ import (
 import pyomo.repn.plugins.ampl.ampl_ as ampl_
 gsr = ampl_.generate_standard_repn
 
-thisdir = os.path.dirname(os.path.abspath(__file__))
+thisdir = this_file_dir()
 
 _norm_whitespace = re.compile(r'\s+')
 _norm_comment = re.compile(r'\s*#\s*')
@@ -61,67 +62,71 @@ def _update_subsets(subset, base, test):
                 else:
                     base[i] = test[j]
 
+def load_and_normalize_nl_baseline(baseline, testfile):
+    with open(testfile, 'r') as FILE:
+        test = FILE.read().splitlines()
+    with open(baseline, 'r') as FILE:
+        base = FILE.read().splitlines()
+    if test == base:
+        return [], []
+    for i in range(min(len(test), len(base))):
+        if test[i] == base[i]:
+            continue
+        # normalize comment whitespace
+        base[i] = _norm_comment.sub(
+            '\t#', _norm_whitespace.sub(' ', base[i]))
+        test[i] = _norm_comment.sub(
+            '\t#', _norm_whitespace.sub(' ', test[i]))
+    if test == base:
+        return [], []
+    i = j = -1
+    subset = ([], [])
+    for line in difflib.ndiff(base, test):
+        if line[0] == '?':
+            continue
+        if line[0] == ' ':
+            _update_subsets(subset, base, test)
+            subset = ([], [])
+            i += 1
+            j += 1
+            continue
+        if line[0] == '-':
+            i += 1
+            subset[0].append(i)
+        if line[0] == '+':
+            j += 1
+            subset[1].append(j)
+
+    if subset[0] or subset[1]:
+        _update_subsets(subset, base, test)
+
+    if test == base:
+        return [], []
+    print(''.join(difflib.unified_diff(
+        [_+"\n" for _ in base],
+        [_+"\n" for _ in test],
+        fromfile=baseline,
+        tofile=testfile)))
+    return base, test
 
 class TestNLWriter(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.context = TempfileManager.new_context()
+        cls.tempdir = cls.context.create_tempdir()
 
-    def _cleanup(self, fname):
-        for x in (fname, fname+'.row', fname+'.col'):
-            try:
-                os.remove(x)
-            except OSError:
-                pass
+    @classmethod
+    def tearDownClass(cls):
+        cls.context.release()
 
     def _get_fnames(self):
         class_name, test_name = self.id().split('.')[-2:]
-        prefix = os.path.join(thisdir, test_name.replace("test_", "", 1))
-        return prefix+".nl.baseline", prefix+".nl.out"
+        prefix = test_name.replace("test_", "", 1)
+        return (os.path.join(thisdir, prefix+".nl.baseline"),
+                os.path.join(self.tempdir, prefix+".nl.out"))
 
     def _compare_nl_baseline(self, baseline, testfile):
-        with open(testfile, 'r') as FILE:
-            test = FILE.read().splitlines()
-        with open(baseline, 'r') as FILE:
-            base = FILE.read().splitlines()
-        if test == base:
-            return
-        for i in range(min(len(test), len(base))):
-            if test[i] == base[i]:
-                continue
-            # normalize comment whitespace
-            base[i] = _norm_comment.sub(
-                '\t#', _norm_whitespace.sub(' ', base[i]))
-            test[i] = _norm_comment.sub(
-                '\t#', _norm_whitespace.sub(' ', test[i]))
-        if test == base:
-            return
-        i = j = -1
-        subset = ([], [])
-        for line in difflib.ndiff(base, test):
-            if line[0] == '?':
-                continue
-            if line[0] == ' ':
-                _update_subsets(subset, base, test)
-                subset = ([], [])
-                i += 1
-                j += 1
-                continue
-            if line[0] == '-':
-                i += 1
-                subset[0].append(i)
-            if line[0] == '+':
-                j += 1
-                subset[1].append(j)
-
-        if subset[0] or subset[1]:
-            _update_subsets(subset, base, test)
-
-        if test == base:
-            return
-        print(''.join(difflib.unified_diff(
-            [_+"\n" for _ in base],
-            [_+"\n" for _ in test],
-            fromfile=baseline,
-            tofile=testfile)))
-        self.assertEqual(test, base)
+        self.assertEqual(*load_and_normalize_nl_baseline(baseline, testfile))
 
     def test_export_nonlinear_variables(self):
         model = ConcreteModel()
@@ -143,7 +148,6 @@ class TestNLWriter(unittest.TestCase):
         assert "z" not in names # z is not in a constraint
         assert "y" not in names # y is fixed
         assert "x" in names
-        self._cleanup(test_fname)
         model.write(
             test_fname,
             format='nl',
@@ -160,7 +164,6 @@ class TestNLWriter(unittest.TestCase):
         assert "w[1]" not in names
         assert "w[2]" not in names
         assert "w[3]" not in names
-        self._cleanup(test_fname)
         model.write(
             test_fname,
             format='nl',
@@ -177,8 +180,6 @@ class TestNLWriter(unittest.TestCase):
         assert "w[1]" in names
         assert "w[2]" in names
         assert "w[3]" in names
-
-        self._cleanup(test_fname)
 
         model.write(
             test_fname,
@@ -197,8 +198,6 @@ class TestNLWriter(unittest.TestCase):
         assert "w[2]" in names
         assert "w[3]" not in names
 
-        self._cleanup(test_fname)
-
     def test_var_on_other_model(self):
         other = ConcreteModel()
         other.a = Var()
@@ -209,12 +208,10 @@ class TestNLWriter(unittest.TestCase):
         model.obj = Objective(expr=model.x)
 
         baseline_fname, test_fname = self._get_fnames()
-        self._cleanup(test_fname)
         self.assertRaisesRegex(
             KeyError,
             "'a' is not part of the model",
             model.write, test_fname, format='nl')
-        self._cleanup(test_fname)
 
     def test_var_on_deactivated_block(self):
         model = ConcreteModel()
@@ -226,10 +223,8 @@ class TestNLWriter(unittest.TestCase):
         model.obj = Objective(expr=model.x)
 
         baseline_fname, test_fname = self._get_fnames()
-        self._cleanup(test_fname)
         model.write(test_fname, format='nl')
         self._compare_nl_baseline(baseline_fname, test_fname)
-        self._cleanup(test_fname)
 
     def test_var_on_nonblock(self):
         class Foo(Block().__class__):
@@ -245,12 +240,10 @@ class TestNLWriter(unittest.TestCase):
         model.obj = Objective(expr=model.x)
 
         baseline_fname, test_fname = self._get_fnames()
-        self._cleanup(test_fname)
         self.assertRaisesRegex(
             KeyError,
             "'other.a' exists within Foo 'other'",
             model.write, test_fname, format='nl')
-        self._cleanup(test_fname)
 
     def _external_model(self):
         DLL = find_GSL()
@@ -280,34 +273,28 @@ class TestNLWriter(unittest.TestCase):
         self.assertAlmostEqual(value(m.o), 5.0, 7)
 
         baseline_fname, test_fname = self._get_fnames()
-        self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True})
         self._compare_nl_baseline(baseline_fname, test_fname)
-        self._cleanup(test_fname)
 
     def test_external_expression_variable(self):
         m = self._external_model()
 
         baseline_fname, test_fname = self._get_fnames()
-        self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True,
                                 'column_order': True})
         self._compare_nl_baseline(baseline_fname, test_fname)
-        self._cleanup(test_fname)
 
     def test_external_expression_partial_fixed(self):
         m = self._external_model()
         m.x.fix()
 
         baseline_fname, test_fname = self._get_fnames()
-        self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True,
                                 'column_order': True})
         self._compare_nl_baseline(baseline_fname, test_fname)
-        self._cleanup(test_fname)
 
     def test_external_expression_fixed(self):
         m = self._external_model()
@@ -315,26 +302,22 @@ class TestNLWriter(unittest.TestCase):
         m.y.fix()
 
         baseline_fname, test_fname = self._get_fnames()
-        self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True,
                                 'column_order': True})
         self._compare_nl_baseline(baseline_fname, test_fname)
-        self._cleanup(test_fname)
 
     def test_external_expression_rewrite_fixed(self):
         m = self._external_model()
 
         baseline_fname, test_fname = self._get_fnames()
         variable_baseline = baseline_fname.replace('rewrite_fixed','variable')
-        self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                     io_options={'symbolic_solver_labels':True,
                                 'column_order': True})
         self._compare_nl_baseline(variable_baseline, test_fname)
 
         m.x.fix()
-        self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                 io_options={'symbolic_solver_labels':True})
         partial_baseline = baseline_fname.replace(
@@ -342,12 +325,10 @@ class TestNLWriter(unittest.TestCase):
         self._compare_nl_baseline(partial_baseline, test_fname)
 
         m.y.fix()
-        self._cleanup(test_fname)
         m.write(test_fname, format='nl',
                 io_options={'symbolic_solver_labels':True})
         fixed_baseline = baseline_fname.replace('rewrite_fixed','fixed')
         self._compare_nl_baseline(fixed_baseline, test_fname)
-        self._cleanup(test_fname)
 
     def test_obj_con_cache(self):
         model = ConcreteModel()
