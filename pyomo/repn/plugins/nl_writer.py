@@ -32,7 +32,7 @@ from pyomo.core.expr.current import (
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.base import (
     Block, Objective, Constraint, Var, Param, Expression, ExternalFunction,
-    Suffix, SymbolMap, NameLabeler, SortComponents, minimize,
+    Suffix, SOSConstraint, SymbolMap, NameLabeler, SortComponents, minimize,
 )
 from pyomo.core.base.block import SortComponents
 from pyomo.core.base.component import ActiveComponent
@@ -263,9 +263,9 @@ class _SuffixData(object):
     def update(self, suffix):
         self.datatype.add(suffix.datatype)
         for obj, val in suffix.items():
-            self._store(obj, val)
+            self.store(obj, val)
 
-    def _store(self, obj, val):
+    def store(self, obj, val):
         _id = id(obj)
         if _id in self._column_order:
             self.var[self._column_order[_id]] = val
@@ -278,17 +278,18 @@ class _SuffixData(object):
         elif isinstance(obj, PyomoObject):
             if obj.is_indexed():
                 for o in obj.values():
-                    self._store(o, val)
+                    self.store(o, val)
             else:
                 logger.warning(
                     f"model contained export suffix {self.name} with "
                     f"{obj.ctype.__name__} key '{obj.name}', but that "
-                    "object is not part of the NL file.  Skipping.")
+                    "object is not exported as part of the NL file.  "
+                    "Skipping.")
         else:
             logger.warning(
                 f"model contained export suffix {self.name} with "
-                f"{obj.__class__.__name__} key '{obj}', but that "
-                "object is not part of the NL file.  Skipping.")
+                f"{obj.__class__.__name__} key '{obj}' that is not "
+                "a Var, Constrtaint, Objective, or the model.  Skipping.")
 
 
 class _NLWriter_impl(object):
@@ -349,13 +350,13 @@ class _NLWriter_impl(object):
             sort=sorter,
             valid={
                 Block, Objective, Constraint, Var, Param, Expression,
-                ExternalFunction, Suffix,
+                ExternalFunction, Suffix, SOSConstraint,
                 # FIXME: Non-active components should not report as Active
                 Set, RangeSet, Port,
-                # TODO: Piecewise, SOSConstraint, Complementarity
+                # TODO: Piecewise, Complementarity
             },
             targets={
-                Objective, Constraint, Suffix,
+                Objective, Constraint, Suffix, SOSConstraint,
             }
         )
         if unknown:
@@ -532,9 +533,17 @@ class _NLWriter_impl(object):
 
         n_lcons = 0 # We do not yet support logical constraints
 
-        # obj_vars = obj_vars_linear.union(obj_vars_nonlinear)
-        # con_vars = con_vars_linear.union(con_vars_nonlinear)
-        # all_vars = con_vars.union(obj_vars)
+        # We need to check the SOS constraints before finalizing the
+        # variable order because the SOS constrint *could* reference a
+        # variable not yet seen in the model.
+        for block in component_map[SOSConstraint]:
+            for sos in block.component_objects(SOSConstraint, active=True):
+                for v in sos.variables:
+                    if id(v) not in var_map:
+                        _id = id(v)
+                        var_map[_id] = v
+                        con_vars_linear.add(_id)
+
         obj_vars = obj_vars_linear | obj_vars_nonlinear
         con_vars = con_vars_linear | con_vars_nonlinear
         all_vars = con_vars | obj_vars
@@ -630,6 +639,7 @@ class _NLWriter_impl(object):
             variables[idx] = (v, _id, _RANGE_TYPE(lb, ub), lb, ub)
         timer.toc("Computed variable bounds", level=logging.DEBUG)
 
+        # Collect all defined EXPORT suffixes on the model
         suffix_data = {}
         if component_map[Suffix]:
             if not row_order:
@@ -648,6 +658,49 @@ class _NLWriter_impl(object):
                             name, column_order, row_order, obj_order, model_id)
                     suffix_data[name].update(suffix)
             timer.toc("Collected suffixes", level=logging.DEBUG)
+
+        # Collect all defined SOSConstraints on the model
+        if component_map[SOSConstraint]:
+            for name in ('sosno', 'ref'):
+                # I am choosing not to allow a user to mix the use of the Pyomo
+                # SOSConstraint component and manual sosno declarations within
+                # a single model. I initially tried to allow this but the
+                # var section of the code below blows up for two reason. (1)
+                # we have to make sure that the sosno suffix is not defined
+                # twice for the same variable (2) We have to make sure that
+                # the automatically chosen sosno used by the SOSConstraint
+                # translation does not already match one a user has manually
+                # implemented (this would modify the members in an sos set).
+                # Since this suffix is exclusively used for defining sos sets,
+                # there is no reason a user can not just stick to one method.
+                if name in suffix_data:
+                    raise RuntimeError(
+                        "The Pyomo NL file writer does not allow both "
+                        f"manually declared '{name}' suffixes as well "
+                        "as SOSConstraint components to exist on a single "
+                        "model. To avoid this error please use only one of "
+                        "these methods to define special ordered sets.")
+                suffix_data[name] = _SuffixData(
+                    name, column_order, row_order, obj_order, model_id)
+            sos_id = 0
+            sosno = suffix_data['sosno']
+            ref = suffix_data['ref']
+            for block in reversed(component_map[SOSConstraint]):
+                for sos in block.component_data_objects(
+                        SOSConstraint, active=True, descend_into=False):
+                    sos_id += 1
+                    if sos.level == 1:
+                        tag = sos_id
+                    elif sos.level == 2:
+                        tag = -sos_id
+                    else:
+                        raise ValueError(
+                            f"SOSContraint '{sos.name}' has sos "
+                            f"type='{sos.level}', which is not supported "
+                            "by the NL file interface")
+                    for v, r in sos.items():
+                        sosno.store(v, tag)
+                        ref.store(v, r)
 
         if symbolic_solver_labels:
             labeler = NameLabeler()
