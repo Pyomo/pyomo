@@ -10,10 +10,11 @@
 #
 # Test the canonical expressions
 #
-import difflib
 import itertools
 import os
 import re
+
+from difflib import SequenceMatcher, unified_diff
 
 import pyomo.common.unittest as unittest
 
@@ -79,30 +80,17 @@ def load_and_normalize_nl_baseline(baseline, testfile):
             '\t#', _norm_whitespace.sub(' ', test[i]))
     if test == base:
         return [], []
-    i = j = -1
-    subset = ([], [])
-    for line in difflib.ndiff(base, test):
-        if line[0] == '?':
-            continue
-        if line[0] == ' ':
-            _update_subsets(subset, base, test)
-            subset = ([], [])
-            i += 1
-            j += 1
-            continue
-        if line[0] == '-':
-            i += 1
-            subset[0].append(i)
-        if line[0] == '+':
-            j += 1
-            subset[1].append(j)
 
-    if subset[0] or subset[1]:
-        _update_subsets(subset, base, test)
+    for group in SequenceMatcher(None, base, test).get_grouped_opcodes(3):
+        for tag, i1, i2, j1, j2 in group:
+            if tag != 'replace':
+                continue
+            _update_subsets((range(i1, i2), range(j1, j2)), base, test)
 
     if test == base:
         return [], []
-    print(''.join(difflib.unified_diff(
+
+    print(''.join(unified_diff(
         [_+"\n" for _ in base],
         [_+"\n" for _ in test],
         fromfile=baseline,
