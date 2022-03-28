@@ -1682,6 +1682,17 @@ def handle_named_expression_node(visitor, node, arg1):
 
 def handle_external_function_node(visitor, node, *args):
     func = node._fcn._function
+    # There is a special case for external functions: these are the only
+    # expressions thatncan accept string arguments. As we currently pass
+    # these as 'precompiled' general NL fragments, the normal trap for
+    # constant subexpressions will miss constant external function calls
+    # that contain strings.  We will catch that case here.
+    if all(arg[0] is _CONSTANT or
+           (arg[0] is _GENERAL and arg[1].nl and not arg[1].nl[1])
+           for arg in args):
+        arg_list = [arg[1] if arg[0] is _CONSTANT else arg[1].const
+                    for arg in args]
+        return (_CONSTANT, node._apply_operation(arg_list))
     if func in visitor.external_functions:
         if node._fcn._library != visitor.external_functions[func][1]._library:
             raise RuntimeError(
@@ -1873,7 +1884,11 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def exitNode(self, node, data):
         if data.__class__ is AMPLRepn:
-            return (_GENERAL, data)
+            # If the summation resulted in a constant, return the constant
+            if data.linear or data.nonlinear or data.nl:
+                return (_GENERAL, data)
+            else:
+                return (_CONSTANT, data.const)
         #
         # General expressions...
         #
