@@ -141,7 +141,7 @@ class TestIntegral(unittest.TestCase):
         with self.assertRaises(ValueError):
             m.int = Integral(m.t, wrt=m.t)
 
-    # test DerivativeVar reclassification after discretization
+    # test Integral reclassification after discretization
     def test_reclassification_finite_difference(self):
         m = ConcreteModel()
         m.t = ContinuousSet(bounds=(0, 1))
@@ -198,7 +198,7 @@ class TestIntegral(unittest.TestCase):
         self.assertTrue(m.int3.ctype is Expression)
         self.assertTrue(m.int4.ctype is Expression)
 
-    # test DerivativeVar reclassification after discretization
+    # test Integral reclassification after discretization
     def test_reclassification_collocation(self):
         m = ConcreteModel()
         m.t = ContinuousSet(bounds=(0, 1))
