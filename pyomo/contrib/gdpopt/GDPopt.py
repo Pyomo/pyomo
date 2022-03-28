@@ -78,13 +78,14 @@ class GDPoptSolver(object):
     For nonconvex problems, LOA may not report rigorous lower/upper bounds.
 
     Questions: Please make a post at StackOverflow and/or contact Qi Chen
-    <https://github.com/qtothec>.
+    <https://github.com/qtothec> or David Bernal <https://github.com/bernalde>.
 
     Several key GDPopt components were prototyped by BS and MS students:
 
     - Logic-based branch and bound: Sunjeev Kale
     - MC++ interface: Johnny Bates
     - LOA set-covering initialization: Eloy Fernandez
+    - Logic-to-linear transformation: Romeo Valentin
 
     """
 
@@ -217,10 +218,10 @@ Subsolvers:
         to_cite_text = """
 If you use this software, you may cite the following:
 - Implementation:
-Chen, Q; Johnson, ES; Siirola, JD; Grossmann, IE.
-Pyomo.GDP: Disjunctive Models in Python.
-Proc. of the 13th Intl. Symposium on Process Systems Eng.
-San Diego, 2018.
+Chen, Q; Johnson, ES; Bernal, DE; Valentin, R; Kale, S;
+Bates, J; Siirola, JD; Grossmann, IE.
+Pyomo.GDP: an ecosystem for logic based modeling and optimization development.
+Optimization and Engineering, 2021. 
         """.strip()
         if config.strategy == "LOA":
             to_cite_text += "\n"

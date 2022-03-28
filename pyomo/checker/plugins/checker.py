@@ -77,11 +77,11 @@ class PyomoModelChecker(SingletonPlugin):
         pass
 
     def _checkerName(self):
-        match = re.search("<class '([a-zA-Z0-9_\.]+)'>", str(self.__class__))
+        match = re.search(r"<class '([a-zA-Z0-9_\.]+)'>", str(self.__class__))
         return match.group(1).split(".")[-1]
 
     def _checkerPackage(self):
-        match = re.search("<class '([a-zA-Z0-9_\.]+)'>", str(self.__class__))
+        match = re.search(r"<class '([a-zA-Z0-9_\.]+)'>", str(self.__class__))
         return match.group(1).split(".")[-3]
         
     def checkerLabel(self):

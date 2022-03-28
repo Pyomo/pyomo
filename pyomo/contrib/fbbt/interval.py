@@ -10,14 +10,10 @@
 
 import math
 import logging
-from pyomo.common.errors import DeveloperError, InfeasibleConstraintException, PyomoException
+from pyomo.common.errors import InfeasibleConstraintException, IntervalException
 
 logger = logging.getLogger(__name__)
 inf = float('inf')
-
-
-class IntervalException(PyomoException):
-    pass
 
 
 def add(xl, xu, yl, yu):

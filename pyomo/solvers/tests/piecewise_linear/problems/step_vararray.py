@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-"""
+r"""
 A step function:
 
        / 0      , 0 <= x <= 1

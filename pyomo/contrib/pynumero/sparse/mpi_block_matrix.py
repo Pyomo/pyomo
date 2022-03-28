@@ -20,7 +20,7 @@ where m_{i,j} are sparse matrices
 .. rubric:: Contents
 
 """
-
+from __future__ import annotations
 from .mpi_block_vector import MPIBlockVector
 from .block_vector import BlockVector
 from .block_matrix import BlockMatrix, NotFullyDefinedBlockMatrixError
@@ -34,12 +34,13 @@ import operator
 __all__ = ['MPIBlockMatrix']
 
 
-def assert_block_structure(mat):
+def assert_block_structure(mat: MPIBlockMatrix):
     if mat.has_undefined_row_sizes() or mat.has_undefined_col_sizes():
         mat.broadcast_block_sizes()
-    if mat.has_undefined_row_sizes() or mat.has_undefined_col_sizes():
-        msg = 'Call MPIBlockMatrix.broadcast_block_sizes() first. '
-        raise NotFullyDefinedBlockMatrixError(msg)
+    # an error would be raised in broadcast_block_sizes if there were still
+    # undefined block rows or columns
+    assert not mat.has_undefined_row_sizes()
+    assert not mat.has_undefined_col_sizes()
 
 
 class MPIBlockMatrix(BaseBlockMatrix):
@@ -153,26 +154,14 @@ class MPIBlockMatrix(BaseBlockMatrix):
         """
         Returns list with inidices of blocks owned by this processor.
         """
-        bm, bn = self.bshape
-        owned_blocks = []
-        for i in range(bm):
-            for j in range(bn):
-                if self._owned_mask[i, j]:
-                    owned_blocks.append((i,j))
-        return owned_blocks
+        return list(zip(*np.nonzero(self._owned_mask)))
 
     @property
     def shared_blocks(self):
         """
         Returns list of 2-tuples with inidices of blocks shared by all processors
         """
-        bm, bn = self.bshape
-        owned_blocks = []
-        for i in range(bm):
-            for j in range(bn):
-                if self._owned_mask[i, j] and self._rank_owner[i, j]<0:
-                    owned_blocks.append((i,j))
-        return owned_blocks
+        return list(zip(*np.nonzero(self._rank_owner < 0)))
 
     @property
     def rank_ownership(self):
@@ -207,11 +196,17 @@ class MPIBlockMatrix(BaseBlockMatrix):
     def set_col_size(self, col, size):
         self._block_matrix.set_col_size(col, size)
 
-    def is_row_size_defined(self, row):
-        return self._block_matrix.is_row_size_defined(row)
+    def is_row_size_defined(self, row, this_process_only=True):
+        res = self._block_matrix.is_row_size_defined(row)
+        if not this_process_only:
+            res = self.mpi_comm.allreduce(res, op=MPI.LOR)
+        return bool(res)
 
-    def is_col_size_defined(self, col):
-        return self._block_matrix.is_col_size_defined(col)
+    def is_col_size_defined(self, col, this_process_only=True):
+        res = self._block_matrix.is_col_size_defined(col)
+        if not this_process_only:
+            res = self.mpi_comm.allreduce(res, op=MPI.LOR)
+        return bool(res)
 
     def get_block_mask(self, copy=True):
         return self._block_matrix.get_block_mask(copy=copy)
@@ -339,7 +334,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         self._mpiw.Allreduce(local_result, global_result)
         return global_result
 
-    def is_empty_block(self, idx, jdx):
+    def is_empty_block(self, idx, jdx, this_process_only=True):
         """
         Indicates if a block is empty
 
@@ -355,7 +350,10 @@ class MPIBlockMatrix(BaseBlockMatrix):
         boolean
 
         """
-        raise NotImplementedError('Operation not supported by MPIBlockMatrix')
+        res = self._block_matrix.is_empty_block(idx, jdx)
+        if not this_process_only:
+            res = self.mpi_comm.allreduce(res, op=MPI.LAND)
+        return bool(res)
 
     # Note: this requires communication
     def broadcast_block_sizes(self):
@@ -612,41 +610,6 @@ class MPIBlockMatrix(BaseBlockMatrix):
                 rank = self._rank_owner[idx, jdx] if self._rank_owner[idx, jdx] >= 0 else 'A'
                 msg += '({}, {}): Owned by processor{}\n'.format(idx, jdx, rank)
         return msg
-
-    def pprint(self, root=0):
-        """Prints MPIBlockMatrix in pretty format"""
-        assert_block_structure(self)
-        msg = self.__repr__() + '\n'
-        num_processors = self._mpiw.Get_size()
-        # figure out which ones are none
-        local_mask = self._block_matrix._block_mask.flatten()
-        receive_data = np.empty(num_processors * local_mask.size,
-                                dtype=np.bool)
-
-        self._mpiw.Allgather(local_mask, receive_data)
-        all_masks = np.split(receive_data, num_processors)
-        m, n = self.bshape
-        matrix_maks = [mask.reshape(m, n) for mask in all_masks]
-
-        global_mask = np.zeros((m, n), dtype=np.bool)
-        for k in range(num_processors):
-            for idx in range(m):
-                for jdx in range(n):
-                    global_mask[idx, jdx] += matrix_maks[k][idx, jdx]
-
-        for idx in range(m):
-            for jdx in range(n):
-                rank = self._rank_owner[idx, jdx] if self._rank_owner[idx, jdx] >= 0 else 'A'
-                row_size = self.get_row_size(idx)
-                col_size = self.get_col_size(jdx)
-                is_none = '' if global_mask[idx, jdx] else '*'
-                repn = 'Owned by {} Shape({},{}){}'.format(rank,
-                                                           row_size,
-                                                           col_size,
-                                                           is_none)
-                msg += '({}, {}): {}\n'.format(idx, jdx, repn)
-        if self._mpiw.Get_rank() == root:
-            print(msg)
 
     def get_block(self, row, col):
         block = self._block_matrix.get_block(row, col)

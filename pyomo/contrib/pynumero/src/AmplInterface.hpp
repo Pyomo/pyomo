@@ -112,6 +112,8 @@ public:
    void finalize_solution(int ampl_solve_status_num, char* msg, 
                           double *const_x, int nx, double *const_lam, int nc);
 
+   // get the ASLdate that the interface was compiled against
+   long get_asl_date();
 private:
 
    // Make these private so the compiler does not give default implementations for them

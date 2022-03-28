@@ -66,7 +66,7 @@ if using_cython:
             raise RuntimeError("Cython is only supported under CPython")
         from Cython.Build import cythonize
         #
-        # Note: The Cython developers recommend that you destribute C source
+        # Note: The Cython developers recommend that you distribute C source
         # files to users.  But this is fine for evaluating the utility of Cython
         #
         import shutil
@@ -104,12 +104,14 @@ if (('--with-distributable-extensions' in sys.argv)
         pass
     #
     # Import the APPSI extension builder
-    #
-    appsi_extension = import_pyomo_module(
-        'pyomo', 'contrib', 'appsi', 'build.py')['get_appsi_extension'](
-            in_setup=True, appsi_root=os.path.join(
-                os.path.dirname(__file__), 'pyomo', 'contrib', 'appsi'))
-    ext_modules.append(appsi_extension)
+    # NOTE: There is inconsistent behavior in Windows for APPSI.
+    # As a result, we will NOT include these extensions in Windows.
+    if not sys.platform.startswith('win'):
+        appsi_extension = import_pyomo_module(
+            'pyomo', 'contrib', 'appsi', 'build.py')['get_appsi_extension'](
+                in_setup=True, appsi_root=os.path.join(
+                    os.path.dirname(__file__), 'pyomo', 'contrib', 'appsi'))
+        ext_modules.append(appsi_extension)
 
 
 class DependenciesCommand(Command):
@@ -171,6 +173,10 @@ setup_kwargs = dict(
     maintainer = 'Pyomo Developer Team',
     maintainer_email = 'pyomo-developers@googlegroups.com',
     url = 'http://pyomo.org',
+    project_urls = {
+        'Documentation': 'https://pyomo.readthedocs.io/',
+        'Source': 'https://github.com/Pyomo/pyomo',
+    },
     license = 'BSD',
     platforms = ["any"],
     description = 'Pyomo: Python Optimization Modeling Objects',
@@ -188,22 +194,23 @@ setup_kwargs = dict(
         'Operating System :: Unix',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Software Development :: Libraries :: Python Modules' ],
-    python_requires = '>=3.6',
+    python_requires = '>=3.7',
     install_requires = [
         'ply',
     ],
     extras_require = {
         'tests': [
             'coverage',
-            'nose',
+            'pytest',
+            'pytest-parallel',
             'parameterized',
             'pybind11',
         ],
@@ -246,6 +253,7 @@ setup_kwargs = dict(
     },
     packages = find_packages(exclude=("scripts",)),
     package_data = {
+        "pyomo.contrib.ampl_function_demo": ["src/*"],
         "pyomo.contrib.appsi.cmodel": ["src/*"],
         "pyomo.contrib.mcpp": ["*.cpp"],
         "pyomo.contrib.pynumero": ['src/*', 'src/tests/*'],

@@ -130,7 +130,9 @@ class TestTiming(unittest.TestCase):
         with capture_output() as out:
             delta = timer.toc()
         self.assertAlmostEqual(ref - start_time, delta, delta=RES)
-        self.assertAlmostEqual(0, timer.toc(None), delta=RES)
+        # entering / leaving the context manager can take non-trivial
+        # time on some platforms (up to 0.02 on Windows)
+        self.assertAlmostEqual(0.01, timer.toc(None), delta=RES)
         self.assertRegex(
             out.getvalue(),
             r'\[\+   [.0-9]+\] .* in test_TicTocTimer_tictoc'
@@ -168,7 +170,6 @@ class TestTiming(unittest.TestCase):
             timer.stop()
             delta = timer.toc()
         self.assertAlmostEqual(ref, delta, delta=RES)
-        #self.assertAlmostEqual(0, timer.toc(None), delta=RES)
         self.assertRegex(
             out.getvalue(),
             r'\[    [.0-9]+\|   1\] .* in test_TicTocTimer_tictoc'
@@ -241,3 +242,53 @@ all                    1     [0-9.]+ +[0-9.]+ +100.0
         self.assertEqual(100., timer.get_relative_percent_time('all'))
         self.assertTrue(100. > timer.get_relative_percent_time('all.a'))
         self.assertTrue(50. < timer.get_relative_percent_time('all.a'))
+
+    def test_HierarchicalTimer_longNames(self):
+        RES = 0.01 # resolution (seconds)
+
+        timer = HierarchicalTimer()
+        start_time = time.perf_counter()
+        timer.start('all'*25)
+        time.sleep(0.02)
+        for i in range(10):
+            timer.start('a'*75)
+            time.sleep(0.01)
+            for j in range(5):
+                timer.start('aa'*20)
+                time.sleep(0.001)
+                timer.stop('aa'*20)
+            timer.start('ab'*20)
+            timer.stop('ab'*20)
+            timer.stop('a'*75)
+        end_time = time.perf_counter()
+        timer.stop('all'*25)
+        ref = (
+"""Identifier%s   ncalls   cumtime   percall      %%
+%s------------------------------------
+%s%s        1     [0-9.]+ +[0-9.]+ +100.0
+    %s------------------------------------
+    %s%s       10     [0-9.]+ +[0-9.]+ +[0-9.]+
+        %s------------------------------------
+        %s%s       50     [0-9.]+ +[0-9.]+ +[0-9.]+
+        %s%s       10     [0-9.]+ +[0-9.]+ +[0-9.]+
+        other%s      n/a     [0-9.]+ +n/a +[0-9.]+
+        %s====================================
+    other%s      n/a     [0-9.]+ +n/a +[0-9.]+
+    %s====================================
+%s====================================
+""" % (
+    ' '*69,
+    '-'*79,
+    'all'*25, ' '*4,
+    '-'*75,
+    'a'*75, '',
+    '-'*71,
+    'aa'*20, ' '*31,
+    'ab'*20, ' '*31,
+    ' '*66,
+    '='*71,
+    ' '*70,
+    '='*75,
+    '='*79)).splitlines()
+        for l, r in zip(str(timer).splitlines(), ref):
+            self.assertRegex(l, r)

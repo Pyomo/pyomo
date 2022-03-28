@@ -8,29 +8,27 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from .base_linear_solver_interface import LinearSolverInterface
-from .results import LinearSolverStatus, LinearSolverResults
+from .base_linear_solver_interface import IPLinearSolverInterface
+from pyomo.contrib.pynumero.linalg.base import LinearSolverStatus, LinearSolverResults
 from pyomo.common.dependencies import attempt_import
-from scipy.sparse import isspmatrix_coo, tril
 from collections import OrderedDict
+from typing import Union, Optional, Tuple
+from pyomo.contrib.pynumero.sparse import BlockVector
+import numpy as np
 
 mumps, mumps_available = attempt_import(name='pyomo.contrib.pynumero.linalg.mumps_interface',
                                         error_message='pymumps is required to use the MumpsInterface')
 
+from pyomo.contrib.pynumero.linalg.mumps_interface import MumpsCentralizedAssembledLinearSolver
 
-class MumpsInterface(LinearSolverInterface):
+
+class MumpsInterface(MumpsCentralizedAssembledLinearSolver, IPLinearSolverInterface):
 
     @classmethod
     def getLoggerName(cls):
         return 'mumps'
 
     def __init__(self, par=1, comm=None, cntl_options=None, icntl_options=None):
-        self._mumps = mumps.MumpsCentralizedAssembledLinearSolver(sym=2,
-                                                                  par=par,
-                                                                  comm=comm)
-
-        if cntl_options is None:
-            cntl_options = dict()
         if icntl_options is None:
             icntl_options = dict()
 
@@ -39,89 +37,22 @@ class MumpsInterface(LinearSolverInterface):
             icntl_options[13] = 1
         if 24 not in icntl_options:
             icntl_options[24] = 0
-            
-        for k, v in cntl_options.items():
-            self.set_cntl(k, v)
-        for k, v in icntl_options.items():
-            self.set_icntl(k, v)
-        
+
+        super(MumpsInterface, self).__init__(sym=2, par=par, comm=comm, cntl_options=cntl_options,
+                                             icntl_options=icntl_options)
+
         self.error_level = self.get_icntl(11)
         self.log_error = bool(self.error_level)
-        self._dim = None
         self.logger = self.getLogger()
         self.log_header(include_error=self.log_error)
-        self._prev_allocation = None
 
-    def do_symbolic_factorization(self, matrix, raise_on_error=True):
-        if not isspmatrix_coo(matrix):
-            matrix = matrix.tocoo()
-        matrix = tril(matrix)
-        nrows, ncols = matrix.shape
-        self._dim = nrows
-
-        try:
-            self._mumps.do_symbolic_factorization(matrix)
-            self._prev_allocation = max(self.get_infog(16),
-                                        self.get_icntl(23))
-            # INFOG(16) is the Mumps estimate for memory usage; ICNTL(23)
-            # is the override used in increase_memory_allocation. Both are
-            # already rounded to MB, so neither should every be negative.
-        except RuntimeError as err:
-            if raise_on_error:
-                raise err
-
-        stat = self.get_infog(1)
-        res = LinearSolverResults()
-        if stat == 0:
-            res.status = LinearSolverStatus.successful
-        elif stat in {-6, -10}:
-            res.status = LinearSolverStatus.singular
-        elif stat < 0:
-            res.status = LinearSolverStatus.error
-        else:
-            res.status = LinearSolverStatus.warning
-        return res
-
-    def do_numeric_factorization(self, matrix, raise_on_error=True):
-        if not isspmatrix_coo(matrix):
-            matrix = matrix.tocoo()
-        matrix = tril(matrix)
-        try:
-            self._mumps.do_numeric_factorization(matrix)
-        except RuntimeError as err:
-            if raise_on_error:
-                raise err
-
-        stat = self.get_infog(1)
-        res = LinearSolverResults()
-        if stat == 0:
-            res.status = LinearSolverStatus.successful
-        elif stat in {-6, -10}:
-            res.status = LinearSolverStatus.singular
-        elif stat in {-8, -9}:
-            res.status = LinearSolverStatus.not_enough_memory
-        elif stat < 0:
-            res.status = LinearSolverStatus.error
-        else:
-            res.status = LinearSolverStatus.warning
-        return res
-
-    def increase_memory_allocation(self, factor):
-        # info(16) is rounded to the nearest MB, so it could be zero
-        if self._prev_allocation == 0:
-            new_allocation = 1
-        else:
-            new_allocation = int(factor*self._prev_allocation)
-        # Here I set the memory allocation directly instead of increasing
-        # the "percent-increase-from-predicted" parameter ICNTL(14)
-        self.set_icntl(23, new_allocation)
-        self._prev_allocation = new_allocation
-        return new_allocation
-
-    def do_back_solve(self, rhs):
-        res = self._mumps.do_back_solve(rhs)
+    def do_back_solve(
+        self, rhs: Union[np.ndarray, BlockVector],
+        raise_on_error: bool = True
+    ) -> Tuple[Optional[Union[np.ndarray, BlockVector]], LinearSolverResults]:
+        res, status = super(MumpsInterface, self).do_back_solve(rhs, raise_on_error=raise_on_error)
         self.log_info()
-        return res
+        return res, status
 
     def get_inertia(self):
         num_negative_eigenvalues = self.get_infog(12)
@@ -147,39 +78,6 @@ class MumpsInterface(LinearSolverInterface):
             info['||x||'] = self.get_rinfog(5)
             info['Max resid'] = self.get_rinfog(6)
             return info
-
-    def set_icntl(self, key, value):
-        value = int(value)
-        if key == 13:
-            if value <= 0:
-                raise ValueError(
-                    'ICNTL(13) must be positive for the MumpsInterface.')
-        elif key == 24:
-            if value != 0:
-                raise ValueError(
-                    'ICNTL(24) must be 0 for the MumpsInterface.')
-        self._mumps.set_icntl(key, value)
-
-    def set_cntl(self, key, value):
-        self._mumps.set_cntl(key, value)
-
-    def get_icntl(self, key):
-        return self._mumps.get_icntl(key)
-
-    def get_cntl(self, key):
-        return self._mumps.get_cntl(key)
-
-    def get_info(self, key):
-        return self._mumps.get_info(key)
-
-    def get_infog(self, key):
-        return self._mumps.get_infog(key)
-
-    def get_rinfo(self, key):
-        return self._mumps.get_rinfo(key)
-
-    def get_rinfog(self, key):
-        return self._mumps.get_rinfog(key)
 
     def log_header(self, include_error=True, extra_fields=None):
         if extra_fields is None:

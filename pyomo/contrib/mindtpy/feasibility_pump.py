@@ -71,13 +71,13 @@ def solve_fp_subproblem(solve_data, config):
     fp_nlp.MindtPy_utils.objective_list[-1].deactivate()
     if solve_data.objective_sense == minimize:
         fp_nlp.improving_objective_cut = Constraint(
-            expr=fp_nlp.MindtPy_utils.objective_value <= solve_data.UB)
+            expr=sum(fp_nlp.MindtPy_utils.objective_value[:]) <= solve_data.primal_bound)
     else:
         fp_nlp.improving_objective_cut = Constraint(
-            expr=fp_nlp.MindtPy_utils.objective_value >= solve_data.LB)
+            expr=sum(fp_nlp.MindtPy_utils.objective_value[:]) >= solve_data.primal_bound)
 
     # Add norm_constraint, which guarantees the monotonicity of the norm objective value sequence of all iterations
-    # Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP'
+    # Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP'   https://doi.org/10.1007/s10107-012-0608-x
     # the norm type is consistant with the norm obj of the FP-main problem.
     if config.fp_norm_constraint:
         generate_norm_constraint(fp_nlp, solve_data, config)
@@ -181,7 +181,7 @@ def fp_loop(solve_data, config):
             config.logger.info(solve_data.log_formatter.format(
                 solve_data.fp_iter, 'FP-NLP', value(
                     fp_nlp.MindtPy_utils.fp_nlp_obj),
-                solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
                 get_main_elapsed_time(solve_data.timing)))
             handle_fp_subproblem_optimal(fp_nlp, solve_data, config)
         elif fp_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
@@ -296,7 +296,7 @@ def handle_fp_main_tc(feas_main_results, solve_data, config):
         config.logger.info(solve_data.log_formatter.format(
             solve_data.fp_iter, 'FP-MIP', value(
                 solve_data.mip.MindtPy_utils.fp_mip_obj),
-            solve_data.LB, solve_data.UB, solve_data.rel_gap, get_main_elapsed_time(solve_data.timing)))
+            solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap, get_main_elapsed_time(solve_data.timing)))
         return False
     elif feas_main_results.solver.termination_condition is tc.maxTimeLimit:
         config.logger.warning('FP-MIP reaches max TimeLimit')

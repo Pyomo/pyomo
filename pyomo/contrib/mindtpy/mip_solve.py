@@ -86,7 +86,7 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
             config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'Reg '+solve_data.regularization_mip_type,
                                                                value(
                                                                    solve_data.mip.MindtPy_utils.loa_proj_mip_obj),
-                                                               solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                               solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
                                                                get_main_elapsed_time(solve_data.timing)))
 
     elif main_mip_results.solver.termination_condition is tc.infeasibleOrUnbounded:
@@ -213,7 +213,7 @@ def handle_main_optimal(main_mip, solve_data, config, update_bound=True):
     if update_bound:
         update_dual_bound(solve_data, value(MindtPy.mip_obj.expr))
         config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'MILP', value(MindtPy.mip_obj.expr),
-                                                           solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                           solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
                                                            get_main_elapsed_time(solve_data.timing)))
 
 
@@ -263,7 +263,7 @@ def handle_main_other_conditions(main_mip, main_mip_results, solve_data, config)
             config)
         update_suboptimal_dual_bound(solve_data, main_mip_results)
         config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'MILP', value(MindtPy.mip_obj.expr),
-                                                           solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                           solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
                                                            get_main_elapsed_time(solve_data.timing)))
     else:
         raise ValueError(
@@ -295,10 +295,8 @@ def handle_main_infeasible(main_mip, solve_data, config):
             'quality cuts.')
     # TODO no-good cuts for single tree case
     # set optimistic bound to infinity
-    if solve_data.objective_sense == minimize:
-        solve_data.LB_progress.append(solve_data.LB)
-    else:
-        solve_data.UB_progress.append(solve_data.UB)
+    # TODO: can we remove the following line?
+    # solve_data.dual_bound_progress.append(solve_data.dual_bound)
     config.logger.info(
         'MindtPy exiting due to MILP main problem infeasibility.')
     if solve_data.results.solver.termination_condition is None:
@@ -335,7 +333,7 @@ def handle_main_max_timelimit(main_mip, main_mip_results, solve_data, config):
         config)
     update_suboptimal_dual_bound(solve_data, main_mip_results)
     config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'MILP', value(MindtPy.mip_obj.expr),
-                                                       solve_data.LB, solve_data.UB, solve_data.rel_gap,
+                                                       solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
                                                        get_main_elapsed_time(solve_data.timing)))
 
 
@@ -506,11 +504,10 @@ def setup_main(solve_data, config, fp, regularization_problem):
                                                                        discrete_only=False)
         if solve_data.objective_sense == minimize:
             MindtPy.cuts.obj_reg_estimate = Constraint(
-                expr=MindtPy.objective_value <= (1 - config.level_coef) * solve_data.UB + config.level_coef * solve_data.LB)
+                expr=sum(MindtPy.objective_value[:]) <= (1 - config.level_coef) * solve_data.primal_bound + config.level_coef * solve_data.dual_bound)
         else:
             MindtPy.cuts.obj_reg_estimate = Constraint(
-                expr=MindtPy.objective_value >= (1 - config.level_coef) * solve_data.LB + config.level_coef * solve_data.UB)
-
+                expr=sum(MindtPy.objective_value[:]) >= (1 - config.level_coef) * solve_data.primal_bound + config.level_coef * solve_data.dual_bound)
     else:
         if config.add_slack:
             MindtPy.del_component('aug_penalty_expr')
@@ -530,10 +527,10 @@ def setup_main(solve_data, config, fp, regularization_problem):
             if solve_data.objective_sense == minimize:
                 MindtPy.cuts.dual_bound = Constraint(
                     expr=main_objective.expr +
-                    (MindtPy.aug_penalty_expr if config.add_slack else 0) >= solve_data.LB,
+                    (MindtPy.aug_penalty_expr if config.add_slack else 0) >= solve_data.dual_bound,
                     doc='Objective function expression should improve on the best found dual bound')
             else:
                 MindtPy.cuts.dual_bound = Constraint(
                     expr=main_objective.expr +
-                    (MindtPy.aug_penalty_expr if config.add_slack else 0) <= solve_data.UB,
+                    (MindtPy.aug_penalty_expr if config.add_slack else 0) <= solve_data.dual_bound,
                     doc='Objective function expression should improve on the best found dual bound')
