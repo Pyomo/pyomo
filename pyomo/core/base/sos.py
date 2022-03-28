@@ -347,6 +347,7 @@ class ScalarSOSConstraint(SOSConstraint, _SOSConstraintData):
     def __init__(self, *args, **kwd):
         _SOSConstraintData.__init__(self, self)
         SOSConstraint.__init__(self, *args, **kwd)
+        self._index = None
 
 
 class SimpleSOSConstraint(metaclass=RenamedClass):

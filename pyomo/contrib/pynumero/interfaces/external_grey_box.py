@@ -408,6 +408,9 @@ class ScalarExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock)
     def __init__(self, *args, **kwds):
         ExternalGreyBoxBlockData.__init__(self, component=self)
         ExternalGreyBoxBlock.__init__(self, *args, **kwds)
+        # The above inherit from Block and _BlockData, so it's not until here
+        # that we know it's scalar. So we set the index accordingly.
+        self._index = None
 
     # Pick up the display() from Block and not BlockData
     display = ExternalGreyBoxBlock.display

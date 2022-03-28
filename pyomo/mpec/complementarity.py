@@ -280,6 +280,7 @@ class ScalarComplementarity(_ComplementarityData, Complementarity):
         _ComplementarityData.__init__(self, self)
         Complementarity.__init__(self, *args, **kwds)
         self._data[None] = self
+        self._index = None
 
 
 class SimpleComplementarity(metaclass=RenamedClass):
