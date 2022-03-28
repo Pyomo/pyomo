@@ -605,12 +605,16 @@ class _NLWriter_impl(object):
             variables.extend(sorted(
                 linear_only_vars - discrete_vars,
                 key=column_order.__getitem__))
+            linear_binary_vars = linear_only_vars & binary_vars
             variables.extend(sorted(
-                linear_only_vars & binary_vars,
+                linear_binary_vars,
                 key=column_order.__getitem__))
+            linear_integer_vars = linear_only_vars & integer_vars
             variables.extend(sorted(
-                linear_only_vars & integer_vars,
+                linear_integer_vars,
                 key=column_order.__getitem__))
+        else:
+            linear_binary_vars = linear_integer_vars = set()
         assert len(variables) == n_vars
         timer.toc(
             'Set row / column ordering: %s variables [%s, %s, %s R/B/Z], '
@@ -770,10 +774,7 @@ class _NLWriter_impl(object):
             " %d %d %d \t"
             "# nonlinear vars in constraints, objectives, both\n"
             % ( len(con_vars_nonlinear),
-                # Note that the objectives entry appears to be reported
-                # by AMPL as the total number of nonlinear variables
-                #len(obj_vars_nonlinear),
-                len(nonlinear_vars),
+                len(obj_vars_nonlinear),
                 len(both_vars_nonlinear),
             ))
 
@@ -791,8 +792,8 @@ class _NLWriter_impl(object):
         ostream.write(
             " %d %d %d %d %d \t"
             "# discrete variables: binary, integer, nonlinear (b,c,o)\n"
-            % ( len(con_vars_linear.intersection(binary_vars)),
-                len(con_vars_linear.intersection(integer_vars)),
+            % ( len(linear_binary_vars),
+                len(linear_integer_vars),
                 len(both_vars_nonlinear.intersection(discrete_vars)),
                 len(con_vars_nonlinear.intersection(discrete_vars)),
                 len(obj_vars_nonlinear.intersection(discrete_vars)),
