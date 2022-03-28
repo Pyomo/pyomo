@@ -1017,6 +1017,10 @@ class _NLWriter_impl(object):
         #
         for row_idx, info in enumerate(constraints):
             linear = info[1].linear
+            # ASL will fail on "J<N> 0", so if there are no coefficients
+            # (i.e., a constant objective), then skip this entry
+            if not linear:
+                continue
             ostream.write(f'J{row_idx} {len(linear)}{row_comments[row_idx]}\n')
             for _id in sorted(linear.keys(), key=column_order.__getitem__):
                 ostream.write(
@@ -1028,6 +1032,10 @@ class _NLWriter_impl(object):
         #
         for obj_idx, info in enumerate(objectives):
             linear = info[1].linear
+            # ASL will fail on "G<N> 0", so if there are no coefficients
+            # (i.e., a constant objective), then skip this entry
+            if not linear:
+                continue
             ostream.write(
                 f'G{obj_idx} {len(linear)}{row_comments[obj_idx + n_cons]}\n')
             for _id in sorted(linear.keys(), key=column_order.__getitem__):
