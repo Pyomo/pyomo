@@ -515,7 +515,7 @@ class DesignOfExperiments:
             #    m.Obj = Objective(expr=log(m.trace), sense=maximize)
             #elif (self.objective_option == 'zero'):
             #    m.Obj = Objective(expr=0)
-
+            # TODO: _activate_det_objective, activate_constant_objective, activate_trace_objective
             m = self.__add_objective(m, deactive_obj=True)
 
             # solve problem with DOF then
@@ -918,6 +918,9 @@ class DesignOfExperiments:
             t_all = []
             for t in mod.t:
                 t_all.append(t)
+
+            # add objective function
+            mod.Obj = Objective(expr=0, sense=minimize)
 
             # Check if measurement time points are in this time set
             # Also correct the measurement time points
@@ -1566,7 +1569,7 @@ class DesignOfExperiments:
         m.ele_rule = Constraint(m.para_set, m.para_set, rule=calc_FIM)
 
         #if m.Obj.available():
-        m.Obj.deactivate()
+        #m.Obj.deactivate()
 
             # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
         if no_obj:
