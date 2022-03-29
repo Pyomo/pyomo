@@ -282,23 +282,6 @@ def test_solver_cases(*args):
             #import_suffixes=['dual', 'rc'])
 
         #
-        # PICO
-        #
-        _pico_capabilities = set(['linear', 'integer'])
-
-        _test_solver_cases['pico', 'lp'] = initialize(
-            name='pico',
-            io='lp',
-            capabilities=_pico_capabilities,
-            import_suffixes=['dual'])
-
-        _test_solver_cases['pico', 'nl'] = initialize(
-            name='pico',
-            io='nl',
-            capabilities=_pico_capabilities,
-            import_suffixes=['dual'])
-
-        #
         # XPRESS
         #
         _xpress_capabilities= set(['linear',

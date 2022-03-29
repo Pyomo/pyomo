@@ -820,15 +820,16 @@ class Gurobi(PersistentBase, PersistentSolver):
             raise ValueError('Cannot obtain suboptimal solutions for a continuous model')
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
-        original_solution_number = self._solver_model.get_gurobi_param('SolutionNumber')
-        self._solver_model.set_gurobi_param('SolutionNumber', solution_number)
-        gurobi_vars_to_load = [var_map[id(pyomo_var)] for pyomo_var in vars_to_load]
+        original_solution_number = self.get_gurobi_param_info('SolutionNumber')[2]
+        self.set_gurobi_param('SolutionNumber', solution_number)
+        gurobi_vars_to_load = [var_map[pyomo_var] for pyomo_var in vars_to_load]
         vals = self._solver_model.getAttr("Xn", gurobi_vars_to_load)
         res = ComponentMap()
-        for var, val in zip(vars_to_load, vals):
-            if ref_vars[id(var)] > 0:
-                res[var] = val
-        self._solver_model.set_gurobi_param('SolutionNumber', original_solution_number)
+        for var_id, val in zip(vars_to_load, vals):
+            using_cons, using_sos, using_obj = ref_vars[var_id]
+            if using_cons or using_sos or (using_obj is not None):
+                res[self._vars[var_id][0]] = val
+        self.set_gurobi_param('SolutionNumber', original_solution_number)
         return res
 
     def load_vars(self, vars_to_load=None, solution_number=0):

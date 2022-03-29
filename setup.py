@@ -66,7 +66,7 @@ if using_cython:
             raise RuntimeError("Cython is only supported under CPython")
         from Cython.Build import cythonize
         #
-        # Note: The Cython developers recommend that you destribute C source
+        # Note: The Cython developers recommend that you distribute C source
         # files to users.  But this is fine for evaluating the utility of Cython
         #
         import shutil
@@ -104,12 +104,14 @@ if (('--with-distributable-extensions' in sys.argv)
         pass
     #
     # Import the APPSI extension builder
-    #
-    appsi_extension = import_pyomo_module(
-        'pyomo', 'contrib', 'appsi', 'build.py')['get_appsi_extension'](
-            in_setup=True, appsi_root=os.path.join(
-                os.path.dirname(__file__), 'pyomo', 'contrib', 'appsi'))
-    ext_modules.append(appsi_extension)
+    # NOTE: There is inconsistent behavior in Windows for APPSI.
+    # As a result, we will NOT include these extensions in Windows.
+    if not sys.platform.startswith('win'):
+        appsi_extension = import_pyomo_module(
+            'pyomo', 'contrib', 'appsi', 'build.py')['get_appsi_extension'](
+                in_setup=True, appsi_root=os.path.join(
+                    os.path.dirname(__file__), 'pyomo', 'contrib', 'appsi'))
+        ext_modules.append(appsi_extension)
 
 
 class DependenciesCommand(Command):
@@ -172,7 +174,7 @@ setup_kwargs = dict(
     maintainer_email = 'pyomo-developers@googlegroups.com',
     url = 'http://pyomo.org',
     project_urls = {
-        'Documentation': 'https://pyomo.readthedocs.io/en/stable/',
+        'Documentation': 'https://pyomo.readthedocs.io/',
         'Source': 'https://github.com/Pyomo/pyomo',
     },
     license = 'BSD',
