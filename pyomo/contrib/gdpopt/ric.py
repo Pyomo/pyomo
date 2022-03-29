@@ -13,14 +13,10 @@ from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
     _add_OA_configs)
+from pyomo.contrib.gdpopt.oa_algorithm_utils import _get_master_and_subproblem
 from pyomo.contrib.gdpopt.util import (
     time_code, lower_logger_level_to, fix_master_solution_in_subproblem,
     move_nonlinear_objective_to_constraints)
-from pyomo.contrib.gdpopt.initialize_subproblems import (
-    initialize_master_problem, get_subproblem, add_util_block,
-    add_disjunct_list, add_variable_list, add_discrete_variable_list,
-    add_boolean_variable_lists, save_initial_values,
-    add_transformed_boolean_variable_list)
 from pyomo.core import Objective, Expression, value
 from pyomo.opt import TerminationCondition
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
@@ -58,37 +54,13 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
     def _solve_gdp_with_ric(self, original_model, config):
         logger = config.logger
 
-        # Make a block where we will store some component lists so that after we
-        # clone we know who's who
-        util_block = self.original_util_block = add_util_block(original_model)
-        # Needed for finding indicator_vars mainly
-        add_disjunct_list(util_block)
-        add_boolean_variable_lists(util_block)
-        # To transfer solutions between MILP and NLP
-        add_variable_list(util_block)
-        if config.force_subproblem_nlp:
-            # We'll need to fix these too
-            add_discrete_variable_list(util_block)
-        move_nonlinear_objective_to_constraints(util_block, logger)
-
-        # create model to hold the subproblems: We create this first because
-        # certain initialization strategies for the master problem need it.
-        subproblem = get_subproblem(original_model)
-        # TODO: use getname and a bufffer!
-        subproblem_util_block = subproblem.component(util_block.name)
-        save_initial_values(subproblem_util_block)
-        add_transformed_boolean_variable_list(subproblem_util_block)
-        # TODO, not completely sure if this is what I should do
-        subproblem_obj = next(subproblem.component_data_objects(
-            Objective, active=True, descend_into=True))
-        subproblem_util_block.obj = Expression(expr=subproblem_obj.expr)
-
-        # create master MILP
-        master_util_block = initialize_master_problem(util_block,
-                                                      subproblem_util_block,
-                                                      config, self)
-        master_obj = next(master_util_block.model().component_data_objects(
-            Objective, active=True, descend_into=True))
+        (master_util_block,
+         subproblem_util_block) = _get_master_and_subproblem(
+             original_model, config, self, constraint_list=False)
+        master = master_util_block.model()
+        subproblem = subproblem_util_block.model()
+        master_obj = next(master.component_data_objects(Objective, active=True,
+                                                        descend_into=True))
 
         # main loop
         while self.master_iteration < config.iterlim:
@@ -124,7 +96,7 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
                     nlp_feasible = solve_subproblem(subproblem_util_block,
                                                     config, self.timing)
                     if nlp_feasible:
-                        new_primal = value(subproblem_obj.expr)
+                        new_primal = value(subproblem_util_block.obj.expr)
                         primal_improved = self._update_bounds(primal=new_primal,
                                                               logger=logger)
                         if primal_improved:
