@@ -24,8 +24,8 @@ if use_mpisppy:
     import mpisppy.opt.ef as st
     import mpisppy.scenario_tree as scenario_tree
 else:
-    import pyomo.contrib.parmest.create_ef as local_ef
-    import pyomo.contrib.parmest.scenario_tree as scenario_tree
+    import pyomo.contrib.parmest.utils.create_ef as local_ef
+    import pyomo.contrib.parmest.utils.scenario_tree as scenario_tree
 
 import re
 import importlib as im
@@ -46,8 +46,7 @@ import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 from pyomo.environ import Block, ComponentUID
 
-import pyomo.contrib.parmest.mpi_utils as mpiu
-import pyomo.contrib.parmest.ipopt_solver_wrapper as ipopt_solver_wrapper
+import pyomo.contrib.parmest.utils as utils
 import pyomo.contrib.parmest.graphics as graphics
 
 parmest_available = numpy_available & pandas_available & scipy_available
@@ -169,19 +168,19 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
                                                 nonant_list=nonant_list,
                                                 scen_model=instance)]
 
-
     if "ThetaVals" in outer_cb_data:
         thetavals = outer_cb_data["ThetaVals"]
 
         # dlw august 2018: see mea code for more general theta
         for vstr in thetavals:
-            object = instance.find_component(vstr)
+            theta_cuid = ComponentUID(vstr)
+            theta_object = theta_cuid.find_component_on(instance)
             if thetavals[vstr] is not None:
                 #print("Fixing",vstr,"at",str(thetavals[vstr]))
-                object.fix(thetavals[vstr])
+                theta_object.fix(thetavals[vstr])
             else:
                 #print("Freeing",vstr)
-                object.fixed = False
+                theta_object.unfix()
 
     return instance
 
@@ -326,37 +325,14 @@ class Estimator(object):
         """
         Modify the Pyomo model for parameter estimation
         """
-        from pyomo.core import Objective
-        
         model = self.model_function(data)
         
         if (len(self.theta_names) == 1) and (self.theta_names[0] == 'parmest_dummy_var'):
             model.parmest_dummy_var = pyo.Var(initialize = 1.0)
-            
-        for i, theta in enumerate(self.theta_names):
-            # First, leverage the parser in ComponentUID to locate the
-            # component.  If that fails, fall back on the original
-            # (insecure) use of 'eval'
-            var_cuid = ComponentUID(theta)
-            var_validate = var_cuid.find_component_on(model)
-            if var_validate is None:
-                logger.warning(
-                    "theta_name[%s] (%s) was not found on the model",
-                    (i, theta))
-            else:
-                try:
-                    # If the component that was found is not a variable,
-                    # this will generate an exception (and the warning
-                    # in the 'except')
-                    var_validate.unfix()
-                    # We want to standardize on the CUID string
-                    # representation
-                    self.theta_names[i] = repr(var_cuid)
-                except:
-                    logger.warning(theta + ' is not a variable')
         
+        # Add objective function (optional)
         if self.obj_function:
-            for obj in model.component_objects(Objective):
+            for obj in model.component_objects(pyo.Objective):
                 obj.deactivate()
         
             def FirstStageCost_rule(model):
@@ -368,6 +344,15 @@ class Estimator(object):
                 return model.FirstStageCost + model.SecondStageCost
             model.Total_Cost_Objective = pyo.Objective(rule=TotalCost_rule, sense=pyo.minimize)
         
+        # Convert theta Params to Vars, and unfix theta Vars
+        model = utils.convert_params_to_vars(model, self.theta_names)
+        
+        # Update theta names list to use CUID string representation
+        for i, theta in enumerate(self.theta_names):
+            theta_cuid = ComponentUID(theta)
+            theta_object = theta_cuid.find_component_on(model)
+            self.theta_names[i] = repr(theta_cuid)
+            
         self.parmest_model = model
         
         return model
@@ -404,8 +389,8 @@ class Estimator(object):
 
         # (Bootstrap scenarios will use indirection through the bootlist)
         if bootlist is None:
-            senario_numbers = list(range(len(self.callback_data)))
-            scen_names = ["Scenario{}".format(i) for i in senario_numbers]
+            scenario_numbers = list(range(len(self.callback_data)))
+            scen_names = ["Scenario{}".format(i) for i in scenario_numbers]
         else:
             scen_names = ["Scenario{}".format(i) for i in range(len(bootlist))]
 
@@ -593,7 +578,7 @@ class Estimator(object):
                     print('      Experiment = ',snum)
                     print('     First solve with with special diagnostics wrapper')
                     status_obj, solved, iters, time, regu \
-                        = ipopt_solver_wrapper.ipopt_solve_with_stats(instance, optimizer, max_iter=500, max_cpu_time=120)
+                        = utils.ipopt_solve_with_stats(instance, optimizer, max_iter=500, max_cpu_time=120)
                     print("   status_obj, solved, iters, time, regularization_stat = ",
                            str(status_obj), str(solved), str(iters), str(time), str(regu))
 
@@ -727,7 +712,7 @@ class Estimator(object):
         global_list = self._get_sample_list(samplesize, bootstrap_samples, 
                                             replacement)
 
-        task_mgr = mpiu.ParallelTaskManager(bootstrap_samples)
+        task_mgr = utils.ParallelTaskManager(bootstrap_samples)
         local_list = task_mgr.global_to_local_data(global_list)
 
         bootstrap_theta = list()
@@ -780,7 +765,7 @@ class Estimator(object):
         
         global_list = self._get_sample_list(samplesize, lNo_samples, replacement=False)
             
-        task_mgr = mpiu.ParallelTaskManager(len(global_list))
+        task_mgr = utils.ParallelTaskManager(len(global_list))
         local_list = task_mgr.global_to_local_data(global_list)
         
         lNo_theta = list()
@@ -900,7 +885,7 @@ class Estimator(object):
         # for parallel code we need to use lists and dicts in the loop
         theta_names = theta_values.columns
         all_thetas = theta_values.to_dict('records')
-        task_mgr = mpiu.ParallelTaskManager(len(all_thetas))
+        task_mgr = utils.ParallelTaskManager(len(all_thetas))
         local_thetas = task_mgr.global_to_local_data(all_thetas)
         
         # walk over the mesh, return objective function
