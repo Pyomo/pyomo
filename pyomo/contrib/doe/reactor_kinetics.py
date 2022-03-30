@@ -235,7 +235,7 @@ def create_model(scena, const=False, controls={0: 300, 0.125: 300, 0.25: 300, 0.
     def obj_rule(m):
         return 0
     
-    m.Obj = Objective(rule=obj_rule, sense=maximize)
+    #m.Obj = Objective(rule=obj_rule, sense=maximize)
         
         
     # Control time

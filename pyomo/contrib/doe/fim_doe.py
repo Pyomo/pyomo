@@ -519,6 +519,13 @@ class DesignOfExperiments:
             m = self.__add_objective(m, deactive_obj=True)
 
             # solve problem with DOF then
+            print('First solve with given objective:')
+            #time0_solve2 = time.time()
+            result_doe1 = self.__solve_doe(m, fix=True)
+            #time1_solve2 = time.time()
+            #time_solve2 = time1_solve2 - time0_solve2
+
+            print('Second solve with given objective:')
             time0_solve2 = time.time()
             result_doe = self.__solve_doe(m, fix=False)
             time1_solve2 = time.time()
