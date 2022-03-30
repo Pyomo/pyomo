@@ -8,7 +8,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pandas as pd
+from pyomo.common.dependencies import (
+    pandas as pd, pandas_available,
+)
 
 import pyomo.environ as pyo
 import pyomo.common.unittest as unittest
