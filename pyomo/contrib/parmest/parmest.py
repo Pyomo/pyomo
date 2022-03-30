@@ -438,6 +438,7 @@ class Estimator(object):
         # if pre_solve = True, solve square problem with parameters to be fitted
         # fixed before solving parameter estimation problem
         if pre_solve:
+            fitted_vars = [] # list to store fitted variables
             # Fix fitted parameters for initialization
             for i, theta in enumerate(self.theta_names):
                 # Use parser in ComponentUID to locate the component
@@ -453,6 +454,7 @@ class Estimator(object):
                         # this will generate an exception (and the warning
                         # in the 'except')
                         var_validate.fix()
+                        fitted_vars.append(var_validate)
                         # We want to standardize on the CUID string
                         # representation
                         # self.theta_names[i] = repr(var_cuid)
@@ -469,25 +471,8 @@ class Estimator(object):
             init_solver.solve(ef, tee = True)
 
             # Un-fix fitted parameters for estimation
-            for i, theta in enumerate(self.theta_names):
-                # Use parser in ComponentUID to locate the component
-                var_cuid = ComponentUID(theta)
-                var_validate = var_cuid.find_component_on(self.parmest_model)
-                if var_validate is None:
-                    logger.warning(
-                        "theta_name[%s] (%s) was not found on the model",
-                        (i, theta))
-                else:
-                    try:
-                        # If the component that was found is not a variable,
-                        # this will generate an exception (and the warning
-                        # in the 'except')
-                        var_validate.unfix()
-                        # We want to standardize on the CUID string
-                        # representation
-                        # self.theta_names[i] = repr(var_cuid)
-                    except:
-                        logger.warning(theta + ' is not a variable')
+            for fit_var in fitted_vars:
+                fit_var.unfix()
 
         self.ef_instance = ef
 
