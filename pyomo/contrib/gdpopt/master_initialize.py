@@ -18,10 +18,6 @@ from pyomo.common.collections import ComponentMap
 from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.gdp import Disjunct
 
-# ESJ TODO: These have a lot of redundant code in terms of not messing up the
-# m,aster problem when we are coopting it, and also just the usual "solve the
-# master, then solve the subproblem and do all the right things" routine.
-
 def _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                                    subprob_util_block, config,
                                                    solver):
@@ -53,9 +49,13 @@ def _restore_bounds(original_bounds):
         v.setlb(l)
         v.setub(u)
 
+# This contextmanager is for use when we solve the master problem with some
+# variables fixed. In that case, the bounds tightening that might be done during
+# preprocessing is not valid later, and we need to restore the variable bounds.
 @contextmanager
-def preserve_master_problem_feasible_region(master_util_block, config):
-    if config.mip_presolve:
+def preserve_master_problem_feasible_region(master_util_block, config,
+                                            original_bounds=None):
+    if config.mip_presolve and original_bounds is None:
         original_bounds = _collect_original_bounds(master_util_block)
 
     yield
@@ -66,19 +66,19 @@ def preserve_master_problem_feasible_region(master_util_block, config):
 def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                           config, solver):
     """Initialize by using user-specified custom disjuncts."""
-    # TODO error checking to make sure that the user gave proper disjuncts
     used_disjuncts = {}
 
     # We are going to fix indicator_vars in the master problem before we solve
     # it, so the bounds tightening will not necessarily be valid afterward. So
-    # we save these bounds and restore them in each iteration.
+    # we save these bounds and restore them in each iteration. We collect them
+    # here since there's no point in doing that ever iteration.
     if config.mip_presolve:
         original_bounds = _collect_original_bounds(master_util_block)
 
     for count, active_disjunct_set in enumerate(config.custom_init_disjuncts):
-        used_disjuncts = set()
         # custom_init_disjuncts contains a list of sets, giving the disjuncts
         # active at each initialization iteration
+        used_disjuncts = set()
 
         subproblem = subprob_util_block.model()
         # fix the disjuncts in the linear GDP and solve
@@ -87,7 +87,7 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
             "Generating initial linear GDP approximation by "
             "solving subproblems with user-specified active disjuncts.")
         for orig_disj, master_disj in zip(util_block.disjunct_list,
-                                         master_util_block.disjunct_list):
+                                          master_util_block.disjunct_list):
             if orig_disj in active_disjunct_set:
                 used_disjuncts.add(orig_disj)
                 master_disj.indicator_var.fix(True)
@@ -97,17 +97,16 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
         if len(unused) > 0:
             disj_str = ""
             for disj in unused:
-                disj_str += "%s, " % disj.name # TODO: make this efficient
+                disj_str += "%s, " % disj.name
             config.logger.warning('The following disjuncts the custom disjunct'
                                   'initialization set number %s were unused: '
                                   '%s\nThey may not be Disjunct objects or '
                                   'they may not be on the active subtree being '
                                   'solved.' % (count, disj_str))
-        mip_feasible = solve_linear_GDP(master_util_block, config,
-                                        solver.timing)
-        if config.mip_presolve:
-            _restore_bounds(original_bounds)
-
+        with preserve_master_problem_feasible_region(master_util_block,
+                                                     original_bounds):
+            mip_feasible = solve_linear_GDP(master_util_block, config,
+                                            solver.timing)
         if mip_feasible:
             _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                                            subprob_util_block,
@@ -154,28 +153,24 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
             if disj not in already_fixed:
                 disj.indicator_var.unfix()
 
-        if mip_feasible:
-            _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
-                                                           subprob_util_block,
-                                                           config, solver)
-            add_no_good_cut(master_util_block, config)
-        else:
-            config.logger.error(
-                'Linear GDP infeasible for initial user-specified '
-                'disjunct values. '
-                'Skipping initialization.')
-
-
-        # if config.mip_presolve:
-        #     _restore_bounds(original_bounds)
+    if mip_feasible:
+        _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
+                                                       subprob_util_block,
+                                                       config, solver)
+        add_no_good_cut(master_util_block, config)
+    else:
+        config.logger.error(
+            'Linear GDP infeasible for initial user-specified '
+            'disjunct values. '
+            'Skipping initialization.')
 
 @contextmanager
 def use_master_for_max_binary_initialization(master_util_block):
     m = master_util_block.model()
 
     # Set up binary maximization objective
-    original_objective = next( m.component_data_objects(Objective, active=True,
-                                                        descend_into=True))
+    original_objective = next(m.component_data_objects(Objective, active=True,
+                                                       descend_into=True))
     original_objective.deactivate()
 
     binary_vars = (v for v in m.component_data_objects(
@@ -273,10 +268,7 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
         for disj in util_block.disjunct_list)
     subprob = subprob_util_block.model()
 
-    # if config.mip_presolve:
-    #     original_bounds = _collect_original_bounds(master_util_block)
-
-    # borrow the master problem to be the set covering MIP. This is only a
+    # We borrow the master problem to be the set covering MIP. This is only a
     # change of objective. The formulation may have its bounds tightened as a
     # result of preprocessing in the MIP solves, but that is okay because the
     # feasible region is the same as the original master problem and any
@@ -295,8 +287,6 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
 
             mip_feasible = solve_linear_GDP(master_util_block, config,
                                             solver.timing)
-            # if config.mip_presolve:
-            #     _restore_bounds(original_bounds)
 
             if not mip_feasible:
                 config.logger.info('Set covering problem is infeasible. '
