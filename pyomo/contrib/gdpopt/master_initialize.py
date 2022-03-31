@@ -103,7 +103,7 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                                   '%s\nThey may not be Disjunct objects or '
                                   'they may not be on the active subtree being '
                                   'solved.' % (count, disj_str))
-        with preserve_master_problem_feasible_region(master_util_block,
+        with preserve_master_problem_feasible_region(master_util_block, config,
                                                      original_bounds):
             mip_feasible = solve_linear_GDP(master_util_block, config,
                                             solver.timing)
