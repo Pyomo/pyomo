@@ -46,8 +46,9 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
     nlp = subproblem_util_block.model()
     sign_adjust = -1 if objective_sense == minimize else 1
 
-    for master_var, subprob_var in zip(subproblem_util_block.variable_list,
-                                       master_util_block.variable_list):
+    for master_var, subprob_var in zip(
+            subproblem_util_block.algebraic_variable_list,
+            master_util_block.algebraic_variable_list):
         val = subprob_var.value
         if val is not None and not master_var.fixed:
             master_var.set_value(val, skip_validation=True)
@@ -169,8 +170,9 @@ def add_affine_cuts(subproblem_util_block, master_util_block, config, timing):
 
     config.logger.info("Adding affine cuts.")
     counter = 0
-    for master_var, subprob_var in zip(master_util_block.variable_list,
-                                       subproblem_util_block.variable_list):
+    for master_var, subprob_var in zip(
+            master_util_block.algebraic_variable_list,
+            subproblem_util_block.algebraic_variable_list):
         val = subprob_var.value
         if val is not None and not master_var.fixed:
             master_var.set_value(val, skip_validation=True)

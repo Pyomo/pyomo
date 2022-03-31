@@ -172,7 +172,7 @@ class _GDPoptAlgorithm(object):
 
     def update_incumbent(self, util_block):
         self.incumbent_continuous_soln = [v.value for v in
-                                          util_block.variable_list]
+                                          util_block.algebraic_variable_list]
         self.incumbent_boolean_soln = [
             v.value for v in util_block.transformed_boolean_variable_list]
 
@@ -311,7 +311,7 @@ class _GDPoptAlgorithm(object):
         return results
 
     def _transfer_incumbent_to_original_model(self):
-        for var, soln in zip(self.original_util_block.variable_list,
+        for var, soln in zip(self.original_util_block.algebraic_variable_list,
                              self.incumbent_continuous_soln):
             var.set_value(soln, skip_validation=True)
         for var, soln in zip(

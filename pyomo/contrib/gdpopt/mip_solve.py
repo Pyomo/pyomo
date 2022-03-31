@@ -24,10 +24,10 @@ def solve_linear_GDP(util_block, config, timing):
             # leaving the constraints in.
             fbbt(m, integer_tol=config.integer_tolerance,
                  deactivate_satisfied_constraints=False)
-            # [ESJ 1/28/22]: Despite being a little scary, this is okay to leave
-            # in because if you tighten the bounds now, they could only get
-            # tighter in later iterations, since you are tightening this
-            # relaxation
+            # [ESJ 1/28/22]: Despite being a little scary, the tightened bounds
+            # are okay to leave in because if you tighten the bounds now, they
+            # could only get tighter in later iterations, since you are
+            # tightening this relaxation
         except InfeasibleConstraintException:
             config.logger.debug("MIP preprocessing detected infeasibility.")
             return False

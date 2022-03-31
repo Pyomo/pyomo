@@ -24,8 +24,9 @@ from pyomo.opt import TerminationCondition as tc
 
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.initialize_subproblems import (
-    add_util_block, add_disjunction_list, add_disjunct_list, add_variable_list,
-    add_boolean_variable_lists, add_transformed_boolean_variable_list)
+    add_util_block, add_disjunction_list, add_disjunct_list,
+    add_algebraic_variable_list, add_boolean_variable_lists,
+    add_transformed_boolean_variable_list)
 from pyomo.contrib.gdpopt.config_options import (
     _add_nlp_solver_configs, _add_BB_configs, _add_mip_solver_configs,
     _add_tolerance_configs)
@@ -76,7 +77,7 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
         # copy solutions between
         util_block = self.original_util_block = add_util_block(model)
         add_disjunct_list(util_block)
-        add_variable_list(util_block)
+        add_algebraic_variable_list(util_block)
         add_boolean_variable_lists(util_block)
 
         root_node = TransformationFactory(
@@ -367,8 +368,8 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 except InfeasibleConstraintException:
                     # copy variable values, even if errored
                     copy_var_list_values(
-                        from_list=subprob_utils.variable_list,
-                        to_list=model_utils.variable_list,
+                        from_list=subprob_utils.algebraic_variable_list,
+                        to_list=model_utils.algebraic_variable_list,
                         config=config, ignore_integrality=True
                     )
                     return float('inf'), float('inf')
@@ -387,8 +388,8 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 "Solver encountered RuntimeError. Treating as infeasible. "
                 "Msg: %s\n%s" % (str(e), traceback.format_exc()))
             copy_var_list_values(  # copy variable values, even if errored
-                from_list=subprob_utils.variable_list,
-                to_list=model_utils.variable_list,
+                from_list=subprob_utils.algebraic_variable_list,
+                to_list=model_utils.algebraic_variable_list,
                 config=config, ignore_integrality=True
             )
             return float('inf'), float('inf')
@@ -401,8 +402,8 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
             ub = result.problem.upper_bound if not obj_sense_correction else \
                  -result.problem.lower_bound
             copy_var_list_values(
-                from_list=subprob_utils.variable_list,
-                to_list=model_utils.variable_list,
+                from_list=subprob_utils.algebraic_variable_list,
+                to_list=model_utils.algebraic_variable_list,
                 config=config,
             )
             return lb, ub
@@ -414,22 +415,22 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                  -result.problem.lower_bound
             # TODO handle LB absent
             copy_var_list_values(
-                from_list=subprob_utils.variable_list,
-                to_list=model_utils.variable_list,
+                from_list=subprob_utils.algebraic_variable_list,
+                to_list=model_utils.algebraic_variable_list,
                 config=config,
             )
             return lb, ub
         elif term_cond == tc.unbounded:
             copy_var_list_values(
-                from_list=subprob_utils.variable_list,
-                to_list=model_utils.variable_list,
+                from_list=subprob_utils.algebraic_variable_list,
+                to_list=model_utils.algebraic_variable_list,
                 config=config, ignore_integrality=True
             )
             return float('-inf'), float('-inf')
         elif term_cond == tc.infeasible:
             copy_var_list_values(
-                from_list=subprob_utils.variable_list,
-                to_list=model_utils.variable_list,
+                from_list=subprob_utils.algebraic_variable_list,
+                to_list=model_utils.algebraic_variable_list,
                 config=config, ignore_integrality=True
             )
             return float('inf'), float('inf')
@@ -437,8 +438,8 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
             config.logger.warning("Unknown termination condition of %s. "
                                   "Treating as infeasible." % term_cond)
             copy_var_list_values(
-                from_list=subprob_utils.variable_list,
-                to_list=model_utils.variable_list,
+                from_list=subprob_utils.algebraic_variable_list,
+                to_list=model_utils.algebraic_variable_list,
                 config=config, ignore_integrality=True
             )
             return float('inf'), float('inf')
@@ -460,8 +461,8 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 "Solver encountered RuntimeError. Treating as infeasible. "
                 "Msg: %s\n%s" % (str(e), traceback.format_exc()))
             copy_var_list_values(  # copy variable values, even if errored
-                from_list=subprob_utils.variable_list,
-                to_list=model_utils.variable_list,
+                from_list=subprob_utils.algebraic_variable_list,
+                to_list=model_utils.algebraic_variable_list,
                 config=config, ignore_integrality=True
             )
             return float('-inf'), float('inf')
@@ -474,8 +475,8 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
             ub = result.problem.upper_bound if not obj_sense_correction else \
                  -result.problem.lower_bound
             copy_var_list_values(
-                from_list=subprob_utils.variable_list,
-                to_list=model_utils.variable_list,
+                from_list=subprob_utils.algebraic_variable_list,
+                to_list=model_utils.algebraic_variable_list,
                 config=config,
             )
             return float('-inf'), ub
@@ -487,22 +488,22 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                  -result.problem.lower_bound
             # TODO handle LB absent
             copy_var_list_values(
-                from_list=subprob_utils.variable_list,
-                to_list=model_utils.variable_list,
+                from_list=subprob_utils.algebraic_variable_list,
+                to_list=model_utils.algebraic_variable_list,
                 config=config,
             )
             return float('-inf'), ub
         elif term_cond == tc.unbounded:
             copy_var_list_values(
-                from_list=subprob_utils.variable_list,
-                to_list=model_utils.variable_list,
+                from_list=subprob_utils.algebraic_variable_list,
+                to_list=model_utils.algebraic_variable_list,
                 config=config, ignore_integrality=True
             )
             return float('-inf'), float('-inf')
         elif term_cond == tc.infeasible:
             copy_var_list_values(
-                from_list=subprob_utils.variable_list,
-                to_list=model_utils.variable_list,
+                from_list=subprob_utils.algebraic_variable_list,
+                to_list=model_utils.algebraic_variable_list,
                 config=config, ignore_integrality=True
             )
             return float('-inf'), float('inf')
@@ -510,8 +511,8 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
             config.logger.warning("Unknown termination condition of %s. "
                                   "Treating as infeasible." % term_cond)
             copy_var_list_values(
-                from_list=subprob_utils.variable_list,
-                to_list=model_utils.variable_list,
+                from_list=subprob_utils.algebraic_variable_list,
+                to_list=model_utils.algebraic_variable_list,
                 config=config, ignore_integrality=True
             )
             return float('-inf'), float('inf')

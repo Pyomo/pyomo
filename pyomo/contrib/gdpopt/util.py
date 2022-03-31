@@ -125,7 +125,8 @@ def move_nonlinear_objective_to_constraints(util_block, logger):
 
         # Add the new variable and constraint to the working lists
         if main_obj.expr.polynomial_degree() not in (1, 0):
-            util_block.variable_list.append(util_block.objective_value)
+            util_block.algebraic_variable_list.append(
+                util_block.objective_value)
             #util_blk.continuous_variable_list.append(util_blk.objective_value)
             if hasattr(util_block, 'constraint_list'):
                 util_block.constraint_list.append(util_block.objective_constr)

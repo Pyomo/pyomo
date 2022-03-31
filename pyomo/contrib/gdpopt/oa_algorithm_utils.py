@@ -10,7 +10,7 @@
 
 from pyomo.contrib.gdpopt.initialize_subproblems import (
     initialize_master_problem, get_subproblem, add_util_block, 
-    add_disjunct_list, add_variable_list, add_discrete_variable_list, 
+    add_disjunct_list, add_algebraic_variable_list, add_discrete_variable_list, 
     add_boolean_variable_lists, add_constraint_list, save_initial_values, 
     add_transformed_boolean_variable_list)
 from pyomo.contrib.gdpopt.util import (move_nonlinear_objective_to_constraints)
@@ -26,7 +26,7 @@ def _get_master_and_subproblem(original_model, config, solver,
     add_disjunct_list(util_block)
     add_boolean_variable_lists(util_block)
     # To transfer solutions between MILP and NLP
-    add_variable_list(util_block)
+    add_algebraic_variable_list(util_block)
     # We'll need these to get dual info after solving subproblems
     if constraint_list:
         add_constraint_list(util_block)

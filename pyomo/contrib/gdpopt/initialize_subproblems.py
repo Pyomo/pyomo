@@ -41,6 +41,7 @@ def initialize_master_problem(util_block, subprob_util_block, config, solver):
     TransformationFactory(config.master_problem_transformation).apply_to(master)
     #add_boolean_variable_list(master_util_block)
     add_transformed_boolean_variable_list(master_util_block)
+    add_algebraic_variable_list(master_util_block, name='all_mip_variables')
 
     # Call the specified initialization strategy
     init_strategy = valid_init_strategies.get(config.init_strategy, None)
@@ -83,15 +84,22 @@ def add_constraint_list(util_block):
         ctype=Constraint, active=True, descend_into=(Block, Disjunct),
         sort=SortComponents.deterministic))
 
-def add_variable_list(util_block):
+def add_algebraic_variable_list(util_block, name=None):
+    """
+    This collects variables from active Constraints and Objectives. It descends
+    onto Disjuncts, but does not collect any indicator variables that do not
+    appear in algebraic constraints pre-transformation.
+    """
     model = util_block.model()
-    util_block.variable_list = list(get_vars_from_components(
+    if name is None:
+        name = "algebraic_variable_list"
+    setattr(util_block, name, list(get_vars_from_components(
         model, ctype=(Constraint, Objective), descend_into=(Block, Disjunct),
-        active=True, sort=SortComponents.deterministic))
+        active=True, sort=SortComponents.deterministic)))
 
 def add_discrete_variable_list(util_block):
     lst = util_block.discrete_variable_list = []
-    for v in util_block.variable_list:
+    for v in util_block.algebraic_variable_list:
         if v.is_integer():
             lst.append(v)
 
@@ -163,5 +171,5 @@ def get_subproblem(original_model):
 
 def save_initial_values(subproblem_util_block):
     initial_values = subproblem_util_block.initial_var_values = ComponentMap()
-    for v in subproblem_util_block.variable_list:
+    for v in subproblem_util_block.algebraic_variable_list:
         initial_values[v] = v.value
