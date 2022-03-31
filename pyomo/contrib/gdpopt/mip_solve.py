@@ -10,8 +10,13 @@ from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
+# TODO: I'd really like too change the name of this function. lienar_GDP is
+# super confusing, since this is a MIP at this point!
 def solve_linear_GDP(util_block, config, timing):
-    """Solves the linear GDP model and attempts to resolve solution issues."""
+    """Solves the linear GDP model and attempts to resolve solution issues.  
+    Returns one of TerminationCondition.optimal, TerminationCondition.feasible,
+    TerminationCondition.infeasible, or TerminationCondition.unbounded.
+    """
     m = util_block.model()
 
     if config.mip_presolve:
@@ -30,7 +35,7 @@ def solve_linear_GDP(util_block, config, timing):
             # tightening this relaxation
         except InfeasibleConstraintException:
             config.logger.debug("MIP preprocessing detected infeasibility.")
-            return False
+            return tc.infeasible
 
     # Deactivate extraneous IMPORT/EXPORT suffixes 
     # ESJ TODO: Do we need to do this? Is this our problem? And, if you give 
@@ -44,8 +49,7 @@ def solve_linear_GDP(util_block, config, timing):
             "MIP solver %s is not available." % config.mip_solver)
 
     # Callback immediately before solving MIP master problem
-    # ESJ: Should we expose alg_info here? I guess we should but I need to make
-    # it safer in terms of getters and setters I think.
+    # TODO: Should this have other arguments?
     config.call_before_master_solve(m)
 
     try:
@@ -68,7 +72,7 @@ def solve_linear_GDP(util_block, config, timing):
         if 'GAMS encountered an error during solve.' in str(e):
             config.logger.warning(
                 "GAMS encountered an error in solve. Treating as infeasible.")
-            return False
+            return tc.infeasible
         else:
             raise
     terminate_cond = results.solver.termination_condition
@@ -79,40 +83,51 @@ def solve_linear_GDP(util_block, config, timing):
         results, terminate_cond = distinguish_mip_infeasible_or_unbounded(
             m, config)
     if terminate_cond is tc.unbounded:
-        # Solution is unbounded. Add an arbitrary bound to the objective and
-        # resolve.  This occurs when the objective is nonlinear. The nonlinear
-        # objective is moved to the constraints, and deactivated for the linear
-        # master problem.
-        # ESJ TODO: This is terrifying! I don't think we should do this... How
-        # about just check your initialization routine? Or bound your variables?
+        # Solution is unbounded. This occurs when the objective is
+        # nonlinear. The nonlinear objective is moved to the constraints, and
+        # deactivated for the linear master problem. We will generate an
+        # arbitrary discrete solution by bounding the objective and re-solving,
+        # in hopes that the cuts we generate later bound this problem.
+
         obj_bound = 1E15
         config.logger.warning(
-            'Linear GDP was unbounded. '
-            'Resolving with arbitrary bound values of (-{0:.10g}, {0:.10g}) '
-            'on the objective. '
+            'Master problem was unbounded. '
+            'Re-solving with arbitrary bound values of (-{0:.10g}, {0:.10g}) '
+            'on the objective, in order to get a discrete solution. '
             'Check your initialization routine.'.format(obj_bound))
         main_objective = next(m.component_data_objects(Objective, active=True))
-        GDPopt.objective_bound = Constraint(
+        util_block.objective_bound = Constraint(
             expr=(-obj_bound, main_objective.expr, obj_bound))
         with SuppressInfeasibleWarning():
             results = SolverFactory(config.mip_solver).solve(
                 m, **config.mip_solver_args)
-        terminate_cond = results.solver.termination_condition
+        if results.solution.status is SolutionStatus.feasible:
+            return tc.unbounded
+        else:
+            raise NotImplementedError(
+                "TODO: I guess we can increase that bound?")
 
-    mip_feasible = True
-
-    if terminate_cond in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-        pass
+    if terminate_cond is tc.optimal:
+        return tc.optimal
+    elif terminate_cond in {tc.locallyOptimal, tc.feasible}:
+        return tc.feasible
     elif terminate_cond is tc.infeasible:
         config.logger.info(
             'Linear GDP is now infeasible. '
             'GDPopt has finished exploring feasible discrete configurations.')
-        mip_feasible = False
+        return tc.infeasible
     elif terminate_cond is tc.maxTimeLimit:
-        # TODO check that status is actually ok and everything is feasible
-        config.logger.info(
-            'Unable to optimize linear GDP problem within time limit. '
-            'Using current solver feasible solution.')
+        if results.solution.status is SolutionStatus.feasible:
+            config.logger.info(
+                'Unable to optimize linear GDP problem within time limit. '
+                'Using current solver feasible solution.')
+            return tc.feasible
+        else:
+            config.logger.info(
+                'Unable to optimize linear GDP problem within time limit. '
+                'No solution found. Treating as infeasible, but there are no '
+                'guarantees.')
+            return tc.infeasible
     elif (terminate_cond is tc.other and
           results.solution.status is SolutionStatus.feasible):
         # load the solution and suppress the warning message by setting
@@ -120,14 +135,13 @@ def solve_linear_GDP(util_block, config, timing):
         config.logger.info(
             'Linear GDP solver reported feasible solution, '
             'but not guaranteed to be optimal.')
+        return tc.feasible
     else:
         raise ValueError(
             'GDPopt unable to handle linear GDP '
             'termination condition '
             'of %s. Solver message: %s' %
             (terminate_cond, results.solver.message))
-
-    return mip_feasible
 
 def distinguish_mip_infeasible_or_unbounded(m, config):
     """Distinguish between an infeasible or unbounded solution.

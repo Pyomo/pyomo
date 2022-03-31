@@ -16,6 +16,7 @@ from pyomo.core import (
 )
 from pyomo.common.collections import ComponentMap
 from pyomo.util.vars_from_expressions import get_vars_from_components
+from pyomo.opt import TerminationCondition as tc
 from pyomo.gdp import Disjunct
 
 def _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
@@ -105,9 +106,9 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                                   'solved.' % (count, disj_str))
         with preserve_master_problem_feasible_region(master_util_block, config,
                                                      original_bounds):
-            mip_feasible = solve_linear_GDP(master_util_block, config,
-                                            solver.timing)
-        if mip_feasible:
+            mip_termination = solve_linear_GDP(master_util_block, config,
+                                               solver.timing)
+        if mip_termination is not tc.infeasible:
             _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                                            subprob_util_block,
                                                            config, solver)
@@ -145,15 +146,15 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
         # are auto-linked to the binaries, we shouldn't have to change
         # anything. So first we solve the master problem in case we need values
         # for other discrete variables, and to make sure it's feasible.
-        mip_feasible = solve_linear_GDP(master_util_block, config,
-                                        solver.timing)
+        mip_termination = solve_linear_GDP(master_util_block, config,
+                                           solver.timing)
 
         # restore the fixed status of the indicator_variables
         for disj in master_util_block.disjunct_list:
             if disj not in already_fixed:
                 disj.indicator_var.unfix()
 
-    if mip_feasible:
+    if mip_termination is not tc.infeasible:
         _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                                        subprob_util_block,
                                                        config, solver)
@@ -203,9 +204,9 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
     # As with set covering, this is only a change of objective. The formulation
     # may be tightened, but that is valid for the duration.
     with use_master_for_max_binary_initialization(master_util_block):
-        mip_feasible = solve_linear_GDP(master_util_block, config,
+        mip_termination = solve_linear_GDP(master_util_block, config,
                                         solver.timing)
-        if mip_feasible:
+        if mip_termination is not tc.infeasible:
             _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                                            subprob_util_block,
                                                            config, solver)
@@ -285,10 +286,10 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
             update_set_covering_objective(master_util_block,
                                           disjunct_needs_cover)
 
-            mip_feasible = solve_linear_GDP(master_util_block, config,
-                                            solver.timing)
+            mip_termination = solve_linear_GDP(master_util_block, config,
+                                               solver.timing)
 
-            if not mip_feasible:
+            if mip_termination is tc.infeasible:
                 config.logger.info('Set covering problem is infeasible. '
                                    'Problem may have no more feasible '
                                    'disjunctive realizations.')

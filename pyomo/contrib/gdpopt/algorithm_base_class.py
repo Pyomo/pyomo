@@ -4,6 +4,7 @@ from textwrap import indent
 from pyomo.common.collections import Bunch
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, NonNegativeInt, In, PositiveInt)
+from pyomo.common.errors import DeveloperError
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import unique_component_name
 from pyomo.opt import SolverResults
@@ -176,9 +177,9 @@ class _GDPoptAlgorithm(object):
         self.incumbent_boolean_soln = [
             v.value for v in util_block.transformed_boolean_variable_list]
 
-    def _update_bounds_after_master_problem_solve(self, mip_feasible, obj_expr,
-                                                  logger):
-        if mip_feasible:
+    def _update_bounds_after_master_problem_solve(self, mip_termination,
+                                                  obj_expr, logger):
+        if mip_termination is tc.optimal:
             self._update_bounds(dual=value(obj_expr), logger=logger)
             # # TODO: I'm going to change this anyway
             # logger.info(
@@ -189,9 +190,18 @@ class _GDPoptAlgorithm(object):
             #         self.nlp_iteration,
             #         value(obj_expr),
             #         self.LB, self.UB))
-        else:
+        elif mip_termination is tc.infeasible:
             # Master problem was infeasible.
             self._update_dual_bound_to_infeasible(logger)
+        elif mip_termination is tc.feasible or tc.unbounded:
+            # we won't update the bound, because we didn't solve to
+            # optimality. (And in the unbounded case, we wouldn't be here if we
+            # didn't find a solution, so we're going to keep going, but we don't
+            # have any info in terms of a dual bound.)
+            pass
+        else:
+            raise DeveloperError("Unrecognized termination condition %s when "
+                                 "updating the dual bound." % mip_termination)
 
     def _update_dual_bound_to_infeasible(self, logger):
         if self.master_iteration == 1:
