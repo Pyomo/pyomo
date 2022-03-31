@@ -478,13 +478,16 @@ class Estimator(object):
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
+
             # add or overwrite ipopt solver option 'bound_push'
             # if problem is initialized with square problem solve and
             # float value is provided for initialization_with_bound_push
-            if pre_solve:
-                if initialization_with_bound_push is not None:
-                    if self.solver_options is not None:
-                        self.solver_options['bound_push'] = initialization_with_bound_push
+            if pre_solve and initialization_with_bound_push is not None:
+                if self.solver_options is not None:
+                    self.solver_options['bound_push'] = initialization_with_bound_push
+                else:
+                    self.solver_options = {'bound_push':initialization_with_bound_push}
+
             if not calc_cov:
                 # Do not calculate the reduced hessian
                 solver = SolverFactory('ipopt')

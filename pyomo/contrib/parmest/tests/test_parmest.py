@@ -195,6 +195,19 @@ class TestRooneyBiegler(unittest.TestCase):
         The formula used in parmest was verified against equations (7-5-15) and (7-5-16) in
         "Nonlinear Parameter Estimation", Y. Bard, 1974.
         '''
+    def test_theta_est_cov_with_pre_solve_and_bound_push(self):
+        objval, thetavals, cov = self.pest.theta_est(calc_cov=True,pre_solve=True,
+                                                     initialization_with_bound_push=1e-4, cov_n=6)
+
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2) # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2) # 0.5311 from the paper
+
+        # Covariance matrix
+        self.assertAlmostEqual(cov.iloc[0,0], 6.30579403, places=2) # 6.22864 from paper
+        self.assertAlmostEqual(cov.iloc[0,1], -0.4395341, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov.iloc[1,0], -0.4395341, places=2) # -0.4322 from paper
+        self.assertAlmostEqual(cov.iloc[1,1], 0.04124, places=2) # 0.04124 from paper
     def test_cov_scipy_least_squares_comparison(self):
         '''
         Scipy results differ in the 3rd decimal place from the paper. It is possible
