@@ -8,7 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.gdpopt.initialize_subproblems import (
+from pyomo.contrib.gdpopt.create_oa_subproblems import (
     initialize_master_problem, get_subproblem, add_util_block, 
     add_disjunct_list, add_algebraic_variable_list, add_discrete_variable_list, 
     add_boolean_variable_lists, add_constraint_list, save_initial_values, 

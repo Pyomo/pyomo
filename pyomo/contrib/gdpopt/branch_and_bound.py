@@ -23,7 +23,7 @@ from pyomo.opt import SolverFactory, SolverStatus
 from pyomo.opt import TerminationCondition as tc
 
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
-from pyomo.contrib.gdpopt.initialize_subproblems import (
+from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block, add_disjunction_list, add_disjunct_list,
     add_algebraic_variable_list, add_boolean_variable_lists,
     add_transformed_boolean_variable_list)
