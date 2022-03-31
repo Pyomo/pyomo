@@ -394,7 +394,7 @@ class Estimator(object):
 
     def _Q_opt(self, ThetaVals=None, solver="ef_ipopt",
                return_values=[], bootlist=None, calc_cov=False, cov_n=None,
-               pre_solve=False, bound_push=None):
+               pre_solve=False, initialization_with_bound_push=None):
         """
         Set up all thetas as first stage Vars, return resulting theta
         values as well as the objective function value.
@@ -478,8 +478,13 @@ class Estimator(object):
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
-            if bound_push is not None:
-                self.solver_options['bound_push'] = bound_push
+            # add or overwrite ipopt solver option 'bound_push'
+            # if problem is initialized with square problem solve and
+            # float value is provided for initialization_with_bound_push
+            if pre_solve:
+                if initialization_with_bound_push is not None:
+                    if self.solver_options is not None:
+                        self.solver_options['bound_push'] = initialization_with_bound_push
             if not calc_cov:
                 # Do not calculate the reduced hessian
                 solver = SolverFactory('ipopt')
@@ -691,7 +696,7 @@ class Estimator(object):
         return samplelist
 
     def theta_est(self, solver="ef_ipopt", return_values=[], calc_cov=False, cov_n=None,
-                  pre_solve=False,bound_push=None):
+                  pre_solve=False, initialization_with_bound_push=None):
         """
         Parameter estimation using all scenarios in the data
 
@@ -708,8 +713,12 @@ class Estimator(object):
             that are used in the objective function
         pre_solve: boolean, optional
             If True, solve square problem with parameters fixed before solving parameter estimation
-        bound_push: float, optional
-            If True, set ipopt solver option 'bound_push' to value provided
+        initialization_with_bound_push: float, optional
+            Only used when solver is ipopt
+            This is over-written by bound_push value provided when creating Estimator object
+            If value provided and pre_solve is True,
+            set ipopt solver option 'bound_push' to value provided for parameter estimation
+            if value provided and pre_solve is False, do not alter ipopt solver options
         Returns
         -------
         objectiveval: float
@@ -725,8 +734,8 @@ class Estimator(object):
         assert isinstance(return_values, list)
         assert isinstance(calc_cov, bool)
         assert isinstance(pre_solve, bool)
-        if bound_push is not None:
-            assert isinstance(bound_push, float)
+        if initialization_with_bound_push is not None:
+            assert isinstance(initialization_with_bound_push, float)
 
         if calc_cov:
             assert isinstance(cov_n, int), "The number of datapoints that are used in the objective function is required to calculate the covariance matrix"
@@ -734,7 +743,8 @@ class Estimator(object):
 
         return self._Q_opt(solver=solver, return_values=return_values,
                            bootlist=None, calc_cov=calc_cov, cov_n=cov_n,
-                           pre_solve=pre_solve, bound_push=bound_push)
+                           pre_solve=pre_solve,
+                           initialization_with_bound_push=initialization_with_bound_push)
 
 
     def theta_est_bootstrap(self, bootstrap_samples, samplesize=None,

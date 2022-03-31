@@ -336,7 +336,7 @@ class TestIndexedVariables(unittest.TestCase):
         self.assertAlmostEqual(thetavals["theta[asymptote]"], 19.1426, places=2)
         self.assertAlmostEqual(thetavals["theta[rate_constant]"], 0.5311, places=2)
 
-    def test_theta_est_square_pre_solve(self):
+    def test_theta_est_with_pre_solve(self):
 
         theta_names = ["theta"]
 
@@ -346,7 +346,20 @@ class TestIndexedVariables(unittest.TestCase):
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(thetavals["theta[asymptote]"], 19.1426, places=2)
         self.assertAlmostEqual(thetavals["theta[rate_constant]"], 0.5311, places=2)
-        
+
+    def test_theta_est_with_pre_solve_and_initialization_with_bound_push(self):
+
+        theta_names = ["theta"]
+
+        pest = self.make_model(theta_names)
+        objval, thetavals = pest.theta_est(pre_solve=True,
+                                           initialization_with_bound_push = 1e-4,
+                                           calc_cov=False)
+
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals["theta[asymptote]"], 19.1426, places=2)
+        self.assertAlmostEqual(thetavals["theta[rate_constant]"], 0.5311, places=2)
+
     def test_theta_est_quotedIndex(self):
 
         theta_names = ["theta['asymptote']", "theta['rate_constant']"]
