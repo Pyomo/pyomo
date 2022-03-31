@@ -22,14 +22,44 @@ from pyomo.gdp import Disjunct
 # m,aster problem when we are coopting it, and also just the usual "solve the
 # master, then solve the subproblem and do all the right things" routine.
 
+def _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
+                                                   subprob_util_block, config,
+                                                   solver):
+    with fix_master_solution_in_subproblem(master_util_block,
+                                           subprob_util_block, config,
+                                           config.force_subproblem_nlp):
+            nlp_feasible = solve_subproblem(subprob_util_block, config,
+                                            solver.timing)
+            if nlp_feasible:
+                primal_improved = solver._update_bounds(
+                    primal=value(subprob_util_block.obj.expr),
+                    logger=config.logger)
+                if primal_improved:
+                    solver.update_incumbent(subprob_util_block)
+            add_cuts_according_to_algorithm(subprob_util_block,
+                                            master_util_block,
+                                            solver.objective_sense, config,
+                                            solver.timing)
+    return nlp_feasible
+
+def _collect_original_bounds(master_util_block):
+    original_bounds = ComponentMap()
+    for v in master_util_block.variable_list:
+        original_bounds[v] = (v.lb, v.ub)
+    return original_bounds
+
+def _restore_bounds(original_bounds):
+    for v, (l, u) in original_bounds.items():
+        v.setlb(l)
+        v.setub(u)
+
 def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                           config, solver):
     """Initialize by using user-specified custom disjuncts."""
     used_disjuncts = {}
     if config.mip_presolve:
-        original_bounds = ComponentMap()
-        for v in master_util_block.variable_list:
-            original_bounds[v] = (v.lb, v.ub)
+        original_bounds = _collect_original_bounds(master_util_block)
+
     for count, active_disjunct_set in enumerate(config.custom_init_disjuncts):
         used_disjuncts = set()
         # custom_init_disjuncts contains a list of sets, giving the disjuncts
@@ -61,28 +91,12 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
         mip_feasible = solve_linear_GDP(master_util_block, config,
                                         solver.timing)
         if config.mip_presolve:
-            # restore bounds
-            for v, (l, u) in original_bounds.items():
-                v.setlb(l)
-                v.setub(u)
+            _restore_bounds(original_bounds)
 
         if mip_feasible:
-            with fix_master_solution_in_subproblem(master_util_block,
-                                                   subprob_util_block,
-                                                   config,
-                                                   config.force_subproblem_nlp):
-                nlp_feasible = solve_subproblem(subprob_util_block, config,
-                                                solver.timing)
-                if nlp_feasible:
-                    primal_improved = solver._update_bounds(
-                        primal=value(subprob_util_block.obj.expr),
-                        logger=config.logger)
-                    if primal_improved:
-                        solver.update_incumbent(subprob_util_block)
-                    add_cuts_according_to_algorithm(subprob_util_block,
-                                                    master_util_block,
-                                                    solver.objective_sense,
-                                                    config, solver.timing)
+            _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
+                                                           subprob_util_block,
+                                                           config, solver)
         else:
             config.logger.error(
                 'Linear GDP infeasible for user-specified '
@@ -103,9 +117,7 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
         "solving subproblem with original user-specified disjunct values.")
 
     if config.mip_presolve:
-        original_bounds = ComponentMap()
-        for v in master_util_block.variable_list:
-            original_bounds[v] = (v.lb, v.ub)
+        original_bounds = _collect_original_bounds(master_util_block)
     
     # We copied the variables over when we cloned, and because the Booleans are
     # auto-linked to the binaries, we shouldn't have to change anything. So
@@ -113,27 +125,12 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
     # discrete variables.
     mip_feasible = solve_linear_GDP(master_util_block, config, solver.timing)
     if config.mip_presolve:
-        # restore bounds
-        for v, (l, u) in original_bounds.items():
-            v.setlb(l)
-            v.setub(u)
+        _restore_bounds(original_bounds)
     
     if mip_feasible:
-        with fix_master_solution_in_subproblem(master_util_block,
-                                           subprob_util_block, config,
-                                           config.force_subproblem_nlp):
-            nlp_feasible = solve_subproblem(subprob_util_block, config,
-                                            solver.timing)
-            if nlp_feasible:
-                primal_improved = solver._update_bounds(
-                    primal=value(subprob_util_block.obj.expr),
-                    logger=config.logger)
-                if primal_improved:
-                    solver.update_incumbent(subprob_util_block)
-            add_cuts_according_to_algorithm(subprob_util_block,
-                                            master_util_block,
-                                            solver.objective_sense, config,
-                                            solver.timing)
+        _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
+                                                       subprob_util_block,
+                                                       config, solver)
     else:
         config.logger.error(
             'Linear GDP infeasible for initial user-specified '
@@ -144,14 +141,6 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
 @contextmanager
 def use_master_for_max_binary_initialization(master_util_block):
     m = master_util_block.model()
-    original_bounds = ComponentMap()
-    for v in get_vars_from_components(m, ctype=(Constraint, Objective),
-                                      active=True, descend_into=Block):
-        original_bounds[v] = (v.lb, v.ub)
-    active_constraints = []
-    for c in m.component_data_objects(Constraint, active=True,
-                                      descend_into=Block):
-        active_constraints.append(c)
 
     # Set up binary maximization objective
     original_objective = next( m.component_data_objects(Objective, active=True,
@@ -159,8 +148,8 @@ def use_master_for_max_binary_initialization(master_util_block):
     original_objective.deactivate()
 
     binary_vars = (v for v in m.component_data_objects(
-        ctype=Var, descend_into=(Block, Disjunct)) if v.is_binary() 
-                   and not v.fixed)
+        ctype=Var, descend_into=(Block, Disjunct)) 
+                   if v.is_binary() and not v.fixed)
     master_util_block.max_binary_obj = Objective(expr=sum(binary_vars),
                                                  sense=maximize)
     
@@ -170,13 +159,6 @@ def use_master_for_max_binary_initialization(master_util_block):
     # still want them. We've already considered those solutions.
     del master_util_block.max_binary_obj
     original_objective.activate()
-
-    # undo what fbbt might have done in preprocessing
-    for v, (l, u) in original_bounds.items():
-        v.setlb(l)
-        v.setub(u)
-    for c in active_constraints:
-        c.activate()
 
 def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
                       solver):
@@ -192,25 +174,15 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
         "solving a subproblem that maximizes "
         "the sum of all binary and logical variables.")
 
+    # As with set covering, this is only a change of objective. The formulation
+    # may be tightened, but that is valid for the duration.
     with use_master_for_max_binary_initialization(master_util_block):
         mip_feasible = solve_linear_GDP(master_util_block, config,
                                         solver.timing)
         if mip_feasible:
-            with fix_master_solution_in_subproblem(master_util_block,
-                                           subprob_util_block, config,
-                                           config.force_subproblem_nlp):
-                nlp_feasible = solve_subproblem(subprob_util_block, config,
-                                                solver.timing)
-                if nlp_feasible:
-                    primal_improved = solver._update_bounds(
-                        primal=value(subprob_util_block.obj.expr),
-                        logger=config.logger)
-                    if primal_improved:
-                        solver.update_incumbent(subprob_util_block)
-                add_cuts_according_to_algorithm(subprob_util_block,
-                                                master_util_block,
-                                                solver.objective_sense, config,
-                                                solver.timing)
+            _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
+                                                           subprob_util_block,
+                                                           config, solver)
         else:
             config.logger.info(
                 "Linear relaxation for initialization was infeasible. "
@@ -222,20 +194,12 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
 @contextmanager
 def use_master_for_set_covering(master_util_block):
     m = master_util_block.model()
-    original_bounds = ComponentMap()
-    for v in get_vars_from_components(m, ctype=(Constraint, Objective),
-                                      active=True, descend_into=Block):
-        original_bounds[v] = (v.lb, v.ub)
-    active_constraints = []
-    for c in m.component_data_objects(Constraint, active=True,
-                                      descend_into=Block):
-        active_constraints.append(c)
 
-    original_objective = next( m.component_data_objects(Objective, active=True,
-                                                        descend_into=True))
+    original_objective = next(m.component_data_objects(Objective, active=True,
+                                                       descend_into=True))
     original_objective.deactivate()
     # placeholder for the objective
-    master_util_block.set_cover_obj = Objective(expr=0)
+    master_util_block.set_cover_obj = Objective(expr=0, sense=maximize)
 
     yield
 
@@ -243,13 +207,6 @@ def use_master_for_set_covering(master_util_block):
     # still want them. We've already considered those solutions.
     del master_util_block.set_cover_obj
     original_objective.activate()
-
-    # undo what fbbt might have done in preprocessing
-    for v, (l, u) in original_bounds.items():
-        v.setlb(l)
-        v.setub(u)
-    for c in active_constraints:
-        c.activate()
 
 def update_set_covering_objective(master_util_block, disj_needs_cover):
     # number of disjuncts that still need to be covered
@@ -260,12 +217,9 @@ def update_set_covering_objective(master_util_block, disj_needs_cover):
     weights = list((num_covered + 1 if disj_bool else 1)
                    for disj_bool in disj_needs_cover)
     # Update set covering objective
-    if hasattr(master_util_block, "set_cover_obj"):
-        del master_util_block.set_cover_obj
-    master_util_block.set_cover_obj = Objective(
-        expr=sum(weight * disj.binary_indicator_var
-                 for (weight, disj) in zip(
-            weights, master_util_block.disjunct_list)), sense=maximize)
+    master_util_block.set_cover_obj.expr = sum(
+        weight * disj.binary_indicator_var
+        for (weight, disj) in zip(weights, master_util_block.disjunct_list))
 
 def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                       solver):
@@ -288,13 +242,14 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
         for disj in util_block.disjunct_list)
     subprob = subprob_util_block.model()
 
-    if config.mip_presolve:
-        original_bounds = ComponentMap()
-        for v in master_util_block.variable_list:
-            original_bounds[v] = (v.lb, v.ub)
+    # if config.mip_presolve:
+    #     original_bounds = _collect_original_bounds(master_util_block)
 
     # borrow the master problem to be the set covering MIP. This is only a
-    # change of objective
+    # change of objective. The formulation may have its bounds tightened as a
+    # result of preprocessing in the MIP solves, but that is okay because the
+    # feasible region is the same as the original master problem and any
+    # feasibility-based tightening will remain valid for the duration.
     with use_master_for_set_covering(master_util_block):
         iter_count = 1
         while (any(disjunct_needs_cover) and
@@ -309,11 +264,8 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
             
             mip_feasible = solve_linear_GDP(master_util_block, config,
                                             solver.timing)
-            if config.mip_presolve:
-                # restore bounds
-                for v, (l, u) in original_bounds.items():
-                    v.setlb(l)
-                    v.setub(u)
+            # if config.mip_presolve:
+            #     _restore_bounds(original_bounds)
                 
             if not mip_feasible:
                 config.logger.info('Set covering problem is infeasible. '
@@ -331,33 +283,19 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                 config.logger.info('Solved set covering MIP')
 
             ## solve local NLP
-            with fix_master_solution_in_subproblem(
-                    master_util_block,
-                    subprob_util_block,
-                    config,
-                    make_subproblem_continuous=config.force_subproblem_nlp):
-                subprob_feasible = solve_subproblem(subprob_util_block, config,
-                                                    solver.timing)
-                if subprob_feasible:
-                    primal_improved = solver._update_bounds(
-                        primal=value(subprob_util_block.obj.expr),
-                        logger=config.logger)
-                    if primal_improved:
-                        solver.update_incumbent(subprob_util_block)
-                    # if successful, updated sets
-                    active_disjuncts = list(
-                        fabs(value(disj.binary_indicator_var) - 1) <=
-                        config.integer_tolerance for disj in
-                        master_util_block.disjunct_list)
-                    # Update the disjunct needs cover list
-                    disjunct_needs_cover = list( 
-                        (needed_cover and not was_active) for 
-                        (needed_cover, was_active) in
-                        zip(disjunct_needs_cover, active_disjuncts))
-                    add_cuts_according_to_algorithm(subprob_util_block,
-                                                    master_util_block,
-                                                    solver.objective_sense,
-                                                    config, solver.timing)
+            nlp_feasible = _fix_master_soln_solve_subproblem_and_add_cuts(
+                master_util_block, subprob_util_block, config, solver)
+            if nlp_feasible:
+                # if successful, update sets
+                active_disjuncts = list(
+                    fabs(value(disj.binary_indicator_var) - 1) <=
+                    config.integer_tolerance for disj in
+                    master_util_block.disjunct_list)
+                # Update the disjunct needs cover list
+                disjunct_needs_cover = list( 
+                    (needed_cover and not was_active) for 
+                    (needed_cover, was_active) in
+                    zip(disjunct_needs_cover, active_disjuncts))
             add_no_good_cut(master_util_block, config)
             iter_count += 1
 
