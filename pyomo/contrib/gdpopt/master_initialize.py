@@ -18,8 +18,6 @@ from pyomo.common.collections import ComponentMap
 from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.gdp import Disjunct
 
-from pytest import set_trace
-
 # ESJ TODO: These have a lot of redundant code in terms of not messing up the
 # m,aster problem when we are coopting it, and also just the usual "solve the
 # master, then solve the subproblem and do all the right things" routine.
