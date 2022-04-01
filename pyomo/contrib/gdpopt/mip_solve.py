@@ -101,13 +101,14 @@ def solve_linear_GDP(util_block, config, timing):
         with SuppressInfeasibleWarning():
             results = SolverFactory(config.mip_solver).solve(
                 m, **config.mip_solver_args)
+        # get rid of the made-up constraint
+        del util_block.objective_bound
         if results.solver.termination_condition in {tc.optimal, tc.feasible,
                                                     tc.locallyOptimal,
                                                     tc.globallyOptimal}:
             # we found a solution, that's all we need to keep going.
             return tc.unbounded
         else:
-            set_trace()
             raise NotImplementedError(
                 "TODO: I guess we can increase that bound?")
 
