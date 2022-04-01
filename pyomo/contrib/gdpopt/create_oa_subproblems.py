@@ -40,11 +40,9 @@ def _get_master_and_subproblem(original_model, config, solver,
     # create model to hold the subproblems: We create this first because
     # certain initialization strategies for the master problem need it.
     subproblem = get_subproblem(original_model)
-    # TODO: use getname and a bufffer!
     subproblem_util_block = subproblem.component(util_block.name)
     save_initial_values(subproblem_util_block)
     add_transformed_boolean_variable_list(subproblem_util_block)
-    # TODO, not completely sure if this is what I should do
     subproblem_obj = next(subproblem.component_data_objects(
         Objective, active=True, descend_into=True))
     subproblem_util_block.obj = Expression(expr=subproblem_obj.expr)
@@ -66,7 +64,6 @@ def initialize_master_problem(util_block, subprob_util_block, config, solver):
     master = util_block.model().clone()
     master.name = master.name + ": master problem"
 
-    # TODO: switch to getname and set up a name buffer
     master_util_block = master.component(util_block.name)
     master_util_block.no_good_cuts = ConstraintList()
 

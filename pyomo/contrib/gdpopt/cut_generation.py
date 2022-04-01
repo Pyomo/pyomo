@@ -78,10 +78,8 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
                 'the ignore set.' % constr.name)
             continue
 
-        # TODO: need a name buffer
-        config.logger.debug(
-            "Adding OA cut for %s with dual value %s"
-            % (constr.name, dual_value))
+        config.logger.debug( "Adding OA cut for %s with dual value %s" %
+                             (constr.name, dual_value))
 
         # Cache jacobian
         jacobian = master_util_block.jacobians.get(constr, None)
