@@ -69,57 +69,57 @@ def process_nonlinear_problem_results(results, model, problem_type, config):
     elif term_cond == tc.feasible:
         return tc.feasible
     elif term_cond == tc.infeasible:
-        logger.info('%s subproblem was infeasible.' % problem_type)
+        logger.debug('%s subproblem was infeasible.' % problem_type)
         return tc.infeasible
     elif term_cond == tc.maxIterations:
         # TODO try something else? Reinitialize with different initial
         # value?
-        logger.info( '%s subproblem failed to converge within iteration limit.'
+        logger.debug( '%s subproblem failed to converge within iteration limit.'
                      % problem_type)
         if is_feasible(model, config):
-            logger.info(
+            logger.debug(
                 'NLP solution is still feasible. '
                 'Using potentially suboptimal feasible solution.')
             return tc.feasible
         return False
     elif term_cond == tc.internalSolverError:
         # Possible that IPOPT had a restoration failure
-        logger.info( "%s solver had an internal failure: %s" %
+        logger.debug( "%s solver had an internal failure: %s" %
                      (problem_type, results.solver.message))
         return tc.noSolution
     elif (term_cond == tc.other and
           "Too few degrees of freedom" in str(results.solver.message)):
         # Possible IPOPT degrees of freedom error
-        logger.info(
+        logger.debug(
             "Perhaps the subproblem solver has too few degrees of freedom: %s" %
             results.solver.message)
         return tc.infeasible
     elif term_cond == tc.other:
-        logger.info(
+        logger.debug(
             "%s solver had a termination condition of 'other': %s" %
             (problem_type, results.solver.message))
         return tc.noSolution
     elif term_cond == tc.error:
-        logger.info("%s solver had a termination condition of 'error': "
+        logger.debug("%s solver had a termination condition of 'error': "
                     "%s" % (problem_type, results.solver.message))
         return tc.noSolution
     elif term_cond == tc.maxTimeLimit:
-        logger.info("%s subproblem failed to converge within time "
+        logger.debug("%s subproblem failed to converge within time "
                     "limit." % problem_type)
         if is_feasible(model, config):
-            config.logger.info(
+            config.logger.debug(
                 '%s solution is still feasible. '
                 'Using potentially suboptimal feasible solution.' %
                 problem_type)
             return tc.feasible
         return tc.noSolution
     elif term_cond == tc.intermediateNonInteger:
-        config.logger.info( "%s solver could not find feasible integer"
+        config.logger.debug( "%s solver could not find feasible integer"
                             " solution: %s" % (problem_type,
                                                results.solver.message))
         return tc.noSolution
     elif term_cond == tc.unbounded:
-        config.logger.info("The NLP subproblem is unbounded, meaning that "
+        config.logger.debug("The NLP subproblem is unbounded, meaning that "
                            "the GDP is unbounded.")
         return tc.unbounded
     else:
@@ -137,10 +137,10 @@ def solve_linear_subproblem(subproblem, config, timing):
     if subprob_terminate_cond is tc.optimal:
         return tc.optimal
     elif subprob_terminate_cond is tc.infeasible:
-        config.logger.info('MILP subproblem was infeasible.')
+        config.logger.debug('MILP subproblem was infeasible.')
         return tc.infeasible
     elif subprob_terminate_cond is tc.unbounded:
-        config.logger.info('MILP subproblem was unbounded.')
+        config.logger.debug('MILP subproblem was unbounded.')
         return tc.unbounded
     else:
         raise ValueError(
@@ -150,7 +150,7 @@ def solve_linear_subproblem(subproblem, config, timing):
 
 def solve_NLP(nlp_model, config, timing):
     """Solve the NLP subproblem."""
-    config.logger.info(
+    config.logger.debug(
         'Solving nonlinear subproblem for '
         'fixed binaries and logical realizations.')
 
@@ -162,7 +162,7 @@ def solve_NLP(nlp_model, config, timing):
 
 def solve_MINLP(util_block, config, timing):
     """Solve the MINLP subproblem."""
-    config.logger.info(
+    config.logger.debug(
         "Solving MINLP subproblem for fixed logical realizations."
     )
     model = util_block.model()
@@ -248,9 +248,8 @@ def preprocess_subproblem(util_block, config):
             return_trivial=constraints_deactivated)
 
     except InfeasibleConstraintException as e:
-            config.logger.info("NLP subproblem determined to be infeasible "
-                               "during preprocessing.")
-            config.logger.debug("Message from preprocessing: %s" % e)
+            config.logger.debug("NLP subproblem determined to be infeasible "
+                                "during preprocessing. Message: %s" % e)
             not_infeas = False
 
     yield not_infeas

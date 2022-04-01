@@ -160,13 +160,13 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
         if jacobian.mode is differentiate.Modes.reverse_numeric:
             jacobian.jac.clear()
 
-    config.logger.info('Added %s OA cuts' % counter)
+    config.logger.debug('Added %s OA cuts' % counter)
 
 def add_affine_cuts(subproblem_util_block, master_util_block, config, timing):
     m = master_util_block.model()
     bigm = TransformationFactory('gdp.bigm')
 
-    config.logger.info("Adding affine cuts.")
+    config.logger.debug("Adding affine cuts.")
     counter = 0
     for master_var, subprob_var in zip(
             master_util_block.algebraic_variable_list,
@@ -227,7 +227,7 @@ def add_affine_cuts(subproblem_util_block, master_util_block, config, timing):
                                                  aff_cuts)
         counter += 2
 
-    config.logger.info("Added %s affine cuts" % counter)
+    config.logger.debug("Added %s affine cuts" % counter)
 
 
 def add_no_good_cut(target_model_util_block, config):
@@ -263,7 +263,7 @@ def add_no_good_cut(target_model_util_block, config):
 
     if not (var_value_is_one or var_value_is_zero):
         # if no remaining binary variables, then terminate algorithm.
-        config.logger.info(
+        config.logger.debug(
             'No remaining discrete solutions to explore.')
         return False
 

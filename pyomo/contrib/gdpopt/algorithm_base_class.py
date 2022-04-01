@@ -74,13 +74,22 @@ class _GDPoptAlgorithm(object):
         self.unbounded = False
         self.iteration_log = {}
         self.timing = Bunch()
-        # TODO: rename these when you understand what they are
-        self.master_iteration = 0
-        self.mip_iteration = 0
-        self.nlp_iteration = 0
-        
+        self.iteration = 0
+
         self.incumbent_boolean_soln = None
         self.incumbent_continuous_soln = None
+
+        self.log_formatter = ('{:>9}   {:>15}   {:>11.5f}   {:>11.5f}   '
+                              '{:>8.2%}   {:>7.2f}  {}')
+
+    def _log_header(self, logger):
+        logger.info(
+            '================================================================='
+            '============================')
+        logger.info(
+            '{:^9} | {:^15} | {:^11} | {:^11} | {:^8} | {:^7}\n'.format(
+                'Iteration', 'Subproblem Type', 'Lower Bound', 'Upper Bound',
+                ' Gap ', 'Time(s)'))
 
     def solve(self, model, config):
         """Solve the model.
@@ -89,6 +98,9 @@ class _GDPoptAlgorithm(object):
             model (Block): a Pyomo model or block to be solved
 
         """
+        # set up the logger so that we will have a pretty log printed
+        logger = config.logger
+
         self._log_solver_intro_message(config)
 
         if self.CONFIG.algorithm is not None and \
@@ -106,13 +118,21 @@ class _GDPoptAlgorithm(object):
         # Check if this problem actually has any discrete decisions. If not,
         # just solve it.
         problem = self.pyomo_results.problem
-        if (problem.number_of_binary_variables == 0 and 
+        if (problem.number_of_binary_variables == 0 and
             problem.number_of_integer_variables == 0 and
             problem.number_of_disjunctions == 0):
             # TODO: This results object won't have the stuff above on it...
             return solve_continuous_problem(model, config)
 
-    def _update_bounds(self, primal=None, dual=None, logger=None):
+    def _update_bounds_after_solve(self, subprob_nm, primal=None, dual=None,
+                                   logger=None):
+        primal_improved = self._update_bounds(primal, dual)
+        if logger is not None:
+            self._log_current_state(logger, subprob_nm, primal_improved)
+
+        return primal_improved
+
+    def _update_bounds(self, primal=None, dual=None):
         """
         Update bounds correctly depending on objective sense.
 
@@ -127,24 +147,28 @@ class _GDPoptAlgorithm(object):
             if primal is not None and primal < oldUB:
                 self.UB = primal
                 primal_bound_improved = True
-                #oldPrimal = oldUB
             if dual is not None and dual > oldLB:
                 self.LB = dual
         else:
             if primal is not None and primal > oldLB:
                 self.LB = primal
                 primal_bound_improved = True
-                #oldPrimal = oldLB
             if dual is not None and dual < oldUB:
                 self.UB = dual
 
-        if logger is not None:
-            self.log_bounds(logger, oldLB, oldUB)
-
-        # if primal is not None:
-        #     return self.primal_bound_improved(oldPrimal, newPrimal)
-        # primal wasn't even updated
         return primal_bound_improved
+
+    def relative_gap(self):
+        absolute_gap = abs(self.UB - self.LB)
+        return absolute_gap/(abs(self.primal_bound() + 1e-10))
+
+    def _log_current_state(self, logger, subproblem_type,
+                           primal_improved=False):
+        star = "*" if primal_improved else ""
+        logger.info(self.log_formatter.format(
+            self.iteration, subproblem_type, self.LB,
+            self.UB, self.relative_gap(),
+            get_main_elapsed_time(self.timing), star))
 
     def primal_bound(self):
         if self.objective_sense is minimize:
@@ -160,18 +184,6 @@ class _GDPoptAlgorithm(object):
             return True
         return False
 
-    def log_bounds(self, logger, oldLB=None, oldUB=None):
-        lb_improved = ""
-        ub_improved = ""
-        if oldLB is not None and self.LB > oldLB:
-            lb_improved = "(IMPROVED) "
-        if oldUB is not None and self.UB < oldUB:
-            ub_improved = "(IMPROVED) "
-        logger.info('LB: {:10g} {:s} UB: {:.10g} {:s}'.format(self.LB,
-                                                              lb_improved,
-                                                              self.UB,
-                                                              ub_improved))
-
     def update_incumbent(self, util_block):
         self.incumbent_continuous_soln = [v.value for v in
                                           util_block.algebraic_variable_list]
@@ -181,16 +193,8 @@ class _GDPoptAlgorithm(object):
     def _update_bounds_after_master_problem_solve(self, mip_termination,
                                                   obj_expr, logger):
         if mip_termination is tc.optimal:
-            self._update_bounds(dual=value(obj_expr), logger=logger)
-            # # TODO: I'm going to change this anyway
-            # logger.info(
-            #     'ITER {:d}.{:d}.{:d}-MIP: OBJ: {:.10g}  LB: {:.10g}  UB: {:.10g}'.\
-            #     format(
-            #         self.master_iteration,
-            #         self.mip_iteration,
-            #         self.nlp_iteration,
-            #         value(obj_expr),
-            #         self.LB, self.UB))
+            self._update_bounds_after_solve('master', dual=value(obj_expr),
+                                            logger=logger)
         elif mip_termination is tc.infeasible:
             # Master problem was infeasible.
             self._update_dual_bound_to_infeasible(logger)
@@ -205,7 +209,7 @@ class _GDPoptAlgorithm(object):
                                  "updating the dual bound." % mip_termination)
 
     def _update_dual_bound_to_infeasible(self, logger):
-        if self.master_iteration == 1:
+        if self.iteration == 1:
             logger.warning(
                 'GDPopt initialization may have generated poor '
                 'quality cuts.')
@@ -244,11 +248,11 @@ class _GDPoptAlgorithm(object):
         return False
 
     def reached_iteration_limit(self, config):
-        if self.master_iteration >= config.iterlim:
+        if self.iteration >= config.iterlim:
             config.logger.info(
                 'GDPopt unable to converge bounds '
                 'after %s master iterations.'
-                % (self.master_iteration,))
+                % (self.iteration,))
             config.logger.info(
                 'Final bound values: LB: {:.10g}  UB: {:.10g}'.format(
                     self.LB, self.UB))
@@ -272,8 +276,8 @@ class _GDPoptAlgorithm(object):
         return False
 
     def any_termination_criterion_met(self, config):
-        return (self.bounds_converged(config) or 
-                self.reached_iteration_limit(config) or 
+        return (self.bounds_converged(config) or
+                self.reached_iteration_limit(config) or
                 self.reached_time_limit(config))
 
     def _get_pyomo_results_object_with_problem_info(self, original_model,
@@ -285,7 +289,7 @@ class _GDPoptAlgorithm(object):
 
         results.solver.name = 'GDPopt %s - %s' % (self.version(),
                                                   config.algorithm)
-    
+
         prob = results.problem
         prob.name = original_model.name
         prob.number_of_nonzeros = None  # TODO
@@ -361,7 +365,7 @@ class _GDPoptAlgorithm(object):
         # Finalize results object
         results.problem.lower_bound = self.LB
         results.problem.upper_bound = self.UB
-        results.solver.iterations = self.master_iteration
+        results.solver.iterations = self.iteration
         results.solver.timing = self.timing
         results.solver.user_time = self.timing.total
         results.solver.wallclock_time = self.timing.total
@@ -377,10 +381,6 @@ class _GDPoptAlgorithm(object):
 
     def available(self, exception_flag=True):
         """Check if solver is available.
-
-        TODO: For now, it is always available. However, sub-solvers may not
-        always be available, and so this should reflect that possibility.
-
         """
         return True
 
@@ -443,7 +443,7 @@ class _GDPoptAlgorithm(object):
         - Implementation:
         Chen, Q; Johnson, ES; Bernal, DE; Valentin, R; Kale, S;
         Bates, J; Siirola, JD; Grossmann, IE.
-        Pyomo.GDP: an ecosystem for logic based modeling and optimization 
+        Pyomo.GDP: an ecosystem for logic based modeling and optimization
         development.
         Optimization and Engineering, 2021.
         """.strip()
@@ -452,7 +452,7 @@ class _GDPoptAlgorithm(object):
             to_cite_text += """
             - LOA algorithm:
             Türkay, M; Grossmann, IE.
-            Logic-based MINLP algorithms for the optimal synthesis of process 
+            Logic-based MINLP algorithms for the optimal synthesis of process
             networks. Comp. and Chem. Eng. 1996, 20(8), 959–978.
             DOI: 10.1016/0098-1354(95)00219-7.
             """.strip()
@@ -461,7 +461,7 @@ class _GDPoptAlgorithm(object):
             to_cite_text += """
             - GLOA algorithm:
             Lee, S; Grossmann, IE.
-            A Global Optimization Algorithm for Nonconvex Generalized 
+            A Global Optimization Algorithm for Nonconvex Generalized
             Disjunctive Programming and Applications to Process Systems.
             Comp. and Chem. Eng. 2001, 25, 1675-1697.
             DOI: 10.1016/S0098-1354(01)00732-3.

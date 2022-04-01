@@ -45,10 +45,9 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
         
-        super().solve(model, config)
-        min_logging_level = logging.INFO if config.tee else None
         with time_code(self.timing, 'total', is_main_timer=True), \
-            lower_logger_level_to(config.logger, min_logging_level):
+            lower_logger_level_to(config.logger, config.tee):
+            super().solve(model, config)
             return self._solve_gdp_with_gloa(model, config)
 
     def _solve_gdp_with_gloa(self, original_model, config):
@@ -63,16 +62,11 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
         master_obj = next(master.component_data_objects(Objective, active=True,
                                                         descend_into=True))
 
-        # main loop
-        while self.master_iteration < config.iterlim:
-            # Set iteration counters for new master iteration.
-            self.master_iteration += 1
-            self.mip_iteration = 0
-            self.nlp_iteration = 0
+        self._log_header(logger)
 
-            # print line for visual display
-            logger.info('---GDPopt Master Iteration %s---' % 
-                        self.master_iteration)
+        # main loop
+        while self.iteration < config.iterlim:
+            self.iteration += 1
 
             # solve linear master problem
             with time_code(self.timing, 'mip'):

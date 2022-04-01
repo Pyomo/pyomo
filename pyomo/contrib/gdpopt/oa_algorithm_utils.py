@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -23,8 +23,9 @@ def _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
         nlp_termination = solve_subproblem(subprob_util_block, config,
                                            solver.timing)
         if nlp_termination in {tc.optimal, tc.feasible}:
-            primal_improved = solver._update_bounds(
-                primal=value(subprob_util_block.obj.expr), logger=config.logger)
+            primal_improved = solver._update_bounds_after_solve(
+                'subproblem', primal=value(subprob_util_block.obj.expr),
+                logger=config.logger)
             if primal_improved:
                 solver.update_incumbent(subprob_util_block)
             add_cuts_according_to_algorithm(subprob_util_block,

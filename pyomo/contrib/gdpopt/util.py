@@ -12,6 +12,7 @@
 from contextlib import contextmanager
 import logging
 from math import fabs
+import sys
 
 from pyomo.common import timing
 from pyomo.common.collections import ComponentSet
@@ -384,13 +385,34 @@ def get_main_elapsed_time(timing_data_obj):
             )
 
 @contextmanager
-def lower_logger_level_to(logger, level=None):
+def lower_logger_level_to(logger, tee=False):
     """Increases logger verbosity by lowering reporting level."""
+    level = logging.INFO if tee else None
+    handlers = [h for h in logger.handlers]
+
+    if tee: # we want pretty stuff
+        logger.handlers.clear()
+        logger.propagate = False
+        sh = logging.StreamHandler(stream=sys.stdout)
+        sh.setLevel(logger.getEffectiveLevel())
+        sh.setFormatter(logging.Formatter('%(message)s'))
+        logger.addHandler(sh)
+
+    level_changed = False
     if level is not None and logger.getEffectiveLevel() > level:
         # If logger level is higher (less verbose), decrease it
         old_logger_level = logger.level
         logger.setLevel(level)
-        yield
+        if tee:
+            sh.setLevel(level)
+        level_changed = True
+
+    yield
+
+    if tee:
+        logger.handlers.clear()
+        for h in handlers:
+            logger.addHandler
+        logger.propagate = True
+    if level_changed:
         logger.setLevel(old_logger_level)
-    else:
-        yield  # Otherwise, leave the logger alone

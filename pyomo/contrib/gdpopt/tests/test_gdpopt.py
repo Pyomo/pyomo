@@ -372,8 +372,7 @@ class TestGDPopt(unittest.TestCase):
         SolverFactory('gdpopt', algorithm='LOA').solve(
             eight_process,
             mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
-            tee=False)
+            nlp_solver=nlp_solver)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")

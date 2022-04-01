@@ -231,7 +231,7 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 self.UB = node_data.obj_ub if \
                           self.objective_sense == minimize else \
                           -node_data.obj_lb
-                self.master_iteration = self.explored_nodes
+                self.iteration = self.explored_nodes
                 if node_data.obj_lb == float('inf'):
                     self.pyomo_results.solver.\
                         termination_condition = tc.infeasible

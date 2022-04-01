@@ -46,6 +46,8 @@ def preserve_master_problem_feasible_region(master_util_block, config,
 def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                           config, solver):
     """Initialize by using user-specified custom disjuncts."""
+    solver._log_header(config.logger)
+
     used_disjuncts = {}
 
     # We are going to fix indicator_vars in the master problem before we solve
@@ -62,7 +64,6 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
 
         subproblem = subprob_util_block.model()
         # fix the disjuncts in the linear GDP and solve
-        solver.mip_iteration += 1
         config.logger.info(
             "Generating initial linear GDP approximation by "
             "solving subproblems with user-specified active disjuncts.")
@@ -104,10 +105,10 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
                          config, solver):
     """Initialize by solving the problem with the current disjunct values."""
 
-    solver.mip_iteration += 1
     config.logger.info(
         "Generating initial linear GDP approximation by "
         "solving subproblem with original user-specified disjunct values.")
+    solver._log_header(config.logger)
 
     # Again, if we presolve, we are going to tighten the bounds after fixing the
     # indicator_vars, so it won't be valid afterwards and we need to restore it.
@@ -174,11 +175,11 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
     feasible.
 
     """
-    solver.mip_iteration += 1
     config.logger.info(
         "Generating initial linear GDP approximation by "
         "solving a subproblem that maximizes "
         "the sum of all binary and logical variables.")
+    solver._log_header(config.logger)
 
     # As with set covering, this is only a change of objective. The formulation
     # may be tightened, but that is valid for the duration.
@@ -190,7 +191,7 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
                                                            subprob_util_block,
                                                            config, solver)
         else:
-            config.logger.info(
+            config.logger.debug(
                 "Linear relaxation for initialization was infeasible. "
                 "Problem is infeasible.")
             solver._update_dual_bound_to_infeasible(config.logger)
@@ -239,6 +240,8 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
 
     """
     config.logger.info("Starting set covering initialization.")
+    solver._log_header(config.logger)
+
     # List of True/False if the corresponding disjunct in
     # disjunct_list still needs to be covered by the initialization
     disjunct_needs_cover = list(
@@ -257,7 +260,7 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
         iter_count = 1
         while (any(disjunct_needs_cover) and
                iter_count <= config.set_cover_iterlim):
-            config.logger.info(
+            config.logger.debug(
                 "%s disjuncts need to be covered." %
                 disjunct_needs_cover.count(True)
             )
@@ -269,10 +272,10 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                                                solver.timing)
 
             if mip_termination is tc.infeasible:
-                config.logger.info('Set covering problem is infeasible. '
-                                   'Problem may have no more feasible '
-                                   'disjunctive realizations.')
-                if solver.mip_iteration <= 1:
+                config.logger.debug('Set covering problem is infeasible. '
+                                    'Problem may have no more feasible '
+                                    'disjunctive realizations.')
+                if solver.iteration <= 1:
                     config.logger.warning(
                         'Set covering problem was infeasible. '
                         'Check your linear and logical constraints '
@@ -281,7 +284,7 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                 # problem is infeasible. break
                 return False
             else:
-                config.logger.info('Solved set covering MIP')
+                config.logger.debug('Solved set covering MIP')
 
             ## solve local NLP
             nlp_feasible = _fix_master_soln_solve_subproblem_and_add_cuts(
