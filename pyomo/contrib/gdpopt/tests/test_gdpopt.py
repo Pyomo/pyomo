@@ -9,29 +9,28 @@
 #  ___________________________________________________________________________
 
 """Tests for the GDPopt solver plugin."""
+
+from io import StringIO
 import logging
 from math import fabs
 from os.path import join, normpath
 
-from io import StringIO
-
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
-from pyomo.common.fileutils import import_file
+from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
+from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
+from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.environ import ( ConcreteModel, Objective, SolverFactory, Var, value,
                             Integers, Block, Constraint, maximize,
                             LogicalConstraint, sqrt)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.tests import models
-from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.opt import TerminationCondition
-from pyomo.core.expr.sympy_tools import sympy_available
 
-from pyomo.common.fileutils import PYOMO_ROOT_DIR
 exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
 mip_solver = 'glpk'

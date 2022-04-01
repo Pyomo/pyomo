@@ -9,8 +9,8 @@
 #  ___________________________________________________________________________
 """Utility functions and classes for the GDPopt solver."""
 
-import logging
 from contextlib import contextmanager
+import logging
 from math import fabs
 
 from pyomo.common import timing

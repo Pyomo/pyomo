@@ -8,20 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import traceback
 from collections import namedtuple
 from heapq import heappush, heappop
+import traceback
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
-from pyomo.contrib.gdpopt.util import (
-    copy_var_list_values, SuppressInfeasibleWarning, get_main_elapsed_time)
-from pyomo.contrib.satsolver.satsolver import satisfiable
-from pyomo.core import minimize, Suffix, Constraint, TransformationFactory
-from pyomo.opt import SolverFactory, SolverStatus
-from pyomo.opt import TerminationCondition as tc
-
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block, add_disjunction_list, add_disjunct_list,
@@ -30,7 +23,13 @@ from pyomo.contrib.gdpopt.create_oa_subproblems import (
 from pyomo.contrib.gdpopt.config_options import (
     _add_nlp_solver_configs, _add_BB_configs, _add_mip_solver_configs,
     _add_tolerance_configs)
-from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to
+from pyomo.contrib.gdpopt.util import (
+    copy_var_list_values, SuppressInfeasibleWarning, get_main_elapsed_time,
+    time_code, lower_logger_level_to)
+from pyomo.contrib.satsolver.satsolver import satisfiable
+from pyomo.core import minimize, Suffix, Constraint, TransformationFactory
+from pyomo.opt import SolverFactory, SolverStatus
+from pyomo.opt import TerminationCondition as tc
 
 _linear_degrees = {1, 0}
 

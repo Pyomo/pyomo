@@ -7,12 +7,12 @@ from pyomo.common.config import (
 from pyomo.common.errors import DeveloperError
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import unique_component_name
-from pyomo.opt import SolverResults
-from pyomo.opt import TerminationCondition as tc
-from pyomo.core.base import Objective, value, minimize, maximize
-from pyomo.util.model_size import build_model_size_report
 from pyomo.contrib.gdpopt.util import (
     a_logger, get_main_elapsed_time, solve_continuous_problem)
+from pyomo.core.base import Objective, value, minimize, maximize
+from pyomo.opt import SolverResults
+from pyomo.opt import TerminationCondition as tc
+from pyomo.util.model_size import build_model_size_report
 
 # I don't know where to keep this, just avoiding circular import for now
 __version__ = (20, 2, 28)  # Note: date-based version number

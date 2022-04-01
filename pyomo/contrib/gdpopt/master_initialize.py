@@ -1,8 +1,10 @@
 """Functions for initializing the master problem
 in Logic-based outer approximation.
 """
-from math import fabs
 from contextlib import contextmanager
+from math import fabs
+
+from pyomo.common.collections import ComponentMap
 
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
@@ -11,12 +13,10 @@ from pyomo.contrib.gdpopt.oa_algorithm_utils import (
 from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.core import (
     Block, Constraint, Objective, Suffix, TransformationFactory, Var, maximize,
-    minimize, value
-)
-from pyomo.common.collections import ComponentMap
-from pyomo.util.vars_from_expressions import get_vars_from_components
-from pyomo.opt import TerminationCondition as tc
+    minimize, value)
 from pyomo.gdp import Disjunct
+from pyomo.opt import TerminationCondition as tc
+from pyomo.util.vars_from_expressions import get_vars_from_components
 
 def _collect_original_bounds(master_util_block):
     original_bounds = ComponentMap()

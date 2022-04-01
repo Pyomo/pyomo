@@ -8,16 +8,16 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.base.block import Block, TraversalStrategy
-from pyomo.gdp.disjunct import Disjunct, Disjunction
-from pyomo.core import SortComponents, Constraint, Objective, LogicalConstraint
+from pyomo.core import (
+    SortComponents, Constraint, Objective, LogicalConstraint, Expression)
 from pyomo.core.base import TransformationFactory, Suffix, ConstraintList
-from pyomo.common.modeling import unique_component_name
+from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.util.vars_from_expressions import get_vars_from_components
+from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
 from pyomo.contrib.gdpopt.util import move_nonlinear_objective_to_constraints
-from pyomo.core import Objective, Expression
+from pyomo.gdp.disjunct import Disjunct, Disjunction
+from pyomo.util.vars_from_expressions import get_vars_from_components
 
 def _get_master_and_subproblem(original_model, config, solver,
                                constraint_list=True):

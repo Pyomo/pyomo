@@ -9,18 +9,18 @@
 #  ___________________________________________________________________________
 
 """Functions for solving the nonlinear subproblem."""
-from math import fabs
 from contextlib import contextmanager
+from math import fabs
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException, DeveloperError
+from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
                                        is_feasible, get_main_elapsed_time)
 from pyomo.core import Constraint, TransformationFactory, Objective, Block
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.fbbt.fbbt import fbbt
 
 def configure_and_call_solver(model, solver, args, problem_type, timing,
                               time_limit):

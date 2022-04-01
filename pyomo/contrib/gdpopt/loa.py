@@ -8,24 +8,22 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.gdpopt.create_oa_subproblems import (
-    _get_master_and_subproblem)
-from pyomo.contrib.gdpopt.oa_algorithm_utils import (
-    _fix_master_soln_solve_subproblem_and_add_cuts)
-from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
-from pyomo.contrib.gdpopt.nlp_solve import solve_subproblem
-from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs, 
     _add_tolerance_configs)
-from pyomo.contrib.gdpopt.cut_generation import (
-    add_outer_approximation_cuts, add_no_good_cut)
+from pyomo.contrib.gdpopt.create_oa_subproblems import (
+    _get_master_and_subproblem)
+from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
+from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
+from pyomo.contrib.gdpopt.oa_algorithm_utils import (
+    _fix_master_soln_solve_subproblem_and_add_cuts)
+from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to
 
 from pyomo.core import Block, Objective, minimize, Var, value
+from pyomo.gdp import Disjunct
 from pyomo.opt.base import SolverFactory
 from pyomo.opt import TerminationCondition
-from pyomo.gdp import Disjunct
 import logging
 
 @SolverFactory.register(
