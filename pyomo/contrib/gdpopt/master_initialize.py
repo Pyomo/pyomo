@@ -25,19 +25,22 @@ def _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
     with fix_master_solution_in_subproblem(master_util_block,
                                            subprob_util_block, config,
                                            config.force_subproblem_nlp):
-            nlp_feasible = solve_subproblem(subprob_util_block, config,
-                                            solver.timing)
-            if nlp_feasible:
-                primal_improved = solver._update_bounds(
-                    primal=value(subprob_util_block.obj.expr),
-                    logger=config.logger)
-                if primal_improved:
-                    solver.update_incumbent(subprob_util_block)
+        nlp_termination = solve_subproblem(subprob_util_block, config,
+                                           solver.timing)
+        if nlp_termination in {tc.optimal, tc.feasible}:
+            primal_improved = solver._update_bounds(
+                primal=value(subprob_util_block.obj.expr), logger=config.logger)
+            if primal_improved:
+                solver.update_incumbent(subprob_util_block)
             add_cuts_according_to_algorithm(subprob_util_block,
                                             master_util_block,
                                             solver.objective_sense, config,
                                             solver.timing)
-    return nlp_feasible
+        elif nlp_termination == tc.unbounded:
+            # the whole problem is unbounded, we can stop
+            solver._update_primal_bound_to_unbounded()
+
+    return nlp_termination not in {tc.infeasible, tc.unbounded}
 
 def _collect_original_bounds(master_util_block):
     original_bounds = ComponentMap()

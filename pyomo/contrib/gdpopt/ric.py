@@ -93,14 +93,18 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
                         subproblem_util_block,
                         config,
                         make_subproblem_continuous=config.force_subproblem_nlp):
-                    nlp_feasible = solve_subproblem(subproblem_util_block,
-                                                    config, self.timing)
-                    if nlp_feasible:
+                    nlp_termination = solve_subproblem(subproblem_util_block,
+                                                       config, self.timing)
+                    if nlp_termination in {TerminationCondition.optimal,
+                                           TerminationCondition.feasible}:
                         new_primal = value(subproblem_util_block.obj.expr)
                         primal_improved = self._update_bounds(primal=new_primal,
                                                               logger=logger)
                         if primal_improved:
                             self.update_incumbent(subproblem_util_block)
+                    elif nlp_termination == TerminationCondition.unbounded:
+                        # the whole problem is unbounded, we can stop
+                        self._update_primal_bound_to_unbounded()
 
             # Add integer cut
             with time_code(self.timing, "integer cut generation"):
@@ -114,7 +118,7 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
                 break
 
         self._get_final_pyomo_results_object()
-        if not self.pyomo_results.solver.termination_condition == \
-           TerminationCondition.infeasible:
+        if self.pyomo_results.solver.termination_condition not in \
+           {TerminationCondition.infeasible, TerminationCondition.unbounded}:
             self._transfer_incumbent_to_original_model()
         return self.pyomo_results

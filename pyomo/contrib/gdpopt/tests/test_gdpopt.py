@@ -2,8 +2,8 @@
 #
 #  Pyomo: Python Optimization Modeling Objects
 #  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -19,7 +19,6 @@ import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
 from pyomo.common.fileutils import import_file
-from pyomo.contrib.gdpopt.GDPopt import GDPoptSolver
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
@@ -51,34 +50,35 @@ license_available = SolverFactory(global_nlp_solver).license_is_valid() if \
 class TestGDPoptUnit(unittest.TestCase):
     """Real unit tests for GDPopt"""
 
-    # TODO: Need to deal with unboundedness and then change this test
-    # @unittest.skipUnless(SolverFactory(mip_solver).available(), 
-    #                      "MIP solver not available")
-    # def test_solve_linear_GDP_unbounded(self):
-    #     m = ConcreteModel()
-    #     m.GDPopt_utils = Block()
-    #     m.x = Var(bounds=(-1, 10))
-    #     m.y = Var(bounds=(2, 3))
-    #     m.z = Var()
-    #     m.d = Disjunction(expr=[
-    #         [m.x + m.y >= 5], [m.x - m.y <= 3]
-    #     ])
-    #     m.o = Objective(expr=m.z)
-    #     m.GDPopt_utils.variable_list = [m.x, m.y, m.z]
-    #     m.GDPopt_utils.disjunct_list = [m.d._autodisjuncts[0],
-    #                                     m.d._autodisjuncts[1]]
-    #     output = StringIO()
-    #     with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-    #         solver_data = GDPoptSolveData()
-    #         solver_data.timing = Bunch()
-    #         with time_code(solver_data.timing, 'main', is_main_timer=True):
-    #             solve_linear_GDP(m, solver_data,
-    #                              GDPoptSolver.CONFIG(dict(mip_solver=mip_solver,
-    #                                                       strategy='LOA')))
-    #         self.assertIn("Linear GDP was unbounded. Resolving with arbitrary "
-    #                       "bound values", output.getvalue().strip())
+    @unittest.skipUnless(SolverFactory(mip_solver).available(),
+                         "MIP solver not available")
+    def test_solve_master_problem_unbounded(self):
+        m = ConcreteModel()
+        m.GDPopt_utils = Block()
+        m.x = Var(bounds=(-1, 10))
+        m.y = Var(bounds=(2, 3))
+        m.z = Var()
+        # Include a disjunction so that we don't default to just a MIP solver
+        m.d = Disjunction(expr=[
+            [m.x + m.y >= 5], [m.x - m.y <= 3]
+        ])
+        m.o = Objective(expr=m.z)
+        m.GDPopt_utils.variable_list = [m.x, m.y, m.z]
+        m.GDPopt_utils.disjunct_list = [m.d._autodisjuncts[0],
+                                        m.d._autodisjuncts[1]]
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
+            timing = Bunch()
+            with time_code(timing, 'main', is_main_timer=True):
+                tc = solve_linear_GDP(
+                    m.GDPopt_utils,
+                    GDP_LOA_Solver.CONFIG(dict(mip_solver=mip_solver)),
+                    timing)
+            self.assertIn("Master problem was unbounded. Re-solving with "
+                          "arbitrary bound values", output.getvalue().strip())
+        self.assertIs(tc, TerminationCondition.unbounded)
 
-    @unittest.skipUnless(SolverFactory(mip_solver).available(), 
+    @unittest.skipUnless(SolverFactory(mip_solver).available(),
                          "MIP solver not available")
     def test_solve_lp(self):
         m = ConcreteModel()
@@ -93,7 +93,7 @@ class TestGDPoptUnit(unittest.TestCase):
                           output.getvalue().strip())
             self.assertAlmostEqual(value(m.o.expr), 1)
 
-    @unittest.skipUnless(SolverFactory(nlp_solver).available(), 
+    @unittest.skipUnless(SolverFactory(nlp_solver).available(),
                          'NLP solver not available')
     def test_solve_nlp(self):
         m = ConcreteModel()
@@ -108,7 +108,7 @@ class TestGDPoptUnit(unittest.TestCase):
                           output.getvalue().strip())
             self.assertAlmostEqual(value(m.o.expr), 1)
 
-    @unittest.skipUnless(SolverFactory(mip_solver).available(), 
+    @unittest.skipUnless(SolverFactory(mip_solver).available(),
                          "MIP solver not available")
     def test_solve_constant_obj(self):
         m = ConcreteModel()
@@ -123,7 +123,7 @@ class TestGDPoptUnit(unittest.TestCase):
                           output.getvalue().strip())
             self.assertAlmostEqual(value(m.o.expr), 1)
 
-    @unittest.skipUnless(SolverFactory(nlp_solver).available(), 
+    @unittest.skipUnless(SolverFactory(nlp_solver).available(),
                          'NLP solver not available')
     def test_no_objective(self):
         m = ConcreteModel()
@@ -175,7 +175,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1), initialize=2)
         m.d = Disjunct()
-        with self.assertRaisesRegex(NotImplementedError, 
+        with self.assertRaisesRegex(NotImplementedError,
                                     "Found active disjunct"):
             is_feasible(m, GDP_LOA_Solver.CONFIG())
 
@@ -195,10 +195,30 @@ class TestGDPopt(unittest.TestCase):
         m.o = Objective(expr=m.x)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-            SolverFactory('gdpopt', algorithm='LOA').solve( 
+            SolverFactory('gdpopt', algorithm='LOA').solve(
                 m, mip_solver=mip_solver, nlp_solver=nlp_solver)
             self.assertIn("Set covering problem was infeasible.",
                           output.getvalue().strip())
+
+    @unittest.skipUnless(SolverFactory(mip_solver).available(),
+                         "MIP solver not available")
+    def test_unbounded_gdp(self):
+        m = ConcreteModel()
+        m.GDPopt_utils = Block()
+        m.x = Var(bounds=(-1, 10))
+        m.y = Var(bounds=(2, 3))
+        m.z = Var()
+        m.d = Disjunction(expr=[
+            [m.x + m.y >= 5], [m.x - m.y <= 3]
+        ])
+        m.o = Objective(expr=m.z)
+        m.GDPopt_utils.variable_list = [m.x, m.y, m.z]
+        m.GDPopt_utils.disjunct_list = [m.d._autodisjuncts[0],
+                                        m.d._autodisjuncts[1]]
+        results = SolverFactory('gdpopt', algorithm='LOA').solve(
+            m, mip_solver=mip_solver, nlp_solver=nlp_solver)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.unbounded)
 
     def test_GDP_nonlinear_objective(self):
         m = ConcreteModel()
@@ -287,7 +307,7 @@ class TestGDPopt(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 10))
         m.z = Var(bounds=(-10, 10))
-        m.disjunction = Disjunction(expr=[[m.x == 0, m.z >= 4], 
+        m.disjunction = Disjunction(expr=[[m.x == 0, m.z >= 4],
                                           [m.x + m.z <= 0]])
         m.cons = Constraint(expr=m.x*m.z <= 0)
         m.obj = Objective(expr=-m.z)
@@ -344,7 +364,7 @@ class TestGDPopt(unittest.TestCase):
         SolverFactory('gdpopt', algorithm='LOA').solve(m, mip_solver=mip_solver,
                                       nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
-        
+
     def test_LOA_8PP_default_init(self):
         """Test logic-based outer approximation with 8PP."""
         exfile = import_file(
@@ -411,12 +431,12 @@ class TestGDPopt(unittest.TestCase):
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_LOA_strip_pack_logical_constraints(self):
-        """Test logic-based outer approximation with variation of strip 
+        """Test logic-based outer approximation with variation of strip
         packing with some logical constraints."""
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
-        # add logical constraints 
+        # add logical constraints
         strip_pack.Rec3AboveOrBelowRec1 = LogicalConstraint(
             expr=strip_pack.no_overlap[1,3].disjuncts[2].indicator_var.lor(
                 strip_pack.no_overlap[1,3].disjuncts[3].indicator_var))
@@ -487,12 +507,12 @@ class TestGDPopt(unittest.TestCase):
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_LOA_strip_pack_maxBinary_logical_constraints(self):
-        """Test LOA with strip packing using max_binary initialization and 
+        """Test LOA with strip packing using max_binary initialization and
         logical constraints."""
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
-        # add logical constraints 
+        # add logical constraints
         strip_pack.Rec3AboveOrBelowRec1 = LogicalConstraint(
             expr=strip_pack.no_overlap[1,3].disjuncts[2].indicator_var.lor(
                 strip_pack.no_overlap[1,3].disjuncts[3].indicator_var))

@@ -101,9 +101,13 @@ def solve_linear_GDP(util_block, config, timing):
         with SuppressInfeasibleWarning():
             results = SolverFactory(config.mip_solver).solve(
                 m, **config.mip_solver_args)
-        if results.solution.status is SolutionStatus.feasible:
+        if results.solver.termination_condition in {tc.optimal, tc.feasible,
+                                                    tc.locallyOptimal,
+                                                    tc.globallyOptimal}:
+            # we found a solution, that's all we need to keep going.
             return tc.unbounded
         else:
+            set_trace()
             raise NotImplementedError(
                 "TODO: I guess we can increase that bound?")
 
@@ -117,7 +121,7 @@ def solve_linear_GDP(util_block, config, timing):
             'GDPopt has finished exploring feasible discrete configurations.')
         return tc.infeasible
     elif terminate_cond is tc.maxTimeLimit:
-        if results.solution.status is SolutionStatus.feasible:
+        if len(results.solution) > 0:
             config.logger.info(
                 'Unable to optimize linear GDP problem within time limit. '
                 'Using current solver feasible solution.')

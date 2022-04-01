@@ -69,8 +69,9 @@ class _GDPoptAlgorithm(object):
                                   preserve_implicit=True)
         self.CONFIG.set_value(kwds)
 
-        self.LB = -float('inf')
+        self.LB = float('-inf')
         self.UB = float('inf')
+        self.unbounded = False
         self.iteration_log = {}
         self.timing = Bunch()
         # TODO: rename these when you understand what they are
@@ -214,9 +215,21 @@ class _GDPoptAlgorithm(object):
         else:
             self._update_bounds(dual=float('-inf'))
 
-    # TODO: What about unbounded??
+    def _update_primal_bound_to_unbounded(self):
+        if self.objective_sense == minimize:
+            self._update_bounds(primal=float('-inf'))
+        else:
+            self._update_bounds(primal=float('inf'))
+        self.unbounded = True
+
     def bounds_converged(self, config):
-        if self.LB + config.bound_tolerance >= self.UB:
+        if self.unbounded:
+            config.logger.info(
+                'GDPopt exiting--GDP is unbounded. '
+                'LB: {:.10g}, UB: {:.10g}'.format(self.LB, self.UB))
+            self.pyomo_results.solver.termination_condition = tc.unbounded
+            return True
+        elif self.LB + config.bound_tolerance >= self.UB:
             config.logger.info(
                 'GDPopt exiting on bound convergence. '
                 'LB: {:.10g} + (tol {:.10g}) >= UB: {:.10g}'.format(
