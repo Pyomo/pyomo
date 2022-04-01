@@ -715,12 +715,14 @@ class Estimator(object):
             If calc_cov=True, then the user needs to supply the number of datapoints
             that are used in the objective function
         pre_solve: boolean, optional
-            If True, solve square problem with parameters fixed before solving parameter estimation
+            If True, solve square problem with parameters fixed using solver ipopt
+            before solving parameter estimation
         initialization_with_bound_push: float, optional
             Only used when solver is ipopt
             This is over-written by bound_push value provided when creating Estimator object
             If value provided and pre_solve is True,
             set ipopt solver option 'bound_push' to value provided for parameter estimation
+            This option enables the user to initialize parameter estimation from the square problem solution
             if value provided and pre_solve is False, do not alter ipopt solver options
         Returns
         -------
