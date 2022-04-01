@@ -8,11 +8,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.gdpopt.oa_algorithm_utils import _get_master_and_subproblem
+from pyomo.contrib.gdpopt.create_oa_subproblems import (
+    _get_master_and_subproblem)
+from pyomo.contrib.gdpopt.oa_algorithm_utils import (
+    _fix_master_soln_solve_subproblem_and_add_cuts)
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
 from pyomo.contrib.gdpopt.nlp_solve import solve_subproblem
-from pyomo.contrib.gdpopt.util import (
-    time_code, lower_logger_level_to, fix_master_solution_in_subproblem)
+from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs, 
@@ -91,28 +93,8 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
                 break
 
             with time_code(self.timing, 'nlp'):
-                with fix_master_solution_in_subproblem(
-                        master_util_block, 
-                        subproblem_util_block,
-                        config,
-                        make_subproblem_continuous=config.force_subproblem_nlp):
-                    nlp_termination = solve_subproblem(subproblem_util_block,
-                                                       config, self.timing)
-                    if nlp_termination in {TerminationCondition.optimal,
-                                           TerminationCondition.feasible}:
-                        new_primal = value(subproblem_util_block.obj.expr)
-                        primal_improved = self._update_bounds(primal=new_primal,
-                                                              logger=logger)
-                        if primal_improved:
-                            self.update_incumbent(subproblem_util_block)
-                        with time_code(self.timing, 'OA cut generation'):
-                            add_outer_approximation_cuts(subproblem_util_block,
-                                                         master_util_block,
-                                                         self.objective_sense,
-                                                         config)
-                    elif nlp_termination == TerminationCondition.unbounded:
-                        # the whole problem is unbounded, we can stop
-                        self._update_primal_bound_to_unbounded()
+                _fix_master_soln_solve_subproblem_and_add_cuts(
+                    master_util_block, subproblem_util_block, config, self)
 
             # Add integer cut
             with time_code(self.timing, "integer cut generation"):

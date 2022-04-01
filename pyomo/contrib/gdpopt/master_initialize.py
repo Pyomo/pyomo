@@ -4,12 +4,11 @@ in Logic-based outer approximation.
 from math import fabs
 from contextlib import contextmanager
 
-from pyomo.contrib.gdpopt.cut_generation import (
-    add_no_good_cut, add_cuts_according_to_algorithm)
+from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
 from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
-from pyomo.contrib.gdpopt.nlp_solve import solve_subproblem
-from pyomo.contrib.gdpopt.util import (
-    _DoNothing, fix_master_solution_in_subproblem)
+from pyomo.contrib.gdpopt.oa_algorithm_utils import (
+    _fix_master_soln_solve_subproblem_and_add_cuts)
+from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.core import (
     Block, Constraint, Objective, Suffix, TransformationFactory, Var, maximize,
     minimize, value
@@ -18,29 +17,6 @@ from pyomo.common.collections import ComponentMap
 from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.opt import TerminationCondition as tc
 from pyomo.gdp import Disjunct
-
-def _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
-                                                   subprob_util_block, config,
-                                                   solver):
-    with fix_master_solution_in_subproblem(master_util_block,
-                                           subprob_util_block, config,
-                                           config.force_subproblem_nlp):
-        nlp_termination = solve_subproblem(subprob_util_block, config,
-                                           solver.timing)
-        if nlp_termination in {tc.optimal, tc.feasible}:
-            primal_improved = solver._update_bounds(
-                primal=value(subprob_util_block.obj.expr), logger=config.logger)
-            if primal_improved:
-                solver.update_incumbent(subprob_util_block)
-            add_cuts_according_to_algorithm(subprob_util_block,
-                                            master_util_block,
-                                            solver.objective_sense, config,
-                                            solver.timing)
-        elif nlp_termination == tc.unbounded:
-            # the whole problem is unbounded, we can stop
-            solver._update_primal_bound_to_unbounded()
-
-    return nlp_termination not in {tc.infeasible, tc.unbounded}
 
 def _collect_original_bounds(master_util_block):
     original_bounds = ComponentMap()
