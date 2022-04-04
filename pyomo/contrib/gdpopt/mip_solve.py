@@ -10,9 +10,7 @@ from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
-# TODO: I'd really like too change the name of this function. lienar_GDP is
-# super confusing, since this is a MIP at this point!
-def solve_linear_GDP(util_block, config, timing):
+def solve_MILP_master_problem(util_block, config, timing):
     """Solves the linear GDP model and attempts to resolve solution issues.  
     Returns one of TerminationCondition.optimal, TerminationCondition.feasible,
     TerminationCondition.infeasible, or TerminationCondition.unbounded.

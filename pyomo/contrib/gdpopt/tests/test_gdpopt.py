@@ -20,7 +20,7 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
-from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
+from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.core.expr.sympy_tools import sympy_available
@@ -69,7 +69,7 @@ class TestGDPoptUnit(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
             timing = Bunch()
             with time_code(timing, 'main', is_main_timer=True):
-                tc = solve_linear_GDP(
+                tc = solve_MILP_master_problem(
                     m.GDPopt_utils,
                     GDP_LOA_Solver.CONFIG(dict(mip_solver=mip_solver)),
                     timing)

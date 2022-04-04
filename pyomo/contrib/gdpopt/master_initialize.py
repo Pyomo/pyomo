@@ -7,7 +7,7 @@ from math import fabs
 from pyomo.common.collections import ComponentMap
 
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
-from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
+from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
     _fix_master_soln_solve_subproblem_and_add_cuts)
 from pyomo.contrib.gdpopt.util import _DoNothing
@@ -86,8 +86,8 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                                   'solved.' % (count, disj_str))
         with preserve_master_problem_feasible_region(master_util_block, config,
                                                      original_bounds):
-            mip_termination = solve_linear_GDP(master_util_block, config,
-                                               solver.timing)
+            mip_termination = solve_MILP_master_problem(master_util_block,
+                                                        config, solver.timing)
         if mip_termination is not tc.infeasible:
             _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                                            subprob_util_block,
@@ -126,8 +126,8 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
         # are auto-linked to the binaries, we shouldn't have to change
         # anything. So first we solve the master problem in case we need values
         # for other discrete variables, and to make sure it's feasible.
-        mip_termination = solve_linear_GDP(master_util_block, config,
-                                           solver.timing)
+        mip_termination = solve_MILP_master_problem(master_util_block, config,
+                                                    solver.timing)
 
         # restore the fixed status of the indicator_variables
         for disj in master_util_block.disjunct_list:
@@ -184,8 +184,8 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
     # As with set covering, this is only a change of objective. The formulation
     # may be tightened, but that is valid for the duration.
     with use_master_for_max_binary_initialization(master_util_block):
-        mip_termination = solve_linear_GDP(master_util_block, config,
-                                        solver.timing)
+        mip_termination = solve_MILP_master_problem(master_util_block, config,
+                                                    solver.timing)
         if mip_termination is not tc.infeasible:
             _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                                            subprob_util_block,
@@ -268,8 +268,8 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
             update_set_covering_objective(master_util_block,
                                           disjunct_needs_cover)
 
-            mip_termination = solve_linear_GDP(master_util_block, config,
-                                               solver.timing)
+            mip_termination = solve_MILP_master_problem(master_util_block,
+                                                        config, solver.timing)
 
             if mip_termination is tc.infeasible:
                 config.logger.debug('Set covering problem is infeasible. '

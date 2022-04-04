@@ -16,7 +16,7 @@ from pyomo.contrib.gdpopt.create_oa_subproblems import (
     _get_master_and_subproblem)
 from pyomo.contrib.gdpopt.cut_generation import (
     add_affine_cuts, add_no_good_cut)
-from pyomo.contrib.gdpopt.mip_solve import solve_linear_GDP
+from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
     _fix_master_soln_solve_subproblem_and_add_cuts)
 from pyomo.contrib.gdpopt.util import (
@@ -70,8 +70,8 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
 
             # solve linear master problem
             with time_code(self.timing, 'mip'):
-                mip_feasible = solve_linear_GDP(master_util_block, config,
-                                                self.timing)
+                mip_feasible = solve_MILP_master_problem(master_util_block,
+                                                         config, self.timing)
                 self._update_bounds_after_master_problem_solve(mip_feasible,
                                                                master_obj,
                                                                logger)
