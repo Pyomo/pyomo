@@ -266,8 +266,9 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
             # disjuncts. All this means we don't have enough info to do it here.
             fix_discrete_var(subprob_var, master_var.value, config)
 
-    # ESJ TODO: Why not initialize with the values of the continuous vars too?
-    # At least in solve_local_subproblem there was a TODO about that.
+    # Call the subproblem initialization callback
+    config.subproblem_initialization_method(subproblem_util_block,
+                                            master_util_block)
             
     yield
 

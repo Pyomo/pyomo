@@ -12,6 +12,8 @@ from pyomo.common.config import (ConfigValue, NonNegativeInt,
                                  In, PositiveInt, NonNegativeFloat,
                                  ConfigBlock, ConfigList)
 from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
+from pyomo.contrib.gdpopt.nlp_initialization import (
+    restore_vars_to_original_values)
 from pyomo.contrib.gdpopt.util import _DoNothing
 
 # TODO: the OA ones need to be further broken down.
@@ -53,6 +55,24 @@ def _add_OA_configs(CONFIG):
     CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook after a solution of the master problem"
+    ))
+    CONFIG.declare("subproblem_initialization_method", ConfigValue(
+        default=restore_vars_to_original_values, # Historical default
+        description="callback to specify custom routines to initialize the "
+        "(MI)NLP subproblems.",
+        doc="""
+        Callback to specify custom routines for initializing the (MI)NLP 
+        subproblems. This method is called after the master problem solution
+        is fixed in the subproblem and before the subproblem is solved (or
+        pre-solved).
+
+        Accepts two arguments: the subproblem GDPopt utility
+        block and the master problem GDPopt utility block. The master problem
+        contains the most recent master problem solution.
+
+        The return of this method will be unused: The method should directly
+        set the value of the variables on the subproblem 
+        """
     ))
     CONFIG.declare("call_before_subproblem_solve", ConfigValue(
         default=_DoNothing,

@@ -72,8 +72,6 @@ def process_nonlinear_problem_results(results, model, problem_type, config):
         logger.debug('%s subproblem was infeasible.' % problem_type)
         return tc.infeasible
     elif term_cond == tc.maxIterations:
-        # TODO try something else? Reinitialize with different initial
-        # value?
         logger.debug( '%s subproblem failed to converge within iteration limit.'
                      % problem_type)
         if is_feasible(model, config):
@@ -166,9 +164,6 @@ def solve_MINLP(util_block, config, timing):
         "Solving MINLP subproblem for fixed logical realizations."
     )
     model = util_block.model()
-    # TODO: make this a callback, which probably means calling it somewhere else
-    # because it should have access to the master problem as well.
-    initialize_subproblem(util_block)
 
     minlp_solver = SolverFactory(config.minlp_solver)
     if not minlp_solver.available():
@@ -282,24 +277,6 @@ def preprocess_subproblem(util_block, config):
     # to go through the relevant ones here too
     for v in unfixed_vars:
         v.unfix()
-
-def initialize_subproblem(util_block):
-    """Perform initialization of the subproblem.
-
-    Presently, this just restores the continuous variables to the original
-    model values.
-    """
-    # restore original continuous variable values
-    for var, old_value in util_block.initial_var_values.items():
-        if not var.fixed and var.is_continuous():
-            if old_value is not None:
-                # Adjust value if it falls outside the bounds
-                if var.has_lb() and old_value < var.lb:
-                    old_value = var.lb
-                if var.has_ub() and old_value > var.ub:
-                    old_value = var.ub
-                # Set the value
-                var.set_value(old_value)
 
 def call_appropriate_subproblem_solver(subprob_util_block, config, timing):
     subprob = subprob_util_block.model()
