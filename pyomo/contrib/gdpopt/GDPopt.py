@@ -122,7 +122,7 @@ class _HACK_GDPoptSolver(_GDPoptAlgorithm):
 
     def solve(self, model, **kwds):
         """Solve the model, depending on the value for config.algorithm. Note
-        that this is merely a deprecation path and eventually setting the 
+        that this is merely a deprecation path and eventually setting the
         algorithm in the call to solve will not be supported: It will need to
         be set when the solver is instantiated.
 
@@ -141,8 +141,3 @@ class _HACK_GDPoptSolver(_GDPoptAlgorithm):
         # logic
         return SolverFactory(_supported_algorithms[algorithm][0]).solve(model,
                                                                         **kwds)
-
-# TODO: How to do the docstring...?
-# Add the CONFIG arguments to the solve method docstring
-# GDPoptSolver.solve.__doc__ = add_docstring_list(
-#     GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)

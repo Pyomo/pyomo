@@ -8,9 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.config import add_docstring_list
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
-    _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs, 
+    _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     _get_master_and_subproblem)
@@ -30,6 +31,13 @@ import logging
     '_logic_based_oa',
     doc='GDP Logic-Based Outer Approximation (LOA) solver')
 class GDP_LOA_Solver(_GDPoptAlgorithm):
+    """The GDPopt (Generalized Disjunctive Programming optimizer) logic-based
+    outer approximation (LOA) solver.
+
+    Accepts models that can include nonlinear, continuous variables and
+    constraints, as well as logical conditions. For nonconvex problems, LOA
+    may not report rigorous lower/upper bounds.
+    """
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_OA_configs(CONFIG)
     _add_mip_solver_configs(CONFIG)
@@ -41,9 +49,15 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
         super(GDP_LOA_Solver, self).__init__()
 
     def solve(self, model, **kwds):
+        """Solve the model with LOA
+
+        Args:
+            model (Block): a Pyomo model or block to be solved.
+
+        """
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
-        
+
         with time_code(self.timing, 'total', is_main_timer=True), \
             lower_logger_level_to(config.logger, config.tee):
             results = super().solve(model, config)
@@ -123,8 +137,11 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
         OA_penalty_expr = sign_adjust * OA_penalty_factor * \
                           sum(v for v in m.component_data_objects(
                               ctype=Var, descend_into=(Block, Disjunct))
-                          if v.parent_component().local_name == 
+                          if v.parent_component().local_name ==
                               'GDPopt_OA_slacks')
         master_util_block.oa_obj.expr = main_objective.expr + OA_penalty_expr
 
         return master_util_block.oa_obj.expr
+
+GDP_LOA_Solver.solve.__doc__ = add_docstring_list(
+    GDP_LOA_Solver.solve.__doc__, GDP_LOA_Solver.CONFIG, indent_by=8)

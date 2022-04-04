@@ -8,6 +8,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.config import add_docstring_list
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
@@ -34,6 +35,13 @@ import logging
     '_relaxation_with_integer_cuts',
     doc='GDP Relaxation with Integer Cuts (RIC) solver')
 class GDP_RIC_Solver(_GDPoptAlgorithm):
+    """The GDPopt (Generalized Disjunctive Programming optimizer) relaxation
+    with integer cuts (RIC) solver.
+
+    Accepts models that can include nonlinear, continuous variables and
+    constraints, as well as logical conditions. For non-convex problems, RIC
+    will not be exact unless the NLP subproblems are solved globally.
+    """
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG)
@@ -45,9 +53,15 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
         super(GDP_RIC_Solver, self).__init__()
 
     def solve(self, model, **kwds):
+        """Solve the model with RIC
+
+        Args:
+            model (Block): a Pyomo model or block to be solved.
+
+        """
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
-        
+
         with time_code(self.timing, 'total', is_main_timer=True), \
             lower_logger_level_to(config.logger, config.tee):
             results = super().solve(model, config)
@@ -104,3 +118,6 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
            {TerminationCondition.infeasible, TerminationCondition.unbounded}:
             self._transfer_incumbent_to_original_model()
         return self.pyomo_results
+
+GDP_RIC_Solver.solve.__doc__ = add_docstring_list(
+    GDP_RIC_Solver.solve.__doc__, GDP_RIC_Solver.CONFIG, indent_by=8)

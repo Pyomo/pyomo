@@ -8,9 +8,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.config import add_docstring_list
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
-    _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs, 
+    _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     _get_master_and_subproblem)
@@ -31,6 +32,12 @@ import logging
     '_global_logic_based_oa',
     doc='GDP Global Logic-Based Outer Approximation (GLOA) solver')
 class GDP_GLOA_Solver(_GDPoptAlgorithm):
+    """The GDPopt (Generalized Disjunctive Programming optimizer) global
+    logic-based outer approximation (GLOA) solver.
+
+    Accepts models that can include nonlinear, continuous variables and
+    constraints, as well as logical conditions.
+    """
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_OA_configs(CONFIG)
     _add_mip_solver_configs(CONFIG)
@@ -42,9 +49,15 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
         super(GDP_GLOA_Solver, self).__init__()
 
     def solve(self, model, **kwds):
+        """Solve the model with GLOA
+
+        Args:
+            model (Block): a Pyomo model or block to be solved.
+
+        """
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
-        
+
         with time_code(self.timing, 'total', is_main_timer=True), \
             lower_logger_level_to(config.logger, config.tee):
             results = super().solve(model, config)
@@ -92,7 +105,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
                     # We've run out of discrete solutions, so we're done.
                     self._update_dual_bound_to_infeasible(logger)
 
-            
+
             # Check termination conditions
             if self.any_termination_criterion_met(config):
                 break
@@ -102,3 +115,6 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
            {TerminationCondition.infeasible, TerminationCondition.unbounded}:
             self._transfer_incumbent_to_original_model()
         return self.pyomo_results
+
+GDP_GLOA_Solver.solve.__doc__ = add_docstring_list(
+    GDP_GLOA_Solver.solve.__doc__, GDP_GLOA_Solver.CONFIG, indent_by=8)
