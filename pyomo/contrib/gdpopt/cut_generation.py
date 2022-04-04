@@ -20,6 +20,7 @@ from pyomo.core import (Block, NonNegativeReals, VarList, minimize, value,
                         Constraint, NonNegativeIntegers)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr.visitor import identify_variables
+from pyomo.repn import generate_standard_repn
 
 MAX_SYMBOLIC_DERIV_SIZE = 1000
 JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
@@ -52,7 +53,6 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
         if val is not None and not master_var.fixed:
             master_var.set_value(val, skip_validation=True)
 
-    # TODO some kind of special handling if the dual is phenomenally small?
     config.logger.debug('Adding OA cuts.')
 
     counter = 0
@@ -61,8 +61,8 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
     for constr, subprob_constr in zip(master_util_block.constraint_list,
                                       subproblem_util_block.constraint_list):
         dual_value = nlp.dual.get(subprob_constr, None)
-        # ESJ TODO: This is a risky use of polynomial_degree I think
-        if dual_value is None or constr.body.polynomial_degree() in (1, 0):
+        if (dual_value is None or
+            generate_standard_repn(constr.body).is_linear()):
             continue
 
         # Determine if the user pre-specified that OA cuts should not be
