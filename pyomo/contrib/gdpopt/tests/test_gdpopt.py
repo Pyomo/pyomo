@@ -77,8 +77,8 @@ class TestGDPoptUnit(unittest.TestCase):
                           "arbitrary bound values", output.getvalue().strip())
         self.assertIs(tc, TerminationCondition.unbounded)
 
-    @unittest.skipUnless(SolverFactory(mip_solver).available(),
-                         "MIP solver not available")
+    @unittest.skipUnless(SolverFactory('gurobi').available(),
+                         "Gurobi not available")
     def test_solve_lp(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-5, 5))
@@ -86,14 +86,20 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=m.x)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            SolverFactory('gdpopt', algorithm='LOA').solve(
-                m, mip_solver=mip_solver)
+            results = SolverFactory('gdpopt', algorithm='LOA').solve(
+                m, mip_solver='gurobi')
             self.assertIn("Your model is an LP (linear program).",
                           output.getvalue().strip())
             self.assertAlmostEqual(value(m.o.expr), 1)
 
-    @unittest.skipUnless(SolverFactory(nlp_solver).available(),
-                         'NLP solver not available')
+            self.assertEqual(results.problem.number_of_binary_variables, 0)
+            self.assertEqual(results.problem.number_of_integer_variables, 0)
+            self.assertEqual(results.problem.number_of_disjunctions, 0)
+            self.assertAlmostEqual(results.problem.lower_bound, 1)
+            self.assertAlmostEqual(results.problem.upper_bound, 1)
+
+    @unittest.skipUnless(SolverFactory('gurobi').available(),
+                         'Gurobi not available')
     def test_solve_nlp(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-5, 5))
@@ -101,11 +107,17 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=m.x ** 2)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            SolverFactory('gdpopt', algorithm='LOA').solve(
-                m, nlp_solver=nlp_solver)
+            results = SolverFactory('gdpopt', algorithm='LOA').solve(
+                m, nlp_solver='gurobi')
             self.assertIn("Your model is an NLP (nonlinear program).",
                           output.getvalue().strip())
             self.assertAlmostEqual(value(m.o.expr), 1)
+
+            self.assertEqual(results.problem.number_of_binary_variables, 0)
+            self.assertEqual(results.problem.number_of_integer_variables, 0)
+            self.assertEqual(results.problem.number_of_disjunctions, 0)
+            self.assertAlmostEqual(results.problem.lower_bound, 1)
+            self.assertAlmostEqual(results.problem.upper_bound, 1)
 
     @unittest.skipUnless(SolverFactory(mip_solver).available(),
                          "MIP solver not available")

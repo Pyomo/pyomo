@@ -188,10 +188,7 @@ def get_subproblem(original_model):
 
     # reclassify all the Disjuncts as Blocks and deactivate the Disjunctions. We
     # don't need to add the xor constraints because we're not going to pass
-    # infeasible integer solutions to this model.  
-    # ESJ TODO: Perhaps this should
-    # rely on pre-constructed ordered lists, but I suspect if can't because it
-    # should store some original states?...
+    # infeasible integer solutions to this model.
     for disjunction in subproblem.component_data_objects(
             Disjunction, descend_into=(Block, Disjunct),
             descent_order=TraversalStrategy.PostfixDFS):

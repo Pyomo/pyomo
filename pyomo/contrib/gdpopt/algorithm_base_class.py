@@ -121,8 +121,13 @@ class _GDPoptAlgorithm(object):
         if (problem.number_of_binary_variables == 0 and
             problem.number_of_integer_variables == 0 and
             problem.number_of_disjunctions == 0):
-            # TODO: This results object won't have the stuff above on it...
-            return solve_continuous_problem(model, config)
+            cont_results = solve_continuous_problem(model, config)
+            problem.lower_bound = cont_results.problem.lower_bound
+            problem.upper_bound = cont_results.problem.upper_bound
+            # Just put the info from the MIP solver
+            self.pyomo_results.solver = cont_results.solver
+
+            return self.pyomo_results
 
     def _update_bounds_after_solve(self, subprob_nm, primal=None, dual=None,
                                    logger=None):

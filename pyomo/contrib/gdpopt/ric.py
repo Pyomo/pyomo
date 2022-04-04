@@ -50,7 +50,9 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
         
         with time_code(self.timing, 'total', is_main_timer=True), \
             lower_logger_level_to(config.logger, config.tee):
-            super().solve(model, config)
+            results = super().solve(model, config)
+            if results:
+                return results
             return self._solve_gdp_with_ric(model, config)
 
     def _solve_gdp_with_ric(self, original_model, config):

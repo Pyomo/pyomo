@@ -45,8 +45,6 @@ class _DoNothing(object):
 
         return _do_nothing
 
-# ESJ TODO: I think we also need to suppress the one about not being able to
-# load results into the model...
 class SuppressInfeasibleWarning(object):
     """Suppress the infeasible model warning message from solve().
 
