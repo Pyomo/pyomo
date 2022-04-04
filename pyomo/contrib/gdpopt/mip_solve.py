@@ -107,8 +107,11 @@ def solve_MILP_master_problem(util_block, config, timing):
             # we found a solution, that's all we need to keep going.
             return tc.unbounded
         else:
-            raise NotImplementedError(
-                "TODO: I guess we can increase that bound?")
+            raise RuntimeError("Unable to find a feasible solution for the "
+                               "unbounded MILP master problem by bounding "
+                               "the objective. Either check your "
+                               "master problem initialization, or add a bound "
+                               "on the master objective value.")
 
     if terminate_cond is tc.optimal:
         return tc.optimal
