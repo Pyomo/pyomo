@@ -569,28 +569,43 @@ class TestGDPopt(unittest.TestCase):
              eight_process.use_unit_8ornot.disjuncts[0]]
         ]
 
-        # TODO: need to rewrite this test without solve_data
-        # def assert_correct_disjuncts_active(nlp_model, solve_data):
-        #     if solve_data.master_iteration >= 1:
-        #         return  # only checking initialization
-        #     iter_num = solve_data.nlp_iteration
-        #     disjs_should_be_active = initialize[iter_num - 1]
-        #     for orig_disj, soln_disj in zip(
-        #         solve_data.original_model.GDPopt_utils.disjunct_list,
-        #         nlp_model.GDPopt_utils.disjunct_list
-        #     ):
-        #         if orig_disj in disjs_should_be_active:
-        #             self.assertTrue(soln_disj.binary_indicator_var.value == 1)
+        def assert_correct_disjuncts_active(subprob_util_block,
+                                            master_util_block):
+            # I can get the iteration based on the number of no-good 
+            # cuts in this case...
+            iteration = len(master_util_block.no_good_cuts)
+            master = master_util_block.model()
+            subprob = subprob_util_block.model()
+            if iteration >= 2:
+                return  # only checking initialization
+            disjs_should_be_active = initialize[iteration]
+            seen = set()
+            for orig_disj in disjs_should_be_active:
+                parent_nm = orig_disj.parent_component().name
+                idx = orig_disj.index()
+                # Find the corresponding components on the master and subproblem
+                master_parent = master.component(parent_nm)
+                subprob_parent = subprob.component(parent_nm)
+                self.assertIsInstance(master_parent, Disjunct)
+                self.assertIsInstance(subprob_parent, Block)
+                master_disj = master_parent[idx]
+                subprob_disj = subprob_parent[idx]
+                self.assertTrue(value(master_disj.indicator_var))
+                self.assertTrue(subprob_disj.active)
+                seen.add(subprob_disj)
+            # check that all the others are inactive (False)
+            for disj in subprob_util_block.disjunct_list:
+                if disj not in seen:
+                    self.assertFalse(disj.active)
 
         SolverFactory('gdpopt', algorithm='LOA').solve(
             eight_process, init_strategy='custom_disjuncts',
             custom_init_disjuncts=initialize,
             mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
-            #call_after_subproblem_feasible=assert_correct_disjuncts_active)
+            nlp_solver=nlp_solver,
+            subproblem_initialization_method=assert_correct_disjuncts_active)
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
-
 
 @unittest.skipIf(not LOA_solvers_available,
                  "Required subsolvers %s are not available"
@@ -849,25 +864,41 @@ class TestGDPoptRIC(unittest.TestCase):
              eight_process.use_unit_8ornot.disjuncts[0]]
         ]
 
-        # TODO: need to rewrite this test without solve_data
-        # def assert_correct_disjuncts_active(nlp_model, solve_data):
-        #     if solve_data.master_iteration >= 1:
-        #         return  # only checking initialization
-        #     iter_num = solve_data.nlp_iteration
-        #     disjs_should_be_active = initialize[iter_num - 1]
-        #     for orig_disj, soln_disj in zip(
-        #         solve_data.original_model.GDPopt_utils.disjunct_list,
-        #         nlp_model.GDPopt_utils.disjunct_list
-        #     ):
-        #         if orig_disj in disjs_should_be_active:
-        #             self.assertTrue(soln_disj.binary_indicator_var.value == 1)
+        def assert_correct_disjuncts_active(subprob_util_block,
+                                            master_util_block):
+            # I can get the iteration based on the number of no-good 
+            # cuts in this case...
+            iteration = len(master_util_block.no_good_cuts)
+            master = master_util_block.model()
+            subprob = subprob_util_block.model()
+            if iteration >= 2:
+                return  # only checking initialization
+            disjs_should_be_active = initialize[iteration]
+            seen = set()
+            for orig_disj in disjs_should_be_active:
+                parent_nm = orig_disj.parent_component().name
+                idx = orig_disj.index()
+                # Find the corresponding components on the master and subproblem
+                master_parent = master.component(parent_nm)
+                subprob_parent = subprob.component(parent_nm)
+                self.assertIsInstance(master_parent, Disjunct)
+                self.assertIsInstance(subprob_parent, Block)
+                master_disj = master_parent[idx]
+                subprob_disj = subprob_parent[idx]
+                self.assertTrue(value(master_disj.indicator_var))
+                self.assertTrue(subprob_disj.active)
+                seen.add(subprob_disj)
+            # check that all the others are inactive (False)
+            for disj in subprob_util_block.disjunct_list:
+                if disj not in seen:
+                    self.assertFalse(disj.active)
 
         SolverFactory('gdpopt', algorithm='RIC').solve(
             eight_process, init_strategy='custom_disjuncts',
             custom_init_disjuncts=initialize,
             mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
-            #call_after_subproblem_feasible=assert_correct_disjuncts_active)
+            nlp_solver=nlp_solver,
+            subproblem_initialization_method=assert_correct_disjuncts_active)
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
