@@ -134,12 +134,6 @@ def _add_OA_configs(CONFIG):
         to interrogate the problem only.
         """
     ))
-    # TODO: I think this is ignored
-    CONFIG.declare("algorithm_stall_after", ConfigValue(
-        default=2,
-        description="number of non-improving master iterations after which "
-                    "the algorithm will stall and exit."
-    ))
     CONFIG.declare("round_discrete_vars", ConfigValue(
         default=True,
         description="flag to round subproblem discrete variable values to the "
