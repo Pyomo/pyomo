@@ -256,8 +256,8 @@ def preprocess_subproblem(util_block, config):
             v.setlb(lb)
             v.setub(ub)
 
-    # ESJ TODO: I think fbbt is messing with Vars that aren't its beeswax, but
-    # it tightens the bounds on the fixed Boolean vars, so restore the bounds
+    # ESJ: I think fbbt is messing with Vars that aren't its beeswax, but it
+    # tightens the bounds on the fixed Boolean vars, so we restore the bounds
     # here for now.
     for disj in util_block.disjunct_list:
         disj.binary_indicator_var.setlb(0)
@@ -273,8 +273,7 @@ def preprocess_subproblem(util_block, config):
     for cons, (orig, modified) in constraints_modified.items():
         cons.set_value(orig)
 
-    # unfix variables: TODO: Maybe I should modify preprocessing so we only have
-    # to go through the relevant ones here too
+    # unfix variables:
     for v in unfixed_vars:
         v.unfix()
 
