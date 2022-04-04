@@ -871,7 +871,7 @@ class TestGDPoptRIC(unittest.TestCase):
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
-    def test_force_nlp_integer_variables(self):
+    def test_force_nlp_subproblem_with_general_integer_variables(self):
         m = ConcreteModel()
         m.x = Var(domain=Integers, bounds=(0, 10))
         m.y = Var(bounds=(0, 10))
