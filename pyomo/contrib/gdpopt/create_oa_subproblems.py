@@ -10,7 +10,8 @@
 
 from pyomo.core import (
     SortComponents, Constraint, Objective, LogicalConstraint, Expression)
-from pyomo.core.base import TransformationFactory, Suffix, ConstraintList
+from pyomo.core.base import (
+    TransformationFactory, Suffix, ConstraintList, Integers)
 from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
@@ -66,6 +67,7 @@ def initialize_master_problem(util_block, subprob_util_block, config, solver):
 
     master_util_block = master.component(util_block.name)
     master_util_block.no_good_cuts = ConstraintList()
+    master_util_block.no_good_disjunctions = Disjunction(Integers)
 
     # deactivate nonlinear constraints
     for c in master.component_data_objects(Constraint, active=True,

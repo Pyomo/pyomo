@@ -18,7 +18,7 @@ from pyomo.contrib.gdpopt.util import (
     constraints_in_True_disjuncts, _add_bigm_constraint_to_transformed_model)
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.core import (Block, NonNegativeReals, VarList, minimize, value,
-                        Constraint, NonNegativeIntegers)
+                        Constraint, NonNegativeIntegers, TransformationFactory)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.repn import generate_standard_repn
@@ -237,49 +237,64 @@ def add_affine_cuts(subproblem_util_block, master_util_block, config, timing):
 
     config.logger.debug("Added %s affine cuts" % counter)
 
+def _record_binary_value(var, var_value_is_one, var_value_is_zero, int_tol):
+    val = value(var)
+    if fabs(val - 1) <= int_tol:
+        var_value_is_one.add(var)
+    elif fabs(val) <= int_tol:
+        var_value_is_zero.add(var)
+    else:
+        raise ValueError(
+            'Binary %s = %s is not 0 or 1' % (var.name, val))
 
 def add_no_good_cut(target_model_util_block, config):
     """Cut the current integer solution from the target model."""
     var_value_is_one = ComponentSet()
     var_value_is_zero = ComponentSet()
     for var in target_model_util_block.transformed_boolean_variable_list:
-        val = value(var)
-        if var.fixed:
-            # ESJ TODO: I don't understand this
-            # Note: FBBT may cause some disjuncts to be fathomed, which can
-            # cause a fixed variable to be different than the subproblem value.
-            # In this case, we simply construct the integer cut as usual with
-            # the subproblem value rather than its fixed value.
-            if val is None:
-                val = var.value
+        _record_binary_value(var, var_value_is_one, var_value_is_zero,
+                             config.integer_tolerance)        
 
-        # TODO: If this is true, we actually need to iterate through more stuff.
-        # if not config.force_subproblem_nlp:
-        #     # By default (config.force_subproblem_nlp = False), we only want
-        #     # the integer cuts to be over disjunct indicator vars.
-        #     # ESJ: Is the above true? Or should it be over all BooleanVars??
-        #     if var not in indicator_vars:
-        #         continue
+    disjuncts = []
+    if config.force_subproblem_nlp:
+        # We need to also cut the solutions for the other discrete variables
+        for var in target_model_util_block.discrete_variable_list:
+            # This has possible duplicates with the above, but few enough that
+            # we'll leave it for now.
+            if var.is_binary():
+                _record_binary_value(var, var_value_is_one, var_value_is_zero,
+                                     config.integer_tolerance)
+            else:
+                # It's integer. It still has to be in the no-good cut because
+                # else the algorithm is wrong (We're cutting more than just this
+                # solution), so we're going to do this as a Disjunction for
+                # now. I think this is the *wrong* way to model if you are using
+                # GDPopt, so if it's a little inefficient then... We'll deal
+                # with that if it becomes an issue.
+                val = round(value(var), 0)
+                less = var <= val - 1
+                more = var >= val + 1
+                disjuncts.extend([less, more])
 
-        if fabs(val - 1) <= config.integer_tolerance:
-            var_value_is_one.add(var)
-        elif fabs(val) <= config.integer_tolerance:
-            var_value_is_zero.add(var)
-        else:
-            raise ValueError(
-                'Binary %s = %s is not 0 or 1' % (var.name, val))
-
-    if not (var_value_is_one or var_value_is_zero):
+    if not (var_value_is_one or var_value_is_zero) and len(disjuncts) == 0:
         # if no remaining binary variables, then terminate algorithm.
-        config.logger.debug(
-            'No remaining discrete solutions to explore.')
+        config.logger.debug('No remaining discrete solutions to explore.')
         return False
-
+    
     int_cut = (sum(1 - v for v in var_value_is_one) +
                sum(v for v in var_value_is_zero)) >= 1
 
-    # Exclude the current binary combination
     config.logger.debug('Adding no-good cut: %s' % int_cut)
-    target_model_util_block.no_good_cuts.add(expr=int_cut)
+    if len(disjuncts) > 0:
+        idx = len(target_model_util_block.no_good_disjunctions)
+        target_model_util_block.no_good_disjunctions[idx] = [
+            [disj] for disj in disjuncts] + [[int_cut]]
+        # transform it
+        TransformationFactory(config.master_problem_transformation).apply_to(
+            target_model_util_block, 
+            targets=[target_model_util_block.no_good_disjunctions[idx]])
+    else:
+        # Exclude the current binary combination
+        target_model_util_block.no_good_cuts.add(expr=int_cut)
 
     return True

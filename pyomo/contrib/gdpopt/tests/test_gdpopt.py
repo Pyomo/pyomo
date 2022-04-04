@@ -871,6 +871,21 @@ class TestGDPoptRIC(unittest.TestCase):
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
+    def test_force_nlp_integer_variables(self):
+        m = ConcreteModel()
+        m.x = Var(domain=Integers, bounds=(0, 10))
+        m.y = Var(bounds=(0, 10))
+        m.disjunction = Disjunction(expr=[[m.x**2 <= 4, m.y**2 <= 1], 
+                                          [(m.x - 1)**2 + (m.y - 1)**2 <= 4, 
+                                           m.y <= 4]])
+        m.obj = Objective(expr=-m.y - m.x)
+        results = SolverFactory('gdpopt', algorithm='RIC').solve(
+            m, init_strategy='no_init', mip_solver=mip_solver, 
+            nlp_solver=nlp_solver, force_subproblem_nlp=True)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertAlmostEqual(value(m.x), 2)
+        self.assertAlmostEqual(value(m.y), 1 + sqrt(3))
 
 @unittest.skipIf(not GLOA_solvers_available,
                  "Required subsolvers %s are not available"
