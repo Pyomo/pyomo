@@ -32,7 +32,8 @@
 """
 
 from pyomo.common.deprecation import deprecation_warning
-from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
+from pyomo.contrib.gdpopt.algorithm_base_class import (
+    _GDPoptAlgorithm, _supported_algorithms)
 from pyomo.contrib.gdpopt.branch_and_bound import GDP_LBB_Solver
 from pyomo.contrib.gdpopt.config_options import (
     _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
@@ -41,13 +42,6 @@ from pyomo.contrib.gdpopt.gloa import GDP_GLOA_Solver
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.ric import GDP_RIC_Solver
 from pyomo.opt.base import SolverFactory
-
-_handlers = {
-    'LOA' : '_logic_based_oa',
-    'GLOA' : '_global_logic_based_oa',
-    'RIC' : '_relaxation_with_integer_cuts',
-    'LBB' : '_logic_based_branch_and_bound'
-}
 
 @SolverFactory.register(
     'gdpopt',
@@ -101,15 +95,9 @@ class GDPoptSolver(_GDPoptAlgorithm):
                                 "replacing 'LOA' with a valid solution "
                                 "algorithm.", version='TODO')
             return _HACK_GDPoptSolver(*args, **kwds)
-        solver = _handlers.get(algorithm)
-        if solver is None:
-            # TODO: make this more general...
-            msg = 'Please specify a valid solution algorithm. Options are: \n'
-            msg += '    LOA:  Logic-based Outer Approximation\n'
-            msg += '    GLOA: Global Logic-based Outer Approximation\n'
-            msg += '    LBB:  Logic-based Branch and Bound\n'
-            msg += '    RIC:  Relaxation with Integer Cuts'
-            raise ValueError(msg)
+        # We know at this point that algorithm is valid because of the config
+        # logic
+        solver = _supported_algorithms.get(algorithm)[0]
         return SolverFactory(solver, *args, **kwds)
 
 @SolverFactory.register(
@@ -149,16 +137,10 @@ class _HACK_GDPoptSolver(_GDPoptAlgorithm):
         if algorithm is None:
             algorithm = config.strategy
             kwds['algorithm'] = config.strategy
-
-        if algorithm in _handlers.keys():
-            return SolverFactory(_handlers[algorithm]).solve(model, **kwds)
-        else:
-            msg = 'Please specify a valid solution algorithm. Options are: \n'
-            msg += '    LOA:  Logic-based Outer Approximation\n'
-            msg += '    GLOA: Global Logic-based Outer Approximation\n'
-            msg += '    LBB:  Logic-based Branch and Bound\n'
-            msg += '    RIC:  Relaxation with Integer Cuts'
-            raise ValueError(msg)
+        # We know at this point that algorithm is valid because of the config
+        # logic
+        return SolverFactory(_supported_algorithms[algorithm][0]).solve(model,
+                                                                        **kwds)
 
 # TODO: How to do the docstring...?
 # Add the CONFIG arguments to the solve method docstring

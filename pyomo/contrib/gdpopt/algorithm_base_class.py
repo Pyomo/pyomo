@@ -16,21 +16,24 @@ from pyomo.util.model_size import build_model_size_report
 
 # I don't know where to keep this, just avoiding circular import for now
 __version__ = (20, 2, 28)  # Note: date-based version number
-_supported_strategies = {
-        'LOA': '_logic_based_oa',
-        'GLOA': '_global_logic_based_oa',
-        'LBB': '_logic_based_branch_and_bound',
-        'RIC': '_relaxation_with_integer_cuts',
+_supported_algorithms = {
+        'LOA': ('_logic_based_oa', 'Logic-based Outer Approximation'),
+        'GLOA': ('_global_logic_based_oa',
+                 'Global Logic-based Outer Approximation'),
+        'LBB': ('_logic_based_branch_and_bound',
+                'Logic-based Branch and Bound'),
+        'RIC': ('_relaxation_with_integer_cuts',
+                'Relaxation with Integer Cuts')
     }
 
 def _strategy_deprecation(strategy):
     deprecation_warning("The argument 'strategy' has been deprecated "
                         "in favor of 'algorithm.'", version="TODO")
-    return In(_supported_strategies)(strategy)
+    return In(_supported_algorithms.keys())(strategy)
 
 class _GDPoptAlgorithm(object):
     """Base class for common elements of GDPopt algorithms"""
-    _supported_strategies = _supported_strategies
+    _supported_algorithms = _supported_algorithms
 
     CONFIG = ConfigBlock("GDPopt")
     CONFIG.declare("iterlim", ConfigValue(
@@ -50,7 +53,7 @@ class _GDPoptAlgorithm(object):
         description="DEPRECATED: Please use 'algorithm' instead."
     ))
     CONFIG.declare("algorithm", ConfigValue(
-        default=None, domain=In(_supported_strategies),
+        default=None, domain=In(_supported_algorithms.keys()),
         description="Algorithm to use."
     ))
     CONFIG.declare("tee", ConfigValue(
