@@ -16,8 +16,6 @@ from pyomo.contrib.gdpopt.nlp_initialization import (
     restore_vars_to_original_values)
 from pyomo.contrib.gdpopt.util import _DoNothing
 
-# TODO: the OA ones need to be further broken down.
-
 def _add_OA_configs(CONFIG):
     CONFIG.declare("init_strategy", ConfigValue(
         default="set_covering", domain=In(valid_init_strategies.keys()),

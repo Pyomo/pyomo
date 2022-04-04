@@ -35,9 +35,7 @@ def solve_MILP_master_problem(util_block, config, timing):
             config.logger.debug("MIP preprocessing detected infeasibility.")
             return tc.infeasible
 
-    # Deactivate extraneous IMPORT/EXPORT suffixes 
-    # ESJ TODO: Do we need to do this? Is this our problem? And, if you give 
-    # a mouse a cookie... Would we have to account for other Suffixes?
+    # Deactivate extraneous IMPORT/EXPORT suffixes
     getattr(m, 'ipopt_zL_out', _DoNothing()).deactivate()
     getattr(m, 'ipopt_zU_out', _DoNothing()).deactivate()
 
@@ -64,8 +62,8 @@ def solve_MILP_master_problem(util_block, config, timing):
             results = SolverFactory(config.mip_solver).solve(m, **mip_args)
 
     except RuntimeError as e:
-        # ESJ TODO: How come GAMS is special? Doesn't seem safe to assume
-        # infeasibility here if the error could be something else...?
+        # ESJ: I don't know enough about GAMS to know if this is a good
+        # idea. Does this always mean it's infeasible?
         if 'GAMS encountered an error during solve.' in str(e):
             config.logger.warning(
                 "GAMS encountered an error in solve. Treating as infeasible.")
@@ -162,11 +160,6 @@ def distinguish_mip_infeasible_or_unbounded(m, config):
         tmp_args['options'] = tmp_args.get('options', {})
         tmp_args['options']['DualReductions'] = 0
     mipopt = SolverFactory(config.mip_solver)
-    # ESJ TODO: Why does this only happen here? Shouldn't it be everywhere or
-    # nowhere? Oh, or is that what the callbacks are for? But how would the user
-    # know what changed?
-    if isinstance(mipopt, PersistentSolver):
-        mipopt.set_instance(m)
     with SuppressInfeasibleWarning():
         results = mipopt.solve(m, **tmp_args)
     termination_condition = results.solver.termination_condition
