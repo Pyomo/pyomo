@@ -169,6 +169,10 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
 
 def add_affine_cuts(subproblem_util_block, master_util_block, config, timing):
     m = master_util_block.model()
+    if hasattr(master_util_block, "aff_utils_blocks"):
+        aff_utils_blocks = master_util_block.aff_utils_blocks
+    else:
+        aff_utils_blocks = master_util_block.aff_utils_blocks = dict()
 
     config.logger.debug("Adding affine cuts.")
     counter = 0
@@ -210,10 +214,12 @@ def add_affine_cuts(subproblem_util_block, master_util_block, config, timing):
 
         parent_block = constr.parent_block()
         # Create a block on which to put outer approximation cuts.
-        aff_utils = parent_block.component('GDPopt_aff')
+        aff_utils = aff_utils_blocks.get(parent_block)
         if aff_utils is None:
-            aff_utils = parent_block.GDPopt_aff = Block(
-                doc="Block holding affine constraints")
+            aff_utils = Block(doc="Block holding affine constraints")
+            nm = unique_component_name(parent_block, "GDPopt_aff")
+            parent_block.add_component(nm, aff_utils)
+            aff_utils_blocks[parent_block] = aff_utils
             aff_utils.GDPopt_aff_cons = Constraint(NonNegativeIntegers)
         aff_cuts = aff_utils.GDPopt_aff_cons
         concave_cut = sum(ccSlope[var] * (var - var.value)
