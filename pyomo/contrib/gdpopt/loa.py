@@ -77,9 +77,6 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
                 self._update_bounds_after_master_problem_solve(mip_feasible,
                                                                oa_obj, logger)
 
-                # TODO: No idea what args these callbacks should actually take
-                config.call_after_master_solve(master_util_block, self)
-
             # Check termination conditions
             if self.any_termination_criterion_met(config):
                 break

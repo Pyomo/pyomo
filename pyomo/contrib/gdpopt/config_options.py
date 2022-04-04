@@ -50,11 +50,29 @@ def _add_OA_configs(CONFIG):
     ))
     CONFIG.declare("call_before_master_solve", ConfigValue(
         default=_DoNothing,
-        description="callback hook before calling the master problem solver"
+        description="callback hook before calling the master problem solver",
+        doc="""
+        Callback called right before the MILP master problem is solved.
+        Takes two arguments: The master problem and the GDPopt utility block on
+        the master problem.
+
+        Note that unless you are *very* confident in what you are doing, the
+        problem should not be modified in this callback: it should be used
+        to interrogate the problem only.
+        """
     ))
     CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing,
-        description="callback hook after a solution of the master problem"
+        description="callback hook after a solution of the master problem",
+        doc="""
+        Callback called right after the MILP master problem is solved.
+        Takes two arguments: The master problem and the GDPopt utility block on
+        the master problem.
+
+        Note that unless you are *very* confident in what you are doing, the
+        problem should not be modified in this callback: it should be used
+        to interrogate the problem only.
+        """
     ))
     CONFIG.declare("subproblem_initialization_method", ConfigValue(
         default=restore_vars_to_original_values, # Historical default
@@ -76,18 +94,49 @@ def _add_OA_configs(CONFIG):
     ))
     CONFIG.declare("call_before_subproblem_solve", ConfigValue(
         default=_DoNothing,
-        description="callback hook before calling the subproblem solver"
+        description="callback hook before calling the subproblem solver",
+        doc="""
+        Callback called right before the (MI)NLP subproblem is solved.
+        Takes two arguments: The subproblem and the GDPopt utility block on
+        the subproblem.
+
+        Note that unless you are *very* confident in what you are doing, the
+        subproblem should not be modified in this callback: it should be used
+        to interrogate the problem only.
+
+        To initialize the problem before it is solved, please specify a method
+        in the 'subproblem_initialization_method' argument.
+        """
     ))
     CONFIG.declare("call_after_subproblem_solve", ConfigValue(
         default=_DoNothing,
         description="callback hook after a solution of the "
-                    "nonlinear subproblem"
+                    "nonlinear subproblem",
+        doc="""
+        Callback called right after the (MI)NLP subproblem is solved.
+        Takes two arguments: The subproblem and the GDPopt utility block on
+        the subproblem.
+
+        Note that unless you are *very* confident in what you are doing, the
+        subproblem should not be modified in this callback: it should be used
+        to interrogate the problem only.
+        """
     ))
     CONFIG.declare("call_after_subproblem_feasible", ConfigValue(
         default=_DoNothing,
         description="callback hook after feasible solution of "
-                    "the nonlinear subproblem"
+                    "the nonlinear subproblem",
+        doc="""
+        Callback called right after the (MI)NLP subproblem is solved, if it
+        was feasible. Takes two arguments: The subproblem and the GDPopt 
+        utility block on the subproblem.
+
+        Note that unless you are *very* confident in what you are doing, the
+        subproblem should not be modified in this callback: it should be used
+        to interrogate the problem only.
+        """
     ))
+    # TODO: I think this is ignored
     CONFIG.declare("algorithm_stall_after", ConfigValue(
         default=2,
         description="number of non-improving master iterations after which "

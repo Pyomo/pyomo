@@ -359,8 +359,6 @@ def constraints_in_True_disjuncts(model, config):
                 for constr in disj.component_data_objects(Constraint):
                     yield constr
 
-# ESJ TODO: Can we rename this? Something like time_tracking or time_recording
-# or something?
 @contextmanager
 def time_code(timing_data_obj, code_block_name, is_main_timer=False):
     """Starts timer at entry, stores elapsed time at exit

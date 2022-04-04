@@ -49,8 +49,7 @@ def solve_linear_GDP(util_block, config, timing):
             "MIP solver %s is not available." % config.mip_solver)
 
     # Callback immediately before solving MIP master problem
-    # TODO: Should this have other arguments?
-    config.call_before_master_solve(m)
+    config.call_before_master_solve(m, util_block)
 
     try:
         with SuppressInfeasibleWarning():
@@ -75,6 +74,9 @@ def solve_linear_GDP(util_block, config, timing):
             return tc.infeasible
         else:
             raise
+
+    config.call_after_master_solve(m, util_block)
+
     terminate_cond = results.solver.termination_condition
     if terminate_cond is tc.infeasibleOrUnbounded:
         # Linear solvers will sometimes tell me that it's infeasible or

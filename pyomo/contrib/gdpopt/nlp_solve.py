@@ -280,11 +280,7 @@ def preprocess_subproblem(util_block, config):
 
 def call_appropriate_subproblem_solver(subprob_util_block, config, timing):
     subprob = subprob_util_block.model()
-    # TODO: If this is really here, then we need to have some very
-    # strongly-worded documentation about how modifying the subproblem model
-    # could have very serious consequences... I don't really want to expose it
-    # at all, honestly...
-    config.call_before_subproblem_solve(subprob)
+    config.call_before_subproblem_solve(subprob, subprob_util_block)
 
     # Is the subproblem linear?
     if not any(constr.body.polynomial_degree() not in (1, 0) for constr in
@@ -307,11 +303,11 @@ def call_appropriate_subproblem_solver(subprob_util_block, config, timing):
                                               timing)
 
     # Call the NLP post-solve callback
-    config.call_after_subproblem_solve(subprob)
+    config.call_after_subproblem_solve(subprob, subprob_util_block)
 
     # if feasible, call the NLP post-feasible callback
     if subprob_termination in {tc.optimal, tc.feasible}:
-        config.call_after_subproblem_feasible(subprob)
+        config.call_after_subproblem_feasible(subprob, subprob_util_block)
 
     return subprob_termination
 
