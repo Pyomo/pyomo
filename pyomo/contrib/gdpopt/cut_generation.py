@@ -12,6 +12,7 @@
 from collections import namedtuple
 from math import copysign, fabs
 from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.util import (
     constraints_in_True_disjuncts, _add_bigm_constraint_to_transformed_model)
@@ -45,6 +46,15 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
     m = master_util_block.model()
     nlp = subproblem_util_block.model()
     sign_adjust = -1 if objective_sense == minimize else 1
+    # Dictionary mapping blocks to their child blocks we use to store OA
+    # cuts. We do it this way because we don't know for sure we can have any
+    # given name since we are sticking these on a clone of a user-generated
+    # model. But this keeps track that we find one if we've already created it,
+    # so that we can add the cuts as indexed constraints.
+    if hasattr(master_util_block, 'oa_cut_blocks'):
+        oa_cut_blocks = master_util_block.oa_cut_blocks
+    else:
+        oa_cut_blocks = master_util_block.oa_cut_blocks = dict()
 
     for master_var, subprob_var in zip(
             subproblem_util_block.algebraic_variable_list,
@@ -107,14 +117,15 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
                                       mode=jacobian.mode)
             jacobian.jac.update(zip(jacobian.vars, jac_list))
 
-        # Create a block on which to put outer approximation cuts.  TODO: This
-        # isn't particularly safe because we don't know that we can have this
-        # name...
-        oa_utils = parent_block.component('GDPopt_OA_cuts')
+        # Create a block on which to put outer approximation cuts, if we don't
+        # have one already on this parent block.
+        oa_utils = oa_cut_blocks.get(parent_block)
         if oa_utils is None:
-            oa_utils = parent_block.GDPopt_OA_cuts = Block(
-                doc="Block holding outer approximation cuts "
-                "and associated data.")
+            nm = unique_component_name(parent_block, 'GDPopt_OA_cuts')
+            oa_utils = Block(doc="Block holding outer approximation cuts "
+                             "and associated data.")
+            parent_block.add_component(nm, oa_utils)
+            oa_cut_blocks[parent_block] = oa_utils
             oa_utils.cuts = Constraint(NonNegativeIntegers)
         master_oa_utils = master_util_block.component('GDPopt_OA_slacks')
         if master_oa_utils is None:
