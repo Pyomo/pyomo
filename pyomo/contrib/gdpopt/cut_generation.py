@@ -13,11 +13,11 @@ from collections import namedtuple
 from math import copysign, fabs
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
-from pyomo.contrib.gdpopt.util import constraints_in_True_disjuncts
+from pyomo.contrib.gdpopt.util import (
+    constraints_in_True_disjuncts, _add_bigm_constraint_to_transformed_model)
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.core import (Block, NonNegativeReals, VarList, minimize, value,
-                        TransformationFactory, Constraint, NonNegativeIntegers,
-                        Reference)
+                        Constraint, NonNegativeIntegers)
 from pyomo.core.expr import differentiate
 from pyomo.core.expr.visitor import identify_variables
 
@@ -42,7 +42,6 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
                                  objective_sense, config):
     """Add outer approximation cuts to the linear GDP model."""
     m = master_util_block.model()
-    bigm = TransformationFactory('gdp.bigm')
     nlp = subproblem_util_block.model()
     sign_adjust = -1 if objective_sense == minimize else 1
 
@@ -140,12 +139,7 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
             assert new_oa_cut.polynomial_degree() in (1, 0)
             idx = len(oa_cuts)
             oa_cuts[idx] = new_oa_cut
-            # ESJ TODO: bigm doesn't handle ConstraintDatas yet, so I'm cheating
-            # by making a Reference to a slice so that it will be an indexed
-            # component for now
-            bigm.add_constraint_to_transformed_model( m,
-                                                      Reference(oa_cuts[idx]),
-                                                      oa_cuts)
+            _add_bigm_constraint_to_transformed_model(m, oa_cuts[idx], oa_cuts)
             config.logger.debug("Cut expression: %s" % new_oa_cut)
             counter += 1
         except ZeroDivisionError:
@@ -164,7 +158,6 @@ def add_outer_approximation_cuts(subproblem_util_block, master_util_block,
 
 def add_affine_cuts(subproblem_util_block, master_util_block, config, timing):
     m = master_util_block.model()
-    bigm = TransformationFactory('gdp.bigm')
 
     config.logger.debug("Adding affine cuts.")
     counter = 0
@@ -221,10 +214,8 @@ def add_affine_cuts(subproblem_util_block, master_util_block, config, timing):
         idx = len(aff_cuts)
         aff_cuts[idx] = concave_cut
         aff_cuts[idx+1] = convex_cut
-        bigm.add_constraint_to_transformed_model(m, Reference(aff_cuts[idx]),
-                                                 aff_cuts)
-        bigm.add_constraint_to_transformed_model(m, Reference(aff_cuts[idx+1]),
-                                                 aff_cuts)
+        _add_bigm_constraint_to_transformed_model(m, aff_cuts[idx], aff_cuts)
+        _add_bigm_constraint_to_transformed_model(m, aff_cuts[idx+1], aff_cuts)
         counter += 2
 
     config.logger.debug("Added %s affine cuts" % counter)

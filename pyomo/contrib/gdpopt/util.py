@@ -19,8 +19,12 @@ from pyomo.common.collections import ComponentSet
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (
-    Block, Constraint, Objective, Reals, Var, minimize, value)
+    Block, Constraint, Objective, Reals, Reference, Var, minimize, 
+    TransformationFactory, value)
 from pyomo.gdp import Disjunct, Disjunction
+# TODO HACK: Get rid of this with name buffers
+from pyomo.gdp.plugins.bigm import NAME_BUFFER
+from pyomo.gdp.util import _parent_disjunct
 from pyomo.opt import SolverFactory
 
 class _DoNothing(object):
@@ -416,3 +420,51 @@ def lower_logger_level_to(logger, tee=False):
         logger.propagate = True
     if level_changed:
         logger.setLevel(old_logger_level)
+
+def _add_bigm_constraint_to_transformed_model(m, constraint, block):
+    """Adds the given constraint to the master problem model as if it had
+    been on the model originally, before the bigm transformation was called.
+    Note this method doesn't actually add the constraint to the model, it just
+    takes a constraint that has been added and transforms it.
+
+    Also note that this is not a general method: We know several special 
+    things in the case of adding OA cuts:
+    * No one is going to have a bigm Suffix or arg for this cut--we're
+    definitely calculating our own value of M.
+    * constraint is for sure a ConstraintData--we don't need to handle anything
+    else.
+    * We know that we originally called bigm with the default arguments to the
+    transformation, so we can assume all of those for this as well. (This is
+    part of the reason this *isn't* a general method, what to do about this
+    generally is a hard question.)
+
+    Parameters
+    ----------
+    m: Master problem model that has been transformed with bigm.
+    constraint: Already-constructed ConstraintData somewhere on m
+    block: The block that constraint lives on. This Block may or may not be on
+           a Disjunct.
+    """
+    # Find out it if this constraint really is on a Disjunct. If not, then
+    # it's global and we don't actually need to do anything.
+    parent_disjunct = block
+    if parent_disjunct.ctype is not Disjunct:
+        parent_disjunct = _parent_disjunct(block)
+
+    if parent_disjunct is None:
+        # the constraint is global, there's nothing to do.
+        return
+
+    bigm = TransformationFactory('gdp.bigm')
+    bigm.assume_fixed_vars_permanent = False
+    # ESJ: This function doesn't handle ConstraintDatas, and bigm is not
+    # sufficiently modular to have a function that does at the moment, so I'm
+    # making a Reference to the ComponentData so that it will look like an
+    # indexed component for now. If I redesign bigm at some point, then this
+    # could be prettier.
+    bigm._transform_constraint(Reference(constraint), parent_disjunct, None,
+                                [], [])
+
+    ## TODO HACK: This can go away when there are no more name buffers in
+    ## pyomo.gdp!
+    NAME_BUFFER.clear()
