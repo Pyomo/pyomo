@@ -111,7 +111,8 @@ def solve_MILP_master_problem(util_block, config, timing):
                                "unbounded MILP master problem by bounding "
                                "the objective. Either check your "
                                "master problem initialization, or add a bound "
-                               "on the master objective value.")
+                               "on the master objective value that admits a "
+                               "feasible solution.")
 
     if terminate_cond is tc.optimal:
         return tc.optimal
