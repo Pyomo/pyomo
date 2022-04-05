@@ -151,7 +151,7 @@ def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense
         constraint_list.add(expr=slack_var <= exp)
 
 
-def process_objective(solve_data, config, move_linear_objective=False,
+def process_objective(solve_data, config, move_objective=False,
                       use_mcpp=False, update_var_con_list=True,
                       partition_nonlinear_terms=True,
                       obj_handleable_polynomial_degree={0, 1},
@@ -167,7 +167,7 @@ def process_objective(solve_data, config, move_linear_objective=False,
     ----------
     solve_data (GDPoptSolveData): solver environment data class
     config (ConfigBlock): solver configuration options
-    move_linear_objective (bool): if True, move even linear
+    move_objective (bool): if True, move even linear
         objective functions to the constraints
     update_var_con_list (bool): if True, the variable/constraint/objective lists will not be updated. 
         This arg is set to True by default. Currently, update_var_con_list will be set to False only when
@@ -195,9 +195,9 @@ def process_objective(solve_data, config, move_linear_objective=False,
                                        ProblemSense.maximize
     solve_data.objective_sense = main_obj.sense
 
-    # Move the objective to the constraints if it is nonlinear or move_linear_objective is True.
-    if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or move_linear_objective:
-        if move_linear_objective:
+    # Move the objective to the constraints if it is nonlinear or move_objective is True.
+    if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or move_objective:
+        if move_objective:
             config.logger.info("Moving objective to constraint set.")
         else:
             config.logger.info(
@@ -224,7 +224,7 @@ def process_objective(solve_data, config, move_linear_objective=False,
         util_blk.objective = Objective(expr=sum(util_blk.objective_value[:]), sense=main_obj.sense)
 
         if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or \
-           (move_linear_objective and update_var_con_list):
+           (move_objective and update_var_con_list):
             util_blk.variable_list.extend(util_blk.objective_value[:])
             util_blk.continuous_variable_list.extend(util_blk.objective_value[:])
             util_blk.constraint_list.extend(util_blk.objective_constr[:])
