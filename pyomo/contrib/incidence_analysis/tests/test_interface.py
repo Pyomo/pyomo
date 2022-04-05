@@ -1152,14 +1152,14 @@ class TestIncludeInequality(unittest.TestCase):
         m = self.make_model_with_inequalities()
         m._obj = pyo.Objective(expr=0)
         nlp = PyomoNLP(m)
-        igraph = IncidenceGraphInterface(m, include_inequality=False)
+        igraph = IncidenceGraphInterface(nlp, include_inequality=False)
         self.assertEqual(igraph.incidence_matrix.shape, (8, 8))
 
     def test_include_inequality_nlp(self):
         m = self.make_model_with_inequalities()
         m._obj = pyo.Objective(expr=0)
         nlp = PyomoNLP(m)
-        igraph = IncidenceGraphInterface(m, include_inequality=True)
+        igraph = IncidenceGraphInterface(nlp, include_inequality=True)
         self.assertEqual(igraph.incidence_matrix.shape, (12, 8))
 
 
