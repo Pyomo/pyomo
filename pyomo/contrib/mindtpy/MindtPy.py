@@ -154,7 +154,8 @@ class MindtPySolver(object):
             # TODO: The logic here is too complicated, can we simplify it?
             process_objective(solve_data, config,
                               move_linear_objective=(config.init_strategy == 'FP'
-                                                     or config.add_regularization is not None),
+                                                     or config.add_regularization is not None
+                                                     or config.move_linear_objective),
                               use_mcpp=config.use_mcpp,
                               update_var_con_list=config.add_regularization is None,
                               partition_nonlinear_terms=config.partition_obj_nonlinear_terms,
