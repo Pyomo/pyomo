@@ -1121,5 +1121,47 @@ class TestExceptions(unittest.TestCase):
             igraph.remove_nodes([m.v1])
 
 
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+class TestIncludeInequality(unittest.TestCase):
+    def make_model_with_inequalities(self):
+        m = make_degenerate_solid_phase_model()
+
+        @m.Constraint()
+        def flow_bound(m):
+            return m.flow >= 0
+
+        @m.Constraint(m.components)
+        def flow_comp_bound(m, j):
+            return m.flow_comp[j] >= 0
+
+        return m
+
+    def test_dont_include_inequality_model(self):
+        m = self.make_model_with_inequalities()
+        igraph = IncidenceGraphInterface(m, include_inequality=False)
+        self.assertEqual(igraph.incidence_matrix.shape, (8, 8))
+
+    def test_include_inequality_model(self):
+        m = self.make_model_with_inequalities()
+        igraph = IncidenceGraphInterface(m, include_inequality=True)
+        self.assertEqual(igraph.incidence_matrix.shape, (12, 8))
+
+    def test_dont_include_inequality_nlp(self):
+        m = self.make_model_with_inequalities()
+        m._obj = pyo.Objective(expr=0)
+        nlp = PyomoNLP(m)
+        igraph = IncidenceGraphInterface(m, include_inequality=False)
+        self.assertEqual(igraph.incidence_matrix.shape, (8, 8))
+
+    def test_include_inequality_nlp(self):
+        m = self.make_model_with_inequalities()
+        m._obj = pyo.Objective(expr=0)
+        nlp = PyomoNLP(m)
+        igraph = IncidenceGraphInterface(m, include_inequality=True)
+        self.assertEqual(igraph.incidence_matrix.shape, (12, 8))
+
+
 if __name__ == "__main__":
     unittest.main()
