@@ -328,9 +328,9 @@ class Gurobi(PersistentBase, PersistentSolver):
 
     def solve(self, model, timer: HierarchicalTimer = None) -> Results:
         StaleFlagManager.mark_all_as_stale()
-        avail = self.available()
-        if not avail:
-            raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')
+        # Note: solver availability check happens in set_instance(),
+        # which will be called (either by the user before this call, or
+        # below) before this method calls self._solve.
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
         if timer is None:
@@ -424,7 +424,10 @@ class Gurobi(PersistentBase, PersistentSolver):
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
         if not self.available():
-            raise ImportError('Could not import gurobipy')
+            c = self.__class__
+            raise PyomoException(
+                f'Solver {c.__module__}.{c.__qualname__} is not available '
+                f'({self.available()}).')
         saved_config = self.config
         saved_options = self.gurobi_options
         saved_update_config = self.update_config
@@ -817,15 +820,16 @@ class Gurobi(PersistentBase, PersistentSolver):
             raise ValueError('Cannot obtain suboptimal solutions for a continuous model')
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
-        original_solution_number = self._solver_model.get_gurobi_param('SolutionNumber')
-        self._solver_model.set_gurobi_param('SolutionNumber', solution_number)
-        gurobi_vars_to_load = [var_map[id(pyomo_var)] for pyomo_var in vars_to_load]
+        original_solution_number = self.get_gurobi_param_info('SolutionNumber')[2]
+        self.set_gurobi_param('SolutionNumber', solution_number)
+        gurobi_vars_to_load = [var_map[pyomo_var] for pyomo_var in vars_to_load]
         vals = self._solver_model.getAttr("Xn", gurobi_vars_to_load)
         res = ComponentMap()
-        for var, val in zip(vars_to_load, vals):
-            if ref_vars[id(var)] > 0:
-                res[var] = val
-        self._solver_model.set_gurobi_param('SolutionNumber', original_solution_number)
+        for var_id, val in zip(vars_to_load, vals):
+            using_cons, using_sos, using_obj = ref_vars[var_id]
+            if using_cons or using_sos or (using_obj is not None):
+                res[self._vars[var_id][0]] = val
+        self.set_gurobi_param('SolutionNumber', original_solution_number)
         return res
 
     def load_vars(self, vars_to_load=None, solution_number=0):
