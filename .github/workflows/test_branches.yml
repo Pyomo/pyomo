@@ -85,6 +85,13 @@ jobs:
           PYENV: pip
           PACKAGES: cython
 
+        - os: windows-latest
+          python: 3.8
+          other: /pip
+          skip_doctest: 1
+          TARGET: win
+          PYENV: pip
+
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v2
@@ -728,6 +735,7 @@ jobs:
         files: coverage.xml
         name: ${{ matrix.TARGET }}
         flags: ${{ matrix.TARGET }}
+        fail_ci_if_error: true
 
     - name: Upload other coverage reports
       if: |
@@ -738,3 +746,4 @@ jobs:
         files: coverage-other.xml
         name: ${{ matrix.TARGET }}/other
         flags: ${{ matrix.TARGET }},other
+        fail_ci_if_error: true
