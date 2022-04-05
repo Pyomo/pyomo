@@ -187,7 +187,10 @@ class IncidenceGraphInterface(object):
                     (var, idx) for idx, var in enumerate(self.variables))
             self.con_index_map = ComponentMap(
                     (con, idx) for idx, con in enumerate(self.constraints))
-            self.incidence_matrix = nlp.evaluate_jacobian_eq()
+            if include_inequality:
+                self.incidence_matrix = nlp.evaluate_jacobian()
+            else:
+                self.incidence_matrix = nlp.evaluate_jacobian_eq()
         elif isinstance(model, Block):
             self.cached = IncidenceMatrixType.STRUCTURAL
             self.constraints = [
