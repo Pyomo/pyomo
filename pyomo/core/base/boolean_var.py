@@ -14,12 +14,13 @@ from weakref import ref as weakref_ref, ReferenceType
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
-from pyomo.common.modeling import unique_component_name, NOTSET, NoArgumentGiven
+from pyomo.common.modeling import unique_component_name, NOTSET
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
-from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.component import (
+    ComponentData, ModelComponentFactory, UnindexedComponent_index)
 from pyomo.core.base.indexed_component import (IndexedComponent,
                                                UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule
@@ -82,7 +83,7 @@ class _BooleanVarData(ComponentData, BooleanValue):
     def __init__(self, component=None):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
-        self._index = NoArgumentGiven
+        self._index = NOTSET
 
     def is_fixed(self):
         """Returns True if this variable is fixed, otherwise returns False."""
@@ -205,7 +206,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         #   - BooleanValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
-        self._index = NoArgumentGiven
+        self._index = NOTSET
         self._value = None
         self.fixed = False
         self._stale = 0 # True
@@ -503,7 +504,7 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
     def __init__(self, *args, **kwd):
         _GeneralBooleanVarData.__init__(self, component=self)
         BooleanVar.__init__(self, *args, **kwd)
-        self._index = None
+        self._index = UnindexedComponent_index
 
     """
     # Since this class derives from Component and Component.__getstate__

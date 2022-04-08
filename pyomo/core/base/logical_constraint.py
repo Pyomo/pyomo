@@ -18,13 +18,13 @@ from weakref import ref as weakref_ref
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import NoArgumentGiven
+from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
 from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.base.component import (
-    ActiveComponentData, ModelComponentFactory,
+    ActiveComponentData, ModelComponentFactory, UnindexedComponent_index
 )
 from pyomo.core.base.indexed_component import \
     (ActiveIndexedComponent,
@@ -72,7 +72,7 @@ class _LogicalConstraintData(ActiveComponentData):
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
             else None
-        self._index = NoArgumentGiven
+        self._index = NOTSET
         self._active = True
 
     #
@@ -130,7 +130,7 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
             else None
-        self._index = NoArgumentGiven
+        self._index = NOTSET
         self._active = True
 
         self._expr = None
@@ -427,7 +427,7 @@ class ScalarLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
         _GeneralLogicalConstraintData.__init__(
             self, component=self, expr=None)
         LogicalConstraint.__init__(self, *args, **kwds)
-        self._index = None
+        self._index = UnindexedComponent_index
 
     #
     # Since this class derives from Component and

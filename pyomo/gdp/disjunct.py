@@ -18,14 +18,15 @@ from weakref import ref as weakref_ref
 from pyomo.common.deprecation import RenamedClass,  deprecation_warning
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import unique_component_name, NOTSET, NoArgumentGiven
+from pyomo.common.modeling import unique_component_name, NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
     ModelComponentFactory, Binary, Block, ConstraintList, Any,
     LogicalConstraintList, BooleanValue, ScalarBooleanVar, ScalarVar,
     value)
 from pyomo.core.base.component import (
-    ActiveComponent, ActiveComponentData, ComponentData
+    ActiveComponent, ActiveComponentData, ComponentData, 
+    UnindexedComponent_index
 )
 from pyomo.core.base.numvalue import native_types
 from pyomo.core.base.block import _BlockData
@@ -447,7 +448,7 @@ class _DisjunctionData(ActiveComponentData):
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
                           else None
-        self._index = NoArgumentGiven
+        self._index = NOTSET
         self._active = True
         self.disjuncts = []
         self.xor = True
@@ -683,7 +684,7 @@ class ScalarDisjunction(_DisjunctionData, Disjunction):
     def __init__(self, *args, **kwds):
         _DisjunctionData.__init__(self, component=self)
         Disjunction.__init__(self, *args, **kwds)
-        self._index = None
+        self._index = UnindexedComponent_index
 
     #
     # Singleton disjunctions are strange in that we want them to be

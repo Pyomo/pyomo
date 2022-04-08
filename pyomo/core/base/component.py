@@ -18,7 +18,7 @@ import pyomo.common
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.common.factory import Factory
 from pyomo.common.formatting import tabular_writer, StreamIndenter
-from pyomo.common.modeling import NOTSET, NoArgumentGiven
+from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.component_namer import name_repr, index_repr
@@ -713,7 +713,7 @@ class ComponentData(_ComponentBase):
         # this assumption is significantly faster.
         #
         self._component = weakref_ref(component)
-        self._index = NoArgumentGiven
+        self._index = NOTSET
 
     def __getstate__(self):
         """Prepare a picklable state of this instance for pickling.
@@ -1006,3 +1006,5 @@ class ActiveComponentData(ComponentData):
         """Set the active attribute to False"""
         self._active = False
 
+# ESJ TODO
+UnindexedComponent_index = None

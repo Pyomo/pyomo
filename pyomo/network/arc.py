@@ -11,13 +11,14 @@
 __all__ = [ 'Arc' ]
 
 from pyomo.network.port import Port
-from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
+from pyomo.core.base.component import (
+    ActiveComponentData, ModelComponentFactory, UnindexedComponent_index)
 from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
     UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import NoArgumentGiven
+from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 from weakref import ref as weakref_ref
 import logging, sys
@@ -78,7 +79,7 @@ class _ArcData(ActiveComponentData):
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
                           else None
-        self._index = NoArgumentGiven
+        self._index = NOTSET
         self._active = True
 
         self._ports = None
@@ -364,7 +365,7 @@ class ScalarArc(_ArcData, Arc):
     def __init__(self, *args, **kwds):
         _ArcData.__init__(self, self)
         Arc.__init__(self, *args, **kwds)
-        self._index = None
+        self.index = UnindexedComponent_index
 
     def set_value(self, vals):
         """

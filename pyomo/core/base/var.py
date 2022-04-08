@@ -19,14 +19,15 @@ from weakref import ref as weakref_ref
 from pyomo.common.collections import Sequence
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import NoArgumentGiven, NOTSET
+from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
     NumericValue, value, is_potentially_variable, native_numeric_types,
 )
-from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.component import (
+    ComponentData, ModelComponentFactory, UnindexedComponent_index)
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
@@ -295,7 +296,7 @@ class _GeneralVarData(_VarData):
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
-        self._index = NoArgumentGiven
+        self._index = NOTSET
         self._value = None
         #
         # The type of the lower and upper bound attributes can either be
@@ -848,7 +849,7 @@ class ScalarVar(_GeneralVarData, Var):
     def __init__(self, *args, **kwd):
         _GeneralVarData.__init__(self, component=self)
         Var.__init__(self, *args, **kwd)
-        self._index = None
+        self._index = UnindexedComponent_index
 
     # Since this class derives from Component and Component.__getstate__
     # just packs up the entire __dict__ into the state dict, we do not
