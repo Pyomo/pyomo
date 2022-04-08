@@ -16,7 +16,8 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import ZeroConstant, native_numeric_types, as_numeric
 from pyomo.core import Constraint, Var, Block, Set
-from pyomo.core.base.component import ModelComponentFactory
+from pyomo.core.base.component import (
+    ModelComponentFactory, UnindexedComponent_index)
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.initializer import (
@@ -280,7 +281,7 @@ class ScalarComplementarity(_ComplementarityData, Complementarity):
         _ComplementarityData.__init__(self, self)
         Complementarity.__init__(self, *args, **kwds)
         self._data[None] = self
-        self._index = None
+        self._index = UnindexedComponent_index
 
 
 class SimpleComplementarity(metaclass=RenamedClass):

@@ -18,6 +18,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base import Var, Set, Constraint, value
 from pyomo.core.base.block import _BlockData, Block, declare_custom_block
+from pyomo.core.base.component import UnindexedComponent_index
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.set import UnindexedComponent_set
 from pyomo.core.base.reference import Reference
@@ -410,7 +411,7 @@ class ScalarExternalGreyBoxBlock(ExternalGreyBoxBlockData, ExternalGreyBoxBlock)
         ExternalGreyBoxBlock.__init__(self, *args, **kwds)
         # The above inherit from Block and _BlockData, so it's not until here
         # that we know it's scalar. So we set the index accordingly.
-        self._index = None
+        self._index = UnindexedComponent_index
 
     # Pick up the display() from Block and not BlockData
     display = ExternalGreyBoxBlock.display

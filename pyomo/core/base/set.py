@@ -38,6 +38,7 @@ from pyomo.core.base.range import (
 )
 from pyomo.core.base.component import (
     _ComponentBase, Component, ComponentData, ModelComponentFactory,
+    UnindexedComponent_index
 )
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
@@ -2236,7 +2237,8 @@ class FiniteScalarSet(_FiniteSetData, Set):
     def __init__(self, **kwds):
         _FiniteSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
-        self._index = None
+        self._index = UnindexedComponent_index
+
 
 
 class FiniteSimpleSet(metaclass=RenamedClass):
@@ -2267,7 +2269,7 @@ class SortedScalarSet(_ScalarOrderedSetMixin, _SortedSetData, Set):
 
         _SortedSetData.__init__(self, component=self)
         Set.__init__(self, **kwds)
-        self._index = None
+        self._index = UnindexedComponent_index
 
 
 class SortedSimpleSet(metaclass=RenamedClass):
@@ -3015,7 +3017,7 @@ class InfiniteScalarRangeSet(_InfiniteRangeSetData, RangeSet):
     def __init__(self, *args, **kwds):
         _InfiniteRangeSetData.__init__(self, component=self)
         RangeSet.__init__(self, *args, **kwds)
-        self._index = None
+        self._index = UnindexedComponent_index
 
     # We want the RangeSet.__str__ to override the one in _FiniteSetMixin
     __str__ = RangeSet.__str__
@@ -3031,7 +3033,7 @@ class FiniteScalarRangeSet(_ScalarOrderedSetMixin,
     def __init__(self, *args, **kwds):
         _FiniteRangeSetData.__init__(self, component=self)
         RangeSet.__init__(self, *args, **kwds)
-        self._index = None
+        self._index = UnindexedComponent_index
 
     # We want the RangeSet.__str__ to override the one in _FiniteSetMixin
     __str__ = RangeSet.__str__

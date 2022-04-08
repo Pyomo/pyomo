@@ -31,6 +31,7 @@ from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import (
     Component, ActiveComponentData, ModelComponentFactory,
+    UnindexedComponent_index
 )
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.set import GlobalSetBase, _SetDataBase
@@ -2039,7 +2040,7 @@ class ScalarBlock(_BlockData, Block):
         # get/setitem_when_not_present so that we do not (implicitly)
         # trigger the Block rule
         self._data[None] = self
-        self._index = None
+        self._index = UnindexedComponent_index
 
     # We want scalar Blocks to pick up the Block display method
     display = Block.display

@@ -410,7 +410,7 @@ class ScalarDisjunct(_DisjunctData, Disjunct):
         _DisjunctData.__init__(self, self)
         Disjunct.__init__(self, *args, **kwds)
         self._data[None] = self
-        self._index = None
+        self._index = UnindexedComponent_index
 
 
 class SimpleDisjunct(metaclass=RenamedClass):

@@ -18,7 +18,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.component import (
-    ActiveComponentData, ModelComponentFactory
+    ActiveComponentData, ModelComponentFactory, UnindexedComponent_index
 )
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent, UnindexedComponent_set
@@ -347,7 +347,7 @@ class ScalarSOSConstraint(SOSConstraint, _SOSConstraintData):
     def __init__(self, *args, **kwd):
         _SOSConstraintData.__init__(self, self)
         SOSConstraint.__init__(self, *args, **kwd)
-        self._index = None
+        self._index = UnindexedComponent_index
 
 
 class SimpleSOSConstraint(metaclass=RenamedClass):
