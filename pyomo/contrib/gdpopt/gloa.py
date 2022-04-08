@@ -9,21 +9,28 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.config import add_docstring_list
+from pyomo.common.modeling import unique_component_name
+from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     _get_master_and_subproblem)
-from pyomo.contrib.gdpopt.cut_generation import (
-    add_affine_cuts, add_no_good_cut)
+from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
 from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
     _fix_master_soln_solve_subproblem_and_add_cuts)
 from pyomo.contrib.gdpopt.util import (
-    time_code, lower_logger_level_to, move_nonlinear_objective_to_constraints)
+    _add_bigm_constraint_to_transformed_model,
+    constraints_in_True_disjuncts, lower_logger_level_to,
+    move_nonlinear_objective_to_constraints, time_code)
+from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
-from pyomo.core import Objective, Expression, value, TransformationFactory
+from pyomo.core import (
+    Constraint, Block, Expression, NonNegativeIntegers, Objective,
+    TransformationFactory, value)
+from pyomo.core.expr.visitor import identify_variables
 from pyomo.opt import TerminationCondition
 from pyomo.opt.base import SolverFactory
 import logging
@@ -116,6 +123,82 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
            {TerminationCondition.infeasible, TerminationCondition.unbounded}:
             self._transfer_incumbent_to_original_model()
         return self.pyomo_results
+
+    def _add_cuts_to_master_problem(self, subproblem_util_block,
+                                    master_util_block, objective_sense, config,
+                                    timing):
+        """Add affine cuts"""
+        m = master_util_block.model()
+        if hasattr(master_util_block, "aff_utils_blocks"):
+            aff_utils_blocks = master_util_block.aff_utils_blocks
+        else:
+            aff_utils_blocks = master_util_block.aff_utils_blocks = dict()
+
+        config.logger.debug("Adding affine cuts.")
+        counter = 0
+        for master_var, subprob_var in zip(
+                master_util_block.algebraic_variable_list,
+                subproblem_util_block.algebraic_variable_list):
+            val = subprob_var.value
+            if val is not None and not master_var.fixed:
+                master_var.set_value(val, skip_validation=True)
+
+        for constr in constraints_in_True_disjuncts(m, config):
+            # Note: this includes constraints that are deactivated in the
+            # current model (linear_GDP)
+
+            disjunctive_var_bounds = disjunctive_bounds(constr.parent_block())
+
+            if constr.body.polynomial_degree() in (1, 0):
+                continue
+
+            vars_in_constr = list(identify_variables(constr.body))
+            if any(var.value is None for var in vars_in_constr):
+                continue  # a variable has no values
+
+            # mcpp stuff
+            try:
+                mc_eqn = mc(constr.body, disjunctive_var_bounds)
+            except MCPP_Error as e:
+                config.logger.debug("Skipping constraint %s due to MCPP "
+                                    "error %s" % (constr.name, str(e)))
+                continue  # skip to the next constraint
+            ccSlope = mc_eqn.subcc()
+            cvSlope = mc_eqn.subcv()
+            ccStart = mc_eqn.concave()
+            cvStart = mc_eqn.convex()
+            ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() \
+                     else mc_eqn.upper()
+            lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() \
+                     else mc_eqn.lower()
+
+            parent_block = constr.parent_block()
+            # Create a block on which to put outer approximation cuts.
+            aff_utils = aff_utils_blocks.get(parent_block)
+            if aff_utils is None:
+                aff_utils = Block(doc="Block holding affine constraints")
+                nm = unique_component_name(parent_block, "GDPopt_aff")
+                parent_block.add_component(nm, aff_utils)
+                aff_utils_blocks[parent_block] = aff_utils
+                aff_utils.GDPopt_aff_cons = Constraint(NonNegativeIntegers)
+            aff_cuts = aff_utils.GDPopt_aff_cons
+            concave_cut = sum(ccSlope[var] * (var - var.value)
+                              for var in vars_in_constr
+                              if not var.fixed) + ccStart >= lb_int
+            convex_cut = sum(cvSlope[var] * (var - var.value)
+                             for var in vars_in_constr
+                             if not var.fixed) + cvStart <= ub_int
+            idx = len(aff_cuts)
+            aff_cuts[idx] = concave_cut
+            aff_cuts[idx+1] = convex_cut
+            _add_bigm_constraint_to_transformed_model(m, aff_cuts[idx],
+                                                      aff_cuts)
+            _add_bigm_constraint_to_transformed_model(m, aff_cuts[idx+1],
+                                                      aff_cuts)
+            counter += 2
+
+        config.logger.debug("Added %s affine cuts" % counter)
+
 
 GDP_GLOA_Solver.solve.__doc__ = add_docstring_list(
     GDP_GLOA_Solver.solve.__doc__, GDP_GLOA_Solver.CONFIG, indent_by=8)

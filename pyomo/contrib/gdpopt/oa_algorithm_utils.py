@@ -8,7 +8,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.gdpopt.cut_generation import add_cuts_according_to_algorithm
 from pyomo.contrib.gdpopt.nlp_solve import solve_subproblem
 from pyomo.contrib.gdpopt.util import fix_master_solution_in_subproblem
 from pyomo.core import value
@@ -28,10 +27,10 @@ def _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                 logger=config.logger)
             if primal_improved:
                 solver.update_incumbent(subprob_util_block)
-            add_cuts_according_to_algorithm(subprob_util_block,
-                                            master_util_block,
-                                            solver.objective_sense, config,
-                                            solver.timing)
+            solver._add_cuts_to_master_problem(subprob_util_block,
+                                               master_util_block,
+                                               solver.objective_sense, config,
+                                               solver.timing)
         elif nlp_termination == tc.unbounded:
             # the whole problem is unbounded, we can stop
             solver._update_primal_bound_to_unbounded()

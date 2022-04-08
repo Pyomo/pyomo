@@ -120,5 +120,11 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
             self._transfer_incumbent_to_original_model()
         return self.pyomo_results
 
+    def _add_cuts_to_master_problem(self, subproblem_util_block,
+                                    master_util_block, objective_sense, config,
+                                    timing):
+        # Nothing to do here
+        pass
+
 GDP_RIC_Solver.solve.__doc__ = add_docstring_list(
     GDP_RIC_Solver.solve.__doc__, GDP_RIC_Solver.CONFIG, indent_by=8)

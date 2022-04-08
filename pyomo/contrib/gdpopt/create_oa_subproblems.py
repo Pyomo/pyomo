@@ -87,18 +87,11 @@ def initialize_master_problem(util_block, subprob_util_block, config, solver):
     add_transformed_boolean_variable_list(master_util_block)
     add_algebraic_variable_list(master_util_block, name='all_mip_variables')
 
-    # Call the specified initialization strategy
-    init_strategy = valid_init_strategies.get(config.init_strategy, None)
-    if init_strategy is not None:
-        init_strategy(util_block, master_util_block, subprob_util_block, config,
-                      solver)
-    else:
-        raise ValueError('Unknown initialization strategy: %s. '
-                         'Valid strategies include: %s'
-                         % (config.init_strategy,
-                            ", ".join(k for (k, v) in 
-                                      valid_init_strategies.items()
-                                      if v is not None)))
+    # Call the specified initialization strategy. (We've already validated the
+    # input in the config logic, so we know this is okay.)
+    init_strategy = valid_init_strategies.get(config.init_strategy)
+    init_strategy(util_block, master_util_block, subprob_util_block, config,
+                  solver)
 
     return master_util_block
 
@@ -177,8 +170,6 @@ def get_subproblem(original_model):
     used in logical constraints and to make sure that the rest of the model is
     algebraic (assuming it was a proper GDP to begin with).
     """
-    ## Debatably this could be a transformation in gdp...
-
     subproblem = original_model.clone()
     subproblem.name = subproblem.name + ": subproblem"
 
@@ -186,7 +177,7 @@ def get_subproblem(original_model):
     if not hasattr(subproblem, 'dual'):
         subproblem.dual = Suffix(direction=Suffix.IMPORT)
     elif not isinstance(subproblem.dual, Suffix):
-        raise ValueError("The model containts a component called 'dual' which "
+        raise ValueError("The model containts a component called 'dual' that "
                          "is not a Suffix. It is of type %s. Please rename "
                          "this component, as GDPopt needs dual information to "
                          "create cuts." % type(subproblem.dual))

@@ -19,7 +19,7 @@ from pyomo.common.collections import ComponentSet
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (
-    Block, Constraint, Objective, Reals, Reference, Var, minimize, 
+    Block, Constraint, Objective, Reals, Reference, Var, minimize,
     TransformationFactory, value)
 from pyomo.gdp import Disjunct, Disjunction
 # TODO HACK: Get rid of this with name buffers
@@ -79,11 +79,11 @@ def solve_continuous_problem(m, config):
     obj = next(m.component_data_objects(Objective, active=True))
     if (any(c.body.polynomial_degree() not in (1, 0) for c in
             m.component_data_objects(Constraint, active=True,
-                                     descend_into=Block)) 
+                                     descend_into=Block))
         or obj.expr.polynomial_degree() not in (1, 0)):
         logger.info("Your model is an NLP (nonlinear program). "
                     "Using NLP solver %s to solve." % config.nlp_solver)
-        results = SolverFactory(config.nlp_solver).solve( 
+        results = SolverFactory(config.nlp_solver).solve(
             m, **config.nlp_solver_args)
         return results
     else:
@@ -140,7 +140,7 @@ def move_nonlinear_objective_to_constraints(util_block, logger):
             # else:
             #     util_blk.nonlinear_constraint_list.append(
             #         util_blk.objective_constr)
-    
+
 # ESJ: Do we need this? Can it be renamed?
 def a_logger(str_or_logger):
     """Returns a logger when passed either a logger name or logger object."""
@@ -224,12 +224,12 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
         else:
             block.binary_indicator_var.fix(1)
             fixed.append(block.name)
-    config.logger.debug("Fixed the following Disjuncts to 'True': %s" 
+    config.logger.debug("Fixed the following Disjuncts to 'True': %s"
                         % ", ".join(fixed))
 
     fixed_bools = []
     for master_bool, subprob_bool in zip(
-            master_util_block.non_indicator_boolean_variable_list, 
+            master_util_block.non_indicator_boolean_variable_list,
             subproblem_util_block.non_indicator_boolean_variable_list):
         master_binary = master_bool.get_associated_binary()
         subprob_binary = subprob_bool.get_associated_binary()
@@ -267,7 +267,7 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
     # Call the subproblem initialization callback
     config.subproblem_initialization_method(subproblem_util_block,
                                             master_util_block)
-            
+
     yield
 
     # unfix all subproblem blocks
@@ -341,7 +341,7 @@ def is_feasible(model, config):
 
 # Utility used in cut_generation
 def constraints_in_True_disjuncts(model, config):
-    """Yield constraints in disjuncts where the indicator value is set or 
+    """Yield constraints in disjuncts where the indicator value is set or
     fixed to True."""
     for constr in model.component_data_objects(Constraint):
         yield constr
@@ -424,7 +424,7 @@ def _add_bigm_constraint_to_transformed_model(m, constraint, block):
     Note this method doesn't actually add the constraint to the model, it just
     takes a constraint that has been added and transforms it.
 
-    Also note that this is not a general method: We know several special 
+    Also note that this is not a general method: We know several special
     things in the case of adding OA cuts:
     * No one is going to have a bigm Suffix or arg for this cut--we're
     definitely calculating our own value of M.

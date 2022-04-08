@@ -220,7 +220,7 @@ class TestGDPopt(unittest.TestCase):
             self.assertIn("Set covering problem was infeasible.",
                           output.getvalue().strip())
 
-        self.assertEqual(results.solver.termination_condition, 
+        self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.infeasible)
 
         # Test maximization problem infeasibility also
@@ -228,12 +228,12 @@ class TestGDPopt(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
             results = SolverFactory('gdpopt', algorithm='LOA').solve(
-                m, mip_solver=mip_solver, nlp_solver=nlp_solver, 
+                m, mip_solver=mip_solver, nlp_solver=nlp_solver,
                 init_strategy='no_init')
             self.assertIn("GDPopt exiting--problem is infeasible.",
                           output.getvalue().strip())
 
-        self.assertEqual(results.solver.termination_condition, 
+        self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.infeasible)
 
     @unittest.skipUnless(SolverFactory(mip_solver).available(),
@@ -445,7 +445,7 @@ class TestGDPopt(unittest.TestCase):
                 iterlim=2)
             self.assertIn("GDPopt unable to converge bounds within iteration "
                           "limit of 2 iterations.", output.getvalue().strip())
-        self.assertEqual(results.solver.termination_condition, 
+        self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.maxIterations)
 
     def test_time_limit(self):
@@ -461,7 +461,7 @@ class TestGDPopt(unittest.TestCase):
                 time_limit=1)
             self.assertIn("GDPopt exiting--Did not converge bounds before "
                           "time limit of 1 seconds.", output.getvalue().strip())
-        self.assertEqual(results.solver.termination_condition, 
+        self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.maxTimeLimit)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
