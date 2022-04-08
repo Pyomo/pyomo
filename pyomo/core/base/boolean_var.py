@@ -19,8 +19,8 @@ from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
-from pyomo.core.base.component import (
-    ComponentData, ModelComponentFactory, UnindexedComponent_index)
+from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (IndexedComponent,
                                                UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule

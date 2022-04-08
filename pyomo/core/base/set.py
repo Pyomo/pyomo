@@ -38,14 +38,13 @@ from pyomo.core.base.range import (
 )
 from pyomo.core.base.component import (
     _ComponentBase, Component, ComponentData, ModelComponentFactory,
-    UnindexedComponent_index
 )
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, normalize_index,
     rule_wrapper,
 )
 from pyomo.core.base.global_set import (
-    GlobalSets, GlobalSetBase,
+    GlobalSets, GlobalSetBase, UnindexedComponent_index
 )
 
 from collections.abc import Sequence

@@ -22,8 +22,8 @@ from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
-from pyomo.core.base.component import (
-    ComponentData, ModelComponentFactory, UnindexedComponent_index)
+from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import \
     IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule

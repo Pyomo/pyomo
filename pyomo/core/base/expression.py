@@ -21,8 +21,8 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 
-from pyomo.core.base.component import (
-    ComponentData, ModelComponentFactory, UnindexedComponent_index)
+from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     IndexedComponent,
     UnindexedComponent_set, )

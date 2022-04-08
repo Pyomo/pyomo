@@ -25,9 +25,9 @@ from pyomo.core import (
     LogicalConstraintList, BooleanValue, ScalarBooleanVar, ScalarVar,
     value)
 from pyomo.core.base.component import (
-    ActiveComponent, ActiveComponentData, ComponentData, 
-    UnindexedComponent_index
+    ActiveComponent, ActiveComponentData, ComponentData
 )
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.numvalue import native_types
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule

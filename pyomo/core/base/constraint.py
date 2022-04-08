@@ -29,9 +29,8 @@ from pyomo.core.expr import logical_expr
 from pyomo.core.expr.numvalue import (
     NumericValue, value, as_numeric, is_fixed, native_numeric_types,
 )
-from pyomo.core.base.component import (
-    ActiveComponentData, ModelComponentFactory, UnindexedComponent_index
-)
+from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent, UnindexedComponent_set, rule_wrapper,
 )

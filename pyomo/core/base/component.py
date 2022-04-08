@@ -22,6 +22,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.component_namer import name_repr, index_repr
+from pyomo.core.base.global_set import UnindexedComponent_index
 
 logger = logging.getLogger('pyomo.core')
 
@@ -1005,6 +1006,3 @@ class ActiveComponentData(ComponentData):
     def deactivate(self):
         """Set the active attribute to False"""
         self._active = False
-
-# ESJ TODO
-UnindexedComponent_index = None

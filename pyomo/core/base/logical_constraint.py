@@ -23,9 +23,8 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
 from pyomo.core.expr.numvalue import native_types, native_logical_types
-from pyomo.core.base.component import (
-    ActiveComponentData, ModelComponentFactory, UnindexedComponent_index
-)
+from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import \
     (ActiveIndexedComponent,
      UnindexedComponent_set,

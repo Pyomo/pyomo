@@ -30,9 +30,9 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import (
-    Component, ActiveComponentData, ModelComponentFactory,
-    UnindexedComponent_index
+    Component, ActiveComponentData, ModelComponentFactory
 )
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.set import GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var

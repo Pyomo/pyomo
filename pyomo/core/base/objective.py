@@ -27,9 +27,8 @@ from pyomo.common.deprecation import RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
-from pyomo.core.base.component import (
-    ActiveComponentData, ModelComponentFactory, UnindexedComponent_index
-)
+from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent, UnindexedComponent_set, rule_wrapper,
 )
