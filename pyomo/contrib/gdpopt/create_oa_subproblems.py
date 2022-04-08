@@ -16,7 +16,8 @@ from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
-from pyomo.contrib.gdpopt.util import move_nonlinear_objective_to_constraints
+from pyomo.contrib.gdpopt.util import (
+    get_main_elapsed_time, move_nonlinear_objective_to_constraints)
 from pyomo.gdp.disjunct import Disjunct, Disjunction
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
@@ -49,9 +50,14 @@ def _get_master_and_subproblem(original_model, config, solver,
     subproblem_util_block.obj = Expression(expr=subproblem_obj.expr)
 
     # create master MILP
+    start = get_main_elapsed_time(solver.timing)
     master_util_block = initialize_master_problem(util_block,
                                                   subproblem_util_block,
                                                   config, solver)
+
+    config.logger.info(
+        'Finished master problem initialization in {:.2f}s\n'.format(
+            get_main_elapsed_time(solver.timing) - start))
 
     return (master_util_block, subproblem_util_block)
 

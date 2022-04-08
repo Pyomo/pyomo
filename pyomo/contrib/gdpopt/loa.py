@@ -113,6 +113,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
                 break
 
         self._get_final_pyomo_results_object()
+        self._log_termination_message(logger)
         if self.pyomo_results.solver.termination_condition not in \
            {TerminationCondition.infeasible, TerminationCondition.unbounded}:
             self._transfer_incumbent_to_original_model()
