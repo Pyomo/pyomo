@@ -71,5 +71,3 @@ def add_no_good_cut(target_model_util_block, config):
     else:
         # Exclude the current binary combination
         target_model_util_block.no_good_cuts.add(expr=int_cut)
-
-    return True
