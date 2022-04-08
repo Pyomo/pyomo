@@ -8,13 +8,28 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.config import (ConfigValue, NonNegativeInt,
-                                 In, PositiveInt, NonNegativeFloat,
-                                 ConfigBlock, ConfigList)
+from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue,
+                                 In, NonNegativeFloat, NonNegativeInt,
+                                 PositiveInt)
 from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
 from pyomo.contrib.gdpopt.nlp_initialization import (
     restore_vars_to_original_values)
 from pyomo.contrib.gdpopt.util import _DoNothing
+from pyomo.opt import SolverFactory
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+
+def _valid_solvers(val):
+    try:
+        opt = SolverFactory(val)
+    except ValueError:
+        raise ValueError("Expected a valid name for a solver. Received '%s'"
+                         % val)
+        raise
+    if isinstance(opt, PersistentSolver):
+        raise ValueError("GDPopt does not currently support the '%s' solver. "
+                         "The only supported persistent solvers are those in "
+                         "the APPSI package." % val)
+    return val
 
 def _add_OA_configs(CONFIG):
     CONFIG.declare("init_strategy", ConfigValue(
@@ -213,7 +228,11 @@ def _add_BB_configs(CONFIG):
 def _add_mip_solver_configs(CONFIG):
     CONFIG.declare("mip_solver", ConfigValue(
         default="gurobi",
-        description="Mixed integer linear solver to use."
+        domain=_valid_solvers,
+        description="""
+        Mixed integer linear solver to use. Note that no persisent solvers
+        other than the auto-persistent solvers in the APPSI package are
+        supported."""
     ))
     CONFIG.declare("mip_solver_args", ConfigBlock(
         description="""
@@ -224,14 +243,22 @@ def _add_mip_solver_configs(CONFIG):
 def _add_nlp_solver_configs(CONFIG):
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
-        description="Nonlinear solver to use"))
+        domain=_valid_solvers,
+        description="""
+        Nonlinear solver to use. Note that no persisent solvers
+        other than the auto-persistent solvers in the APPSI package are
+        supported."""))
     CONFIG.declare("nlp_solver_args", ConfigBlock(
         description="""
         Keyword arguments to send to the NLP subsolver solve() invocation""",
         implicit=True))
     CONFIG.declare("minlp_solver", ConfigValue(
         default="baron",
-        description="MINLP solver to use"
+        domain=_valid_solvers,
+        description="""
+        MINLP solver to use. Note that no persisent solvers
+        other than the auto-persistent solvers in the APPSI package are
+        supported."""
     ))
     CONFIG.declare("minlp_solver_args", ConfigBlock(
         description="""
@@ -239,7 +266,11 @@ def _add_nlp_solver_configs(CONFIG):
         implicit=True))
     CONFIG.declare("local_minlp_solver", ConfigValue(
         default="bonmin",
-        description="MINLP solver to use"
+        domain=_valid_solvers,
+        description="""
+        MINLP solver to use. Note that no persisent solvers
+        other than the auto-persistent solvers in the APPSI package are
+        supported."""
     ))
     CONFIG.declare("local_minlp_solver_args", ConfigBlock(
         description="""

@@ -19,6 +19,7 @@ import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
+from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
@@ -583,7 +584,7 @@ class TestGDPopt(unittest.TestCase):
 
         def assert_correct_disjuncts_active(subprob_util_block,
                                             master_util_block):
-            # I can get the iteration based on the number of no-good 
+            # I can get the iteration based on the number of no-good
             # cuts in this case...
             iteration = len(master_util_block.no_good_cuts)
             master = master_util_block.model()
@@ -618,6 +619,26 @@ class TestGDPopt(unittest.TestCase):
             subproblem_initialization_method=assert_correct_disjuncts_active)
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    @unittest.skipUnless(Gurobi().available(),
+                         "APPSI Gurobi solver is not available")
+    def test_non_auto_persistent_solver_error_checking(self):
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        m = exfile.build_eight_process_flowsheet()
+        with self.assertRaisesRegex(
+                ValueError,
+                ".*GDPopt does not currently support the 'gurobi_persistent' "
+                "solver. The only supported persistent solvers are those in "
+                "the APPSI package."):
+            SolverFactory('gdpopt', algorithm='LOA').solve(
+                m, mip_solver='gurobi_persistent')
+
+        # But APPSI is okay:
+        SolverFactory('gdpopt', algorithm='LOA').solve(
+                m, mip_solver='appsi_gurobi')
+
+        self.assertTrue(fabs(value(m.profit.expr) - 68) <= 1E-2)
 
 @unittest.skipIf(not LOA_solvers_available,
                  "Required subsolvers %s are not available"
@@ -878,7 +899,7 @@ class TestGDPoptRIC(unittest.TestCase):
 
         def assert_correct_disjuncts_active(subprob_util_block,
                                             master_util_block):
-            # I can get the iteration based on the number of no-good 
+            # I can get the iteration based on the number of no-good
             # cuts in this case...
             iteration = len(master_util_block.no_good_cuts)
             master = master_util_block.model()
@@ -918,12 +939,12 @@ class TestGDPoptRIC(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(domain=Integers, bounds=(0, 10))
         m.y = Var(bounds=(0, 10))
-        m.disjunction = Disjunction(expr=[[m.x**2 <= 4, m.y**2 <= 1], 
-                                          [(m.x - 1)**2 + (m.y - 1)**2 <= 4, 
+        m.disjunction = Disjunction(expr=[[m.x**2 <= 4, m.y**2 <= 1],
+                                          [(m.x - 1)**2 + (m.y - 1)**2 <= 4,
                                            m.y <= 4]])
         m.obj = Objective(expr=-m.y - m.x)
         results = SolverFactory('gdpopt', algorithm='RIC').solve(
-            m, init_strategy='no_init', mip_solver=mip_solver, 
+            m, init_strategy='no_init', mip_solver=mip_solver,
             nlp_solver=nlp_solver, force_subproblem_nlp=True)
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.optimal)

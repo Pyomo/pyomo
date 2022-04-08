@@ -358,7 +358,7 @@ class _GDPoptAlgorithm(object):
             if soln is None:
                 var.set_value(soln, skip_validation=True)
                 if original_binary is not None:
-                    original_binary.set_value(None, skip_validiation=True)
+                    original_binary.set_value(None, skip_validation=True)
                 continue
             elif soln > 0.5:
                 var.set_value(True)
