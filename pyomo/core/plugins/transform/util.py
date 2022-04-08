@@ -176,9 +176,9 @@ def _getAbstractIndices(comp):
     """
     Returns the index or index set of this component
     """
-    if type(comp._index_set) != type({}):
+    if type(comp.index_set()) != type({}):
         # Singly indexed component
-        return comp._index_set
+        return comp.index_set()
     else:
         # Unindexed constraint
         return {None: None}
