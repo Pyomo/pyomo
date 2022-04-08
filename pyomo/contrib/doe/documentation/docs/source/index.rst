@@ -5,13 +5,10 @@ Pyomo.DOE
 Pyomo.DOE
 ===================================
 
-**Pyomo.DOE** (Pyomo Design of Experiments) is a Python library for model-based design of experiments
-using science-based models.
+**Pyomo.DOE** (Pyomo Design of Experiments) is a Python library for model-based design of experiments using science-based models.
 
-It was developed by **Jialu Wang** and **Alexander W. Dowling** of University of Notre Dame as part of the Carbon Capture Simulation for Industry Impact (CCSI2)
-(https://www.acceleratecarboncapture.org/ ) project, 
-funded through the U.S. DOE Office of Fossil Energy by the Lawrence Berkeley National Laboratory through contract
-DE-AC02-05CH11231 and the National Energy Technology Laboratory, an agency of the United States Government, through a support contract.
+Pyomo.DOE was developed by **Jialu Wang** and **Alexander W. Dowling** of University of Notre Dame as part of the Carbon Capture Simulation for Industry Impact (CCSI2)
+(https://www.acceleratecarboncapture.org/ ) project, funded through the U.S. DOE Office of Fossil Energy.
 
 If you use Pyomo.DOE, please cite:
 
@@ -20,15 +17,13 @@ If you use Pyomo.DOE, please cite:
 Methodology Overview
 ---------------------
 
-Model-based Design of Experiments (MBDoE) is a technique to maximize the information gain of experiments by directly using
-science-based models with physically meaningful parameters. It is one key component in the model calibration and uncertainty quantification workflow
-shown below:
+Model-based Design of Experiments (MBDoE) is a technique to maximize the information gain of experiments by directly using science-based models with physically meaningful parameters. It is one key component in the model calibration and uncertainty quantification workflow shown below:
 
 .. figure:: flowchart.png
    :scale: 25 %
    :alt: map to buried treasure
 
-   The exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE are combined into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty. The goal of this workflow is to achieve a confident parameter estimation.
+   The exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE are combined into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty. Currently, Pyomo.DOE focused on increasing parameter precision.
 
 Pyomo.DOE provides the exploratory anlaysis and MBDoE capabilities to the Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
 the allowable design spaces for design variables, and the assumed observation error model.
@@ -37,14 +32,14 @@ MBDoE then recommends optimized experimental conditions for collecting more data
 Parameter estimation packages such as **Parmest** can perform parameter estimation using the available data to infer values for parameters,
 and facilitate an uncertainty analysis to approximate the parameter covariance matrix.
 If the parameter uncertainties are sufficiently small, the workflow terminates and returns the final model with quantified parametric uncertainty.
-If not, MBDoE is performed to recommend new experiments to generate new data.
+If not, MBDoE recommends optimized experimental conditions to generate new data.
 
 Below is an overview of the type of optimization models Pyomo.DOE can accomodate:
 
 * Pyomo.DOE is suitable for optimization models of **continuous** variables
 * Pyomo.DOE can handle **equality constraints** defining state variables
-* Pyomo.DOE allows for (Partial) Differential-Algebraic Equations (PDAE) models which can be discretized and solved by Pyomo.DAE
-* Pyomo.DOE also supports only algebraic models
+* Pyomo.DOE supports (Partial) Differential-Algebraic Equations (PDAE) models via Pyomo.DAE
+* Pyomo.DOE also supports models with only algebraic constraints
 
 The general form of a DAE problem that can be passed into Pyomo.DOE is shown below:
 
@@ -73,7 +68,7 @@ where:
 
 .. note::
     * Process models provided to Pyomo.DOE should define an extra scenario index for all state variables and all parameters, as the first index before any other index.
-    * Process models define time as t. For steady-state models, t should be [0].
+    * Process models must include an index for time, named ``t``. For steady-state models, t should be [0].
     * Parameter and design variables should defined as variables.
     * Create model function should take scenarios as the first argument of this function.
     * Design variables are defined with and only with a time index.
@@ -134,8 +129,8 @@ The required inputs to the Pyomo.DOE solver are the following:
 * Dictionary of parameters and their nominal value
 * Dictionary of measurements and their measurement time points
 * Dictionary of design variables and their control time points
-* Prior FIM
-* Subordinate local and global NLP optimization solver
+* A Numpy ``array`` containing the Prior FIM
+* Local and global optimization solver
 
 Below is a list of arguments that Pyomo.DOE expects the user to provide.
 
@@ -153,8 +148,8 @@ create_model : ``function``
     A ``function`` representing a deterministic process model.
 
 
-prior_FIM : ``list``
-    A ``list`` defining the Fisher information matrix (FIM) for prior experiments, default is a zero matrix.
+prior_FIM : ``array``
+    A ``array`` defining the Fisher information matrix (FIM) for prior experiments, default is a zero matrix.
 
 Pyomo.DOE Solver Interface
 ---------------------------
@@ -169,7 +164,7 @@ Pyomo.DOE Solver Interface
 
 
 .. Note::
-    Optimize_doe() includes the following steps:
+    ``optimize_doe()`` includes the following steps:
         #.  Build two-stage stochastic programming optimization model where scenarios correspond to finite difference approximations for the Jacobian of the response variables with respect to calibrated model parameters
         #.  Fix the experiment design decisions and solve a square (i.e., zero degrees of freedom) instance of the two-stage DOE problem. This step is for initialization.
         #.  Unfix the experiment design decisions and solve the two-stage DOE problem.
@@ -191,7 +186,7 @@ Pyomo.DOE Solver Interface
 Pyomo.DOE Usage Example
 ------------------------
 
-We will use an example to illustrate the usage of Pyomo.DOE to a reaction kinetics example.
+We illustrate the use of Pyomo.DOE using a reaction kinetics example (Wang and Dowling, 2022).
 The Arrhenius equations model the temperature dependence of the reaction rate coefficient  :math:`k_1, k_2`. Assuming a first-order reaction mechanism gives the reaction rate model. Further, we assume only sepcies A is fed to the reactor.
 
 
@@ -219,8 +214,6 @@ The observation errors are assumed to be independent both in time and across mea
 Step 0: Import Pyomo and the Pyomo.DOE module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In anticipation of using the Pyomo.DOE and building the Pyomo process model:
-
 .. doctest::
 
     >>> # === Required import ===
@@ -235,72 +228,73 @@ The process model for the reaction kinetics problem is shown below.
 
 .. doctest::
 
-    >>> # === Create model ==
-    >>> m = pyo.ConcreteModel()
-    >>> m.R = 8.31446261815324  # J/K/mol
+    >>> def create_model():
+    >>>     # === Create model ==
+    >>>     m = pyo.ConcreteModel()
+    >>>     m.R = 8.31446261815324  # J/K/mol
 
 .. doctest::
 
-    >>> # === Define set ===
-    >>> m.t0 = pyo.Set(initialize=[0])
-    >>> m.t = pyo.ContinuousSet(bounds=(0, 1))
-    >>> m.t_con = pyo.Set(iniitalize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
-    >>> m.scena = pyo.Set(initialize=scena['scena-name'])
-    >>> m.y_set = pyo.Set(initialize=['CA', 'CB', 'CC'])
+    >>>     # === Define set ===
+    >>>     m.t0 = pyo.Set(initialize=[0])
+    >>>     m.t = pyo.ContinuousSet(bounds=(0, 1))
+    >>>     m.t_con = pyo.Set(iniitalize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
+    >>>     m.scena = pyo.Set(initialize=scena['scena-name'])
+    >>>     m.y_set = pyo.Set(initialize=['CA', 'CB', 'CC'])
 
 .. doctest::
 
-    >>> # === Define variables ===
-    >>> m.CA0 = pyo.Var(m.t0, initialize = CA_init, bounds=(1.0,5.0), within=NonNegativeReals) # mol/L
-    >>> m.T = pyo.Var(m.t, initialize =T_initial, bounds=(300, 700), within=NonNegativeReals)
-    >>> m.C = pyo.Var(m.scena, m.y_set, m.t, initialize=C_init, within=NonNegativeReals)
-    >>> m.dCdt = pyo.DerivativeVar(m.C, wrt=m.t)
-    >>> m.kp1 = pyo.Var(m.scena, m.t, initialize=kp1_init)
-    >>> m.kp2 = pyo.Var(m.scena, m.t, initialize=kp2_init)
+    >>>     # === Define variables ===
+    >>>     m.CA0 = pyo.Var(m.t0, initialize = CA_init, bounds=(1.0,5.0), within=NonNegativeReals) # mol/L
+    >>>     m.T = pyo.Var(m.t, initialize =T_initial, bounds=(300, 700), within=NonNegativeReals)
+    >>>     m.C = pyo.Var(m.scena, m.y_set, m.t, initialize=C_init, within=NonNegativeReals)
+    >>>     m.dCdt = pyo.DerivativeVar(m.C, wrt=m.t)
+    >>>     m.kp1 = pyo.Var(m.scena, m.t, initialize=kp1_init)
+    >>>     m.kp2 = pyo.Var(m.scena, m.t, initialize=kp2_init)
 
 .. doctest::
 
-    >>> # === Define Param ===
-    >>> m.A1 = pyo.Param(m.scena, initialize=scena['A1'],mutable=True)
-    >>> m.A2 = pyo.Param(m.scena, initialize=scena['A2'],mutable=True)
-    >>> m.E1 = pyo.Param(m.scena, initialize=scena['E1'],mutable=True)
-    >>> m.E2 = pyo.Param(m.scena, initialize=scena['E2'],mutable=True)
+    >>>     # === Define Param ===
+    >>>     m.A1 = pyo.Param(m.scena, initialize=scena['A1'],mutable=True)
+    >>>     m.A2 = pyo.Param(m.scena, initialize=scena['A2'],mutable=True)
+    >>>     m.E1 = pyo.Param(m.scena, initialize=scena['E1'],mutable=True)
+    >>>     m.E2 = pyo.Param(m.scena, initialize=scena['E2'],mutable=True)
 
 .. doctest::
 
-    >>> # === Constraints ===
-    >>> def T_control(m,t):
-    >>>     if t in m.t_con:
-    >>>         return Constraint.Skip
-    >>>     else:
-    >>>         j = -1
-    >>>         for t_con in m.t_con:
-    >>>             if t>t_con:
-    >>>                 j+=1
-    >>>         neighbour_t = t_control[j]
+    >>>     # === Constraints ===
+    >>>     def T_control(m,t):
+    >>>         if t in m.t_con:
+    >>>             return Constraint.Skip
+    >>>         else:
+    >>>             j = -1
+    >>>             for t_con in m.t_con:
+    >>>                 if t>t_con:
+    >>>                     j+=1
+    >>>             neighbour_t = t_control[j]
     >>>         return m.T[t] == m.T[neighbour_t]
-    >>> def cal_kp1(m,z,t):
-    >>>     return m.kp1[z,t] == m.A1[z]*exp(-m.E1[z]*1000/(m.R*m.T[t]))
-    >>> def cal_kp2(m,z,t):
-    >>>     return m.kp2[z,t] == m.A2[z]*exp(-m.E2[z]*1000/(m.R*m.T[t]))
-    >>> def dCdt_control(m,z,y,t):
-    >>>     if y=='CA':
-    >>>         return m.dCdt[z,y,t] == -m.kp1[z,t]*m.C[z,'CA',t]
-    >>>     elif y=='CB':
-    >>>         return m.dCdt[z,y,t] == m.kp1[z,t]*m.C[z,'CA',t] - m.kp2[z,t]*m.C[z,'CB',t]
-    >>>     elif y=='CC':
-    >>>         return Constraint.Skip
-    >>> def alge(m,z,t):
-    >>>     return m.C[z,'CA',t] + m.C[z,'CB',t] + m.C[z,'CC', t] == m.CA0[0]
-    >>> m.T_rule = pyo.Constraint(m.t, rule=T_control)
-    >>> m.k1_pert_rule = pyo.Constraint(m.scena, m.t, rule=cal_kp1)
-    >>> m.k2_pert_rule = pyo.Constraint(m.scena, m.t, rule=cal_kp2)
-    >>> m.dCdt_rule = pyo.Constraint(m.scena,m.y_set, m.t, rule=dCdt_control)
-    >>> m.alge_rule = pyo.Constraint(m.scena, m.t, rule=alge)
-    >>> for z in m.scena:
-    >>>     m.C[z,'CB',0.0].fix(0.0)
-    >>>     m.C[z,'CC',0.0].fix(0.0)
-
+    >>>     def cal_kp1(m,z,t):
+    >>>         return m.kp1[z,t] == m.A1[z]*exp(-m.E1[z]*1000/(m.R*m.T[t]))
+    >>>     def cal_kp2(m,z,t):
+    >>>         return m.kp2[z,t] == m.A2[z]*exp(-m.E2[z]*1000/(m.R*m.T[t]))
+    >>>     def dCdt_control(m,z,y,t):
+    >>>         if y=='CA':
+    >>>             return m.dCdt[z,y,t] == -m.kp1[z,t]*m.C[z,'CA',t]
+    >>>         elif y=='CB':
+    >>>             return m.dCdt[z,y,t] == m.kp1[z,t]*m.C[z,'CA',t] - m.kp2[z,t]*m.C[z,'CB',t]
+    >>>         elif y=='CC':
+    >>>             return Constraint.Skip
+    >>>     def alge(m,z,t):
+    >>>         return m.C[z,'CA',t] + m.C[z,'CB',t] + m.C[z,'CC', t] == m.CA0[0]
+    >>>     m.T_rule = pyo.Constraint(m.t, rule=T_control)
+    >>>     m.k1_pert_rule = pyo.Constraint(m.scena, m.t, rule=cal_kp1)
+    >>>     m.k2_pert_rule = pyo.Constraint(m.scena, m.t, rule=cal_kp2)
+    >>>     m.dCdt_rule = pyo.Constraint(m.scena,m.y_set, m.t, rule=dCdt_control)
+    >>>     m.alge_rule = pyo.Constraint(m.scena, m.t, rule=alge)
+    >>>     for z in m.scena:
+    >>>         m.C[z,'CB',0.0].fix(0.0)
+    >>>         m.C[z,'CC',0.0].fix(0.0)
+    >>>     return m
 .. doctest::
 
     >>> # === Discretization ===
@@ -340,7 +334,7 @@ Step 2: Define the inputs for Pyomo.DOE
 Step 3: Compute the FIM of a square MBDoE problem
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This method computes an MBDoE optimization problem with no Degree of Freedom.
+This method computes an MBDoE optimization problem with no degree of freedom.
 
 .. doctest::
 
@@ -384,7 +378,7 @@ Exploratory analysis is suggested to enumerate the design space to check if the 
 Pyomo.DOE accomplishes the exploratory analysis with the ``run_grid_search`` function.
 It allows to define any number of design decisions. Heatmaps can be drawn by two design variables, fixing other design variables.
 1D curve can be drawn by one design variable, fixing all other variables.
-The function ``run_grid_search`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method. Therefore, ``run_grid_search`` can also choose from the two modes, ``sequential_finite`` and ``direct_kaug``.
+The function ``run_grid_search`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method. Therefore, ``run_grid_search`` supports only two modes: ``sequential_finite`` and ``direct_kaug``.
 
 
 .. doctest::
@@ -421,11 +415,9 @@ Successful run of the above code shows the following figure:
 Step 5: Gradient-based optimization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Pyomo.DOE accomplishes gradient-based optimization with ``optimize_doe`` function for A- and D-optimality design. It is
-strongly suggested that when using D-optimality the identifiability of the problems is firstly analyzed by ``run_grid_search``.
+Pyomo.DOE accomplishes gradient-based optimization with ``optimize_doe`` function for A- and D-optimality design. 
 
-This function solves twice: It solves the square version of the MBDoE problem first,
-and then unfixes the design variables as degree of freedoms and solves again. In this way the optimization problem can be well initialized.
+This function solves twice: It solves the square version of the MBDoE problem first, and then unfixes the design variables as degree of freedoms and solves again. In this way the optimization problem can be well initialized.
 
 .. doctest::
 
