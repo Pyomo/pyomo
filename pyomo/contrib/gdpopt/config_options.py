@@ -15,20 +15,21 @@ from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
 from pyomo.contrib.gdpopt.nlp_initialization import (
     restore_vars_to_original_values)
 from pyomo.contrib.gdpopt.util import _DoNothing
-from pyomo.opt import SolverFactory
+from pyomo.opt import SolverFactory, UnknownSolver
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
+from pytest import set_trace
 def _valid_solvers(val):
-    try:
-        opt = SolverFactory(val)
-    except ValueError:
+    opt = SolverFactory(val)
+    if isinstance(opt, UnknownSolver):
         raise ValueError("Expected a valid name for a solver. Received '%s'"
                          % val)
-        raise
-    if isinstance(opt, PersistentSolver):
+    elif isinstance(opt, PersistentSolver):
         raise ValueError("GDPopt does not currently support the '%s' solver. "
                          "The only supported persistent solvers are those in "
                          "the APPSI package." % val)
+    # There's still stuff that could have gone wrong that we won't find out
+    # until we call solve, but what can you do?
     return val
 
 def _add_OA_configs(CONFIG):

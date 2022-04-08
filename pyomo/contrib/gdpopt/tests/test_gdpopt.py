@@ -191,6 +191,14 @@ class TestGDPoptUnit(unittest.TestCase):
                                     "Found active disjunct"):
             is_feasible(m, GDP_LOA_Solver.CONFIG())
 
+    def test_invalid_solver_name(self):
+        m = ConcreteModel()
+        with self.assertRaisesRegex(ValueError,
+                                    ".*Expected a valid name for a solver. "
+                                    "Received 'grubi'"):
+            SolverFactory('gdpopt', algorithm='LOA').solve(
+                m, mip_solver='grubi')
+
 @unittest.skipIf(not LOA_solvers_available,
                  "Required subsolvers %s are not available"
                  % (LOA_solvers,))
@@ -207,14 +215,30 @@ class TestGDPopt(unittest.TestCase):
         m.o = Objective(expr=m.x)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-            SolverFactory('gdpopt', algorithm='LOA').solve(
+            results = SolverFactory('gdpopt', algorithm='LOA').solve(
                 m, mip_solver=mip_solver, nlp_solver=nlp_solver)
             self.assertIn("Set covering problem was infeasible.",
                           output.getvalue().strip())
 
+        self.assertEqual(results.solver.termination_condition, 
+                         TerminationCondition.infeasible)
+
+        # Test maximization problem infeasibility also
+        m.o.sense = maximize
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
+            results = SolverFactory('gdpopt', algorithm='LOA').solve(
+                m, mip_solver=mip_solver, nlp_solver=nlp_solver, 
+                init_strategy='no_init')
+            self.assertIn("GDPopt exiting--problem is infeasible.",
+                          output.getvalue().strip())
+
+        self.assertEqual(results.solver.termination_condition, 
+                         TerminationCondition.infeasible)
+
     @unittest.skipUnless(SolverFactory(mip_solver).available(),
                          "MIP solver not available")
-    def test_unbounded_gdp(self):
+    def test_unbounded_gdp_minimization(self):
         m = ConcreteModel()
         m.GDPopt_utils = Block()
         m.x = Var(bounds=(-1, 10))
@@ -224,6 +248,26 @@ class TestGDPopt(unittest.TestCase):
             [m.x + m.y >= 5], [m.x - m.y <= 3]
         ])
         m.o = Objective(expr=m.z)
+        m.GDPopt_utils.variable_list = [m.x, m.y, m.z]
+        m.GDPopt_utils.disjunct_list = [m.d._autodisjuncts[0],
+                                        m.d._autodisjuncts[1]]
+        results = SolverFactory('gdpopt', algorithm='LOA').solve(
+            m, mip_solver=mip_solver, nlp_solver=nlp_solver)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.unbounded)
+
+    @unittest.skipUnless(SolverFactory(mip_solver).available(),
+                         "MIP solver not available")
+    def test_unbounded_gdp_maximization(self):
+        m = ConcreteModel()
+        m.GDPopt_utils = Block()
+        m.x = Var(bounds=(-1, 10))
+        m.y = Var(bounds=(2, 3))
+        m.z = Var()
+        m.d = Disjunction(expr=[
+            [m.x + m.y <= 5], [m.x - m.y >= 3]
+        ])
+        m.o = Objective(expr=m.z, sense=maximize)
         m.GDPopt_utils.variable_list = [m.x, m.y, m.z]
         m.GDPopt_utils.disjunct_list = [m.d._autodisjuncts[0],
                                         m.d._autodisjuncts[1]]
@@ -387,6 +431,38 @@ class TestGDPopt(unittest.TestCase):
             mip_solver=mip_solver,
             nlp_solver=nlp_solver)
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
+    def test_iteration_limit(self):
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
+            results = SolverFactory('gdpopt', algorithm='LOA').solve(
+                eight_process,
+                mip_solver=mip_solver,
+                nlp_solver=nlp_solver,
+                iterlim=2)
+            self.assertIn("GDPopt unable to converge bounds within iteration "
+                          "limit of 2 iterations.", output.getvalue().strip())
+        self.assertEqual(results.solver.termination_condition, 
+                         TerminationCondition.maxIterations)
+
+    def test_time_limit(self):
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
+            results = SolverFactory('gdpopt', algorithm='LOA').solve(
+                eight_process,
+                mip_solver=mip_solver,
+                nlp_solver=nlp_solver,
+                time_limit=1)
+            self.assertIn("GDPopt exiting--Did not converge bounds before "
+                          "time limit of 1 seconds.", output.getvalue().strip())
+        self.assertEqual(results.solver.termination_condition, 
+                         TerminationCondition.maxTimeLimit)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_LOA_8PP_logical_default_init(self):

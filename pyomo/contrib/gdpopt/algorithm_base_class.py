@@ -192,14 +192,6 @@ class _GDPoptAlgorithm(object):
         else:
             return self.LB
 
-    def primal_bound_improved(self, old, new):
-        if self.objective_sense is minimize:
-            if old > new:
-                return True
-        elif old < new:
-            return True
-        return False
-
     def update_incumbent(self, util_block):
         self.incumbent_continuous_soln = [v.value for v in
                                           util_block.algebraic_variable_list]
@@ -225,10 +217,6 @@ class _GDPoptAlgorithm(object):
                                  "updating the dual bound." % mip_termination)
 
     def _update_dual_bound_to_infeasible(self, logger):
-        if self.iteration == 1:
-            logger.warning(
-                'GDPopt initialization may have generated poor '
-                'quality cuts.')
         # set optimistic bound to infinity
         if self.objective_sense == minimize:
             self._update_bounds(dual=float('inf'))
@@ -248,13 +236,15 @@ class _GDPoptAlgorithm(object):
             self.pyomo_results.solver.termination_condition = tc.unbounded
             return True
         elif self.LB + config.bound_tolerance >= self.UB:
-            config.logger.info(
-                'GDPopt exiting--bounds have converged or crossed.')
             if self.LB == float('inf') and self.UB == float('inf'):
+                config.logger.info('GDPopt exiting--problem is infeasible.')
                 self.pyomo_results.solver.termination_condition = tc.infeasible
             elif self.LB == float('-inf') and self.UB == float('-inf'):
+                config.logger.info('GDPopt exiting--problem is infeasible.')
                 self.pyomo_results.solver.termination_condition = tc.infeasible
             else:
+                config.logger.info(
+                    'GDPopt exiting--bounds have converged or crossed.')
                 self.pyomo_results.solver.termination_condition = tc.optimal
             return True
         return False
@@ -274,7 +264,7 @@ class _GDPoptAlgorithm(object):
             config.logger.info(
                 'GDPopt exiting--Did not converge bounds '
                 'before time limit of {} seconds. '.format(config.time_limit))
-            self.results.solver.termination_condition = tc.maxTimeLimit
+            self.pyomo_results.solver.termination_condition = tc.maxTimeLimit
             return True
         return False
 
