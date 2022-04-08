@@ -1054,6 +1054,42 @@ class TestGLOA(unittest.TestCase):
         )
         self.assertAlmostEqual(value(m.o.expr), 3)
 
+    def make_nonlinear_gdp_with_int_vars(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 10))
+        m.y = Var(domain=Integers, bounds=(0, 5))
+        m.d = Disjunction(expr=[[
+            m.x**2 >= m.y, m.y >= 3.5
+        ],
+        [
+            m.x**2 >= m.y, m.y >= 2.5
+        ]])
+        m.o = Objective(expr=m.x)
+        return m
+
+    def test_nonlinear_GDP_integer_vars(self):
+        m = self.make_nonlinear_gdp_with_int_vars()
+        SolverFactory('gdpopt').solve(
+            m, strategy='GLOA',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver,
+            minlp_solver=minlp_solver
+        )
+        self.assertAlmostEqual(value(m.o.expr), sqrt(3))
+        self.assertAlmostEqual(value(m.y), 3)
+
+    def test_nonlinear_GDP_integer_vars_force_nlp_subproblem(self):
+        m = self.make_nonlinear_gdp_with_int_vars()
+        SolverFactory('gdpopt').solve(
+            m, strategy='GLOA',
+            mip_solver=mip_solver,
+            nlp_solver=nlp_solver,
+            minlp_solver=minlp_solver,
+            force_subproblem_nlp=True
+        )
+        self.assertAlmostEqual(value(m.o.expr), sqrt(3))
+        self.assertAlmostEqual(value(m.y), 3)
+
     def test_GDP_integer_vars_infeasible(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1))
