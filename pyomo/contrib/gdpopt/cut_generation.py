@@ -53,10 +53,8 @@ def add_no_good_cut(target_model_util_block, config):
                 more = var >= val + 1
                 disjuncts.extend([less, more])
 
-    if not (var_value_is_one or var_value_is_zero) and len(disjuncts) == 0:
-        # if no remaining binary variables, then terminate algorithm.
-        config.logger.debug('No remaining discrete solutions to explore.')
-        return False
+    # It shouldn't be possible to get here unless there's a solution to be cut.
+    assert (var_value_is_one or var_value_is_zero) or len(disjuncts) == 0
 
     int_cut = (sum(1 - v for v in var_value_is_one) +
                sum(v for v in var_value_is_zero)) >= 1

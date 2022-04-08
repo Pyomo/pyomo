@@ -107,11 +107,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
 
             # Add integer cut
             with time_code(self.timing, "integer cut generation"):
-                added = add_no_good_cut(master_util_block, config)
-                if not added:
-                    # We've run out of discrete solutions, so we're done.
-                    self._update_dual_bound_to_infeasible(logger)
-
+                add_no_good_cut(master_util_block, config)
 
             # Check termination conditions
             if self.any_termination_criterion_met(config):
