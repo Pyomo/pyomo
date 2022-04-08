@@ -407,7 +407,7 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         _active         A boolean that indicates whether this data is active
     """
 
-    __slots__ = ('_index')
+    __slots__ = ()
 
     def __init__(self, index, component=None):
         #
@@ -430,7 +430,6 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         This method must be defined because this class uses slots.
         """
         result = super(_LinearMatrixConstraintData, self).__getstate__()
-        result['_index'] = self._index
         return result
 
     # Since this class requires no special processing of the state
@@ -697,4 +696,3 @@ class MatrixConstraint(Mapping, IndexedConstraint):
 
     def __delitem__(self):
         raise NotImplementedError
-
