@@ -96,7 +96,7 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
             add_no_good_cut(master_util_block, config)
         else:
             config.logger.error(
-                'Linear GDP infeasible for user-specified '
+                'MILP relaxation infeasible for user-specified '
                 'custom initialization disjunct set %s. '
                 'Skipping that set and continuing on.'
                 % list(disj.name for disj in active_disjunct_set))
@@ -141,7 +141,7 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
         add_no_good_cut(master_util_block, config)
     else:
         config.logger.error(
-            'Linear GDP infeasible for initial user-specified '
+            'MILP relaxation infeasible for initial user-specified '
             'disjunct values. '
             'Skipping initialization.')
 
@@ -192,7 +192,7 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
                                                            config, solver)
         else:
             config.logger.debug(
-                "Linear relaxation for initialization was infeasible. "
+                "MILP relaxation for initialization was infeasible. "
                 "Problem is infeasible.")
             solver._update_dual_bound_to_infeasible(config.logger)
             return False
