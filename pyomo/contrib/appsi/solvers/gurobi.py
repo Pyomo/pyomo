@@ -1,9 +1,7 @@
 from collections.abc import Iterable
-import enum
 import logging
 import math
 from typing import List, Dict, Optional
-
 from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
@@ -20,9 +18,6 @@ from pyomo.core.expr.numvalue import (
     value, is_constant, is_fixed, native_numeric_types,
 )
 from pyomo.repn import generate_standard_repn
-from pyomo.core.base.set import (Reals, NonNegativeReals, NonPositiveReals,
-                                 Integers, NonNegativeIntegers, NonPositiveIntegers,
-                                 Binary, PercentFraction, UnitInterval)
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.contrib.appsi.base import (
     PersistentSolver, Results, TerminationCondition, MIPSolverConfig,
@@ -433,7 +428,8 @@ class Gurobi(PersistentBase, PersistentSolver):
         self.gurobi_options = saved_options
         self.update_config = saved_update_config
         self._model = model
-        self._expr_types = cmodel.PyomoExprTypes()
+        if self.use_extensions and cmodel_available:
+            self._expr_types = cmodel.PyomoExprTypes()
 
         if self.config.symbolic_solver_labels:
             self._labeler = TextLabeler()

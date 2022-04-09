@@ -739,7 +739,7 @@ Notes:
 
 
 class PersistentBase(abc.ABC):
-    def __init__(self, use_extensions=False):
+    def __init__(self):
         self._model = None
         self._active_constraints = dict()  # maps constraint to (lower, body, upper)
         self._vars = dict()  # maps var id to (var, lb, ub, fixed, domain, value)
@@ -755,7 +755,7 @@ class PersistentBase(abc.ABC):
         self._vars_referenced_by_con = dict()
         self._vars_referenced_by_obj = list()
         self._expr_types = None
-        self.use_extensions = use_extensions
+        self.use_extensions = False
 
     @property
     def update_config(self):
