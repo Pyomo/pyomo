@@ -254,22 +254,19 @@ class Gurobi(PersistentBase, PersistentSolver):
         except gurobipy.GurobiError:
             cls._available = Gurobi.Availability.BadLicense
             return
-        if not cmodel_available:
-            cls._available = Gurobi.Availability.NeedsCompiledExtension
-        else:
-            m = gurobipy.Model()
+        m = gurobipy.Model()
+        m.setParam('OutputFlag', 0)
+        try:
+            # As of 3/2021, the limited-size Gurobi license was limited
+            # to 2000 variables.
+            m.addVars(range(2001))
             m.setParam('OutputFlag', 0)
-            try:
-                # As of 3/2021, the limited-size Gurobi license was limited
-                # to 2000 variables.
-                m.addVars(range(2001))
-                m.setParam('OutputFlag', 0)
-                m.optimize()
-                cls._available = Gurobi.Availability.FullLicense
-            except gurobipy.GurobiError:
-                cls._available = Gurobi.Availability.LimitedLicense
-            finally:
-                m.dispose()
+            m.optimize()
+            cls._available = Gurobi.Availability.FullLicense
+        except gurobipy.GurobiError:
+            cls._available = Gurobi.Availability.LimitedLicense
+        finally:
+            m.dispose()
 
     def version(self):
         version = (gurobipy.GRB.VERSION_MAJOR,

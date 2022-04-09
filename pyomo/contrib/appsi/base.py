@@ -10,7 +10,7 @@ from pyomo.core.base.objective import _GeneralObjectiveData
 from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
 from collections import OrderedDict
 from .utils.get_objective import get_objective
-from .utils.identify_named_expressions import identify_named_expressions
+from .utils.collect_vars_and_named_exprs import collect_vars_and_named_exprs
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
 from pyomo.common.errors import ApplicationError
@@ -739,7 +739,7 @@ Notes:
 
 
 class PersistentBase(abc.ABC):
-    def __init__(self):
+    def __init__(self, use_extensions=False):
         self._model = None
         self._active_constraints = dict()  # maps constraint to (lower, body, upper)
         self._vars = dict()  # maps var id to (var, lb, ub, fixed, domain, value)
@@ -755,6 +755,7 @@ class PersistentBase(abc.ABC):
         self._vars_referenced_by_con = dict()
         self._vars_referenced_by_obj = list()
         self._expr_types = None
+        self.use_extensions = use_extensions
 
     @property
     def update_config(self):
@@ -769,7 +770,8 @@ class PersistentBase(abc.ABC):
         self.__init__()
         self.update_config = saved_update_config
         self._model = model
-        self._expr_types = cmodel.PyomoExprTypes()
+        if self.use_extensions and cmodel_available:
+            self._expr_types = cmodel.PyomoExprTypes()
         self.add_block(model)
         if self._objective is None:
             self.set_objective(None)
@@ -806,7 +808,11 @@ class PersistentBase(abc.ABC):
             if con in self._named_expressions:
                 raise ValueError('constraint {name} has already been added'.format(name=con.name))
             self._active_constraints[con] = (con.lower, con.body, con.upper)
-            named_exprs, variables, fixed_vars, external_functions = cmodel.prep_for_repn(con.body, expr_types)
+            if self.use_extensions and cmodel_available:
+                tmp = cmodel.prep_for_repn(con.body, expr_types)
+            else:
+                tmp = collect_vars_and_named_exprs(con.body)
+            named_exprs, variables, fixed_vars, external_functions = tmp
             self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[con] = external_functions
@@ -851,7 +857,11 @@ class PersistentBase(abc.ABC):
             self._objective_expr = obj.expr
             self._objective_sense = obj.sense
             expr_types = cmodel.PyomoExprTypes()
-            named_exprs, variables, fixed_vars, external_functions = cmodel.prep_for_repn(obj.expr, expr_types)
+            if self.use_extensions and cmodel_available:
+                tmp = cmodel.prep_for_repn(obj.expr, expr_types)
+            else:
+                tmp = collect_vars_and_named_exprs(obj.expr)
+            named_exprs, variables, fixed_vars, external_functions = tmp
             self._obj_named_expressions = [(i, i.expr) for i in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[obj] = external_functions

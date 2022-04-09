@@ -105,7 +105,6 @@ def create_pmedian_model():
     return model
 
 
-@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
     def setUp(self):
         self.m = pe.ConcreteModel()
@@ -180,7 +179,7 @@ class TestGurobiPersistentSimpleLPUpdates(unittest.TestCase):
         finally:
             Gurobi._available = _avail
 
-@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
+
 class TestGurobiPersistent(unittest.TestCase):
     def test_range_constraints(self):
         m = pe.ConcreteModel()
@@ -408,7 +407,6 @@ class TestGurobiPersistent(unittest.TestCase):
         self.assertAlmostEqual(pe.value(m.obj.expr), 6.592304628123309)
 
 
-@unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestManualModel(unittest.TestCase):
     def setUp(self):
         opt = Gurobi()
