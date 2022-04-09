@@ -987,6 +987,13 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 1)
 
+        opt: PersistentSolver = opt_class()
+        opt.use_extensions = True
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)
+
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestLegacySolverInterface(unittest.TestCase):
