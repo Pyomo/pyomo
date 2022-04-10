@@ -1709,7 +1709,12 @@ int build_expression_tree(py::handle pyomo_expr,
                           py::handle param_map, PyomoExprTypes &expr_types) {
   int num_nodes = 0;
 
-  if (appsi_expr->is_leaf()) {
+  ExprType tmp_type =
+      expr_types.expr_type_map[py::type::of(pyomo_expr)].cast<ExprType>();
+  if (tmp_type == named_expr) {
+    num_nodes += build_expression_tree(pyomo_expr.attr("expr"), appsi_expr,
+                                       var_map, param_map, expr_types);
+  } else if (appsi_expr->is_leaf()) {
     ;
   } else if (appsi_expr->is_binary_operator()) {
     num_nodes += 1;
