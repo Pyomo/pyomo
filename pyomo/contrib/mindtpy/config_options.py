@@ -255,7 +255,7 @@ def _add_subsolver_configs(CONFIG):
     CONFIG.declare('mip_solver', ConfigValue(
         default='glpk',
         domain=In(['gurobi', 'cplex', 'cbc', 'glpk', 'gams',
-                   'gurobi_persistent', 'cplex_persistent']),
+                   'gurobi_persistent', 'cplex_persistent', 'appsi_cplex', 'appsi_gurobi', 'appsi_ipopt']),
         description='MIP subsolver name',
         doc='Which MIP subsolver is going to be used for solving the mixed-'
             'integer main problems.'
