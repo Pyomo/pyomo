@@ -803,13 +803,12 @@ class PersistentBase(abc.ABC):
 
     def add_constraints(self, cons: List[_GeneralConstraintData]):
         all_fixed_vars = dict()
-        expr_types = self._expr_types
         for con in cons:
             if con in self._named_expressions:
                 raise ValueError('constraint {name} has already been added'.format(name=con.name))
             self._active_constraints[con] = (con.lower, con.body, con.upper)
             if self.use_extensions and cmodel_available:
-                tmp = cmodel.prep_for_repn(con.body, expr_types)
+                tmp = cmodel.prep_for_repn(con.body, self._expr_types)
             else:
                 tmp = collect_vars_and_named_exprs(con.body)
             named_exprs, variables, fixed_vars, external_functions = tmp
@@ -856,9 +855,8 @@ class PersistentBase(abc.ABC):
             self._objective = obj
             self._objective_expr = obj.expr
             self._objective_sense = obj.sense
-            expr_types = cmodel.PyomoExprTypes()
             if self.use_extensions and cmodel_available:
-                tmp = cmodel.prep_for_repn(obj.expr, expr_types)
+                tmp = cmodel.prep_for_repn(obj.expr, self._expr_types)
             else:
                 tmp = collect_vars_and_named_exprs(obj.expr)
             named_exprs, variables, fixed_vars, external_functions = tmp
