@@ -594,6 +594,7 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
                 results.solver.user_time = float(tokens[3])
             elif len(tokens) >= 4 and tokens[0] == "Deterministic" and tokens[1] == "time" and tokens[2] == "=":
                 results.solver.deterministic_time = float(tokens[3])
+                results.solver.ticks_per_second = float(tokens[5][1:])
             elif len(tokens) >= 4 and tokens[0] == "Primal" and tokens[1] == "simplex" and tokens[3] == "Optimal:":
                 results.solver.termination_condition = TerminationCondition.optimal
                 results.solver.termination_message = ' '.join(tokens)

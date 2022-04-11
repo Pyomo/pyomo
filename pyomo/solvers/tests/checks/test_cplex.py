@@ -442,6 +442,7 @@ CPLEX>"""
             results.solver.termination_condition, TerminationCondition.maxTimeLimit
         )
         self.assertEqual(results.solver.deterministic_time, 100.00)
+        self.assertEqual(results.solver.ticks_per_second, 10.0)
 
     def test_log_file_shows_max_deterministic_time_limit_exceeded_with_feasible_solution(self):
         log_file_text = """
@@ -461,6 +462,8 @@ CPLEX>"""
             results.solver.termination_condition, TerminationCondition.maxTimeLimit
         )
         self.assertEqual(results.solver.deterministic_time, 100.00)
+        self.assertEqual(results.solver.ticks_per_second, 10.0)
+
 
     def test_log_file_shows_warm_start_objective_value(self):
         log_file_text = """
