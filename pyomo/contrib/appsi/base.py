@@ -1,13 +1,13 @@
 import abc
 import enum
-from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
+from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple, MutableMapping
 from pyomo.core.base.constraint import _GeneralConstraintData, Constraint
 from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
+from pyomo.common.collections import ComponentMap
 from collections import OrderedDict
 from .utils.get_objective import get_objective
 from .utils.collect_vars_and_named_exprs import collect_vars_and_named_exprs
@@ -16,15 +16,13 @@ from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
 from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
 from pyomo.common.factory import Factory
-import logging
 import os
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import Solution as LegacySolution, SolutionStatus as LegacySolutionStatus
 from pyomo.opt.results.solver import TerminationCondition as LegacyTerminationCondition, SolverStatus as LegacySolverStatus
-from pyomo.core.kernel.objective import minimize, maximize
+from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
 import weakref
-from io import StringIO
 from .cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numvalue import NumericConstant
@@ -158,7 +156,6 @@ class SolutionLoaderBase(abc.ABC):
         for v, val in self.get_primals(vars_to_load=vars_to_load).items():
             v.set_value(val, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
-        
 
     @abc.abstractmethod
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
@@ -231,7 +228,13 @@ class SolutionLoaderBase(abc.ABC):
 
 
 class SolutionLoader(SolutionLoaderBase):
-    def __init__(self, primals, duals, slacks, reduced_costs):
+    def __init__(
+        self,
+        primals: Optional[MutableMapping],
+        duals: Optional[MutableMapping],
+        slacks: Optional[MutableMapping],
+        reduced_costs: Optional[MutableMapping]
+    ):
         """
         Parameters
         ----------
@@ -250,14 +253,26 @@ class SolutionLoader(SolutionLoaderBase):
         self._reduced_costs = reduced_costs
 
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
+        if self._primals is None:
+            raise RuntimeError(
+                'Solution loader does not currently have a valid solution. Please '
+                'check the termination condition.'
+            )
         if vars_to_load is None:
             return ComponentMap(self._primals.values())
         else:
             primals = ComponentMap()
             for v in vars_to_load:
                 primals[v] = self._primals[id(v)][1]
+            return primals
 
     def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
+        if self._duals is None:
+            raise RuntimeError(
+                'Solution loader does not currently have valid duals. Please '
+                'check the termination condition and ensure the solver returns duals '
+                'for the given problem type.'
+            )
         if cons_to_load is None:
             duals = dict(self._duals)
         else:
@@ -267,6 +282,12 @@ class SolutionLoader(SolutionLoaderBase):
         return duals
 
     def get_slacks(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
+        if self._slacks is None:
+            raise RuntimeError(
+                'Solution loader does not currently have valid slacks. Please '
+                'check the termination condition and ensure the solver returns slacks '
+                'for the given problem type.'
+            )
         if cons_to_load is None:
             slacks = dict(self._slacks)
         else:
@@ -276,6 +297,12 @@ class SolutionLoader(SolutionLoaderBase):
         return slacks
 
     def get_reduced_costs(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
+        if self._reduced_costs is None:
+            raise RuntimeError(
+                'Solution loader does not currently have valid reduced costs. Please '
+                'check the termination condition and ensure the solver returns reduced '
+                'costs for the given problem type.'
+            )
         if vars_to_load is None:
             rc = ComponentMap(self._reduced_costs.values())
         else:
@@ -326,7 +353,7 @@ class Results(object):
         ...     print('The following termination condition was encountered: ', results.termination_condition) #doctest:+SKIP
     """
     def __init__(self):
-        self.solution_loader: Optional[SolutionLoaderBase] = None
+        self.solution_loader: SolutionLoaderBase = SolutionLoader(None, None, None, None)
         self.termination_condition: TerminationCondition = TerminationCondition.unknown
         self.best_feasible_objective: Optional[float] = None
         self.best_objective_bound: Optional[float] = None

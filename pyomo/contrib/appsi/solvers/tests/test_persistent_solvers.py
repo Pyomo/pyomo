@@ -400,6 +400,13 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.y.value, None)
         self.assertTrue(res.best_feasible_objective is None)
 
+        with self.assertRaisesRegex(RuntimeError, '.*does not currently have a valid solution.*'):
+            res.solution_loader.load_vars()
+        with self.assertRaisesRegex(RuntimeError, '.*does not currently have valid duals.*'):
+            res.solution_loader.get_duals()
+        with self.assertRaisesRegex(RuntimeError, '.*does not currently have valid reduced costs.*'):
+            res.solution_loader.get_reduced_costs()
+
     @parameterized.expand(input=all_solvers)
     def test_duals(self, name: str, opt_class: Type[PersistentSolver]):
         opt: PersistentSolver = opt_class()
