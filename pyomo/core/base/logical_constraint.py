@@ -18,13 +18,13 @@ from weakref import ref as weakref_ref
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
+from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
 from pyomo.core.expr.numvalue import native_types, native_logical_types
-from pyomo.core.base.component import (
-    ActiveComponentData, ModelComponentFactory,
-)
+from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import \
     (ActiveIndexedComponent,
      UnindexedComponent_set,
@@ -71,6 +71,7 @@ class _LogicalConstraintData(ActiveComponentData):
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
             else None
+        self._index = NOTSET
         self._active = True
 
     #
@@ -123,11 +124,12 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
         #
         # These lines represent in-lining of the
         # following constructors:
-        #   - _LogicalStatmentData,
+        #   - _LogicalConstraintData,
         #   - ActiveComponentData
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
             else None
+        self._index = NOTSET
         self._active = True
 
         self._expr = None
@@ -217,7 +219,7 @@ class LogicalConstraint(ActiveIndexedComponent):
             A boolean that is true if this component has been constructed
         _data
             A dictionary from the index set to component data objects
-        _index
+        _index_set
             The set of valid indices
         _implicit_subsets
             A tuple of set objects that represents the index set
@@ -327,7 +329,7 @@ class LogicalConstraint(ActiveIndexedComponent):
                     "of a logical constraint with a single expression" %
                     (self.name,))
 
-            for ndx in self._index:
+            for ndx in self._index_set:
                 try:
                     tmp = apply_indexed_rule(self,
                                              _init_rule,
@@ -352,7 +354,7 @@ class LogicalConstraint(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active),
              ],
             self.items(),
@@ -424,6 +426,7 @@ class ScalarLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
         _GeneralLogicalConstraintData.__init__(
             self, component=self, expr=None)
         LogicalConstraint.__init__(self, *args, **kwds)
+        self._index = UnindexedComponent_index
 
     #
     # Since this class derives from Component and
@@ -570,7 +573,7 @@ class LogicalConstraintList(IndexedLogicalConstraint):
             _generator = _init_rule
         if _generator is None:
             while True:
-                val = len(self._index) + 1
+                val = len(self._index_set) + 1
                 if generate_debug_messages:
                     logger.debug(
                         "   Constructing logical constraint index " + str(val))
@@ -601,7 +604,7 @@ class LogicalConstraintList(IndexedLogicalConstraint):
 
     def add(self, expr):
         """Add a logical constraint with an implicit index."""
-        next_idx = len(self._index) + 1
-        self._index.add(next_idx)
+        next_idx = len(self._index_set) + 1
+        self._index_set.add(next_idx)
         return self.__setitem__(next_idx, expr)
 

@@ -24,7 +24,7 @@ def instance2dat(instance, output_filename):
         if (set_object.initialize is not None) and (type(set_object.initialize) is types.FunctionType):
             continue
 
-        if (set_name.find("_index") == -1) and (set_name.find("_domain") == -1):
+        if (set_name.find("_index_set") == -1) and (set_name.find("_domain") == -1):
             if set_object.dim() == 0:
                 if len(set_object) == 0:
                     continue

@@ -30,8 +30,9 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import (
-    Component, ActiveComponentData, ModelComponentFactory,
+    Component, ActiveComponentData, ModelComponentFactory
 )
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.set import GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
@@ -799,11 +800,11 @@ class _BlockData(ActiveComponentData):
                 if tset.parent_component().parent_block() is None \
                         and not isinstance(tset.parent_component(), GlobalSetBase):
                     self.add_component("%s_index_%d" % (val.local_name, ctr), tset)
-        if getattr(val, '_index', None) is not None \
-                and isinstance(val._index, _SetDataBase) \
-                and val._index.parent_component().parent_block() is None \
-                and not isinstance(val._index.parent_component(), GlobalSetBase):
-            self.add_component("%s_index" % (val.local_name,), val._index.parent_component())
+        if getattr(val, '_index_set', None) is not None \
+                and isinstance(val._index_set, _SetDataBase) \
+                and val._index_set.parent_component().parent_block() is None \
+                and not isinstance(val._index_set.parent_component(), GlobalSetBase):
+            self.add_component("%s_index" % (val.local_name,), val._index_set.parent_component())
         if getattr(val, 'initialize', None) is not None \
                 and isinstance(val.initialize, _SetDataBase) \
                 and val.initialize.parent_component().parent_block() is None \
@@ -2004,7 +2005,7 @@ class Block(ActiveIndexedComponent):
     def _pprint(self):
         _attrs = [
             ("Size", len(self)),
-            ("Index", self._index if self.is_indexed() else None),
+            ("Index", self._index_set if self.is_indexed() else None),
             ('Active', self.active),
         ]
         # HACK: suppress the top-level block header (for historical reasons)
@@ -2039,6 +2040,7 @@ class ScalarBlock(_BlockData, Block):
         # get/setitem_when_not_present so that we do not (implicitly)
         # trigger the Block rule
         self._data[None] = self
+        self._index = UnindexedComponent_index
 
     # We want scalar Blocks to pick up the Block display method
     display = Block.display

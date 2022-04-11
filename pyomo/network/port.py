@@ -17,12 +17,13 @@ from pyomo.common.collections import ComponentMap
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import unique_component_name
+from pyomo.common.modeling import unique_component_name, NOTSET
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import \
     IndexedComponent, UnindexedComponent_set
 from pyomo.core.base.misc import apply_indexed_rule
@@ -55,6 +56,7 @@ class _PortData(ComponentData):
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NOTSET
 
         self.vars = {}
         self._arcs = []
@@ -344,6 +346,7 @@ class Port(IndexedComponent):
     def _getitem_when_not_present(self, idx):
         """Returns the default component data value."""
         tmp = self._data[idx] = _PortData(component=self)
+        tmp._index = idx
         return tmp
 
     def construct(self, data=None):
@@ -359,7 +362,7 @@ class Port(IndexedComponent):
 
         # Construct _PortData objects for all index values
         if self.is_indexed():
-            self._initialize_members(self._index)
+            self._initialize_members(self._index_set)
         else:
             self._data[None] = self
             self._initialize_members([None])
@@ -424,7 +427,7 @@ class Port(IndexedComponent):
                 yield _k, _len, str(_v)
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None)],
+             ("Index", self._index_set if self.is_indexed() else None)],
              self._data.items(),
              ( "Name", "Size", "Variable"),
              _line_generator)
@@ -729,6 +732,7 @@ class ScalarPort(Port, _PortData):
     def __init__(self, *args, **kwd):
         _PortData.__init__(self, component=self)
         Port.__init__(self, *args, **kwd)
+        self._index = UnindexedComponent_index
 
 
 class SimplePort(metaclass=RenamedClass):

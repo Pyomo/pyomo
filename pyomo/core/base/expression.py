@@ -22,6 +22,7 @@ from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     IndexedComponent,
     UnindexedComponent_set, )
@@ -228,6 +229,7 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
         # Inlining ComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NOTSET
 
 
 @ModelComponentFactory.register(
@@ -280,7 +282,7 @@ class Expression(IndexedComponent):
         return (
             [('Size', len(self)),
              ('Index', None if (not self.is_indexed())
-                  else self._index)
+                  else self._index_set)
              ],
             self.items(),
             ("Expression",),
@@ -373,6 +375,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     def __init__(self, *args, **kwds):
         _GeneralExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)
+        self._index = UnindexedComponent_index
 
     #
     # Since this class derives from Component and
@@ -467,7 +470,7 @@ class IndexedExpression(Expression):
 
     #
     # Leaving this method for backward compatibility reasons
-    # Note: It allows adding members outside of self._index.
+    # Note: It allows adding members outside of self._index_set.
     #       This has always been the case. Not sure there is
     #       any reason to maintain a reference to a separate
     #       index set if we allow this.
