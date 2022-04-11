@@ -259,6 +259,13 @@ jobs:
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
+        # HACK: Remove problem packages on conda+Linux
+        if test "${{matrix.TARGET}}" == linux; then
+            WORDSTOREMOVE="casadi numdifftools pint"
+            for WORD in $WORDSTOREMOVE; do
+                PYOMO_DEPENDENCIES=${PYOMO_DEPENDENCIES//$WORD/}
+            done
+        fi
         CONDA_DEPENDENCIES=`echo $PYOMO_DEPENDENCIES | tr ' ' '\n' \
             | grep -Ev ${PYPI_ONLY} | tr '\n' ' '`
         PYPI_DEPENDENCIES=`echo $PYOMO_DEPENDENCIES | tr ' ' '\n' \
@@ -331,12 +338,12 @@ jobs:
             URL=${URL}/releases/download/$VER
             if test "${{matrix.TARGET}}" == linux; then
                 curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-ubuntu2004-64.tar.gz \
+                    -L $URL/idaes-solvers-ubuntu2004-x86_64.tar.gz \
                     > $IPOPT_TAR
             else
                 curl --max-time 150 --retry 8 \
-                    -L $URL/idaes-solvers-windows-64.tar.gz \
-                    $URL/idaes-lib-windows-64.tar.gz > $IPOPT_TAR
+                    -L $URL/idaes-solvers-windows-x86_64.tar.gz \
+                    $URL/idaes-lib-windows-x86_64.tar.gz > $IPOPT_TAR
             fi
         fi
         cd $IPOPT_DIR
