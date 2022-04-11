@@ -15,6 +15,7 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
+from pyomo.core.expr.logical_expr import EqualityExpression
 from pyomo.util.subsystems import create_subsystem_block
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import scipy_available
@@ -149,7 +150,13 @@ class IncidenceGraphInterface(object):
     model without constructing multiple PyomoNLPs.
     """
 
-    def __init__(self, model=None, active=True, include_fixed=False):
+    def __init__(
+            self,
+            model=None,
+            active=True,
+            include_fixed=False,
+            include_inequality=True,
+            ):
         """
         """
         # If the user gives us a model or an NLP, we assume they want us
@@ -180,12 +187,17 @@ class IncidenceGraphInterface(object):
                     (var, idx) for idx, var in enumerate(self.variables))
             self.con_index_map = ComponentMap(
                     (con, idx) for idx, con in enumerate(self.constraints))
-            self.incidence_matrix = nlp.evaluate_jacobian_eq()
+            if include_inequality:
+                self.incidence_matrix = nlp.evaluate_jacobian()
+            else:
+                self.incidence_matrix = nlp.evaluate_jacobian_eq()
         elif isinstance(model, Block):
             self.cached = IncidenceMatrixType.STRUCTURAL
-            self.constraints = list(
+            self.constraints = [
+                con for con in
                 model.component_data_objects(Constraint, active=active)
-            )
+                if include_inequality or isinstance(con.expr, EqualityExpression)
+            ]
             self.variables = list(
                 _generate_variables_in_constraints(
                     self.constraints, include_fixed=include_fixed
