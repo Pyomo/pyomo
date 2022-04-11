@@ -135,7 +135,7 @@ class ExternalFunction(Component):
         # FIXME: We must declare an _index attribute because
         # block._add_temporary_set assumes ALL components define an
         # index.  Sigh.
-        self._index = None
+        self._index_set = None
 
     def get_units(self):
         """Return the units for this ExternalFunction"""

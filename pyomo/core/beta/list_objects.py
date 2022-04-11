@@ -98,6 +98,7 @@ class ComponentList(MutableSequence):
                     self._active |= getattr(item, '_active', True)
                 self._data[i]._component = None
                 self._data[i] = item
+                item._index = i
                 return
             elif self._data[i] is item:
                 # a very special case that makes sense to handle
@@ -133,6 +134,7 @@ class ComponentList(MutableSequence):
                 if hasattr(self, "_active"):
                     self._active |= getattr(item, '_active', True)
                 self._data.insert(i, item)
+                item._index = i
                 return
             # see note about allowing components to live in more than
             # one container

@@ -1192,7 +1192,7 @@ class Piecewise(Block):
                 logger.debug("  Constructing single Piecewise component (index=None)")
             self.add(None, _is_indexed=is_indexed)
         else:
-            for index in self._index:
+            for index in self._index_set:
                 if generate_debug_messages:
                     logger.debug("  Constructing Piecewise index "+str(index))
                 self.add(index, _is_indexed=is_indexed)

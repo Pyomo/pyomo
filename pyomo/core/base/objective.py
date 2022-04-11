@@ -22,13 +22,13 @@ from weakref import ref as weakref_ref
 from typing import overload
 
 from pyomo.common.log import is_debug_set
+from pyomo.common.modeling import NOTSET
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.expr.numvalue import value
-from pyomo.core.base.component import (
-    ActiveComponentData, ModelComponentFactory,
-)
+from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent, UnindexedComponent_set, rule_wrapper,
 )
@@ -150,6 +150,7 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
         # Inlining ActiveComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NOTSET
         self._active = True
         self._sense = sense
 
@@ -364,7 +365,7 @@ class Objective(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active)
              ],
             self._data.items(),
@@ -385,7 +386,7 @@ class Objective(ActiveIndexedComponent):
         ostream.write(prefix+self.local_name+" : ")
         ostream.write(", ".join("%s=%s" % (k,v) for k,v in [
                     ("Size", len(self)),
-                    ("Index", self._index if self.is_indexed() else None),
+                    ("Index", self._index_set if self.is_indexed() else None),
                     ("Active", self.active),
                     ] ))
 
@@ -405,6 +406,7 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
     def __init__(self, *args, **kwd):
         _GeneralObjectiveData.__init__(self, expr=None, component=self)
         Objective.__init__(self, *args, **kwd)
+        self._index = UnindexedComponent_index
 
     #
     # Since this class derives from Component and
@@ -590,8 +592,8 @@ class ObjectiveList(IndexedObjective):
 
     def add(self, expr, sense=minimize):
         """Add an objective to the list."""
-        next_idx = len(self._index) + self._starting_index
-        self._index.add(next_idx)
+        next_idx = len(self._index_set) + self._starting_index
+        self._index_set.add(next_idx)
         ans = self.__setitem__(next_idx, expr)
         if ans is not None:
             if sense not in {minimize, maximize}:
