@@ -4,7 +4,7 @@ Functions for handling the construction and solving of the GRCS master problem v
 from pyomo.core.base import (ConcreteModel, Block,
                              Var,
                              Objective, Constraint,
-                             ConstraintList)
+                             ConstraintList, SortComponents)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
 from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
@@ -67,9 +67,12 @@ def get_state_vars(model, iterations):
         for blk in model.scenarios[itn, :]:
             ssv_set = ComponentSet(blk.util.second_stage_variables)
             state_vars.extend(
-                    v for v in blk.component_data_objects(Var,
-                                                          active=True,
-                                                          descend_into=True)
+                    v for v in blk.component_data_objects(
+                        Var,
+                        active=True,
+                        descend_into=True,
+                        sort=SortComponents.deterministic,  # guarantee order
+                    )
                     if v not in fsv_set and v not in ssv_set
             )
         iter_state_var_map[itn] = state_vars
@@ -115,16 +118,12 @@ def construct_master_feasibility_problem(model_data, config):
 
                 # update var value for initialization
                 # fine since DR eqns are f(d) - z == 0 (not z - f(d) == 0)
-                ssv_in_dr_eq.set_value(
-                        value(replace_expressions(eq.body,
-                                                  {id(ssv_in_dr_eq): 0}))
-                )
+                ssv_in_dr_eq.set_value(0)
+                ssv_in_dr_eq.set_value(eq.body)
 
     # initialize state vars to previous master solution values
     if iteration != 0:
         stvar_map = get_state_vars(model, [iteration, iteration-1])
-        # is order of variables in each state vars list guaranteed to
-        # be the same across blocks? if not, how to address that?
         for current, prev in zip(stvar_map[iteration], stvar_map[iteration-1]):
             current.set_value(prev)
 
