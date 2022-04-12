@@ -20,6 +20,7 @@ from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (IndexedComponent,
                                                UnindexedComponent_set)
 from pyomo.core.base.misc import apply_indexed_rule
@@ -82,6 +83,7 @@ class _BooleanVarData(ComponentData, BooleanValue):
     def __init__(self, component=None):
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NOTSET
 
     def is_fixed(self):
         """Returns True if this variable is fixed, otherwise returns False."""
@@ -204,6 +206,7 @@ class _GeneralBooleanVarData(_BooleanVarData):
         #   - BooleanValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NOTSET
         self._value = None
         self.fixed = False
         self._stale = 0 # True
@@ -392,11 +395,16 @@ class BooleanVar(IndexedComponent):
             # Calling dict.update((...) for ...) is roughly
             # 30% slower
             self_weakref = weakref_ref(self)
-            for ndx in self._index:
+            for ndx in self._index_set:
                 cdata = self._ComponentDataClass(component=None)
                 cdata._component = self_weakref
                 self._data[ndx] = cdata
-            self._initialize_members(self._index)
+                # NOTE: This is a special case where a key, value pair is added
+                # to the _data dictionary without calling
+                # _getitem_when_not_present, which is why we need to set the
+                # index here.
+                cdata._index = ndx
+            self._initialize_members(self._index_set)
         timer.report()
 
     def add(self, index):
@@ -414,7 +422,9 @@ class BooleanVar(IndexedComponent):
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
         self._initialize_members((index,))
+        obj._index = index
         return obj
+
     def _setitem_when_not_present(self, index, value):
         """Perform the fundamental component item creation and storage.
 
@@ -477,7 +487,7 @@ class BooleanVar(IndexedComponent):
             Print component information.
         """
         return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
+                  ("Index", self._index_set if self.is_indexed() else None),
                   ],
                  self._data.items(),
                  ( "Value","Fixed","Stale"),
@@ -494,6 +504,7 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
     def __init__(self, *args, **kwd):
         _GeneralBooleanVarData.__init__(self, component=self)
         BooleanVar.__init__(self, *args, **kwd)
+        self._index = UnindexedComponent_index
 
     """
     # Since this class derives from Component and Component.__getstate__
@@ -625,7 +636,7 @@ class BooleanVarList(IndexedBooleanVar):
         # then let _validate_index complain when we set the value.
         if self._value_init_value.__class__ is dict:
             for i in range(len(self._value_init_value)):
-                self._index.add(i + self._starting_index)
+                self._index_set.add(i + self._starting_index)
         super(BooleanVarList,self).construct(data)
         # Note that the current Var initializer silently ignores
         # initialization data that is not in the underlying index set.  To
@@ -638,8 +649,8 @@ class BooleanVarList(IndexedBooleanVar):
 
     def add(self):
         """Add a variable to this list."""
-        next_idx = len(self._index) + self._starting_index
-        self._index.add(next_idx)
+        next_idx = len(self._index_set) + self._starting_index
+        self._index_set.add(next_idx)
         return self[next_idx]
 
 

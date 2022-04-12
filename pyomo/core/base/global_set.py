@@ -88,3 +88,5 @@ class _UnindexedComponent_set(GlobalSetBase):
         # As this set only has a single element, it is implicitly "ordered"
         return True
 UnindexedComponent_set = _UnindexedComponent_set('UnindexedComponent_set')
+
+UnindexedComponent_index = next(iter(UnindexedComponent_set))

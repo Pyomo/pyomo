@@ -63,7 +63,7 @@ class BuildCheck(IndexedComponent):
                 raise ValueError("BuildCheck %r identified error" % self.name)
         else:
             # Indexed component
-            for index in self._index:
+            for index in self._index_set:
                 res = apply_indexed_rule(self, self._rule, self._parent(), index)
                 if not res:
                     raise ValueError("BuildCheck %r identified error with index %r" % (self.name, str(index)))

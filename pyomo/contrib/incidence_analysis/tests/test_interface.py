@@ -17,16 +17,16 @@ from pyomo.contrib.incidence_analysis.interface import (
     get_structural_incidence_matrix,
     get_numeric_incidence_matrix,
     get_incidence_graph,
-    )
+)
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
 from pyomo.contrib.incidence_analysis.triangularize import block_triangularize
 from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
     dulmage_mendelsohn,
-    )
+)
 from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
     make_gas_expansion_model,
     make_degenerate_solid_phase_model,
-        )
+)
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 if networkx_available:
@@ -64,7 +64,7 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
             model.F[i-1],
             model.rho[i],
             model.rho[i-1],
-            ])) for i in model.streams if i != model.streams.first())
+        ])) for i in model.streams if i != model.streams.first())
         csr_map.update((model.ebal[i], ComponentSet([
             model.F[i],
             model.F[i-1],
@@ -72,18 +72,18 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
             model.rho[i-1],
             model.T[i],
             model.T[i-1],
-            ])) for i in model.streams if i != model.streams.first())
+        ])) for i in model.streams if i != model.streams.first())
         csr_map.update((model.expansion[i], ComponentSet([
             model.rho[i],
             model.rho[i-1],
             model.P[i],
             model.P[i-1],
-            ])) for i in model.streams if i != model.streams.first())
+        ])) for i in model.streams if i != model.streams.first())
         csr_map.update((model.ideal_gas[i], ComponentSet([
             model.P[i],
             model.rho[i],
             model.T[i],
-            ])) for i in model.streams)
+        ])) for i in model.streams)
 
         # Map constraint and variable indices to the values of the derivatives
         # Note that the derivative values calculated here depend on the model's
@@ -113,14 +113,14 @@ class TestGasExpansionNumericIncidenceMatrix(unittest.TestCase):
 
                 j = var_idx_map[model.rho[s]]
                 deriv_lookup[i,j] = pyo.value(
-                        -m.gamma*(m.rho[s]/m.rho[s-1])**(m.gamma-1)/m.rho[s-1]
-                        )
+                    -m.gamma*(m.rho[s]/m.rho[s-1])**(m.gamma-1)/m.rho[s-1]
+                )
 
                 j = var_idx_map[model.rho[s-1]]
                 deriv_lookup[i,j] = pyo.value(
-                        -m.gamma*(m.rho[s]/m.rho[s-1])**(m.gamma-1) *
-                        (-m.rho[s]/m.rho[s-1]**2)
-                        )
+                    -m.gamma*(m.rho[s]/m.rho[s-1])**(m.gamma-1) *
+                    (-m.rho[s]/m.rho[s-1]**2)
+                )
 
                 # Energy balance:
                 i = con_idx_map[m.ebal[s]]
@@ -1119,6 +1119,48 @@ class TestExceptions(unittest.TestCase):
         igraph = IncidenceGraphInterface()
         with self.assertRaisesRegex(RuntimeError, "no incidence matrix"):
             igraph.remove_nodes([m.v1])
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+@unittest.skipUnless(AmplInterface.available(), "pynumero_ASL is not available")
+class TestIncludeInequality(unittest.TestCase):
+    def make_model_with_inequalities(self):
+        m = make_degenerate_solid_phase_model()
+
+        @m.Constraint()
+        def flow_bound(m):
+            return m.flow >= 0
+
+        @m.Constraint(m.components)
+        def flow_comp_bound(m, j):
+            return m.flow_comp[j] >= 0
+
+        return m
+
+    def test_dont_include_inequality_model(self):
+        m = self.make_model_with_inequalities()
+        igraph = IncidenceGraphInterface(m, include_inequality=False)
+        self.assertEqual(igraph.incidence_matrix.shape, (8, 8))
+
+    def test_include_inequality_model(self):
+        m = self.make_model_with_inequalities()
+        igraph = IncidenceGraphInterface(m, include_inequality=True)
+        self.assertEqual(igraph.incidence_matrix.shape, (12, 8))
+
+    def test_dont_include_inequality_nlp(self):
+        m = self.make_model_with_inequalities()
+        m._obj = pyo.Objective(expr=0)
+        nlp = PyomoNLP(m)
+        igraph = IncidenceGraphInterface(nlp, include_inequality=False)
+        self.assertEqual(igraph.incidence_matrix.shape, (8, 8))
+
+    def test_include_inequality_nlp(self):
+        m = self.make_model_with_inequalities()
+        m._obj = pyo.Objective(expr=0)
+        nlp = PyomoNLP(m)
+        igraph = IncidenceGraphInterface(nlp, include_inequality=True)
+        self.assertEqual(igraph.incidence_matrix.shape, (12, 8))
 
 
 if __name__ == "__main__":

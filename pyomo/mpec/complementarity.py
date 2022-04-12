@@ -17,6 +17,7 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numvalue import ZeroConstant, native_numeric_types, as_numeric
 from pyomo.core import Constraint, Var, Block, Set
 from pyomo.core.base.component import ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.initializer import (
@@ -265,7 +266,7 @@ Error thrown for Complementarity "%s".""" % ( b.name, ) )
 
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active),
              ],
             self._data.items(),
@@ -280,6 +281,7 @@ class ScalarComplementarity(_ComplementarityData, Complementarity):
         _ComplementarityData.__init__(self, self)
         Complementarity.__init__(self, *args, **kwds)
         self._data[None] = self
+        self._index = UnindexedComponent_index
 
 
 class SimpleComplementarity(metaclass=RenamedClass):
@@ -326,7 +328,7 @@ class ComplementarityList(IndexedComplementarity):
         Add a complementarity condition with an implicit index.
         """
         self._nconditions += 1
-        self._index.add(self._nconditions)
+        self._index_set.add(self._nconditions)
         return Complementarity.add(self, self._nconditions, expr)
 
     def construct(self, data=None):

@@ -19,7 +19,7 @@ from weakref import ref as weakref_ref
 from pyomo.common.collections import Sequence
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import NoArgumentGiven, NOTSET
+from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
@@ -27,6 +27,7 @@ from pyomo.core.expr.numvalue import (
     NumericValue, value, is_potentially_variable, native_numeric_types,
 )
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
@@ -295,6 +296,7 @@ class _GeneralVarData(_VarData):
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NOTSET
         self._value = None
         #
         # The type of the lower and upper bound attributes can either be
@@ -318,6 +320,7 @@ class _GeneralVarData(_VarData):
         self._domain = src._domain
         self._fixed = src._fixed
         self._stale = src._stale
+        self._index = src._index
         return self
 
     def __getstate__(self):
@@ -745,6 +748,11 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                 # Initialize all the component datas with the common data
                 for index in self.index_set():
                     self._data[index] = self._ComponentDataClass.copy(ref)
+                    # NOTE: This is a special case where a key, value pair is
+                    # added to the _data dictionary without calling
+                    # _getitem_when_not_present, which is why we need to set the
+                    # index here.
+                    self._data[index]._index = index
                 # Now go back and initialize any index-specific data
                 block = self.parent_block()
                 if call_domain_rule:
@@ -795,6 +803,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             obj.lower, obj.upper = self._rule_bounds(parent, index)
         if self._rule_init is not None:
             obj.set_value(self._rule_init(parent, index))
+        obj._index = index
         return obj
 
     #
@@ -817,7 +826,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         """Print component information."""
         headers = [
             ("Size", len(self)),
-            ("Index", self._index if self.is_indexed() else None),
+            ("Index", self._index_set if self.is_indexed() else None),
         ]
         if self._units is not None:
             headers.append(('Units', str(self._units)))
@@ -840,6 +849,7 @@ class ScalarVar(_GeneralVarData, Var):
     def __init__(self, *args, **kwd):
         _GeneralVarData.__init__(self, component=self)
         Var.__init__(self, *args, **kwd)
+        self._index = UnindexedComponent_index
 
     # Since this class derives from Component and Component.__getstate__
     # just packs up the entire __dict__ into the state dict, we do not
@@ -950,11 +960,11 @@ class VarList(IndexedVar):
         # then let _validate_index complain when we set the value.
         if self._rule_init is not None and self._rule_init.contains_indices():
             for i, idx in enumerate(self._rule_init.indices()):
-                self._index.add(i + self._starting_index)
+                self._index_set.add(i + self._starting_index)
         super(VarList,self).construct(data)
 
     def add(self):
         """Add a variable to this list."""
-        next_idx = len(self._index) + self._starting_index
-        self._index.add(next_idx)
+        next_idx = len(self._index_set) + self._starting_index
+        self._index_set.add(next_idx)
         return self[next_idx]

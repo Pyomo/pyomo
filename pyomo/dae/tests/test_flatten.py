@@ -586,13 +586,13 @@ class TestFlatten(TestCategorize):
 
         ref1 = Reference(m.v_2n[:,('c',3)])
 
-        ref_set = ref1._index._ref # _index is a _ReferenceSet
+        ref_set = ref1.index_set()._ref # _index is a _ReferenceSet
 
         #next(ref_set._get_iter(ref_set._slice, ('a',1)))
         # ^ This raises a somewhat cryptic error message.
         # _ReferenceSet.__contains__ seems to be the culprit,
         # which is called in validate_index for every __getitem__.
-        self.assertNotIn(('a',1), ref1._index._ref)
+        self.assertNotIn(('a',1), ref_set)
         # ^ This does not seem to behave as expected...
         # Reason is incompatibility with flatten==False.
 

@@ -230,7 +230,7 @@ class IndexedComponent(Component):
     """
     This is the base class for all indexed modeling components.
     This class stores a dictionary, self._data, that maps indices
-    to component data objects.  The object self._index defines valid
+    to component data objects.  The object self._index_set defines valid
     keys for this dictionary, and the dictionary keys may be a
     strict subset.
 
@@ -252,7 +252,7 @@ class IndexedComponent(Component):
     Private class attributes:
         _data               A dictionary from the index set to
                                 component data objects
-        _index              The set of valid indices
+        _index_set              The set of valid indices
         _implicit_subsets   A temporary data element that stores
                                 sets that are transfered to the model
     """
@@ -263,7 +263,7 @@ class IndexedComponent(Component):
     # If an index is supplied for which there is not a _data entry
     # (specifically, in a get call), then this flag determines whether
     # a check is performed to see if the input index is in the
-    # index set _index. This is extremely expensive, and so this flag
+    # index set _index_set. This is extremely expensive, and so this flag
     # is provided to disable that feature globally.
     #
     _DEFAULT_INDEX_CHECKING_ENABLED = True
@@ -282,13 +282,13 @@ class IndexedComponent(Component):
             # If no indexing sets are provided, generate a dummy index
             #
             self._implicit_subsets = None
-            self._index = UnindexedComponent_set
+            self._index_set = UnindexedComponent_set
         elif len(args) == 1:
             #
             # If a single indexing set is provided, just process it.
             #
             self._implicit_subsets = None
-            self._index = process_setarg(args[0])
+            self._index_set = process_setarg(args[0])
         else:
             #
             # If multiple indexing sets are provided, process them all,
@@ -307,26 +307,26 @@ class IndexedComponent(Component):
             #
             tmp = [process_setarg(x) for x in args]
             self._implicit_subsets = tmp
-            self._index = tmp[0].cross(*tmp[1:])
+            self._index_set = tmp[0].cross(*tmp[1:])
 
     def __getstate__(self):
         # Special processing of getstate so that we never copy the
         # UnindexedComponent_set set
         state = super(IndexedComponent, self).__getstate__()
         if not self.is_indexed():
-            state['_index'] = None
+            state['_index_set'] = None
         return state
 
     def __setstate__(self, state):
         # Special processing of setstate so that we never copy the
         # UnindexedComponent_set set
-        if state['_index'] is None:
-            state['_index'] = UnindexedComponent_set
+        if state['_index_set'] is None:
+            state['_index_set'] = UnindexedComponent_set
         super(IndexedComponent, self).__setstate__(state)
 
     def to_dense_data(self):
         """TODO"""
-        for idx in self._index:
+        for idx in self._index_set:
             if idx in self._data:
                 continue
             try:
@@ -346,11 +346,11 @@ class IndexedComponent(Component):
 
     def index_set(self):
         """Return the index set"""
-        return self._index
+        return self._index_set
 
     def is_indexed(self):
         """Return true if this component is indexed"""
-        return self._index is not UnindexedComponent_set
+        return self._index_set is not UnindexedComponent_set
 
     def is_reference(self):
         """Return True if this component is a reference, where
@@ -363,7 +363,7 @@ class IndexedComponent(Component):
         """Return the dimension of the index"""
         if not self.is_indexed():
             return 0
-        return self._index.dimen
+        return self._index_set.dimen
 
     def __len__(self):
         """
@@ -402,7 +402,8 @@ class IndexedComponent(Component):
 
         """
         sort_needed = ordered
-        if hasattr(self._index, 'isfinite') and not self._index.isfinite():
+        if hasattr(self._index_set, 'isfinite') and not \
+           self._index_set.isfinite():
             #
             # If the index set is virtual (e.g., Any) then return the
             # data iterator.  Note that since we cannot check the length
@@ -412,16 +413,17 @@ class IndexedComponent(Component):
             ans = self._data.__iter__()
         elif self.is_reference():
             ans = self._data.__iter__()
-        elif len(self) == len(self._index):
+        elif len(self) == len(self._index_set):
             #
             # If the data is dense then return the index iterator.
             #
-            ans = self._index.__iter__()
-            if ordered and self._index.isordered():
+            ans = self._index_set.__iter__()
+            if ordered and self._index_set.isordered():
                 # As this iterator is ordered, we do not need to sort it
                 sort_needed = False
         else:
-            if not self._data and self._index and PyomoOptions.paranoia_level:
+            if not self._data and self._index_set and \
+               PyomoOptions.paranoia_level:
                 logger.warning(
 """Iterating over a Component (%s)
 defined by a non-empty concrete set before any data objects have
@@ -442,8 +444,8 @@ You can silence this warning by one of three ways:
        where it is empty.
 """ % (self.name,) )
 
-            if not hasattr(self._index, 'isordered') or \
-               not self._index.isordered():
+            if not hasattr(self._index_set, 'isordered') or \
+               not self._index_set.isordered():
                 #
                 # If the index set is not ordered, then return the
                 # data iterator.  This is in an arbitrary order, which is
@@ -459,7 +461,7 @@ You can silence this warning by one of three ways:
                 # small number of indices.  However, this provides a
                 # consistent ordering that the user expects.
                 #
-                ans = filter(self._data.__contains__, self._index)
+                ans = filter(self._data.__contains__, self._index_set)
                 # As the iterator is ordered, we do not need to sort it
                 sort_needed = False
         if sort_needed:
@@ -739,7 +741,7 @@ You can silence this warning by one of three ways:
 
         # This is only called through __{get,set,del}item__, which has
         # already trapped unhashable objects.
-        validated_idx = self._index.get(idx, _NotFound)
+        validated_idx = self._index_set.get(idx, _NotFound)
         if validated_idx is not _NotFound:
             # If the index is in the underlying index set, then return it
             #  Note: This check is potentially expensive (e.g., when the
@@ -759,7 +761,7 @@ You can silence this warning by one of three ways:
                 idx = normalized_idx
                 if idx in self._data:
                     return idx
-                if idx in self._index:
+                if idx in self._index_set:
                     return idx
         # There is the chance that the index contains an Ellipsis,
         # so we should generate a slicer
@@ -979,7 +981,7 @@ value() function.""" % ( self.name, i ))
         should override this method.
 
         Implementations may assume that the index has already been
-        validated and is a legitimate entry in the _data dict.
+        validated and is a legitimate entry to add to the _data dict.
         """
         # If the value is "Skip" do not add anything
         if value is IndexedComponent.Skip:
@@ -991,6 +993,7 @@ value() function.""" % ( self.name, i ))
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
+        obj._index = index
         try:
             if value is not _NotSpecified:
                 obj.set_value(value)
@@ -1016,7 +1019,7 @@ value() function.""" % ( self.name, i ))
     def _pprint(self):
         """Print component information."""
         return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
+                  ("Index", self._index_set if self.is_indexed() else None),
                   ],
                  self._data.items(),
                  ( "Object",),
