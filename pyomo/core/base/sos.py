@@ -17,9 +17,8 @@ from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.misc import apply_indexed_rule
-from pyomo.core.base.component import (
-    ActiveComponentData, ModelComponentFactory
-)
+from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     ActiveIndexedComponent, UnindexedComponent_set
 )
@@ -272,7 +271,7 @@ class SOSConstraint(ActiveIndexedComponent):
         else:
             _self_rule = self._rule
             _self_parent = self._parent()
-            for index in self._index:
+            for index in self._index_set:
                 try:
                     tmp = apply_indexed_rule(self, _self_rule, _self_parent, index)
                 except Exception:
@@ -323,7 +322,7 @@ class SOSConstraint(ActiveIndexedComponent):
             ostream.write("  ")
         ostream.write("\tSize="+str(len(self._data.keys()))+' ')
         if self.is_indexed():
-            ostream.write("\tIndex= "+self._index.name+'\n')
+            ostream.write("\tIndex= "+self._index_set.name+'\n')
         else:
             ostream.write("\n")
         for val in self._data:
@@ -347,6 +346,7 @@ class ScalarSOSConstraint(SOSConstraint, _SOSConstraintData):
     def __init__(self, *args, **kwd):
         _SOSConstraintData.__init__(self, self)
         SOSConstraint.__init__(self, *args, **kwd)
+        self._index = UnindexedComponent_index
 
 
 class SimpleSOSConstraint(metaclass=RenamedClass):

@@ -327,7 +327,7 @@ class Test(unittest.TestCase):
         for c in ('x', 'y', 'z'):
             for n in ('1', '2', '3', '4'):
                 var = transformed.__getattribute__(c+n)
-                for ndx in var._index:
+                for ndx in var.index_set():
                     self.assertTrue(self.nonnegativeBounds(var[ndx]))
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")

@@ -281,14 +281,9 @@ def _diff_abs(node, val_dict, der_dict):
     arg = node.args[0]
     der = der_dict[node]
     val = val_dict[arg]
-    if not is_constant(val):
-        raise DifferentiationException('Cannot perform symbolic differentiation of abs(x). Please use numeric differentiation')
-    if val == 0:
+    if is_constant(val) and val == 0:
         raise DifferentiationException('Cannot differentiate abs(x) at x=0')
-    elif val < 0:
-        der_dict[arg] -= der
-    else:
-        der_dict[arg] += der
+    der_dict[arg] += der * val / abs(val)
 
 
 _unary_map = dict()

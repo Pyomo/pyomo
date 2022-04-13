@@ -55,7 +55,7 @@ class _MatrixConstraintData(_ConstraintData):
         _index          The row index into the main coefficient matrix
     """
 
-    __slots__ = ('_index',)
+    __slots__ = ()
 
     # the super secret flag that makes the writers
     # handle _MatrixConstraintData objects more efficiently
@@ -119,7 +119,6 @@ class _MatrixConstraintData(_ConstraintData):
         This method must be defined because this class uses slots.
         """
         result = super(_MatrixConstraintData, self).__getstate__()
-        result['_index'] = self._index
         return result
 
     # Since this class requires no special processing of the state

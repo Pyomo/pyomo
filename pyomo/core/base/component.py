@@ -15,13 +15,15 @@ from pickle import PickleError
 from weakref import ref as weakref_ref
 
 import pyomo.common
-from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.deprecation import (
+    deprecated, deprecation_warning, relocated_module_attribute)
 from pyomo.common.factory import Factory
 from pyomo.common.formatting import tabular_writer, StreamIndenter
 from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.base.component_namer import name_repr, index_repr
+from pyomo.core.base.global_set import UnindexedComponent_index
 
 logger = logging.getLogger('pyomo.core')
 
@@ -556,11 +558,6 @@ class Component(_ComponentBase):
         fully_qualified: bool
             Generate full name from nested block names
 
-        name_buffer: dict
-            A dictionary that caches encountered names and indices.
-            Providing a ``name_buffer`` can significantly speed up
-            iterative name generation
-
         relative_to: Block
             Generate fully_qualified names reletive to the specified block.
         """
@@ -584,6 +581,13 @@ class Component(_ComponentBase):
             # add quotes or otherwise escape the string.
             ans = local_name
         if name_buffer is not None:
+            deprecation_warning(
+                "The 'name_buffer' argument to getname is deprecated. "
+                "The functionality is no longer necessary since getting names "
+                "is no longer a quadratic operation. Additionally, note that "
+                "use of this argument poses risks if the buffer contains "
+                "names relative to different Blocks in the model hierarchy or "
+                "a mixture of local and fully_qualified names.", version='TODO')
             name_buffer[id(self)] = ans
         return ans
 
@@ -690,11 +694,20 @@ class ComponentData(_ComponentBase):
 
     Private class attributes:
         _component      A weakref to the component that owns this data object
+        _index          The index of this data object
         """
 
-    __pickle_slots__ = ('_component',)
+    __pickle_slots__ = ('_component', '_index')
     __slots__ = __pickle_slots__ + ('__weakref__',)
 
+    # NOTE: This constructor is in-lined in the constructors for the following
+    # classes: _BooleanVarData, _ConnectorData, _ConstraintData,
+    # _GeneralExpressionData, _LogicalConstraintData,
+    # _GeneralLogicalConstraintData, _GeneralObjectiveData,
+    # _ParamData,_GeneralVarData, _GeneralBooleanVarData, _DisjunctionData,
+    # _ArcData, _PortData, _LinearConstraintData, and
+    # _LinearMatrixConstraintData. Changes made here need to be made in those
+    # constructors as well!
     def __init__(self, component):
         #
         # ComponentData objects are typically *private* objects for
@@ -704,6 +717,7 @@ class ComponentData(_ComponentBase):
         # this assumption is significantly faster.
         #
         self._component = weakref_ref(component)
+        self._index = NOTSET
 
     def __getstate__(self):
         """Prepare a picklable state of this instance for pickling.
@@ -741,6 +755,7 @@ class ComponentData(_ComponentBase):
             state['_component'] = None
         else:
             state['_component'] = self._component()
+        state['_index'] = self._index
         return state
 
     def __setstate__(self, state):
@@ -832,17 +847,11 @@ class ComponentData(_ComponentBase):
         to the parent component index set. None is returned if
         this instance does not have a parent component, or if
         - for some unknown reason - this instance does not belong
-        to the parent component's index set. This method is not
-        intended to be a fast method;  it should be used rarely,
-        primarily in cases of label formulation.
+        to the parent component's index set.
         """
-        self_component = self.parent_component()
-        if self_component is None:
+        if self.parent_component() is None:
             return None
-        for idx, component_data in self_component.items():
-            if component_data is self:
-                return idx
-        return None
+        return self._index
 
     def __str__(self):
         """Return a string with the component name and index"""
@@ -850,12 +859,27 @@ class ComponentData(_ComponentBase):
 
     def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
         """Return a string with the component name and index"""
+        # NOTE: There are bugs with name buffers if a user always gives the same
+        # dictionary but switches from fully-qualified to local names or changes
+        # the component the name is relative to. We will simply deprecate the
+        # buffer in a future PR, but for now we will leave this method so it
+        # behaves the same when a buffer is given, and, in the absence of a
+        # buffer it will construct the name using the index (woohoo!)
+
         #
         # Using the buffer, which is a dictionary:  id -> string
         #
-        if name_buffer is not None and id(self) in name_buffer:
-            # Return the name if it is in the buffer
-            return name_buffer[id(self)]
+        if name_buffer is not None:
+            deprecation_warning(
+                "The 'name_buffer' argument to getname is deprecated. "
+                "The functionality is no longer necessary since getting names "
+                "is no longer a quadratic operation. Additionally, note that "
+                "use of this argument poses risks if the buffer contains "
+                "names relative to different Blocks in the model hierarchy or "
+                "a mixture of local and fully_qualified names.", version='TODO')
+            if id(self) in name_buffer:
+                # Return the name if it is in the buffer
+                return name_buffer[id(self)]
 
         c = self.parent_component()
         if c is self:
@@ -889,13 +913,10 @@ class ComponentData(_ComponentBase):
                 return name_buffer[id(self)]
         else:
             #
-            # No buffer, so we iterate through the component _data
-            # dictionary until we find this object.  This can be much
-            # more expensive than if a buffer is provided.
+            # No buffer, we can do what we are going to do all the time after we
+            # deprecate the buffer.
             #
-            for idx, obj in c.items():
-                if obj is self:
-                    return base + index_repr(idx)
+            return base + index_repr(self.index())
         #
         raise RuntimeError("Fatal error: cannot find the component data in "
                            "the owning component's _data dictionary.")
@@ -956,6 +977,7 @@ class ActiveComponentData(ComponentData):
 
     Private class attributes:
         _component      A weakref to the component that owns this data object
+        _index          The index of this data object
         _active         A boolean that indicates whether this data is active
     """
 
@@ -995,4 +1017,3 @@ class ActiveComponentData(ComponentData):
     def deactivate(self):
         """Set the active attribute to False"""
         self._active = False
-
