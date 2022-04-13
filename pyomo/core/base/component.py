@@ -15,7 +15,8 @@ from pickle import PickleError
 from weakref import ref as weakref_ref
 
 import pyomo.common
-from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common.deprecation import (
+    deprecated, deprecation_warning, relocated_module_attribute)
 from pyomo.common.factory import Factory
 from pyomo.common.formatting import tabular_writer, StreamIndenter
 from pyomo.common.modeling import NOTSET
@@ -585,6 +586,13 @@ class Component(_ComponentBase):
             # add quotes or otherwise escape the string.
             ans = local_name
         if name_buffer is not None:
+            deprecation_warning(
+                "The 'name_buffer' argument to getname is deprecated. "
+                "The functionality is no longer necessary since getting names "
+                "is no longer a quadratic operation. Additionally, note that "
+                "use of this argument poses risks if the buffer contains "
+                "names relative to different Blocks in the model hierarchy or "
+                "a mixture of local and fully_qualified names.", version='TODO')
             name_buffer[id(self)] = ans
         return ans
 
