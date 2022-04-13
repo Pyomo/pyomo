@@ -173,8 +173,8 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
             oa_cut_blocks = master_util_block.oa_cut_blocks = dict()
 
         for master_var, subprob_var in zip(
-                subproblem_util_block.algebraic_variable_list,
-                master_util_block.algebraic_variable_list):
+                master_util_block.algebraic_variable_list,
+                subproblem_util_block.algebraic_variable_list):
             val = subprob_var.value
             if val is not None and not master_var.fixed:
                 master_var.set_value(val, skip_validation=True)

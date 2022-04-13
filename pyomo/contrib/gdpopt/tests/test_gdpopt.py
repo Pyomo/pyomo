@@ -318,9 +318,6 @@ class TestGDPopt(unittest.TestCase):
         self.assertTrue(value(m.d1.indicator_var))
         self.assertFalse(value(m.d2.indicator_var))
 
-    # TODO: test that if there is a Var that only appears in nonlinear
-    # constraints, we don't have issues with it not being in the master problem
-
     def test_equality_propagation_infeasibility_in_subproblems(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-10, 10))
@@ -382,6 +379,62 @@ class TestGDPopt(unittest.TestCase):
         self.assertTrue(value(m.disjunction.disjuncts[0].indicator_var))
         self.assertFalse(value(m.disjunction.disjuncts[1].indicator_var))
 
+    def make_convex_circle_and_circle_slice_disjunction(self):
+        m = ConcreteModel()
+        # x will only appear in nonlinear expressions
+        m.x = Var(bounds=(-10, 18))
+        m.y = Var(bounds=(0,7))
+        m.obj = Objective(expr=m.x**2 + m.y)
+        m.disjunction = Disjunction(expr=[[m.x**2 + m.y**2 <= 3, m.y >= 1],
+                                          (m.x - 3)**2 + (m.y - 2)**2 <= 1])
+
+        return m
+
+    def test_some_vars_only_in_subproblem(self):
+        # Even variables that only appear in nonlinear constraints will be
+        # introduced to the master problem via the cuts, so we check that that
+        # works out.
+        m = self.make_convex_circle_and_circle_slice_disjunction()
+
+        results = SolverFactory('gdpopt',
+                                algorithm='LOA').solve(m, mip_solver=mip_solver,
+                                                       nlp_solver=nlp_solver)
+        self.assertEqual(results.solver.termination_condition, 
+                         TerminationCondition.optimal)
+        self.assertAlmostEqual(results.problem.upper_bound, 1)
+        self.assertAlmostEqual(value(m.x), 0)
+        self.assertAlmostEqual(value(m.y), 1)
+
+    def test_fixed_vars_honored(self):
+        # Make sure that the algorithm doesn't stomp on user-fixed variables
+        m = self.make_convex_circle_and_circle_slice_disjunction()
+
+        # first, force ourselves into the suboptimal disjunct
+        m.disjunction.disjuncts[0].indicator_var.fix(False)
+        logger = logging.getLogger('pyomo.contrib.gdpopt')
+        logger.setLevel(logging.DEBUG)
+        SolverFactory('gdpopt', algorithm='LOA').solve(m, mip_solver=mip_solver,
+                                                       nlp_solver=nlp_solver,
+                                                       logger=logger)
+        self.assertTrue(value(m.disjunction.disjuncts[1].indicator_var))
+        self.assertFalse(value(m.disjunction.disjuncts[0].indicator_var))
+        self.assertTrue(m.disjunction.disjuncts[0].indicator_var.fixed)
+        self.assertAlmostEqual(value(m.x), 2.029, places=3)
+        self.assertAlmostEqual(value(m.y), 1.761, places=3)
+        self.assertAlmostEqual(value(m.obj), 5.878, places=3)
+        
+        # Now, do it by fixing a continuous variable
+        m.disjunction.disjuncts[0].indicator_var.fixed = False
+        m.x.fix(3)
+        SolverFactory('gdpopt', algorithm='LOA').solve(m, mip_solver=mip_solver,
+                                                       nlp_solver=nlp_solver)
+        self.assertTrue(value(m.disjunction.disjuncts[1].indicator_var))
+        self.assertFalse(value(m.disjunction.disjuncts[0].indicator_var))
+        self.assertEqual(value(m.x), 3)
+        self.assertTrue(m.x.fixed)
+        self.assertAlmostEqual(value(m.y), 1)
+        self.assertAlmostEqual(value(m.obj), 10)
+
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_logical_constraints_on_disjuncts(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
@@ -418,7 +471,7 @@ class TestGDPopt(unittest.TestCase):
     def test_boolean_vars_on_disjuncts(self):
         m = models.makeBooleanVarsOnDisjuncts()
         SolverFactory('gdpopt', algorithm='LOA').solve(m, mip_solver=mip_solver,
-                                      nlp_solver=nlp_solver)
+                                                       nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
     def test_LOA_8PP_default_init(self):
