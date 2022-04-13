@@ -878,8 +878,8 @@ class ComponentData(_ComponentBase):
                 "names relative to different Blocks in the model hierarchy or "
                 "a mixture of local and fully_qualified names.", version='TODO')
             if id(self) in name_buffer:
-            # Return the name if it is in the buffer
-            return name_buffer[id(self)]
+                # Return the name if it is in the buffer
+                return name_buffer[id(self)]
 
         c = self.parent_component()
         if c is self:
