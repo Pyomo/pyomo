@@ -558,11 +558,6 @@ class Component(_ComponentBase):
         fully_qualified: bool
             Generate full name from nested block names
 
-        name_buffer: dict
-            A dictionary that caches encountered names and indices.
-            Providing a ``name_buffer`` can significantly speed up
-            iterative name generation
-
         relative_to: Block
             Generate fully_qualified names reletive to the specified block.
         """
@@ -874,7 +869,15 @@ class ComponentData(_ComponentBase):
         #
         # Using the buffer, which is a dictionary:  id -> string
         #
-        if name_buffer is not None and id(self) in name_buffer:
+        if name_buffer is not None:
+            deprecation_warning(
+                "The 'name_buffer' argument to getname is deprecated. "
+                "The functionality is no longer necessary since getting names "
+                "is no longer a quadratic operation. Additionally, note that "
+                "use of this argument poses risks if the buffer contains "
+                "names relative to different Blocks in the model hierarchy or "
+                "a mixture of local and fully_qualified names.", version='TODO')
+            if id(self) in name_buffer:
             # Return the name if it is in the buffer
             return name_buffer[id(self)]
 
