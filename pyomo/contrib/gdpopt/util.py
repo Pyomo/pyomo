@@ -22,8 +22,6 @@ from pyomo.core import (
     Block, Constraint, Objective, Reals, Reference, Var, minimize,
     TransformationFactory, value)
 from pyomo.gdp import Disjunct, Disjunction
-# TODO HACK: Get rid of this with name buffers
-from pyomo.gdp.plugins.bigm import NAME_BUFFER
 from pyomo.gdp.util import _parent_disjunct
 from pyomo.opt import SolverFactory
 
@@ -461,7 +459,3 @@ def _add_bigm_constraint_to_transformed_model(m, constraint, block):
     # could be prettier.
     bigm._transform_constraint(Reference(constraint), parent_disjunct, None,
                                 [], [])
-
-    ## TODO HACK: This can go away when there are no more name buffers in
-    ## pyomo.gdp!
-    NAME_BUFFER.clear()
