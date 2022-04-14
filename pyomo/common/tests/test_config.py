@@ -2155,6 +2155,9 @@ Scenario definition:
             .declare_as_argument( group=(subp,'Node information') )
         self.config.initialize_argparse(parser)
 
+        # Note that the output for argparse changes in diffeent versions
+        # (in particular, "options:" vs "optional arguments:").  We will
+        # only test for a subset of the output that should stay consistent.
         help = parser.format_help()
         self.assertIn(
             """
@@ -2203,14 +2206,14 @@ Node information:
         parser = argparse.ArgumentParser(prog='tester')
         c.initialize_argparse(parser)
 
-        self.assertEqual("""
-        usage: tester [-h] [--lst INT] [--sub SUB-DICT] [--listof LISTOF[INT]]
-
-optional arguments:
+        # Note that the output for argparse changes in diffeent versions
+        # (in particular, "options:" vs "optional arguments:").  We will
+        # only test for a subset of the output that should stay consistent.
+        self.assertIn("""
   -h, --help            show this help message and exit
   --lst INT
   --sub SUB-DICT
-  --listof LISTOF[INT]""".strip(), parser.format_help().strip())
+  --listof LISTOF[INT]""".strip(), parser.format_help())
 
         args = parser.parse_args([
             '--lst', '42', '--lst', '1',
