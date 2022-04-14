@@ -24,6 +24,7 @@ import io
 import logging
 import os
 import pickle
+import ply.lex
 import re
 import sys
 from textwrap import wrap
@@ -292,17 +293,29 @@ class ListOf(object):
         element in the list.  If not specified, defaults to the
         `itemtype`.
 
+    string_lexer: Callable
+        A preprocessor (lexer) called for all string values.  If
+        NOTSET, then strings are split on whitespace and/or commas
+        (honoring simple use of single or double quotes).  If None, then
+        no tokenization is performed.
+
     """
-    def __init__(self, itemtype, domain=None):
+    def __init__(self, itemtype, domain=None, string_lexer=NOTSET):
         self.itemtype = itemtype
         if domain is None:
             self.domain = self.itemtype
         else:
             self.domain = domain
+        if string_lexer is NOTSET:
+            self.string_lexer = _default_string_list_lexer
+        else:
+            self.string_lexer = string_lexer
         self.__name__ = 'ListOf(%s)' % (
             getattr(self.domain, '__name__', self.domain),)
 
     def __call__(self, value):
+        if isinstance(value, str) and self.string_lexer is not None:
+            return [self.domain(v) for v in self.string_lexer(value)]
         if hasattr(value, '__iter__') and not isinstance(value, self.itemtype):
             return [self.domain(v) for v in value]
         else:
@@ -1110,6 +1123,88 @@ _picklable.known = {}
 # module scope)
 _picklable.unknowable_types = {type, types.FunctionType,}
 
+_store_bool = {'store_true', 'store_false'}
+
+def _build_lexer(literals=''):
+    # Ignore whitespace (space, tab, linefeed, and comma)
+    t_ignore = " \t\r,"
+
+    tokens = [
+        "STRING", # quoted string
+        "WORD",   # unquoted string
+    ]
+
+    # A "string" is a proper quoted string
+    _quoted_str = r"'(?:[^'\\]|\\.)*'"
+    _general_str = "|".join([_quoted_str, _quoted_str.replace("'",'"')])
+    @ply.lex.TOKEN(_general_str)
+    def t_STRING(t):
+        t.value = t.value[1:-1]
+        return t
+
+    # A "word" contains no whitesspace or commas
+    @ply.lex.TOKEN(r'[^' + repr(t_ignore+literals) + r']+')
+    def t_WORD(t):
+        t.value = t.value
+        return t
+
+    # Error handling rule
+    def t_error(t):
+        # Note this parser does not allow "\n", so lexpos is the
+        # column number
+        raise IOError("ERROR: Token '%s' Line %s Column %s"
+          % (t.value, t.lineno, t.lexpos+1))
+
+    return ply.lex.lex()
+
+def _default_string_list_lexer(value):
+    """Simple string tokenizer for lists of words.
+
+    This default lexer splits strings on whitespace and/or commas while
+    honoring use of single and double quotes.  Separators (whitespace or
+    commas) are not returned.  Consecutive delimiters are ignored (and
+    do not yield empty strings).
+
+    """
+    _lex = _default_string_list_lexer._lex
+    if _lex is None:
+        _default_string_list_lexer._lex = _lex = _build_lexer()
+    _lex.input(value)
+    while True:
+        tok = _lex.token()
+        if not tok:
+            break
+        yield tok.value
+
+_default_string_list_lexer._lex = None
+
+def _default_string_dict_lexer(value):
+    """Simple string tokenizer for dict data.
+
+    This default lexer splits strings on whitespace and/or commas while
+    honoring use of single and double quotes.  ':' and '=' are
+    recognized as special tokens.  Separators (whitespace or commas) are
+    not returned.  Consecutive delimiters are ignored (and do not yield
+    empty strings).
+
+    """
+    _lex = _default_string_dict_lexer._lex
+    if _lex is None:
+        _default_string_dict_lexer._lex = _lex = _build_lexer(':=')
+    _lex.input(value)
+    while True:
+        key = _lex.token()
+        if not key:
+            break
+        sep = _lex.token()
+        if sep.type not in ':=':
+            raise ValueError("Expected ':' or '=' at "
+                             f"Line {sep.lineno} Column {sep.lexpos+1}")
+        val = _lex.token()
+        yield key.value, val.value
+
+_default_string_dict_lexer._lex = None
+
 
 class ConfigBase(object):
     __slots__ = ('_parent', '_name', '_userSet', '_userAccessed', '_data',
@@ -1354,7 +1449,7 @@ class ConfigBase(object):
                     return 0, _grp
             return 0, _parser.add_argument_group(title=name)
 
-        def _process_argparse_def(_args, _kwds):
+        def _process_argparse_def(obj, _args, _kwds):
             _parser = parser
             # shallow copy the dict so we can remove the group flag and
             # add things like documentation, etc.
@@ -1386,7 +1481,7 @@ class ConfigBase(object):
             if obj._argparse is None:
                 continue
             for _args, _kwds in obj._argparse:
-                _process_argparse_def(_args, _kwds)
+                _process_argparse_def(obj, _args, _kwds)
 
     def import_argparse(self, parsed_args):
         for level, prefix, value, obj in self._data_collector(None, ""):
@@ -1824,6 +1919,8 @@ class ConfigList(ConfigBase, Sequence):
         _old = self._data
         self._data = []
         try:
+            if isinstance(value, str):
+                value = list(_default_string_list_lexer()(value))
             if (type(value) is list) or \
                isinstance(value, ConfigList):
                 for val in value:
@@ -2151,6 +2248,8 @@ class ConfigDict(ConfigBase, Mapping):
     def set_value(self, value, skip_implicit=False):
         if value is None:
             return self
+        if isinstance(value, str):
+            value = dict(_default_string_dict_lexer(value))
         if (type(value) is not dict) and \
            (not isinstance(value, ConfigDict)):
             raise ValueError("Expected dict value for %s.set_value, found %s" %
