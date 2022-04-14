@@ -1946,7 +1946,7 @@ class ConfigList(ConfigBase, Sequence):
         self._data = []
         try:
             if isinstance(value, str):
-                value = list(_default_string_list_lexer()(value))
+                value = list(_default_string_list_lexer(value))
             if (type(value) is list) or \
                isinstance(value, ConfigList):
                 for val in value:
