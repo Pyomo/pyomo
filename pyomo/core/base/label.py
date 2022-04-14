@@ -116,35 +116,23 @@ class NumericLabeler(object):
 # actually being LP-compliant.
 #
 class CNameLabeler(object):
-    def __init__(self):
-        self.name_buffer = {}
-
     def __call__(self, obj):
-        return obj.getname(True, self.name_buffer)
+        return obj.getname(True)
 
 class TextLabeler(object):
-    def __init__(self):
-        self.name_buffer = {}
-
     def __call__(self, obj):
-        return cpxlp_label_from_name(obj.getname(True, self.name_buffer))
+        return cpxlp_label_from_name(obj.getname(True))
 
     def remove_obj(self, obj):
-        self.name_buffer.pop(id(obj))
+        pass
 
 class AlphaNumericTextLabeler(object):
-    def __init__(self):
-        self.name_buffer = {}
-
     def __call__(self, obj):
-        return alphanum_label_from_name(obj.getname(True, self.name_buffer))
+        return alphanum_label_from_name(obj.getname(True))
 
 class NameLabeler(object):
-    def __init__(self):
-        self.name_buffer = {}
-
     def __call__(self, obj):
-        return obj.getname(True, self.name_buffer)
+        return obj.getname(True)
 
 class ShortNameLabeler(object):
     def __init__(self, limit, suffix, start=0, labeler=None,
