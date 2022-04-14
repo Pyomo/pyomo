@@ -248,6 +248,13 @@ class In(object):
             return v
         raise ValueError("value %s not in domain %s" % (value, self._domain))
 
+    def domain_name(self):
+        _dn = str(self._domain)
+        if not _dn or _dn[0] not in '[({':
+            return f'In({_dn})'
+        else:
+            return f'In{_dn}'
+
 
 class InEnum(object):
     """Domain validation class admitting an enum value/name.
@@ -277,6 +284,9 @@ class InEnum(object):
                 pass
         raise ValueError("%r is not a valid %s" % (
             value, self._domain.__name__))
+
+    def domain_name(self):
+        return f'InEnum[{self._domain.__name__}]'
 
 
 class ListOf(object):
@@ -318,8 +328,11 @@ class ListOf(object):
             return [self.domain(v) for v in self.string_lexer(value)]
         if hasattr(value, '__iter__') and not isinstance(value, self.itemtype):
             return [self.domain(v) for v in value]
-        else:
-            return [self.domain(value)]
+        return [self.domain(value)]
+
+    def domain_name(self):
+        _dn = _domain_name(self.domain) or ""
+        return f'ListOf[{_dn}]'
 
 
 class Module(object):
@@ -1020,6 +1033,17 @@ def _munge_name(name, space_to_dash=True):
     name = re.sub(r'_', '-', name)
     return re.sub(r'[^a-zA-Z0-9-_]', '_', name)
 
+def _domain_name(domain):
+    if domain is None:
+        return ""
+    elif hasattr(domain, 'domain_name'):
+        return domain.domain_name()
+    elif domain.__class__ is type:
+        return domain.__name__
+    elif inspect.isfunction(domain):
+        return domain.__name__
+    else:
+        return None
 
 _leadingSpace = re.compile('^([ \t]*)')
 
@@ -1339,6 +1363,12 @@ class ConfigBase(object):
         else:
             return self._name
 
+    def domain_name(self):
+        _dn = _domain_name(self._domain)
+        if _dn is None:
+            return _munge_name(self.name(), False)
+        return _dn
+
     def set_default_value(self, default):
         self._default = default
 
@@ -1467,14 +1497,10 @@ class ConfigBase(object):
                     _issub, _parser = _get_subparser_or_group(_parser, _group)
             if 'dest' not in _kwds:
                 _kwds['dest'] = 'CONFIGBLOCK.' + obj.name(True)
-                if 'metavar' not in _kwds and \
-                   _kwds.get('action','') not in ('store_true','store_false'):
-                    if obj._domain is not None and \
-                       obj._domain.__class__ is type:
-                        _kwds['metavar'] = obj._domain.__name__.upper()
-                    else:
-                        _kwds['metavar'] = _munge_name(self.name().upper(),
-                                                       False)
+                if ( 'metavar' not in _kwds
+                     and _kwds.get('action','') not in _store_bool
+                     and obj._domain is not None ):
+                    _kwds['metavar'] = obj.domain_name().upper()
             _parser.add_argument(*_args, default=argparse.SUPPRESS, **_kwds)
 
         for level, prefix, value, obj in self._data_collector(None, ""):
@@ -2047,6 +2073,9 @@ class ConfigDict(ConfigBase, Mapping):
             self._implicit_domain = ConfigValue(None, domain=implicit_domain)
         ConfigBase.__init__(self, None, {}, description, doc, visibility)
         self._data = {}
+
+    def domain_name(self):
+        return _munge_name(self.name(), False)
 
     def __getstate__(self):
         state = super(ConfigDict, self).__getstate__()
