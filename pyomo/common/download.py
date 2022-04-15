@@ -124,7 +124,7 @@ class FileDownloader(object):
             'scientific',
             # Additional Ubuntu (Debian) spins
             'linuxmint',
-        }
+        ]
         for key in _map:
             if key.__class__ is tuple:
                 key, val = key
