@@ -14,6 +14,7 @@ __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
 
 import re
 
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.base.componentuid import ComponentUID
 
 # This module provides some basic functionality for generating labels
@@ -103,7 +104,10 @@ class NumericLabeler(object):
         return self.prefix + str(self.id)
 
     def remove_obj(self, obj):
-        pass
+        deprecation_warning("The 'remove_obj' method is no longer "
+                            "necessary now that 'getname' does not "
+                            "support the use of a name buffer",
+                            version="TODO")
 
 #
 # TODO: [JDS] I would like to rename TextLabeler to LPLabeler - as it
@@ -124,7 +128,10 @@ class TextLabeler(object):
         return cpxlp_label_from_name(obj.getname(True))
 
     def remove_obj(self, obj):
-        pass
+        deprecation_warning("The 'remove_obj' method is no longer "
+                            "necessary now that 'getname' does not "
+                            "support the use of a name buffer",
+                            version="TODO")
 
 class AlphaNumericTextLabeler(object):
     def __call__(self, obj):
@@ -173,7 +180,7 @@ class ShortNameLabeler(object):
                 raise RuntimeError(
                     "Too many identifiers.\n\t"
                     "The ShortNameLabeler cannot generate a guaranteed unique "
-                    "label limited to %d characters" % (self.limit,)) 
+                    "label limited to %d characters" % (self.limit,))
             lbl = self.prefix + lbl[tail:] + suffix
         if self.known_labels is not None:
             self.known_labels.add(lbl.upper() if self.caseInsensitive else lbl)
