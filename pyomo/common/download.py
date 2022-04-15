@@ -113,7 +113,7 @@ class FileDownloader(object):
         # with spaces (e.g., RHEL6 reports 'red hat enterprise')
         dist = dist.lower().strip().replace(' ', '')
         _map = [
-            'redhat',
+            ('redhat', 'rhel'),
             'fedora',
             'ubuntu', # implicitly maps kubuntu / xubuntu
             'debian',
