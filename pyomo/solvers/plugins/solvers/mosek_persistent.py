@@ -111,7 +111,6 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
             for v in solver_vars:
                 var_ids.append(self._pyomo_var_to_solver_var_map[v])
                 self._symbol_map.removeSymbol(v)
-                self._labeler.remove_obj(v)
                 del self._referenced_variables[v]
                 del self._pyomo_var_to_solver_var_map[v]
             self._solver_model.removevars(var_ids)
@@ -160,12 +159,10 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
             for c in lq_cons:
                 lq.append(self._pyomo_con_to_solver_con_map[c])
                 self._symbol_map.removeSymbol(c)
-                self._labeler.remove_obj(c)
                 del self._pyomo_con_to_solver_con_map[c]
             for c in cone_cons:
                 cones.append(self._pyomo_cone_to_solver_cone_map[c])
                 self._symbol_map.removeSymbol(c)
-                self._labeler.remove_obj(c)
                 del self._pyomo_cone_to_solver_cone_map[c]
             self._solver_model.removecons(lq)
             self._solver_model.removecones(cones)
