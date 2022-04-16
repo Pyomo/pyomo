@@ -853,6 +853,13 @@ class ComponentData(_ComponentBase):
         if parent is None:
             return None
         idx = self._index
+        if idx is NOTSET:
+            # ESJ TODO: I'm not sure if this should be an error, but it's
+            # actually what caught all my bugs... So that makes me think yes.
+            # Problem is, we can't query the name in the error message below--
+            # it would be an infinite loop.
+            raise pyomo.common.DeveloperError(
+                "The '_index' attribute is not yet set.")
         if parent._data[idx] is not self:
             raise pyomo.common.DeveloperError(
                 "The '_data' dictionary and '_index' attribute are out of "
