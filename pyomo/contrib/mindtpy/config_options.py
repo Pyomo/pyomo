@@ -241,7 +241,7 @@ def _add_subsolver_configs(CONFIG):
     """
     CONFIG.declare('nlp_solver', ConfigValue(
         default='ipopt',
-        domain=In(['ipopt', 'gams', 'baron']),
+        domain=In(['ipopt', 'gams', 'baron', 'appsi_ipopt']),
         description='NLP subsolver name',
         doc='Which NLP subsolver is going to be used for solving the nonlinear'
             'subproblems.'
@@ -255,7 +255,7 @@ def _add_subsolver_configs(CONFIG):
     CONFIG.declare('mip_solver', ConfigValue(
         default='glpk',
         domain=In(['gurobi', 'cplex', 'cbc', 'glpk', 'gams',
-                   'gurobi_persistent', 'cplex_persistent', 'appsi_cplex', 'appsi_gurobi', 'appsi_ipopt']),
+                   'gurobi_persistent', 'cplex_persistent', 'appsi_cplex', 'appsi_gurobi']),
         description='MIP subsolver name',
         doc='Which MIP subsolver is going to be used for solving the mixed-'
             'integer main problems.'
