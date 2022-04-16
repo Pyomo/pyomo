@@ -849,8 +849,17 @@ class ComponentData(_ComponentBase):
         - for some unknown reason - this instance does not belong
         to the parent component's index set.
         """
-        if self.parent_component() is None:
+        parent = self.parent_component()
+        if parent is None:
             return None
+        idx = self._index
+        if parent._data[idx] is not self:
+            raise pyomo.common.DeveloperError(
+                "The '_data' dictionary and '_index' attribute are out of "
+                "sync for index %s: %s._index is %s, but the '_data' "
+                "dictionary of '%s' contains '%s' as the value corresponding "
+                "to %s." % (idx, self.name, idx, parent.name, 
+                            parent._data[idx].name, idx))
         return self._index
 
     def __str__(self):
