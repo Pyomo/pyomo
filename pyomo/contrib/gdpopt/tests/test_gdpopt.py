@@ -78,8 +78,8 @@ class TestGDPoptUnit(unittest.TestCase):
                           "arbitrary bound values", output.getvalue().strip())
         self.assertIs(tc, TerminationCondition.unbounded)
 
-    @unittest.skipUnless(SolverFactory('gurobi').available(),
-                         "Gurobi not available")
+    @unittest.skipUnless(SolverFactory(mip_solver).available(),
+                         "MIP solver not available")
     def test_solve_lp(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-5, 5))
@@ -88,7 +88,7 @@ class TestGDPoptUnit(unittest.TestCase):
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
             results = SolverFactory('gdpopt', algorithm='LOA').solve(
-                m, mip_solver='gurobi')
+                m, mip_solver=mip_solver)
             self.assertIn("Your model is an LP (linear program).",
                           output.getvalue().strip())
             self.assertAlmostEqual(value(m.o.expr), 1)
@@ -434,6 +434,23 @@ class TestGDPopt(unittest.TestCase):
         self.assertTrue(m.x.fixed)
         self.assertAlmostEqual(value(m.y), 1)
         self.assertAlmostEqual(value(m.obj), 10)
+
+    def test_ignore_set_for_oa_cuts(self):
+        m = self.make_convex_circle_and_circle_slice_disjunction()
+        
+        m.disjunction.disjuncts[1].GDPopt_ignore_OA = [
+            m.disjunction.disjuncts[1].constraint[1]]
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.DEBUG):
+            SolverFactory('gdpopt', algorithm='LOA').solve(
+                m, mip_solver=mip_solver, nlp_solver=nlp_solver)
+            self.assertIn('OA cut addition for '
+                          'disjunction_disjuncts[1].constraint[1] skipped '
+                          'because it is in the ignore set.', 
+                          output.getvalue().strip())
+        # and the solution is optimal
+        self.assertAlmostEqual(value(m.x), 0)
+        self.assertAlmostEqual(value(m.y), 1)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_logical_constraints_on_disjuncts(self):
