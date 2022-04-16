@@ -76,14 +76,12 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                 master_disj.indicator_var.fix(False)
         unused = set(active_disjunct_set) - used_disjuncts
         if len(unused) > 0:
-            disj_str = ""
-            for disj in unused:
-                disj_str += "%s, " % disj.name
-            config.logger.warning('The following disjuncts the custom disjunct'
-                                  'initialization set number %s were unused: '
-                                  '%s\nThey may not be Disjunct objects or '
-                                  'they may not be on the active subtree being '
-                                  'solved.' % (count, disj_str))
+            config.logger.warning(
+                'The following disjuncts from the custom disjunct '
+                'initialization set number %s were unused: '
+                '%s\nThey may not be Disjunct objects or '
+                'they may not be on the active subtree being '
+                'solved.' % (count, ", ".join([disj.name for disj in unused])))
         with preserve_master_problem_feasible_region(master_util_block, config,
                                                      original_bounds):
             mip_termination = solve_MILP_master_problem(master_util_block,

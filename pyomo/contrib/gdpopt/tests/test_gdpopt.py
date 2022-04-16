@@ -738,6 +738,44 @@ class TestGDPopt(unittest.TestCase):
 
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
+    def test_LOA_custom_disjuncts_with_silly_components_in_list(self):
+        exfile = import_file(
+            join(exdir, 'eight_process', 'eight_proc_model.py'))
+        eight_process = exfile.build_eight_process_flowsheet()
+
+        eight_process.goofy = Disjunct()
+        eight_process.goofy2 = Disjunct()
+        eight_process.goofy.deactivate()
+        eight_process.goofy2.deactivate()
+
+        initialize = [
+            # Use units 1, 4, 7, 8
+            [eight_process.use_unit_1or2.disjuncts[0],
+             eight_process.use_unit_3ornot.disjuncts[1],
+             eight_process.use_unit_4or5ornot.disjuncts[0],
+             eight_process.use_unit_6or7ornot.disjuncts[1],
+             eight_process.use_unit_8ornot.disjuncts[0],
+             eight_process.goofy, eight_process.goofy2], # not a Disjunct
+            # Use units 2, 4, 6, 8
+            [eight_process.use_unit_1or2.disjuncts[1],
+             eight_process.use_unit_3ornot.disjuncts[1],
+             eight_process.use_unit_4or5ornot.disjuncts[0],
+             eight_process.use_unit_6or7ornot.disjuncts[0],
+             eight_process.use_unit_8ornot.disjuncts[0]]
+        ]
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
+            results = SolverFactory('gdpopt', algorithm='LOA').solve(
+                eight_process, init_strategy='custom_disjuncts',
+                custom_init_disjuncts=initialize, mip_solver=mip_solver,
+                nlp_solver=nlp_solver)
+
+            self.assertIn("The following disjuncts from the custom disjunct "
+                          "initialization set number 0 were unused: goofy2, "
+                          "goofy", output.getvalue().strip())
+        # and the solution is optimal to boot
+        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+
     def test_LOA_custom_disjuncts(self):
         """Test logic-based OA with custom disjuncts initialization."""
         exfile = import_file(
