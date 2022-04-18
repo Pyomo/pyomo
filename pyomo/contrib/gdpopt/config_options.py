@@ -18,7 +18,6 @@ from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.opt import SolverFactory, UnknownSolver
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
-from pytest import set_trace
 def _valid_solvers(val):
     opt = SolverFactory(val)
     if isinstance(opt, UnknownSolver):
