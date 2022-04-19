@@ -73,6 +73,9 @@ class Measurements:
             a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index, values are its variance (a scalar number), values are its variance if there is no extra index for this measurement.
             For e.g., for the kinetics illustrative example, it should be {'C':{'CA': 10, 'CB': 1, 'CC': 2}}.
             If given None, the default is {'C':{'CA': 1, 'CB': 1, 'CC': 1}}.
+        ind_string:
+            a ''string'', used to flatten the name of variables and extra index. Default is '_index_'.
+            For e.g., for {'C':{'CA': 10, 'CB': 1, 'CC': 2}}, the reformulated name is 'C_index_CA'.
         '''
         self.measurement_all_info = measurement_index_time
         self.ind_string = ind_string
@@ -101,7 +104,7 @@ class Measurements:
         '''
         Generate a dictionary, keys are the variable names, values are the indexes of this variable.
         For e.g., name_and_index = {'C': ['CA', 'CB', 'CC']}
-        Arguments
+        Parameters
         ---------
         all_info: a dictionary, keys are measurement variable names,
                 values are a dictionary, keys are its extra index, values are its measuring time points
@@ -151,6 +154,13 @@ class Measurements:
 
     def __generate_variance(self, flatten_measure_name, variance, name_and_index):
         '''Generate the variance dictionary
+        Parameters
+        ----------
+        flatten_measure_name: flattened measurement names. For e.g., flattenning {'C':{'CA': 10, 'CB': 1, 'CC': 2}} will be 'C_index_CA', ..., 'C_index_CC'.
+        variance:
+            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index, values are its variance (a scalar number), values are its variance if there is no extra index for this measurement.
+            For e.g., for the kinetics illustrative example, it should be {'C':{'CA': 10, 'CB': 1, 'CC': 2}}.
+            If given None, the default is {'C':{'CA': 1, 'CB': 1, 'CC': 1}}.
         '''
         flatten_variance = {}
         for i in flatten_measure_name:
@@ -172,6 +182,7 @@ class Measurements:
         '''
         Generate flatten variables timeset. Return a dict where keys are the flattened variable names,
         values are a list of measurement time.
+
         '''
         flatten_measure_timeset = {}
         for i in flatten_measure_name:
@@ -208,7 +219,7 @@ class Measurements:
                     measurement_names.append(measurement_name)
         self.model_measure_name = measurement_names
 
-    def __SP_measure_name(self, j, t,scenario_all=None, p=None, mode=None, legal_t=True):
+    def SP_measure_name(self, j, t,scenario_all=None, p=None, mode=None, legal_t=True):
         '''Return pyomo string name for different modes
         Arguments
         ---------
@@ -331,8 +342,6 @@ class DesignOfExperiments:
         self.flatten_measure_name = self.measure.flatten_measure_name
         self.flatten_variance = self.measure.flatten_variance
         self.flatten_measure_timeset = self.measure.flatten_measure_timeset
-        #print('The extra index:', self.measure.measurement_extra_index)
-        #print('The extra index name:', self.measure.extra_measure_name)
 
         # check if user-defined solver is given
         if solver is not None:
@@ -389,8 +398,9 @@ class DesignOfExperiments:
         '''Optimize DOE problem with design variables being the decisions.
         The DOE model is formed invasively and all scenarios are computed simultaneously.
         The function will first fun a square problem with design variable being fixed at
-        the given initial points, and then unfix the design variable and do the
-        optimization.
+        the given initial points (Objective function being 0), then a square problem with
+        design variables being fixed at the given initial points (Objective function being Design optimality),
+        and then unfix the design variable and do the optimization.
 
         Parameters
         -----------
@@ -495,45 +505,11 @@ class DesignOfExperiments:
 
         if self.optimize:
 
-            #m.Obj.deactivate()
-
-            #def cholesky_imp(m, c, d):
-            #    '''
-            #    Calculate Cholesky L matrix using algebraic constraints
-            #    '''
-                # If it is the left bottom half of L
-            #    if (self.param_name.index(c) >= self.param_name.index(d)):
-            #        return m.FIM[c, d] == sum(
-            #            m.L_ele[c, self.param_name[k]] * m.L_ele[d, self.param_name[k]] for k in range(self.param_name.index(d) + 1))
-            #    else:
-                    # This is the empty half of L above the diagonal
-            #        return Constraint.Skip
-
-
-
-            # if cholesky, calculating L and evaluate the OBJ with Cholesky decomposition
-            #if self.Cholesky_option:
-            #    m.cholesky_cons = Constraint(m.para_set, m.para_set, rule=cholesky_imp)
-            #    m.Obj = Objective(expr=2 * sum(log(m.L_ele[j, j]) for j in m.para_set), sense=maximize)
-            # if not cholesky but determinant, calculating det and evaluate the OBJ with det
-            #elif (self.objective_option == 'det'):
-            #    m.det_rule = Constraint(rule=det_general)
-            #    m.Obj = Objective(expr=log(m.det), sense=maximize)
-            # if not determinant or cholesky, calculating the OBJ with trace
-            #elif (self.objective_option == 'trace'):
-            #    m.trace_rule = Constraint(rule=trace_calc)
-            #    m.Obj = Objective(expr=log(m.trace), sense=maximize)
-            #elif (self.objective_option == 'zero'):
-            #    m.Obj = Objective(expr=0)
-            # TODO: _activate_det_objective, activate_constant_objective, activate_trace_objective
             m = self.__add_objective(m, deactive_obj=True)
 
             # solve problem with DOF then
             print('First solve with given objective:')
-            #time0_solve2 = time.time()
             result_doe1 = self.__solve_doe(m, fix=True)
-            #time1_solve2 = time.time()
-            #time_solve2 = time1_solve2 - time0_solve2
 
             print('Second solve with given objective:')
             time0_solve2 = time.time()
@@ -625,10 +601,6 @@ class DesignOfExperiments:
         self.objective_option = 'zero'
         self.tee_opt = tee_opt
 
-        self.Cholesky_option = if_Cholesky
-        self.L_LB = L_LB
-        self.L_initial = L_initial
-
         # calculate how much the FIM element is scaled by a constant number
         # As FIM~Jacobian.T@Jacobian, FIM is scaled twice the number the Q is scaled
         self.fim_scale_constant_value = self.scale_constant_value ** 2
@@ -700,7 +672,7 @@ class DesignOfExperiments:
 
                     for j in self.flatten_measure_name:
                         for t in self.flatten_measure_timeset[j]:
-                            measure_string_name = self.measure.__SP_measure_name(j,t,mode='sequential_finite')
+                            measure_string_name = self.measure.SP_measure_name(j,t,mode='sequential_finite')
                             C_value = value(eval(measure_string_name))
                             output_iter.append(C_value)
 
@@ -1347,7 +1319,7 @@ class DesignOfExperiments:
 
         Parameters:
         -----------
-        jac_involved: a measurement object
+        no_obj: if True, objective function is 0.
         self.design_values: a dict of dictionaries, keys are the name of design variables, values are a dict where keys are the time points, values are the design variable value at that time point
 
         self.optimize: if True, solve the problem unfixing the design variables. if False, solve the problem as a
@@ -1387,15 +1359,6 @@ class DesignOfExperiments:
         param_name = self.param_name
         m.y_set = Set(initialize=self.jac_involved_name)
         m.t_set = Set(initialize=time_set)
-
-        #def flatten_time(m, j):
-        #    return self.flatten_measure_timeset[j]
-        #flatten_timepoint = list(self.flatten_measure_timeset.values())
-        #overall_time = []
-        #for i in flatten_timepoint:
-        #    overall_time += i
-        #    timepoint_overall_set = list(set(overall_time))
-        #print('overall time point:', timepoint_overall_set)
 
         m.tmea_set = Set(initialize=self.timepoint_overall_set)
 
@@ -1503,7 +1466,7 @@ class DesignOfExperiments:
             # A better way to do this: 
             # https://github.com/IDAES/idaes-pse/blob/274e58bef55f2f969f0df97cbb1fb7d99342388e/idaes/apps/uncertainty_propagation/sens.py#L296
             # check if j is a measurement with extra index by checking if there is '_index_' in its name
-            up_C_name, lo_C_name, legal_t_option = self.measure.__SP_measure_name(j,t,scenario_all=scenario_all, mode='simultaneous_finite', p=p)
+            up_C_name, lo_C_name, legal_t_option = self.measure.SP_measure_name(j,t,scenario_all=scenario_all, mode='simultaneous_finite', p=p)
             if legal_t_option:
                 up_C = eval(up_C_name)
                 lo_C = eval(lo_C_name)
