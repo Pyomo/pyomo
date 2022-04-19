@@ -19,6 +19,11 @@ from pyomo.opt import SolverFactory, UnknownSolver
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 def _valid_solvers(val):
+    # TODO: Can we change this so that people pass in their SolverFactory,
+    # because I can't do this--it'll generate an error when pyomo.environ is
+    # imported withot the right solvers present. And then I can support this for
+    # strings, but deprecate it and warn that there's no error checking in that
+    # case... It would simplify the passing solver args stuff too, actually.
     opt = SolverFactory(val)
     if isinstance(opt, UnknownSolver):
         raise ValueError("Expected a valid name for a solver. Received '%s'"
