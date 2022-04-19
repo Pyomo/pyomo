@@ -94,7 +94,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Configure job parameters
       run: |
@@ -571,7 +571,7 @@ jobs:
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Set up Python 3.8
       uses: actions/setup-python@v3
@@ -626,7 +626,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       # We need the source for .codecov.yml and running "coverage xml"
 
     - name: Pip package cache
