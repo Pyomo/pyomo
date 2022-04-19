@@ -24,6 +24,7 @@ Contributed packages distributed with Pyomo:
    pynumero/index.rst
    pyros.rst
    sensitivity_toolbox.rst
+   doe/doe.rst
 
 Contributed Pyomo interfaces to other packages:
 
