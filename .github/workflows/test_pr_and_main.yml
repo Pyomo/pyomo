@@ -108,8 +108,8 @@ jobs:
           PYENV: pip
 
         exclude:
-        - {os: macos-latest, python: pypy3}
-        - {os: windows-latest, python: pypy3}
+        - {os: macos-latest, python: pypy-3.9}
+        - {os: windows-latest, python: pypy-3.9}
 
     steps:
     - name: Checkout Pyomo source
