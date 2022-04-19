@@ -204,15 +204,19 @@ class TestGDPoptUnit(unittest.TestCase):
                  % (LOA_solvers,))
 class TestGDPopt(unittest.TestCase):
     """Tests for the GDPopt solver plugin."""
-
-    def test_infeasible_GDP(self):
-        """Test for infeasible GDP."""
+    def make_infeasible_gdp_model(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 2))
         m.d = Disjunction(expr=[
             [m.x ** 2 >= 3, m.x >= 3],
             [m.x ** 2 <= -1, m.x <= -1]])
         m.o = Objective(expr=m.x)
+
+        return m
+
+    def test_infeasible_GDP(self):
+        """Test for infeasible GDP."""
+        m = self.make_infeasible_gdp_model()
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
             results = SolverFactory('gdpopt', algorithm='LOA').solve(
@@ -233,6 +237,19 @@ class TestGDPopt(unittest.TestCase):
             self.assertIn("GDPopt exiting--problem is infeasible.",
                           output.getvalue().strip())
 
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.infeasible)
+
+    def test_infeasible_gdp_max_binary(self):
+        """Test that max binary initialization catches infeasible GDP too"""
+        m = self.make_infeasible_gdp_model()
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.DEBUG):
+            results = SolverFactory('gdpopt', algorithm='LOA').solve(
+                m, mip_solver=mip_solver, nlp_solver=nlp_solver,
+                init_strategy='max_binary')
+            self.assertIn("MILP relaxation for initialization was infeasible. "
+                          "Problem is infeasible.", output.getvalue().strip())
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.infeasible)
 
@@ -399,7 +416,7 @@ class TestGDPopt(unittest.TestCase):
         results = SolverFactory('gdpopt',
                                 algorithm='LOA').solve(m, mip_solver=mip_solver,
                                                        nlp_solver=nlp_solver)
-        self.assertEqual(results.solver.termination_condition, 
+        self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.optimal)
         self.assertAlmostEqual(results.problem.upper_bound, 1)
         self.assertAlmostEqual(value(m.x), 0)
@@ -422,7 +439,7 @@ class TestGDPopt(unittest.TestCase):
         self.assertAlmostEqual(value(m.x), 2.029, places=3)
         self.assertAlmostEqual(value(m.y), 1.761, places=3)
         self.assertAlmostEqual(value(m.obj), 5.878, places=3)
-        
+
         # Now, do it by fixing a continuous variable
         m.disjunction.disjuncts[0].indicator_var.fixed = False
         m.x.fix(3)
@@ -437,7 +454,7 @@ class TestGDPopt(unittest.TestCase):
 
     def test_ignore_set_for_oa_cuts(self):
         m = self.make_convex_circle_and_circle_slice_disjunction()
-        
+
         m.disjunction.disjuncts[1].GDPopt_ignore_OA = [
             m.disjunction.disjuncts[1].constraint[1]]
         output = StringIO()
@@ -446,7 +463,7 @@ class TestGDPopt(unittest.TestCase):
                 m, mip_solver=mip_solver, nlp_solver=nlp_solver)
             self.assertIn('OA cut addition for '
                           'disjunction_disjuncts[1].constraint[1] skipped '
-                          'because it is in the ignore set.', 
+                          'because it is in the ignore set.',
                           output.getvalue().strip())
         # and the solution is optimal
         self.assertAlmostEqual(value(m.x), 0)
@@ -633,7 +650,10 @@ class TestGDPopt(unittest.TestCase):
         SolverFactory('gdpopt', algorithm='LOA').solve(
             strip_pack,
             mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+            nlp_solver=nlp_solver,
+            subproblem_presolve=False)# skip preprocessing for linear problem
+                                      # and so that we test everything is still
+                                      # fine
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 13) <= 1E-2)
 
@@ -744,9 +764,7 @@ class TestGDPopt(unittest.TestCase):
         eight_process = exfile.build_eight_process_flowsheet()
 
         eight_process.goofy = Disjunct()
-        eight_process.goofy2 = Disjunct()
         eight_process.goofy.deactivate()
-        eight_process.goofy2.deactivate()
 
         initialize = [
             # Use units 1, 4, 7, 8
@@ -755,7 +773,7 @@ class TestGDPopt(unittest.TestCase):
              eight_process.use_unit_4or5ornot.disjuncts[0],
              eight_process.use_unit_6or7ornot.disjuncts[1],
              eight_process.use_unit_8ornot.disjuncts[0],
-             eight_process.goofy, eight_process.goofy2], # not a Disjunct
+             eight_process.goofy],
             # Use units 2, 4, 6, 8
             [eight_process.use_unit_1or2.disjuncts[1],
              eight_process.use_unit_3ornot.disjuncts[1],
@@ -771,8 +789,8 @@ class TestGDPopt(unittest.TestCase):
                 nlp_solver=nlp_solver)
 
             self.assertIn("The following disjuncts from the custom disjunct "
-                          "initialization set number 0 were unused: goofy2, "
-                          "goofy", output.getvalue().strip())
+                          "initialization set number 0 were unused: goofy",
+                          output.getvalue().strip())
         # and the solution is optimal to boot
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
@@ -1165,6 +1183,22 @@ class TestGDPoptRIC(unittest.TestCase):
                          TerminationCondition.optimal)
         self.assertAlmostEqual(value(m.x), 2)
         self.assertAlmostEqual(value(m.y), 1 + sqrt(3))
+
+    # TODO: You can put the unbounded vars in the global constraints and make
+    # sure this gets handled correctly
+    # def test_force_nlp_subproblem_with_unbounded_integer_variables(self):
+    #     m = ConcreteModel()
+    #     m.x = Var(domain=Integers, bounds=(0,10))
+    #     m.y = Var(bounds=(0, 10))
+    #     m.disjunction = Disjunction(expr=[[m.x**2 <= 4, m.y**2 <= 1],
+    #                                       [(m.x - 1)**2 + (m.y - 1)**2 <= 4,
+    #                                        m.y <= 4]])
+    #     m.obj = Objective(expr=-m.y - m.x)
+    #     results = SolverFactory('gdpopt', algorithm='RIC').solve(
+    #         m, init_strategy='no_init', mip_solver=mip_solver,
+    #         nlp_solver=nlp_solver, force_subproblem_nlp=True)
+    #     from pytest import set_trace
+    #     set_trace()
 
 @unittest.skipIf(not GLOA_solvers_available,
                  "Required subsolvers %s are not available"

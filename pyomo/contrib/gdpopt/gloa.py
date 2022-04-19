@@ -141,7 +141,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
 
         for constr in constraints_in_True_disjuncts(m, config):
             # Note: this includes constraints that are deactivated in the
-            # current model (linear_GDP)
+            # current model
 
             disjunctive_var_bounds = disjunctive_bounds(constr.parent_block())
 

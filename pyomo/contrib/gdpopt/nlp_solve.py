@@ -256,9 +256,9 @@ def preprocess_subproblem(util_block, config):
             v.setlb(lb)
             v.setub(ub)
 
-    # ESJ: I think fbbt is messing with Vars that aren't its beeswax, but it
-    # tightens the bounds on the fixed Boolean vars, so we restore the bounds
-    # here for now.
+    # A bit counter-intuitively (but I assume so that it can propogate those
+    # bounds elsewhere), fbbt tightens the bounds on the fixed Boolean vars, so
+    # we restore the bounds here
     for disj in util_block.disjunct_list:
         disj.binary_indicator_var.setlb(0)
         disj.binary_indicator_var.setub(1)
@@ -289,8 +289,11 @@ def call_appropriate_subproblem_solver(subprob_util_block, config, timing):
         # Does it have any discrete variables, and is that allowed?
         unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
         if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:
-            raise RuntimeError("Unfixed discrete variables found on the NLP "
-                               "subproblem.")
+            # this is actually our fault at this point--we should have
+            # enumerated the discrete solutions if it was possible and the user
+            # requested.
+            raise DeveloperError("Unfixed discrete variables found on the NLP "
+                                 "subproblem.")
         elif len(unfixed_discrete_vars) == 0:
             subprob_termination = solve_NLP(subprob, config, timing)
         else:
@@ -312,8 +315,6 @@ def call_appropriate_subproblem_solver(subprob_util_block, config, timing):
 
 def solve_subproblem(subprob_util_block, config, timing):
     """Set up and solve the local MINLP or NLP subproblem."""
-    # ESJ: do we need this/do we need to track it here?
-    #solve_data.nlp_iteration += 1
     if config.subproblem_presolve:
         with preprocess_subproblem(subprob_util_block, config) as call_solver:
             if call_solver:
