@@ -356,11 +356,25 @@ class BARONSHELL(SystemCallSolver):
         # Process model and solver status from the Baron tim file
         #
         line = TimFile.readline().split()
-        results.problem.name = line[0]
-        results.problem.number_of_constraints = int(line[1])
-        results.problem.number_of_variables = int(line[2])
-        results.problem.lower_bound = float(line[5])
-        results.problem.upper_bound = float(line[6])
+        try:
+            # The list of information in the tim file depends on the
+            # BARON version.  As we extract things in order, older
+            # versions of BARON will just result in an IndexError AFTER
+            # we have grabbed all the data that it returns - and we can
+            # safely silently ignore the exception.
+            results.problem.name = line[0]
+            results.problem.number_of_constraints = int(line[1])
+            results.problem.number_of_variables = int(line[2])
+            results.problem.lower_bound = float(line[5])
+            results.problem.upper_bound = float(line[6])
+            results.problem.missing_bounds = line[9]
+            results.problem.iterations = line[10]
+            results.problem.node_opt = line[11]
+            results.problem.node_memmax = line[12]
+            results.problem.cpu_time = float(line[13])
+            results.problem.wall_time = float(line[14])
+        except IndexError:
+            pass
         soln.gap = results.problem.upper_bound - results.problem.lower_bound
         solver_status = line[7]
         model_status = line[8]
