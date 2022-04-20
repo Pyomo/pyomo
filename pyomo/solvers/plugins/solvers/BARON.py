@@ -285,22 +285,20 @@ class BARONSHELL(SystemCallSolver):
         #
         # Process logfile
         #
-        OUTPUT = open(self._log_file)
+        cuts = ['Bilinear', 'LD-Envelopes', 'Multilinears',
+                'Convexity', 'Integrality']
 
         # Collect cut-generation statistics from the log file
-        for line in OUTPUT:
-            if 'Bilinear' in line:
-                results.solver.statistics['Bilinear_cuts'] = int(line.split()[1])
-            elif 'LD-Envelopes' in line:
-                results.solver.statistics['LD-Envelopes_cuts'] = int(line.split()[1])
-            elif 'Multilinears' in line:
-                results.solver.statistics['Multilinears_cuts'] = int(line.split()[1])
-            elif 'Convexity' in line:
-                results.solver.statistics['Convexity_cuts'] = int(line.split()[1])
-            elif 'Integrality' in line:
-                results.solver.statistics['Integrality_cuts'] = int(line.split()[1])
+        with open(self._log_file) as OUTPUT:
+            for line in OUTPUT:
+                for field in cuts:
+                    if field in line:
+                        try:
+                            results.solver.statistics[field+'_cuts'] = int(
+                                line.split()[1])
+                        except:
+                            pass
 
-        OUTPUT.close()
         return results
 
 
