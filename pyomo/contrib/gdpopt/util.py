@@ -16,6 +16,7 @@ import sys
 
 from pyomo.common import timing
 from pyomo.common.collections import ComponentSet
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (
@@ -128,18 +129,9 @@ def move_nonlinear_objective_to_constraints(util_block, logger):
         if main_obj.expr.polynomial_degree() not in (1, 0):
             util_block.algebraic_variable_list.append(
                 util_block.objective_value)
-            #util_blk.continuous_variable_list.append(util_blk.objective_value)
             if hasattr(util_block, 'constraint_list'):
                 util_block.constraint_list.append(util_block.objective_constr)
-            #util_blk.objective_list.append(util_blk.objective)
-            # if util_blk.objective_constr.body.polynomial_degree() in (0, 1):
-            #     util_blk.linear_constraint_list.append(
-            #         util_blk.objective_constr)
-            # else:
-            #     util_blk.nonlinear_constraint_list.append(
-            #         util_blk.objective_constr)
 
-# ESJ: Do we need this? Can it be renamed?
 def a_logger(str_or_logger):
     """Returns a logger when passed either a logger name or logger object."""
     if isinstance(str_or_logger, logging.Logger):
@@ -147,47 +139,20 @@ def a_logger(str_or_logger):
     else:
         return logging.getLogger(str_or_logger)
 
-
 def copy_var_list_values(from_list, to_list, config,
                          skip_stale=False, skip_fixed=True,
                          ignore_integrality=False):
-    """Copy variable values from one list to another.
-
-    Rounds to Binary/Integer if necessary
-    Sets to zero for NonNegativeReals if necessary
-    """
+    """Copy variable values from one list to another, without validation"""
+    if ignore_integrality:
+        deprecation_warning("The 'ignore_integrality' argument is no longer "
+                            "has any functionality since this function does "
+                            "not validate the values.", version="TODO")
     for v_from, v_to in zip(from_list, to_list):
         if skip_stale and v_from.stale:
             continue  # Skip stale variable values.
         if skip_fixed and v_to.is_fixed():
             continue  # Skip fixed variables.
-        try:
-            # We don't want to trigger the reset of the global stale
-            # indicator, so we will set this variable to be "stale",
-            # knowing that set_value will switch it back to "not
-            # stale"
-            v_to.stale = True
-            # NOTE: PEP 2180 changes the var behavior so that domain /
-            # bounds violations no longer generate exceptions (and
-            # instead log warnings).  This means that the following will
-            # always succeed and the ValueError should never be raised.
-            v_to.set_value(value(v_from, exception=False), skip_validation=True)
-        except ValueError as err:
-            err_msg = getattr(err, 'message', str(err))
-            var_val = value(v_from)
-            rounded_val = int(round(var_val))
-            # Check to see if this is just a tolerance issue
-            if ignore_integrality and v_to.is_integer():
-                v_to.set_value(var_val, skip_validation=True)
-            elif v_to.is_integer() and (fabs(var_val - rounded_val) <=
-                                        config.integer_tolerance):
-                v_to.set_value(rounded_val, skip_validation=True)
-            elif abs(var_val) <= config.zero_tolerance and 0 in v_to.domain:
-                v_to.set_value(0, skip_validation=True)
-            else:
-                config.logger.error('Unknown validation domain error setting '
-                                    'variable %s', (v_to.name,))
-                raise
+        v_to.set_value(value(v_from, exception=False), skip_validation=True)
 
 def fix_discrete_var(var, val, config):
     """Fixes the discrete variable var to val, rounding to the nearest integer
@@ -341,6 +306,9 @@ def is_feasible(model, config):
 def constraints_in_True_disjuncts(model, config):
     """Yield constraints in disjuncts where the indicator value is set or
     fixed to True."""
+    # ESJ TODO: This should be a bug if parts of the model are deactivated,
+    # since it goes out and finds them anyway? Oh, or maybe that's not the
+    # default.
     for constr in model.component_data_objects(Constraint):
         yield constr
     observed_disjuncts = ComponentSet()
