@@ -198,6 +198,7 @@ class Ipopt(PersistentSolver):
         return self._writer.symbol_map
 
     def set_instance(self, model):
+        self._writer.config.symbolic_solver_labels = self.config.symbolic_solver_labels
         self._writer.set_instance(model)
 
     def add_variables(self, variables: List[_GeneralVarData]):
