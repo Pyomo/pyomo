@@ -264,6 +264,9 @@ jobs:
         fi
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
+        echo ""
+        echo "Final pip environment:"
+        python -m pip list | sed 's/^/    /'
 
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
@@ -326,6 +329,9 @@ jobs:
                 | tr ":" "\\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
                 | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
         done
+        echo ""
+        echo "Final conda environment:"
+        conda list | sed 's/^/    /'
 
     - name: Setup TPL package directories
       run: |
