@@ -15,6 +15,7 @@ from pickle import PickleError
 from weakref import ref as weakref_ref
 
 import pyomo.common
+from pyomo.common import DeveloperError
 from pyomo.common.deprecation import (
     deprecated, deprecation_warning, relocated_module_attribute)
 from pyomo.common.factory import Factory
@@ -402,7 +403,7 @@ class Component(_ComponentBase):
         # Verify that ctype has been specified.
         #
         if self._ctype is None:
-            raise pyomo.common.DeveloperError(
+            raise DeveloperError(
                 "Must specify a component type for class %s!"
                 % ( type(self).__name__, ) )
         #
@@ -853,20 +854,28 @@ class ComponentData(_ComponentBase):
         if parent is None:
             return None
         idx = self._index
-        if idx is NOTSET:
-            # ESJ TODO: I'm not sure if this should be an error, but it's
-            # actually what caught all my bugs... So that makes me think yes.
-            # Problem is, we can't query the name in the error message below--
-            # it would be an infinite loop.
-            raise pyomo.common.DeveloperError(
-                "The '_index' attribute is not yet set.")
-        if parent._data[idx] is not self:
-            raise pyomo.common.DeveloperError(
+        # ComponentList objects implement _data as a list rather than a dict so
+        # we have to account for both here
+        if isinstance(parent._data, dict):
+            parent_idx = parent._data.get(idx, None)
+        elif isinstance(parent._data, list):
+            try:
+                parent_idx = parent._data[idx]
+            except IndexError:
+                parent_idx = None
+        else:
+            raise DeveloperError("Unrecognized type for '_data' dictionary")
+        if ((idx is NOTSET and parent_idx is not None) or
+            (parent_idx is not self)):
+            parent_idx_name = parent_idx.name if parent_idx is not None \
+                              else 'None'
+            # This error message is a bit goofy, but we can't call self.name
+            # here--it's an infinite loop!
+            raise DeveloperError(
                 "The '_data' dictionary and '_index' attribute are out of "
-                "sync for index %s: %s._index is %s, but the '_data' "
-                "dictionary of '%s' contains '%s' as the value corresponding "
-                "to %s." % (idx, self.name, idx, parent.name, 
-                            parent._data[idx].name, idx))
+                "sync for index '%s' on indexed component '%s': The '_data' "
+                "dictionary contains '%s' as the value corresponding to '%s'."
+                % (idx, parent.name, parent_idx_name, idx))
         return self._index
 
     def __str__(self):
