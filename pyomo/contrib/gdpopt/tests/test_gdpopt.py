@@ -1278,8 +1278,8 @@ class TestGLOA(unittest.TestCase):
             m.x >= m.y, m.y >= 2.5
         ]])
         m.o = Objective(expr=m.x)
-        SolverFactory('gdpopt').solve(
-            m, strategy='GLOA',
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            m,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             minlp_solver=minlp_solver
@@ -1301,8 +1301,8 @@ class TestGLOA(unittest.TestCase):
 
     def test_nonlinear_GDP_integer_vars(self):
         m = self.make_nonlinear_gdp_with_int_vars()
-        SolverFactory('gdpopt').solve(
-            m, strategy='GLOA',
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            m,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             minlp_solver=minlp_solver
@@ -1312,8 +1312,8 @@ class TestGLOA(unittest.TestCase):
 
     def test_nonlinear_GDP_integer_vars_force_nlp_subproblem(self):
         m = self.make_nonlinear_gdp_with_int_vars()
-        SolverFactory('gdpopt').solve(
-            m, strategy='GLOA',
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            m,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             minlp_solver=minlp_solver,
@@ -1333,8 +1333,8 @@ class TestGLOA(unittest.TestCase):
             m.x >= m.y, m.y >= 2.5
         ]])
         m.o = Objective(expr=m.x)
-        res = SolverFactory('gdpopt').solve(
-            m, strategy='GLOA',
+        res = SolverFactory('gdpopt', algorithm='GLOA').solve(
+            m,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             minlp_solver=minlp_solver
@@ -1347,8 +1347,9 @@ class TestGLOA(unittest.TestCase):
                          "not available.")
     def test_logical_constraints_on_disjuncts(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
-        SolverFactory('gdpopt').solve(m, strategy='GLOA', mip_solver=mip_solver,
-                                      nlp_solver=nlp_solver)
+        SolverFactory('gdpopt', algorithm='GLOA').solve(m,
+                                                        mip_solver=mip_solver,
+                                                        nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
     @unittest.skipUnless(license_available and sympy_available,
@@ -1356,8 +1357,9 @@ class TestGLOA(unittest.TestCase):
                          "not available.")
     def test_boolean_vars_on_disjuncts(self):
         m = models.makeBooleanVarsOnDisjuncts()
-        SolverFactory('gdpopt').solve(m, strategy='GLOA', mip_solver=mip_solver,
-                                      nlp_solver=nlp_solver)
+        SolverFactory('gdpopt', algorithm='GLOA').solve(m,
+                                                        mip_solver=mip_solver,
+                                                        nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
     @unittest.skipUnless(license_available,
@@ -1367,8 +1369,8 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt').solve(
-            eight_process, strategy='GLOA', tee=False,
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            eight_process, tee=False,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args
@@ -1383,8 +1385,8 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_logical.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt').solve(
-            eight_process, strategy='GLOA', tee=False,
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            eight_process, tee=False,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args
@@ -1398,8 +1400,8 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt').solve(
-            eight_process, strategy='GLOA', tee=False,
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            eight_process, tee=False,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
@@ -1414,8 +1416,8 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
-        SolverFactory('gdpopt').solve(
-            strip_pack, strategy='GLOA',
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            strip_pack,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args)
@@ -1437,8 +1439,8 @@ class TestGLOA(unittest.TestCase):
         strip_pack.Rec3RightOrLeftOfRec2 = LogicalConstraint(
             expr=strip_pack.no_overlap[2,3].disjuncts[0].indicator_var.lor(
                 strip_pack.no_overlap[2,3].disjuncts[1].indicator_var))
-        SolverFactory('gdpopt').solve(
-            strip_pack, strategy='GLOA',
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            strip_pack,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args)
@@ -1453,8 +1455,8 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         cons_layout = exfile.build_constrained_layout_model()
-        SolverFactory('gdpopt').solve(
-            cons_layout, strategy='GLOA',
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            cons_layout,
             mip_solver=mip_solver,
             iterlim=36,
             nlp_solver=global_nlp_solver,
@@ -1469,22 +1471,23 @@ class TestGLOA(unittest.TestCase):
         """Test LOA with Francisco thesis example."""
         exfile = import_file(join(exdir, 'small_lit', 'ex_633_trespalacios.py'))
         model = exfile.build_simple_nonconvex_gdp()
-        SolverFactory('gdpopt').solve(
-            model, strategy='GLOA',
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            model,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
-            tee=False)
+            tee=True)
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)
+        self.assertTrue(False)
 
     @unittest.skipUnless(license_available,
                          "Global NLP solver license not available.")
     def test_GLOA_nonconvex_HENS(self):
         exfile = import_file(join(exdir, 'small_lit', 'nonconvex_HEN.py'))
         model = exfile.build_gdp_model()
-        SolverFactory('gdpopt').solve(
-            model, strategy='GLOA',
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            model,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
@@ -1497,8 +1500,8 @@ class TestGLOA(unittest.TestCase):
     def test_GLOA_disjunctive_bounds(self):
         exfile = import_file(join(exdir, 'small_lit', 'nonconvex_HEN.py'))
         model = exfile.build_gdp_model()
-        SolverFactory('gdpopt').solve(
-            model, strategy='GLOA',
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            model,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
