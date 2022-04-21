@@ -21,16 +21,19 @@ from pyomo.common.collections import Bunch
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.contrib.appsi.solvers.gurobi import Gurobi
+from pyomo.contrib.gdpopt.create_oa_subproblems import (
+    add_util_block, add_disjunct_list, add_constraints_by_disjunct,
+    add_global_constraint_list)
+from pyomo.contrib.gdpopt.gloa import GDP_GLOA_Solver
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.mip_solve import (
     solve_MILP_master_problem, distinguish_mip_infeasible_or_unbounded)
-from pyomo.contrib.gdpopt.util import (
-    constraints_in_True_disjuncts, is_feasible, time_code)
+from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.core.expr.sympy_tools import sympy_available
-from pyomo.environ import ( ConcreteModel, Objective, SolverFactory, Var, value,
-                            Integers, Block, Constraint, maximize,
-                            LogicalConstraint, sqrt, RangeSet)
+from pyomo.environ import (
+    Block, ConcreteModel, Constraint, Integers, LogicalConstraint, maximize, 
+    Objective, RangeSet, TransformationFactory, SolverFactory, sqrt, value, Var)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.tests import models
 from pyomo.opt import TerminationCondition
@@ -222,7 +225,7 @@ class TestGDPoptUnit(unittest.TestCase):
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.infeasible)
 
-    def test_constraints_in_True_disjuncts(self):
+    def test_gloa_cut_generation_ignores_deactivated_constraints(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-5, 5))
         m.y = Var(bounds=(-2, 6))
@@ -241,9 +244,22 @@ class TestGDPoptUnit(unittest.TestCase):
         m.disjunction.disjuncts[1].indicator_var.fix(True)
         m.disjunction.disjuncts[2].indicator_var.fix(False)
 
+        # set up the util block
+        add_util_block(m)
+        util_block = m._gdpopt_cuts
+        add_disjunct_list(util_block)
+        add_constraints_by_disjunct(util_block)
+        add_global_constraint_list(util_block)
+
+        TransformationFactory('gdp.bigm').apply_to(m)
+
         config = ConfigDict()
         config.declare('integer_tolerance', ConfigValue(1e-6))
-        constraints = list(constraints_in_True_disjuncts(m, config))
+
+        gloa = GDP_GLOA_Solver()
+
+        constraints = list(gloa._get_active_untransformed_constraints(
+            util_block, config))
         self.assertEqual(len(constraints), 2)
         c1 = constraints[0]
         c2 = constraints[1]

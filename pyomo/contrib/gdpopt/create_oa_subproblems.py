@@ -110,6 +110,12 @@ def add_constraint_list(util_block):
         ctype=Constraint, active=True, descend_into=(Block, Disjunct),
         sort=SortComponents.deterministic))
 
+def add_global_constraint_list(util_block):
+    model = util_block.model()
+    util_block.global_constraint_list = list(model.component_data_objects(
+        ctype=Constraint, active=True, descend_into=Block,
+        sort=SortComponents.deterministic))
+
 def add_constraints_by_disjunct(util_block):
     constraints_by_disjunct = util_block.constraints_by_disjunct = {}
     for disj in util_block.disjunct_list:

@@ -16,14 +16,14 @@ from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
-    _get_master_and_subproblem, add_constraints_by_disjunct)
+    _get_master_and_subproblem, add_constraints_by_disjunct,
+    add_global_constraint_list)
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
 from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
     _fix_master_soln_solve_subproblem_and_add_cuts)
 from pyomo.contrib.gdpopt.util import (
-    _add_bigm_constraint_to_transformed_model,
-    constraints_in_True_disjuncts, lower_logger_level_to,
+    _add_bigm_constraint_to_transformed_model, lower_logger_level_to,
     move_nonlinear_objective_to_constraints, time_code)
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
@@ -80,6 +80,10 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
         # before we call any GDP transformations, as we will need this
         # information for cut generation later
         add_constraints_by_disjunct(self.original_util_block)
+        # We also save these in advance because we know only linear logical
+        # constraints will be added by the transformation to a MIP, so these are
+        # all we'll ever need.
+        add_global_constraint_list(self.original_util_block)
         (master_util_block,
          subproblem_util_block) = _get_master_and_subproblem(self, config)
 
@@ -135,9 +139,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
         fixed to True."""
         model = util_block.model()
         # Get active global constraints
-        for constr in model.component_data_objects(
-                Constraint, active=True, sort=SortComponents.deterministic,
-                descend_into=Block):
+        for constr in util_block.global_constraint_list:
             yield constr
         # get all the disjuncts in the original model. Check which ones are
         # True.
