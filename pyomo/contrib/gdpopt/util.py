@@ -378,7 +378,7 @@ def lower_logger_level_to(logger, tee=False):
     if tee:
         logger.handlers.clear()
         for h in handlers:
-            logger.addHandler
+            logger.addHandler(h)
         logger.propagate = True
     if level_changed:
         logger.setLevel(old_logger_level)

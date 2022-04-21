@@ -424,7 +424,7 @@ class TestGDPopt(unittest.TestCase):
         m.disj = Disjunction(expr=[[m.x == m.y, m.x + m.y >= 8],
                                    [m.x == 4]])
         m.obj = Objective(expr=m.x + m.y)
-        logger = logging.getLogger('pyomo.contrib.gdpopt')
+        logger = logging.getLogger('gdpopt_test')
         logger.setLevel(logging.DEBUG)
         SolverFactory('gdpopt', algorithm='RIC').solve(
             m, mip_solver=mip_solver,
@@ -491,11 +491,8 @@ class TestGDPopt(unittest.TestCase):
 
         # first, force ourselves into the suboptimal disjunct
         m.disjunction.disjuncts[0].indicator_var.fix(False)
-        logger = logging.getLogger('pyomo.contrib.gdpopt')
-        logger.setLevel(logging.DEBUG)
         SolverFactory('gdpopt', algorithm='LOA').solve(m, mip_solver=mip_solver,
-                                                       nlp_solver=nlp_solver,
-                                                       logger=logger)
+                                                       nlp_solver=nlp_solver)
         self.assertTrue(value(m.disjunction.disjuncts[1].indicator_var))
         self.assertFalse(value(m.disjunction.disjuncts[0].indicator_var))
         self.assertTrue(m.disjunction.disjuncts[0].indicator_var.fixed)
