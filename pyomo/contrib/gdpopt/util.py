@@ -310,15 +310,11 @@ def constraints_in_True_disjuncts(model, config):
             Constraint, active=True, sort=SortComponents.deterministic,
             descend_into=Block):
         yield constr
-    observed_disjuncts = ComponentSet()
     for disjctn in model.component_data_objects(
             Disjunction, active=True,
             sort=SortComponents.deterministic, descend_into=Block):
         # get all the disjuncts in the disjunction. Check which ones are True.
         for disj in disjctn.disjuncts:
-            if disj in observed_disjuncts:
-                continue
-            observed_disjuncts.add(disj)
             if fabs(disj.binary_indicator_var.value - 1) \
                <= config.integer_tolerance:
                 for constr in disj.component_data_objects(
