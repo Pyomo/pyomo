@@ -363,7 +363,7 @@ class TestMindtPy(unittest.TestCase):
             config.add_no_good_cuts = False
             config.use_tabu_list = True
             check_config(config)
-            self.assertIs(config.init_strategy, 'FP')
+            self.assertEqual(config.init_strategy, 'FP')
             self.assertEqual(config.iteration_limit, 0)
             self.assertEqual(config.add_no_good_cuts, True)
             self.assertEqual(config.use_tabu_list, False)
