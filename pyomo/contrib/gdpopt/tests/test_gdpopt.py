@@ -18,11 +18,14 @@ from os.path import join, normpath
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.collections import Bunch
+from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
-from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
-from pyomo.contrib.gdpopt.util import is_feasible, time_code
+from pyomo.contrib.gdpopt.mip_solve import (
+    solve_MILP_master_problem, distinguish_mip_infeasible_or_unbounded)
+from pyomo.contrib.gdpopt.util import (
+    constraints_in_True_disjuncts, is_feasible, time_code)
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.environ import ( ConcreteModel, Objective, SolverFactory, Var, value,
@@ -190,6 +193,66 @@ class TestGDPoptUnit(unittest.TestCase):
         with self.assertRaisesRegex(NotImplementedError,
                                     "Found active disjunct"):
             is_feasible(m, GDP_LOA_Solver.CONFIG())
+
+    @unittest.skipUnless(SolverFactory('gurobi').available(),
+                         'Gurobi not available')
+    def test_infeasible_or_unbounded_mip_termination(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.c1 = Constraint(expr=m.x >= 2)
+        m.c2 = Constraint(expr=m.x <= 1.9)
+        m.obj = Objective(expr=m.x)
+
+        results = SolverFactory('gurobi').solve(m)
+        # Gurobi shrugs:
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.infeasibleOrUnbounded)
+        # just pretend on the config block--we only need these two:
+        config = ConfigDict()
+        config.declare('mip_solver', ConfigValue('gurobi'))
+        config.declare('mip_solver_args', ConfigValue({}))
+
+        # We tell Gurobi to figure it out
+        (results,
+         termination_condition) = distinguish_mip_infeasible_or_unbounded(
+             m, config)
+
+        # It's infeasible:
+        self.assertEqual(termination_condition, TerminationCondition.infeasible)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.infeasible)
+
+    def test_constraints_in_True_disjuncts(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-5, 5))
+        m.y = Var(bounds=(-2, 6))
+        m.b = Block()
+        m.b.disjunction = Disjunction(expr=[[m.x + m.y <= 1, m.y >= 0.5],
+                                            [m.x == 2, m.y == 4],
+                                            [m.x**2 - m.y <= 3]])
+        m.disjunction = Disjunction(expr=[[m.x - m.y <= -2, m.y >= -1],
+                                          [m.x == 0, m.y >= 0],
+                                          [m.y**2 + m.x <= 3]])
+        m.b.disjunction.disjuncts[0].indicator_var.fix(True)
+        m.b.disjunction.disjuncts[1].indicator_var.fix(False)
+        m.b.disjunction.disjuncts[2].indicator_var.fix(False)
+        m.b.deactivate()
+        m.disjunction.disjuncts[0].indicator_var.fix(False)
+        m.disjunction.disjuncts[1].indicator_var.fix(True)
+        m.disjunction.disjuncts[2].indicator_var.fix(False)
+
+        config = ConfigDict()
+        config.declare('integer_tolerance', ConfigValue(1e-6))
+        constraints = list(constraints_in_True_disjuncts(m, config))
+        self.assertEqual(len(constraints), 2)
+        c1 = constraints[0]
+        c2 = constraints[1]
+        self.assertIs(c1.body, m.x)
+        self.assertEqual(c1.lower, 0)
+        self.assertEqual(c1.upper, 0)
+        self.assertIs(c2.body, m.y)
+        self.assertEqual(c2.lower, 0)
+        self.assertIsNone(c2.upper)
 
     def test_invalid_solver_name(self):
         m = ConcreteModel()

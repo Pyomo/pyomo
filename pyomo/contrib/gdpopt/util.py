@@ -20,8 +20,8 @@ from pyomo.common.deprecation import deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (
-    Block, Constraint, Objective, Reals, Reference, Var, minimize,
-    TransformationFactory, value)
+    Block, Constraint, minimize, Objective, Reals, Reference, SortComponents,
+    TransformationFactory, value, Var)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import _parent_disjunct
 from pyomo.opt import SolverFactory
@@ -306,13 +306,14 @@ def is_feasible(model, config):
 def constraints_in_True_disjuncts(model, config):
     """Yield constraints in disjuncts where the indicator value is set or
     fixed to True."""
-    # ESJ TODO: This should be a bug if parts of the model are deactivated,
-    # since it goes out and finds them anyway? Oh, or maybe that's not the
-    # default.
-    for constr in model.component_data_objects(Constraint):
+    for constr in model.component_data_objects(
+            Constraint, active=True, sort=SortComponents.deterministic,
+            descend_into=Block):
         yield constr
     observed_disjuncts = ComponentSet()
-    for disjctn in model.component_data_objects(Disjunction):
+    for disjctn in model.component_data_objects(
+            Disjunction, active=True,
+            sort=SortComponents.deterministic, descend_into=Block):
         # get all the disjuncts in the disjunction. Check which ones are True.
         for disj in disjctn.disjuncts:
             if disj in observed_disjuncts:
@@ -320,7 +321,9 @@ def constraints_in_True_disjuncts(model, config):
             observed_disjuncts.add(disj)
             if fabs(disj.binary_indicator_var.value - 1) \
                <= config.integer_tolerance:
-                for constr in disj.component_data_objects(Constraint):
+                for constr in disj.component_data_objects(
+                        Constraint, active=True,
+                        sort=SortComponents.deterministic, descend_into=Block):
                     yield constr
 
 @contextmanager
