@@ -314,7 +314,6 @@ class PersistentSolver(DirectOrPersistentSolver):
         solver_con = self._pyomo_con_to_solver_con_map[con]
         self._remove_constraint(solver_con)
         self._symbol_map.removeSymbol(con)
-        self._labeler.remove_obj(con)
         for var in self._vars_referenced_by_con[con]:
             self._referenced_variables[var] -= 1
         del self._vars_referenced_by_con[con]
@@ -341,7 +340,6 @@ class PersistentSolver(DirectOrPersistentSolver):
         solver_con = self._pyomo_con_to_solver_con_map[con]
         self._remove_sos_constraint(solver_con)
         self._symbol_map.removeSymbol(con)
-        self._labeler.remove_obj(con)
         for var in self._vars_referenced_by_con[con]:
             self._referenced_variables[var] -= 1
         del self._vars_referenced_by_con[con]
@@ -371,7 +369,6 @@ class PersistentSolver(DirectOrPersistentSolver):
         solver_var = self._pyomo_var_to_solver_var_map[var]
         self._remove_var(solver_var)
         self._symbol_map.removeSymbol(var)
-        self._labeler.remove_obj(var)
         del self._referenced_variables[var]
         del self._pyomo_var_to_solver_var_map[var]
         del self._solver_var_to_pyomo_var_map[solver_var]
