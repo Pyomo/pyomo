@@ -20,7 +20,7 @@ from pyomo.common.deprecation import deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (
-    Block, Constraint, minimize, Objective, Reals, Reference, SortComponents,
+    Block, Constraint, minimize, Objective, Reals, Reference,
     TransformationFactory, value, Var)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import _parent_disjunct
@@ -301,26 +301,6 @@ def is_feasible(model, config):
             return False
     config.logger.info('Model is feasible.')
     return True
-
-# Utility used in cut_generation
-def constraints_in_True_disjuncts(model, config):
-    """Yield constraints in disjuncts where the indicator value is set or
-    fixed to True."""
-    for constr in model.component_data_objects(
-            Constraint, active=True, sort=SortComponents.deterministic,
-            descend_into=Block):
-        yield constr
-    for disjctn in model.component_data_objects(
-            Disjunction, active=True,
-            sort=SortComponents.deterministic, descend_into=Block):
-        # get all the disjuncts in the disjunction. Check which ones are True.
-        for disj in disjctn.disjuncts:
-            if fabs(disj.binary_indicator_var.value - 1) \
-               <= config.integer_tolerance:
-                for constr in disj.component_data_objects(
-                        Constraint, active=True,
-                        sort=SortComponents.deterministic, descend_into=Block):
-                    yield constr
 
 @contextmanager
 def time_code(timing_data_obj, code_block_name, is_main_timer=False):

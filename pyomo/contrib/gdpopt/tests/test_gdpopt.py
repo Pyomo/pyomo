@@ -1476,10 +1476,9 @@ class TestGLOA(unittest.TestCase):
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
-            tee=True)
+            tee=False)
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)
-        self.assertTrue(False)
 
     @unittest.skipUnless(license_available,
                          "Global NLP solver license not available.")

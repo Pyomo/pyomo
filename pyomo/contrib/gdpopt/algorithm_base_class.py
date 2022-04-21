@@ -7,6 +7,9 @@ from pyomo.common.config import (
 from pyomo.common.errors import DeveloperError
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import unique_component_name
+from pyomo.contrib.gdpopt.create_oa_subproblems import (
+    add_util_block, add_disjunct_list, add_boolean_variable_lists,
+    add_algebraic_variable_list)
 from pyomo.contrib.gdpopt.util import (
     a_logger, get_main_elapsed_time, solve_continuous_problem)
 from pyomo.core.base import Objective, value, minimize, maximize
@@ -132,6 +135,20 @@ class _GDPoptAlgorithm(object):
             self.pyomo_results.solver = cont_results.solver
 
             return self.pyomo_results
+
+        # This class assumes that we have a util_block with an algebraic
+        # variable list and a boolean variable list, so that we can transfer the
+        # solution onto the original model. Everything else will be up to the
+        # algorithm, but we make sure we have those here.
+
+        # Make a block where we will store some component lists so that after we
+        # clone we know who's who
+        util_block = self.original_util_block = add_util_block(model)
+        # Needed for finding indicator_vars mainly
+        add_disjunct_list(util_block)
+        add_boolean_variable_lists(util_block)
+        # To transfer solutions between cloned models
+        add_algebraic_variable_list(util_block)
 
     def _update_bounds_after_solve(self, subprob_nm, primal=None, dual=None,
                                    logger=None):

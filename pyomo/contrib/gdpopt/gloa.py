@@ -16,7 +16,7 @@ from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
-    _get_master_and_subproblem)
+    _get_master_and_subproblem, add_constraints_by_disjunct)
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
 from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
@@ -29,11 +29,12 @@ from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
 from pyomo.core import (
     Constraint, Block, Expression, NonNegativeIntegers, Objective,
-    TransformationFactory, value)
+    SortComponents, TransformationFactory, value)
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.opt import TerminationCondition
 from pyomo.opt.base import SolverFactory
 import logging
+from math import fabs
 
 @SolverFactory.register(
     '_global_logic_based_oa',
@@ -75,9 +76,12 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
     def _solve_gdp_with_gloa(self, original_model, config):
         logger = config.logger
 
+        # we need to gather a map of Disjuncts to their active Constraints
+        # before we call any GDP transformations, as we will need this
+        # information for cut generation later
+        add_constraints_by_disjunct(self.original_util_block)
         (master_util_block,
-         subproblem_util_block) = _get_master_and_subproblem(
-             original_model, config, self, constraint_list=True)
+         subproblem_util_block) = _get_master_and_subproblem(self, config)
 
         master = master_util_block.model()
         subproblem = subproblem_util_block.model()
@@ -120,6 +124,29 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
             self._transfer_incumbent_to_original_model()
         return self.pyomo_results
 
+    # Utility used in cut_generation: We saved a map of Disjuncts to the
+    # active constraints they contain on the master problem util_block, and use
+    # it here to find the active constraints under the current discrete
+    # solution. Note that this preprocesses not just to be efficient, but
+    # because everything on the Disjuncts is deactivated at this point, since
+    # we've already transformed the master problem to a MILP
+    def _get_active_untransformed_constraints(self, util_block, config):
+        """Yield constraints in disjuncts where the indicator value is set or
+        fixed to True."""
+        model = util_block.model()
+        # Get active global constraints
+        for constr in model.component_data_objects(
+                Constraint, active=True, sort=SortComponents.deterministic,
+                descend_into=Block):
+            yield constr
+        # get all the disjuncts in the original model. Check which ones are
+        # True.
+        for disj, constr_list in util_block.constraints_by_disjunct.items():
+            if fabs(disj.binary_indicator_var.value - 1) \
+               <= config.integer_tolerance:
+                for constr in constr_list:
+                    yield constr
+
     def _add_cuts_to_master_problem(self, subproblem_util_block,
                                     master_util_block, objective_sense, config,
                                     timing):
@@ -139,10 +166,8 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
             if val is not None and not master_var.fixed:
                 master_var.set_value(val, skip_validation=True)
 
-        for constr in constraints_in_True_disjuncts(m, config):
-            # Note: this includes constraints that are deactivated in the
-            # current model
-
+        for constr in self._get_active_untransformed_constraints(
+                master_util_block, config):
             disjunctive_var_bounds = disjunctive_bounds(constr.parent_block())
 
             if constr.body.polynomial_degree() in (1, 0):

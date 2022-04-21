@@ -21,19 +21,9 @@ from pyomo.contrib.gdpopt.util import (
 from pyomo.gdp.disjunct import Disjunct, Disjunction
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
-def _get_master_and_subproblem(original_model, config, solver,
-                               constraint_list=True):
-    # Make a block where we will store some component lists so that after we
-    # clone we know who's who
-    util_block = solver.original_util_block = add_util_block(original_model)
-    # Needed for finding indicator_vars mainly
-    add_disjunct_list(util_block)
-    add_boolean_variable_lists(util_block)
-    # To transfer solutions between MILP and NLP
-    add_algebraic_variable_list(util_block)
-    # We'll need these to get dual info after solving subproblems
-    if constraint_list:
-        add_constraint_list(util_block)
+def _get_master_and_subproblem(solver, config):
+    util_block = solver.original_util_block
+    original_model = util_block.model()
     if config.force_subproblem_nlp:
         # We'll need to fix these too
         add_discrete_variable_list(util_block)
@@ -83,7 +73,6 @@ def initialize_master_problem(util_block, subprob_util_block, config, solver):
 
     # Transform to a MILP
     TransformationFactory(config.master_problem_transformation).apply_to(master)
-    #add_boolean_variable_list(master_util_block)
     add_transformed_boolean_variable_list(master_util_block)
     add_algebraic_variable_list(master_util_block, name='all_mip_variables')
 
@@ -120,6 +109,15 @@ def add_constraint_list(util_block):
     util_block.constraint_list = list(model.component_data_objects(
         ctype=Constraint, active=True, descend_into=(Block, Disjunct),
         sort=SortComponents.deterministic))
+
+def add_constraints_by_disjunct(util_block):
+    constraints_by_disjunct = util_block.constraints_by_disjunct = {}
+    for disj in util_block.disjunct_list:
+        cons_list = constraints_by_disjunct[disj] = []
+        for cons in disj.component_data_objects(
+                Constraint, active=True, descend_into=Block,
+                sort=SortComponents.deterministic):
+            cons_list.append(cons)
 
 def add_algebraic_variable_list(util_block, name=None):
     """

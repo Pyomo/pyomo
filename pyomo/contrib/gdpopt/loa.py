@@ -19,7 +19,7 @@ from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
-    _get_master_and_subproblem)
+    _get_master_and_subproblem, add_constraint_list)
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
 from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
@@ -82,9 +82,11 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
     def _solve_gdp_with_loa(self, original_model, config):
         logger = config.logger
 
+        # We'll need these to get dual info after solving subproblems
+        add_constraint_list(self.original_util_block)
+
         (master_util_block,
-         subproblem_util_block) = _get_master_and_subproblem(
-             original_model, config, self, constraint_list=True)
+         subproblem_util_block) = _get_master_and_subproblem(self, config)
 
         master = master_util_block.model()
         subproblem = subproblem_util_block.model()

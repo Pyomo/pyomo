@@ -73,8 +73,7 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
         logger = config.logger
 
         (master_util_block,
-         subproblem_util_block) = _get_master_and_subproblem(
-             original_model, config, self, constraint_list=False)
+         subproblem_util_block) = _get_master_and_subproblem(self, config)
         master = master_util_block.model()
         subproblem = subproblem_util_block.model()
         master_obj = next(master.component_data_objects(Objective, active=True,
