@@ -356,7 +356,7 @@ def build_ordered_component_lists(model, solve_data):
     if hasattr(solve_data,'mip_constraint_polynomial_degree'):
         mip_constraint_polynomial_degree = solve_data.mip_constraint_polynomial_degree
     else:
-        mip_constraint_polynomial_degree=(0, 1)
+        mip_constraint_polynomial_degree = {0, 1}
     setattr(
         util_blk, 'linear_constraint_list', list(
             c for c in model.component_data_objects(
