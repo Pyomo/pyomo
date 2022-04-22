@@ -26,6 +26,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.opt import SolverFactory
 from pyomo.contrib.pyros.util import (model_is_valid,
                                       recast_to_min_obj,
+                                      remove_model_objectives,
                                       add_decision_rule_constraints,
                                       add_decision_rule_variables,
                                       load_final_solution,
@@ -379,20 +380,19 @@ class PyROS(object):
                 for obj in model_data.working_model.component_data_objects(
                     Objective,
                     active=True,
-                    descend_into=True)
+                    descend_into=True,)
             )[0]
             active_obj = recast_to_min_obj(model_data.working_model,
                                            active_obj)
 
             # remove inactive objectives, then deactivate the
             # only remaining objective, of the working model
-            for obj in model_data.working_model.component_data_objects(
-                    Objective,
-                    descend_into=True,
-            ):
-                if not obj.active:
-                    model_data.working_model.del_component(obj)
             active_obj.deactivate()
+            remove_model_objectives(model_data.working_model,
+                                    keep_objectives=[active_obj])
+
+            # import pdb
+            # pdb.set_trace()
 
             # === Add objective expressions
             identify_objective_functions(model_data.working_model, config)

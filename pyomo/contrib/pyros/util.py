@@ -840,6 +840,36 @@ def add_decision_rule_constraints(model_data, config):
     model_data.working_model.util.decision_rule_eqns = decision_rule_eqns
 
 
+def remove_model_objectives(model, keep_objectives=list()):
+    """
+    Remove all Objectives in a model, save those
+    specified in the iterable `keep_objectives`.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        The model of interest.
+    keep_objectives : iterable(Objective), optional
+        Objectives to retain. The default is an empty list.
+    """
+    # morph keep_objectives into ComponentSet
+    keep_objectives = ComponentSet(keep_objectives)
+
+    # Assemble Blocks over which to iterate and perform
+    # `del_component`. We loop explicitly over these Blocks
+    # as `model.del_component(obj)` does not remove
+    # objectives associated with the Blocks of `model`
+    blks = [model] + list(
+        model.component_data_objects(
+            Block, descend_into=True,
+        )
+    )
+    for blk in blks:
+        for obj in blk.component_data_objects(Objective):
+            if obj not in keep_objectives:
+                blk.del_component(obj)
+
+
 def identify_objective_functions(model, config):
     '''
     Determine the objective first- and second-stage costs based on the user provided variable partition

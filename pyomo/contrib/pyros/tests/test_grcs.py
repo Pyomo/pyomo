@@ -2256,6 +2256,9 @@ class testUninitializedVars(unittest.TestCase):
             )
 
 
+@unittest.skipUnless(SolverFactory('baron').available(exception_flag=False)
+                     and SolverFactory('baron').license_is_valid(),
+                     "Global NLP solver is not available and licensed.")
 class testModelMultipleObjectives(unittest.TestCase):
     """
     This class contains tests for models with multiple
@@ -2273,7 +2276,13 @@ class testModelMultipleObjectives(unittest.TestCase):
         m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
 
         m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # add another objective
         m.obj2 = Objective(expr=m.obj.expr / 2)
+
+        # add block, with another objective
+        m.b = Block()
+        m.b.obj = Objective(expr=m.obj.expr / 2)
 
         # Define the uncertainty set
         interval = BoxSet(bounds=[(0.25, 2)])
@@ -2301,6 +2310,14 @@ class testModelMultipleObjectives(unittest.TestCase):
         )
 
         # check validation error raised due to multiple objectives
+        self.assertRaises(
+            AttributeError,
+            pyros_solver.solve,
+            **solve_kwargs,
+        )
+
+        # check validation error raised due to multiple objectives
+        m.b.obj.deactivate()
         self.assertRaises(
             AttributeError,
             pyros_solver.solve,
