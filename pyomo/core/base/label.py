@@ -14,7 +14,7 @@ __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
 
 import re
 
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecated
 from pyomo.core.base.componentuid import ComponentUID
 
 # This module provides some basic functionality for generating labels
@@ -103,12 +103,11 @@ class NumericLabeler(object):
         self.id += 1
         return self.prefix + str(self.id)
 
+    @deprecated("The 'remove_obj' method is no longer "
+                "necessary now that 'getname' does not "
+                "support the use of a name buffer", version="TODO")
     def remove_obj(self, obj):
-        deprecation_warning("The 'remove_obj' method is no longer "
-                            "necessary now that 'getname' does not "
-                            "support the use of a name buffer",
-                            version="TODO")
-
+        pass
 #
 # TODO: [JDS] I would like to rename TextLabeler to LPLabeler - as it
 # generated LP-file-compliant labels - and make the CNameLabeler the
@@ -127,11 +126,11 @@ class TextLabeler(object):
     def __call__(self, obj):
         return cpxlp_label_from_name(obj.getname(True))
 
+    @deprecated("The 'remove_obj' method is no longer "
+                "necessary now that 'getname' does not "
+                "support the use of a name buffer", version="TODO")
     def remove_obj(self, obj):
-        deprecation_warning("The 'remove_obj' method is no longer "
-                            "necessary now that 'getname' does not "
-                            "support the use of a name buffer",
-                            version="TODO")
+        pass
 
 class AlphaNumericTextLabeler(object):
     def __call__(self, obj):
