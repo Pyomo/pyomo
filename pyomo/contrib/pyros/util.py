@@ -114,44 +114,53 @@ class ObjectiveType(Enum):
     worst_case = auto()
     nominal = auto()
 
-def model_is_valid(model):
-    '''
-    Possibilities:
-    Deterministic model has a single objective
-    Deterministic model has no objective
-    Deterministic model has multiple objectives
-    :param model: the deterministic model
-    :return: True if it satisfies certain properties, else False.
-    '''
-    objectives = list(model.component_data_objects(Objective))
-    for o in objectives:
-        o.deactivate()
-    if len(objectives) == 1:
-        '''
-        Ensure objective is a minimization. If not, change the sense.
-        '''
-        obj = objectives[0]
 
-        if obj.sense is not minimize:
-            sympy_obj = sympyify_expression(-obj.expr)
-            # Use sympy to distribute the negation so the method for determining first/second stage costs is valid
-            min_obj = Objective(expr=sympy2pyomo_expression(sympy_obj[1].simplify(), sympy_obj[0]))
-            model.del_component(obj)
-            model.add_component(unique_component_name(model, obj.name+'_min'), min_obj)
-        return True
+def recast_to_min_obj(model, obj):
+    """
+    Recast model objective to a minimization objective, if necessary.
 
-    elif len(objectives) > 1:
-        '''
-        User should deactivate all Objectives in the model except the one represented by the output of 
-        first_stage_objective + second_stage_objective
-        '''
-        return False
+    Parameters
+    ----------
+    model : ConcreteModel
+        Model of interest.
+    obj : ScalarObjective
+        Objective of interest.
+
+    Returns
+    -------
+    model_obj : ScalarObjective
+        The updated model objective. If original objective has a
+        minimization sense (i.e. no update performed), then this is
+        identical to `obj`.
+    """
+    if obj.sense is not minimize:
+        sympy_obj = sympyify_expression(-obj.expr)
+        # Use sympy to distribute the negation so the method
+        # for determining first/second stage costs is valid
+        min_obj = Objective(
+            expr=sympy2pyomo_expression(sympy_obj[1].simplify(),
+                                        sympy_obj[0])
+        )
+        model.del_component(obj)
+        model.add_component(
+            unique_component_name(model, obj.name+'_min'), min_obj
+        )
+        model_obj = min_obj
     else:
-        '''
-        No Objective objects provided as part of the model, please provide an Objective to your model so that
-        PyROS can infer first- and second-stage objective.
-        '''
-        return False
+        model_obj = obj
+
+    return model_obj
+
+
+def model_is_valid(model):
+    """
+    Assess whether model is valid on basis of the number of active
+    Objectives. A valid model must contain exactly one active Objective.
+    """
+    return (
+        len(list(model.component_data_objects(Objective, active=True)))
+        == 1
+    )
 
 
 def turn_bounds_to_constraints(variable, model, config=None):

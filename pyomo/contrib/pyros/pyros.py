@@ -25,6 +25,7 @@ from pyomo.contrib.pyros.util import (a_logger,
 from pyomo.common.modeling import unique_component_name
 from pyomo.opt import SolverFactory
 from pyomo.contrib.pyros.util import (model_is_valid,
+                                      recast_to_min_obj,
                                       add_decision_rule_constraints,
                                       add_decision_rule_variables,
                                       load_final_solution,
@@ -363,10 +364,6 @@ class PyROS(object):
             # === Validate uncertainty set happens here, requires util block for Cardinality and FactorModel sets
             validate_uncertainty_set(config=config)
 
-            # === Deactivate objective on model
-            for o in model.component_data_objects(Objective):
-                o.deactivate()
-
             # === Leads to a logger warning here for inactive obj when cloning
             model_data.original_model = model
             # === For keeping track of variables after cloning
@@ -374,6 +371,28 @@ class PyROS(object):
             src_vars = list(model_data.original_model.component_data_objects(Var))
             setattr(model_data.original_model, cname, src_vars)
             model_data.working_model = model_data.original_model.clone()
+
+            # convert active objective to a minimization objective,
+            # if necessary
+            active_obj = list(
+                obj
+                for obj in model_data.working_model.component_data_objects(
+                    Objective,
+                    active=True,
+                    descend_into=True)
+            )[0]
+            active_obj = recast_to_min_obj(model_data.working_model,
+                                           active_obj)
+
+            # remove inactive objectives, then deactivate the
+            # only remaining objective, of the working model
+            for obj in model_data.working_model.component_data_objects(
+                    Objective,
+                    descend_into=True,
+            ):
+                if not obj.active:
+                    model_data.working_model.del_component(obj)
+            active_obj.deactivate()
 
             # === Add objective expressions
             identify_objective_functions(model_data.working_model, config)

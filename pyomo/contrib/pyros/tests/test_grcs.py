@@ -22,6 +22,7 @@ from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, i
 from pyomo.contrib.pyros.solve_data import MasterProblemData
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
+from pyomo.environ import maximize as pyo_max
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest('PyROS unit tests require numpy and scipy')
@@ -246,6 +247,8 @@ class testModelIsValid(unittest.TestCase):
         self.assertTrue(model_is_valid(m))
         m.obj2 = Objective(expr = m.x)
         self.assertFalse(model_is_valid(m))
+        m.obj2.deactivate()
+        self.assertTrue(model_is_valid(m))
         m.del_component("obj1")
         m.del_component("obj2")
         self.assertFalse(model_is_valid(m))
@@ -2251,6 +2254,88 @@ class testUninitializedVars(unittest.TestCase):
                          f"decision rule order {dr_order} is not return "
                          "robust_optimal.")
             )
+
+
+class testModelMultipleObjectives(unittest.TestCase):
+    """
+    This class contains tests for models with multiple
+    Objective attributes.
+    """
+    def test_multiple_objs(self):
+        """Test bypassing of global separation solve calls."""
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+        m.obj2 = Objective(expr=m.obj.expr / 2)
+
+        # Define the uncertainty set
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('ipopt')
+        global_subsolver = SolverFactory("baron")
+
+        solve_kwargs = dict(
+             model=m,
+             first_stage_variables=[m.x1],
+             second_stage_variables=[m.x2],
+             uncertain_params=[m.u],
+             uncertainty_set=interval,
+             local_solver=local_subsolver,
+             global_solver=global_subsolver,
+             options={
+                 "objective_focus": ObjectiveType.worst_case,
+                 "solve_master_globally": True,
+                 "decision_rule_order":0,
+             }
+        )
+
+        # check validation error raised due to multiple objectives
+        self.assertRaises(
+            AttributeError,
+            pyros_solver.solve,
+            **solve_kwargs,
+        )
+
+        # now solve with only one active obj,
+        # check successful termination
+        m.obj2.deactivate()
+        res = pyros_solver.solve(**solve_kwargs)
+        self.assertIs(res.pyros_termination_condition,
+                      pyrosTerminationCondition.robust_optimal)
+
+        # check active objectives
+        self.assertEqual(
+            len(list(m.component_data_objects(Objective, active=True))),
+            1
+        )
+        self.assertTrue(m.obj.active)
+
+        # swap to maximization objective.
+        # and solve again
+        m.obj_max = Objective(
+            expr=-m.obj.expr,
+            sense=pyo_max,
+        )
+        m.obj.deactivate()
+        res = pyros_solver.solve(**solve_kwargs)
+
+        # check active objectives
+        self.assertEqual(
+            len(list(m.component_data_objects(Objective, active=True))),
+            1
+        )
+        self.assertTrue(m.obj_max.active)
 
 
 if __name__ == "__main__":
