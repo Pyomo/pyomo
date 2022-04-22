@@ -208,6 +208,20 @@ def _get_MindtPy_config():
         description='Partition objective with the sum of nonlinear terms using epigraph reformulation.',
         domain=bool
     ))
+    CONFIG.declare('quadratic_strategy', ConfigValue(
+        default=0,
+        domain=In([0, 1, 2]),
+        description='How to treat the quadratic terms in MINLP.'
+                    '0 : treat as nonlinear terms'
+                    '1 : only use quadratic terms in objective function directly in main problem'
+                    '2 : use quadratic terms in objective function and constraints in main problem',
+    ))
+    CONFIG.declare('move_objective', ConfigValue(
+        default=False,
+        domain=bool,
+        description='Whether to replace the objective function to constraint using epigraph constraint.',
+    ))
+    
 
     _add_subsolver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)
