@@ -851,31 +851,17 @@ class ComponentData(_ComponentBase):
         to the parent component's index set.
         """
         parent = self.parent_component()
-        if parent is None:
-            return None
-        idx = self._index
-        # ComponentList objects implement _data as a list rather than a dict so
-        # we have to account for both here
-        if isinstance(parent._data, dict):
-            parent_idx = parent._data.get(idx, None)
-        elif isinstance(parent._data, list):
-            try:
-                parent_idx = parent._data[idx]
-            except IndexError:
-                parent_idx = None
-        else:
-            raise DeveloperError("Unrecognized type for '_data' dictionary")
-        if ((idx is NOTSET and parent_idx is not None) or
-            (parent_idx is not self)):
-            parent_idx_name = parent_idx.name if parent_idx is not None \
-                              else 'None'
+        if ( parent is not None and
+             self._index is not NOTSET and
+             parent[self._index] is not self ):
             # This error message is a bit goofy, but we can't call self.name
             # here--it's an infinite loop!
             raise DeveloperError(
                 "The '_data' dictionary and '_index' attribute are out of "
                 "sync for index '%s' on indexed component '%s': The '_data' "
                 "dictionary contains '%s' as the value corresponding to '%s'."
-                % (idx, parent.name, parent_idx_name, idx))
+                % (self._index, parent.name, parent[self._index].name,
+                   self._index))
         return self._index
 
     def __str__(self):
