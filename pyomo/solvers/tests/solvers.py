@@ -282,23 +282,6 @@ def test_solver_cases(*args):
             #import_suffixes=['dual', 'rc'])
 
         #
-        # PICO
-        #
-        _pico_capabilities = set(['linear', 'integer'])
-
-        _test_solver_cases['pico', 'lp'] = initialize(
-            name='pico',
-            io='lp',
-            capabilities=_pico_capabilities,
-            import_suffixes=['dual'])
-
-        _test_solver_cases['pico', 'nl'] = initialize(
-            name='pico',
-            io='nl',
-            capabilities=_pico_capabilities,
-            import_suffixes=['dual'])
-
-        #
         # XPRESS
         #
         _xpress_capabilities= set(['linear',
@@ -308,32 +291,11 @@ def test_solver_cases(*args):
                                    'sos1',
                                    'sos2'])
 
-        _test_solver_cases['xpress', 'lp'] = initialize(
-            name='xpress',
-            io='lp',
-            capabilities=_xpress_capabilities,
-            import_suffixes=['dual','rc','slack'],
-            options={'bargapstop':1e-9,})
-
-        _test_solver_cases['xpress', 'mps'] = initialize(
-            name='xpress',
-            io='mps',
-            capabilities=_xpress_capabilities,
-            import_suffixes=['dual','rc','slack'],
-            options={'bargapstop':1e-9,})
-
-        _test_solver_cases['xpress', 'nl'] = initialize(
-            name='xpress',
-            io='nl',
-            capabilities=_xpress_capabilities,
-            import_suffixes=['dual'],
-            options={'bargapstop':1e-9,})
-
         _test_solver_cases['xpress', 'python'] = initialize(
-            name='xpress',
+            name='xpress_direct',
             io='python',
             capabilities=_xpress_capabilities,
-            import_suffixes=['dual','rc','slack'],
+            import_suffixes=['dual', 'rc', 'slack'],
             options={'bargapstop':1e-9,})
 
         #

@@ -7,7 +7,8 @@ import pyomo.common.unittest as unittest
 
 from pyomo.common.fileutils import import_file
 from pyomo.contrib.satsolver.satsolver import z3_available
-from pyomo.environ import SolverFactory, value, ConcreteModel, Var, Objective, maximize
+from pyomo.environ import (SolverFactory, value, ConcreteModel, Var, Objective,
+                           maximize)
 from pyomo.gdp import Disjunction
 from pyomo.opt import TerminationCondition
 
@@ -17,10 +18,12 @@ exdir = normpath(join(currdir, '..', '..', '..', '..', 'examples', 'gdp'))
 minlp_solver = 'baron'
 minlp_args = dict()
 solver_available = SolverFactory(minlp_solver).available()
-license_available = SolverFactory(minlp_solver).license_is_valid() if solver_available else False
+license_available = SolverFactory(minlp_solver).license_is_valid() if \
+                    solver_available else False
 
 
-@unittest.skipUnless(solver_available, "Required subsolver %s is not available" % (minlp_solver,))
+@unittest.skipUnless(solver_available, 
+                     "Required subsolver %s is not available" % (minlp_solver,))
 class TestGDPopt_LBB(unittest.TestCase):
     """Tests for logic-based branch and bound."""
 
@@ -38,9 +41,11 @@ class TestGDPopt_LBB(unittest.TestCase):
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
-        self.assertEqual(result.solver.termination_condition, TerminationCondition.infeasible)
+        self.assertEqual(result.solver.termination_condition,
+                         TerminationCondition.infeasible)
 
-    @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
+    @unittest.skipUnless(license_available, 
+                         "Problem is too big for unlicensed BARON.")
     def test_LBB_8PP(self):
         """Test the logic-based branch and bound algorithm."""
         exfile = import_file(
@@ -54,7 +59,8 @@ class TestGDPopt_LBB(unittest.TestCase):
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
-    @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
+    @unittest.skipUnless(license_available, 
+                         "Problem is too big for unlicensed BARON.")
     def test_LBB_8PP_max(self):
         """Test the logic-based branch and bound algorithm."""
         exfile = import_file(
@@ -71,7 +77,8 @@ class TestGDPopt_LBB(unittest.TestCase):
         )
         self.assertAlmostEqual(value(eight_process.profit.expr), -68, places=1)
 
-    @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
+    @unittest.skipUnless(license_available, 
+                         "Problem is too big for unlicensed BARON.")
     def test_LBB_strip_pack(self):
         """Test logic-based branch and bound with strip packing."""
         exfile = import_file(
@@ -86,8 +93,9 @@ class TestGDPopt_LBB(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
-    @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
-    @unittest.category('expensive')
+    @unittest.skipUnless(license_available, 
+                         "Problem is too big for unlicensed BARON.")
+    @unittest.pytest.mark.expensive
     def test_LBB_constrained_layout(self):
         """Test LBB with constrained layout."""
         exfile = import_file(
@@ -117,8 +125,10 @@ class TestGDPopt_LBB(unittest.TestCase):
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)
 
-    @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
-    @unittest.skipUnless(SolverFactory('bonmin').available(exception_flag=False), "Bonmin is not avaialable")
+    @unittest.skipUnless(license_available, 
+                         "Problem is too big for unlicensed BARON.")
+    @unittest.skipUnless(SolverFactory('bonmin').available(
+        exception_flag=False), "Bonmin is not avaialable")
     def test_LBB_8PP_with_screening(self):
         """Test the logic-based branch and bound algorithm."""
         exfile = import_file(
@@ -136,7 +146,8 @@ class TestGDPopt_LBB(unittest.TestCase):
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
 
-@unittest.skipUnless(solver_available, "Required subsolver %s is not available" % (minlp_solver,))
+@unittest.skipUnless(solver_available, 
+                     "Required subsolver %s is not available" % (minlp_solver,))
 @unittest.skipUnless(z3_available, "Z3 SAT solver is not available.")
 class TestGDPopt_LBB_Z3(unittest.TestCase):
     """Tests for logic-based branch and bound with Z3 SAT solver integration."""
@@ -155,9 +166,11 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
-        self.assertEqual(result.solver.termination_condition, TerminationCondition.infeasible)
+        self.assertEqual(result.solver.termination_condition,
+                         TerminationCondition.infeasible)
 
-    @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
+    @unittest.skipUnless(license_available, 
+                         "Problem is too big for unlicensed BARON.")
     def test_LBB_8PP(self):
         """Test the logic-based branch and bound algorithm."""
         exfile = import_file(
@@ -171,7 +184,8 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         )
         self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
 
-    @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
+    @unittest.skipUnless(license_available, 
+                         "Problem is too big for unlicensed BARON.")
     def test_LBB_strip_pack(self):
         """Test logic-based branch and bound with strip packing."""
         exfile = import_file(
@@ -186,8 +200,9 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
-    @unittest.skipUnless(license_available, "Problem is too big for unlicensed BARON.")
-    @unittest.category('expensive')
+    @unittest.skipUnless(license_available, 
+                         "Problem is too big for unlicensed BARON.")
+    @unittest.pytest.mark.expensive
     def test_LBB_constrained_layout(self):
         """Test LBB with constrained layout."""
         exfile = import_file(

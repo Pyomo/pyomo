@@ -67,7 +67,7 @@ class _UnindexedComponent_set(GlobalSetBase):
         return default
     def __iter__(self):
         return (None,).__iter__()
-    def subsets(self):
+    def subsets(self, expand_all_set_operators=None):
         return [ self ]
     def construct(self):
         pass
@@ -88,3 +88,5 @@ class _UnindexedComponent_set(GlobalSetBase):
         # As this set only has a single element, it is implicitly "ordered"
         return True
 UnindexedComponent_set = _UnindexedComponent_set('UnindexedComponent_set')
+
+UnindexedComponent_index = next(iter(UnindexedComponent_set))

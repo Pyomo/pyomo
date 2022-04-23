@@ -13,15 +13,17 @@ from __future__ import division
 
 from math import fabs
 
-from pyomo.common.collections import ComponentSet
+from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.gdpopt.data_class import SubproblemResult
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
                                        is_feasible, get_main_elapsed_time)
-from pyomo.core import Constraint, TransformationFactory, minimize, value, Objective
+from pyomo.core import (Constraint, TransformationFactory, minimize, value,
+                        Objective, Block)
 from pyomo.core.expr import current as EXPR
 from pyomo.opt import SolverFactory, SolverResults
 from pyomo.opt import TerminationCondition as tc
+from pyomo.contrib.fbbt.fbbt import fbbt
 
 
 def solve_disjunctive_subproblem(mip_result, solve_data, config):
@@ -52,7 +54,8 @@ def solve_linear_subproblem(mip_model, solve_data, config):
 
     mip_solver = SolverFactory(config.mip_solver)
     if not mip_solver.available():
-        raise RuntimeError("MIP solver %s is not available." % config.mip_solver)
+        raise RuntimeError("MIP solver %s is not available." %
+                           config.mip_solver)
     with SuppressInfeasibleWarning():
         mip_args = dict(config.mip_solver_args)
         elapsed = get_main_elapsed_time(solve_data.timing)
@@ -61,14 +64,16 @@ def solve_linear_subproblem(mip_model, solve_data, config):
             mip_args['add_options'] = mip_args.get('add_options', [])
             mip_args['add_options'].append('option reslim=%s;' % remaining)
         elif config.mip_solver == 'multisolve':
-            mip_args['time_limit'] = min(mip_args.get('time_limit', float('inf')), remaining)
+            mip_args['time_limit'] = min(mip_args.get('time_limit',
+                                                      float('inf')), remaining)
         results = mip_solver.solve(mip_model, **mip_args)
 
     subprob_result = SubproblemResult()
     subprob_result.feasible = True
     subprob_result.var_values = list(v.value for v in GDPopt.variable_list)
     subprob_result.pyomo_results = results
-    subprob_result.dual_values = list(mip_model.dual.get(c, None) for c in GDPopt.constraint_list)
+    subprob_result.dual_values = list(mip_model.dual.get(c, None) for c in
+                                      GDPopt.constraint_list)
 
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
@@ -124,10 +129,13 @@ def solve_NLP(nlp_model, solve_data, config):
                 nlp_args['add_options'] = nlp_args.get('add_options', [])
                 nlp_args['add_options'].append('option reslim=%s;' % remaining)
             elif config.nlp_solver == 'multisolve':
-                nlp_args['time_limit'] = min(nlp_args.get('time_limit', float('inf')), remaining)
+                nlp_args['time_limit'] = min(nlp_args.get('time_limit', 
+                                                          float('inf')), 
+                                             remaining)
             results = nlp_solver.solve(nlp_model, **nlp_args)
         except ValueError as err:
-            if 'Cannot load a SolverResults object with bad status: error' in str(err):
+            if 'Cannot load a SolverResults object with bad status: error' in \
+               str(err):
                 results = SolverResults()
                 results.solver.termination_condition = tc.error
                 results.solver.message = str(err)
@@ -143,7 +151,8 @@ def solve_NLP(nlp_model, solve_data, config):
         for c in GDPopt.constraint_list)
 
     term_cond = results.solver.termination_condition
-    if any(term_cond == cond for cond in (tc.optimal, tc.locallyOptimal, tc.feasible)):
+    if any(term_cond == cond for cond in (tc.optimal, tc.locallyOptimal,
+                                          tc.feasible)):
         pass
     elif term_cond == tc.infeasible:
         config.logger.info('NLP subproblem was infeasible.')
@@ -177,10 +186,12 @@ def solve_NLP(nlp_model, solve_data, config):
             results.solver.message)
         nlp_result.feasible = False
     elif term_cond == tc.error:
-        config.logger.info("NLP solver had a termination condition of 'error': %s" % results.solver.message)
+        config.logger.info("NLP solver had a termination condition of 'error': "
+                           "%s" % results.solver.message)
         nlp_result.feasible = False
     elif term_cond == tc.maxTimeLimit:
-        config.logger.info("NLP solver ran out of time. Assuming infeasible for now.")
+        config.logger.info("NLP solver ran out of time. Assuming infeasible "
+                           "for now.")
         nlp_result.feasible = False
     else:
         raise ValueError(
@@ -223,7 +234,9 @@ def solve_MINLP(model, solve_data, config):
             minlp_args['add_options'] = minlp_args.get('add_options', [])
             minlp_args['add_options'].append('option reslim=%s;' % remaining)
         elif config.minlp_solver == 'multisolve':
-            minlp_args['time_limit'] = min(minlp_args.get('time_limit', float('inf')), remaining)
+            minlp_args['time_limit'] = min(minlp_args.get('time_limit',
+                                                          float('inf')),
+                                           remaining)
         results = minlp_solver.solve(model, **minlp_args)
 
     subprob_result = SubproblemResult()
@@ -235,7 +248,8 @@ def solve_MINLP(model, solve_data, config):
         for c in GDPopt.constraint_list)
 
     term_cond = results.solver.termination_condition
-    if any(term_cond == cond for cond in (tc.optimal, tc.locallyOptimal, tc.feasible)):
+    if any(term_cond == cond for cond in (tc.optimal, tc.locallyOptimal,
+                                          tc.feasible)):
         pass
     elif term_cond == tc.infeasible:
         config.logger.info('MINLP subproblem was infeasible.')
@@ -252,7 +266,8 @@ def solve_MINLP(model, solve_data, config):
         else:
             subprob_result.feasible = False
     elif term_cond == tc.maxTimeLimit:
-        config.logger.info('MINLP subproblem failed to converge within time limit.')
+        config.logger.info('MINLP subproblem failed to converge within time '
+                           'limit.')
         if is_feasible(model, config):
             config.logger.info(
                 'MINLP solution is still feasible. '
@@ -260,8 +275,8 @@ def solve_MINLP(model, solve_data, config):
         else:
             subprob_result.feasible = False
     elif term_cond == tc.intermediateNonInteger:
-        config.logger.info(
-            "MINLP solver could not find feasible integer solution: %s" % results.solver.message)
+        config.logger.info( "MINLP solver could not find feasible integer"
+                            " solution: %s" % results.solver.message)
         subprob_result.feasible = False
     else:
         raise ValueError(
@@ -289,34 +304,56 @@ def detect_unfixed_discrete_vars(model):
                 constr.body, include_fixed=False)
             if not v.is_continuous())
     for obj in model.component_data_objects(Objective, active=True):
-        var_set.update(v for v in EXPR.identify_variables(obj.expr, include_fixed=False)
+        var_set.update(v for v in EXPR.identify_variables(obj.expr,
+                                                          include_fixed=False)
                        if not v.is_continuous())
     return var_set
 
 
 def preprocess_subproblem(m, config):
     """Applies preprocessing transformations to the model."""
-    # fbbt(m, integer_tol=config.integer_tolerance)
+    if not config.tighten_nlp_var_bounds:
+        original_bounds = ComponentMap()
+        # TODO: Switch this to the general utility function, but I hid it in
+        # #2221
+        for cons in m.component_data_objects(Constraint, active=True,
+                                             descend_into=Block):
+            for v in EXPR.identify_variables(cons.expr):
+                if v not in original_bounds.keys():
+                    original_bounds[v] = (v.lb, v.ub)
+        # We could miss if there is a variable that only appears in the
+        # objective, but its bounds are not going to get changed anyway if
+        # that's the case.
+
+    # First do FBBT
+    fbbt(m, integer_tol=config.integer_tolerance,
+         feasibility_tol=config.constraint_tolerance,
+         max_iter=config.max_fbbt_iterations)
     xfrm = TransformationFactory
-    xfrm('contrib.propagate_eq_var_bounds').apply_to(m)
+    # Now that we've tightened bounds, see if any variables are fixed because
+    # their lb is equal to the ub (within tolerance)
     xfrm('contrib.detect_fixed_vars').apply_to(
-        m, tolerance=config.variable_tolerance)
-    xfrm('contrib.propagate_fixed_vars').apply_to(m)
+         m, tolerance=config.variable_tolerance)
+
+    # Restore the original bounds because the NLP solver might like that better
+    # and because, if deactivate_trivial_constraints ever gets fancier, this
+    # could change what is and is not trivial.
+    if not config.tighten_nlp_var_bounds:
+        for v, (lb, ub) in original_bounds.items():
+            v.setlb(lb)
+            v.setub(ub)
+
+    # Now, if something got fixed to 0, we might have 0*var terms to remove
     xfrm('contrib.remove_zero_terms').apply_to(m)
-    xfrm('contrib.propagate_zero_sum').apply_to(m)
-    xfrm('contrib.constraints_to_var_bounds').apply_to(
-        m, tolerance=config.variable_tolerance)
-    xfrm('contrib.detect_fixed_vars').apply_to(
-        m, tolerance=config.variable_tolerance)
-    xfrm('contrib.propagate_zero_sum').apply_to(m)
+    # Last, check if any constraints are now trivial and deactivate them
     xfrm('contrib.deactivate_trivial_constraints').apply_to(
         m, tolerance=config.constraint_tolerance)
-
 
 def initialize_subproblem(model, solve_data):
     """Perform initialization of the subproblem.
 
-    Presently, this just restores the continuous variables to the original model values.
+    Presently, this just restores the continuous variables to the original 
+    model values.
 
     """
     # restore original continuous variable values
@@ -336,7 +373,8 @@ def initialize_subproblem(model, solve_data):
 def update_subproblem_progress_indicators(solved_model, solve_data, config):
     """Update the progress indicators for the subproblem."""
     GDPopt = solved_model.GDPopt_utils
-    objective = next(solved_model.component_data_objects(Objective, active=True))
+    objective = next(solved_model.component_data_objects(Objective,
+                                                         active=True))
     if objective.sense == minimize:
         old_UB = solve_data.UB
         solve_data.UB = min(value(objective.expr), solve_data.UB)
@@ -365,7 +403,8 @@ def update_subproblem_progress_indicators(solved_model, solve_data, config):
         if objective.sense == minimize
         else (improvement_tag, ""))
     config.logger.info(
-        'ITER {:d}.{:d}.{:d}-NLP: OBJ: {:.10g}  LB: {:.10g} {:s} UB: {:.10g} {:s}'.format(
+        'ITER {:d}.{:d}.{:d}-NLP: OBJ: {:.10g}  LB: {:.10g} {:s} UB: {:.10g} '
+        '{:s}'.format(
             solve_data.master_iteration,
             solve_data.mip_iteration,
             solve_data.nlp_iteration,
@@ -383,7 +422,7 @@ def solve_local_NLP(mip_var_values, solve_data, config):
         if val is None:
             continue
         if var.is_continuous():
-            var.value = val
+            var.set_value(val, skip_validation=True)
         elif ((fabs(val) > config.integer_tolerance and
                fabs(val - 1) > config.integer_tolerance)):
             raise ValueError(
@@ -395,7 +434,7 @@ def solve_local_NLP(mip_var_values, solve_data, config):
             if config.round_discrete_vars:
                 var.fix(int(round(val)))
             else:
-                var.fix(val)
+                var.fix(val, skip_validation=True)
     TransformationFactory('gdp.fix_disjuncts').apply_to(nlp_model)
 
     nlp_result = solve_NLP(nlp_model, solve_data, config)
@@ -435,10 +474,10 @@ def solve_local_subproblem(mip_result, solve_data, config):
                 continue
             rounded_val = int(round(val))
             if fabs(val - rounded_val) > config.integer_tolerance:
-                raise ValueError(
-                    "Discrete variable %s value %s is not "
-                    "within tolerance %s of %s." %
-                    (var.name, var.value, config.integer_tolerance, rounded_val))
+                raise ValueError( "Discrete variable %s value %s is not "
+                                  "within tolerance %s of %s." % 
+                                  (var.name, var.value, 
+                                   config.integer_tolerance, rounded_val))
             else:
                 # variable is binary and within tolerances
                 if config.round_discrete_vars:
@@ -454,17 +493,22 @@ def solve_local_subproblem(mip_result, solve_data, config):
     if config.subproblem_presolve:
         try:
             preprocess_subproblem(subprob, config)
-        except InfeasibleConstraintException:
+        except InfeasibleConstraintException as e:
+            config.logger.info("NLP subproblem determined to be infeasible "
+                               "during preprocessing.")
+            config.logger.debug("Message from preprocessing: %s" % e)
             return get_infeasible_result_object(
-                subprob, "Preprocessing determined problem to be infeasible.")
+                subprob,
+                "Preprocessing determined problem to be infeasible.")
 
-    if not any(constr.body.polynomial_degree() not in (1, 0)
-               for constr in subprob.component_data_objects(Constraint, active=True)):
+    if not any(constr.body.polynomial_degree() not in (1, 0) for constr in
+               subprob.component_data_objects(Constraint, active=True)):
         subprob_result = solve_linear_subproblem(subprob, solve_data, config)
     else:
         unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
         if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:
-            raise RuntimeError("Unfixed discrete variables found on the NLP subproblem.")
+            raise RuntimeError("Unfixed discrete variables found on the NLP "
+                               "subproblem.")
         elif len(unfixed_discrete_vars) == 0:
             subprob_result = solve_NLP(subprob, solve_data, config)
         else:
@@ -504,10 +548,10 @@ def solve_global_subproblem(mip_result, solve_data, config):
                 continue
             rounded_val = int(round(val))
             if fabs(val - rounded_val) > config.integer_tolerance:
-                raise ValueError(
-                    "Discrete variable %s value %s is not "
-                    "within tolerance %s of %s." %
-                    (var.name, var.value, config.integer_tolerance, rounded_val))
+                raise ValueError( "Discrete variable %s value %s is not "
+                                  "within tolerance %s of %s." % 
+                                  (var.name, var.value, 
+                                   config.integer_tolerance, rounded_val))
             else:
                 # variable is binary and within tolerances
                 if config.round_discrete_vars:
@@ -521,14 +565,15 @@ def solve_global_subproblem(mip_result, solve_data, config):
     if config.subproblem_presolve:
         try:
             preprocess_subproblem(subprob, config)
-        except InfeasibleConstraintException as e:
-            # FBBT found the problem to be infeasible
+        except InfeasibleConstraintException:
+            # Preprocessing found the problem to be infeasible
             return get_infeasible_result_object(
                 subprob, "Preprocessing determined problem to be infeasible.")
 
     unfixed_discrete_vars = detect_unfixed_discrete_vars(subprob)
     if config.force_subproblem_nlp and len(unfixed_discrete_vars) > 0:
-        raise RuntimeError("Unfixed discrete variables found on the NLP subproblem.")
+        raise RuntimeError("Unfixed discrete variables found on the NLP "
+                           "subproblem.")
     elif len(unfixed_discrete_vars) == 0:
         subprob_result = solve_NLP(subprob, solve_data, config)
     else:
@@ -541,9 +586,11 @@ def solve_global_subproblem(mip_result, solve_data, config):
 def get_infeasible_result_object(model, message=""):
     infeas_result = SubproblemResult()
     infeas_result.feasible = False
-    infeas_result.var_values = list(v.value for v in model.GDPopt_utils.variable_list)
+    infeas_result.var_values = list(v.value for v in
+                                    model.GDPopt_utils.variable_list)
     infeas_result.pyomo_results = SolverResults()
     infeas_result.pyomo_results.solver.termination_condition = tc.infeasible
     infeas_result.pyomo_results.message = message
-    infeas_result.dual_values = list(None for _ in model.GDPopt_utils.constraint_list)
+    infeas_result.dual_values = list(None for _ in
+                                     model.GDPopt_utils.constraint_list)
     return infeas_result

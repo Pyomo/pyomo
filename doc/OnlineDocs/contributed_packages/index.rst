@@ -16,6 +16,7 @@ Contributed packages distributed with Pyomo:
    :maxdepth: 1
    
    community.rst
+   doe/doe.rst
    gdpopt.rst
    mindtpy.rst
    multistart.rst
@@ -25,7 +26,6 @@ Contributed packages distributed with Pyomo:
    pyros.rst
    sensitivity_toolbox.rst
    trustregion.rst
-   doe/doe.rst
 
 Contributed Pyomo interfaces to other packages:
 

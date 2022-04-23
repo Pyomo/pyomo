@@ -14,10 +14,6 @@ import os
 import sys
 import tempfile
 
-from pyomo.common.envvar import PYOMO_CONFIG_DIR
-from pyomo.common.fileutils import this_file_dir
-
-
 def handleReadonly(function, path, excinfo):
     excvalue = excinfo[1]
     if excvalue.errno == errno.EACCES:
@@ -26,25 +22,48 @@ def handleReadonly(function, path, excinfo):
     else:
         raise
 
+def get_appsi_extension(in_setup=False, appsi_root=None):
+    from pybind11.setup_helpers import Pybind11Extension
+
+    if appsi_root is None:
+        from pyomo.common.fileutils import this_file_dir
+        appsi_root = this_file_dir()
+
+    sources = [
+        os.path.join(appsi_root, 'cmodel', 'src', file_)
+        for file_ in (
+                'interval.cpp',
+                'expression.cpp',
+                'common.cpp',
+                'nl_writer.cpp',
+                'lp_writer.cpp',
+                'model_base.cpp',
+                'fbbt_model.cpp',
+                'cmodel_bindings.cpp',
+        )
+    ]
+
+    if in_setup:
+        package_name = 'pyomo.contrib.appsi.cmodel.appsi_cmodel'
+    else:
+        package_name = 'appsi_cmodel'
+    if sys.platform.startswith('win'):
+        # Assume that builds on Windows will use MSVC
+        # MSVC doesn't have a flag for c++11, use c++14
+        extra_args = ['/std:c++14']
+    else:
+        # Assume all other platforms are GCC-like
+        extra_args = ['-std=c++11']
+    return Pybind11Extension(package_name, sources, extra_compile_args=extra_args)
 
 def build_appsi(args=[]):
     print('\n\n**** Building APPSI ****')
     import setuptools
     from distutils.dist import Distribution
-    from pybind11.setup_helpers import Pybind11Extension, build_ext
+    from pybind11.setup_helpers import build_ext
     import pybind11.setup_helpers
-
-    appsi_root = this_file_dir()
-    sources = [
-        os.path.join(appsi_root, 'cmodel', 'src', file_)
-        for file_ in (
-                'expression.cpp',
-                'common.cpp',
-                'nl_writer.cpp',
-                'lp_writer.cpp',
-                'cmodel_bindings.cpp',
-        )
-    ]
+    from pyomo.common.envvar import PYOMO_CONFIG_DIR
+    from pyomo.common.fileutils import this_file_dir
 
     class appsi_build_ext(build_ext):
         def run(self):
@@ -78,9 +97,7 @@ def build_appsi(args=[]):
         package_config = {
             'name': 'appsi_cmodel',
             'packages': [],
-            'ext_modules': [
-                Pybind11Extension("appsi_cmodel", sources)
-            ],
+            'ext_modules': [ get_appsi_extension(False) ],
             'cmdclass': {
                 "build_ext": appsi_build_ext,
             },

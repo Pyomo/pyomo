@@ -13,6 +13,7 @@ __all__ = ['IndexedComponent', 'ActiveIndexedComponent']
 import inspect
 import logging
 import sys
+import textwrap
 
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import native_types, NumericNDArray
@@ -23,8 +24,9 @@ from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
 from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import NOTSET
+from pyomo.common.sorting import sorted_robust
 
 from collections.abc import Sequence
 
@@ -228,7 +230,7 @@ class IndexedComponent(Component):
     """
     This is the base class for all indexed modeling components.
     This class stores a dictionary, self._data, that maps indices
-    to component data objects.  The object self._index defines valid
+    to component data objects.  The object self._index_set defines valid
     keys for this dictionary, and the dictionary keys may be a
     strict subset.
 
@@ -250,7 +252,7 @@ class IndexedComponent(Component):
     Private class attributes:
         _data               A dictionary from the index set to
                                 component data objects
-        _index              The set of valid indices
+        _index_set              The set of valid indices
         _implicit_subsets   A temporary data element that stores
                                 sets that are transfered to the model
     """
@@ -261,7 +263,7 @@ class IndexedComponent(Component):
     # If an index is supplied for which there is not a _data entry
     # (specifically, in a get call), then this flag determines whether
     # a check is performed to see if the input index is in the
-    # index set _index. This is extremely expensive, and so this flag
+    # index set _index_set. This is extremely expensive, and so this flag
     # is provided to disable that feature globally.
     #
     _DEFAULT_INDEX_CHECKING_ENABLED = True
@@ -280,13 +282,13 @@ class IndexedComponent(Component):
             # If no indexing sets are provided, generate a dummy index
             #
             self._implicit_subsets = None
-            self._index = UnindexedComponent_set
+            self._index_set = UnindexedComponent_set
         elif len(args) == 1:
             #
             # If a single indexing set is provided, just process it.
             #
             self._implicit_subsets = None
-            self._index = process_setarg(args[0])
+            self._index_set = process_setarg(args[0])
         else:
             #
             # If multiple indexing sets are provided, process them all,
@@ -305,26 +307,26 @@ class IndexedComponent(Component):
             #
             tmp = [process_setarg(x) for x in args]
             self._implicit_subsets = tmp
-            self._index = tmp[0].cross(*tmp[1:])
+            self._index_set = tmp[0].cross(*tmp[1:])
 
     def __getstate__(self):
         # Special processing of getstate so that we never copy the
         # UnindexedComponent_set set
         state = super(IndexedComponent, self).__getstate__()
         if not self.is_indexed():
-            state['_index'] = None
+            state['_index_set'] = None
         return state
 
     def __setstate__(self, state):
         # Special processing of setstate so that we never copy the
         # UnindexedComponent_set set
-        if state['_index'] is None:
-            state['_index'] = UnindexedComponent_set
+        if state['_index_set'] is None:
+            state['_index_set'] = UnindexedComponent_set
         super(IndexedComponent, self).__setstate__(state)
 
     def to_dense_data(self):
         """TODO"""
-        for idx in self._index:
+        for idx in self._index_set:
             if idx in self._data:
                 continue
             try:
@@ -344,11 +346,11 @@ class IndexedComponent(Component):
 
     def index_set(self):
         """Return the index set"""
-        return self._index
+        return self._index_set
 
     def is_indexed(self):
         """Return true if this component is indexed"""
-        return self._index is not UnindexedComponent_set
+        return self._index_set is not UnindexedComponent_set
 
     def is_reference(self):
         """Return True if this component is a reference, where
@@ -361,7 +363,7 @@ class IndexedComponent(Component):
         """Return the dimension of the index"""
         if not self.is_indexed():
             return 0
-        return self._index.dimen
+        return self._index_set.dimen
 
     def __len__(self):
         """
@@ -379,29 +381,49 @@ class IndexedComponent(Component):
     # keys/values/items continue to work for components that implement
     # other definitions for __iter__ (e.g., Set)
     def __iter__(self):
-        """Return an iterator of the keys in the dictionary"""
+        """Return an iterator of the component data keys"""
         return self.keys()
 
-    def keys(self):
-        """Iterate over the keys in the dictionary"""
+    def keys(self, ordered=False):
+        """Return an iterator over the component data keys
 
-        if hasattr(self._index, 'isfinite') and not self._index.isfinite():
+        This method sets the ordering of component data objects within
+        this IndexedComponent container.  For consistency,
+        :py:meth:`__init__()`, :py:meth:`values`, and :py:meth:`items`
+        all leverage this method to ensure consistent ordering.
+
+        Parameters
+        ----------
+        ordered: bool
+            If True, then the keys are returned in a deterministic
+            order.  If the underlying indexing set is ordered then that
+            ordering is used.  Otherwise, the keys are sorted using
+            :py:func:`sorted_robust`.
+
+        """
+        sort_needed = ordered
+        if hasattr(self._index_set, 'isfinite') and not \
+           self._index_set.isfinite():
             #
             # If the index set is virtual (e.g., Any) then return the
             # data iterator.  Note that since we cannot check the length
             # of the underlying Set, there should be no warning if the
             # user iterates over the set when the _data dict is empty.
             #
-            return self._data.__iter__()
+            ans = self._data.__iter__()
         elif self.is_reference():
-            return self._data.__iter__()
-        elif len(self._data) == len(self._index):
+            ans = self._data.__iter__()
+        elif len(self) == len(self._index_set):
             #
             # If the data is dense then return the index iterator.
             #
-            return self._index.__iter__()
+            ans = self._index_set.__iter__()
+            if ordered and self._index_set.isordered():
+                # As this iterator is ordered, we do not need to sort it
+                sort_needed = False
         else:
-            if not self._data and self._index and PyomoOptions.paranoia_level:
+            if not self._data and self._index_set and \
+               PyomoOptions.paranoia_level:
                 logger.warning(
 """Iterating over a Component (%s)
 defined by a non-empty concrete set before any data objects have
@@ -422,13 +444,14 @@ You can silence this warning by one of three ways:
        where it is empty.
 """ % (self.name,) )
 
-            if not hasattr(self._index, 'isordered') or not self._index.isordered():
+            if not hasattr(self._index_set, 'isordered') or \
+               not self._index_set.isordered():
                 #
                 # If the index set is not ordered, then return the
                 # data iterator.  This is in an arbitrary order, which is
                 # fine because the data is unordered.
                 #
-                return self._data.__iter__()
+                ans = self._data.__iter__()
             else:
                 #
                 # Test each element of a sparse data with an ordered
@@ -438,19 +461,40 @@ You can silence this warning by one of three ways:
                 # small number of indices.  However, this provides a
                 # consistent ordering that the user expects.
                 #
-                def _sparse_iter_gen(self):
-                    for idx in self._index.__iter__():
-                        if idx in self._data:
-                            yield idx
-                return _sparse_iter_gen(self)
+                ans = filter(self._data.__contains__, self._index_set)
+                # As the iterator is ordered, we do not need to sort it
+                sort_needed = False
+        if sort_needed:
+            return iter(sorted_robust(ans))
+        else:
+            return ans
 
-    def values(self):
-        """Return an iterator of the component data objects in the dictionary"""
-        return (self[s] for s in self.keys())
+    def values(self, ordered=False):
+        """Return an iterator of the component data objects
 
-    def items(self):
-        """Return an iterator of (index,data) tuples from the dictionary"""
-        return((s, self[s]) for s in self.keys())
+        Parameters
+        ----------
+        ordered: bool
+            If True, then the values are returned in a deterministic
+            order.  If the underlying indexing set is ordered then that
+            ordering is used.  Otherwise, the component keys are sorted
+            using :py:func:`sorted_robust` and the values are returned
+            in that order.
+        """
+        return map(self.__getitem__, self.keys(ordered))
+
+    def items(self, ordered=False):
+        """Return an iterator of (index,data) component data tuples
+
+        Parameters
+        ----------
+        ordered: bool
+            If True, then the items are returned in a deterministic
+            order.  If the underlying indexing set is ordered then that
+            ordering is used.  Otherwise, the items are sorted using
+            :py:func:`sorted_robust`.
+        """
+        return((s, self[s]) for s in self.keys(ordered))
 
     @deprecated('The iterkeys method is deprecated. Use dict.keys().',
                 version='6.0')
@@ -697,7 +741,7 @@ You can silence this warning by one of three ways:
 
         # This is only called through __{get,set,del}item__, which has
         # already trapped unhashable objects.
-        validated_idx = self._index.get(idx, _NotFound)
+        validated_idx = self._index_set.get(idx, _NotFound)
         if validated_idx is not _NotFound:
             # If the index is in the underlying index set, then return it
             #  Note: This check is potentially expensive (e.g., when the
@@ -717,7 +761,7 @@ You can silence this warning by one of three ways:
                 idx = normalized_idx
                 if idx in self._data:
                     return idx
-                if idx in self._index:
+                if idx in self._index_set:
                     return idx
         # There is the chance that the index contains an Ellipsis,
         # so we should generate a slicer
@@ -743,7 +787,7 @@ You can silence this warning by one of three ways:
         There are three basic ways to get here:
           1) the index contains one or more slices or ellipsis
           2) the index contains an unhashable type (e.g., a Pyomo
-             (Simple)Component
+             (Scalar)Component
           3) the index contains an IndexTemplate
         """
         from pyomo.core.expr import current as EXPR
@@ -765,16 +809,11 @@ You can silence this warning by one of three ways:
 
         for i,val in enumerate(idx):
             if type(val) is slice:
-                if val.start is not None or val.stop is not None:
+                if val.start is not None or val.stop is not None \
+                   or val.step is not None:
                     raise IndexError(
                         "Indexed components can only be indexed with simple "
                         "slices: start and stop values are not allowed.")
-                if val.step is not None:
-                    deprecation_warning(
-                        "The special wildcard slice (::0) is deprecated.  "
-                        "Please use an ellipsis (...) to indicate "
-                        "'0 or more' indices", version='4.4')
-                    val = Ellipsis
                 else:
                     if ellipsis is None:
                         sliced[i] = val
@@ -859,6 +898,8 @@ value() function.""" % ( self.name, i ))
             structurally_valid = False
             if slice_dim == set_dim or set_dim is None:
                 structurally_valid = True
+            elif type(set_dim) is type:
+                pass # UnknownSetDimen
             elif ellipsis is not None and slice_dim < set_dim:
                 structurally_valid = True
             elif set_dim == 0 and idx == (slice(None),):
@@ -872,10 +913,23 @@ value() function.""" % ( self.name, i ))
                 structurally_valid = True
 
             if not structurally_valid:
-                raise IndexError(
-                    "Index %s contains an invalid number of entries for "
-                    "component %s. Expected %s, got %s."
-                    % (idx, self.name, set_dim, slice_dim))
+                msg = ("Index %s contains an invalid number of entries for "
+                       "component '%s'. Expected %s, got %s.")
+                if type(set_dim) is type:
+                    set_dim = set_dim.__name__
+                    msg += '\n    ' + '\n    '.join(
+                        textwrap.wrap(textwrap.dedent("""
+                        Slicing components relies on knowing the
+                        underlying set dimensionality (even if the
+                        dimensionality is None).  The underlying
+                        component set ('%s') dimensionality has not been
+                        determined (likely because it is an empty Set).
+                        You can avoid this error by specifying the Set
+                        dimensionality (with the 'dimen=' keyword).""" % (
+                            self.index_set(), )).strip()))
+                raise IndexError(msg % (
+                    IndexedComponent_slice._getitem_args_to_str(list(idx)),
+                    self.name, set_dim, slice_dim))
             return IndexedComponent_slice(self, fixed, sliced, ellipsis)
         elif _found_numeric:
             if len(idx) == 1:
@@ -927,7 +981,7 @@ value() function.""" % ( self.name, i ))
         should override this method.
 
         Implementations may assume that the index has already been
-        validated and is a legitimate entry in the _data dict.
+        validated and is a legitimate entry to add to the _data dict.
         """
         # If the value is "Skip" do not add anything
         if value is IndexedComponent.Skip:
@@ -939,6 +993,7 @@ value() function.""" % ( self.name, i ))
             obj = self._data[index] = self
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
+        obj._index = index
         try:
             if value is not _NotSpecified:
                 obj.set_value(value)
@@ -964,7 +1019,7 @@ value() function.""" % ( self.name, i ))
     def _pprint(self):
         """Print component information."""
         return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
+                  ("Index", self._index_set if self.is_indexed() else None),
                   ],
                  self._data.items(),
                  ( "Object",),

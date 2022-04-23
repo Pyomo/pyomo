@@ -8,36 +8,27 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-"""Tests for the MindtPy solver."""
-import pyomo.core.base.symbolic
+"""Unit tests for the MindtPy solver."""
 import pyomo.common.unittest as unittest
 from pyomo.contrib.mindtpy.tests.eight_process_problem import \
     EightProcessFlowsheet
 from pyomo.contrib.mindtpy.tests.MINLP_simple import SimpleMINLP as SimpleMINLP
-from pyomo.contrib.mindtpy.tests.MINLP2_simple import SimpleMINLP as SimpleMINLP2
-from pyomo.contrib.mindtpy.tests.MINLP3_simple import SimpleMINLP as SimpleMINLP3
-from pyomo.contrib.mindtpy.tests.MINLP4_simple import SimpleMINLP4
-from pyomo.contrib.mindtpy.tests.MINLP5_simple import SimpleMINLP5
-from pyomo.contrib.mindtpy.tests.from_proposal import ProposalModel
-from pyomo.contrib.mindtpy.tests.constraint_qualification_example import ConstraintQualificationExample
-from pyomo.contrib.mindtpy.tests.online_doc_example import OnlineDocExample
-from pyomo.environ import SolverFactory, value, maximize
+from pyomo.environ import SolverFactory, maximize
 from pyomo.solvers.tests.models.LP_unbounded import LP_unbounded
 from pyomo.solvers.tests.models.QCP_simple import QCP_simple
-from pyomo.opt import TerminationCondition
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
-from pyomo.contrib.mindtpy.util import setup_solve_data, add_feas_slacks, set_solver_options
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
+from pyomo.contrib.mindtpy.util import get_primal_integral, get_dual_integral, set_up_solve_data, add_feas_slacks, set_solver_options
 from pyomo.contrib.mindtpy.nlp_solve import handle_subproblem_other_termination, handle_feasibility_subproblem_tc, solve_subproblem, handle_nlp_subproblem_tc
 from pyomo.core.base import TransformationFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import create_utility_block, time_code, process_objective, setup_results_object
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main, init_rNLP
-from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, handle_feas_main_tc
+from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, handle_fp_main_tc
 from pyomo.core import Block, ConstraintList
-from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, handle_main_infeasible, handle_main_other_conditions, handle_regularization_main_tc
+from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_other_conditions
 from pyomo.opt import SolutionStatus, SolverStatus
 from pyomo.core import (Constraint, Objective,
-                        TransformationFactory, minimize, value, Var, RangeSet, NonNegativeReals)
+                        TransformationFactory, minimize, Var, RangeSet, NonNegativeReals)
 from pyomo.contrib.mindtpy.iterate import algorithm_should_terminate
 
 nonconvex_model_list = [EightProcessFlowsheet(convex=False)]
@@ -60,8 +51,6 @@ else:
 @unittest.skipIf(not subsolvers_available,
                  'Required subsolvers %s are not available'
                  % (required_solvers,))
-@unittest.skipIf(not pyomo.core.base.symbolic.differentiate_available,
-                 'Symbolic differentiation is not available')
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
@@ -69,7 +58,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         model = SimpleMINLP()
         config = _get_MindtPy_config()
-        solve_data = setup_solve_data(model, config)
+        solve_data = set_up_solve_data(model, config)
         with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
 
@@ -78,10 +67,10 @@ class TestMindtPy(unittest.TestCase):
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
             process_objective(solve_data, config,
-                              move_linear_objective=(config.init_strategy == 'FP'
+                              move_objective=(config.init_strategy == 'FP'
                                                      or config.add_regularization is not None),
                               use_mcpp=config.use_mcpp,
-                              updata_var_con_list=config.add_regularization is None
+                              update_var_con_list=config.add_regularization is None
                               )
             feas = MindtPy.feas_opt = Block()
             feas.deactivate()
@@ -119,7 +108,6 @@ class TestMindtPy(unittest.TestCase):
             # test handle_main_other_conditions
             main_mip, main_mip_results = solve_main(solve_data, config)
             main_mip_results.solver.termination_condition = tc.infeasible
-            print(solve_data.results.solver.termination_condition)
             handle_main_other_conditions(
                 solve_data.mip, main_mip_results, solve_data, config)
             self.assertIs(
@@ -221,42 +209,42 @@ class TestMindtPy(unittest.TestCase):
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.maxEvaluations)
 
-            # test handle_feas_main_tc
+            # test handle_fp_main_tc
             config.init_strategy = 'FP'
             solve_data.fp_iter = 1
             init_rNLP(solve_data, config)
             feas_main, feas_main_results = solve_main(
                 solve_data, config, fp=True)
             feas_main_results.solver.termination_condition = tc.optimal
-            fp_should_terminate = handle_feas_main_tc(
+            fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
             self.assertIs(fp_should_terminate, False)
 
             feas_main_results.solver.termination_condition = tc.maxTimeLimit
-            fp_should_terminate = handle_feas_main_tc(
+            fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
             self.assertIs(fp_should_terminate, True)
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.maxTimeLimit)
 
             feas_main_results.solver.termination_condition = tc.infeasible
-            fp_should_terminate = handle_feas_main_tc(
+            fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
             self.assertIs(fp_should_terminate, True)
 
             feas_main_results.solver.termination_condition = tc.unbounded
-            fp_should_terminate = handle_feas_main_tc(
+            fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
             self.assertIs(fp_should_terminate, True)
 
             feas_main_results.solver.termination_condition = tc.other
             feas_main_results.solution.status = SolutionStatus.feasible
-            fp_should_terminate = handle_feas_main_tc(
+            fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
             self.assertIs(fp_should_terminate, False)
 
             feas_main_results.solver.termination_condition = tc.solverFailure
-            fp_should_terminate = handle_feas_main_tc(
+            fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
             self.assertIs(fp_should_terminate, True)
 
@@ -313,38 +301,72 @@ class TestMindtPy(unittest.TestCase):
 
             # test algorithm_should_terminate
             solve_data.should_terminate = True
-            solve_data.UB = float('inf')
+            solve_data.primal_bound = float('inf')
             self.assertIs(algorithm_should_terminate(
                 solve_data, config, check_cycling=False), True)
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.noSolution)
 
-            solve_data.UB = 100
+            solve_data.primal_bound = 100
             self.assertIs(algorithm_should_terminate(
                 solve_data, config, check_cycling=False), True)
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.feasible)
 
-            solve_data.objective_sense = maximize
-            solve_data.LB = float('-inf')
-            self.assertIs(algorithm_should_terminate(
-                solve_data, config, check_cycling=False), True)
-            self.assertIs(
-                solve_data.results.solver.termination_condition, tc.noSolution)
+            solve_data.primal_bound_progress = [float('inf'), 5, 4, 3, 2, 1]
+            solve_data.primal_bound_progress_time = [1, 2, 3, 4, 5, 6]
+            solve_data.primal_bound = 1
+            self.assertEqual(get_primal_integral(solve_data, config), 14.5)
 
-            solve_data.LB = 100
-            self.assertIs(algorithm_should_terminate(
-                solve_data, config, check_cycling=False), True)
-            self.assertIs(
-                solve_data.results.solver.termination_condition, tc.feasible)
+            solve_data.dual_bound_progress = [float('-inf'), 1, 2, 3, 4, 5]
+            solve_data.dual_bound_progress_time = [1, 2, 3, 4, 5, 6]
+            solve_data.dual_bound = 5
+            self.assertEqual(get_dual_integral(solve_data, config), 14.1)
 
-            # config.time_limit = 1
-            # solve_data.should_terminate = False
-            # self.assertIs(algorithm_should_terminate(
-            #     solve_data, config, check_cycling=False), True)
-            # self.assertIs(
-            #     solve_data.results.solver.termination_condition, tc.maxTimeLimit)
+            # test check_config
+            config.add_regularization = 'level_L1'
+            config.regularization_mip_threads = 0
+            config.threads = 8
+            check_config(config)
+            self.assertEqual(config.regularization_mip_threads, 8)
 
+            config.mip_solver = 'cplex'
+            config.single_tree = True
+            check_config(config)
+            self.assertEqual(config.mip_solver, 'cplex_persistent')
+            self.assertEqual(config.threads, 1)
+
+            config.add_slack = True
+            config.max_slack == 0.0
+            check_config(config)
+            self.assertEqual(config.add_slack, False)
+
+            config.strategy = 'GOA'
+            config.add_slack = True
+            config.use_mcpp = False
+            config.equality_relaxation = True
+            config.use_fbbt = False
+            config.add_no_good_cuts = False
+            config.use_tabu_list = False
+            check_config(config)
+            self.assertTrue(config.use_mcpp)
+            self.assertTrue(config.use_fbbt)
+            self.assertFalse(config.add_slack)
+            self.assertFalse(config.equality_relaxation)
+            self.assertTrue(config.add_no_good_cuts)
+            self.assertFalse(config.use_tabu_list)
+            
+            config.single_tree = False
+            config.strategy = 'FP'
+            config.init_strategy = 'rNLP'
+            config.iteration_limit = 100
+            config.add_no_good_cuts = False
+            config.use_tabu_list = True
+            check_config(config)
+            self.assertEqual(config.init_strategy, 'FP')
+            self.assertEqual(config.iteration_limit, 0)
+            self.assertEqual(config.add_no_good_cuts, True)
+            self.assertEqual(config.use_tabu_list, False)
 
 if __name__ == '__main__':
     unittest.main()

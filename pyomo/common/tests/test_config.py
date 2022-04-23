@@ -288,6 +288,7 @@ class TestConfigDomains(unittest.TestCase):
     def test_In(self):
         c = ConfigDict()
         c.declare('a', ConfigValue(None, In([1,3,5])))
+        self.assertEqual(c.get('a').domain_name(), 'In[1, 3, 5]')
         self.assertEqual(c.a, None)
         c.a = 3
         self.assertEqual(c.a, 3)
@@ -314,6 +315,23 @@ class TestConfigDomains(unittest.TestCase):
         c.b = '1'
         self.assertEqual(c.b, 1)
 
+        class Container(object):
+            def __init__(self, vals):
+                self._vals = vals
+            def __str__(self):
+                return f'Container{self._vals}'
+            def __contains__(self, val):
+                return val in self._vals
+
+        c.declare('c', ConfigValue(None, In(Container([1,3,5]))))
+        self.assertEqual(c.get('c').domain_name(), 'In(Container[1, 3, 5])')
+        self.assertEqual(c.c, None)
+        c.c = 3
+        self.assertEqual(c.c, 3)
+        with self.assertRaises(ValueError):
+            c.c = 2
+        self.assertEqual(c.c, 3)
+
     def test_In_enum(self):
         class TestEnum(enum.Enum):
             ITEM_ONE = 1
@@ -324,6 +342,7 @@ class TestConfigDomains(unittest.TestCase):
             default=TestEnum.ITEM_TWO,
             domain=In(TestEnum)
         ))
+        self.assertEqual(cfg.get('enum').domain_name(), 'InEnum[TestEnum]')
         self.assertEqual(cfg.enum, TestEnum.ITEM_TWO)
         cfg.enum = 'ITEM_ONE'
         self.assertEqual(cfg.enum, TestEnum.ITEM_ONE)
@@ -474,11 +493,15 @@ class TestConfigDomains(unittest.TestCase):
     def test_ListOf(self):
         c = ConfigDict()
         c.declare('a', ConfigValue(domain=ListOf(int), default=None))
+        self.assertEqual(c.get('a').domain_name(), 'ListOf[int]')
+
         self.assertEqual(c.a, None)
         c.a = 5
         self.assertEqual(c.a, [5])
         c.a = (5, 6.6)
         self.assertEqual(c.a, [5, 6])
+        c.a = '7,8'
+        self.assertEqual(c.a, [7, 8])
 
         ref=(r"(?m)Failed casting a\s+to ListOf\(int\)\s+"
              r"Error: invalid literal for int\(\) with base 10: 'a'")
@@ -486,13 +509,32 @@ class TestConfigDomains(unittest.TestCase):
             c.a = 'a'
 
         c.declare('b', ConfigValue(domain=ListOf(str), default=None))
+        self.assertEqual(c.get('b').domain_name(), 'ListOf[str]')
         self.assertEqual(c.b, None)
-        c.b = "Hello, World"
+        c.b = "'Hello, World'"
         self.assertEqual(c.b, ["Hello, World"])
+        c.b = "Hello, World"
+        self.assertEqual(c.b, ["Hello", "World"])
         c.b = ("A", 6)
         self.assertEqual(c.b, ["A", "6"])
+        with self.assertRaises(ValueError):
+            c.b = "'Hello, World"
+
+        c.declare('b1', ConfigValue(domain=ListOf(
+            str, string_lexer=None), default=None))
+        self.assertEqual(c.get('b1').domain_name(), 'ListOf[str]')
+        self.assertEqual(c.b1, None)
+        c.b1 = "'Hello, World'"
+        self.assertEqual(c.b1, ["'Hello, World'"])
+        c.b1 = "Hello, World"
+        self.assertEqual(c.b1, ["Hello, World"])
+        c.b1 = ("A", 6)
+        self.assertEqual(c.b1, ["A", "6"])
+        c.b1 = "'Hello, World"
+        self.assertEqual(c.b1, ["'Hello, World"])
 
         c.declare('c', ConfigValue(domain=ListOf(int, PositiveInt)))
+        self.assertEqual(c.get('c').domain_name(), 'ListOf[PositiveInt]')
         self.assertEqual(c.c, None)
         c.c = 6
         self.assertEqual(c.c, [6])
@@ -2036,12 +2078,8 @@ endBlock{}
         parser = argparse.ArgumentParser(prog='tester')
         self.config.initialize_argparse(parser)
         help = parser.format_help()
-        #print(help)
-        self.assertEqual(
-            """usage: tester [-h] [--epanet-file EPANET] [--scenario-file STR] [--merlion]
-
-optional arguments:
-  -h, --help            show this help message and exit
+        self.assertIn(
+"""  -h, --help            show this help message and exit
   --epanet-file EPANET  EPANET network inp file
 
 Scenario definition:
@@ -2057,13 +2095,9 @@ Scenario definition:
         parser = argparse.ArgumentParser(prog='tester')
         self.config.initialize_argparse(parser)
         help = parser.format_help()
-        #print(help)
         self.maxDiff = None
-        self.assertEqual(
-            """usage: tester [-h] [--epanet-file EPANET] [--scenario-file STR] [--merlion]
-              [--disable-epanet]
-
-optional arguments:
+        self.assertIn(
+            """
   -h, --help            show this help message and exit
   --epanet-file EPANET  EPANET network inp file
 
@@ -2121,13 +2155,12 @@ Scenario definition:
             .declare_as_argument( group=(subp,'Node information') )
         self.config.initialize_argparse(parser)
 
+        # Note that the output for argparse changes in diffeent versions
+        # (in particular, "options:" vs "optional arguments:").  We will
+        # only test for a subset of the output that should stay consistent.
         help = parser.format_help()
-        #print(help)
-        self.assertEqual(
-            """usage: tester [-h] [--epanet-file EPANET] [--scenario-file STR] [--merlion]
-              {flushing} ...
-
-optional arguments:
+        self.assertIn(
+            """
   -h, --help            show this help message and exit
   --epanet-file EPANET  EPANET network inp file
 
@@ -2141,12 +2174,8 @@ Scenario definition:
 """, help)
 
         help = subp.format_help()
-        #print(help)
-        self.assertEqual(
-            """usage: tester flushing [-h] [--feasible-nodes STR] [--infeasible-nodes STR]
-                       [--duration FLOAT]
-
-optional arguments:
+        self.assertIn(
+            """
   -h, --help            show this help message and exit
   --duration FLOAT      Time [min] for flushing
 
@@ -2155,6 +2184,57 @@ Node information:
   --infeasible-nodes STR
                         ALL, NZD, NONE, list or filename
 """, help)
+
+    def test_argparse_lists(self):
+        c = ConfigDict()
+        self.assertEqual(c.domain_name(), '')
+        sub_dict = c.declare('sub_dict', ConfigDict())
+        sub_dict.declare('a', ConfigValue(domain=int))
+        sub_dict.declare('b', ConfigValue())
+        self.assertEqual(c.sub_dict.domain_name(), 'sub-dict')
+        self.assertEqual(c.sub_dict.get('a').domain_name(), 'int')
+        self.assertEqual(c.sub_dict.get('b').domain_name(), '')
+        c.declare(
+            'lst',
+            ConfigList(domain=int)).declare_as_argument(action='append')
+        c.declare(
+            'sub',
+            ConfigList(domain=c.sub_dict)).declare_as_argument(action='append')
+        c.declare('listof', ConfigValue(
+            domain=ListOf(int))).declare_as_argument()
+
+        parser = argparse.ArgumentParser(prog='tester')
+        c.initialize_argparse(parser)
+
+        # Note that the output for argparse changes in diffeent versions
+        # (in particular, "options:" vs "optional arguments:").  We will
+        # only test for a subset of the output that should stay consistent.
+        self.assertIn("""
+  -h, --help            show this help message and exit
+  --lst INT
+  --sub SUB-DICT
+  --listof LISTOF[INT]""".strip(), parser.format_help())
+
+        args = parser.parse_args([
+            '--lst', '42', '--lst', '1',
+            '--sub', 'a=4', '--sub', 'b=12,a:0',
+            '--listof', '3,2 4'
+        ])
+        leftovers = c.import_argparse(args)
+        self.assertEqual(c.lst.value(), [42, 1])
+        self.assertEqual(c.sub.value(), [{'a':4, 'b':None}, {'a':0, 'b':'12'}])
+        self.assertEqual(c.listof, [3, 2, 4])
+
+        args = parser.parse_args([
+            '--lst', '42', '--lst', '1',
+            '--sub', 'a=4', '--sub', 'b=12,a 0',
+            '--listof', '3,2 4'
+        ])
+        with self.assertRaisesRegex(
+                ValueError, r"(?s)invalid value for configuration 'sub':.*"
+                r"Expected ':' or '=' at Line 1 Column 8"):
+            leftovers = c.import_argparse(args)
+
 
     def test_getattr_setattr(self):
         config = ConfigDict()

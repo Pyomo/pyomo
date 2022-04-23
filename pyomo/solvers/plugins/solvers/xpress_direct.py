@@ -21,6 +21,7 @@ from pyomo.common.tee import capture_output
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.expr.numvalue import is_fixed
 from pyomo.core.expr.numvalue import value
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.repn import generate_standard_repn
 from pyomo.solvers.plugins.solvers.direct_solver import DirectSolver
 from pyomo.solvers.plugins.solvers.direct_or_persistent_solver import DirectOrPersistentSolver
@@ -63,6 +64,10 @@ def _finalize_xpress_import(xpress, avail):
         XpressDirect.XpressException = RuntimeError
     else:
         XpressDirect.XpressException = xpress.ModelError
+    # In (pypi) versions prior to 8.13.0, the 'xpress.rng' keyword was
+    # 'xpress.range'
+    if not hasattr(xpress, 'rng'):
+        xpress.rng = xpress.range
 
 class _xpress_importer_class(object):
     # We want to be able to *update* the message that the deferred
@@ -159,14 +164,7 @@ class XpressDirect(DirectSolver):
         return bool(xpress_available)
 
     def _apply_solver(self):
-        if not self._save_results:
-            for block in self._pyomo_model.block_data_objects(descend_into=True,
-                                                              active=True):
-                for var in block.component_data_objects(ctype=pyomo.core.base.var.Var,
-                                                        descend_into=False,
-                                                        active=True,
-                                                        sort=False):
-                    var.stale = True
+        StaleFlagManager.mark_all_as_stale()
 
         self._solver_model.setlogfile(self._log_file)
         if self._keepfiles:
@@ -357,7 +355,7 @@ class XpressDirect(DirectSolver):
                                            name=conname)
         elif con.has_lb() and con.has_ub():
             xpress_con = xpress.constraint(body=xpress_expr,
-                                           sense=xpress.range,
+                                           sense=xpress.rng,
                                            lb=value(con.lower),
                                            ub=value(con.upper),
                                            name=conname)
@@ -685,7 +683,6 @@ class XpressDirect(DirectSolver):
                 for xpress_var, val in zip(xpress_vars, var_vals):
                     pyomo_var = self._solver_var_to_pyomo_var_map[xpress_var]
                     if self._referenced_variables[pyomo_var] > 0:
-                        pyomo_var.stale = False
                         soln_variables[xpress_var.name] = {"Value": val}
 
                 if extract_reduced_costs:
@@ -727,7 +724,7 @@ class XpressDirect(DirectSolver):
             if xprob_attrs.lpstatus == xp.lp_optimal and \
                     ((not is_mip) or (xprob_attrs.mipsols > 0)):
 
-                self._load_vars()
+                self.load_vars()
 
                 if extract_reduced_costs:
                     self._load_rc()
@@ -768,8 +765,7 @@ class XpressDirect(DirectSolver):
 
         for var, val in zip(vars_to_load, vals):
             if ref_vars[var] > 0:
-                var.stale = False
-                var.value = val
+                var.set_value(val, skip_validation=True)
 
     def _load_rc(self, vars_to_load=None):
         if not hasattr(self._pyomo_model, 'rc'):

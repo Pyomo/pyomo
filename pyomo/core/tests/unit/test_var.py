@@ -21,14 +21,102 @@ currdir = dirname(abspath(__file__))+os.sep
 from io import StringIO
 
 import pyomo.common.unittest as unittest
+from pyomo.common.log import LoggingIntercept
 
 from pyomo.core.base import IntegerSet
+from pyomo.core.expr.numeric_expr import (
+    NPV_ProductExpression, NPV_MaxExpression, NPV_MinExpression,
+)
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.environ import (
     AbstractModel, ConcreteModel, Set, Param, Var, VarList, RangeSet,
     Suffix, Expression, NonPositiveReals, PositiveReals, Reals, RealSet,
     NonNegativeReals, Integers, Binary, value
 )
 from pyomo.core.base.units_container import units, pint_available, UnitsError
+
+
+class TestVarData(unittest.TestCase):
+    def test_lower_bound(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.p = Param(mutable=True, initialize=2)
+        self.assertIsNone(m.x.lower)
+        m.x.domain = NonNegativeReals
+        self.assertIs(type(m.x.lower), int)
+        self.assertEqual(value(m.x.lower), 0)
+        m.x.domain = Reals
+        m.x.setlb(5*m.p)
+        self.assertIs(type(m.x.lower), NPV_ProductExpression)
+        self.assertEqual(value(m.x.lower), 10)
+        m.x.domain = NonNegativeReals
+        self.assertIs(type(m.x.lower), NPV_MaxExpression)
+        self.assertEqual(value(m.x.lower), 10)
+        with self.assertRaisesRegex(
+                ValueError, "Potentially variable input of type 'ScalarVar' "
+                "supplied as lower bound for variable 'x'"):
+            m.x.setlb(m.x)
+
+    def test_lower_bound_setter(self):
+        m = ConcreteModel()
+        m.x = Var()
+        self.assertIsNone(m.x.lb)
+        m.x.lb = 1
+        self.assertEqual(m.x.lb, 1)
+        m.x.lower = 2
+        self.assertEqual(m.x.lb, 2)
+        m.x.setlb(3)
+        self.assertEqual(m.x.lb, 3)
+
+        m.y = Var([1])
+        self.assertIsNone(m.y[1].lb)
+        m.y[1].lb = 1
+        self.assertEqual(m.y[1].lb, 1)
+        m.y[1].lower = 2
+        self.assertEqual(m.y[1].lb, 2)
+        m.y[1].setlb(3)
+        self.assertEqual(m.y[1].lb, 3)
+
+    def test_upper_bound(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.p = Param(mutable=True, initialize=2)
+        self.assertIsNone(m.x.upper)
+        m.x.domain = NonPositiveReals
+        self.assertIs(type(m.x.upper), int)
+        self.assertEqual(value(m.x.upper), 0)
+        m.x.domain = Reals
+        m.x.setub(-5*m.p)
+        self.assertIs(type(m.x.upper), NPV_ProductExpression)
+        self.assertEqual(value(m.x.upper), -10)
+        m.x.domain = NonPositiveReals
+        self.assertIs(type(m.x.upper), NPV_MinExpression)
+        self.assertEqual(value(m.x.upper), -10)
+        with self.assertRaisesRegex(
+                ValueError, "Potentially variable input of type 'ScalarVar' "
+                "supplied as upper bound for variable 'x'"):
+            m.x.setub(m.x)
+
+    def test_upper_bound_setter(self):
+        m = ConcreteModel()
+        m.x = Var()
+        self.assertIsNone(m.x.ub)
+        m.x.ub = 1
+        self.assertEqual(m.x.ub, 1)
+        m.x.upper = 2
+        self.assertEqual(m.x.ub, 2)
+        m.x.setub(3)
+        self.assertEqual(m.x.ub, 3)
+
+        m.y = Var([1])
+        self.assertIsNone(m.y[1].ub)
+        m.y[1].ub = 1
+        self.assertEqual(m.y[1].ub, 1)
+        m.y[1].upper = 2
+        self.assertEqual(m.y[1].ub, 2)
+        m.y[1].setub(3)
+        self.assertEqual(m.y[1].ub, 3)
+
 
 class PyomoModel(unittest.TestCase):
 
@@ -45,6 +133,7 @@ class PyomoModel(unittest.TestCase):
             self.instance = self.model.create_instance(filename)
         else:
             self.instance = self.model.create_instance()
+
 
 class TestSimpleVar(PyomoModel):
 
@@ -850,6 +939,37 @@ class TestVarList(PyomoModel):
         self.assertEqual( type(tmp), int)
         self.assertEqual( tmp, 3 )
 
+    def test_0based_add(self):
+        m = ConcreteModel()
+        m.x = VarList(starting_index=0)
+        m.x.add()
+        self.assertEqual(list(m.x.keys()), [0])
+        m.x.add()
+        self.assertEqual(list(m.x.keys()), [0, 1])
+        m.x.add()
+        self.assertEqual(list(m.x.keys()), [0, 1, 2])
+
+    def test_0based_initialize_with_dict(self):
+        """Test initialize option with a dictionary"""
+        self.model.x = VarList(initialize={1:1.3,2:2.3}, starting_index=0)
+        self.assertRaisesRegex(
+            KeyError, ".*Index '2' is not valid for indexed component 'x'",
+            self.model.create_instance
+        )
+
+    def test_0based_initialize_with_bad_dict(self):
+        """Test initialize option with a dictionary of subkeys"""
+        self.model.x = VarList(initialize={0:1.3, 1:2.3}, starting_index=0)
+        self.instance = self.model.create_instance()
+        self.assertEqual(self.instance.x[0].value, 1.3)
+        self.assertEqual(self.instance.x[1].value, 2.3)
+        self.instance.x[0] = 1
+        self.instance.x[1] = 2
+        self.assertEqual(self.instance.x[0].value, 1)
+        self.assertEqual(self.instance.x[1].value, 2)
+        self.instance.x.add()
+        self.assertEqual(list(self.instance.x.keys()), [0, 1, 2])
+
 
 class Test2DArrayVar(TestSimpleVar):
 
@@ -1147,48 +1267,66 @@ class MiscVarTests(unittest.TestCase):
     def test_set_get(self):
         model=AbstractModel()
         model.a = Set(initialize=[1,2,3])
-        model.b = Var(model.a,initialize=1.1,within=PositiveReals)
-        model.c = Var(initialize=2.1, within=PositiveReals,dense=True)
-        try:
+        model.b = Var(model.a, initialize=1.1, within=PositiveReals)
+        model.c = Var(initialize=2.1, within=PositiveReals, bounds=(1, 10))
+        with self.assertRaisesRegex(
+                ValueError, "Cannot set the value for the indexed "
+                "component 'b' without specifying an index value"):
             model.b = 2.2
-            self.fail("can't set the value of an array variable")
-        except ValueError:
-            pass
-        instance = model.create_instance()
-        try:
-            instance.c[1]=2.2
-            self.fail("can't use an index to set a scalar variable")
-        except KeyError:
-            pass
-        instance.b[1]=2.2
-        try:
-            instance.b[4]=2.2
-            self.fail("can't set an array variable with a bad index")
-        except KeyError:
-            pass
-        try:
-            instance.b[3] = -2.2
-            #print "HERE",type(instance)
-            #print "HERE",type(instance.b[3])
-            self.fail("can't set an array variable with a bad value")
-        except ValueError:
-            pass
-        try:
-            tmp = instance.c[3]
-            self.fail("can't index a scalar variable")
-        except KeyError:
-            pass
 
-        try:
-            instance.c.set_value('a')
-            self.fail("can't set a bad value for variable c")
-        except ValueError:
-            pass
-        try:
-            instance.c.set_value(-1.0)
-            self.fail("can't set a bad value for variable c")
-        except ValueError:
-            pass
+        instance = model.create_instance()
+        with self.assertRaisesRegex(
+                KeyError, "Cannot treat the scalar component 'c' "
+                "as an indexed component"):
+            instance.c[1]=2.2
+
+        instance.b[1]=2.2
+        with self.assertRaisesRegex(
+                KeyError, "Index '4' is not valid for indexed component 'b'"):
+            instance.b[4]=2.2
+
+        with LoggingIntercept() as LOG:
+            instance.b[3] = -2.2
+        self.assertEqual(
+            LOG.getvalue().strip(),
+            "Setting Var 'b[3]' to a value `-2.2` (float) "
+            "not in domain PositiveReals.",
+        )
+
+        with self.assertRaisesRegex(
+                KeyError, "Cannot treat the scalar component 'c' "
+                "as an indexed component"):
+            tmp = instance.c[3]
+        with LoggingIntercept() as LOG:
+            instance.c = 'a'
+        self.assertEqual(
+            LOG.getvalue().strip(),
+            "Setting Var 'c' to a value `a` (str) "
+            "not in domain PositiveReals.",
+        )
+        with LoggingIntercept() as LOG:
+            instance.c = -2.2
+        self.assertEqual(
+            LOG.getvalue().strip(),
+            "Setting Var 'c' to a value `-2.2` (float) "
+            "not in domain PositiveReals.",
+        )
+        with LoggingIntercept() as LOG:
+            instance.c = 11
+        self.assertEqual(
+            LOG.getvalue().strip(),
+            "Setting Var 'c' to a numeric value `11` "
+            "outside the bounds (1, 10).",
+        )
+
+        with LoggingIntercept() as LOG:
+            instance.c.set_value('a', skip_validation=True)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(instance.c.value, 'a')
+        with LoggingIntercept() as LOG:
+            instance.c.set_value(-1, skip_validation=True)
+        self.assertEqual(LOG.getvalue(), "")
+        self.assertEqual(instance.c.value, -1)
 
         #try:
             #instance.c.ub = 'a'
@@ -1237,7 +1375,7 @@ class MiscVarTests(unittest.TestCase):
 
     def test_simple_bad_nondefault_domain_value(self):
         model = ConcreteModel()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             model.x = Var(domain=25)
 
     def test_simple_nondefault_domain_rule(self):
@@ -1247,7 +1385,7 @@ class MiscVarTests(unittest.TestCase):
 
     def test_simple_bad_nondefault_domain_rule(self):
         model = ConcreteModel()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             model.x = Var(domain=lambda m: 25)
 
     def test_indexed_default_domain(self):
@@ -1265,7 +1403,7 @@ class MiscVarTests(unittest.TestCase):
     def test_indexed_bad_nondefault_domain_value(self):
         model = ConcreteModel()
         model.s = Set(initialize=[1])
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             model.x = Var(model.s, domain=25)
 
     def test_indexed_nondefault_domain_rule(self):
@@ -1277,7 +1415,7 @@ class MiscVarTests(unittest.TestCase):
     def test_indexed_bad_nondefault_domain_rule(self):
         model = ConcreteModel()
         model.s = Set(initialize=[1])
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             model.x = Var(model.s, domain=lambda m, i: 25)
 
     def test_list_default_domain(self):
@@ -1295,7 +1433,7 @@ class MiscVarTests(unittest.TestCase):
     def test_list_bad_nondefault_domain_value(self):
         model = ConcreteModel()
         model.x = VarList(domain=25)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             model.x.add()
 
     def test_list_nondefault_domain_rule(self):
@@ -1307,7 +1445,7 @@ class MiscVarTests(unittest.TestCase):
     def test_list_bad_nondefault_domain_rule(self):
         model = ConcreteModel()
         model.x = VarList(domain=lambda m, i: 25)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             model.x.add()
 
     def test_setdata_index(self):
@@ -1432,6 +1570,32 @@ class MiscVarTests(unittest.TestCase):
         m.p = 3 * units.kg
         self.assertEqual(m.x.ub, 3000)
 
+    def test_stale(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=0)
+        self.assertFalse(m.x.stale)
+        m.y = Var()
+        self.assertTrue(m.y.stale)
+
+        StaleFlagManager.mark_all_as_stale(delayed=False)
+        self.assertTrue(m.x.stale)
+        self.assertTrue(m.y.stale)
+        m.x = 1
+        self.assertFalse(m.x.stale)
+        self.assertTrue(m.y.stale)
+        m.y = 2
+        self.assertFalse(m.x.stale)
+        self.assertFalse(m.y.stale)
+
+        StaleFlagManager.mark_all_as_stale(delayed=True)
+        self.assertFalse(m.x.stale)
+        self.assertFalse(m.y.stale)
+        m.x = 1
+        self.assertFalse(m.x.stale)
+        self.assertTrue(m.y.stale)
+        m.y = 2
+        self.assertFalse(m.x.stale)
+        self.assertFalse(m.y.stale)
 
 if __name__ == "__main__":
     unittest.main()

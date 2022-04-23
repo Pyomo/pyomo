@@ -21,6 +21,7 @@ import textwrap
 from inspect import isclass
 from operator import itemgetter
 from io import StringIO
+from typing import overload
 
 from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
@@ -29,8 +30,9 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import (
-    Component, ActiveComponentData, ModelComponentFactory,
+    Component, ActiveComponentData, ModelComponentFactory
 )
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.set import GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
@@ -798,11 +800,11 @@ class _BlockData(ActiveComponentData):
                 if tset.parent_component().parent_block() is None \
                         and not isinstance(tset.parent_component(), GlobalSetBase):
                     self.add_component("%s_index_%d" % (val.local_name, ctr), tset)
-        if getattr(val, '_index', None) is not None \
-                and isinstance(val._index, _SetDataBase) \
-                and val._index.parent_component().parent_block() is None \
-                and not isinstance(val._index.parent_component(), GlobalSetBase):
-            self.add_component("%s_index" % (val.local_name,), val._index.parent_component())
+        if getattr(val, '_index_set', None) is not None \
+                and isinstance(val._index_set, _SetDataBase) \
+                and val._index_set.parent_component().parent_block() is None \
+                and not isinstance(val._index_set.parent_component(), GlobalSetBase):
+            self.add_component("%s_index" % (val.local_name,), val._index_set.parent_component())
         if getattr(val, 'initialize', None) is not None \
                 and isinstance(val.initialize, _SetDataBase) \
                 and val.initialize.parent_component().parent_block() is None \
@@ -813,23 +815,6 @@ class _BlockData(ActiveComponentData):
                 and val.domain.parent_block() is None \
                 and not isinstance(val.domain, GlobalSetBase):
             self.add_component("%s_domain" % (val.local_name,), val.domain)
-
-    def _flag_vars_as_stale(self):
-        """
-        Configure *all* variables (on active blocks) and
-        their composite _VarData objects as stale. This
-        method is used prior to loading solver
-        results. Variable that did not particpate in the
-        solution are flagged as stale.  E.g., it most cases
-        fixed variables will be flagged as stale since they
-        are compiled out of expressions; however, many
-        solver plugins support including fixed variables in
-        the output problem by overriding bounds in order to
-        minimize preprocessing requirements, meaning fixed
-        variables are not necessarily always stale.
-        """
-        for variable in self.component_objects(Var, active=True):
-            variable.flag_as_stale()
 
     def collect_ctypes(self,
                        active=None,
@@ -899,9 +884,26 @@ class _BlockData(ActiveComponentData):
 
     def find_component(self, label_or_component):
         """
-        Return a block component given a name.
+        Returns a component in the block given a name.
+
+        Parameters
+        ----------
+        label_or_component : str, Component, or ComponentUID
+            The name of the component to find in this block. String or
+            Component arguments are first converted to ComponentUID.
+
+        Returns
+        -------
+        Component
+            Component on the block identified by the ComponentUID. If
+            a matching component is not found, None is returned.
+
         """
-        return ComponentUID(label_or_component).find_component_on(self)
+        if type(label_or_component) is ComponentUID:
+            cuid = label_or_component
+        else:
+            cuid = ComponentUID(label_or_component)
+        return cuid.find_component_on(self)
 
     def add_component(self, name, val):
         """
@@ -1850,6 +1852,11 @@ class Block(ActiveIndexedComponent):
         else:
             return IndexedBlock.__new__(IndexedBlock)
 
+    # `options` is ignored since it is deprecated
+    @overload
+    def __init__(self, *indexes, rule=None, concrete=False, dense=True,
+                 name=None, doc=None): ...
+
     def __init__(self, *args, **kwargs):
         """Constructor"""
         self._suppress_ctypes = set()
@@ -1998,7 +2005,7 @@ class Block(ActiveIndexedComponent):
     def _pprint(self):
         _attrs = [
             ("Size", len(self)),
-            ("Index", self._index if self.is_indexed() else None),
+            ("Index", self._index_set if self.is_indexed() else None),
             ('Active', self.active),
         ]
         # HACK: suppress the top-level block header (for historical reasons)
@@ -2033,6 +2040,7 @@ class ScalarBlock(_BlockData, Block):
         # get/setitem_when_not_present so that we do not (implicitly)
         # trigger the Block rule
         self._data[None] = self
+        self._index = UnindexedComponent_index
 
     # We want scalar Blocks to pick up the Block display method
     display = Block.display

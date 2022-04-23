@@ -18,25 +18,15 @@ from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.common import Executable
 from pyomo.common.collections import Bunch
-from pyomo.opt import SolverFactory, OptSolver, ProblemFormat, ResultsFormat, SolverResults, TerminationCondition, SolutionStatus, ProblemSense
+from pyomo.opt import (
+    SolverFactory, OptSolver, ProblemFormat, ResultsFormat, SolverResults,
+    TerminationCondition, SolutionStatus, ProblemSense,
+)
 from pyomo.opt.base.solvers import _extract_version
 from pyomo.opt.solver import SystemCallSolver
+from pyomo.solvers.mockmip import MockMIP
 
 logger = logging.getLogger('pyomo.solvers')
-
-_glpk_version = None
-def configure_glpk():
-    global _glpk_version
-    if _glpk_version is not None:
-        return
-    _glpk_version = _extract_version("")
-    if not Executable("glpsol"):
-        return
-    result = subprocess.run([Executable('glpsol').path(), "--version"],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            timeout=1, universal_newlines=True)
-    if not result.returncode:
-        _glpk_version = _extract_version(result.stdout)
 
 # Not sure how better to get these constants, but pulled from GLPK
 # documentation and source code (include/glpk.h)
@@ -61,46 +51,18 @@ class GLPK(OptSolver):
     """The GLPK LP/MIP solver"""
 
     def __new__(cls, *args, **kwds):
-        configure_glpk()
-        try:
-            mode = kwds['solver_io']
-            if mode is None:
-                mode = 'lp'
-            del kwds['solver_io']
-        except KeyError:
-            mode = 'lp'
+        mode = kwds.pop('solver_io', 'lp')
         #
-        if mode  == 'lp':
-            if (_glpk_version is None) or \
-               (_glpk_version >= (4,58,0,0)):
-                return SolverFactory('_glpk_shell', **kwds)
-            elif _glpk_version >= (4,42,0,0):
-                return SolverFactory('_glpk_shell_4_42', **kwds)
-            else:
-                return SolverFactory('_glpk_shell_old', **kwds)
-        if mode == 'mps':
-            if (_glpk_version is None) or \
-               (_glpk_version >= (4,58,0,0)):
-                opt = SolverFactory('_glpk_shell', **kwds)
-            elif _glpk_version >= (4,42,0,0):
-                opt = SolverFactory('_glpk_shell_4_42', **kwds)
-            else:
-                opt = SolverFactory('_glpk_shell_old', **kwds)
-            opt.set_problem_format(ProblemFormat.mps)
-            return opt
-        if mode == 'python':
-            opt = SolverFactory('_glpk_direct', **kwds)
-            if opt is None:
-                logger.error('Python API for GLPK is not installed')
-                return
-            return opt
-        #
-        if mode == 'os':
+        if mode in {None, 'lp', 'mps'}:
+            opt = SolverFactory('_glpk_shell', **kwds)
+            if mode == 'mps':
+                opt.set_problem_format(ProblemFormat.mps)
+        elif mode == 'os':
             opt = SolverFactory('_ossolver', **kwds)
+            opt.set_options('solver=glpsol')
         else:
             logger.error('Unknown IO type: %s' % mode)
-            return
-        opt.set_options('solver=glpsol')
+            return None
         return opt
 
 
@@ -110,8 +72,11 @@ class GLPK(OptSolver):
 class GLPKSHELL(SystemCallSolver):
     """Shell interface to the GLPK LP/MIP solver"""
 
+    # Cache known versions so we do not need to repeatedly query the
+    # version every time we run the solver.
+    _known_versions = {}
+
     def __init__ (self, **kwargs):
-        configure_glpk()
         #
         # Call base constructor
         #
@@ -151,15 +116,36 @@ class GLPKSHELL(SystemCallSolver):
             return None
         return executable.path()
 
-    def _get_version(self):
+    def _get_version(self, executable=None):
         """
         Returns a tuple describing the solver executable version.
         """
-        if _glpk_version is None:
-            return _extract_version('')
-        return _glpk_version
+        if executable is None:
+            executable = self.executable()
+        result = subprocess.run(
+            [executable, "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=1,
+            universal_newlines=True,
+        )
+        return _extract_version(result.stdout)
 
     def create_command_line(self, executable, problem_files):
+        #
+        # Not the best place to catch this, but we want to make sure
+        # that we have done the version check somewhere
+        #
+        if executable not in self._known_versions:
+            self._known_versions[executable] = self._get_version(executable)
+        _ver = self._known_versions[executable]
+        if not _ver or _ver < (4, 58):
+            raise RuntimeError(
+                "Pyomo only supports versions of GLPK since 4.58; "
+                "found version %s.  Please upgrade your installation "
+                "of GLPK" % ('.'.join(map(str, _ver)),)
+            )
+
         #
         # Define log file
         #
@@ -519,3 +505,36 @@ class GLPKSHELL(SystemCallSolver):
 
                 else:
                     raise ValueError("Unexpected row type: "+rtype)
+
+
+@SolverFactory.register('_mock_glpk')
+class MockGLPK(GLPKSHELL, MockMIP):
+    """A Mock GLPK solver used for testing
+    """
+
+    def __init__(self, **kwds):
+        try:
+            GLPKSHELL.__init__(self, **kwds)
+        except ApplicationError:
+            pass
+        MockMIP.__init__(self, "glpk")
+
+    def available(self, exception_flag=True):
+        return GLPKSHELL.available(self, exception_flag)
+
+    def create_command_line(self, executable, problem_files):
+        command = GLPKSHELL.create_command_line(self, executable, problem_files)
+        MockMIP.create_command_line(self, executable, problem_files)
+        return command
+
+    def executable(self):
+        return MockMIP.executable(self)
+
+    def _execute_command(self,cmd):
+        return MockMIP._execute_command(self, cmd)
+
+    def _convert_problem(self, args, pformat, valid_pformats):
+        if pformat in [ProblemFormat.mps, ProblemFormat.cpxlp]:
+            return (args, pformat, None)
+        else:
+            return (args, ProblemFormat.cpxlp, None)

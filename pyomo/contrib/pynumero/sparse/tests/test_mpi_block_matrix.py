@@ -17,7 +17,7 @@ from pyomo.contrib.pynumero.dependencies import (
 
 SKIPTESTS=[]
 if numpy_available and scipy_available:
-    from scipy.sparse import coo_matrix, bmat
+    from scipy.sparse import coo_matrix, bmat, rand
 else:
     SKIPTESTS.append(
         "Pynumero needs scipy and numpy>=1.13.0 to run BlockMatrix tests"
@@ -41,7 +41,7 @@ if not SKIPTESTS:
     )
 
 
-@unittest.category("mpi")
+@unittest.pytest.mark.mpi
 class TestMPIBlockMatrix(unittest.TestCase):
 
     # Because the setUpClass is called before decorators around the
@@ -77,7 +77,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
 
         # create mpi matrix
         rank_ownership = [[0, -1], [-1, 1]]
-        bm = MPIBlockMatrix(2, 2, rank_ownership, comm)
+        bm = MPIBlockMatrix(2, 2, rank_ownership, comm, assert_correct_owners=True)
         if rank == 0:
             bm.set_block(0, 0, m)
         if rank == 1:
@@ -352,6 +352,7 @@ class TestMPIBlockMatrix(unittest.TestCase):
                                             mat2.get_block(j, i).toarray()))
 
     def _compare_mpi_and_serial_block_matrices(self, mpi_mat, serial_mat):
+        self.assertTrue(np.allclose(mpi_mat.to_local_array(), serial_mat.toarray()))
         self.assertIsInstance(mpi_mat, MPIBlockMatrix)
         rows, columns = np.nonzero(mpi_mat.ownership_mask)
         for i, j in zip(rows, columns):
@@ -952,8 +953,139 @@ class TestMPIBlockMatrix(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             res = serial_mat1 > mat1
 
+    def test_owned_blocks(self):
+        rank = comm.Get_rank()
+        mat = self.square_mpi_mat
+        owned_blocks = mat.owned_blocks
+        if rank == 0:
+            self.assertEqual(owned_blocks, [(0, 0), (0, 1), (1, 0)])
+        elif rank == 1:
+            self.assertEqual(owned_blocks, [(0, 1), (1, 0), (1, 1)])
+        else:
+            self.assertEqual(owned_blocks, [(0, 1), (1, 0)])
 
-@unittest.category("mpi")
+    def test_shared_blocks(self):
+        rank = comm.Get_rank()
+        mat = self.square_mpi_mat
+        shared_blocks = mat.shared_blocks
+        self.assertEqual(shared_blocks, [(0, 1), (1, 0)])
+
+    def test_not_fully_defined_block_matrix(self):
+        m = MPIBlockMatrix(2, 2, [[0, 1], [-1, -1]], comm)
+        rank = comm.Get_rank()
+        m0 = np.array([[4.3, 0], [-2.1, 1.5]])
+        m0 = coo_matrix(m0)
+        m1 = np.array([[0, 0], [0, 3.2]])
+        m1 = coo_matrix(m1)
+        if rank == 0:
+            m.set_block(0, 0, m0)
+        elif rank == 1:
+            m.set_block(0, 1, m1)
+
+        with self.assertRaises(NotFullyDefinedBlockMatrixError):
+            res = m.shape
+
+        m = MPIBlockMatrix(2, 2, [[0, -1], [1, -1]], comm)
+        rank = comm.Get_rank()
+        m0 = np.array([[4.3, 0], [-2.1, 1.5]])
+        m0 = coo_matrix(m0)
+        m1 = np.array([[0, 0], [0, 3.2]])
+        m1 = coo_matrix(m1)
+        if rank == 0:
+            m.set_block(0, 0, m0)
+        elif rank == 1:
+            m.set_block(1, 0, m1)
+
+        with self.assertRaises(NotFullyDefinedBlockMatrixError):
+            res = m.shape
+
+        m = MPIBlockMatrix(2, 2, [[0, -1], [-1, 1]], comm)
+        rank = comm.Get_rank()
+        m0 = np.array([[4.3, 0], [-2.1, 1.5]])
+        m0 = coo_matrix(m0)
+        m1 = np.array([[0, 0], [0, 3.2]])
+        m1 = coo_matrix(m1)
+        if rank == 0:
+            m.set_block(0, 0, m0)
+        elif rank == 1:
+            m.set_block(1, 1, m1)
+
+        res = m.shape
+        self.assertEqual(res, (4,4))
+
+    def test_is_row_size_defined(self):
+        m = MPIBlockMatrix(2, 2, [[0, 1], [-1, -1]], comm)
+        rank = comm.Get_rank()
+        m0 = np.array([[4.3, 0], [-2.1, 1.5]])
+        m0 = coo_matrix(m0)
+        m1 = np.array([[0, 0], [0, 3.2]])
+        m1 = coo_matrix(m1)
+        if rank == 0:
+            m.set_block(0, 0, m0)
+        elif rank == 1:
+            m.set_block(0, 1, m1)
+
+        self.assertTrue(m.is_row_size_defined(0, False))
+        self.assertFalse(m.is_row_size_defined(1, False))
+        self.assertTrue(m.is_col_size_defined(0, False))
+        self.assertTrue(m.is_col_size_defined(1, False))
+
+        m = MPIBlockMatrix(2, 2, [[0, -1], [1, -1]], comm)
+        rank = comm.Get_rank()
+        m0 = np.array([[4.3, 0], [-2.1, 1.5]])
+        m0 = coo_matrix(m0)
+        m1 = np.array([[0, 0], [0, 3.2]])
+        m1 = coo_matrix(m1)
+        if rank == 0:
+            m.set_block(0, 0, m0)
+        elif rank == 1:
+            m.set_block(1, 0, m1)
+
+        self.assertTrue(m.is_row_size_defined(0, False))
+        self.assertTrue(m.is_row_size_defined(1, False))
+        self.assertTrue(m.is_col_size_defined(0, False))
+        self.assertFalse(m.is_col_size_defined(1, False))
+
+    def test_empty_block(self):
+        m = self.square_mpi_mat
+        self.assertFalse(m.is_empty_block(0, 0, False))
+        self.assertFalse(m.is_empty_block(1, 1, False))
+        self.assertTrue(m.is_empty_block(0, 1, False))
+        self.assertTrue(m.is_empty_block(1, 0, False))
+
+    def test_copy(self):
+        m = self.square_mpi_mat
+        m2 = m.copy()
+        self.assertTrue(np.allclose(m.to_local_array(), m2.to_local_array()))
+        rank = comm.Get_rank()
+        if rank == 0:
+            m2.get_block(0, 0).data[0] += 1
+        self.assertFalse(np.allclose(m.to_local_array(), m2.to_local_array()))
+
+    def test_get_block_column_index(self):
+        m = self.square_mpi_mat
+        self.assertEqual(m.get_block_column_index(0), 0)
+        self.assertEqual(m.get_block_column_index(1), 0)
+        self.assertEqual(m.get_block_column_index(2), 0)
+        self.assertEqual(m.get_block_column_index(3), 0)
+        self.assertEqual(m.get_block_column_index(4), 1)
+        self.assertEqual(m.get_block_column_index(5), 1)
+        self.assertEqual(m.get_block_column_index(6), 1)
+        self.assertEqual(m.get_block_column_index(7), 1)
+
+    def test_get_block_row_index(self):
+        m = self.square_mpi_mat
+        self.assertEqual(m.get_block_row_index(0), 0)
+        self.assertEqual(m.get_block_row_index(1), 0)
+        self.assertEqual(m.get_block_row_index(2), 0)
+        self.assertEqual(m.get_block_row_index(3), 0)
+        self.assertEqual(m.get_block_row_index(4), 1)
+        self.assertEqual(m.get_block_row_index(5), 1)
+        self.assertEqual(m.get_block_row_index(6), 1)
+        self.assertEqual(m.get_block_row_index(7), 1)
+
+
+@unittest.pytest.mark.mpi
 class TestMPIMatVec(unittest.TestCase):
 
     @classmethod
@@ -1122,19 +1254,98 @@ class TestMPIMatVec(unittest.TestCase):
 
     def test_matvec_1(self):
         rank = comm.Get_rank()
+        np.random.seed(0)
+        orig_m = np.zeros((8,8))
+        for ndx in range(4):
+            start = ndx*2
+            stop = (ndx + 1) * 2
+            orig_m[start:stop, start:stop] = np.random.uniform(-10, 10, size=(2, 2))
+            orig_m[start:stop, 6:8] = np.random.uniform(-10, 10, size=(2, 2))
+            orig_m[6:8, start:stop] = np.random.uniform(-10, 10, size=(2, 2))
+        orig_m[6:8, 6:8] = np.random.uniform(-10, 10, size=(2, 2))
+
+        orig_v = np.random.uniform(-10, 10, size=8)
+        correct_res = coo_matrix(orig_m)*orig_v
 
         rank_ownership = np.array([[0, -1, -1, 0],
                                    [-1, 1, -1, 1],
                                    [-1, -1, 2, 2],
                                    [0, 1, 2, -1]])
         m = MPIBlockMatrix(4, 4, rank_ownership, comm)
+        start = rank*2
+        stop = (rank+1)*2
+        m.set_block(rank, rank, coo_matrix(orig_m[start:stop, start:stop]))
+        m.set_block(rank, 3, coo_matrix(orig_m[start:stop, 6:8]))
+        m.set_block(3, rank, coo_matrix(orig_m[6:8, start:stop]))
+        m.set_block(3, 3, coo_matrix(orig_m[6:8, 6:8]))
+
+        rank_ownership = np.array([0, 1, 2, -1])
+        v = MPIBlockVector(4, rank_ownership, comm)
+        v.set_block(rank, orig_v[start:stop])
+        v.set_block(3, orig_v[6:8])
+
+        res: MPIBlockVector = m.dot(v)
+        self.assertTrue(np.allclose(correct_res, res.make_local_copy().flatten()))
+        self.assertIsInstance(res, MPIBlockVector)
+        self.assertTrue(np.allclose(res.get_block(rank), correct_res[start:stop]))
+        self.assertTrue(np.allclose(res.get_block(3), correct_res[6:8]))
+        self.assertTrue(np.allclose(res.rank_ownership, np.array([0, 1, 2, -1])))
+        self.assertFalse(res.has_none)
+
+    def test_matvec_with_block_vector(self):
+        rank = comm.Get_rank()
+        np.random.seed(0)
+        orig_m = np.zeros((8,8))
+        for ndx in range(4):
+            start = ndx*2
+            stop = (ndx + 1) * 2
+            orig_m[start:stop, start:stop] = np.random.uniform(-10, 10, size=(2, 2))
+            orig_m[start:stop, 6:8] = np.random.uniform(-10, 10, size=(2, 2))
+            orig_m[6:8, start:stop] = np.random.uniform(-10, 10, size=(2, 2))
+        orig_m[6:8, 6:8] = np.random.uniform(-10, 10, size=(2, 2))
+
+        orig_v = np.random.uniform(-10, 10, size=8)
+        correct_res = coo_matrix(orig_m)*orig_v
+
+        rank_ownership = np.array([[0, -1, -1, 0],
+                                   [-1, 1, -1, 1],
+                                   [-1, -1, 2, 2],
+                                   [0, 1, 2, -1]])
+        m = MPIBlockMatrix(4, 4, rank_ownership, comm)
+        start = rank*2
+        stop = (rank+1)*2
+        m.set_block(rank, rank, coo_matrix(orig_m[start:stop, start:stop]))
+        m.set_block(rank, 3, coo_matrix(orig_m[start:stop, 6:8]))
+        m.set_block(3, rank, coo_matrix(orig_m[6:8, start:stop]))
+        m.set_block(3, 3, coo_matrix(orig_m[6:8, 6:8]))
+
+        v = BlockVector(4)
+        for ndx in range(4):
+            v.set_block(ndx, np.zeros(2))
+        v.copyfrom(orig_v)
+
+        res: MPIBlockVector = m.dot(v)
+        self.assertTrue(np.allclose(correct_res, res.make_local_copy().flatten()))
+        self.assertIsInstance(res, MPIBlockVector)
+        self.assertTrue(np.allclose(res.get_block(rank), correct_res[start:stop]))
+        self.assertTrue(np.allclose(res.get_block(3), correct_res[6:8]))
+        self.assertTrue(np.allclose(res.rank_ownership, np.array([0, 1, 2, -1])))
+        self.assertFalse(res.has_none)
+
+    def test_matvect_with_empty_rows(self):
+        rank = comm.Get_rank()
+
+        rank_ownership = np.array([[ 0, -1, -1,  0],
+                                   [-1,  1, -1,  1],
+                                   [-1, -1,  2,  2],
+                                   [ 0,  1,  2, -1]])
+        m = MPIBlockMatrix(4, 4, rank_ownership, comm)
         sub_m = np.array([[1, 0],
                           [0, 1]])
         sub_m = coo_matrix(sub_m)
         m.set_block(rank, rank, sub_m.copy())
         m.set_block(rank, 3, sub_m.copy())
-        m.set_block(3, rank, sub_m.copy())
-        m.set_block(3, 3, sub_m.copy())
+        m.set_row_size(3, 2)
 
         rank_ownership = np.array([0, 1, 2, -1])
         v = MPIBlockVector(4, rank_ownership, comm)
@@ -1144,7 +1355,47 @@ class TestMPIMatVec(unittest.TestCase):
 
         res = m.dot(v)
         self.assertIsInstance(res, MPIBlockVector)
-        self.assertTrue(np.array_equal(res.get_block(rank), sub_v*2))
-        self.assertTrue(np.array_equal(res.get_block(3), sub_v*4))
-        self.assertTrue(np.array_equal(res.rank_ownership, np.array([0, 1, 2, -1])))
+        self.assertTrue(np.allclose(res.get_block(rank), sub_v*2))
+        self.assertTrue(np.allclose(res.get_block(3), np.zeros(2)))
+        self.assertTrue(np.allclose(res.rank_ownership, np.array([0, 1, 2, -1])))
+        self.assertFalse(res.has_none)
+
+        rank_ownership = np.array([[ 0, -1, -1,  0],
+                                   [-1,  1, -1,  1],
+                                   [-1, -1,  2,  2],
+                                   [ 0,  -1, -1, -1]])
+        m = MPIBlockMatrix(4, 4, rank_ownership, comm)
+        sub_m = np.array([[1, 0],
+                          [0, 1]])
+        sub_m = coo_matrix(sub_m)
+        m.set_block(rank, rank, sub_m.copy())
+        m.set_block(rank, 3, sub_m.copy())
+        m.set_row_size(3, 2)
+
+        res = m.dot(v)
+        self.assertIsInstance(res, MPIBlockVector)
+        self.assertTrue(np.allclose(res.get_block(rank), sub_v*2))
+        if rank == 0:
+            self.assertTrue(np.allclose(res.get_block(3), np.zeros(2)))
+        self.assertTrue(np.allclose(res.rank_ownership, np.array([0, 1, 2, 0])))
+        self.assertFalse(res.has_none)
+
+        rank_ownership = np.array([[ 0, -1, -1,  0],
+                                   [-1,  1, -1,  1],
+                                   [-1, -1,  2,  2],
+                                   [-1, -1, -1,  0]])
+        m = MPIBlockMatrix(4, 4, rank_ownership, comm)
+        sub_m = np.array([[1, 0],
+                          [0, 1]])
+        sub_m = coo_matrix(sub_m)
+        m.set_block(rank, rank, sub_m.copy())
+        m.set_block(rank, 3, sub_m.copy())
+        m.set_row_size(3, 2)
+
+        res = m.dot(v)
+        self.assertIsInstance(res, MPIBlockVector)
+        self.assertTrue(np.allclose(res.get_block(rank), sub_v*2))
+        if rank == 0:
+            self.assertTrue(np.allclose(res.get_block(3), np.zeros(2)))
+        self.assertTrue(np.allclose(res.rank_ownership, np.array([0, 1, 2, 0])))
         self.assertFalse(res.has_none)

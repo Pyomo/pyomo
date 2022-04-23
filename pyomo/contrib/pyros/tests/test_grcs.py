@@ -13,6 +13,9 @@ from pyomo.core.expr.current import identify_variables, identify_mutable_paramet
 from pyomo.contrib.pyros.util import selective_clone, add_decision_rule_variables, add_decision_rule_constraints, \
     model_is_valid, turn_bounds_to_constraints, transform_to_standard_form, ObjectiveType, pyrosTerminationCondition, \
     coefficient_matching
+from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
+from pyomo.contrib.pyros.util import get_vars_from_component
+from pyomo.core.expr import current as EXPR
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master, \
     minimize_dr_vars
@@ -271,13 +274,220 @@ class testTurnBoundsToConstraints(unittest.TestCase):
                          msg="Inequality constraints were not "
                              "written correctly for a variable with both lower and upper bound.")
 
+    def test_uncertain_bounds_to_constraints(self):
+        # test model
+        m = ConcreteModel()
+        # parameters
+        m.p = Param(initialize=8, mutable=True)
+        m.r = Param(initialize=-5, mutable=True)
+        m.q = Param(initialize=1, mutable=False)
+        m.s = Param(initialize=1, mutable=True)
+        m.n = Param(initialize=1, mutable=True)
+
+        # variables, with bounds contingent on params
+        m.u = Var(initialize=0, bounds=(0, m.p))
+        m.v = Var(initialize=1, bounds=(m.r, m.p))
+        m.w = Var(initialize=1, bounds=(None, None))
+        m.x = Var(initialize=1, bounds=(0, exp(-1*m.p / 8) * m.q * m.s))
+        m.y = Var(initialize=-1, bounds=(m.r * m.p, 0))
+        m.z = Var(initialize=1, bounds=(0, m.s))
+        m.t = Var(initialize=1, bounds=(0, m.p ** 2))
+
+        # objective
+        m.obj = Objective(sense=maximize, expr=m.x**2 - m.y + m.t**2 + m.v)
+
+        # clone model
+        mod = m.clone()
+        uncertain_params = [mod.n, mod.p, mod.r]
+
+        # check variable replacement without any active objective
+        # or active performance constraints
+        mod.obj.deactivate()
+        replace_uncertain_bounds_with_constraints(mod, uncertain_params)
+        self.assertTrue(hasattr(mod, 'uncertain_var_bound_cons'),
+                        msg='Uncertain variable bounds erroneously added. '
+                            'Check only variables participating in active '
+                            'objective and constraints are added.')
+        self.assertFalse(mod.uncertain_var_bound_cons)
+        mod.obj.activate()
+
+        # add performance constraints
+        constraints_m = ConstraintList()
+        m.add_component('perf_constraints', constraints_m)
+        constraints_m.add(m.w == 2 * m.x + m.y)
+        constraints_m.add(m.v + m.x + m.y >= 0)
+        constraints_m.add(m.y ** 2 + m.z >= 0)
+        constraints_m.add(m.x ** 2 + m.u <= 1)
+        constraints_m[4].deactivate()
+
+        # clone model with constraints added
+        mod_2 = m.clone()
+
+        # manually replace uncertain parameter bounds with explicit constraints
+        uncertain_cons = ConstraintList()
+        m.add_component('uncertain_var_bound_cons', uncertain_cons)
+        uncertain_cons.add(m.x - m.x.upper <= 0)
+        uncertain_cons.add(m.y.lower - m.y <= 0)
+        uncertain_cons.add(m.v - m.v._ub <= 0)
+        uncertain_cons.add(m.v.lower - m.v <= 0)
+        uncertain_cons.add(m.t - m.t.upper <= 0)
+
+        # remove corresponding variable bounds
+        m.x.setub(None)
+        m.y.setlb(None)
+        m.v.setlb(None)
+        m.v.setub(None)
+        m.t.setub(None)
+
+        # check that vars participating in
+        # active objective and activated constraints correctly determined
+        svars_con = ComponentSet(get_vars_from_component(mod_2, Constraint))
+        svars_obj = ComponentSet(get_vars_from_component(mod_2, Objective))
+        vars_in_active_cons = ComponentSet([mod_2.z, mod_2.w, mod_2.y,
+                                            mod_2.x, mod_2.v])
+        vars_in_active_obj = ComponentSet([mod_2.x, mod_2.y, mod_2.t, mod_2.v])
+        self.assertEqual(svars_con, vars_in_active_cons,
+                         msg='Mismatch of variables participating in '
+                             'activated constraints.')
+        self.assertEqual(svars_obj, vars_in_active_obj,
+                         msg='Mismatch of variables participating in '
+                             'activated objectives.')
+
+        # replace bounds in model with performance constraints
+        uncertain_params = [mod_2.p, mod_2.r]
+        replace_uncertain_bounds_with_constraints(mod_2, uncertain_params)
+
+        # check that same number of constraints added to model
+        self.assertEqual(len(list(m.component_data_objects(Constraint))),
+                         len(list(mod_2.component_data_objects(Constraint))),
+                         msg='Mismatch between number of explicit variable '
+                             'bound inequality constraints added '
+                             'automatically and added manually.')
+
+        # check that explicit constraints contain correct vars and params
+        vars_in_cons = ComponentSet()
+        params_in_cons = ComponentSet()
+
+        # get variables, mutable params in the explicit constraints
+        cons = mod_2.uncertain_var_bound_cons
+        for idx in cons:
+            for p in EXPR.identify_mutable_parameters(cons[idx].expr):
+                params_in_cons.add(p)
+            for v in EXPR.identify_variables(cons[idx].expr):
+                vars_in_cons.add(v)
+        # reduce only to uncertain mutable params found
+        params_in_cons = params_in_cons & uncertain_params
+
+        # expected participating variables
+        vars_with_bounds_removed = ComponentSet([mod_2.x, mod_2.y, mod_2.v,
+                                                 mod_2.t])
+        # complete the check
+        self.assertEqual(params_in_cons, ComponentSet([mod_2.p, mod_2.r]),
+                         msg='Mismatch of parameters added to explicit '
+                             'inequality constraints.')
+        self.assertEqual(vars_in_cons, vars_with_bounds_removed,
+                         msg='Mismatch of variables added to explicit '
+                             'inequality constraints.')
+
+
 class testTransformToStandardForm(unittest.TestCase):
 
+    def test_transform_to_std_form(self):
+        """Check that `pyros.util.transform_to_standard_form` works
+        correctly for an example model. That is:
+        - all Constraints with a finite `upper` or `lower` attribute
+          are either equality constraints, or inequalities
+          of the standard form `expression(vars) <= upper`;
+        - every inequality Constraint for which the `upper` and `lower`
+          attribute are identical is converted to an equality constraint;
+        - every inequality Constraint with distinct finite `upper` and
+          `lower` attributes is split into two standard form inequality
+          Constraints.
+        """
+
+        m = ConcreteModel()
+
+        m.p = Param(initialize=1, mutable=True)
+
+        m.x = Var(initialize=0)
+        m.y = Var(initialize=1)
+        m.z = Var(initialize=1)
+
+        # example constraints
+        m.c1 = Constraint(expr=m.x >= 1)
+        m.c2 = Constraint(expr=-m.y <= 0)
+        m.c3 = Constraint(rule=(None, m.x + m.y, None))
+        m.c4 = Constraint(rule=(1, m.x + m.y, 2))
+        m.c5 = Constraint(rule=(m.p, m.x, m.p))
+        m.c6 = Constraint(rule=(1.0000, m.z, 1.0))
+
+        # example ConstraintList
+        clist = ConstraintList()
+        m.add_component('clist', clist)
+        clist.add(m.y <= 0)
+        clist.add(m.x >= 1)
+        clist.add((0, m.x, 1))
+
+        num_orig_cons = len([con for con in
+                             m.component_data_objects(Constraint,
+                                                      active=True,
+                                                      descend_into=True)])
+        # constraints with finite, distinct lower & upper bounds
+        num_lbub_cons = len([con for con in
+                             m.component_data_objects(Constraint,
+                                                      active=True,
+                                                      descend_into=True)
+                             if con.lower is not None
+                             and con.upper is not None
+                             and con.lower is not con.upper])
+
+        # count constraints with no bounds
+        num_nobound_cons = len([con for con in
+                             m.component_data_objects(Constraint,
+                                                      active=True,
+                                                      descend_into=True)
+                             if con.lower is None
+                             and con.upper is None
+                             ])
+
+        transform_to_standard_form(m)
+        cons = [con for con in m.component_data_objects(Constraint,
+                                                        active=True,
+                                                        descend_into=True)]
+        for con in cons:
+            has_lb_or_ub = not(con.lower is None and con.upper is None)
+            if has_lb_or_ub and not con.equality:
+                self.assertTrue(con.lower is None, msg="Constraint %s not"
+                                " in standard form" % con.name)
+                lb_is_ub = con.lower is con.upper
+                self.assertFalse(lb_is_ub, msg="Constraint %s should be"
+                                 " converted to equality" % con.name)
+            if con is not m.c3:
+                self.assertTrue(has_lb_or_ub, msg="Constraint %s should have"
+                                " a lower or upper bound" % con.name)
+
+        self.assertEqual(len([con for con in
+                              m.component_data_objects(Constraint,
+                                                       active=True,
+                                                       descend_into=True)]),
+                              num_orig_cons + num_lbub_cons - num_nobound_cons,
+                              msg="Expected number of constraints after\n "
+                                  "standardizing constraints not matched. "
+                                  "Number of constraints after\n "
+                                  "transformation"
+                                  " should be (number constraints in original "
+                                  "model) \n + (number of constraints with "
+                                  "distinct finite lower and upper bounds).")
+
     def test_transform_does_not_alter_num_of_constraints(self):
-        '''
-        Standard form for the purpose of PyROS is all inequality constraints as g(.)<=0
-        :return:
-        '''
+        """
+        Check that if model does not contain any constraints
+        for which both the `lower` and `upper` attributes are
+        distinct and not None, then number of constraints remains the same
+        after constraint standardization.
+        Standard form for the purpose of PyROS is all inequality constraints
+        as `g(.)<=0`.
+        """
         m = ConcreteModel()
         m.x = Var(initialize=1, bounds=(0, 1))
         m.y = Var(initialize=0, bounds=(None, 1))
@@ -1443,9 +1653,9 @@ class coefficientMatchingTests(unittest.TestCase):
         self.assertEqual(robust_infeasible, True, msg="Coefficient matching should be proven robust infeasible.")
 
 # === regression test for the solver
+@unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
 class RegressionTest(unittest.TestCase):
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False), "Global NLP solver is not available.")
     def regression_test_constant_drs(self):
         model = m = ConcreteModel()
         m.name = "s381"
@@ -1480,8 +1690,6 @@ class RegressionTest(unittest.TestCase):
         self.assertTrue(results.pyros_termination_condition,
                          pyrosTerminationCondition.robust_feasible)
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
-                         "Global NLP solver is not available.")
     def regression_test_affine_drs(self):
         model = m = ConcreteModel()
         m.name = "s381"
@@ -1517,8 +1725,6 @@ class RegressionTest(unittest.TestCase):
         self.assertTrue(results.pyros_termination_condition,
                         pyrosTerminationCondition.robust_feasible)
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False),
-                         "Global NLP solver is not available.")
     def regression_test_quad_drs(self):
         model = m = ConcreteModel()
         m.name = "s381"
@@ -1554,7 +1760,7 @@ class RegressionTest(unittest.TestCase):
         self.assertTrue(results.pyros_termination_condition,
                         pyrosTerminationCondition.robust_feasible)
 
-    @unittest.skipUnless(SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
                          "Global NLP solver is not available and licensed.")
     def test_minimize_dr_norm(self):
         m = ConcreteModel()
@@ -1599,9 +1805,8 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.solver.termination_condition, TerminationCondition.optimal,
                          msg="Minimize dr norm did not solve to optimality.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_identifying_violating_param_realization(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1642,9 +1847,8 @@ class RegressionTest(unittest.TestCase):
         self.assertGreater(results.iterations, 0,
                          msg="Robust infeasible model terminated in 0 iterations (nominal case).")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_terminate_with_max_iter(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1685,9 +1889,8 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.max_iter,
                          msg="Returned termination condition is not return max_iter.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_terminate_with_time_limit(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1727,9 +1930,8 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.time_out,
                          msg="Returned termination condition is not return time_out.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_discrete_separation(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1768,9 +1970,8 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
                          msg="Returned termination condition is not return robust_optimal.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_higher_order_decision_rules(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -1810,9 +2011,8 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
                          msg="Returned termination condition is not return robust_optimal.")
 
-    @unittest.skipUnless(
-        SolverFactory('baron').available(exception_flag=False) and SolverFactory('baron').license_is_valid(),
-        "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_coefficient_matching_solve(self):
 
         # Write the deterministic Pyomo model
@@ -1909,7 +2109,9 @@ class RegressionTest(unittest.TestCase):
         global_subsolver = SolverFactory("baron")
 
         # Call the PyROS solver
-        try:
+        with self.assertRaises(
+                ValueError, msg="ValueError should be raised for general "
+                "nonlinear expressions in h(x,z,q)=0 constraints."):
             results = pyros_solver.solve(model=m,
                                          first_stage_variables=[m.x1],
                                          second_stage_variables=[m.x2],
@@ -1922,11 +2124,133 @@ class RegressionTest(unittest.TestCase):
                                              "solve_master_globally": True,
                                              "decision_rule_order":1
                                          })
-        except:
-            self.assertRaises(ValueError, msg="ValueError should be "
-                                              "raised for general nonlinear expressions in h(x,z,q)=0 constraints.")
 
 
+@unittest.skipUnless(SolverFactory('baron').available(exception_flag=False)
+                     and SolverFactory('baron').license_is_valid(),
+                     "Global NLP solver is not available and licensed.")
+class testBypassingSeparation(unittest.TestCase):
+    def test_bypass_global_separation(self):
+        """Test bypassing of global separation solve calls."""
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # Define the uncertainty set
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('ipopt')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+                         model=m,
+                         first_stage_variables=[m.x1],
+                         second_stage_variables=[m.x2],
+                         uncertain_params=[m.u],
+                         uncertainty_set=interval,
+                         local_solver=local_subsolver,
+                         global_solver=global_subsolver,
+                         options={
+                             "objective_focus": ObjectiveType.worst_case,
+                             "solve_master_globally": True,
+                             "decision_rule_order":0,
+                             "bypass_global_separation": True
+                         }
+        )
+
+        self.assertEqual(results.pyros_termination_condition,
+                         pyrosTerminationCondition.robust_optimal,
+                         msg="Returned termination condition is not return robust_optimal.")
+
+
+@unittest.skipUnless(SolverFactory('baron').available(exception_flag=False)
+                     and SolverFactory('baron').license_is_valid(),
+                     "Global NLP solver is not available and licensed.")
+class testUninitializedVars(unittest.TestCase):
+    def test_uninitialized_vars(self):
+        """
+        Test a simple PyROS model instance with uninitialized
+        first-stage and second-stage variables.
+        """
+        m = ConcreteModel()
+
+        # parameters
+        m.ell0 = Param(initialize=1)
+        m.u0 = Param(initialize=3)
+        m.ell = Param(initialize=1)
+        m.u = Param(initialize=5)
+        m.p = Param(initialize=m.u0, mutable=True)
+        m.r = Param(initialize=0.1)
+
+        # variables
+        m.x = Var(bounds=(m.ell0, m.u0))
+        m.z = Var(bounds=(m.ell0, m.p))
+        m.t = Var(initialize=1, bounds=(0, m.r))
+        m.w = Var(bounds=(0, 1))
+
+        # objectives
+        m.obj = Objective(expr=-m.x ** 2 + m.z ** 2)
+
+        # auxiliary constraints
+        m.t_lb_con = Constraint(expr=m.x - m.z <= m.t)
+        m.t_ub_con = Constraint(expr=-m.t <= m.x - m.z)
+
+        # other constraints
+        m.con1 = Constraint(expr=m.x - m.z >= 0.1)
+        m.eq_con = Constraint(expr=m.w == 0.5 * m.t)
+
+        box_set = BoxSet(
+                bounds=((value(m.ell), value(m.u)),)
+        )
+
+        # solvers
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("baron")
+
+        # pyros setup
+        pyros_solver = SolverFactory("pyros")
+
+        # solve for different decision rule orders
+        for dr_order in [0, 1, 2]:
+            model = m.clone()
+
+            # degree of freedom partitioning
+            fsv = [model.x]
+            ssv = [model.z, model.t]
+            uncertain_params = [model.p]
+
+            res = pyros_solver.solve(
+                    model=model,
+                    first_stage_variables=fsv,
+                    second_stage_variables=ssv,
+                    uncertain_params=uncertain_params,
+                    uncertainty_set=box_set,
+                    local_solver=local_solver,
+                    global_solver=global_solver,
+                    objective_focus=ObjectiveType.worst_case,
+                    decision_rule_order=2,
+                    solve_master_globally=True
+            )
+
+            self.assertEqual(
+                    res.pyros_termination_condition,
+                    pyrosTerminationCondition.robust_optimal,
+                    msg=("Returned termination condition for solve with"
+                         f"decision rule order {dr_order} is not return "
+                         "robust_optimal.")
+            )
 
 
 if __name__ == "__main__":

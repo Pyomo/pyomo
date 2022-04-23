@@ -126,8 +126,8 @@ class kestrelAMPL(object):
                 http.client.BadStatusLine):
             e = sys.exc_info()[1]
             self.neos = None
-            logger.info("Fail.")
-            logger.warning("NEOS is temporarily unavailable.\n")
+            logger.info("Fail: %s" % (e,))
+            logger.warning("NEOS is temporarily unavailable:\n\t(%s)" % (e,))
 
     def tempfile(self):
         return os.path.join(tempfile.gettempdir(),'at%s.jobs' % os.getenv('ampl_id'))
@@ -200,10 +200,10 @@ class kestrelAMPL(object):
         password=""
         options = os.getenv("kestrel_options")
         if options is not None:
-            m = re.search(r'job\s*=\s*(\d+)',options,re.IGNORECASE)
+            m = re.search(r'job\s*=\s*(\d+)', options, re.IGNORECASE)
             if m:
                 jobNumber = int(m.groups()[0])
-            m = re.search(r'password\s*=\s*(\S+)',options,re.IGNORECASE)
+            m = re.search(r'password\s*=\s*(\S+)', options, re.IGNORECASE)
             if m:
                 password = m.groups()[0]
         return (jobNumber,password)
@@ -230,7 +230,7 @@ class kestrelAMPL(object):
             self.options = os.getenv("KESTREL_OPTIONS")
         #
         if self.options is not None:
-            m = re.search('solver\s*=*\s*(\S+)',self.options,re.IGNORECASE)
+            m = re.search(r'solver\s*=*\s*(\S+)', self.options, re.IGNORECASE)
             NEOS_solver_name=None
             if m:
                 solver_name=m.groups()[0]

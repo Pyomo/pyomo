@@ -31,38 +31,6 @@ from pyomo.solvers.mockmip import MockMIP
 
 logger = logging.getLogger('pyomo.solvers')
 
-def _version_to_string(version):
-    if version is None:
-        return "<unknown>"
-    return ('.'.join(str(i) for i in version))
-
-_cbc_compiled_with_asl = None
-_cbc_version = None
-_cbc_old_version = None
-def configure_cbc():
-    global _cbc_compiled_with_asl
-    global _cbc_version
-    global _cbc_old_version
-    if _cbc_compiled_with_asl is not None:
-        return
-    # manually look for the cbc executable to prevent the
-    # CBC.execute() from logging an error when CBC is missing
-    executable = Executable("cbc")
-    if not executable:
-        return
-    cbc_exec = executable.path()
-    results = subprocess.run([cbc_exec,"-stop"], timeout=1,
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                             universal_newlines=True)
-    _cbc_version = _extract_version(results.stdout)
-    results = subprocess.run([cbc_exec, "dummy", "-AMPL", "-stop"], timeout=1,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.STDOUT,
-                             universal_newlines=True)
-    _cbc_compiled_with_asl = not ('No match for AMPL' in results.stdout)
-    if _cbc_version is not None:
-        _cbc_old_version = _cbc_version < (2,7,0,0)
-
 
 @SolverFactory.register('cbc', doc='The CBC LP/MIP solver')
 class CBC(OptSolver):
@@ -70,45 +38,23 @@ class CBC(OptSolver):
     """
 
     def __new__(cls, *args, **kwds):
-        configure_cbc()
-        try:
-            mode = kwds['solver_io']
-            if mode is None:
-                mode = 'lp'
-            del kwds['solver_io']
-        except KeyError:
-            mode = 'lp'
-        #
-        if mode  == 'lp':
+        mode = kwds.pop('solver_io', 'lp')
+
+        if mode  == 'lp' or mode is None:
             opt = SolverFactory('_cbc_shell', **kwds)
             opt.set_problem_format(ProblemFormat.cpxlp)
             return opt
         # CBC's MPS parser seems too buggy to expose
         # this option
-#        if mode == 'mps':
-#            # *NOTE: CBC uses the COIN-OR MPS reader,
-#            #        which ignores any objective sense
-#            #        declared in the OBJSENSE section.
-#            opt = SolverFactory('_cbc_shell', **kwds)
-#            opt.set_problem_format(ProblemFormat.mps)
-#            return opt
+        # if mode == 'mps':
+        #     # *NOTE: CBC uses the COIN-OR MPS reader,
+        #     #        which ignores any objective sense
+        #     #        declared in the OBJSENSE section.
+        #     opt = SolverFactory('_cbc_shell', **kwds)
+        #     opt.set_problem_format(ProblemFormat.mps)
+        #     return opt
         #
         if mode == 'nl':
-            # the _cbc_compiled_with_asl and
-            # _cbc_old_version flags are tristate
-            # (None, False, True), so don't
-            # simplify the if statements from
-            # checking "is"
-            if _cbc_compiled_with_asl is not False:
-                if _cbc_old_version is True:
-                    logger.warning("found CBC version "
-                                   +_version_to_string(_cbc_version)+
-                                   " < 2.7; ASL support disabled.")
-                    logger.warning("Upgrade CBC to activate ASL "
-                                   "support in this plugin")
-            else:
-                logger.warning("CBC solver is not compiled with ASL "
-                               "interface.")
             # CBC doesn't not accept all asl style command line
             # options (-s in particular, which is required for
             # streaming output of all asl solvers). Therefore we need
@@ -118,11 +64,11 @@ class CBC(OptSolver):
             return opt
         elif mode == 'os':
             opt = SolverFactory('_ossolver', **kwds)
+            opt.set_options('solver=cbc')
+            return opt
         else:
             logger.error('Unknown IO type: %s' % mode)
             return
-        opt.set_options('solver=cbc')
-        return opt
 
 
 
@@ -138,26 +84,30 @@ class CBCSHELL(SystemCallSolver):
         kwds['type'] = 'cbc'
         super(CBCSHELL, self).__init__(**kwds)
 
-        # NOTE: eventually both of the following attributes should be migrated to a common base class.
-        # is the current solve warm-started? a transient data member to communicate state information
-        # across the _presolve, _apply_solver, and _postsolve methods.
+        # NOTE: eventually both of the following attributes should be
+        # migrated to a common base class.  is the current solve
+        # warm-started? a transient data member to communicate state
+        # information across the _presolve, _apply_solver, and
+        # _postsolve methods.
         self._warm_start_solve = False
-        # related to the above, the temporary name of the SOLN warm-start file (if any).
+        # related to the above, the temporary name of the SOLN
+        # warm-start file (if any).
         self._warm_start_file_name = None
 
         #
-        # Set up valid problem formats and valid results for each problem format
+        # Set up valid problem formats and valid results for each
+        # problem format
         #
-        self._valid_problem_formats=[ProblemFormat.cpxlp, ProblemFormat.mps]
-        if (_cbc_compiled_with_asl is not False) and \
-           (_cbc_old_version is not True):
-            self._valid_problem_formats.append(ProblemFormat.nl)
-        self._valid_result_formats={}
-        self._valid_result_formats[ProblemFormat.cpxlp] = [ResultsFormat.soln]
-        if (_cbc_compiled_with_asl is not False) and \
-           (_cbc_old_version is not True):
-            self._valid_result_formats[ProblemFormat.nl] = [ResultsFormat.sol]
-        self._valid_result_formats[ProblemFormat.mps] = [ResultsFormat.soln]
+        self._valid_problem_formats=[
+            ProblemFormat.cpxlp,
+            ProblemFormat.nl,
+            #ProblemFormat.mps,
+        ]
+        self._valid_result_formats={
+            ProblemFormat.cpxlp: [ResultsFormat.soln],
+            ProblemFormat.nl: [ResultsFormat.sol],
+            #ProblemFormat.mps: [ResultsFormat.soln],
+        }
 
         # Note: Undefined capabilities default to 'None'
         self._capabilities = Bunch()
@@ -185,6 +135,29 @@ class CBCSHELL(SystemCallSolver):
         else:
             self._capabilities.sos1 = True
             self._capabilities.sos2 = True
+        if self._problem_format == ProblemFormat.nl:
+            if self._compiled_with_asl():
+                _ver = self.version()
+                # It is possible that _ver is None if the parse failed
+                if not _ver or _ver[:3] < (2, 7, 0):
+                    if _ver is None:
+                        _ver_str = "<unknown>"
+                    else:
+                        _ver_str ='.'.join(str(i) for i in _ver)
+                    logger.warning(
+                        f"found CBC version {_ver_str} < 2.7; "
+                        "ASL support disabled (falling back on LP interface)."
+                    )
+                    logger.warning("Upgrade CBC to activate ASL "
+                                   "support in this plugin")
+                    # Fall back on LP
+                    self.set_problem_format(ProblemFormat.cpxlp)
+            else:
+                logger.warning("CBC solver is not compiled with ASL "
+                               "interface (falling back on LP interface).")
+                # Fall back on LP
+                self.set_problem_format(ProblemFormat.cpxlp)
+
 
     def _default_results_format(self, prob_format):
         if prob_format == ProblemFormat.nl:
@@ -192,11 +165,10 @@ class CBCSHELL(SystemCallSolver):
         return ResultsFormat.soln
 
     def warm_start_capable(self):
-        if self._problem_format == ProblemFormat.cpxlp \
-                and _cbc_version >= (2,8,0,0):
-            return True
-        else:
+        if self._problem_format != ProblemFormat.cpxlp:
             return False
+        _ver = self.version()
+        return _ver and _ver >= (2,8,0,0)
 
     def _write_soln_file(self, instance, filename):
 
@@ -323,9 +295,27 @@ class CBCSHELL(SystemCallSolver):
         """
         Returns a tuple describing the solver executable version.
         """
-        if _cbc_version is None:
+        results = subprocess.run(
+            [self.executable(), "-stop"],
+            timeout=5,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True
+        )
+        _version = _extract_version(results.stdout)
+        if _version is None:
             return _extract_version('')
-        return _cbc_version
+        return _version
+
+    def _compiled_with_asl(self):
+        results = subprocess.run(
+            [self.executable(), "dummy", "-AMPL", "-stop"],
+            timeout=5,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True
+        )
+        return 'No match for AMPL'.lower() not in results.stdout.lower()
 
     def create_command_line(self, executable, problem_files):
         #
@@ -665,7 +655,8 @@ class CBCSHELL(SystemCallSolver):
         if results.problem.sense == ProblemSense.minimize:
             upper_bound = optim_value
         elif results.problem.sense == ProblemSense.maximize:
-            if self.version() < (2, 10, 2):
+            _ver = self.version()
+            if _ver and _ver[:3] < (2, 10, 2):
                 optim_value *= -1
                 upper_bound = None if lower_bound is None else -lower_bound
             else:
@@ -725,6 +716,13 @@ class CBCSHELL(SystemCallSolver):
             INPUT = open(self._soln_file,"r")
         except IOError:
             INPUT = []
+
+        _ver = self.version()
+        invert_objective_sense = (
+            results.problem.sense == ProblemSense.maximize
+            and ( _ver and _ver[:3] < (2, 10, 2) )
+        )
+
 
         for line in INPUT:
             tokens = tuple(re.split('[ \t]+',line.strip()))
@@ -820,7 +818,7 @@ class CBCSHELL(SystemCallSolver):
             except ValueError:
                 if tokens[0] in ("Optimal", "Infeasible", "Unbounded", "Stopped", "Integer", "Status"):
                     if optim_value is not None:
-                        if results.problem.sense == ProblemSense.maximize and self.version() < (2, 10, 2):
+                        if invert_objective_sense:
                             optim_value *= -1
                         solution.objective['__default_objective__'] = {'Value': optim_value}
                     header_processed = True
@@ -836,7 +834,7 @@ class CBCSHELL(SystemCallSolver):
                 constraint = tokens[1]
                 constraint_ax = _float(tokens[2]) # CBC reports the constraint row times the solution vector - not the slack.
                 constraint_dual = _float(tokens[3])
-                if results.problem.sense == ProblemSense.maximize and self.version() < (2, 10, 2):
+                if invert_objective_sense:
                     constraint_dual *= -1
                 if constraint[:2] == 'c_':
                     solution.constraint[constraint] = {"Dual" : constraint_dual}
@@ -869,7 +867,7 @@ class CBCSHELL(SystemCallSolver):
                 variable = solution.variable[variable_name] = {"Value" : variable_value}
                 if extract_reduced_costs is True:
                     variable_reduced_cost = _float(tokens[3]) # currently ignored.
-                    if results.problem.sense == ProblemSense.maximize and self.version() < (2, 10, 2):
+                    if invert_objective_sense:
                         variable_reduced_cost *= -1
                     variable["Rc"] = variable_reduced_cost
 

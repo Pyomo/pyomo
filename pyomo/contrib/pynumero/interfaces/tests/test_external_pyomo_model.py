@@ -33,6 +33,16 @@ from pyomo.contrib.pynumero.interfaces.external_pyomo_model import (
     ExternalPyomoModel,
     get_hessian_of_constraint,
 )
+from pyomo.contrib.pynumero.interfaces.pyomo_grey_box_nlp import (
+    PyomoNLPWithGreyBoxBlocks,
+)
+from pyomo.contrib.pynumero.interfaces.external_grey_box import (
+    ExternalGreyBoxBlock,
+)
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
+    CyIpoptNLP,
+    CyIpoptSolver,
+)
 
 if not pyo.SolverFactory("ipopt").available():
     raise unittest.SkipTest(
@@ -260,6 +270,66 @@ class Model2by2(object):
             [d2y1dx0dx1, d2y1dx1dx1],
             ])
         return [d2y0dxdx, d2y1dxdx]
+
+    def calculate_external_multipliers(self, lam, x):
+        r"""
+        Calculates the multipliers of the external constraints
+        from the multipliers of the residual constraints,
+        assuming zero dual infeasibility in the coordinates of
+        the external variables.
+        This is calculated analytically from:
+
+        \nabla_y f^T \lambda_f + \nabla_y g^T \lambda_g = 0
+
+        """
+        y = self.evaluate_external_variables(x)
+        lg0 = -2*y[1]*lam[0]/(x[0]**2 * x[1]**0.5 * y[0])
+        lg1 = -(2*y[0]*lam[0] + x[0]**2*x[1]**0.5*y[1]*lg0)/(x[0]*x[1])
+        return [lg0, lg1]
+
+    def calculate_full_space_lagrangian_hessians(self, lam, x):
+        y = self.evaluate_external_variables(x)
+        lam_g = self.calculate_external_multipliers(lam, x)
+        d2fdx0dx0 = 2.0
+        d2fdx1dx1 = 2.0
+        d2fdy0dy0 = 2.0
+        d2fdy1dy1 = 2.0
+        hfxx = np.array([[d2fdx0dx0, 0], [0, d2fdx1dx1]])
+        hfxy = np.array([[0, 0], [0, 0]])
+        hfyy = np.array([[d2fdy0dy0, 0], [0, d2fdy1dy1]])
+
+        dg0dx0dx0 = 2*y[0]*x[1]**0.5*y[1]
+        dg0dx0dx1 = x[0]*y[0]*y[1]/x[1]**0.5
+        dg0dx1dx1 = -1/4*x[0]**2*y[0]*y[1]/x[1]**(3/2)
+        dg0dx0dy0 = 2*x[0]*x[1]**0.5*y[1]
+        dg0dx0dy1 = 2*x[0]*y[0]*x[1]**0.5
+        dg0dx1dy0 = 0.5*x[0]**2*y[1]/x[1]**0.5
+        dg0dx1dy1 = 0.5*x[0]**2*y[0]/x[1]**0.5
+        dg0dy0dy1 = x[0]**2*x[1]**0.5
+        hg0xx = np.array([[dg0dx0dx0, dg0dx0dx1], [dg0dx0dx1, dg0dx1dx1]])
+        hg0xy = np.array([[dg0dx0dy0, dg0dx0dy1], [dg0dx1dy0, dg0dx1dy1]])
+        hg0yy = np.array([[0, dg0dy0dy1], [dg0dy0dy1, 0]])
+
+        dg1dx0dx1 = y[0]
+        dg1dx0dy0 = x[1]
+        dg1dx1dy0 = x[0]
+        hg1xx = np.array([[0, dg1dx0dx1], [dg1dx0dx1, 0]])
+        hg1xy = np.array([[dg1dx0dy0, 0], [dg1dx1dy0, 0]])
+        hg1yy = np.zeros((2, 2))
+
+        hlxx = lam[0]*hfxx + lam_g[0]*hg0xx + lam_g[1]*hg1xx
+        hlxy = lam[0]*hfxy + lam_g[0]*hg0xy + lam_g[1]*hg1xy
+        hlyy = lam[0]*hfyy + lam_g[0]*hg0yy + lam_g[1]*hg1yy
+        return hlxx, hlxy, hlyy
+
+    def calculate_reduced_lagrangian_hessian(self, lam, x):
+        dydx = self.evaluate_external_jacobian(x)
+        hlxx, hlxy, hlyy = self.calculate_full_space_lagrangian_hessians(lam, x)
+        return (
+            hlxx
+            + (hlxy.dot(dydx)).transpose() + hlxy.dot(dydx)
+            + dydx.transpose().dot(hlyy).dot(dydx)
+        )
 
 
 class TestGetHessianOfConstraint(unittest.TestCase):
@@ -769,6 +839,342 @@ class TestExternalPyomoModel(unittest.TestCase):
             expected_hess = model.evaluate_hessian(x)
             expected_hess_lag = np.tril(expected_hess[0] + expected_hess[1])
             np.testing.assert_allclose(hess_lag, expected_hess_lag, rtol=1e-8)
+
+
+class TestUpdatedHessianCalculationMethods(unittest.TestCase):
+    """
+    These tests exercise the methods for fast Hessian-of-Lagrangian
+    computation.
+    They use Model2by2 because it has constraints that are nonlinear
+    in both x and y.
+
+    """
+
+    def test_external_multipliers_from_residual_multipliers(self):
+        model = Model2by2()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [0.5, 1.0, 1.5, 2.5, 4.1]
+        lam_init_list = [-2.5, -0.5, 0.0, 1.0, 2.0]
+        init_list = list(
+            itertools.product(x0_init_list, x1_init_list, lam_init_list)
+        )
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x0, x1, lam in init_list:
+            x = [x0, x1]
+            lam = [lam]
+            external_model.set_input_values(x)
+            lam_g = external_model.calculate_external_constraint_multipliers(lam)
+            pred_lam_g = model.calculate_external_multipliers(lam, x)
+            np.testing.assert_allclose(lam_g, pred_lam_g, rtol=1e-8)
+
+    def test_full_space_lagrangian_hessians(self):
+        model = Model2by2()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [0.5, 1.0, 1.5, 2.5, 4.1]
+        lam_init_list = [-2.5, -0.5, 0.0, 1.0, 2.0]
+        init_list = list(
+            itertools.product(x0_init_list, x1_init_list, lam_init_list)
+        )
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x0, x1, lam in init_list:
+            x = [x0, x1]
+            lam = [lam]
+            external_model.set_input_values(x)
+            # Note that these multiplier calculations are dependent on x,
+            # so if we switch their order, we will get "wrong" answers.
+            # (This is wrong in the sense that the residual and external
+            # multipliers won't necessarily correspond).
+            external_model.set_external_constraint_multipliers(lam)
+            hlxx, hlxy, hlyy = \
+                external_model.get_full_space_lagrangian_hessians()
+            pred_hlxx, pred_hlxy, pred_hlyy = \
+                model.calculate_full_space_lagrangian_hessians(lam, x)
+
+            # TODO: Is comparing the array representation sufficient here?
+            # Should I make sure I get the sparse representation I expect?
+            np.testing.assert_allclose(hlxx.toarray(), pred_hlxx, rtol=1e-8)
+            np.testing.assert_allclose(hlxy.toarray(), pred_hlxy, rtol=1e-8)
+            np.testing.assert_allclose(hlyy.toarray(), pred_hlyy, rtol=1e-8)
+
+    def test_reduced_hessian_lagrangian(self):
+        model = Model2by2()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [0.5, 1.0, 1.5, 2.5, 4.1]
+        lam_init_list = [-2.5, -0.5, 0.0, 1.0, 2.0]
+        init_list = list(
+            itertools.product(x0_init_list, x1_init_list, lam_init_list)
+        )
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x0, x1, lam in init_list:
+            x = [x0, x1]
+            lam = [lam]
+            external_model.set_input_values(x)
+            # Same comment as previous test regarding calculation order
+            external_model.set_external_constraint_multipliers(lam)
+            hlxx, hlxy, hlyy = \
+                external_model.get_full_space_lagrangian_hessians()
+            hess = external_model.calculate_reduced_hessian_lagrangian(
+                hlxx, hlxy, hlyy
+            )
+            pred_hess = model.calculate_reduced_lagrangian_hessian(lam, x)
+            # This test asserts that we are doing the block reduction properly.
+            np.testing.assert_allclose(np.array(hess), pred_hess, rtol=1e-8)
+
+            from_individual = external_model.evaluate_hessians_of_residuals()
+            hl_from_individual = sum(l*h for l, h in zip(lam, from_individual))
+            # This test asserts that the block reduction is correct.
+            np.testing.assert_allclose(
+                np.array(hess), hl_from_individual, rtol=1e-8
+            )
+
+    def test_evaluate_hessian_equality_constraints(self):
+        model = Model2by2()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [0.5, 1.0, 1.5, 2.5, 4.1]
+        lam_init_list = [-2.5, -0.5, 0.0, 1.0, 2.0]
+        init_list = list(
+            itertools.product(x0_init_list, x1_init_list, lam_init_list)
+        )
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x0, x1, lam in init_list:
+            x = [x0, x1]
+            lam = [lam]
+            external_model.set_input_values(x)
+            external_model.set_equality_constraint_multipliers(lam)
+            hess = external_model.evaluate_hessian_equality_constraints()
+            pred_hess = model.calculate_reduced_lagrangian_hessian(lam, x)
+            # This test asserts that we are doing the block reduction properly.
+            np.testing.assert_allclose(
+                hess.toarray(), np.tril(pred_hess), rtol=1e-8
+            )
+
+            from_individual = external_model.evaluate_hessians_of_residuals()
+            hl_from_individual = sum(l*h for l, h in zip(lam, from_individual))
+            # This test asserts that the block reduction is correct.
+            np.testing.assert_allclose(
+                hess.toarray(), np.tril(hl_from_individual), rtol=1e-8
+            )
+
+    def test_evaluate_hessian_equality_constraints_order(self):
+        model = Model2by2()
+        m = model.make_model()
+        m.x[0].set_value(1.0)
+        m.x[1].set_value(2.0)
+        m.y[0].set_value(3.0)
+        m.y[1].set_value(4.0)
+        x0_init_list = [-5.0, -3.0, 0.5, 1.0, 2.5]
+        x1_init_list = [0.5, 1.0, 1.5, 2.5, 4.1]
+        lam_init_list = [-2.5, -0.5, 0.0, 1.0, 2.0]
+        init_list = list(
+            itertools.product(x0_init_list, x1_init_list, lam_init_list)
+        )
+        external_model = ExternalPyomoModel(
+                list(m.x.values()),
+                list(m.y.values()),
+                list(m.residual_eqn.values()),
+                list(m.external_eqn.values()),
+                )
+
+        for x0, x1, lam in init_list:
+            x = [x0, x1]
+            lam = [lam]
+            external_model.set_equality_constraint_multipliers(lam)
+            external_model.set_input_values(x)
+            # Using evaluate_hessian_equality_constraints, which calculates
+            # external multiplier values, we can calculate the correct Hessian
+            # regardless of the order in which primal and dual variables are
+            # set.
+            hess = external_model.evaluate_hessian_equality_constraints()
+            pred_hess = model.calculate_reduced_lagrangian_hessian(lam, x)
+            # This test asserts that we are doing the block reduction properly.
+            np.testing.assert_allclose(
+                hess.toarray(), np.tril(pred_hess), rtol=1e-8
+            )
+
+            from_individual = external_model.evaluate_hessians_of_residuals()
+            hl_from_individual = sum(l*h for l, h in zip(lam, from_individual))
+            # This test asserts that the block reduction is correct.
+            np.testing.assert_allclose(
+                hess.toarray(), np.tril(hl_from_individual), rtol=1e-8
+            )
+
+
+class TestScaling(unittest.TestCase):
+
+    def con_3_body(self, x, y, u, v):
+        return 1e5*x**2 + 1e4*y**2 + 1e1*u**2 + 1e0*v**2
+
+    def con_3_rhs(self):
+        return 2.0e4
+
+    def con_4_body(self, x, y, u, v):
+        return 1e-2*x + 1e-3*y + 1e-4*u + 1e-4*v
+
+    def con_4_rhs(self):
+        return 3.0e-4
+
+    def make_model(self):
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(initialize=1.0)
+        m.y = pyo.Var(initialize=1.0)
+        m.u = pyo.Var(initialize=1.0)
+        m.v = pyo.Var(initialize=1.0)
+        m.con_1 = pyo.Constraint(
+            expr=m.x * m.y == m.u
+        )
+        m.con_2 = pyo.Constraint(
+            expr=m.x**2 * m.y**3 == m.v
+        )
+        m.con_3 = pyo.Constraint(
+            expr=self.con_3_body(m.x, m.y, m.u, m.v) == self.con_3_rhs()
+        )
+        m.con_4 = pyo.Constraint(
+            expr=self.con_4_body(m.x, m.y, m.u, m.v) == self.con_4_rhs()
+        )
+
+        epm_model = pyo.ConcreteModel()
+        epm_model.x = pyo.Reference(m.x)
+        epm_model.y = pyo.Reference(m.y)
+        epm_model.u = pyo.Reference(m.u)
+        epm_model.v = pyo.Reference(m.v)
+        epm_model.epm = ExternalPyomoModel(
+            [m.u, m.v],
+            [m.x, m.y],
+            [m.con_3, m.con_4],
+            [m.con_1, m.con_2],
+            use_cyipopt=False,
+        )
+        epm_model.obj = pyo.Objective(
+            expr=m.x**2 + m.y**2 + m.u**2 + m.v**2
+        )
+        epm_model.egb = ExternalGreyBoxBlock()
+        epm_model.egb.set_external_model(epm_model.epm, inputs=[m.u, m.v])
+        return epm_model
+
+    def test_get_set_scaling_factors(self):
+        m = self.make_model()
+        scaling_factors = [1e-4, 1e4]
+        m.epm.set_equality_constraint_scaling_factors(scaling_factors)
+        epm_sf = m.epm.get_equality_constraint_scaling_factors()
+        np.testing.assert_array_equal(scaling_factors, epm_sf)
+
+    def test_pyomo_nlp(self):
+        m = self.make_model()
+        scaling_factors = [1e-4, 1e4]
+        m.epm.set_equality_constraint_scaling_factors(scaling_factors)
+        nlp = PyomoNLPWithGreyBoxBlocks(m)
+        nlp_sf = nlp.get_constraints_scaling()
+        np.testing.assert_array_equal(scaling_factors, nlp_sf)
+
+    def test_cyipopt_nlp(self):
+        m = self.make_model()
+        scaling_factors = [1e-4, 1e4]
+        m.epm.set_equality_constraint_scaling_factors(scaling_factors)
+        nlp = PyomoNLPWithGreyBoxBlocks(m)
+        cyipopt_nlp = CyIpoptNLP(nlp)
+        obj_scaling, x_scaling, g_scaling = cyipopt_nlp.scaling_factors()
+        np.testing.assert_array_equal(scaling_factors, g_scaling)
+
+    @unittest.skipUnless(cyipopt_available, "cyipopt is not available")
+    def test_cyipopt_callback(self):
+        # Use a callback to check that the reported infeasibility is
+        # due to the scaled equality constraints.
+        # Note that the scaled infeasibility is not what we see if we
+        # call solve with tee=True, as by default the displayed infeasibility
+        # is unscaled. Luckily, we can still access the scaled infeasibility
+        # with a callback.
+        m = self.make_model()
+        scaling_factors = [1e-4, 1e4]
+        m.epm.set_equality_constraint_scaling_factors(scaling_factors)
+        nlp = PyomoNLPWithGreyBoxBlocks(m)
+        
+        def callback(
+                local_nlp,
+                alg_mod,
+                iter_count,
+                obj_value,
+                inf_pr,
+                inf_du,
+                mu,
+                d_norm,
+                regularization_size,
+                alpha_du,
+                alpha_pr,
+                ls_trials,
+                ):
+            primals = tuple(local_nlp.get_primals())
+            # I happen to know the order of the primals here
+            u, v, x, y = primals
+
+            # Calculate the scaled residuals I expect
+            con_3_resid = scaling_factors[0]*abs(
+                self.con_3_body(x, y, u, v) - self.con_3_rhs()
+            )
+            con_4_resid = scaling_factors[1]*abs(
+                self.con_4_body(x, y, u, v) - self.con_4_rhs()
+            )
+            pred_inf_pr = max(con_3_resid, con_4_resid)
+
+            # Make sure Ipopt is using the scaled constraints internally
+            self.assertAlmostEqual(inf_pr, pred_inf_pr)
+
+        cyipopt_nlp = CyIpoptNLP(
+            nlp,
+            intermediate_callback=callback,
+        )
+        x0 = nlp.get_primals()
+        cyipopt = CyIpoptSolver(
+            cyipopt_nlp,
+            options={
+                "max_iter": 0,
+                "nlp_scaling_method": "user-scaling",
+            },
+        )
+        cyipopt.solve(x0=x0)
 
 
 if __name__ == '__main__':

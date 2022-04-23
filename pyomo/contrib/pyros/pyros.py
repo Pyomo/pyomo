@@ -36,13 +36,14 @@ from pyomo.contrib.pyros.util import (model_is_valid,
                                       validate_kwarg_inputs,
                                       transform_to_standard_form,
                                       turn_bounds_to_constraints,
+                                      replace_uncertain_bounds_with_constraints,
                                       output_logger)
 from pyomo.contrib.pyros.solve_data import ROSolveResults
 from pyomo.contrib.pyros.pyros_algorithm_methods import ROSolver_iterative_solve
 from pyomo.contrib.pyros.uncertainty_sets import uncertainty_sets
 from pyomo.core.base import Constraint
 
-__version__ =  "1.0.0"
+__version__ =  "1.1.0"
 
 def NonNegIntOrMinusOne(obj):
     '''
@@ -226,6 +227,12 @@ def pyros_config():
                     "'False' to use local solver(s) at intermediate separations, "
                     "using global solver(s) only before termination to certify robust feasibility. "
     ))
+    CONFIG.declare("bypass_global_separation", ConfigValue(
+        default=False, domain=bool,
+        description="This is an advanced option. Default = False. 'True' to only use local solver(s) during separation; "
+                    "however, robustness of the final result will not be guaranteed. Use to expedite PyROS run when "
+                    "global solver(s) cannot (efficiently) solve separation problems."
+    ))
     CONFIG.declare("p_robustness", ConfigValue(
         default={}, domain=dict,
         description="This is an advanced option. Default = {}. Whether or not to add p-robustness constraints to the master problems. "
@@ -373,6 +380,11 @@ class PyROS(object):
 
             # === Put model in standard form
             transform_to_standard_form(model_data.working_model)
+
+            # === Replace variable bounds depending on uncertain params with
+            #     explicit inequality constraints
+            replace_uncertain_bounds_with_constraints(model_data.working_model,
+                                                      model_data.working_model.util.uncertain_params)
 
             # === Add decision rule information
             add_decision_rule_variables(model_data, config)

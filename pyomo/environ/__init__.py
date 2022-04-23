@@ -10,15 +10,9 @@
 
 import sys as _sys
 
-if _sys.version_info[0] >= 3:
-    import importlib
-
-
-    def _do_import(pkg_name):
+import importlib
+def _do_import(pkg_name):
         importlib.import_module(pkg_name)
-else:
-    def _do_import(pkg_name):
-        __import__(pkg_name, globals(), locals(), [], -1)
 
 #
 # These packages contain plugins that need to be loaded
@@ -36,32 +30,25 @@ _packages = [
     'pyomo.gdp',
     'pyomo.mpec',
     'pyomo.dae',
-    'pyomo.bilevel',
     'pyomo.scripting',
     'pyomo.network',
-]
-#
-#
-# These packages also contain plugins that need to be loaded, but
-# we silently ignore any import errors because these
-# packages are optional and/or under development.
-#
-_optional_packages = {
+    'pyomo.contrib.ampl_function_demo',
     'pyomo.contrib.appsi',
+    'pyomo.contrib.community_detection',
     'pyomo.contrib.example',
     'pyomo.contrib.fme',
+    'pyomo.contrib.gdp_bounds',
     'pyomo.contrib.gdpbb',
     'pyomo.contrib.gdpopt',
+    'pyomo.contrib.gjh',
     'pyomo.contrib.gdp_bounds',
     'pyomo.contrib.mcpp',
     'pyomo.contrib.mindtpy',
     'pyomo.contrib.multistart',
-    'pyomo.contrib.petsc',
     'pyomo.contrib.preprocessing',
     'pyomo.contrib.pynumero',
     'pyomo.contrib.trustregion',
-    'pyomo.contrib.community_detection',
-}
+]
 
 
 def _import_packages():
@@ -85,17 +72,6 @@ def _import_packages():
             # original exception?
             raise ImportError(msg)
 
-        pkg = _sys.modules[pname]
-        pkg.load()
-    #
-    # Import optional packages
-    #
-    for _package in _optional_packages:
-        pname = _package + '.plugins'
-        try:
-            _do_import(pname)
-        except ImportError:
-            continue
         pkg = _sys.modules[pname]
         pkg.load()
 
@@ -169,7 +145,7 @@ from pyomo.opt import (
     TerminationCondition, SolverStatus, check_optimal_termination,
     assert_optimal_termination
     )
-from pyomo.core.base.units_container import units
+from pyomo.core.base.units_container import units, as_quantity
 
 # These APIs are deprecated and should be removed in the near future
 from pyomo.common.deprecation import relocated_module_attribute

@@ -12,11 +12,14 @@ from pyomo.core.base.var import IndexedVar
 from pyomo.core.base.set_types import Reals
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core.expr import value
+from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters, replace_expressions
 from pyomo.core.expr.sympy_tools import sympyify_expression, sympy2pyomo_expression
 from pyomo.common.dependencies import scipy as sp
 from pyomo.core.expr.numvalue import native_types
+from pyomo.util.vars_from_expressions import get_vars_from_components
 import itertools as it
 import timeit
 from contextlib import contextmanager
@@ -231,7 +234,8 @@ def add_bounds_for_uncertain_parameters(model, config):
     bounding_model.util = Block()
     bounding_model.util.uncertain_param_vars = IndexedVar(model.util.uncertain_param_vars.index_set())
     for tup in model.util.uncertain_param_vars.items():
-        bounding_model.util.uncertain_param_vars[tup[0]].value = tup[1].value
+        bounding_model.util.uncertain_param_vars[tup[0]].set_value(
+            tup[1].value, skip_validation=True)
 
     bounding_model.add_component("uncertainty_set_constraint",
                                  config.uncertainty_set.set_as_constraint(
@@ -264,19 +268,122 @@ def add_bounds_for_uncertain_parameters(model, config):
 
 
 def transform_to_standard_form(model):
-    '''
-    Make all inequality constraints of the form g(x) <= 0
-    :param model: the optimization model
-    :return: void
-    '''
-    for constraint in model.component_data_objects(Constraint, descend_into=True, active=True):
-        if not constraint.equality:
-            if constraint.lower is not None:
-                temp = constraint
-                model.del_component(constraint)
-                model.add_component(temp.name, Constraint(expr= - (temp.body) + (temp.lower) <= 0 ))
+    """
+    Recast all model inequality constraints of the form `a <= g(v)` (`<= b`)
+    to the 'standard' form `a - g(v) <= 0` (and `g(v) - b <= 0`),
+    in which `v` denotes all model variables and `a` and `b` are
+    contingent on model parameters.
 
-    return
+    Parameters
+    ----------
+    model : ConcreteModel
+        The model to search for constraints. This will descend into all
+        active Blocks and sub-Blocks as well.
+
+    Note
+    ----
+    If `a` and `b` are identical and the constraint is not classified as an
+    equality (i.e. the `equality` attribute of the constraint object
+    is `False`), then the constraint is recast to the equality `g(v) == a`.
+    """
+    # Note: because we will be adding / modifying the number of
+    # constraints, we want to resolve the generator to a list before
+    # starting.
+    cons = list(model.component_data_objects(
+        Constraint, descend_into=True, active=True))
+    for con in cons:
+        if not con.equality:
+            has_lb = con.lower is not None
+            has_ub = con.upper is not None
+
+            if has_lb and has_ub:
+                if con.lower is con.upper:
+                    # recast as equality Constraint
+                    con.set_value(con.lower == con.body)
+                else:
+                    # range inequality; split into two Constraints.
+                    uniq_name = unique_component_name(model, con.name + '_lb')
+                    model.add_component(
+                        uniq_name,
+                        Constraint(expr=con.lower - con.body <= 0)
+                    )
+                    con.set_value(con.body - con.upper <= 0)
+            elif has_lb:
+                # not in standard form; recast.
+                con.set_value(con.lower - con.body <= 0)
+            elif has_ub:
+                # move upper bound to body.
+                con.set_value(con.body - con.upper <= 0)
+            else:
+                # unbounded constraint: deactivate
+                con.deactivate()
+
+
+def get_vars_from_component(block, ctype):
+    """Determine all variables used in active components within a block.
+
+    Parameters
+    ----------
+    block: Block
+        The block to search for components.  This is a recursive
+        generator and will descend into any active sub-Blocks as well.
+    ctype:  class
+        The component type (typically either :py:class:`Constraint` or
+        :py:class:`Objective` to search for).
+
+    """
+
+    return get_vars_from_components(block, ctype, active=True,
+                                    descend_into=True)
+
+
+def replace_uncertain_bounds_with_constraints(model, uncertain_params):
+    """
+    For variables of which the bounds are dependent on the parameters
+    in the list `uncertain_params`, remove the bounds and add
+    explicit variable bound inequality constraints.
+
+    :param model: Model in which to make the bounds/constraint replacements
+    :type model: class:`pyomo.core.base.PyomoModel.ConcreteModel`
+    :param uncertain_params: List of uncertain model parameters
+    :type uncertain_params: list
+    """
+    uncertain_param_set = ComponentSet(uncertain_params)
+
+    # component for explicit inequality constraints
+    uncertain_var_bound_constrs = ConstraintList()
+    model.add_component(unique_component_name(model,
+                                              'uncertain_var_bound_cons'),
+                        uncertain_var_bound_constrs)
+
+    # get all variables in active objective and constraint expression(s)
+    vars_in_cons = ComponentSet(get_vars_from_component(model, Constraint))
+    vars_in_obj = ComponentSet(get_vars_from_component(model, Objective))
+
+    for v in vars_in_cons | vars_in_obj:
+        # get mutable parameters in variable bounds expressions
+        ub = v.upper
+        mutable_params_ub = ComponentSet(identify_mutable_parameters(ub))
+        lb = v.lower
+        mutable_params_lb = ComponentSet(identify_mutable_parameters(lb))
+
+        # add explicit inequality constraint(s), remove variable bound(s)
+        if mutable_params_ub & uncertain_param_set:
+            if type(ub) is NPV_MinExpression:
+                upper_bounds = ub.args
+            else:
+                upper_bounds = (ub,)
+            for u_bnd in upper_bounds:
+                uncertain_var_bound_constrs.add(v - u_bnd <= 0)
+            v.setub(None)
+        if mutable_params_lb & uncertain_param_set:
+            if type(ub) is NPV_MaxExpression:
+                lower_bounds = lb.args
+            else:
+                lower_bounds = (lb,)
+            for l_bnd in lower_bounds:
+                uncertain_var_bound_constrs.add(l_bnd - v <= 0)
+            v.setlb(None)
 
 
 def validate_kwarg_inputs(model, config):
@@ -327,6 +434,11 @@ def validate_kwarg_inputs(model, config):
     if not config.local_solver or not config.global_solver:
         raise ValueError("User must designate both a local and global optimization solver via the local_solver"
                          " and global_solver options.")
+
+    if config.bypass_local_separation and config.bypass_global_separation:
+        raise ValueError("User cannot simultaneously enable options "
+                         "'bypass_local_separation' and "
+                         "'bypass_global_separation'.")
 
     # === Degrees of freedom provided check
     if len(config.first_stage_variables) + len(config.second_stage_variables) == 0:
@@ -595,8 +707,11 @@ def add_decision_rule_variables(model_data, config):
     bounds = (None, None)
     if degree == 0:
         for i in range(len(second_stage_variables)):
-            model_data.working_model.add_component("decision_rule_var_" + str(i),
-                                                   Var(initialize=value(second_stage_variables[i]),bounds=bounds,domain=Reals))#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
+            model_data.working_model.add_component(
+                    "decision_rule_var_" + str(i),
+                    Var(initialize=value(second_stage_variables[i], exception=False),
+                        bounds=bounds,domain=Reals)
+            )
             first_stage_variables.extend(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values())
             decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
     elif degree == 1:
@@ -606,9 +721,9 @@ def add_decision_rule_variables(model_data, config):
                     Var(index_set,
                         initialize=0,
                         bounds=bounds,
-                        domain=Reals))#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
+                        domain=Reals))
             # === For affine drs, the [0]th constant term is initialized to the control variable values, all other terms are initialized to 0
-            getattr(model_data.working_model, "decision_rule_var_" + str(i))[0].value = value(second_stage_variables[i])
+            getattr(model_data.working_model, "decision_rule_var_" + str(i))[0].set_value(value(second_stage_variables[i], exception=False), skip_validation=True)
             first_stage_variables.extend(list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values()))
             decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
     elif degree == 2 or degree == 3 or degree == 4:
@@ -617,7 +732,7 @@ def add_decision_rule_variables(model_data, config):
             dict_init = {}
             for r in range(num_vars):
                 if r == 0:
-                    dict_init.update({r: value(second_stage_variables[i])})
+                    dict_init.update({r: value(second_stage_variables[i], exception=False)})
                 else:
                     dict_init.update({r: 0})
             model_data.working_model.add_component("decision_rule_var_" + str(i),
@@ -631,7 +746,6 @@ def add_decision_rule_variables(model_data, config):
             "Decision rule order " + str(config.decision_rule_order) +
             " is not yet supported. PyROS supports polynomials of degree 0 (static approximation), 1, 2.")
     model_data.working_model.util.decision_rule_vars = decision_rule_vars
-    return
 
 
 def partition_powers(n, v):
@@ -715,7 +829,6 @@ def add_decision_rule_constraints(model_data, config):
                 raise RuntimeError("Construction of the decision rule functions did not work correctly! "
                                    "Did not use all coefficient terms.")
     model_data.working_model.util.decision_rule_eqns = decision_rule_eqns
-    return
 
 
 def identify_objective_functions(model, config):
@@ -803,7 +916,7 @@ def load_final_solution(model_data, master_soln, config):
     varMap = list(zip(src_vars, local_vars))
 
     for src, local in varMap:
-        src.value = local.value
+        src.set_value(local.value, skip_validation=True)
 
     return
 
@@ -877,6 +990,13 @@ def output_logger(config, **kwargs):
                     "Please provide feedback and/or report any issues by opening a Pyomo ticket.\n"
                     "===========================================================================================\n")
     # === ALL LOGGER RETURN MESSAGES
+    if "bypass_global_separation" in kwargs:
+        if kwargs["bypass_global_separation"]:
+            config.progress_logger.info(
+                    "NOTE: Option to bypass global separation was chosen. "
+                    "Robust feasibility and optimality of the reported "
+                    "solution are not guaranteed."
+                    )
     if "robust_optimal" in kwargs:
         if kwargs["robust_optimal"]:
             config.progress_logger.info('Robust optimal solution identified. Exiting PyROS.')

@@ -14,12 +14,14 @@ import sys
 import types
 import logging
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
 )
@@ -28,7 +30,7 @@ from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed
 from pyomo.core.base.numvalue import (
     NumericValue, native_types, value as expr_value
 )
-from pyomo.core.base.set_types import Any, Reals
+from pyomo.core.base.set import Any, GlobalSetBase, Reals
 from pyomo.core.base.units_container import units
 
 logger = logging.getLogger('pyomo.core')
@@ -45,6 +47,7 @@ def _raise_modifying_immutable_error(obj, index):
         "declare the parameter as mutable [i.e., Param(mutable=True)]"
         % (name,))
 
+
 class _ImplicitAny(Any.__class__):
     """An Any that issues a deprecation warning for non-Real values.
 
@@ -52,39 +55,65 @@ class _ImplicitAny(Any.__class__):
     change of Param's implicit domain from Any to Reals.
 
     """
-    def __new__(cls, **kwds):
-        return super(_ImplicitAny, cls).__new__(cls)
+    def __new__(cls, **kwargs):
+        # Strip off owner / kwargs before calling base __new__
+        return super().__new__(cls)
 
-    def __init__(self, owner, **kwds):
-        super(_ImplicitAny, self).__init__(**kwds)
+    def __init__(self, owner, **kwargs):
         self._owner = weakref_ref(owner)
+        super().__init__(**kwargs)
         self._component = weakref_ref(self)
         self.construct()
 
     def __getstate__(self):
-        state = super(_ImplicitAny, self).__getstate__()
+        state = super().__getstate__()
         state['_owner'] = None if self._owner is None else self._owner()
         return state
 
     def __setstate__(self, state):
         _owner = state.pop('_owner')
-        super(_ImplicitAny, self).__setstate__(state)
+        super().__setstate__(state)
         self._owner = None if _owner is None else weakref_ref(_owner)
 
     def __deepcopy__(self, memo):
-        return super(Any.__class__, self).__deepcopy__(memo)
+        # Note: we need to start super() at GlobalSetBase to actually
+        # copy this object
+        return super(GlobalSetBase, self).__deepcopy__(memo)
 
     def __contains__(self, val):
         if val not in Reals:
+            if self._owner is None or self._owner() is None:
+                name = 'Unknown'
+            else:
+                name = self._owner().name
             deprecation_warning(
+                f"Param '{name}' declared with an implicit domain of 'Any'. "
                 "The default domain for Param objects is 'Any'.  However, "
                 "we will be changing that default to 'Reals' in the "
-                "future.  If you really intend the domain of this Param (%s) "
+                "future.  If you really intend the domain of this Param"
                 "to be 'Any', you can suppress this warning by explicitly "
-                "specifying 'within=Any' to the Param constructor."
-                % ('Unknown' if self._owner is None else self._owner().name,),
+                "specifying 'within=Any' to the Param constructor.",
                 version='5.6.9', remove_in='6.0')
         return True
+
+    # This should "mock up" a global set, so the "name" should always be
+    # the local name (without block scope)
+    def getname(self, fully_qualified=False, name_buffer=None, relative_to=None):
+        return super().getname(False, name_buffer, relative_to)
+
+    # The parent tracks the parent of the owner.  We can't set it
+    # directly here because the owner has not been assigned to a block
+    # when we create the _ImplicitAny
+    @property
+    def _parent(self):
+        if self._owner is None or self._owner() is None:
+            return None
+        return self._owner()._parent
+    # This is not settable.  However the base classes assume that it is,
+    # so we need to define the setter and just ignore the incoming value
+    @_parent.setter
+    def _parent(self, val):
+        pass
 
 
 class _ParamData(ComponentData, NumericValue):
@@ -107,6 +136,7 @@ class _ParamData(ComponentData, NumericValue):
         # the base ComponentData constructor.
         #
         self._component = weakref_ref(component)
+        self._index = NOTSET
         #
         # The following is equivalent to calling the
         # base NumericValue constructor.
@@ -212,12 +242,6 @@ class _ParamData(ComponentData, NumericValue):
         """
         return 0
 
-    def __nonzero__(self):
-        """Return True if the value is defined and non-zero."""
-        return bool(self())
-
-    __bool__ = __nonzero__
-
 
 @ModelComponentFactory.register("Parameter data that is used to define a model instance.")
 class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
@@ -225,11 +249,6 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
     A parameter value, which may be defined over an index.
 
     Constructor Arguments:
-        name        
-            The name of this parameter
-        index       
-            The index set that defines the distinct parameters. By default, 
-            this is None, indicating that there is a single parameter.
         domain      
             A set that defines the type of values that each parameter must be.
         within      
@@ -248,6 +267,10 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         mutable: `boolean`
             Flag indicating if the value of the parameter may change between
             calls to a solver. Defaults to `False`
+        name
+            Name for this component.
+        doc
+            Text describing this component.
     """
 
     DefaultMutable = False
@@ -265,16 +288,15 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         else:
             return super(Param, cls).__new__(IndexedParam)
 
+    @overload
+    def __init__(self, *indexes, rule=NOTSET, initialize=NOTSET,
+                 domain=None, within=None, validate=None, mutable=False, default=NoValue,
+                 initialize_as_dense=False, units=None, name=None, doc=None): ...
+
     def __init__(self, *args, **kwd):
         _init = self._pop_from_kwargs(
             'Param', kwd, ('rule', 'initialize'), NOTSET)
-        self._rule = Initializer(_init,
-                                 treat_sequences_as_mappings=False,
-                                 arg_not_specified=NOTSET)
         self.domain = self._pop_from_kwargs('Param', kwd, ('domain', 'within'))
-        if self.domain is None:
-            self.domain = _ImplicitAny(owner=self, name='Any')
-
         self._validate      = kwd.pop('validate', None )
         self._mutable       = kwd.pop('mutable', Param.DefaultMutable )
         self._default_val   = kwd.pop('default', Param.NoValue )
@@ -287,6 +309,13 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         kwd.setdefault('ctype', Param)
         IndexedComponent.__init__(self, *args, **kwd)
 
+        if self.domain is None:
+            self.domain = _ImplicitAny(owner=self, name='Any')
+        # After IndexedComponent.__init__ so we can call is_indexed().
+        self._rule = Initializer(_init,
+                                 treat_sequences_as_mappings=self.is_indexed(),
+                                 arg_not_specified=NOTSET)
+
     def __len__(self):
         """
         Return the number of component data objects stored by this
@@ -295,7 +324,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         """
         if self._default_val is Param.NoValue:
             return len(self._data)
-        return len(self._index)
+        return len(self._index_set)
 
     def __contains__(self, idx):
         """
@@ -304,16 +333,12 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
         """
         if self._default_val is Param.NoValue:
             return idx in self._data
-        return idx in self._index
+        return idx in self._index_set
 
-    def keys(self):
-        """
-        Iterate over the keys in the dictionary.  If the default value is
-        specified, then iterate over all keys in the component index.
-        """
-        if self._default_val is Param.NoValue:
-            return self._data.__iter__()
-        return self._index.__iter__()
+    # We do not need to override keys(), as the __len__ override will
+    # cause the base class keys() to correctly correctly handle default
+    # values
+    #def keys(self, ordered=False):
 
     @property
     def mutable(self):
@@ -434,7 +459,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 for index, new_value in new_values.items():
                     self[index] = new_value
             else:
-                for index in self._index:
+                for index in self._index_set:
                     self[index] = new_values
             return
         #
@@ -455,14 +480,14 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                 # For scalars, we will choose an approach based on
                 # how "dense" the Param is
                 if not self._data: # empty
-                    for index in self._index:
+                    for index in self._index_set:
                         p = self._data[index] = _ParamData(self)
                         p._value = new_values
-                elif len(self._data) == len(self._index):
-                    for index in self._index:
+                elif len(self._data) == len(self._index_set):
+                    for index in self._index_set:
                         self._data[index]._value = new_values
                 else:
-                    for index in self._index:
+                    for index in self._index_set:
                         if index not in self._data:
                             self._data[index] = _ParamData(self)
                         self._data[index]._value = new_values
@@ -529,6 +554,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
                     ans = self._data[index] = _ParamData(self)
                 else:
                     ans = self._data[index] = self
+                ans._index = index
                 return ans
             if self.is_indexed():
                 idx_str = '%s[%s]' % (self.name, index,)
@@ -654,10 +680,12 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             if index is None and not self.is_indexed():
                 self._data[None] = self
                 self.set_value(value, index)
+                self._index = UnindexedComponent_index
                 return self
             elif self._mutable:
                 obj = self._data[index] = _ParamData(self)
                 obj.set_value(value, index)
+                obj._index = index
                 return obj
             else:
                 self._data[index] = value
@@ -769,7 +797,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             self._constructed = True
 
             # populate all other indices with default data
-            # (avoids calling _set_contains on self._index at runtime)
+            # (avoids calling _set_contains on self._index_set at runtime)
             if self._dense_initialize:
                 self.to_dense_data()
         finally:
@@ -791,7 +819,7 @@ class Param(IndexedComponent, IndexedComponent_NDArrayMixin):
             dataGen = lambda k, v: [ v, ]
         headers = [
             ("Size", len(self)),
-            ("Index", self._index if self.is_indexed() else None),
+            ("Index", self._index_set if self.is_indexed() else None),
             ("Domain", self.domain.name),
             ("Default", default),
             ("Mutable", self._mutable),
@@ -810,6 +838,7 @@ class ScalarParam(_ParamData, Param):
     def __init__(self, *args, **kwds):
         Param.__init__(self, *args, **kwds)
         _ParamData.__init__(self, component=self)
+        self._index = UnindexedComponent_index
 
     #
     # Since this class derives from Component and Component.__getstate__

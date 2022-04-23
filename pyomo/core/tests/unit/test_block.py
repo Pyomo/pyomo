@@ -29,7 +29,7 @@ from pyomo.environ import (AbstractModel, ConcreteModel, Var, Set,
                            Objective, Expression, SOSConstraint,
                            SortComponents, NonNegativeIntegers,
                            TraversalStrategy, RangeSet, SolverFactory,
-                           value, sum_product)
+                           value, sum_product, ComponentUID)
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.block import ScalarBlock, SubclassOf, _BlockData, declare_custom_block
@@ -54,7 +54,6 @@ DerivedBlock._Block_reserved_words = set(dir(DerivedBlock()))
 
 class TestGenerators(unittest.TestCase):
 
-    @ unittest.nottest
     def generate_model(self):
         #
         # ** DO NOT modify the model below without updating the
@@ -178,8 +177,7 @@ class TestGenerators(unittest.TestCase):
 
         return model
 
-    @unittest.nottest
-    def generator_test(self, ctype):
+    def generator_runner(self, ctype):
 
         model = self.generate_model()
 
@@ -306,32 +304,32 @@ class TestGenerators(unittest.TestCase):
                                  sorted([id(comp) for comp in block.component_data_lists[ctype]]))
 
     def test_Objective(self):
-        self.generator_test(Objective)
+        self.generator_runner(Objective)
 
     def test_Expression(self):
-        self.generator_test(Expression)
+        self.generator_runner(Expression)
 
     def test_Suffix(self):
-        self.generator_test(Suffix)
+        self.generator_runner(Suffix)
 
     def test_Constraint(self):
-        self.generator_test(Constraint)
+        self.generator_runner(Constraint)
 
     def test_Param(self):
-        self.generator_test(Param)
+        self.generator_runner(Param)
 
     def test_Var(self):
-        self.generator_test(Var)
+        self.generator_runner(Var)
 
     def test_Set(self):
-        self.generator_test(Set)
+        self.generator_runner(Set)
 
     def test_SOSConstraint(self):
-        self.generator_test(SOSConstraint)
+        self.generator_runner(SOSConstraint)
 
     def test_Block(self):
 
-        self.generator_test(Block)
+        self.generator_runner(Block)
 
         model = self.generate_model()
 
@@ -2614,6 +2612,41 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(value(m.b[1].p), 5)
         self.assertEqual(value(m.b[2].p), 10)
         self.assertEqual(value(m.b[3].p), 0)
+
+    def test_find_component_name(self):
+        b = Block(concrete=True)
+        b.v1 = Var()
+        b.v2 = Var([1, 2])
+        self.assertIs(b.find_component("v1"), b.v1)
+        self.assertIs(b.find_component("v2[2]"), b.v2[2])
+
+    def test_find_component_cuid(self):
+        b = Block(concrete=True)
+        b.v1 = Var()
+        b.v2 = Var([1, 2])
+        cuid1 = ComponentUID("v1")
+        cuid2 = ComponentUID("v2[2]")
+        self.assertIs(b.find_component(cuid1), b.v1)
+        self.assertIs(b.find_component(cuid2), b.v2[2])
+
+    def test_find_component_hierarchical(self):
+        b1 = Block(concrete=True)
+        b1.b2 = Block()
+        b1.b2.v1 = Var()
+        b1.b2.v2 = Var([1, 2])
+        self.assertIs(b1.find_component("b2.v1"), b1.b2.v1)
+        self.assertIs(b1.find_component("b2.v2[2]"), b1.b2.v2[2])
+
+    def test_find_component_hierarchical_cuid(self):
+        b1 = Block(concrete=True)
+        b1.b2 = Block()
+        b1.b2.v1 = Var()
+        b1.b2.v2 = Var([1, 2])
+        cuid1 = ComponentUID("b2.v1")
+        cuid2 = ComponentUID("b2.v2[2]")
+        self.assertIs(b1.find_component(cuid1), b1.b2.v1)
+        self.assertIs(b1.find_component(cuid2), b1.b2.v2[2])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -13,6 +13,7 @@ __all__ = ['Expression', '_ExpressionData']
 import sys
 import logging
 from weakref import ref as weakref_ref
+from typing import overload
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecated, RenamedClass
@@ -21,6 +22,7 @@ from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     IndexedComponent,
     UnindexedComponent_set, )
@@ -185,23 +187,9 @@ class _GeneralExpressionDataImpl(_ExpressionData):
     def expr(self):
         """Return expression on this expression."""
         return self._expr
+    
     @expr.setter
     def expr(self, expr):
-        self.set_value(expr)
-
-    # for backwards compatibility reasons
-    @property
-    @deprecated("The .value property getter on _GeneralExpressionDataImpl "
-                "is deprecated. Use the .expr property getter instead",
-                version='4.3.11323')
-    def value(self):
-        return self._expr
-
-    @value.setter
-    @deprecated("The .value property setter on _GeneralExpressionDataImpl "
-                "is deprecated. Use the set_value(expr) method instead",
-                version='4.3.11323')
-    def value(self, expr):
         self.set_value(expr)
 
     def set_value(self, expr):
@@ -241,6 +229,7 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
         # Inlining ComponentData.__init__
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NOTSET
 
 
 @ModelComponentFactory.register(
@@ -254,6 +243,8 @@ class Expression(IndexedComponent):
                         used to initialize this object.
         expr        A synonym for initialize.
         rule        A rule function used to initialize this object.
+        name        Name for this component.
+        doc         Text describing this component.
     """
 
     _ComponentDataClass = _GeneralExpressionData
@@ -267,6 +258,10 @@ class Expression(IndexedComponent):
             return ScalarExpression.__new__(ScalarExpression)
         else:
             return IndexedExpression.__new__(IndexedExpression)
+
+    @overload
+    def __init__(self, *indexes, rule=None, expr=None, initialize=None,
+                 name=None, doc=None): ...
 
     def __init__(self, *args, **kwds):
         _init = self._pop_from_kwargs(
@@ -287,7 +282,7 @@ class Expression(IndexedComponent):
         return (
             [('Size', len(self)),
              ('Index', None if (not self.is_indexed())
-                  else self._index)
+                  else self._index_set)
              ],
             self.items(),
             ("Expression",),
@@ -380,6 +375,7 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     def __init__(self, *args, **kwds):
         _GeneralExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)
+        self._index = UnindexedComponent_index
 
     #
     # Since this class derives from Component and
@@ -409,21 +405,6 @@ class ScalarExpression(_GeneralExpressionData, Expression):
     @expr.setter
     def expr(self, expr):
         """Set the expression on this expression."""
-        self.set_value(expr)
-
-    # for backwards compatibility reasons
-    @property
-    @deprecated("The .value property getter on ScalarExpression "
-                "is deprecated. Use the .expr property getter instead",
-                version='4.3.11323')
-    def value(self):
-        return self.expr
-
-    @value.setter
-    @deprecated("The .value property setter on ScalarExpression "
-                "is deprecated. Use the set_value(expr) method instead",
-                version='4.3.11323')
-    def value(self, expr):
         self.set_value(expr)
 
     def clear(self):
@@ -489,7 +470,7 @@ class IndexedExpression(Expression):
 
     #
     # Leaving this method for backward compatibility reasons
-    # Note: It allows adding members outside of self._index.
+    # Note: It allows adding members outside of self._index_set.
     #       This has always been the case. Not sure there is
     #       any reason to maintain a reference to a separate
     #       index set if we allow this.

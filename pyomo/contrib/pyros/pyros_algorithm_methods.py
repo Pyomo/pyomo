@@ -101,8 +101,12 @@ def ROSolver_iterative_solve(model_data, config):
         )
     elif config.objective_focus is ObjectiveType.worst_case:
         # === Worst-case cost objective
-        master_data.master_model.zeta = Var(initialize=value(master_data.master_model.scenarios[0, 0].first_stage_objective +
-                                                            master_data.master_model.scenarios[0, 0].second_stage_objective))
+        master_data.master_model.zeta = Var(
+                initialize=value(
+                    master_data.master_model.scenarios[0, 0].first_stage_objective +
+                    master_data.master_model.scenarios[0, 0].second_stage_objective,
+                    exception=False)
+        )
         master_data.master_model.obj = Objective(expr=master_data.master_model.zeta)
         master_data.master_model.scenarios[0,0].epigraph_constr = Constraint(expr=
                         master_data.master_model.scenarios[0, 0].first_stage_objective +
@@ -162,7 +166,9 @@ def ROSolver_iterative_solve(model_data, config):
 
         # === Keep track of total time and subsolver termination conditions
         timing_data.total_master_solve_time += get_time_from_solver(master_soln.results)
-        timing_data.total_master_solve_time += get_time_from_solver(master_soln.feasibility_problem_results)
+
+        if k > 0:  # master feas problem not solved for iteration 0
+            timing_data.total_master_solve_time += get_time_from_solver(master_soln.feasibility_problem_results)
 
         master_soln.master_problem_subsolver_statuses.append(master_soln.results.solver.termination_condition)
 
@@ -295,8 +301,14 @@ def ROSolver_iterative_solve(model_data, config):
                                    master_soln=master_soln)
             return model_data, separation_solns
 
-        # === Check if we terminate due to robust optimality or feasibility
-        if not any(s.found_violation for sep_soln_list in separation_solns for s in sep_soln_list) and is_global:
+        # === Check if we terminate due to robust optimality or feasibility,
+        #     or in the event of bypassing global separation, no violations
+        if (not any(s.found_violation for sep_soln_list in separation_solns for s in sep_soln_list)
+            and (is_global or config.bypass_global_separation)):
+            output_logger(
+                    config=config,
+                    bypass_global_separation=config.bypass_global_separation
+            )
             if config.solve_master_globally and config.objective_focus is ObjectiveType.worst_case:
                 output_logger(config=config, robust_optimal=True)
                 termination_condition = pyrosTerminationCondition.robust_optimal
