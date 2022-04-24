@@ -206,6 +206,23 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+    
+    @unittest.skipUnless(SolverFactory('appsi_cplex').available(), 
+                         "APPSI_CPLEX not available.")
+    def test_OA_APPSI_solver(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver='appsi_cplex',
+                                    nlp_solver=required_solvers[0],
+                                    integer_to_binary=True
+                                    )
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
 
     def test_OA_integer_to_binary(self):
         """Test the outer approximation decomposition algorithm."""

@@ -79,7 +79,10 @@ def model_is_valid(solve_data, config):
             set_solver_options(mainopt, solve_data,
                                config, solver_type='mip')
             mainopt.solve(solve_data.original_model,
-                          tee=config.mip_solver_tee, **config.mip_solver_args)
+                          tee=config.mip_solver_tee,
+                          load_solutions=config.mip_solver not in {'appsi_cplex', 'appsi_gurobi'},
+                          **config.mip_solver_args)
+            load_solution_appsi(mainopt, config)
             return False
 
     if not hasattr(m, 'dual') and config.calculate_dual:  # Set up dual value reporting
@@ -468,14 +471,14 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
     elif solver_type == 'nlp':
         solver_name = config.nlp_solver
     # TODO: opt.name doesn't work for GAMS
-    if solver_name in {'cplex', 'gurobi', 'gurobi_persistent'}:
+    if solver_name in {'cplex', 'gurobi', 'gurobi_persistent', 'appsi_gurobi'}:
         opt.options['timelimit'] = remaining
         opt.options['mipgap'] = config.mip_solver_mipgap
         if solver_name == 'gurobi_persistent' and config.single_tree:
             # PreCrush: Controls presolve reductions that affect user cuts
             # You should consider setting this parameter to 1 if you are using callbacks to add your own cuts.
-            opt.set_gurobi_param('PreCrush', 1)
-            opt.set_gurobi_param('LazyConstraints', 1)
+            opt.options['PreCrush'] = 1
+            opt.options['LazyConstraints'] = 1
         if regularization == True:
             if solver_name == 'cplex':
                 if config.solution_limit is not None:
@@ -499,6 +502,16 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
             opt._solver_model.parameters.mip.strategy.presolvenode.set(3)
             if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
                 opt._solver_model.parameters.optimalitytarget.set(3)
+    elif solver_name == 'appsi_cplex':
+        opt.options['timelimit'] = remaining
+        opt.options['mip_tolerances_mipgap'] = config.mip_solver_mipgap
+        # opt.options['load_solution'] = False
+        if regularization is True:
+            if config.solution_limit is not None:
+                opt.options['mip_limits_solutions'] = config.solution_limit
+            opt.options['mip_strategy_presolvenode'] = 3
+            if config.add_regularization in {'hess_lag', 'hess_only_lag'}:
+                opt.options['optimalitytarget'] = 3
     elif solver_name == 'glpk':
         opt.options['tmlim'] = remaining
         # TODO: mipgap does not work for glpk yet
@@ -932,3 +945,13 @@ def get_primal_integral(solve_data, config):
 
     config.logger.info(' {:<25}:   {:>7.4f} '.format('Primal integral', primal_integral))
     return primal_integral
+
+def load_solution_appsi(opt, config):
+    if config.mip_solver == 'appsi_cplex':
+        cpxprob = opt._cplex_model
+        if cpxprob.solution.get_solution_type() != cpxprob.solution.type.none:
+            opt.load_vars()
+    elif config.mip_solver == 'appsi_gurobi':
+        gprob = opt._solver_model
+        if gprob.SolCount > 0:
+            opt.load_vars()

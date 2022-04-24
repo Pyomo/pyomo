@@ -14,7 +14,7 @@ from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
                                        copy_var_list_values, get_main_elapsed_time)
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_affine_cuts
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
-from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, update_dual_bound, add_var_bound, get_integer_solution, update_suboptimal_dual_bound
+from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, update_dual_bound, add_var_bound, get_integer_solution, update_suboptimal_dual_bound, load_solution_appsi
 from pyomo.core import (ConstraintList, Objective,
                         TransformationFactory, maximize, minimize,
                         value, Var)
@@ -226,8 +226,14 @@ def init_max_binaries(solve_data, config):
     if isinstance(mipopt, PersistentSolver):
         mipopt.set_instance(m)
     mip_args = dict(config.mip_solver_args)
+    # if config.mip_solver in {'appsi_cplex', 'appsi_gurobi'}:
+    #     mip_args['load_solutions'] = False
     set_solver_options(mipopt, solve_data, config, solver_type='mip')
-    results = mipopt.solve(m, tee=config.mip_solver_tee, **mip_args)
+    results = mipopt.solve(m, 
+                           tee=config.mip_solver_tee, 
+                           load_solutions=config.mip_solver not in {'appsi_cplex', 'appsi_gurobi'},
+                           **mip_args)
+    load_solution_appsi(mipopt, config)
 
     solve_terminate_cond = results.solver.termination_condition
     if solve_terminate_cond is tc.optimal:
@@ -235,8 +241,12 @@ def init_max_binaries(solve_data, config):
             MindtPy.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
-        config.logger.info(solve_data.log_formatter.format('-', 'Max binary MILP', value(MindtPy.max_binary_obj.expr),
-                                                           solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
+        config.logger.info(solve_data.log_formatter.format('-',
+                                                           'Max binary MILP', 
+                                                           value(MindtPy.max_binary_obj.expr),
+                                                           solve_data.primal_bound,
+                                                           solve_data.dual_bound,
+                                                           solve_data.rel_gap,
                                                            get_main_elapsed_time(solve_data.timing)))
     elif solve_terminate_cond is tc.infeasible:
         raise ValueError(

@@ -10,7 +10,7 @@
 
 """Iteration loop for MindtPy."""
 from __future__ import division
-from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, update_suboptimal_dual_bound, copy_var_list_values_from_solution_pool
+from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, update_suboptimal_dual_bound, copy_var_list_values_from_solution_pool, load_solution_appsi
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, handle_main_infeasible, handle_main_other_conditions, handle_regularization_main_tc
@@ -449,8 +449,12 @@ def fix_dual_bound(solve_data, config, last_iter_cuts):
             mainopt._solver_model.set_error_stream(None)
         mip_args = dict(config.mip_solver_args)
         set_solver_options(mainopt, solve_data, config, solver_type='mip')
-        main_mip_results = mainopt.solve(
-            solve_data.mip, tee=config.mip_solver_tee, **mip_args)
+        main_mip_results = mainopt.solve(solve_data.mip, 
+                                         tee=config.mip_solver_tee, 
+                                         load_solutions=config.mip_solver not in {'appsi_cplex', 'appsi_gurobi'},
+                                         **mip_args)
+        load_solution_appsi(mainopt, config)
+
         if main_mip_results.solver.termination_condition is tc.infeasible:
             config.logger.info(
                 'Bound fix failed. The bound fix problem is infeasible')

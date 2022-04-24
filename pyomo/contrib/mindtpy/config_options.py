@@ -301,7 +301,7 @@ def _add_subsolver_configs(CONFIG):
     CONFIG.declare('mip_regularization_solver', ConfigValue(
         default=None,
         domain=In(['gurobi', 'cplex', 'cbc', 'glpk', 'gams',
-                   'gurobi_persistent', 'cplex_persistent']),
+                   'gurobi_persistent', 'cplex_persistent', 'appsi_cplex', 'appsi_gurobi']),
         description='MIP subsolver for regularization problem',
         doc='Which MIP subsolver is going to be used for solving the regularization problem.'
     ))
@@ -523,7 +523,7 @@ def check_config(config):
         if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
             config.mip_solver = 'cplex_persistent'
             config.logger.info(
-                'Only cplex_persistent and gurobi_persistent are supported for LP/NLP based Branch and Bound method. The MIP solver has been changed to cplex_persistent.')
+                'Only cplex_persistent, gurobi_persistent are supported for LP/NLP based Branch and Bound method. The MIP solver has been changed to cplex_persistent.')
         if config.threads > 1:
             config.threads = 1
             config.logger.info(
@@ -575,4 +575,23 @@ def check_config(config):
                 'The threads parameter is corrected to 1 since incumbent callback conflicts with multi-threads mode.')
     if config.solution_pool:
         if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
+            if config.mip_solver in {'appsi_cplex', 'appsi_gurobi'}:
+                config.logger.info("Solution pool does not support APPSI solver yet.")
             config.mip_solver = 'cplex_persistent'
+    if config.calculate_dual:
+        if config.mip_solver == 'appsi_cplex':
+            config.logger.info("APPSI-Cplex cannot get duals for mixed-integer problems"
+                            "mip_solver will be changed to Cplex")
+            config.mip_solver = 'cplex'
+        if config.mip_regularization_solver == 'appsi_cplex':
+            config.logger.info("APPSI-Cplex cannot get duals for mixed-integer problems"
+                            "mip_solver will be changed to Cplex")
+            config.mip_regularization_solver = 'cplex'
+        if config.mip_regularization_solver == 'appsi_gurobi':
+            config.logger.info("APPSI-GUROBI cannot get duals for mixed-integer problems"
+                            "mip_solver will be changed to GUROBI")
+            config.mip_regularization_solver = 'gurobi'
+        if config.mip_regularization_solver == 'appsi_gurobi':
+            config.logger.info("APPSI-GUROBI cannot get duals for mixed-integer problems"
+                            "mip_solver will be changed to GUROBI")
+            config.mip_regularization_solver = 'gurobi'

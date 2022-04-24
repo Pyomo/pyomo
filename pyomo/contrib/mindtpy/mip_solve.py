@@ -18,7 +18,7 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWa
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy, update_dual_bound, update_suboptimal_dual_bound
+from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy, update_dual_bound, update_suboptimal_dual_bound, load_solution_appsi
 
 
 single_tree, single_tree_available = attempt_import(
@@ -63,7 +63,10 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
     try:
         with time_code(solve_data.timing, 'regularization main' if regularization_problem else ('fp main' if fp else 'main')):
             main_mip_results = mainopt.solve(solve_data.mip,
-                                             tee=config.mip_solver_tee, **mip_args)
+                                            tee=config.mip_solver_tee, 
+                                            load_solutions=config.mip_solver not in {'appsi_cplex', 'appsi_gurobi'},
+                                            **mip_args)
+            load_solution_appsi(mainopt, config)
     except (ValueError, AttributeError):
         if config.single_tree:
             config.logger.warning('Single tree terminate.')
@@ -84,8 +87,7 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
             update_suboptimal_dual_bound(solve_data, main_mip_results)
         if regularization_problem:
             config.logger.info(solve_data.log_formatter.format(solve_data.mip_iter, 'Reg '+solve_data.regularization_mip_type,
-                                                               value(
-                                                                   solve_data.mip.MindtPy_utils.loa_proj_mip_obj),
+                                                               value(solve_data.mip.MindtPy_utils.loa_proj_mip_obj),
                                                                solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
                                                                get_main_elapsed_time(solve_data.timing)))
 
@@ -93,6 +95,7 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
+        # TODO: appsi_cplex will fail here. Need to be fixed. test_mindtpy_feas_pump.py  test_mindtpy_global.py
         main_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
             solve_data.mip, config)
         return solve_data.mip, main_mip_results
@@ -370,8 +373,11 @@ def handle_main_unbounded(main_mip, solve_data, config):
         mainopt.set_instance(main_mip)
     set_solver_options(mainopt, solve_data, config, solver_type='mip')
     with SuppressInfeasibleWarning():
-        main_mip_results = mainopt.solve(
-            main_mip, tee=config.mip_solver_tee, **config.mip_solver_args)
+        main_mip_results = mainopt.solve(main_mip,
+                                         tee=config.mip_solver_tee,
+                                         load_solutions=config.mip_solver not in {'appsi_cplex', 'appsi_gurobi'},
+                                         **config.mip_solver_args)
+        load_solution_appsi(mainopt, config)
     return main_mip_results
 
 
@@ -483,7 +489,7 @@ def setup_main(solve_data, config, fp, regularization_problem):
                 discrete_only=config.fp_discrete_only)
     elif regularization_problem:
         # The epigraph constraint is very "flat" for branching rules.
-        # In ROA, if the objective function is linear(or quadratic when quadratic_strategy = 1 or 2), the original objective function is used in the MIP problem. 
+        # In ROA, if the objective function is linear(or quadratic when quadratic_strategy = 1 or 2), the original objective function is used in the MIP problem.
         # In the MIP projection problem, we need to reactivate the epigraph constraint(objective_constr).
         if MindtPy.objective_list[0].expr.polynomial_degree() in solve_data.mip_objective_polynomial_degree:
             MindtPy.objective_constr.activate()
@@ -527,13 +533,14 @@ def setup_main(solve_data, config, fp, regularization_problem):
         if config.use_dual_bound:
             # Delete previously added dual bound constraint
             MindtPy.cuts.del_component('dual_bound')
-            if solve_data.objective_sense == minimize:
-                MindtPy.cuts.dual_bound = Constraint(
-                    expr=main_objective.expr +
-                    (MindtPy.aug_penalty_expr if config.add_slack else 0) >= solve_data.dual_bound,
-                    doc='Objective function expression should improve on the best found dual bound')
-            else:
-                MindtPy.cuts.dual_bound = Constraint(
-                    expr=main_objective.expr +
-                    (MindtPy.aug_penalty_expr if config.add_slack else 0) <= solve_data.dual_bound,
-                    doc='Objective function expression should improve on the best found dual bound')
+            if solve_data.dual_bound not in {float('inf'), float('-inf')}:
+                if solve_data.objective_sense == minimize:
+                    MindtPy.cuts.dual_bound = Constraint(
+                        expr=main_objective.expr +
+                        (MindtPy.aug_penalty_expr if config.add_slack else 0) >= solve_data.dual_bound,
+                        doc='Objective function expression should improve on the best found dual bound')
+                else:
+                    MindtPy.cuts.dual_bound = Constraint(
+                        expr=main_objective.expr +
+                        (MindtPy.aug_penalty_expr if config.add_slack else 0) <= solve_data.dual_bound,
+                        doc='Objective function expression should improve on the best found dual bound')
