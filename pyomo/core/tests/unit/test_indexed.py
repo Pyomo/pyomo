@@ -212,9 +212,8 @@ class TestIndexedComponent(unittest.TestCase):
         with self.assertRaisesRegex(
                 DeveloperError,
                 ".*The '_data' dictionary and '_index' attribute are out of "
-                "sync for index '2' on indexed component 'x': The '_data' "
-                "dictionary contains 'x\[2\]' as the value corresponding to "
-                "'2'"):
+                "sync for indexed Var 'x': The 2 entry in the '_data' "
+                "dictionary does not map back to this component data object."):
             m.x[3].index()
 
 if __name__ == "__main__":

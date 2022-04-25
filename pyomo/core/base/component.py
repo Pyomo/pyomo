@@ -858,10 +858,9 @@ class ComponentData(_ComponentBase):
             # here--it's an infinite loop!
             raise DeveloperError(
                 "The '_data' dictionary and '_index' attribute are out of "
-                "sync for index '%s' on indexed component '%s': The '_data' "
-                "dictionary contains '%s' as the value corresponding to '%s'."
-                % (self._index, parent.name, parent[self._index].name,
-                   self._index))
+                "sync for indexed %s '%s': The %s entry in the '_data' "
+                "dictionary does not map back to this component data object."
+                % (parent.ctype.__name__, parent.name, self._index))
         return self._index
 
     def __str__(self):
