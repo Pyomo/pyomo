@@ -37,8 +37,6 @@ class ExpandConnectors(Transformation):
         if is_debug_set(logger):   #pragma:nocover
             logger.debug("   Connectors found!")
 
-        self._name_buffer = {}
-
         #
         # At this point, there are connectors in the model, so we must
         # look for constraints that involve connectors and expand them.
@@ -118,7 +116,7 @@ class ExpandConnectors(Transformation):
             cList = ConstraintList()
             constraint.parent_block().add_component(
                 '%s.expanded' % ( constraint.getname(
-                    fully_qualified=False, name_buffer=self._name_buffer), ),
+                    fully_qualified=False), ),
                 cList )
             connId = next(iter(conn_set))
             ref = known_conn_sets[id(matched_connectors[connId])]
@@ -151,8 +149,7 @@ class ExpandConnectors(Transformation):
                 block.add_component(
                     '%s.%s.aggregate' % (
                         conn.getname(
-                            fully_qualified=True,
-                            name_buffer=self._name_buffer),
+                            fully_qualified=True),
                         var), c )
 
 
@@ -235,7 +232,7 @@ class ExpandConnectors(Transformation):
             # This is expensive (names aren't cheap), but does result in
             # a deterministic ordering
             empty_or_partial.sort(key=lambda x: x.getname(
-                fully_qualified=True, name_buffer=self._name_buffer))
+                fully_qualified=True))
 
         # Fill in any empty connectors
         for c in empty_or_partial:
@@ -260,8 +257,7 @@ class ExpandConnectors(Transformation):
                 new_var = Var( *idx, **var_args )
                 block.add_component(
                     '%s.auto.%s' % (
-                        c.getname(fully_qualified=True,
-                                  name_buffer=self._name_buffer), k ),
+                        c.getname(fully_qualified=True), k ),
                     new_var)
                 if idx:
                     for i in idx[0]:

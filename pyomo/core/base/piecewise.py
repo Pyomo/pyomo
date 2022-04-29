@@ -1002,6 +1002,8 @@ class Piecewise(Block):
                   not be modified.
     """
 
+    _ComponentDataClass = _PiecewiseData
+
     def __new__(cls, *args, **kwds):
         if cls != Piecewise:
             return super(Piecewise, cls).__new__(cls)
@@ -1198,9 +1200,6 @@ class Piecewise(Block):
                 self.add(index, _is_indexed=is_indexed)
         timer.report()
 
-    def _getitem_when_not_present(self, idx):
-        return self._data.setdefault(idx, _PiecewiseData(self))
-
     def add(self, index, _is_indexed=None):
 
         if _is_indexed is None:
@@ -1367,6 +1366,7 @@ class Piecewise(Block):
         else:
             comp = self
         self._data[index] = comp
+        comp._index = index
         comp.updateBoundType(self._bound_type)
         comp.updatePoints(_self_domain_pts_index,range_pts)
         comp.build_constraints(func,_self_xvar,_self_yvar)

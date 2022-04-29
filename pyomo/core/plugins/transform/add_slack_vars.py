@@ -17,8 +17,6 @@ from pyomo.core.base import ComponentUID
 from pyomo.core.base.constraint import _ConstraintData
 from pyomo.common.deprecation import deprecation_warning
 
-NAME_BUFFER = {}
-
 def target_list(x):
     deprecation_msg = ("In future releases ComponentUID targets will no "
                        "longer be supported in the core.add_slack_variables "
@@ -84,11 +82,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
         super(AddSlackVariables, self).__init__(**kwds)
 
     def _apply_to(self, instance, **kwds):
-        try:
-            assert not NAME_BUFFER
-            self._apply_to_impl(instance, **kwds)
-        finally:
-            NAME_BUFFER.clear()
+        self._apply_to_impl(instance, **kwds)
 
     def _apply_to_impl(self, instance, **kwds):
         config = self.CONFIG(kwds.pop('options', {}))
@@ -135,8 +129,7 @@ class AddSlackVariables(NonIsomorphicTransformation):
                 raise RuntimeError("Lower bound exceeds upper bound in "
                                    "constraint %s" % cons.name)
             if not cons.active: continue
-            cons_name = cons.getname(fully_qualified=True,
-                                     name_buffer=NAME_BUFFER)
+            cons_name = cons.getname(fully_qualified=True)
             if cons.lower is not None:
                 # we add positive slack variable to body:
                 # declare positive slack
