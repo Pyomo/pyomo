@@ -505,7 +505,6 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
     elif solver_name == 'appsi_cplex':
         opt.options['timelimit'] = remaining
         opt.options['mip_tolerances_mipgap'] = config.mip_solver_mipgap
-        # opt.options['load_solution'] = False
         if regularization is True:
             if config.solution_limit is not None:
                 opt.options['mip_limits_solutions'] = config.solution_limit

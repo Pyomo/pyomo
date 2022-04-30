@@ -226,8 +226,6 @@ def init_max_binaries(solve_data, config):
     if isinstance(mipopt, PersistentSolver):
         mipopt.set_instance(m)
     mip_args = dict(config.mip_solver_args)
-    # if config.mip_solver in {'appsi_cplex', 'appsi_gurobi'}:
-    #     mip_args['load_solutions'] = False
     set_solver_options(mipopt, solve_data, config, solver_type='mip')
     results = mipopt.solve(m, 
                            tee=config.mip_solver_tee, 

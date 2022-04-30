@@ -576,7 +576,7 @@ def check_config(config):
     if config.solution_pool:
         if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
             if config.mip_solver in {'appsi_cplex', 'appsi_gurobi'}:
-                config.logger.info("Solution pool does not support APPSI solver yet.")
+                config.logger.info("Solution pool does not support APPSI solver.")
             config.mip_solver = 'cplex_persistent'
     if config.calculate_dual:
         if config.mip_solver == 'appsi_cplex':

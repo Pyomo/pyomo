@@ -215,8 +215,7 @@ class TestMindtPy(unittest.TestCase):
             for model in model_list:
                 results = opt.solve(model, strategy='OA',
                                     mip_solver='appsi_cplex',
-                                    nlp_solver=required_solvers[0],
-                                    integer_to_binary=True
+                                    nlp_solver=required_solvers[0]
                                     )
 
                 self.assertIn(results.solver.termination_condition,
