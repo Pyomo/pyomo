@@ -78,11 +78,13 @@ def model_is_valid(solve_data, config):
                 mainopt.set_instance(solve_data.original_model)
             set_solver_options(mainopt, solve_data,
                                config, solver_type='mip')
-            mainopt.solve(solve_data.original_model,
-                          tee=config.mip_solver_tee,
-                          load_solutions=config.mip_solver not in {'appsi_cplex', 'appsi_gurobi'},
-                          **config.mip_solver_args)
-            load_solution_appsi(mainopt, config)
+            results = mainopt.solve(solve_data.original_model,
+                                    tee=config.mip_solver_tee,
+                                    load_solutions=False,
+                                    **config.mip_solver_args
+                                    )
+            if len(results.solution) > 0:
+                solve_data.original_model.solutions.load_from(results)
             return False
 
     if not hasattr(m, 'dual') and config.calculate_dual:  # Set up dual value reporting

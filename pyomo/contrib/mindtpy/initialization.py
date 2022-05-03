@@ -229,9 +229,10 @@ def init_max_binaries(solve_data, config):
     set_solver_options(mipopt, solve_data, config, solver_type='mip')
     results = mipopt.solve(m, 
                            tee=config.mip_solver_tee, 
-                           load_solutions=config.mip_solver not in {'appsi_cplex', 'appsi_gurobi'},
+                           load_solutions=False,
                            **mip_args)
-    load_solution_appsi(mipopt, config)
+    if len(results.solution) > 0:
+        m.solutions.load_from(results)
 
     solve_terminate_cond = results.solver.termination_condition
     if solve_terminate_cond is tc.optimal:

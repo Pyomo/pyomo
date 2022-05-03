@@ -64,9 +64,10 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
         with time_code(solve_data.timing, 'regularization main' if regularization_problem else ('fp main' if fp else 'main')):
             main_mip_results = mainopt.solve(solve_data.mip,
                                             tee=config.mip_solver_tee, 
-                                            load_solutions=config.mip_solver not in {'appsi_cplex', 'appsi_gurobi'},
+                                            load_solutions=False,
                                             **mip_args)
-            load_solution_appsi(mainopt, config)
+            if len(main_mip_results.solution) > 0:
+                solve_data.mip.solutions.load_from(main_mip_results)
     except (ValueError, AttributeError):
         if config.single_tree:
             config.logger.warning('Single tree terminate.')
@@ -375,9 +376,10 @@ def handle_main_unbounded(main_mip, solve_data, config):
     with SuppressInfeasibleWarning():
         main_mip_results = mainopt.solve(main_mip,
                                          tee=config.mip_solver_tee,
-                                         load_solutions=config.mip_solver not in {'appsi_cplex', 'appsi_gurobi'},
+                                         load_solutions=False,
                                          **config.mip_solver_args)
-        load_solution_appsi(mainopt, config)
+        if len(main_mip_results.solution) > 0:
+                solve_data.mip.solutions.load_from(main_mip_results)
     return main_mip_results
 
 

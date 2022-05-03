@@ -451,9 +451,10 @@ def fix_dual_bound(solve_data, config, last_iter_cuts):
         set_solver_options(mainopt, solve_data, config, solver_type='mip')
         main_mip_results = mainopt.solve(solve_data.mip, 
                                          tee=config.mip_solver_tee, 
-                                         load_solutions=config.mip_solver not in {'appsi_cplex', 'appsi_gurobi'},
+                                         load_solutions=False,
                                          **mip_args)
-        load_solution_appsi(mainopt, config)
+        if len(main_mip_results.solution) > 0:
+            solve_data.mip.solutions.load_from(main_mip_results)
 
         if main_mip_results.solver.termination_condition is tc.infeasible:
             config.logger.info(
