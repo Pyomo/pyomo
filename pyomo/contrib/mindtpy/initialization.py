@@ -14,7 +14,7 @@ from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
                                        copy_var_list_values, get_main_elapsed_time)
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_affine_cuts
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem
-from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, update_dual_bound, add_var_bound, get_integer_solution, update_suboptimal_dual_bound, load_solution_appsi
+from pyomo.contrib.mindtpy.util import calc_jacobians, set_solver_options, update_dual_bound, add_var_bound, get_integer_solution, update_suboptimal_dual_bound
 from pyomo.core import (ConstraintList, Objective,
                         TransformationFactory, maximize, minimize,
                         value, Var)

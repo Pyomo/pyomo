@@ -18,7 +18,7 @@ from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWa
 from pyomo.contrib.gdpopt.mip_solve import distinguish_mip_infeasible_or_unbounded
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy, update_dual_bound, update_suboptimal_dual_bound, load_solution_appsi
+from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy, update_dual_bound, update_suboptimal_dual_bound
 
 
 single_tree, single_tree_available = attempt_import(

@@ -10,7 +10,7 @@
 
 """Iteration loop for MindtPy."""
 from __future__ import division
-from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, update_suboptimal_dual_bound, copy_var_list_values_from_solution_pool, load_solution_appsi
+from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, update_suboptimal_dual_bound, copy_var_list_values_from_solution_pool
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, handle_main_infeasible, handle_main_other_conditions, handle_regularization_main_tc

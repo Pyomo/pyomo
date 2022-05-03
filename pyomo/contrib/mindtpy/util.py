@@ -946,13 +946,3 @@ def get_primal_integral(solve_data, config):
 
     config.logger.info(' {:<25}:   {:>7.4f} '.format('Primal integral', primal_integral))
     return primal_integral
-
-def load_solution_appsi(opt, config):
-    if config.mip_solver == 'appsi_cplex':
-        cpxprob = opt._cplex_model
-        if cpxprob.solution.get_solution_type() != cpxprob.solution.type.none:
-            opt.load_vars()
-    elif config.mip_solver == 'appsi_gurobi':
-        gprob = opt._solver_model
-        if gprob.SolCount > 0:
-            opt.load_vars()
