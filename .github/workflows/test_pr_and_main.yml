@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [3.7, 3.8, 3.9, '3.10', pypy3]
+        python: [3.7, 3.8, 3.9, '3.10', pypy-3.9]
         other: [""]
         category: [""]
 
@@ -57,7 +57,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py openmpi
+          PACKAGES:
 
         - os: ubuntu-latest
           python: 3.8
@@ -66,7 +66,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py openmpi
+          PACKAGES: mpi4py 'openmpi>4,!=4.1.3'
 
         - os: ubuntu-latest
           python: 3.7
@@ -108,12 +108,12 @@ jobs:
           PYENV: pip
 
         exclude:
-        - {os: macos-latest, python: pypy3}
-        - {os: windows-latest, python: pypy3}
+        - {os: macos-latest, python: pypy-3.9}
+        - {os: windows-latest, python: pypy-3.9}
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Configure job parameters
       run: |
@@ -214,7 +214,7 @@ jobs:
 
     - name: Set up Python ${{ matrix.python }}
       if: matrix.PYENV == 'pip'
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python }}
 
@@ -264,6 +264,9 @@ jobs:
         fi
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
+        echo ""
+        echo "Final pip environment:"
+        python -m pip list | sed 's/^/    /'
 
     - name: Install Python packages (conda)
       if: matrix.PYENV == 'conda'
@@ -326,6 +329,9 @@ jobs:
                 | tr ":" "\\n" | grep runner | tr "\n" ":"`:`echo "$PATH" \
                 | tr ":" "\\n" | grep -v runner | tr "\n" ":"`' >> $profile
         done
+        echo ""
+        echo "Final conda environment:"
+        conda list | sed 's/^/    /'
 
     - name: Setup TPL package directories
       run: |
@@ -590,10 +596,10 @@ jobs:
     timeout-minutes: 10
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: 3.8
 
@@ -645,7 +651,7 @@ jobs:
 
     steps:
     - name: Checkout Pyomo source
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       # We need the source for .codecov.yml and running "coverage xml"
 
     - name: Pip package cache
@@ -661,7 +667,7 @@ jobs:
         path: artifacts
 
     - name: Set up Python 3.8
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: 3.8
 

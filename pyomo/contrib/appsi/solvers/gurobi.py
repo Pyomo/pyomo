@@ -622,7 +622,6 @@ class Gurobi(PersistentBase, PersistentSolver):
             solver_con = self._pyomo_con_to_solver_con_map[con]
             self._solver_model.remove(solver_con)
             self._symbol_map.removeSymbol(con)
-            self._labeler.remove_obj(con)
             del self._pyomo_con_to_solver_con_map[con]
             del self._solver_con_to_pyomo_con_map[id(solver_con)]
             self._range_constraints.discard(con)
@@ -637,7 +636,6 @@ class Gurobi(PersistentBase, PersistentSolver):
             solver_sos_con = self._pyomo_sos_to_solver_sos_map[con]
             self._solver_model.remove(solver_sos_con)
             self._symbol_map.removeSymbol(con)
-            self._labeler.remove_obj(con)
             del self._pyomo_sos_to_solver_sos_map[con]
         self._needs_updated = True
 
@@ -649,7 +647,6 @@ class Gurobi(PersistentBase, PersistentSolver):
             solver_var = self._pyomo_var_to_solver_var_map[v_id]
             self._solver_model.remove(solver_var)
             self._symbol_map.removeSymbol(var)
-            self._labeler.remove_obj(var)
             del self._pyomo_var_to_solver_var_map[v_id]
             self._mutable_bounds.pop(v_id, None)
         self._needs_updated = True

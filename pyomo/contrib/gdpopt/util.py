@@ -1,7 +1,7 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022 National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -356,7 +356,7 @@ def build_ordered_component_lists(model, solve_data):
     if hasattr(solve_data,'mip_constraint_polynomial_degree'):
         mip_constraint_polynomial_degree = solve_data.mip_constraint_polynomial_degree
     else:
-        mip_constraint_polynomial_degree=(0, 1)
+        mip_constraint_polynomial_degree = {0, 1}
     setattr(
         util_blk, 'linear_constraint_list', list(
             c for c in model.component_data_objects(

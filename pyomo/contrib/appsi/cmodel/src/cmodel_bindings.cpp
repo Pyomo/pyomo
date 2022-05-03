@@ -1,7 +1,7 @@
 /**___________________________________________________________________________
  *
  *  Pyomo: Python Optimization Modeling Objects
- * Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+ * Copyright (c) 2008-2022 National Technology and Engineering Solutions of Sandia, LLC
  * Under the terms of Contract DE-NA0003525 with National Technology and
  * Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
  * rights in this software.
@@ -37,6 +37,8 @@ PYBIND11_MODULE(appsi_cmodel, m) {
   m.def("py_interval_power", &py_interval_power);
   m.def("py_interval_exp", &py_interval_exp);
   m.def("py_interval_log", &py_interval_log);
+  m.def("py_interval_abs", &py_interval_abs);
+  m.def("_py_inverse_abs", &_py_inverse_abs);
   m.def("py_interval_log10", &py_interval_log10);
   m.def("py_interval_sin", &py_interval_sin);
   m.def("py_interval_cos", &py_interval_cos);

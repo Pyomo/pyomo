@@ -22,6 +22,7 @@ class PowerOperator;
 class NegationOperator;
 class ExpOperator;
 class LogOperator;
+class AbsOperator;
 class ExternalOperator;
 class PyomoExprTypes;
 
@@ -47,6 +48,7 @@ public:
   virtual bool is_negation_operator() { return false; }
   virtual bool is_exp_operator() { return false; }
   virtual bool is_log_operator() { return false; }
+  virtual bool is_abs_operator() { return false; }
   virtual bool is_sqrt_operator() { return false; }
   virtual bool is_external_operator() { return false; }
   virtual double get_value_from_array(double *) = 0;
@@ -485,6 +487,23 @@ public:
       std::set<std::shared_ptr<Var>> &improved_vars) override;
 };
 
+class AbsOperator : public UnaryOperator {
+public:
+  AbsOperator() = default;
+  void evaluate(double *values) override;
+  void print(std::string *) override;
+  std::string name() override { return "AbsOperator"; };
+  void write_nl_string(std::ofstream &) override;
+  bool is_abs_operator() override;
+  void propagate_bounds_forward(double *lbs, double *ubs,
+                                double feasibility_tol,
+                                double integer_tol) override;
+  void propagate_bounds_backward(
+      double *lbs, double *ubs, double feasibility_tol, double integer_tol,
+      double improvement_tol,
+      std::set<std::shared_ptr<Var>> &improved_vars) override;
+};
+
 class SqrtOperator : public UnaryOperator {
 public:
   SqrtOperator() = default;
@@ -627,7 +646,9 @@ enum ExprType {
   unary_func = 9,
   linear = 10,
   named_expr = 11,
-  numeric_constant = 12
+  numeric_constant = 12,
+  pyomo_unit = 13,
+  unary_abs = 14
 };
 
 class PyomoExprTypes {
@@ -671,6 +692,9 @@ public:
     expr_type_map[Integral] = named_expr;
     expr_type_map[ScalarIntegral] = named_expr;
     expr_type_map[NumericConstant] = numeric_constant;
+    expr_type_map[_PyomoUnit] = pyomo_unit;
+    expr_type_map[AbsExpression] = unary_abs;
+    expr_type_map[NPV_AbsExpression] = unary_abs;
   }
   ~PyomoExprTypes() = default;
   py::int_ ione = 1;
@@ -718,6 +742,8 @@ public:
   py::object NPV_SumExpression = numeric_expr.attr("NPV_SumExpression");
   py::object UnaryFunctionExpression =
       numeric_expr.attr("UnaryFunctionExpression");
+  py::object AbsExpression = numeric_expr.attr("AbsExpression");
+  py::object NPV_AbsExpression = numeric_expr.attr("NPV_AbsExpression");
   py::object NPV_UnaryFunctionExpression =
       numeric_expr.attr("NPV_UnaryFunctionExpression");
   py::object LinearExpression = numeric_expr.attr("LinearExpression");
@@ -731,6 +757,8 @@ public:
       py::module_::import("pyomo.dae.integral").attr("ScalarIntegral");
   py::object Integral =
       py::module_::import("pyomo.dae.integral").attr("Integral");
+  py::object _PyomoUnit =
+      py::module_::import("pyomo.core.base.units_container").attr("_PyomoUnit");
   py::object builtins = py::module_::import("builtins");
   py::object id = builtins.attr("id");
   py::object len = builtins.attr("len");
