@@ -515,8 +515,7 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
                 opt.options['optimalitytarget'] = 3
     elif solver_name == 'glpk':
         opt.options['tmlim'] = remaining
-        # TODO: mipgap does not work for glpk yet
-        # opt.options['mipgap'] = config.mip_solver_mipgap
+        opt.options['mipgap'] = config.mip_solver_mipgap
     elif solver_name == 'baron':
         opt.options['MaxTime'] = remaining
         opt.options['AbsConFeasTol'] = config.zero_tolerance

@@ -253,7 +253,8 @@ def handle_main_other_conditions(main_mip, main_mip_results, solve_data, config)
         handle_main_max_timelimit(
             main_mip, main_mip_results, solve_data, config)
         solve_data.results.solver.termination_condition = tc.maxTimeLimit
-    elif (main_mip_results.solver.termination_condition is tc.other and
+    elif main_mip_results.solver.termination_condition is tc.feasible or \
+        (main_mip_results.solver.termination_condition is tc.other and
           main_mip_results.solution.status is SolutionStatus.feasible):
         # load the solution and suppress the warning message by setting
         # solver status to ok.

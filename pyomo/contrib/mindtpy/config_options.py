@@ -586,5 +586,6 @@ def check_config(config):
             config.logger.info("APPSI-Cplex cannot get duals for mixed-integer problems"
                             "mip_solver will be changed to Cplex.")
             config.mip_regularization_solver = 'cplex'
-        if 'gurobi' in config.mip_solver or 'gurobi' in config.mip_regularization_solver:
+        if config.mip_solver in {'gurobi', 'appsi_gurobi'} or \
+            config.mip_regularization_solver in {'gurobi', 'appsi_gurobi'}:
             raise ValueError("GUROBI can not provide duals for mixed-integer problems.")
