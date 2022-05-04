@@ -182,7 +182,7 @@ def _get_MindtPy_config():
         description='Use dual solution from the NLP solver to add OA cuts for equality constraints.',
         domain=bool
     ))
-    CONFIG.declare('calculate_dual', ConfigValue(
+    CONFIG.declare('calculate_dual_at_solution', ConfigValue(
         default=False,
         description='Calculate duals of the NLP subproblem.',
         domain=bool
@@ -504,7 +504,7 @@ def check_config(config):
     # configuration confirmation
     if config.add_regularization is not None:
         if config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
-            config.calculate_dual = True
+            config.calculate_dual_at_solution = True
         if config.regularization_mip_threads == 0 and config.threads > 0:
             config.regularization_mip_threads = config.threads
             config.logger.info(
@@ -563,7 +563,7 @@ def check_config(config):
         config.equality_relaxation = True
         config.add_slack = True
     if config.equality_relaxation:
-        config.calculate_dual = True
+        config.calculate_dual_at_solution = True
     if config.add_no_good_cuts:
         config.integer_to_binary = True
     if config.use_tabu_list:
@@ -577,7 +577,7 @@ def check_config(config):
             if config.mip_solver in {'appsi_cplex', 'appsi_gurobi'}:
                 config.logger.info("Solution pool does not support APPSI solver.")
             config.mip_solver = 'cplex_persistent'
-    if config.calculate_dual:
+    if config.calculate_dual_at_solution:
         if config.mip_solver == 'appsi_cplex':
             config.logger.info("APPSI-Cplex cannot get duals for mixed-integer problems"
                             "mip_solver will be changed to Cplex.")

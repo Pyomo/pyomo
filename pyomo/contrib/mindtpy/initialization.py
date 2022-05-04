@@ -46,7 +46,7 @@ def MindtPy_initialize_main(solve_data, config):
         Objective, active=True)).deactivate()
 
     MindtPy = m.MindtPy_utils
-    if config.calculate_dual:
+    if config.calculate_dual_at_solution:
         m.dual.deactivate()
 
     if config.init_strategy == 'FP':
@@ -140,7 +140,7 @@ def init_rNLP(solve_data, config):
                 'relaxed NLP is not solved to optimality.')
             update_suboptimal_dual_bound(solve_data, results)
         dual_values = list(
-            m.dual[c] for c in MindtPy.constraint_list) if config.calculate_dual else None
+            m.dual[c] for c in MindtPy.constraint_list) if config.calculate_dual_at_solution else None
         config.logger.info(solve_data.log_formatter.format('-', 'Relaxed NLP', value(main_objective.expr),
                                                            solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
                                                            get_main_elapsed_time(solve_data.timing)))
@@ -204,7 +204,7 @@ def init_max_binaries(solve_data, config):
         MindtPy unable to handle the termination condition of the MILP main problem.
     """
     m = solve_data.working_model.clone()
-    if config.calculate_dual:
+    if config.calculate_dual_at_solution:
         m.dual.deactivate()
     MindtPy = m.MindtPy_utils
     solve_data.mip_subiter += 1

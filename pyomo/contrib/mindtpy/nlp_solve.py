@@ -52,7 +52,7 @@ def solve_subproblem(solve_data, config):
     TransformationFactory('core.fix_integer_vars').apply_to(fixed_nlp)
 
     MindtPy.cuts.deactivate()
-    if config.calculate_dual:
+    if config.calculate_dual_at_solution:
         fixed_nlp.tmp_duals = ComponentMap()
         # tmp_duals are the value of the dual variables stored before using deactivate trivial contraints
         # The values of the duals are computed as follows: (Complementary Slackness)
@@ -163,7 +163,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
         fixed_nlp.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config)
-    if config.calculate_dual:
+    if config.calculate_dual_at_solution:
         for c in fixed_nlp.tmp_duals:
             if fixed_nlp.dual.get(c, None) is None:
                 fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
@@ -246,7 +246,7 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt=None):
     # value?
     config.logger.info('NLP subproblem was locally infeasible.')
     solve_data.nlp_infeasible_counter += 1
-    if config.calculate_dual:
+    if config.calculate_dual_at_solution:
         for c in fixed_nlp.MindtPy_utils.constraint_list:
             rhs = value(c.upper) if c. has_ub() else value(c.lower)
             c_geq = -1 if c.has_ub() else 1

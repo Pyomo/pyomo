@@ -87,7 +87,7 @@ def model_is_valid(solve_data, config):
                 solve_data.original_model.solutions.load_from(results)
             return False
 
-    if not hasattr(m, 'dual') and config.calculate_dual:  # Set up dual value reporting
+    if not hasattr(m, 'dual') and config.calculate_dual_at_solution:  # Set up dual value reporting
         m.dual = Suffix(direction=Suffix.IMPORT)
 
     # TODO if any continuous variables are multiplied with binary ones,
