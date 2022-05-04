@@ -26,7 +26,6 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.opt import SolverFactory
 from pyomo.contrib.pyros.util import (model_is_valid,
                                       recast_to_min_obj,
-                                      remove_model_objectives,
                                       add_decision_rule_constraints,
                                       add_decision_rule_variables,
                                       load_final_solution,
@@ -373,29 +372,23 @@ class PyROS(object):
             setattr(model_data.original_model, cname, src_vars)
             model_data.working_model = model_data.original_model.clone()
 
-            # convert active objective to a minimization objective,
-            # if necessary
-            active_obj = list(
-                obj
-                for obj in model_data.working_model.component_data_objects(
+            # identify active objective function (there should only be one
+            # (there should only be one at this point)
+            # recast to minimization if necessary
+            active_objs = list(
+                model_data.working_model.component_data_objects(
                     Objective,
                     active=True,
-                    descend_into=True,)
-            )[0]
-            active_obj = recast_to_min_obj(model_data.working_model,
-                                           active_obj)
+                    descend_into=True,
+                )
+            )
+            assert len(active_objs) == 1
+            active_obj = active_objs[0]
+            recast_to_min_obj(model_data.working_model, active_obj)
 
-            # remove inactive objectives, then deactivate the
-            # only remaining objective, of the working model
+            # === Determine first and second-stage objectives
+            identify_objective_functions(model_data.working_model, active_obj)
             active_obj.deactivate()
-            remove_model_objectives(model_data.working_model,
-                                    keep_objectives=[active_obj])
-
-            # import pdb
-            # pdb.set_trace()
-
-            # === Add objective expressions
-            identify_objective_functions(model_data.working_model, config)
 
             # === Put model in standard form
             transform_to_standard_form(model_data.working_model)

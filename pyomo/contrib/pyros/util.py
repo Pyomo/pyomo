@@ -117,7 +117,7 @@ class ObjectiveType(Enum):
 
 def recast_to_min_obj(model, obj):
     """
-    Recast model objective to a minimization objective, if necessary.
+    Recast model objective to a minimization objective, as necessary.
 
     Parameters
     ----------
@@ -125,31 +125,10 @@ def recast_to_min_obj(model, obj):
         Model of interest.
     obj : ScalarObjective
         Objective of interest.
-
-    Returns
-    -------
-    model_obj : ScalarObjective
-        The updated model objective. If original objective has a
-        minimization sense (i.e. no update performed), then this is
-        identical to `obj`.
     """
     if obj.sense is not minimize:
-        sympy_obj = sympyify_expression(-obj.expr)
-        # Use sympy to distribute the negation so the method
-        # for determining first/second stage costs is valid
-        min_obj = Objective(
-            expr=sympy2pyomo_expression(sympy_obj[1].simplify(),
-                                        sympy_obj[0])
-        )
-        model.del_component(obj)
-        model.add_component(
-            unique_component_name(model, obj.name+'_min'), min_obj
-        )
-        model_obj = min_obj
-    else:
-        model_obj = obj
-
-    return model_obj
+        obj.expr = -obj.expr
+        obj.sense = minimize
 
 
 def model_is_valid(model):
@@ -840,97 +819,102 @@ def add_decision_rule_constraints(model_data, config):
     model_data.working_model.util.decision_rule_eqns = decision_rule_eqns
 
 
-def remove_model_objectives(model, keep_objectives=list()):
+def expand_expression(blk, expr):
     """
-    Remove all Objectives in a model, save those
-    specified in the iterable `keep_objectives`.
+    Expand an expression algebraically via sympy tools.
+    """
+    mutable_params = list(identify_mutable_parameters(expr))
+
+    # temporary Var objects to substitute for the uncertain
+    # parameters. We perform these substitutions since
+    # `sympyify_expression` does not account for mutable params
+    tmp_param_var_blk = Block()
+    blk.add_component(
+        unique_component_name(blk, "tmp_param_var_blk"),
+        tmp_param_var_blk,
+    )
+    tmp_param_vars = Var(
+        range(len(mutable_params)),
+        initialize={idx: value(param)
+                    for idx, param in enumerate(mutable_params)},
+    )
+    tmp_param_var_blk.add_component("tmp_param_vars", tmp_param_vars)
+
+    # substitute the Var objects for the uncertain params
+    substitution_map = {
+        id(param): var
+        for param, var in zip(mutable_params, tmp_param_vars.values())
+    }
+    inverse_map = {
+        id(var): param
+        for param, var in zip(mutable_params, tmp_param_vars.values())
+    }
+    new_expr = replace_expressions(expr, substitution_map)
+
+    # now invoke sympy
+    sympy_map, sympy_expr = sympyify_expression(new_expr)
+    sympy_expr = sympy_expr.expand()
+    expanded_expr = replace_expressions(
+        sympy2pyomo_expression(sympy_expr, sympy_map),
+        inverse_map,
+    )
+
+    blk.del_component(tmp_param_var_blk)
+
+    return expanded_expr
+
+
+def identify_objective_functions(model, objective):
+    """
+    Identify the first and second-stage portions of an Objective
+    expression, subject to user-provided variable partitioning and
+    uncertain parameter choice. In doing so, the first and second-stage
+    objective expressions are added to the model as `Expression`
+    attributes.
 
     Parameters
     ----------
     model : ConcreteModel
-        The model of interest.
-    keep_objectives : iterable(Objective), optional
-        Objectives to retain. The default is an empty list.
+        Model of interest.
+    objective : Objective
+        Objective to be resolved into first and second-stage parts.
     """
-    # morph keep_objectives into ComponentSet
-    keep_objectives = ComponentSet(keep_objectives)
+    # expand objective function expression to a summation of terms,
+    # each of which cannot be further split into two additive
+    # portions such that:
+    # (1) one portion depends only on first-stage variables
+    # (2) the other portion depends on second-stage variables or
+    #     uncertain params, and possibly also first-stage variables
+    expr_to_split = expand_expression(model, objective.expr)
 
-    # Assemble Blocks over which to iterate and perform
-    # `del_component`. We loop explicitly over these Blocks
-    # as `model.del_component(obj)` does not remove
-    # objectives associated with the Blocks of `model`
-    blks = [model] + list(
-        model.component_data_objects(
-            Block, descend_into=True,
-        )
-    )
-    for blk in blks:
-        for obj in blk.component_data_objects(Objective):
-            if obj not in keep_objectives:
-                blk.del_component(obj)
-
-
-def identify_objective_functions(model, config):
-    '''
-    Determine the objective first- and second-stage costs based on the user provided variable partition
-    :param model: deterministic model
-    :param config: config block
-    :return:
-    '''
-
-    m = model
-    obj = [o for o in model.component_data_objects(Objective)]
-    if len(obj) > 1:
-        raise AttributeError("Deterministic model must only have 1 active objective!")
-    if obj[0].sense != minimize:
-        raise AttributeError("PyROS requires deterministic models to have an objective function with  'sense'=minimization. "
-                             "Please specify your objective function as minimization.")
-    first_stage_terms = []
-    second_stage_terms = []
-
+    # initialize first and second-stage cost expressions
     first_stage_cost_expr = 0
     second_stage_cost_expr = 0
-    const_obj_expr = 0
 
-    if isinstance(obj[0].expr, Var):
-        obj_to_parse = [obj[0].expr]
+    if not hasattr(expr_to_split, "args"):
+        # this is the case if, for example, the expression
+        # consists only of a Var object
+        obj_args = [expr_to_split]
     else:
-        obj_to_parse = obj[0].expr.args
-    first_stage_variable_set = ComponentSet(model.util.first_stage_variables)
-    second_stage_variable_set = ComponentSet(model.util.second_stage_variables)
-    for term in obj_to_parse:
-        vars_in_term = list(v for v in identify_variables(term))
+        obj_args = expr_to_split.args
 
-        first_stage_vars_in_term = list(v for v in vars_in_term if
-                                        v in first_stage_variable_set)
-        second_stage_vars_in_term = list(v for v in vars_in_term if
-                                         v not in first_stage_variable_set)
-        # By checking not in first_stage_variable_set, you pick up both ssv and state vars
-        for v in first_stage_vars_in_term:
-            if id(v) not in list(id(var) for var in first_stage_terms):
-                first_stage_terms.append(v)
-        for v in second_stage_vars_in_term:
-            if id(v) not in list(id(var) for var in second_stage_terms):
-                second_stage_terms.append(v)
+    for term in obj_args:
+        non_first_stage_vars_in_term = ComponentSet(
+            v for v in identify_variables(term)
+            if v not in ComponentSet(model.util.first_stage_variables)
+        )
+        uncertain_params_in_term = ComponentSet(
+            param for param in identify_mutable_parameters(term)
+            if param in ComponentSet(model.util.uncertain_params)
+        )
 
-        if first_stage_vars_in_term and second_stage_vars_in_term:
+        if non_first_stage_vars_in_term or uncertain_params_in_term:
             second_stage_cost_expr += term
-        elif first_stage_vars_in_term and not second_stage_vars_in_term:
+        else:
             first_stage_cost_expr += term
-        elif not first_stage_vars_in_term and second_stage_vars_in_term:
-            second_stage_cost_expr += term
-        elif not vars_in_term:
-            const_obj_expr += term
-    # convention to add constant objective term to first stage costs
-    # IFF the const_obj_term does not contain an uncertain param! Else, it is second-stage cost
-    mutable_params_in_const_term = identify_mutable_parameters(expr=const_obj_expr)
-    if any(q in ComponentSet(model.util.uncertain_params) for q in mutable_params_in_const_term):
-        m.first_stage_objective = Expression(expr=first_stage_cost_expr )
-        m.second_stage_objective = Expression(expr=second_stage_cost_expr + const_obj_expr)
-    else:
-        m.first_stage_objective = Expression(expr=first_stage_cost_expr + const_obj_expr)
-        m.second_stage_objective = Expression(expr=second_stage_cost_expr)
-    return
+
+    model.first_stage_objective = Expression(expr=first_stage_cost_expr)
+    model.second_stage_objective = Expression(expr=second_stage_cost_expr)
 
 
 def load_final_solution(model_data, master_soln, config):
