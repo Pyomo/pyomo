@@ -875,8 +875,8 @@ class EllipsoidalSet(UncertaintySet):
         scale = self.scale
         nom_value = self.center
         P = self.shape_matrix
-        parameter_bounds = [(nom_value[i] - np.power(P[i][i], 0.5) * scale,
-                             nom_value[i] + np.power(P[i][i], 0.5) * scale) for i in range(self.dim)]
+        parameter_bounds = [(nom_value[i] - np.power(P[i][i] * scale, 0.5),
+                             nom_value[i] + np.power(P[i][i] * scale, 0.5)) for i in range(self.dim)]
         return parameter_bounds
 
     def set_as_constraint(self, uncertain_params, **kwargs):
