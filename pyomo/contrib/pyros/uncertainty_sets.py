@@ -802,13 +802,19 @@ class EllipsoidalSet(UncertaintySet):
 
     def __init__(self, center, shape_matrix, scale=1):
         """
-        EllipsoidalSet constructor
+        EllipsoidalSet constructor.
 
-        Args:
-            center: Vector (``list``) of uncertain parameter values around which deviations are restrained.
-            shape_matrix: Positive semi-definite matrix, effectively a covariance matrix for
-            constraint and bounds determination.
-            scale: Right-hand side value for the ellipsoid.
+        Parameters
+        ----------
+        center : (N,) array-like
+            Center of the ellipsoid.
+        shape_matrix : (N, N) array-like
+            A positive definite matrix characterizing the shape
+            and orientation of the ellipsoid.
+        scale : float
+            Square of the factor by which to scale the semi-axes
+            of the ellipsoid (i.e. the eigenvectors of the covariance
+            matrix).
         """
 
         # === Valid data in lists/matrixes
