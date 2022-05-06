@@ -93,7 +93,7 @@ class GDPoptSolver(_GDPoptAlgorithm):
                                 "For example, you should write: "
                                 "SolverFactory('gdpopt', algorithm='LOA'), "
                                 "replacing 'LOA' with a valid solution "
-                                "algorithm.", version='TODO')
+                                "algorithm.", version='TBD')
             return _HACK_GDPoptSolver(*args, **kwds)
         # We know at this point that algorithm is valid because of the config
         # logic

@@ -31,7 +31,7 @@ _supported_algorithms = {
 
 def _strategy_deprecation(strategy):
     deprecation_warning("The argument 'strategy' has been deprecated "
-                        "in favor of 'algorithm.'", version="TODO")
+                        "in favor of 'algorithm.'", version="TBD")
     return In(_supported_algorithms.keys())(strategy)
 
 class _GDPoptAlgorithm(object):
@@ -116,7 +116,7 @@ class _GDPoptAlgorithm(object):
                                 "arguments passed to "
                                 "the 'solve' method is deprecated. Please "
                                 "specify the algorithm when the solver is "
-                                "instantiated.", version="TODO")
+                                "instantiated.", version="TBD")
 
         self.pyomo_results = self._get_pyomo_results_object_with_problem_info(
             model, config)

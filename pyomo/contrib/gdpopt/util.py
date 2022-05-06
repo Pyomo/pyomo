@@ -146,7 +146,7 @@ def copy_var_list_values(from_list, to_list, config,
     if ignore_integrality:
         deprecation_warning("The 'ignore_integrality' argument is no longer "
                             "has any functionality since this function does "
-                            "not validate the values.", version="TODO")
+                            "not validate the values.", version="TBD")
     for v_from, v_to in zip(from_list, to_list):
         if skip_stale and v_from.stale:
             continue  # Skip stale variable values.
