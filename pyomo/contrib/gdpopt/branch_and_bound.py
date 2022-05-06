@@ -223,7 +223,7 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 # Update the incumbent and put it in the original model
                 self.update_incumbent(
                     node_model.component(self.original_util_block.name))
-                self._transfer_incumbent_to_original_model()
+                self._transfer_incumbent_to_original_model(config.logger)
 
                 self.LB = node_data.obj_lb if \
                           self.objective_sense == minimize else \

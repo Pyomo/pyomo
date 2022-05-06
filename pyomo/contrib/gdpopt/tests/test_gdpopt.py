@@ -1279,9 +1279,13 @@ class TestGDPoptRIC(unittest.TestCase):
         # We don't find a feasible solution this way, but we want to make sure
         # we do a few iterations, and then handle the termination state
         # correctly.
-        results = SolverFactory('gdpopt', algorithm='RIC').solve(
-            m, init_strategy='no_init', mip_solver=mip_solver,
-            nlp_solver=nlp_solver, force_subproblem_nlp=True, iterlim=5)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
+            results = SolverFactory('gdpopt', algorithm='RIC').solve(
+                m, init_strategy='no_init', mip_solver=mip_solver,
+                nlp_solver=nlp_solver, force_subproblem_nlp=True, iterlim=5,
+                tee=True)
+        self.assertIn("No feasible solutions found.", output.getvalue().strip())
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.maxIterations)
         # There's no solution in the model

@@ -347,10 +347,11 @@ class _GDPoptAlgorithm(object):
 
         return results
 
-    def _transfer_incumbent_to_original_model(self):
+    def _transfer_incumbent_to_original_model(self, logger):
         if self.incumbent_boolean_soln is None:
             assert self.incumbent_continuous_soln is None
             # we don't have a solution to transfer
+            logger.info("No feasible solutions found.")
             return
         for var, soln in zip(self.original_util_block.algebraic_variable_list,
                              self.incumbent_continuous_soln):
