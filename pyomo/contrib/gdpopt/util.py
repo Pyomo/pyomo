@@ -216,6 +216,7 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
 
     # Fix subproblem discrete variables according to the master solution
     if make_subproblem_continuous:
+        fixed_discrete = []
         for master_var, subprob_var in zip(
                 master_util_block.discrete_variable_list,
                 subproblem_util_block.discrete_variable_list):
@@ -226,6 +227,10 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
             # linearized, but subproblem is a specific realization of the
             # disjuncts. All this means we don't have enough info to do it here.
             fix_discrete_var(subprob_var, master_var.value, config)
+            fixed_discrete.append("%s = %s" % (subprob_var.name,
+                                               master_var.value))
+        config.logger.debug("Fixed the following integer variables: %s" %
+                            ", ".join(fixed_discrete))
 
     # Call the subproblem initialization callback
     config.subproblem_initialization_method(subproblem_util_block,
@@ -330,16 +335,20 @@ def get_main_elapsed_time(timing_data_obj):
                 "`get_main_elapsed_time()`."
             )
 
+# TODO: Need to add tests for this, but I'm confused--maybe pyc files don't
+# update because this makes no sense.
 @contextmanager
-def lower_logger_level_to(logger, tee=False):
+def lower_logger_level_to(logger, level=None, tee=False):
     """Increases logger verbosity by lowering reporting level."""
-    level = logging.INFO if tee else None
-    handlers = [h for h in logger.handlers]
-
     if tee: # we want pretty stuff
+        level = logging.INFO # we need to be at least this verbose for tee to
+                             # work
+        handlers = [h for h in logger.handlers]
         logger.handlers.clear()
         logger.propagate = False
-        sh = logging.StreamHandler(stream=sys.stdout)
+        sh = logging.StreamHandler()
+        # set it to the logger level first, we'll change it below if it needs to
+        # become more verbose for tee
         sh.setLevel(logger.getEffectiveLevel())
         sh.setFormatter(logging.Formatter('%(message)s'))
         logger.addHandler(sh)

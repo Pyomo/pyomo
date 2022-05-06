@@ -243,9 +243,9 @@ def preprocess_subproblem(util_block, config):
             return_trivial=constraints_deactivated)
 
     except InfeasibleConstraintException as e:
-            config.logger.debug("NLP subproblem determined to be infeasible "
-                                "during preprocessing. Message: %s" % e)
-            not_infeas = False
+        config.logger.debug("NLP subproblem determined to be infeasible "
+                            "during preprocessing. Message: %s" % e)
+        not_infeas = False
 
     yield not_infeas
 

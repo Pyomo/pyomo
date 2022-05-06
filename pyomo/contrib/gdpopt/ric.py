@@ -63,11 +63,19 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
         config.set_value(kwds)
 
         with time_code(self.timing, 'total', is_main_timer=True), \
-            lower_logger_level_to(config.logger, config.tee):
+            lower_logger_level_to(config.logger, tee=config.tee):
             results = super().solve(model, config)
             if results:
                 return results
-            return self._solve_gdp_with_ric(model, config)
+            else:
+                self._solve_gdp_with_ric(model, config)
+
+        self._get_final_pyomo_results_object()
+        self._log_termination_message(config.logger)
+        if self.pyomo_results.solver.termination_condition not in \
+           {TerminationCondition.infeasible, TerminationCondition.unbounded}:
+            self._transfer_incumbent_to_original_model()
+        return self.pyomo_results
 
     def _solve_gdp_with_ric(self, original_model, config):
         logger = config.logger
@@ -108,13 +116,6 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
             # Check termination conditions
             if self.any_termination_criterion_met(config):
                 break
-
-        self._get_final_pyomo_results_object()
-        self._log_termination_message(logger)
-        if self.pyomo_results.solver.termination_condition not in \
-           {TerminationCondition.infeasible, TerminationCondition.unbounded}:
-            self._transfer_incumbent_to_original_model()
-        return self.pyomo_results
 
     def _add_cuts_to_master_problem(self, subproblem_util_block,
                                     master_util_block, objective_sense, config,

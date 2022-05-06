@@ -318,6 +318,7 @@ class TestGDPopt(unittest.TestCase):
 
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.infeasible)
+        self.assertIsNotNone(results.solver.user_time)
 
     def test_infeasible_gdp_max_binary(self):
         """Test that max binary initialization catches infeasible GDP too"""
@@ -1260,21 +1261,36 @@ class TestGDPoptRIC(unittest.TestCase):
         self.assertAlmostEqual(value(m.x), 2)
         self.assertAlmostEqual(value(m.y), 1 + sqrt(3))
 
-    # TODO: You can put the unbounded vars in the global constraints and make
-    # sure this gets handled correctly
-    # def test_force_nlp_subproblem_with_unbounded_integer_variables(self):
-    #     m = ConcreteModel()
-    #     m.x = Var(domain=Integers, bounds=(0,10))
-    #     m.y = Var(bounds=(0, 10))
-    #     m.disjunction = Disjunction(expr=[[m.x**2 <= 4, m.y**2 <= 1],
-    #                                       [(m.x - 1)**2 + (m.y - 1)**2 <= 4,
-    #                                        m.y <= 4]])
-    #     m.obj = Objective(expr=-m.y - m.x)
-    #     results = SolverFactory('gdpopt', algorithm='RIC').solve(
-    #         m, init_strategy='no_init', mip_solver=mip_solver,
-    #         nlp_solver=nlp_solver, force_subproblem_nlp=True)
-    #     from pytest import set_trace
-    #     set_trace()
+    # Put unbounded vars in the global constraints and make sure this gets
+    # handled correctly by GDPopt (The GDP transformations will throw a fit if
+    # we put unbounded variables on the Disjuncts, but you can put them
+    # globally... Seems like a terrible idea, but as long as the behavior is
+    # correct, I guess people can learn the hard way)
+    def test_force_nlp_subproblem_with_unbounded_integer_variables(self):
+        m = ConcreteModel()
+        m.x = Var(domain=Integers, bounds=(0,10))
+        m.y = Var(bounds=(0, 10))
+        m.w = Var(domain=Integers)
+        m.disjunction = Disjunction(expr=[[m.x**2 <= 4, m.y**2 <= 1],
+                                          [(m.x - 1)**2 + (m.y - 1)**2 <= 4,
+                                           m.y <= 4]])
+        m.c = Constraint(expr=m.x + m.y == m.w)
+        m.obj = Objective(expr=-m.w)
+        # We don't find a feasible solution this way, but we want to make sure
+        # we do a few iterations, and then handle the termination state
+        # correctly.
+        results = SolverFactory('gdpopt', algorithm='RIC').solve(
+            m, init_strategy='no_init', mip_solver=mip_solver,
+            nlp_solver=nlp_solver, force_subproblem_nlp=True, iterlim=5)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.maxIterations)
+        # There's no solution in the model
+        self.assertIsNone(m.x.value)
+        self.assertIsNone(m.y.value)
+        self.assertIsNone(m.w.value)
+        self.assertIsNone(m.disjunction.disjuncts[0].indicator_var.value)
+        self.assertIsNone(m.disjunction.disjuncts[1].indicator_var.value)
+        self.assertIsNotNone(results.solver.user_time)
 
 @unittest.skipIf(not GLOA_solvers_available,
                  "Required subsolvers %s are not available"

@@ -11,7 +11,7 @@
 """This module provides functions for cut generation used across multiple
 algorithms."""
 from pyomo.common.collections import ComponentSet
-from pyomo.core import TransformationFactory, value
+from pyomo.core import TransformationFactory, value, Constraint, Block
 from math import fabs
 
 def _record_binary_value(var, var_value_is_one, var_value_is_zero, int_tol):
@@ -59,15 +59,29 @@ def add_no_good_cut(target_model_util_block, config):
     int_cut = (sum(1 - v for v in var_value_is_one) +
                sum(v for v in var_value_is_zero)) >= 1
 
-    config.logger.debug('Adding no-good cut: %s' % int_cut)
     if len(disjuncts) > 0:
         idx = len(target_model_util_block.no_good_disjunctions)
         target_model_util_block.no_good_disjunctions[idx] = [
             [disj] for disj in disjuncts] + [[int_cut]]
+        config.logger.debug('Adding no-good disjunction: %s' %
+                            disjunction_to_str(
+                                target_model_util_block.no_good_disjunctions[
+                                    idx]))
         # transform it
         TransformationFactory(config.master_problem_transformation).apply_to(
             target_model_util_block,
             targets=[target_model_util_block.no_good_disjunctions[idx]])
     else:
+        config.logger.debug('Adding no-good cut: %s' % int_cut)
         # Exclude the current binary combination
         target_model_util_block.no_good_cuts.add(expr=int_cut)
+
+def disjunction_to_str(disjunction):
+    pretty = []
+    for disjunct in disjunction.disjuncts:
+        exprs = []
+        for cons in disjunct.component_data_objects(Constraint, active=True,
+                                                    descend_into=Block):
+            exprs.append(str(cons.expr))
+        pretty.append("[%s]" % ", ".join(exprs))
+    return " v ".join(pretty)
