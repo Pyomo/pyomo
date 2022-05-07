@@ -16,10 +16,10 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters, replace_expressions
-from pyomo.core.expr.sympy_tools import sympyify_expression, sympy2pyomo_expression
 from pyomo.common.dependencies import scipy as sp
 from pyomo.core.expr.numvalue import native_types
 from pyomo.util.vars_from_expressions import get_vars_from_components
+from pyomo.core.expr.numeric_expr import SumExpression
 import itertools as it
 import timeit
 from contextlib import contextmanager
@@ -127,7 +127,12 @@ def recast_to_min_obj(model, obj):
         Objective of interest.
     """
     if obj.sense is not minimize:
-        obj.expr = -obj.expr
+        if isinstance(obj.expr, SumExpression):
+            # ensure additive terms in objective
+            # are split in accordance with user declaration
+            obj.expr = sum(-term for term in obj.expr.args)
+        else:
+            obj.expr = -obj.expr
         obj.sense = minimize
 
 
@@ -819,51 +824,6 @@ def add_decision_rule_constraints(model_data, config):
     model_data.working_model.util.decision_rule_eqns = decision_rule_eqns
 
 
-def expand_expression(blk, expr):
-    """
-    Expand an expression algebraically via sympy tools.
-    """
-    mutable_params = list(identify_mutable_parameters(expr))
-
-    # temporary Var objects to substitute for the uncertain
-    # parameters. We perform these substitutions since
-    # `sympyify_expression` does not account for mutable params
-    tmp_param_var_blk = Block()
-    blk.add_component(
-        unique_component_name(blk, "tmp_param_var_blk"),
-        tmp_param_var_blk,
-    )
-    tmp_param_vars = Var(
-        range(len(mutable_params)),
-        initialize={idx: value(param)
-                    for idx, param in enumerate(mutable_params)},
-    )
-    tmp_param_var_blk.add_component("tmp_param_vars", tmp_param_vars)
-
-    # substitute the Var objects for the uncertain params
-    substitution_map = {
-        id(param): var
-        for param, var in zip(mutable_params, tmp_param_vars.values())
-    }
-    inverse_map = {
-        id(var): param
-        for param, var in zip(mutable_params, tmp_param_vars.values())
-    }
-    new_expr = replace_expressions(expr, substitution_map)
-
-    # now invoke sympy
-    sympy_map, sympy_expr = sympyify_expression(new_expr)
-    sympy_expr = sympy_expr.expand()
-    expanded_expr = replace_expressions(
-        sympy2pyomo_expression(sympy_expr, sympy_map),
-        inverse_map,
-    )
-
-    blk.del_component(tmp_param_var_blk)
-
-    return expanded_expr
-
-
 def identify_objective_functions(model, objective):
     """
     Identify the first and second-stage portions of an Objective
@@ -879,24 +839,21 @@ def identify_objective_functions(model, objective):
     objective : Objective
         Objective to be resolved into first and second-stage parts.
     """
-    # expand objective function expression to a summation of terms,
-    # each of which cannot be further split into two additive
-    # portions such that:
-    # (1) one portion depends only on first-stage variables
-    # (2) the other portion depends on second-stage variables or
-    #     uncertain params, and possibly also first-stage variables
-    expr_to_split = expand_expression(model, objective.expr)
+    expr_to_split = objective.expr
+
+    has_args = hasattr(expr_to_split, "args")
+    is_sum = isinstance(expr_to_split, SumExpression)
+
+    # determine additive terms of the objective expression
+    # additive terms are in accordance with user declaration
+    if has_args and is_sum:
+        obj_args = expr_to_split.args
+    else:
+        obj_args = [expr_to_split]
 
     # initialize first and second-stage cost expressions
     first_stage_cost_expr = 0
     second_stage_cost_expr = 0
-
-    if not hasattr(expr_to_split, "args"):
-        # this is the case if, for example, the expression
-        # consists only of a Var object
-        obj_args = [expr_to_split]
-    else:
-        obj_args = expr_to_split.args
 
     for term in obj_args:
         non_first_stage_vars_in_term = ComponentSet(
