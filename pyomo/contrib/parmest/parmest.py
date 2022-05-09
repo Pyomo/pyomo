@@ -950,7 +950,7 @@ class Estimator(object):
         else:
             obj, thetvals, worststatus = self._Q_at_theta(thetavals=None)
             if worststatus != pyo.TerminationCondition.infeasible:
-                 all_obj.append(list(Theta.values()) + [obj])
+                 all_obj.append(list(thetvals.values()) + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
         dfcols = list(theta_names) + ['obj']
