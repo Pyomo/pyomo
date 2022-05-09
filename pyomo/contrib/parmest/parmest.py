@@ -562,12 +562,19 @@ class Estimator(object):
             pyo.TerminationCondition.infeasible is the worst.
         """
 
-        dummy_cb = {"callback": self._instance_creation_callback,
-                    "ThetaVals": thetavals,
-                    "theta_names": self.theta_names,
-                    "cb_data": self.callback_data}
-
         optimizer = pyo.SolverFactory('ipopt')
+
+        if thetavals is not None:
+            dummy_cb = {"callback": self._instance_creation_callback,
+                        "ThetaVals": thetavals,
+                        "theta_names": self.theta_names,
+                        "cb_data": self.callback_data}
+        else:
+            dummy_cb = {"callback": self._instance_creation_callback,
+                        # "ThetaVals": thetavals,
+                        "theta_names": self.theta_names,
+                        "cb_data": self.callback_data}
+
 
         if self.diagnostic_mode:
             print('    Compute objective at theta = ',str(thetavals))
@@ -589,6 +596,29 @@ class Estimator(object):
         for snum in senario_numbers:
             sname = "scenario_NODE"+str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
+            for i, theta in enumerate(self.theta_names):
+                # Use parser in ComponentUID to locate the component
+                var_cuid = ComponentUID(theta)
+                var_validate = var_cuid.find_component_on(instance)
+                if var_validate is None:
+                    logger.warning(
+                        "theta_name[%s] (%s) was not found on the model",
+                        (i, theta))
+                else:
+                    try:
+                        # If the component that was found is not a variable,
+                        # this will generate an exception (and the warning
+                        # in the 'except')
+                        var_validate.fix()
+                        fitted_vars.append(var_validate)
+                        if thetavals is None:
+                            thetavals[theta] = var_validate.value()
+                        # We want to standardize on the CUID string
+                        # representation
+                        # self.theta_names[i] = repr(var_cuid)
+                    except:
+                        logger.warning(theta + ' is not a variable')
+
             if not sillylittle:
                 if self.diagnostic_mode:
                     print('      Experiment = ',snum)
@@ -881,7 +911,7 @@ class Estimator(object):
         return results
 
 
-    def objective_at_theta(self, theta_values):
+    def objective_at_theta(self, theta_values=None):
         """
         Objective value for each theta
 
@@ -898,27 +928,6 @@ class Estimator(object):
         """
         if theta_values is None:
             all_thetas = {} # dictionary to store fitted variables
-            # Fix fitted parameters for initialization
-            for i, theta in enumerate(self.theta_names):
-                # Use parser in ComponentUID to locate the component
-                var_cuid = ComponentUID(theta)
-                var_validate = var_cuid.find_component_on(self.parmest_model)
-                if var_validate is None:
-                    logger.warning(
-                        "theta_name[%s] (%s) was not found on the model",
-                        (i, theta))
-                else:
-                    try:
-                        # If the component that was found is not a variable,
-                        # this will generate an exception (and the warning
-                        # in the 'except')
-                        var_validate.fix()
-                        all_thetas[theta] = var_validate.value()
-                        # We want to standardize on the CUID string
-                        # representation
-                        # self.theta_names[i] = repr(var_cuid)
-                    except:
-                        logger.warning(theta + ' is not a variable')
         else:
             assert isinstance(theta_values, pd.DataFrame)
 
@@ -927,15 +936,21 @@ class Estimator(object):
             all_thetas = theta_values.to_dict('records')
 
         task_mgr = mpiu.ParallelTaskManager(len(all_thetas))
-        local_thetas = task_mgr.global_to_local_data(all_thetas)
+        if all_thetas:
+            local_thetas = task_mgr.global_to_local_data(all_thetas)
 
         # walk over the mesh, return objective function
         all_obj = list()
-        for Theta in local_thetas:
-            obj, thetvals, worststatus = self._Q_at_theta(Theta)
+        if all_thetas:
+            for Theta in local_thetas:
+                obj, thetvals, worststatus = self._Q_at_theta(Theta)
+                if worststatus != pyo.TerminationCondition.infeasible:
+                     all_obj.append(list(Theta.values()) + [obj])
+                # DLW, Aug2018: should we also store the worst solver status?
+        else:
+            obj, thetvals, worststatus = self._Q_at_theta(thetavals=None)
             if worststatus != pyo.TerminationCondition.infeasible:
                  all_obj.append(list(Theta.values()) + [obj])
-            # DLW, Aug2018: should we also store the worst solver status?
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
         dfcols = list(theta_names) + ['obj']
