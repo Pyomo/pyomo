@@ -61,7 +61,6 @@ from pyomo.environ import *
 from pyomo.dae import *
 
 from itertools import permutations, product, combinations
-import idaes
 
 from fim_doe import *
 
@@ -69,13 +68,14 @@ from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
 
 
-@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+
 
 
 
 class doe_object_Tester(unittest.TestCase):
     ''' Test the kinetics example with both the sequential_finite mode and the direct_kaug mode 
     '''
+    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def setUP(self):
         import reactor_kinetics as reactor
         
