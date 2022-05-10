@@ -22,7 +22,8 @@ def _record_binary_value(var, var_value_is_one, var_value_is_zero, int_tol):
         var_value_is_zero.add(var)
     else:
         raise ValueError(
-            'Binary %s = %s is not 0 or 1' % (var.name, val))
+            'Binary %s = %s is not 0 or 1 within integer tolerance %s' %
+            (var.name, val, int_tol))
 
 def add_no_good_cut(target_model_util_block, config):
     """Cut the current integer solution from the target model."""
@@ -64,7 +65,7 @@ def add_no_good_cut(target_model_util_block, config):
         target_model_util_block.no_good_disjunctions[idx] = [
             [disj] for disj in disjuncts] + [[int_cut]]
         config.logger.debug('Adding no-good disjunction: %s' %
-                            disjunction_to_str(
+                            _disjunction_to_str(
                                 target_model_util_block.no_good_disjunctions[
                                     idx]))
         # transform it
@@ -76,7 +77,7 @@ def add_no_good_cut(target_model_util_block, config):
         # Exclude the current binary combination
         target_model_util_block.no_good_cuts.add(expr=int_cut)
 
-def disjunction_to_str(disjunction):
+def _disjunction_to_str(disjunction):
     pretty = []
     for disjunct in disjunction.disjuncts:
         exprs = []
