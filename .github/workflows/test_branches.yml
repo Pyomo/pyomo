@@ -1,4 +1,4 @@
- I doname: GitHub Branch CI
+name: GitHub Branch CI
 
 on:
   push:
