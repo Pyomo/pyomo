@@ -11,7 +11,6 @@
 
 """Functions for solving the nonlinear subproblem."""
 from contextlib import contextmanager
-from math import fabs
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException, DeveloperError
@@ -73,7 +72,7 @@ def process_nonlinear_problem_results(results, model, problem_type, config):
         logger.debug('%s subproblem was infeasible.' % problem_type)
         return tc.infeasible
     elif term_cond == tc.maxIterations:
-        logger.debug( '%s subproblem failed to converge within iteration limit.'
+        logger.debug('%s subproblem failed to converge within iteration limit.'
                      % problem_type)
         if is_feasible(model, config):
             logger.debug(
@@ -83,7 +82,7 @@ def process_nonlinear_problem_results(results, model, problem_type, config):
         return False
     elif term_cond == tc.internalSolverError:
         # Possible that IPOPT had a restoration failure
-        logger.debug( "%s solver had an internal failure: %s" %
+        logger.debug("%s solver had an internal failure: %s" %
                      (problem_type, results.solver.message))
         return tc.noSolution
     elif (term_cond == tc.other and
@@ -100,11 +99,11 @@ def process_nonlinear_problem_results(results, model, problem_type, config):
         return tc.noSolution
     elif term_cond == tc.error:
         logger.debug("%s solver had a termination condition of 'error': "
-                    "%s" % (problem_type, results.solver.message))
+                     "%s" % (problem_type, results.solver.message))
         return tc.noSolution
     elif term_cond == tc.maxTimeLimit:
         logger.debug("%s subproblem failed to converge within time "
-                    "limit." % problem_type)
+                     "limit." % problem_type)
         if is_feasible(model, config):
             config.logger.debug(
                 '%s solution is still feasible. '
@@ -114,12 +113,12 @@ def process_nonlinear_problem_results(results, model, problem_type, config):
         return tc.noSolution
     elif term_cond == tc.intermediateNonInteger:
         config.logger.debug( "%s solver could not find feasible integer"
-                            " solution: %s" % (problem_type,
-                                               results.solver.message))
+                             " solution: %s" % (problem_type,
+                                                results.solver.message))
         return tc.noSolution
     elif term_cond == tc.unbounded:
         config.logger.debug("The NLP subproblem is unbounded, meaning that "
-                           "the GDP is unbounded.")
+                            "the GDP is unbounded.")
         return tc.unbounded
     else:
         # This isn't the user's fault, but we give up--we don't know what's
@@ -225,7 +224,7 @@ def preprocess_subproblem(util_block, config):
         # Now that we've tightened bounds, see if any variables are fixed
         # because their lb is equal to the ub (within tolerance)
         xfrm('contrib.detect_fixed_vars').apply_to(
-             m, tolerance=config.variable_tolerance)
+            m, tolerance=config.variable_tolerance)
 
         # Restore the original bounds because the NLP solver might like that
         # better and because, if deactivate_trivial_constraints ever gets

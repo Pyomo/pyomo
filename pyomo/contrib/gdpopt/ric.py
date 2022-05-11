@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -19,12 +20,9 @@ from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
 from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
     _fix_master_soln_solve_subproblem_and_add_cuts)
-from pyomo.contrib.gdpopt.util import (
-    time_code, move_nonlinear_objective_to_constraints)
-from pyomo.core import Objective, Expression, value
+from pyomo.contrib.gdpopt.util import time_code
+from pyomo.core import Objective
 from pyomo.opt.base import SolverFactory
-
-import logging
 
 # ESJ: In the future, if we have a direct interface to cplex or gurobi, we
 # should get the integer solutions several-at-a-time with a solution pool or

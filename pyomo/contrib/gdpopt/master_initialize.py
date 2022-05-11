@@ -11,12 +11,9 @@ from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
     _fix_master_soln_solve_subproblem_and_add_cuts)
 from pyomo.contrib.gdpopt.util import _DoNothing
-from pyomo.core import (
-    Block, Constraint, Objective, Suffix, TransformationFactory, Var, maximize,
-    minimize, value)
+from pyomo.core import Block, Constraint, Objective, Var, maximize, value
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
-from pyomo.util.vars_from_expressions import get_vars_from_components
 
 def _collect_original_bounds(master_util_block):
     original_bounds = ComponentMap()
@@ -192,7 +189,7 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
             config.logger.debug(
                 "MILP relaxation for initialization was infeasible. "
                 "Problem is infeasible.")
-            solver._update_dual_bound_to_infeasible(config.logger)
+            solver._update_dual_bound_to_infeasible()
             return False
         add_no_good_cut(master_util_block, config)
 
@@ -245,7 +242,7 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
     disjunct_needs_cover = list(
         any(constr.body.polynomial_degree() not in (0, 1)
             for constr in disj.component_data_objects(
-            ctype=Constraint, active=True, descend_into=True))
+                    ctype=Constraint, active=True, descend_into=True))
         for disj in util_block.disjunct_list)
     subprob = subprob_util_block.model()
 
@@ -278,7 +275,7 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                         'Set covering problem was infeasible. '
                         'Check your linear and logical constraints '
                         'for contradictions.')
-                solver._update_dual_bound_to_infeasible(config.logger)
+                solver._update_dual_bound_to_infeasible()
                 # problem is infeasible. break
                 return False
             else:

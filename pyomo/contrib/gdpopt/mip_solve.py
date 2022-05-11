@@ -1,3 +1,13 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 """Functions for solving the master problem."""
 from copy import deepcopy
 
@@ -11,7 +21,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 def solve_MILP_master_problem(util_block, config, timing):
-    """Solves the linear GDP model and attempts to resolve solution issues.  
+    """Solves the linear GDP model and attempts to resolve solution issues.
     Returns one of TerminationCondition.optimal, TerminationCondition.feasible,
     TerminationCondition.infeasible, or TerminationCondition.unbounded.
     """

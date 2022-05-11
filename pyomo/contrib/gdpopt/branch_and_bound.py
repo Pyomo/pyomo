@@ -25,8 +25,7 @@ from pyomo.contrib.gdpopt.config_options import (
     _add_nlp_solver_configs, _add_BB_configs, _add_mip_solver_configs,
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.util import (
-    copy_var_list_values, SuppressInfeasibleWarning, get_main_elapsed_time,
-    time_code, lower_logger_level_to)
+    copy_var_list_values, SuppressInfeasibleWarning, get_main_elapsed_time)
 from pyomo.contrib.satsolver.satsolver import satisfiable
 from pyomo.core import minimize, Suffix, Constraint, TransformationFactory
 from pyomo.opt import SolverFactory, SolverStatus

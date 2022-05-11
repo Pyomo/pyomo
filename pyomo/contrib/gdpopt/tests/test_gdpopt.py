@@ -34,7 +34,7 @@ from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.environ import (
-    Block, ConcreteModel, Constraint, Integers, LogicalConstraint, maximize, 
+    Block, ConcreteModel, Constraint, Integers, LogicalConstraint, maximize,
     Objective, RangeSet, TransformationFactory, SolverFactory, sqrt, value, Var)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.tests import models
@@ -1307,12 +1307,8 @@ class TestGLOA(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 10))
         m.y = Var(domain=Integers, bounds=(0, 5))
-        m.d = Disjunction(expr=[[
-            m.x >= m.y, m.y >= 3.5
-        ],
-        [
-            m.x >= m.y, m.y >= 2.5
-        ]])
+        m.d = Disjunction(expr=[[m.x >= m.y, m.y >= 3.5],
+                                [m.x >= m.y, m.y >= 2.5]])
         m.o = Objective(expr=m.x)
         SolverFactory('gdpopt', algorithm='GLOA').solve(
             m,
@@ -1326,12 +1322,8 @@ class TestGLOA(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 10))
         m.y = Var(domain=Integers, bounds=(0, 5))
-        m.d = Disjunction(expr=[[
-            m.x**2 >= m.y, m.y >= 3.5
-        ],
-        [
-            m.x**2 >= m.y, m.y >= 2.5
-        ]])
+        m.d = Disjunction(expr=[[m.x**2 >= m.y, m.y >= 3.5],
+                                [m.x**2 >= m.y, m.y >= 2.5]])
         m.o = Objective(expr=m.x)
         return m
 
@@ -1362,12 +1354,8 @@ class TestGLOA(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 1))
         m.y = Var(domain=Integers, bounds=(0, 5))
-        m.d = Disjunction(expr=[[
-            m.x >= m.y, m.y >= 3.5
-        ],
-        [
-            m.x >= m.y, m.y >= 2.5
-        ]])
+        m.d = Disjunction(expr=[[m.x >= m.y, m.y >= 3.5],
+                                [m.x >= m.y, m.y >= 2.5]])
         m.o = Objective(expr=m.x)
         res = SolverFactory('gdpopt', algorithm='GLOA').solve(
             m,

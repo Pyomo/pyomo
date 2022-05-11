@@ -1,15 +1,16 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 """A library of possible callbacks to use for initializing the NLP subproblems.
-However, it seems likely that problem-specific routines might be better, in 
-which case you can write your own, and specify it in the 
+However, it seems likely that problem-specific routines might be better, in
+which case you can write your own, and specify it in the
 'subproblem_initialization_method' argument."""
 
 # This is the original GDPopt behavior:
@@ -17,7 +18,7 @@ def restore_vars_to_original_values(nlp_util_block, mip_util_block):
     """Perform initialization of the subproblem.
 
     This just restores the continuous variables to the original
-    model values, which were saved on the subproblem's utility block when it 
+    model values, which were saved on the subproblem's utility block when it
     was created.
     """
     # restore original continuous variable values

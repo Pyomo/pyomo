@@ -1,13 +1,15 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from math import fabs
 from pyomo.common.config import add_docstring_list
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
@@ -23,17 +25,12 @@ from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
     _fix_master_soln_solve_subproblem_and_add_cuts)
 from pyomo.contrib.gdpopt.util import (
-    _add_bigm_constraint_to_transformed_model,
-    move_nonlinear_objective_to_constraints, time_code)
+    _add_bigm_constraint_to_transformed_model, time_code)
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
-from pyomo.core import (
-    Constraint, Block, Expression, NonNegativeIntegers, Objective,
-    SortComponents, TransformationFactory, value)
+from pyomo.core import Constraint, Block, NonNegativeIntegers, Objective
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.opt.base import SolverFactory
-import logging
-from math import fabs
 
 @SolverFactory.register(
     '_global_logic_based_oa',

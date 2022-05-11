@@ -1,3 +1,14 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 from io import StringIO
 from textwrap import indent
 
@@ -21,14 +32,14 @@ from pyomo.util.model_size import build_model_size_report
 # I don't know where to keep this, just avoiding circular import for now
 __version__ = (20, 2, 28)  # Note: date-based version number
 _supported_algorithms = {
-        'LOA': ('_logic_based_oa', 'Logic-based Outer Approximation'),
-        'GLOA': ('_global_logic_based_oa',
-                 'Global Logic-based Outer Approximation'),
-        'LBB': ('_logic_based_branch_and_bound',
-                'Logic-based Branch and Bound'),
-        'RIC': ('_relaxation_with_integer_cuts',
-                'Relaxation with Integer Cuts')
-    }
+    'LOA': ('_logic_based_oa', 'Logic-based Outer Approximation'),
+    'GLOA': ('_global_logic_based_oa',
+             'Global Logic-based Outer Approximation'),
+    'LBB': ('_logic_based_branch_and_bound',
+            'Logic-based Branch and Bound'),
+    'RIC': ('_relaxation_with_integer_cuts',
+            'Relaxation with Integer Cuts')
+}
 
 def _strategy_deprecation(strategy):
     deprecation_warning("The argument 'strategy' has been deprecated "
@@ -240,7 +251,7 @@ class _GDPoptAlgorithm(object):
                                             logger=logger)
         elif mip_termination is tc.infeasible:
             # Master problem was infeasible.
-            self._update_dual_bound_to_infeasible(logger)
+            self._update_dual_bound_to_infeasible()
         elif mip_termination is tc.feasible or tc.unbounded:
             # we won't update the bound, because we didn't solve to
             # optimality. (And in the unbounded case, we wouldn't be here if we
@@ -251,7 +262,7 @@ class _GDPoptAlgorithm(object):
             raise DeveloperError("Unrecognized termination condition %s when "
                                  "updating the dual bound." % mip_termination)
 
-    def _update_dual_bound_to_infeasible(self, logger):
+    def _update_dual_bound_to_infeasible(self):
         # set optimistic bound to infinity
         if self.objective_sense == minimize:
             self._update_bounds(dual=float('inf'))
@@ -390,7 +401,7 @@ class _GDPoptAlgorithm(object):
                 var.set_value(False)
 
             if original_binary is not None:
-                    original_binary.set_value(soln)
+                original_binary.set_value(soln)
 
     def _get_final_pyomo_results_object(self):
         """
@@ -407,7 +418,7 @@ class _GDPoptAlgorithm(object):
 
         return results
 
-    """Support use as a context manager under current solver API"""
+    # Support use as a context manager under current solver API
     def __enter__(self):
         return self
 

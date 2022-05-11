@@ -23,7 +23,7 @@ license_available = SolverFactory(minlp_solver).license_is_valid() if \
                     solver_available else False
 
 
-@unittest.skipUnless(solver_available, 
+@unittest.skipUnless(solver_available,
                      "Required subsolver %s is not available" % (minlp_solver,))
 class TestGDPopt_LBB(unittest.TestCase):
     """Tests for logic-based branch and bound."""
@@ -48,7 +48,7 @@ class TestGDPopt_LBB(unittest.TestCase):
         self.assertIsNone(m.d.disjuncts[0].indicator_var.value)
         self.assertIsNone(m.d.disjuncts[1].indicator_var.value)
 
-    @unittest.skipUnless(license_available, 
+    @unittest.skipUnless(license_available,
                          "Problem is too big for unlicensed BARON.")
     def test_LBB_8PP(self):
         """Test the logic-based branch and bound algorithm."""
@@ -63,7 +63,7 @@ class TestGDPopt_LBB(unittest.TestCase):
         )
         ct.check_8PP_solution(self, eight_process, results)
 
-    @unittest.skipUnless(license_available, 
+    @unittest.skipUnless(license_available,
                          "Problem is too big for unlicensed BARON.")
     def test_LBB_8PP_max(self):
         """Test the logic-based branch and bound algorithm."""
@@ -81,7 +81,7 @@ class TestGDPopt_LBB(unittest.TestCase):
         )
         self.assertAlmostEqual(value(eight_process.profit.expr), -68, places=1)
 
-    @unittest.skipUnless(license_available, 
+    @unittest.skipUnless(license_available,
                          "Problem is too big for unlicensed BARON.")
     def test_LBB_strip_pack(self):
         """Test logic-based branch and bound with strip packing."""
@@ -97,7 +97,7 @@ class TestGDPopt_LBB(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
-    @unittest.skipUnless(license_available, 
+    @unittest.skipUnless(license_available,
                          "Problem is too big for unlicensed BARON.")
     @unittest.pytest.mark.expensive
     def test_LBB_constrained_layout(self):
@@ -129,7 +129,7 @@ class TestGDPopt_LBB(unittest.TestCase):
         objective_value = value(model.obj.expr)
         self.assertAlmostEqual(objective_value, 4.46, 2)
 
-    @unittest.skipUnless(license_available, 
+    @unittest.skipUnless(license_available,
                          "Problem is too big for unlicensed BARON.")
     @unittest.skipUnless(SolverFactory('bonmin').available(
         exception_flag=False), "Bonmin is not avaialable")
@@ -149,7 +149,7 @@ class TestGDPopt_LBB(unittest.TestCase):
         )
         ct.check_8PP_solution(self, eight_process, results)
 
-@unittest.skipUnless(solver_available, 
+@unittest.skipUnless(solver_available,
                      "Required subsolver %s is not available" % (minlp_solver,))
 @unittest.skipUnless(z3_available, "Z3 SAT solver is not available.")
 class TestGDPopt_LBB_Z3(unittest.TestCase):
@@ -177,7 +177,7 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         self.assertIsNone(m.d.disjuncts[0].indicator_var.value)
         self.assertIsNone(m.d.disjuncts[1].indicator_var.value)
 
-    @unittest.skipUnless(license_available, 
+    @unittest.skipUnless(license_available,
                          "Problem is too big for unlicensed BARON.")
     def test_LBB_8PP(self):
         """Test the logic-based branch and bound algorithm."""
@@ -192,7 +192,7 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         )
         ct.check_8PP_solution(self, eight_process, results)
 
-    @unittest.skipUnless(license_available, 
+    @unittest.skipUnless(license_available,
                          "Problem is too big for unlicensed BARON.")
     def test_LBB_strip_pack(self):
         """Test logic-based branch and bound with strip packing."""
@@ -208,7 +208,7 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
-    @unittest.skipUnless(license_available, 
+    @unittest.skipUnless(license_available,
                          "Problem is too big for unlicensed BARON.")
     @unittest.pytest.mark.expensive
     def test_LBB_constrained_layout(self):

@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -35,7 +36,6 @@ from pyomo.core.expr.visitor import identify_variables
 from pyomo.gdp import Disjunct
 from pyomo.opt.base import SolverFactory
 from pyomo.repn import generate_standard_repn
-import logging
 
 MAX_SYMBOLIC_DERIV_SIZE = 1000
 JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
@@ -138,7 +138,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
         OA_penalty_expr = sign_adjust * OA_penalty_factor * \
                           sum(v for v in m.component_data_objects(
                               ctype=Var, descend_into=(Block, Disjunct))
-                          if v.parent_component().local_name ==
+                              if v.parent_component().local_name ==
                               'GDPopt_OA_slacks')
         master_util_block.oa_obj.expr = main_objective.expr + OA_penalty_expr
 
