@@ -855,14 +855,17 @@ def identify_objective_functions(model, objective):
     first_stage_cost_expr = 0
     second_stage_cost_expr = 0
 
+    first_stage_var_set = ComponentSet(model.util.first_stage_variables)
+    uncertain_param_set = ComponentSet(model.util.uncertain_params)
+
     for term in obj_args:
         non_first_stage_vars_in_term = ComponentSet(
             v for v in identify_variables(term)
-            if v not in ComponentSet(model.util.first_stage_variables)
+            if v not in first_stage_var_set
         )
         uncertain_params_in_term = ComponentSet(
             param for param in identify_mutable_parameters(term)
-            if param in ComponentSet(model.util.uncertain_params)
+            if param in uncertain_param_set
         )
 
         if non_first_stage_vars_in_term or uncertain_params_in_term:
