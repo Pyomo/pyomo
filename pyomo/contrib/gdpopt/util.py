@@ -335,8 +335,6 @@ def get_main_elapsed_time(timing_data_obj):
                 "`get_main_elapsed_time()`."
             )
 
-# TODO: Need to add tests for this, but I'm confused--maybe pyc files don't
-# update because this makes no sense.
 @contextmanager
 def lower_logger_level_to(logger, level=None, tee=False):
     """Increases logger verbosity by lowering reporting level."""
@@ -346,7 +344,8 @@ def lower_logger_level_to(logger, level=None, tee=False):
         handlers = [h for h in logger.handlers]
         logger.handlers.clear()
         logger.propagate = False
-        sh = logging.StreamHandler()
+        # Send logging to stdout
+        sh = logging.StreamHandler(sys.stdout)
         # set it to the logger level first, we'll change it below if it needs to
         # become more verbose for tee
         sh.setLevel(logger.getEffectiveLevel())
