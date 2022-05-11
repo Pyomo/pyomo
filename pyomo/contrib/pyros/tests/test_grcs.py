@@ -2311,19 +2311,19 @@ class testModelMultipleObjectives(unittest.TestCase):
         )
 
         # check validation error raised due to multiple objectives
-        self.assertRaises(
-            AttributeError,
-            pyros_solver.solve,
-            **solve_kwargs,
-        )
+        with self.assertRaisesRegex(
+                AttributeError,
+                "This model structure is not currently handled by the ROSolver."
+                ):
+            pyros_solver.solve(**solve_kwargs)
 
         # check validation error raised due to multiple objectives
         m.b.obj.deactivate()
-        self.assertRaises(
-            AttributeError,
-            pyros_solver.solve,
-            **solve_kwargs,
-        )
+        with self.assertRaisesRegex(
+                AttributeError,
+                "This model structure is not currently handled by the ROSolver."
+                ):
+            pyros_solver.solve(**solve_kwargs)
 
         # now solve with only one active obj,
         # check successful termination
