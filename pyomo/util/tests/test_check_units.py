@@ -198,5 +198,31 @@ class TestUnitsChecking(unittest.TestCase):
 
         assert_units_consistent(m)
 
+    def test_units_roundoff_error(self):
+        # Issue 2393: this example resulted in roundoff error where the
+        # computed units for var_1 were
+        #(0.9999999999999986,
+        # <Unit('kilogram ** 1 / kelvin / meter ** 1.66533e-16 / second ** 3')>
+        #)
+        m = ConcreteModel()
+        m.var_1 = Var(
+            initialize=400,
+            units=((units.J**0.4) *
+                   (units.kg**0.2) *
+                   (units.W**0.6) /
+                   units.K /
+                   (units.m**2.2) /
+                   (units.Pa**0.2) /
+                   (units.s**0.8))
+        )
+        m.var_1.fix()
+        m.var_2 = Var(
+            initialize=400,
+            units=units.kg/units.s**3/units.K
+        )
+        assert_units_equivalent(m.var_1, m.var_2)
+
+
+
 if __name__ == "__main__":
     unittest.main()
