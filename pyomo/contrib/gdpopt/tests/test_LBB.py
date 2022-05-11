@@ -6,6 +6,7 @@ from os.path import abspath, dirname, join, normpath
 import pyomo.common.unittest as unittest
 
 from pyomo.common.fileutils import import_file
+import pyomo.contrib.gdpopt.tests.common_tests as ct
 from pyomo.contrib.satsolver.satsolver import z3_available
 from pyomo.environ import (SolverFactory, value, ConcreteModel, Var, Objective,
                            maximize)
@@ -43,6 +44,9 @@ class TestGDPopt_LBB(unittest.TestCase):
         )
         self.assertEqual(result.solver.termination_condition,
                          TerminationCondition.infeasible)
+        self.assertIsNone(m.x.value)
+        self.assertIsNone(m.d.disjuncts[0].indicator_var.value)
+        self.assertIsNone(m.d.disjuncts[1].indicator_var.value)
 
     @unittest.skipUnless(license_available, 
                          "Problem is too big for unlicensed BARON.")
@@ -51,13 +55,13 @@ class TestGDPopt_LBB(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt').solve(
+        results = SolverFactory('gdpopt').solve(
             eight_process, tee=False,
             strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     @unittest.skipUnless(license_available, 
                          "Problem is too big for unlicensed BARON.")
@@ -134,7 +138,7 @@ class TestGDPopt_LBB(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt').solve(
+        results = SolverFactory('gdpopt').solve(
             eight_process, tee=False,
             strategy='LBB',
             minlp_solver=minlp_solver,
@@ -143,8 +147,7 @@ class TestGDPopt_LBB(unittest.TestCase):
             local_minlp_solver='bonmin',
             local_minlp_solver_args={},
         )
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
-
+        ct.check_8PP_solution(self, eight_process, results)
 
 @unittest.skipUnless(solver_available, 
                      "Required subsolver %s is not available" % (minlp_solver,))
@@ -168,6 +171,11 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         )
         self.assertEqual(result.solver.termination_condition,
                          TerminationCondition.infeasible)
+        self.assertEqual(result.solver.termination_condition,
+                         TerminationCondition.infeasible)
+        self.assertIsNone(m.x.value)
+        self.assertIsNone(m.d.disjuncts[0].indicator_var.value)
+        self.assertIsNone(m.d.disjuncts[1].indicator_var.value)
 
     @unittest.skipUnless(license_available, 
                          "Problem is too big for unlicensed BARON.")
@@ -176,13 +184,13 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt').solve(
+        results = SolverFactory('gdpopt').solve(
             eight_process, tee=False, check_sat=True,
             strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     @unittest.skipUnless(license_available, 
                          "Problem is too big for unlicensed BARON.")

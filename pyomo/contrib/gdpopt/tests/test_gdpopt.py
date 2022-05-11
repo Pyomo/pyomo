@@ -28,6 +28,7 @@ from pyomo.contrib.gdpopt.gloa import GDP_GLOA_Solver
 from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.mip_solve import (
     solve_MILP_master_problem, distinguish_mip_infeasible_or_unbounded)
+import pyomo.contrib.gdpopt.tests.common_tests as ct
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.core.expr.sympy_tools import sympy_available
@@ -305,6 +306,9 @@ class TestGDPopt(unittest.TestCase):
 
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.infeasible)
+        self.assertIsNone(m.x.value)
+        self.assertIsNone(m.d.disjuncts[0].indicator_var.value)
+        self.assertIsNone(m.d.disjuncts[1].indicator_var.value)
 
         # Test maximization problem infeasibility also
         m.o.sense = maximize
@@ -319,6 +323,9 @@ class TestGDPopt(unittest.TestCase):
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.infeasible)
         self.assertIsNotNone(results.solver.user_time)
+        self.assertIsNone(m.x.value)
+        self.assertIsNone(m.d.disjuncts[0].indicator_var.value)
+        self.assertIsNone(m.d.disjuncts[1].indicator_var.value)
 
     def test_infeasible_gdp_max_binary(self):
         """Test that max binary initialization catches infeasible GDP too"""
@@ -441,13 +448,11 @@ class TestGDPopt(unittest.TestCase):
         m.disj = Disjunction(expr=[[m.x == m.y, m.x + m.y >= 8],
                                    [m.x == 4]])
         m.obj = Objective(expr=m.x + m.y)
-        logger = logging.getLogger('gdpopt_test')
-        logger.setLevel(logging.DEBUG)
         SolverFactory('gdpopt', algorithm='RIC').solve(
             m, mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             init_strategy='set_covering',
-            tee=True, logger=logger)
+            tee=True)
         self.assertAlmostEqual(value(m.x), 4)
         self.assertAlmostEqual(value(m.y), 5)
         self.assertFalse(value(m.disj.disjuncts[0].indicator_var))
@@ -620,11 +625,11 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='LOA').solve(
+        results = SolverFactory('gdpopt', algorithm='LOA').solve(
             eight_process,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver)
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     def test_iteration_limit(self):
         exfile = import_file(
@@ -664,12 +669,12 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_logical.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='LOA').solve(
+        results = SolverFactory('gdpopt', algorithm='LOA').solve(
             eight_process,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             tee=False)
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_logical_solution(self, eight_process, results)
 
     @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False),
                          'GAMS solver not available')
@@ -678,25 +683,25 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='LOA').solve(
+        results = SolverFactory('gdpopt', algorithm='LOA').solve(
             eight_process,
             mip_solver=mip_solver,
             nlp_solver='gams',
             max_slack=0,
             tee=False)
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     def test_LOA_8PP_force_NLP(self):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='LOA').solve(
+        results = SolverFactory('gdpopt', algorithm='LOA').solve(
             eight_process,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             force_subproblem_nlp=True,
             tee=False)
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     def test_LOA_strip_pack_default_init(self):
         """Test logic-based outer approximation with strip packing."""
@@ -757,12 +762,11 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='LOA').solve(
+        results = SolverFactory('gdpopt', algorithm='LOA').solve(
             eight_process, init_strategy='max_binary',
             mip_solver=mip_solver,
             nlp_solver=nlp_solver)
-
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_LOA_8PP_logical_maxBinary(self):
@@ -770,12 +774,11 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_logical.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='LOA').solve(
+        results = SolverFactory('gdpopt', algorithm='LOA').solve(
             eight_process, init_strategy='max_binary',
             mip_solver=mip_solver,
             nlp_solver=nlp_solver)
-
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_logical_solution(self, eight_process, results)
 
     def test_LOA_strip_pack_maxBinary(self):
         """Test LOA with strip packing using max_binary initialization."""
@@ -828,12 +831,11 @@ class TestGDPopt(unittest.TestCase):
                 disj.binary_indicator_var.set_value(1)
             else:
                 disj.binary_indicator_var.set_value(0)
-        SolverFactory('gdpopt', algorithm='LOA').solve(
+        results = SolverFactory('gdpopt', algorithm='LOA').solve(
             eight_process, init_strategy='fix_disjuncts',
             mip_solver=mip_solver,
             nlp_solver=nlp_solver)
-
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     def test_LOA_custom_disjuncts_with_silly_components_in_list(self):
         exfile = import_file(
@@ -1019,12 +1021,12 @@ class TestGDPoptRIC(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='RIC').solve(
+        results = SolverFactory('gdpopt', algorithm='RIC').solve(
             eight_process,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             tee=False)
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_RIC_8PP_logical_default_init(self):
@@ -1032,12 +1034,12 @@ class TestGDPoptRIC(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_logical.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='RIC').solve(
+        results = SolverFactory('gdpopt', algorithm='RIC').solve(
             eight_process,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             tee=False)
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_logical_solution(self, eight_process, results)
 
     @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False),
                          'GAMS solver not available')
@@ -1046,25 +1048,25 @@ class TestGDPoptRIC(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='RIC').solve(
+        results = SolverFactory('gdpopt', algorithm='RIC').solve(
             eight_process,
             mip_solver=mip_solver,
             nlp_solver='gams',
             max_slack=0,
             tee=False)
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     def test_RIC_8PP_force_NLP(self):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='RIC').solve(
+        results = SolverFactory('gdpopt', algorithm='RIC').solve(
             eight_process,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             force_subproblem_nlp=True,
             tee=False)
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     def test_RIC_strip_pack_default_init(self):
         """Test logic-based outer approximation with strip packing."""
@@ -1122,12 +1124,11 @@ class TestGDPoptRIC(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='RIC').solve(
+        results = SolverFactory('gdpopt', algorithm='RIC').solve(
             eight_process, init_strategy='max_binary',
             mip_solver=mip_solver,
             nlp_solver=nlp_solver)
-
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     def test_RIC_strip_pack_maxBinary(self):
         """Test RIC with strip packing using max_binary initialization."""
@@ -1180,12 +1181,11 @@ class TestGDPoptRIC(unittest.TestCase):
                 disj.binary_indicator_var.set_value(1)
             else:
                 disj.binary_indicator_var.set_value(0)
-        SolverFactory('gdpopt', algorithm='RIC').solve(
+        results = SolverFactory('gdpopt', algorithm='RIC').solve(
             eight_process, init_strategy='fix_disjuncts',
             mip_solver=mip_solver,
             nlp_solver=nlp_solver)
-
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     def test_RIC_custom_disjuncts(self):
         """Test logic-based OA with custom disjuncts initialization."""
@@ -1283,8 +1283,7 @@ class TestGDPoptRIC(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
             results = SolverFactory('gdpopt', algorithm='RIC').solve(
                 m, init_strategy='no_init', mip_solver=mip_solver,
-                nlp_solver=nlp_solver, force_subproblem_nlp=True, iterlim=5,
-                tee=True)
+                nlp_solver=nlp_solver, force_subproblem_nlp=True, iterlim=5)
         self.assertIn("No feasible solutions found.", output.getvalue().strip())
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.maxIterations)
@@ -1405,13 +1404,13 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
+        results = SolverFactory('gdpopt', algorithm='GLOA').solve(
             eight_process, tee=False,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args
         )
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     @unittest.skipUnless(license_available and sympy_available,
                          "Global NLP solver license not available or sympy "
@@ -1421,13 +1420,13 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_logical.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
+        results = SolverFactory('gdpopt', algorithm='GLOA').solve(
             eight_process, tee=False,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args
         )
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_logical_solution(self, eight_process, results)
 
     @unittest.skipUnless(license_available,
                          "Global NLP solver license not available.")
@@ -1436,14 +1435,14 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
+        results = SolverFactory('gdpopt', algorithm='GLOA').solve(
             eight_process, tee=False,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
             force_subproblem_nlp=True
         )
-        self.assertTrue(fabs(value(eight_process.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, eight_process, results)
 
     @unittest.skipUnless(license_available,
                          "Global NLP solver license not available.")
