@@ -164,6 +164,10 @@ def distinguish_mip_infeasible_or_unbounded(m, config):
         tmp_args['options'] = tmp_args.get('options', {})
         tmp_args['options']['DualReductions'] = 0
     mipopt = SolverFactory(config.mip_solver)
+    # gdpopt no longer supports non-auto persistent solvers, but mindtpy does,
+    # and it uses this function.
+    if isinstance(mipopt, PersistentSolver):
+        mipopt.set_instance(m)
     with SuppressInfeasibleWarning():
         results = mipopt.solve(m, **tmp_args)
     termination_condition = results.solver.termination_condition

@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -448,7 +449,7 @@ def setup_main(solve_data, config, fp, regularization_problem):
     MindtPy = solve_data.mip.MindtPy_utils
 
     for c in MindtPy.constraint_list:
-        if c.body.polynomial_degree() not in {1, 0}:
+        if c.body.polynomial_degree() not in solve_data.mip_constraint_polynomial_degree:
             c.deactivate()
 
     MindtPy.cuts.activate()
@@ -482,7 +483,10 @@ def setup_main(solve_data, config, fp, regularization_problem):
                 solve_data.working_model,
                 discrete_only=config.fp_discrete_only)
     elif regularization_problem:
-        if MindtPy.objective_list[0].expr.polynomial_degree() in {1, 0}:
+        # The epigraph constraint is very "flat" for branching rules.
+        # In ROA, if the objective function is linear(or quadratic when quadratic_strategy = 1 or 2), the original objective function is used in the MIP problem. 
+        # In the MIP projection problem, we need to reactivate the epigraph constraint(objective_constr).
+        if MindtPy.objective_list[0].expr.polynomial_degree() in solve_data.mip_objective_polynomial_degree:
             MindtPy.objective_constr.activate()
         if config.add_regularization == 'level_L1':
             MindtPy.loa_proj_mip_obj = generate_norm1_objective_function(solve_data.mip,

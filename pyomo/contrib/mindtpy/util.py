@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -16,7 +17,7 @@ from pyomo.core import (Block, Constraint, VarList,
                         Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
-from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
+from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
@@ -65,8 +66,8 @@ def model_is_valid(solve_data, config):
     if len(MindtPy.discrete_variable_list) == 0:
         config.logger.info('Problem has no discrete decisions.')
         obj = next(m.component_data_objects(ctype=Objective, active=True))
-        if (any(c.body.polynomial_degree() not in {1, 0} for c in MindtPy.constraint_list) or
-                obj.expr.polynomial_degree() not in {1, 0}):
+        if (any(c.body.polynomial_degree() not in solve_data.mip_constraint_polynomial_degree for c in MindtPy.constraint_list) or
+                obj.expr.polynomial_degree() not in solve_data.mip_objective_polynomial_degree):
             config.logger.info(
                 'Your model is a NLP (nonlinear program). '
                 'Using NLP solver %s to solve.' % config.nlp_solver)
@@ -670,6 +671,16 @@ def set_up_solve_data(model, config):
         if not hasattr(solve_data.working_model, 'ipopt_zU_out'):
             solve_data.working_model.ipopt_zU_out = Suffix(
                 direction=Suffix.IMPORT)
+    
+    if config.quadratic_strategy == 0:
+        solve_data.mip_objective_polynomial_degree = {0, 1}
+        solve_data.mip_constraint_polynomial_degree = {0, 1}
+    elif config.quadratic_strategy == 1:
+        solve_data.mip_objective_polynomial_degree = {0, 1, 2}
+        solve_data.mip_constraint_polynomial_degree = {0, 1}
+    elif config.quadratic_strategy == 2:
+        solve_data.mip_objective_polynomial_degree = {0, 1, 2}
+        solve_data.mip_constraint_polynomial_degree = {0, 1, 2}
 
     return solve_data
 
@@ -966,9 +977,11 @@ def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense
 
 def build_ordered_component_lists(model, solve_data):
     """Define lists used for future data transfer.
+
     Also attaches ordered lists of the variables, constraints, disjuncts, and
     disjunctions to the model so that they can be used for mapping back and
     forth.
+
     """
     util_blk = getattr(model, solve_data.util_block_name)
     var_set = ComponentSet()
@@ -977,16 +990,217 @@ def build_ordered_component_lists(model, solve_data):
             model.component_data_objects(
                 ctype=Constraint, active=True,
                 descend_into=(Block, Disjunct))))
+    if hasattr(solve_data,'mip_constraint_polynomial_degree'):
+        mip_constraint_polynomial_degree = solve_data.mip_constraint_polynomial_degree
+    else:
+        mip_constraint_polynomial_degree = {0, 1}
     setattr(
         util_blk, 'linear_constraint_list', list(
             c for c in model.component_data_objects(
             ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() in (0, 1)))
+            if c.body.polynomial_degree() in mip_constraint_polynomial_degree))
     setattr(
         util_blk, 'nonlinear_constraint_list', list(
             c for c in model.component_data_objects(
             ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() not in (0, 1)))
+            if c.body.polynomial_degree() not in mip_constraint_polynomial_degree))
+    setattr(
+        util_blk, 'disjunct_list', list(
+            model.component_data_objects(
+                ctype=Disjunct, active=True,
+                descend_into=(Block, Disjunct))))
+    setattr(
+        util_blk, 'disjunction_list', list(
+            model.component_data_objects(
+                ctype=Disjunction, active=True,
+                descend_into=(Disjunct, Block))))
+    setattr(
+        util_blk, 'objective_list', list(
+            model.component_data_objects(
+                ctype=Objective, active=True,
+                descend_into=(Block))))
+
+    # Identify the non-fixed variables in (potentially) active constraints and
+    # objective functions
+    for constr in getattr(util_blk, 'constraint_list'):
+        for v in EXPR.identify_variables(constr.body, include_fixed=False):
+            var_set.add(v)
+    for obj in model.component_data_objects(ctype=Objective, active=True):
+        for v in EXPR.identify_variables(obj.expr, include_fixed=False):
+            var_set.add(v)
+    # Disjunct indicator variables might not appear in active constraints. In
+    # fact, if we consider them Logical variables, they should not appear in
+    # active algebraic constraints. For now, they need to be added to the
+    # variable set.
+    for disj in getattr(util_blk, 'disjunct_list'):
+        var_set.add(disj.binary_indicator_var)
+
+    # We use component_data_objects rather than list(var_set) in order to
+    # preserve a deterministic ordering.
+    var_list = list(
+        v for v in model.component_data_objects(
+            ctype=Var, descend_into=(Block, Disjunct))
+        if v in var_set)
+    setattr(util_blk, 'variable_list', var_list)
+    discrete_variable_list = list(
+        v for v in model.component_data_objects(
+            ctype=Var, descend_into=(Block, Disjunct))
+        if v in var_set and v.is_integer())
+    setattr(util_blk, 'discrete_variable_list', discrete_variable_list)
+    continuous_variable_list = list(
+        v for v in model.component_data_objects(
+            ctype=Var, descend_into=(Block, Disjunct))
+        if v in var_set and v.is_continuous())
+    setattr(util_blk, 'continuous_variable_list', continuous_variable_list)
+
+def setup_results_object(solve_data, config):
+    """Record problem statistics for original model."""
+    # Create the solver results object
+    res = solve_data.results
+    prob = res.problem
+    res.problem.name = solve_data.original_model.name
+    res.problem.number_of_nonzeros = None  # TODO
+    # TODO work on termination condition and message
+    res.solver.termination_condition = None
+    res.solver.message = None
+    res.solver.user_time = None
+    res.solver.system_time = None
+    res.solver.wallclock_time = None
+    res.solver.termination_message = None
+
+    num_of = build_model_size_report(solve_data.original_model)
+
+    # Get count of constraints and variables
+    prob.number_of_constraints = num_of.activated.constraints
+    prob.number_of_disjunctions = num_of.activated.disjunctions
+    prob.number_of_variables = num_of.activated.variables
+    prob.number_of_binary_variables = num_of.activated.binary_variables
+    prob.number_of_continuous_variables = num_of.activated.continuous_variables
+    prob.number_of_integer_variables = num_of.activated.integer_variables
+
+    config.logger.info(
+        "Original model has %s constraints (%s nonlinear) "
+        "and %s disjunctions, "
+        "with %s variables, of which %s are binary, %s are integer, "
+        "and %s are continuous." %
+        (num_of.activated.constraints,
+         num_of.activated.nonlinear_constraints,
+         num_of.activated.disjunctions,
+         num_of.activated.variables,
+         num_of.activated.binary_variables,
+         num_of.activated.integer_variables,
+         num_of.activated.continuous_variables))
+
+def process_objective(solve_data, config, move_objective=False,
+                      use_mcpp=False, update_var_con_list=True,
+                      partition_nonlinear_terms=True,
+                      obj_handleable_polynomial_degree={0, 1},
+                      constr_handleable_polynomial_degree={0, 1}):
+    """Process model objective function.
+    Check that the model has only 1 valid objective.
+    If the objective is nonlinear, move it into the constraints.
+    If no objective function exists, emit a warning and create a dummy 
+    objective.
+    Parameters
+    ----------
+    solve_data (GDPoptSolveData): solver environment data class
+    config (ConfigBlock): solver configuration options
+    move_objective (bool): if True, move even linear
+        objective functions to the constraints
+    update_var_con_list (bool): if True, the variable/constraint/objective lists will not be updated. 
+        This arg is set to True by default. Currently, update_var_con_list will be set to False only when
+        add_regularization is not None in MindtPy.
+    partition_nonlinear_terms (bool): if True, partition sum of nonlinear terms in the objective function.
+    """
+    m = solve_data.working_model
+    util_blk = getattr(m, solve_data.util_block_name)
+    # Handle missing or multiple objectives
+    active_objectives = list(m.component_data_objects(
+        ctype=Objective, active=True, descend_into=True))
+    solve_data.results.problem.number_of_objectives = len(active_objectives)
+    if len(active_objectives) == 0:
+        config.logger.warning(
+            'Model has no active objectives. Adding dummy objective.')
+        util_blk.dummy_objective = Objective(expr=1)
+        main_obj = util_blk.dummy_objective
+    elif len(active_objectives) > 1:
+        raise ValueError('Model has multiple active objectives.')
+    else:
+        main_obj = active_objectives[0]
+    solve_data.results.problem.sense = ProblemSense.minimize if \
+                                       main_obj.sense == 1 else \
+                                       ProblemSense.maximize
+    solve_data.objective_sense = main_obj.sense
+
+    # Move the objective to the constraints if it is nonlinear or move_objective is True.
+    if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or move_objective:
+        if move_objective:
+            config.logger.info("Moving objective to constraint set.")
+        else:
+            config.logger.info(
+                "Objective is nonlinear. Moving it to constraint set.")
+        util_blk.objective_value = VarList(domain=Reals, initialize=0)
+        util_blk.objective_constr = ConstraintList()
+        if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
+            repn = generate_standard_repn(main_obj.expr, quadratic=2 in obj_handleable_polynomial_degree)
+            # the following code will also work if linear_subexpr is a constant.
+            linear_subexpr = repn.constant + sum(coef*var for coef, var in zip(repn.linear_coefs, repn.linear_vars)) \
+                + sum(coef*var1*var2 for coef, (var1, var2) in zip(repn.quadratic_coefs, repn.quadratic_vars))
+            # only need to generate one epigraph constraint for the sum of all linear terms and constant
+            epigraph_reformulation(linear_subexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+            nonlinear_subexpr = repn.nonlinear_expr
+            if nonlinear_subexpr.__class__ is EXPR.SumExpression:
+                for subsubexpr in nonlinear_subexpr.args:
+                    epigraph_reformulation(subsubexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+            else:
+                epigraph_reformulation(nonlinear_subexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+        else:
+            epigraph_reformulation(main_obj.expr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
+
+        main_obj.deactivate()
+        util_blk.objective = Objective(expr=sum(util_blk.objective_value[:]), sense=main_obj.sense)
+
+        if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or \
+           (move_objective and update_var_con_list):
+            util_blk.variable_list.extend(util_blk.objective_value[:])
+            util_blk.continuous_variable_list.extend(util_blk.objective_value[:])
+            util_blk.constraint_list.extend(util_blk.objective_constr[:])
+            util_blk.objective_list.append(util_blk.objective)
+            for constr in util_blk.objective_constr[:]:
+                if constr.body.polynomial_degree() in constr_handleable_polynomial_degree:
+                    util_blk.linear_constraint_list.append(constr)
+                else:
+                    util_blk.nonlinear_constraint_list.append(constr)
+
+def build_ordered_component_lists(model, solve_data):
+    """Define lists used for future data transfer.
+
+    Also attaches ordered lists of the variables, constraints, disjuncts, and
+    disjunctions to the model so that they can be used for mapping back and
+    forth.
+
+    """
+    util_blk = getattr(model, solve_data.util_block_name)
+    var_set = ComponentSet()
+    setattr(
+        util_blk, 'constraint_list', list(
+            model.component_data_objects(
+                ctype=Constraint, active=True,
+                descend_into=(Block, Disjunct))))
+    if hasattr(solve_data,'mip_constraint_polynomial_degree'):
+        mip_constraint_polynomial_degree = solve_data.mip_constraint_polynomial_degree
+    else:
+        mip_constraint_polynomial_degree = {0, 1}
+    setattr(
+        util_blk, 'linear_constraint_list', list(
+            c for c in model.component_data_objects(
+            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree() in mip_constraint_polynomial_degree))
+    setattr(
+        util_blk, 'nonlinear_constraint_list', list(
+            c for c in model.component_data_objects(
+            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+            if c.body.polynomial_degree() not in mip_constraint_polynomial_degree))
     setattr(
         util_blk, 'disjunct_list', list(
             model.component_data_objects(
@@ -1058,124 +1272,3 @@ def create_utility_block(model, name, solve_data):
     yield
     if created_util_block:
         model.del_component(name)
-
-def setup_results_object(solve_data, config):
-    """Record problem statistics for original model."""
-    # Create the solver results object
-    res = solve_data.results
-    prob = res.problem
-    res.problem.name = solve_data.original_model.name
-    res.problem.number_of_nonzeros = None  # TODO
-    # TODO work on termination condition and message
-    res.solver.termination_condition = None
-    res.solver.message = None
-    res.solver.user_time = None
-    res.solver.system_time = None
-    res.solver.wallclock_time = None
-    res.solver.termination_message = None
-
-    num_of = build_model_size_report(solve_data.original_model)
-
-    # Get count of constraints and variables
-    prob.number_of_constraints = num_of.activated.constraints
-    prob.number_of_disjunctions = num_of.activated.disjunctions
-    prob.number_of_variables = num_of.activated.variables
-    prob.number_of_binary_variables = num_of.activated.binary_variables
-    prob.number_of_continuous_variables = num_of.activated.continuous_variables
-    prob.number_of_integer_variables = num_of.activated.integer_variables
-
-    config.logger.info(
-        "Original model has %s constraints (%s nonlinear) "
-        "and %s disjunctions, "
-        "with %s variables, of which %s are binary, %s are integer, "
-        "and %s are continuous." %
-        (num_of.activated.constraints,
-         num_of.activated.nonlinear_constraints,
-         num_of.activated.disjunctions,
-         num_of.activated.variables,
-         num_of.activated.binary_variables,
-         num_of.activated.integer_variables,
-         num_of.activated.continuous_variables))
-
-
-# ESJ: planning on abandoning this function
-def process_objective(solve_data, config, move_linear_objective=False,
-                      use_mcpp=False, update_var_con_list=True,
-                      partition_nonlinear_terms=True):
-    """Process model objective function.
-
-    Check that the model has only 1 valid objective.
-    If the objective is nonlinear, move it into the constraints.
-    If no objective function exists, emit a warning and create a dummy 
-    objective.
-
-    Parameters
-    ----------
-    solve_data (GDPoptSolveData): solver environment data class
-    config (ConfigBlock): solver configuration options
-    move_linear_objective (bool): if True, move even linear
-        objective functions to the constraints
-    update_var_con_list (bool): if True, the variable/constraint/objective lists will not be updated. 
-        This arg is set to True by default. Currently, update_var_con_list will be set to False only when
-        add_regularization is not None in MindtPy.
-    partition_nonlinear_terms (bool): if True, partition sum of nonlinear terms in the objective function.
-
-    """
-    m = solve_data.working_model
-    util_blk = getattr(m, solve_data.util_block_name)
-    # Handle missing or multiple objectives
-    active_objectives = list(m.component_data_objects(
-        ctype=Objective, active=True, descend_into=True))
-    solve_data.results.problem.number_of_objectives = len(active_objectives)
-    if len(active_objectives) == 0:
-        config.logger.warning(
-            'Model has no active objectives. Adding dummy objective.')
-        util_blk.dummy_objective = Objective(expr=1)
-        main_obj = util_blk.dummy_objective
-    elif len(active_objectives) > 1:
-        raise ValueError('Model has multiple active objectives.')
-    else:
-        main_obj = active_objectives[0]
-    solve_data.results.problem.sense = ProblemSense.minimize if \
-                                       main_obj.sense == 1 else \
-                                       ProblemSense.maximize
-    solve_data.objective_sense = main_obj.sense
-
-    # Move the objective to the constraints if it is nonlinear or move_linear_objective is True.
-    if main_obj.expr.polynomial_degree() not in (1, 0) or move_linear_objective:
-        if move_linear_objective:
-            config.logger.info("Moving objective to constraint set.")
-        else:
-            config.logger.info(
-                "Objective is nonlinear. Moving it to constraint set.")
-        util_blk.objective_value = VarList(domain=Reals, initialize=0)
-        util_blk.objective_constr = ConstraintList()
-        if main_obj.expr.polynomial_degree() not in (1, 0) and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
-            repn = generate_standard_repn(main_obj.expr, quadratic=False)
-            # the following code will also work if linear_subexpr is a constant.
-            linear_subexpr = repn.constant + sum(coef*var for coef, var in zip(repn.linear_coefs, repn.linear_vars))
-            # only need to generate one epigraph constraint for the sum of all linear terms and constant
-            epigraph_reformulation(linear_subexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
-            nonlinear_subexpr = repn.nonlinear_expr
-            if nonlinear_subexpr.__class__ is EXPR.SumExpression:
-                for subsubexpr in nonlinear_subexpr.args:
-                    epigraph_reformulation(subsubexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
-            else:
-                epigraph_reformulation(nonlinear_subexpr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
-        else:
-            epigraph_reformulation(main_obj.expr, util_blk.objective_value, util_blk.objective_constr, use_mcpp, main_obj.sense)
-
-        main_obj.deactivate()
-        util_blk.objective = Objective(expr=sum(util_blk.objective_value[:]), sense=main_obj.sense)
-
-        if main_obj.expr.polynomial_degree() not in (1, 0) or \
-           (move_linear_objective and update_var_con_list):
-            util_blk.variable_list.extend(util_blk.objective_value[:])
-            util_blk.continuous_variable_list.extend(util_blk.objective_value[:])
-            util_blk.constraint_list.extend(util_blk.objective_constr[:])
-            util_blk.objective_list.append(util_blk.objective)
-            for constr in util_blk.objective_constr[:]:
-                if constr.body.polynomial_degree() in (0, 1):
-                    util_blk.linear_constraint_list.append(constr)
-                else:
-                    util_blk.nonlinear_constraint_list.append(constr)
