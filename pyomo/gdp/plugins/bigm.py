@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -19,7 +20,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
-    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var, 
+    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, value, RangeSet,
     NonNegativeIntegers, LogicalConstraint, Binary, )
 from pyomo.core.base.boolean_var import (
@@ -29,7 +30,7 @@ from pyomo.core.base import Transformation, TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
-    is_child_of, get_src_disjunction, get_src_constraint, 
+    is_child_of, get_src_disjunction, get_src_constraint,
     get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
     _warn_for_active_disjunction, _warn_for_active_disjunct, preprocess_targets,
     _to_dict)
@@ -40,8 +41,6 @@ from functools import wraps
 from weakref import ref as weakref_ref, ReferenceType
 
 logger = logging.getLogger('pyomo.gdp.bigm')
-
-NAME_BUFFER = {}
 
 @TransformationFactory.register('gdp.bigm', doc="Relax disjunctive model using "
                                 "big-M terms.")
@@ -194,7 +193,6 @@ class BigM_Transformation(Transformation):
         return arg_list
 
     def _apply_to(self, instance, **kwds):
-        assert not NAME_BUFFER
         self._generate_debug_messages = is_debug_set(logger)
         self.used_args = ComponentMap() # If everything was sure to go well,
                                         # this could be a dictionary. But if
@@ -205,8 +203,6 @@ class BigM_Transformation(Transformation):
         try:
             self._apply_to_impl(instance, **kwds)
         finally:
-            # Clear the global name buffer now that we are done
-            NAME_BUFFER.clear()
             # same for our bookkeeping about what we used from bigM arg dict
             self.used_args.clear()
 
@@ -324,7 +320,7 @@ class BigM_Transformation(Transformation):
         #    nm = '_xor' if xor else '_or'
         nm = '_xor'
         orCname = unique_component_name( transBlock, disjunction.getname(
-            fully_qualified=True, name_buffer=NAME_BUFFER) + nm)
+            fully_qualified=True) + nm)
         transBlock.add_component(orCname, orC)
         disjunction._algebraic_constraint = weakref_ref(orC)
 
@@ -376,8 +372,7 @@ class BigM_Transformation(Transformation):
         if len(obj.disjuncts) == 0:
             raise GDP_Error("Disjunction '%s' is empty. This is "
                             "likely indicative of a modeling error."  %
-                            obj.getname(fully_qualified=True,
-                                        name_buffer=NAME_BUFFER))
+                            obj.getname(fully_qualified=True))
         for disjunct in obj.disjuncts:
             or_expr += disjunct.binary_indicator_var
             # make suffix list. (We don't need it until we are
@@ -519,8 +514,7 @@ class BigM_Transformation(Transformation):
         varRefBlock = disjunctBlock.localVarReferences
         for v in block.component_objects(Var, descend_into=Block, active=None):
             varRefBlock.add_component(unique_component_name(
-                varRefBlock, v.getname(fully_qualified=True,
-                                       name_buffer=NAME_BUFFER)), Reference(v))
+                varRefBlock, v.getname(fully_qualified=True)), Reference(v))
 
         # Now look through the component map of block and transform everything
         # we have a handler for. Yell if we don't know how to handle it. (Note
@@ -570,16 +564,15 @@ class BigM_Transformation(Transformation):
 
     def _warn_for_active_disjunction(self, disjunction, disjunct, bigMargs,
                                      arg_list, suffix_list):
-        _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER)
+        _warn_for_active_disjunction(disjunction, disjunct)
 
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, bigMargs,
                                   arg_list, suffix_list):
-        _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER)
+        _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
 
     def _warn_for_active_logical_statement(
             self, logical_statment, disjunct, infodict, bigMargs, suffix_list):
-        _warn_for_active_logical_constraint(logical_statment, disjunct,
-                                            NAME_BUFFER)
+        _warn_for_active_logical_constraint(logical_statment, disjunct)
 
     def _transform_block_on_disjunct(self, block, disjunct, bigMargs, arg_list,
                                      suffix_list):
@@ -631,7 +624,7 @@ class BigM_Transformation(Transformation):
         # Though rare, it is possible to get naming conflicts here
         # since constraints from all blocks are getting moved onto the
         # same block. So we get a unique name
-        cons_name = obj.getname(fully_qualified=True, name_buffer=NAME_BUFFER)
+        cons_name = obj.getname(fully_qualified=True)
         name = unique_component_name(transBlock, cons_name)
 
         if obj.is_indexed():
@@ -663,8 +656,7 @@ class BigM_Transformation(Transformation):
             M = (lower[0], upper[0])
 
             if self._generate_debug_messages:
-                _name = obj.getname(
-                    fully_qualified=True, name_buffer=NAME_BUFFER)
+                _name = obj.getname(fully_qualified=True)
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "
                              "from the BigM argument is %s." % (cons_name,
                                                                 str(M)))
@@ -683,8 +675,7 @@ class BigM_Transformation(Transformation):
                 M = (lower[0], upper[0])
 
             if self._generate_debug_messages:
-                _name = obj.getname(
-                    fully_qualified=True, name_buffer=NAME_BUFFER)
+                _name = obj.getname(fully_qualified=True)
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "
                              "after checking suffixes is %s." % (cons_name,
                                                                  str(M)))
@@ -697,8 +688,7 @@ class BigM_Transformation(Transformation):
                 upper = (M[1], None, None)
 
             if self._generate_debug_messages:
-                _name = obj.getname(
-                    fully_qualified=True, name_buffer=NAME_BUFFER)
+                _name = obj.getname(fully_qualified=True)
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "
                              "after estimating (if needed) is %s." %
                              (cons_name, str(M)))
@@ -770,8 +760,7 @@ class BigM_Transformation(Transformation):
         # None
         need_lower = constraint.lower is not None
         need_upper = constraint.upper is not None
-        constraint_name = constraint.getname(fully_qualified=True,
-                                             name_buffer=NAME_BUFFER)
+        constraint_name = constraint.getname(fully_qualified=True)
 
         # check for the constraint itself and its container
         parent = constraint.parent_component()
@@ -832,8 +821,7 @@ class BigM_Transformation(Transformation):
         # looking for half the answer.
         need_lower = constraint.lower is not None and lower[0] is None
         need_upper = constraint.upper is not None and upper[0] is None
-        constraint_name = constraint.getname(fully_qualified=True,
-                                             name_buffer=NAME_BUFFER)
+        constraint_name = constraint.getname(fully_qualified=True)
         M = None
         # first we check if the constraint or its parent is a key in any of the
         # suffix lists

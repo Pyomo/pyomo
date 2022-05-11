@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -104,7 +105,6 @@ def apply_basic_step(disjunctions_or_constraints):
     # Link the new disjunct indicator_var's to the original
     # indicator_var's.  Since only one of the new
     #
-    NAME_BUFFER = {}
     ans.indicator_links = ConstraintList()
     for i in ans.DISJUNCTIONS:
         for j in range(len(disjunctions[i].disjuncts)):
@@ -117,8 +117,7 @@ def apply_basic_step(disjunctions_or_constraints):
                      if (idx[i] if isinstance(idx, tuple) else idx) == j ))
             # and throw on a Reference to original on the block
             for v in (orig_var, orig_binary_var):
-                name_base = v.getname(
-                    fully_qualified=True, name_buffer=NAME_BUFFER)
+                name_base = v.getname(fully_qualified=True)
                 ans.add_component(unique_component_name( ans, name_base),
                                   Reference(v))
 

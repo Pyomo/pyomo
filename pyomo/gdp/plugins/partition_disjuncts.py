@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -44,8 +45,6 @@ from math import floor
 
 import logging
 logger = logging.getLogger('pyomo.gdp.partition_disjuncts')
-
-NAME_BUFFER = {}
 
 def _generate_additively_separable_repn(nonlinear_part):
     if nonlinear_part.__class__ is not EXPR.SumExpression:
@@ -334,7 +333,6 @@ class PartitionDisjuncts_Transformation(Transformation):
                             "the case of nested disjunctions)." %
                             (instance.name, instance.ctype))
         try:
-            assert not NAME_BUFFER
             self._config = self.CONFIG(kwds.pop('options', {}))
             self._config.set_value(kwds)
             self._transformation_blocks = {}
@@ -360,8 +358,6 @@ class PartitionDisjuncts_Transformation(Transformation):
 
             del self._config
             del self._transformation_blocks
-            # clear the global name buffer
-            NAME_BUFFER.clear()
 
     def _apply_to_impl(self, instance):
         self.variable_partitions = self._config.variable_partitions if \
@@ -377,15 +373,13 @@ class PartitionDisjuncts_Transformation(Transformation):
                 Constraint, active=True, descend_into=Block,
                 sort=SortComponents.deterministic):
             global_constraints.add_component(unique_component_name(
-                global_constraints, cons.getname(fully_qualified=True,
-                                                 name_buffer=NAME_BUFFER)),
+                global_constraints, cons.getname(fully_qualified=True)),
                                              Reference(cons))
         for var in instance.component_objects(
                 Var, descend_into=(Block, Disjunct),
                 sort=SortComponents.deterministic):
             global_constraints.add_component(unique_component_name(
-                global_constraints, var.getname(fully_qualified=True,
-                                                name_buffer=NAME_BUFFER)),
+                global_constraints, var.getname(fully_qualified=True)),
                                              Reference(var))
         self._global_constraints = global_constraints
 
@@ -464,8 +458,7 @@ class PartitionDisjuncts_Transformation(Transformation):
         if len(obj.disjuncts) == 0:
             raise GDP_Error("Disjunction '%s' is empty. This is "
                             "likely indicative of a modeling error."  %
-                            obj.getname(fully_qualified=True,
-                                        name_buffer=NAME_BUFFER))
+                            obj.getname(fully_qualified=True))
 
         if transBlock is None and transformed_parent_disjunct is not None:
             transBlock = self._get_transformation_block(
@@ -531,8 +524,7 @@ class PartitionDisjuncts_Transformation(Transformation):
                                                     transformed_disjuncts])
         transBlock.add_component(
             unique_component_name(transBlock,
-                                  obj.getname(fully_qualified=True,
-                                              name_buffer=NAME_BUFFER)),
+                                  obj.getname(fully_qualified=True)),
             transformed_disjunction)
         obj._algebraic_constraint = weakref_ref(transformed_disjunction)
 
@@ -578,10 +570,9 @@ class PartitionDisjuncts_Transformation(Transformation):
 
         transformed_disjunct = Disjunct()
         disjunct._transformation_block = weakref_ref(transformed_disjunct)
-        transBlock.add_component(unique_component_name(
-            transBlock,
-            disjunct.getname(fully_qualified=True, name_buffer=NAME_BUFFER)),
-                                 transformed_disjunct)
+        transBlock.add_component(
+            unique_component_name(transBlock, disjunct.getname(
+                fully_qualified=True)), transformed_disjunct)
         # If the original has an indicator_var fixed to something, fix this one
         # too.
         if disjunct.indicator_var.fixed:
@@ -606,8 +597,7 @@ class PartitionDisjuncts_Transformation(Transformation):
         for var in disjunct.component_objects(Var, descend_into=Block,
                                               active=None):
             transformed_disjunct.add_component(unique_component_name(
-                transformed_disjunct, var.getname(fully_qualified=True,
-                                                  name_buffer=NAME_BUFFER)),
+                transformed_disjunct, var.getname(fully_qualified=True)),
                                            Reference(var))
 
         # Since this transformation is GDP -> GDP and it is based on
@@ -658,8 +648,7 @@ class PartitionDisjuncts_Transformation(Transformation):
     def _transform_constraint(self, cons, disjunct, transformed_disjunct,
                               transBlock, partition):
         instance = disjunct.model()
-        cons_name = cons.getname(fully_qualified=True,
-                                 name_buffer=NAME_BUFFER)
+        cons_name = cons.getname(fully_qualified=True)
 
         # create place on transformed Disjunct for the new constraint and
         # for the auxiliary variables
@@ -799,7 +788,7 @@ class PartitionDisjuncts_Transformation(Transformation):
     def _warn_for_active_disjunct(self, disjunct, parent_disjunct,
                                   transformed_parent_disjunct, transBlock,
                                   partition):
-        _warn_for_active_disjunct(disjunct, parent_disjunct, NAME_BUFFER)
+        _warn_for_active_disjunct(disjunct, parent_disjunct)
 
 # Add the CONFIG arguments to the transformation's docstring
 PartitionDisjuncts_Transformation.__doc__ = add_docstring_list(
