@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -796,6 +797,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         else:
             obj = self._data[index] = self._ComponentDataClass(component=self)
         parent = self.parent_block()
+        obj._index = index
         # We can directly set the attribute (not the property) because
         # the SetInitializer ensures that the value is a proper Set.
         obj._domain = self._rule_domain(parent, index)
@@ -803,7 +805,6 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
             obj.lower, obj.upper = self._rule_bounds(parent, index)
         if self._rule_init is not None:
             obj.set_value(self._rule_init(parent, index))
-        obj._index = index
         return obj
 
     #

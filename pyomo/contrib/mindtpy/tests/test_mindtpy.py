@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -178,6 +179,28 @@ class TestMindtPy(unittest.TestCase):
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
                                     add_no_good_cuts=True
+                                    )
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
+
+    @unittest.skipUnless(SolverFactory('cplex').available() or SolverFactory('gurobi').available(), 
+                         "CPLEX or GUROBI not available.")
+    def test_OA_quadratic_strategy(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = ProposalModel()
+            if SolverFactory('cplex').available():
+                mip_solver = 'cplex'
+            elif SolverFactory('gurobi').available():
+                mip_solver = 'gurobi'
+            for quadratic_strategy in (0, 1, 2):
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver=mip_solver,
+                                    nlp_solver=required_solvers[0],
+                                    quadratic_strategy=quadratic_strategy,
                                     )
 
                 self.assertIn(results.solver.termination_condition,

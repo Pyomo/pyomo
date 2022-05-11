@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -59,7 +60,6 @@ class ExpandArcs(Transformation):
             arc.deactivate()
 
     def _collect_ports(self, instance):
-        self._name_buffer = {}
         # List of the ports in the order in which we found them
         # (this should be deterministic, provided that the user's model
         # is deterministic)
@@ -199,8 +199,7 @@ class ExpandArcs(Transformation):
         if len(empty_or_partial) > 1:
             # This is expensive (names aren't cheap), but does result in
             # a deterministic ordering
-            empty_or_partial.sort(key=lambda x: x.getname(
-                fully_qualified=True, name_buffer=self._name_buffer))
+            empty_or_partial.sort(key=lambda x: x.getname(fully_qualified=True))
 
         # Fill in any empty ports
         for p in empty_or_partial:
@@ -210,8 +209,7 @@ class ExpandArcs(Transformation):
                     continue
 
                 vname = unique_component_name(
-                    block, '%s_auto_%s' % (p.getname(
-                        fully_qualified=True, name_buffer=self._name_buffer),k))
+                    block, '%s_auto_%s' % (p.getname(fully_qualified=True),k))
 
                 new_var = replicate_var(v[0], vname, block)
 

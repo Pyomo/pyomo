@@ -133,7 +133,6 @@ class IntervalTightener(PersistentBase):
         if self._symbolic_solver_labels:
             for c in cons:
                 self._symbol_map.removeSymbol(c)
-                self._con_labeler.remove_obj(c)
         for c in cons:
             cc = self._con_map.pop(c)
             self._cmodel.remove_constraint(cc)
@@ -147,7 +146,6 @@ class IntervalTightener(PersistentBase):
         if self._symbolic_solver_labels:
             for v in variables:
                 self._symbol_map.removeSymbol(v)
-                self._var_labeler.remove_obj(v)
         for v in variables:
             cvar = self._var_map.pop(id(v))
             del self._rvar_map[cvar]
@@ -156,7 +154,6 @@ class IntervalTightener(PersistentBase):
         if self._symbolic_solver_labels:
             for p in params:
                 self._symbol_map.removeSymbol(p)
-                self._param_labeler.remove_obj(p)
         for p in params:
             del self._param_map[id(p)]
 
@@ -173,7 +170,6 @@ class IntervalTightener(PersistentBase):
         if self._symbolic_solver_labels:
             if self._objective is not None:
                 self._symbol_map.removeSymbol(self._objective)
-                self._obj_labeler.remove_obj(self._objective)
         super().set_objective(obj)
 
     def _set_objective(self, obj: _GeneralObjectiveData):

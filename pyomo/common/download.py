@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -81,7 +82,7 @@ class FileDownloader(object):
                     dist = val
                 elif key == 'version_id':
                     ver = val
-        return cls._map_dist(dist), ver
+        return cls._map_linux_dist(dist), ver
 
     @classmethod
     def _get_distver_from_redhat_release(cls):
@@ -93,7 +94,7 @@ class FileDownloader(object):
                 if re.match(r'^[0-9\.]+', word):
                     ver = word
                     break
-        return cls._map_dist(dist), ver
+        return cls._map_linux_dist(dist), ver
 
     @classmethod
     def _get_distver_from_lsb_release(cls):
@@ -101,26 +102,37 @@ class FileDownloader(object):
                               stderr=subprocess.STDOUT, universal_newlines=True)
         ver = subprocess.run(['lsb_release', '-sr'], stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT, universal_newlines=True)
-        return cls._map_dist(dist.stdout.lower().strip()), ver.stdout.strip()
+        return cls._map_linux_dist(dist.stdout), ver.stdout.strip()
 
     @classmethod
     def _get_distver_from_distro(cls):
         return distro.id(), distro.version(best=True)
 
     @classmethod
-    def _map_dist(cls, dist):
-        dist = dist.lower()
-        _map = {
-            'centos': 'centos',
-            'redhat': 'rhel',
-            'red hat': 'rhel', # RHEL6 reports 'red hat enterprise'
-            'fedora': 'fedora',
-            'debian': 'debian',
-            'ubuntu': 'ubuntu',
-        }
+    def _map_linux_dist(cls, dist):
+        # Some distributions end up reporting longer strings or strings
+        # with spaces (e.g., RHEL6 reports 'red hat enterprise')
+        dist = dist.lower().strip().replace(' ', '')
+        _map = [
+            ('redhat', 'rhel'),
+            'fedora',
+            'ubuntu', # implicitly maps kubuntu / xubuntu
+            'debian',
+            # Additional RHEL (Fedora) spins
+            'centos',
+            'rocky',
+            'almalinux',
+            'scientific',
+            # Additional Ubuntu (Debian) spins
+            'linuxmint',
+        ]
         for key in _map:
+            if key.__class__ is tuple:
+                key, val = key
+            else:
+                val = key
             if key in dist:
-                return _map[key]
+                return val
         return dist
 
     @classmethod
@@ -176,7 +188,13 @@ class FileDownloader(object):
 
         _os, _ver = FileDownloader._os_version
         _map = {
+            'almalinux': 'rhel',
             'centos': 'rhel',
+            'rocky': 'rhel',
+            'scientific': 'rhel',
+            'kubuntu': 'ubuntu',
+            'linuxmint': 'ubuntu',
+            'xubuntu': 'ubuntu',
         }
         if _os in _map:
             _os = _map[_os]

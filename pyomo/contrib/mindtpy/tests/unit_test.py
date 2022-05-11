@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -67,7 +68,7 @@ class TestMindtPy(unittest.TestCase):
             MindtPy = solve_data.working_model.MindtPy_utils
             setup_results_object(solve_data, config)
             process_objective(solve_data, config,
-                              move_linear_objective=(config.init_strategy == 'FP'
+                              move_objective=(config.init_strategy == 'FP'
                                                      or config.add_regularization is not None),
                               use_mcpp=config.use_mcpp,
                               update_var_con_list=config.add_regularization is None
@@ -363,7 +364,7 @@ class TestMindtPy(unittest.TestCase):
             config.add_no_good_cuts = False
             config.use_tabu_list = True
             check_config(config)
-            self.assertIs(config.init_strategy, 'FP')
+            self.assertEqual(config.init_strategy, 'FP')
             self.assertEqual(config.iteration_limit, 0)
             self.assertEqual(config.add_no_good_cuts, True)
             self.assertEqual(config.use_tabu_list, False)
