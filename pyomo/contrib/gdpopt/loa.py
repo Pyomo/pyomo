@@ -25,7 +25,7 @@ from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
     _fix_master_soln_solve_subproblem_and_add_cuts)
 from pyomo.contrib.gdpopt.util import (
-    time_code, lower_logger_level_to, _add_bigm_constraint_to_transformed_model)
+    time_code, _add_bigm_constraint_to_transformed_model)
 
 from pyomo.core import (
     Block, Constraint, minimize, NonNegativeIntegers, NonNegativeReals,
@@ -34,7 +34,6 @@ from pyomo.core.expr import differentiate
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.gdp import Disjunct
 from pyomo.opt.base import SolverFactory
-from pyomo.opt import TerminationCondition
 from pyomo.repn import generate_standard_repn
 import logging
 
@@ -72,22 +71,9 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
 
-        with time_code(self.timing, 'total', is_main_timer=True), \
-            lower_logger_level_to(config.logger, tee=config.tee):
-            results = super().solve(model, config)
-            if results:
-                return results
-            else:
-                self._solve_gdp_with_loa(model, config)
+        return super().solve(model, config)
 
-        self._get_final_pyomo_results_object()
-        self._log_termination_message(config.logger)
-        if self.pyomo_results.solver.termination_condition not in \
-           {TerminationCondition.infeasible, TerminationCondition.unbounded}:
-            self._transfer_incumbent_to_original_model(config.logger)
-        return self.pyomo_results
-
-    def _solve_gdp_with_loa(self, original_model, config):
+    def _solve_gdp(self, original_model, config):
         logger = config.logger
 
         # We'll need these to get dual info after solving subproblems

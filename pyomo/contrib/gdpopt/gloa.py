@@ -23,7 +23,7 @@ from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
     _fix_master_soln_solve_subproblem_and_add_cuts)
 from pyomo.contrib.gdpopt.util import (
-    _add_bigm_constraint_to_transformed_model, lower_logger_level_to,
+    _add_bigm_constraint_to_transformed_model,
     move_nonlinear_objective_to_constraints, time_code)
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
@@ -31,7 +31,6 @@ from pyomo.core import (
     Constraint, Block, Expression, NonNegativeIntegers, Objective,
     SortComponents, TransformationFactory, value)
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.opt import TerminationCondition
 from pyomo.opt.base import SolverFactory
 import logging
 from math import fabs
@@ -66,22 +65,9 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
 
-        with time_code(self.timing, 'total', is_main_timer=True), \
-            lower_logger_level_to(config.logger, tee=config.tee):
-            results = super().solve(model, config)
-            if results:
-                return results
-            else:
-                self._solve_gdp_with_gloa(model, config)
+        return super().solve(model, config)
 
-        self._get_final_pyomo_results_object()
-        self._log_termination_message(config.logger)
-        if self.pyomo_results.solver.termination_condition not in \
-           {TerminationCondition.infeasible, TerminationCondition.unbounded}:
-            self._transfer_incumbent_to_original_model(config.logger)
-        return self.pyomo_results
-
-    def _solve_gdp_with_gloa(self, original_model, config):
+    def _solve_gdp(self, original_model, config):
         logger = config.logger
 
         # we need to gather a map of Disjuncts to their active Constraints

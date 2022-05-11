@@ -11,7 +11,8 @@ from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block, add_disjunct_list, add_boolean_variable_lists,
     add_algebraic_variable_list)
 from pyomo.contrib.gdpopt.util import (
-    a_logger, get_main_elapsed_time, solve_continuous_problem)
+    a_logger, get_main_elapsed_time, lower_logger_level_to,
+    solve_continuous_problem, time_code)
 from pyomo.core.base import Objective, value, minimize, maximize
 from pyomo.opt import SolverResults
 from pyomo.opt import TerminationCondition as tc
@@ -98,7 +99,7 @@ class _GDPoptAlgorithm(object):
                 'Iteration', 'Subproblem Type', 'Lower Bound', 'Upper Bound',
                 ' Gap ', 'Time(s)'))
 
-    def solve(self, model, config):
+    def _prepare_for_solve(self, model, config):
         """Solve the model.
 
         Args:
@@ -107,7 +108,6 @@ class _GDPoptAlgorithm(object):
         """
         # set up the logger so that we will have a pretty log printed
         logger = config.logger
-
         self._log_solver_intro_message(config)
 
         if self.CONFIG.algorithm is not None and \
@@ -149,6 +149,24 @@ class _GDPoptAlgorithm(object):
         add_boolean_variable_lists(util_block)
         # To transfer solutions between cloned models
         add_algebraic_variable_list(util_block)
+
+    def solve(self, model, config):
+        with lower_logger_level_to(config.logger, tee=config.tee):
+            with time_code(self.timing, 'total', is_main_timer=True):
+                results = self._prepare_for_solve(model, config)
+                # If it wasn't disjunctive, we solved it
+                if results:
+                    return results
+                else:
+                    # main loop implemented by each algorithm
+                    self._solve_gdp(model, config)
+
+            self._get_final_pyomo_results_object()
+            self._log_termination_message(config.logger)
+            if (self.pyomo_results.solver.termination_condition not in
+                {tc.infeasible, tc.unbounded}):
+                self._transfer_incumbent_to_original_model(config.logger)
+        return self.pyomo_results
 
     def _update_bounds_after_solve(self, subprob_nm, primal=None, dual=None,
                                    logger=None):

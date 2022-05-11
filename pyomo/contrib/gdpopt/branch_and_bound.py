@@ -63,13 +63,9 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
         config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
 
-        super().solve(model, config)
-        min_logging_level = logging.INFO if config.tee else None
-        with time_code(self.timing, 'total', is_main_timer=True), \
-            lower_logger_level_to(config.logger, min_logging_level):
-            return self._perform_branch_and_bound(model, config)
+        return super().solve(model, config)
 
-    def _perform_branch_and_bound(self, model, config):
+    def _solve_gdp(self, model, config):
         self.explored_nodes = 0
 
         # Create utility block on the original model so that we will be able to
