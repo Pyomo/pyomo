@@ -33,12 +33,12 @@ Usage of GDPopt to solve a Pyomo.GDP concrete model involves:
 
 .. code::
 
-  >>> SolverFactory('gdpopt').solve(model)
+  >>> SolverFactory('gdpopt', algorithm='LOA').solve(model)
 
 .. note::
 
-  By default, GDPopt uses the GDPopt-LOA strategy.
-  Other strategies may be used by specifying the ``strategy`` argument during ``solve()``.
+  In the above example, GDPopt uses the GDPopt-LOA strategy.
+  Other strategies may be used by specifying them in the ``algorithm`` argument as shown above.
   All GDPopt options are listed below.
 
 Logic-based Outer Approximation
@@ -49,7 +49,7 @@ Logic-based Outer Approximation
 .. image:: gdpopt_flowchart.png
     :scale: 70%
 
-An example which includes the modeling approach may be found below.
+An example that includes the modeling approach may be found below.
 
 .. doctest::
   :skipif: not glpk_available
@@ -75,8 +75,8 @@ An example which includes the modeling approach may be found below.
   >>> model.objective = Objective(expr=model.x + 0.1*model.y, sense=minimize)
 
   Solve the model using GDPopt
-  >>> results = SolverFactory('gdpopt').solve(
-  ...     model, strategy='LOA', mip_solver='glpk') # doctest: +IGNORE_RESULT
+  >>> results = SolverFactory('gdpopt', algorithm='LOA').solve(
+  ...     model, mip_solver='glpk') # doctest: +IGNORE_RESULT
 
   Display the final solution
   >>> model.display()
@@ -107,7 +107,7 @@ An example which includes the modeling approach may be found below.
 
 .. code::
 
-  >>> SolverFactory('gdpopt').solve(model, tee=True)
+  >>> SolverFactory('gdpopt', algorithm='LOA').solve(model, tee=True)
 
 Logic-based Branch-and-Bound
 ----------------------------
@@ -139,7 +139,7 @@ To use the GDPopt-LBB solver, define your Pyomo GDP model as usual:
   >>> m.djn = Disjunction(expr=[m.y1, m.y2])
 
   Invoke the GDPopt-LBB solver
-  >>> results = SolverFactory('gdpopt').solve(m, strategy='LBB')
+  >>> results = SolverFactory('gdpopt', algorithm='LBB').solve(m)
 
   >>> print(results)  # doctest: +SKIP
   >>> print(results.solver.status)
