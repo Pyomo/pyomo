@@ -81,11 +81,8 @@ print details for a subcommand.  For example, type
 
 to print information about the `solve` subcommand.
 """
-_pyomo_parser = argparse.ArgumentParser(
-    description=doc, epilog=epilog, formatter_class=CustomHelpFormatter )
-_pyomo_parser.add_argument("--version", action="version", version=get_version())
-_pyomo_subparsers = _pyomo_parser.add_subparsers(
-    dest='subparser_name', title='subcommands' )
+_pyomo_parser = None
+_pyomo_subparsers = None
 
 subparsers = []
 
@@ -93,7 +90,9 @@ def add_subparser(name, **args):
     """
     Add a subparser to the 'pyomo' command.
     """
-    global subparsers
+    if _pyomo_subparsers is None:
+        get_parser()
+
     func = args.pop('func', None)
     parser = _pyomo_subparsers.add_parser(name, **args)
     subparsers.append(name)
@@ -105,5 +104,16 @@ def get_parser():
     """
     Return the parser used by the 'pyomo' commmand.
     """
+    global _pyomo_parser
+    if _pyomo_parser is None:
+        _pyomo_parser = argparse.ArgumentParser(
+            description=doc,
+            epilog=epilog,
+            formatter_class=CustomHelpFormatter
+        )
+        _pyomo_parser.add_argument(
+            "--version", action="version", version=get_version())
+        global _pyomo_subparsers
+        _pyomo_subparsers = _pyomo_parser.add_subparsers(
+            dest='subparser_name', title='subcommands' )
     return _pyomo_parser
-
