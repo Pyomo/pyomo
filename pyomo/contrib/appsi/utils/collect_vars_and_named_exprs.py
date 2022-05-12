@@ -1,9 +1,8 @@
 from pyomo.core.expr.visitor import ExpressionValueVisitor, nonpyomo_leaf_types
-from pyomo.common.collections import ComponentSet
 from pyomo.core.expr import current as _expr
 
 
-class _NamedExpressionVisitor(ExpressionValueVisitor):
+class _VarAndNamedExprCollector(ExpressionValueVisitor):
     def __init__(self):
         self.named_expressions = dict()
         self.variables = dict()
@@ -37,10 +36,10 @@ class _NamedExpressionVisitor(ExpressionValueVisitor):
         return True, None
 
 
-_visitor = _NamedExpressionVisitor()
+_visitor = _VarAndNamedExprCollector()
 
 
-def identify_named_expressions(expr):
+def collect_vars_and_named_exprs(expr):
     _visitor.__init__()
     _visitor.dfs_postorder_stack(expr)
     return (list(_visitor.named_expressions.values()),
