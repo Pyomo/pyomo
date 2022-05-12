@@ -34,8 +34,6 @@ from pyomo.core.expr.numvalue import is_potentially_variable
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.opt.base import SolverFactory
 
-from pytest import set_trace
-
 @SolverFactory.register(
     '_global_logic_based_oa',
     doc='GDP Global Logic-Based Outer Approximation (GLOA) solver')

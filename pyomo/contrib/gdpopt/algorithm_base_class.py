@@ -187,28 +187,31 @@ class _GDPoptAlgorithm(object):
 
         return primal_improved
 
-    def _update_bounds(self, primal=None, dual=None):
+    def _update_bounds(self, primal=None, dual=None, force_update=False):
         """
         Update bounds correctly depending on objective sense.
 
         primal: bound from solving subproblem with fixed master solution
         dual: bound from solving master problem (relaxation of original problem)
+        force_update: flag so this function will set the bound even if it's 
+                      not an improvement. (Used at termination if the bounds
+                      cross.)
         """
         oldLB = self.LB
         oldUB = self.UB
         primal_bound_improved = False
 
         if self.objective_sense is minimize:
-            if primal is not None and primal < oldUB:
+            if primal is not None and (primal < oldUB or force_update):
                 self.UB = primal
-                primal_bound_improved = True
-            if dual is not None and dual > oldLB:
+                primal_bound_improved = primal < oldUB
+            if dual is not None and (dual > oldLB or force_update):
                 self.LB = dual
         else:
-            if primal is not None and primal > oldLB:
+            if primal is not None and (primal > oldLB or force_update):
                 self.LB = primal
-                primal_bound_improved = True
-            if dual is not None and dual < oldUB:
+                primal_bound_improved = primal > oldLB
+            if dual is not None and (dual < oldUB or force_update):
                 self.UB = dual
 
         return primal_bound_improved
@@ -228,9 +231,10 @@ class _GDPoptAlgorithm(object):
     def _log_termination_message(self, logger):
         logger.info(
             '\nSolved in {} iterations and {:.5f} seconds\n'
-            'Optimal objective value {:.10f}'.format(
+            'Optimal objective value {:.10f}\n'
+            'Relative optimality gap {:.5f}%'.format(
                 self.iteration, get_main_elapsed_time(self.timing),
-                self.primal_bound()))
+                self.primal_bound(), self.relative_gap()))
 
     def primal_bound(self):
         if self.objective_sense is minimize:
@@ -289,9 +293,17 @@ class _GDPoptAlgorithm(object):
                 config.logger.info('GDPopt exiting--problem is infeasible.')
                 self.pyomo_results.solver.termination_condition = tc.infeasible
             else:
+                # if they've crossed, then the gap is actually 0: Update the
+                # dual (master problem) bound to be equal to the primal
+                # (subproblem) bound
+                if self.LB + config.bound_tolerance > self.UB:
+                    self._update_bounds(dual=self.primal_bound(),
+                                        force_update=True)
+                self._log_current_state(config.logger, '')
                 config.logger.info(
                     'GDPopt exiting--bounds have converged or crossed.')
                 self.pyomo_results.solver.termination_condition = tc.optimal
+                
             return True
         return False
 
