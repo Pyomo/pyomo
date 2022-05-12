@@ -61,7 +61,7 @@ class SuppressInfeasibleWarning(object):
         def filter(self, record):
             return not record.getMessage().startswith(
                 "Loading a SolverResults object with a warning status into "
-                "model=")
+                "model")
 
     warning_filter = InfeasibleWarningFilter()
 
