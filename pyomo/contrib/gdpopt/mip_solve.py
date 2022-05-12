@@ -130,18 +130,18 @@ def solve_MILP_master_problem(util_block, config, timing):
         return tc.feasible
     elif terminate_cond is tc.infeasible:
         config.logger.info(
-            'Linear GDP is now infeasible. '
+            'MILP master problem is now infeasible. '
             'GDPopt has finished exploring feasible discrete configurations.')
         return tc.infeasible
     elif terminate_cond is tc.maxTimeLimit:
         if len(results.solution) > 0:
             config.logger.info(
-                'Unable to optimize linear GDP problem within time limit. '
+                'Unable to optimize MILP master problem within time limit. '
                 'Using current solver feasible solution.')
             return tc.feasible
         else:
             config.logger.info(
-                'Unable to optimize linear GDP problem within time limit. '
+                'Unable to optimize MILP master problem within time limit. '
                 'No solution found. Treating as infeasible, but there are no '
                 'guarantees.')
             return tc.infeasible
@@ -150,12 +150,12 @@ def solve_MILP_master_problem(util_block, config, timing):
         # load the solution and suppress the warning message by setting
         # solver status to ok.
         config.logger.info(
-            'Linear GDP solver reported feasible solution, '
-            'but not guaranteed to be optimal.')
+            'MIP solver reported feasible solution to MILP master problem, '
+            'but it is not guaranteed to be optimal.')
         return tc.feasible
     else:
         raise ValueError(
-            'GDPopt unable to handle linear GDP '
+            'GDPopt unable to handle MILP master problem '
             'termination condition '
             'of %s. Solver message: %s' %
             (terminate_cond, results.solver.message))
