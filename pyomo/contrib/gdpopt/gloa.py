@@ -11,6 +11,7 @@
 
 from math import fabs
 from pyomo.common.config import add_docstring_list
+from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
@@ -29,8 +30,11 @@ from pyomo.contrib.gdpopt.util import (
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
 from pyomo.core import Constraint, Block, NonNegativeIntegers, Objective
+from pyomo.core.expr.numvalue import is_potentially_variable
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.opt.base import SolverFactory
+
+from pytest import set_trace
 
 @SolverFactory.register(
     '_global_logic_based_oa',
@@ -189,22 +193,31 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
                 aff_utils_blocks[parent_block] = aff_utils
                 aff_utils.GDPopt_aff_cons = Constraint(NonNegativeIntegers)
             aff_cuts = aff_utils.GDPopt_aff_cons
-            concave_cut = sum(ccSlope[var] * (var - var.value)
-                              for var in vars_in_constr
-                              if not var.fixed) + ccStart >= lb_int
-            convex_cut = sum(cvSlope[var] * (var - var.value)
-                             for var in vars_in_constr
-                             if not var.fixed) + cvStart <= ub_int
-            idx = len(aff_cuts)
-            aff_cuts[idx] = concave_cut
-            aff_cuts[idx+1] = convex_cut
-            _add_bigm_constraint_to_transformed_model(m, aff_cuts[idx],
-                                                      aff_cuts)
-            _add_bigm_constraint_to_transformed_model(m, aff_cuts[idx+1],
-                                                      aff_cuts)
-            counter += 2
+            cut_body = sum(ccSlope[var] * (var - var.value) for var in
+                           vars_in_constr if not var.fixed)
+            if not is_potentially_variable(cut_body):
+                if (cut_body + ccStart >= lb_int - config.constraint_tolerance
+                    and cut_body + cvStart <= ub_int +
+                    config.constraint_tolerance):
+                    # We won't add them, but nothing is wrong--they hold
+                    config.logger.debug("Affine cut is trivially True.")
+                else:
+                    # something went wrong.
+                    raise DeveloperError("One of the affine cuts is trivially "
+                                         "False.")
+            else:
+                concave_cut = cut_body + ccStart >= lb_int
+                convex_cut = cut_body + cvStart <= ub_int
+                idx = len(aff_cuts)
+                aff_cuts[idx] = concave_cut
+                aff_cuts[idx+1] = convex_cut
+                _add_bigm_constraint_to_transformed_model(m, aff_cuts[idx],
+                                                          aff_cuts)
+                _add_bigm_constraint_to_transformed_model(m, aff_cuts[idx+1],
+                aff_cuts)
+                counter += 2
 
-        config.logger.debug("Added %s affine cuts" % counter)
+                config.logger.debug("Added %s affine cuts" % counter)
 
 
 GDP_GLOA_Solver.solve.__doc__ = add_docstring_list(
