@@ -43,7 +43,6 @@ subproblems using Python parallel communication libraries.
 * [Download](http://www.pyomo.org/installation/)
 * [Documentation](http://www.pyomo.org/documentation/)
 * [Performance Plots](https://software.sandia.gov/downloads/pub/pyomo/performance/index.html)
-* [Blog](http://www.pyomo.org/blog/)
 
 Pyomo was formerly released as the Coopr software library.
 
@@ -52,7 +51,7 @@ Pyomo is available under the BSD License, see the LICENSE.txt file.
 Pyomo is currently tested with the following Python implementations:
 
 * CPython: 3.7, 3.8, 3.9, 3.10
-* PyPy: 3
+* PyPy: 3.7, 3.8, 3.9
 
 ### Installation
 

@@ -3,6 +3,44 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.4.1    13 May 2022
+-------------------------------------------------------------------------------
+
+- General
+  - Extend linux distribution map logic (#2361)
+  - Improve string processing in ConfigList, ConfigDict, and ListOf (#2360)
+  - Update copyright assertion (#2368, #2378)
+  - Deprecate name_buffer argument to getname (#2370)
+  - Defer construction of the main Pyomo parser (#2385)
+  - Improve error checking parsing ConfigDict string value (#2399)
+- Core
+  - Add indices to ComponentData objects (#2351)
+  - Ignore SetOf, BuildAction, and BuildCheck when checking units (#2366)
+  - Improve support for absolute value in differentiation and FBBT (#2347)
+  - Allow relative tolerance when comparing unit dimensionality (#2395)
+- Solver Interfaces
+  - Fix bug in GLPK solver plugin (#2348)
+  - Update BARON solution parser (#2367)
+- Testing
+  - Turn on failure for codecov-action (#2343)
+  - Fixes to GHA due to updates to Ubuntu runner and Conda (#2356, #2384, #2396)
+  - Update setup-python and pypy in GHA (#2364)
+  - Pin version of openmpi used for testing (#2369)
+- DAE Updates
+  - Fix typo preventing a DAE test from running (#2349)
+- Contributed Packages
+  - APPSI: Minor improvements and generalizations (#2383, #2386, #2389,
+    #2391, #2388, #2392)
+  - incidence_analysis: Add option to ignore inequality constraints in 
+    IncidenceGraphInterface (#2350)
+  - MC++: Update interface tests (#2400)
+  - MindtPy: Add quadratic_strategy option to pass quadratic constraints
+    or objectives to MIP solvers (#2338)
+  - Parmest: Skip tests when seaborn and matplotlib are missing (#2394)
+  - PyROS: Improve feasibility problem formulation, objective validation
+    (#2353, #2371)
+
+-------------------------------------------------------------------------------
 Pyomo 6.4.0    16 Mar 2022
 -------------------------------------------------------------------------------
 

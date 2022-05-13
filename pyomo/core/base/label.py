@@ -106,7 +106,7 @@ class NumericLabeler(object):
 
     @deprecated("The 'remove_obj' method is no longer "
                 "necessary now that 'getname' does not "
-                "support the use of a name buffer", version="TBD")
+                "support the use of a name buffer", version="6.4.1")
     def remove_obj(self, obj):
         pass
 #
@@ -129,7 +129,7 @@ class TextLabeler(object):
 
     @deprecated("The 'remove_obj' method is no longer "
                 "necessary now that 'getname' does not "
-                "support the use of a name buffer", version="TBD")
+                "support the use of a name buffer", version="6.4.1")
     def remove_obj(self, obj):
         pass
 
