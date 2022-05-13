@@ -48,7 +48,8 @@ from textwrap import indent
 
 from pyomo.common.collections import Bunch
 from pyomo.common.config import (
-    ConfigBlock, ConfigValue, NonNegativeInt, In, PositiveInt)
+    add_docstring_list, ConfigBlock, ConfigValue, NonNegativeInt, In,
+    PositiveInt)
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
@@ -70,8 +71,6 @@ from pyomo.opt import SolverResults
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt.base import SolverFactory
 from pyomo.util.model_size import build_model_size_report
-
-from pytest import set_trace
 
 __version__ = (22, 5, 13)  # Note: date-based version number
 _supported_algorithms = {
@@ -658,3 +657,6 @@ class GDPoptSolver():
         config.logger.info(to_cite_text)
 
     _metasolver = False
+
+GDPoptSolver.solve.__doc__ = add_docstring_list(
+    GDPoptSolver.solve.__doc__, GDPoptSolver._CONFIG, indent_by=8)
