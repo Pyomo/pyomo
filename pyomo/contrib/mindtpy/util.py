@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -59,8 +60,8 @@ def model_is_valid(solve_data, config):
     if len(MindtPy.discrete_variable_list) == 0:
         config.logger.info('Problem has no discrete decisions.')
         obj = next(m.component_data_objects(ctype=Objective, active=True))
-        if (any(c.body.polynomial_degree() not in {1, 0} for c in MindtPy.constraint_list) or
-                obj.expr.polynomial_degree() not in {1, 0}):
+        if (any(c.body.polynomial_degree() not in solve_data.mip_constraint_polynomial_degree for c in MindtPy.constraint_list) or
+                obj.expr.polynomial_degree() not in solve_data.mip_objective_polynomial_degree):
             config.logger.info(
                 'Your model is a NLP (nonlinear program). '
                 'Using NLP solver %s to solve.' % config.nlp_solver)
@@ -664,6 +665,16 @@ def set_up_solve_data(model, config):
         if not hasattr(solve_data.working_model, 'ipopt_zU_out'):
             solve_data.working_model.ipopt_zU_out = Suffix(
                 direction=Suffix.IMPORT)
+    
+    if config.quadratic_strategy == 0:
+        solve_data.mip_objective_polynomial_degree = {0, 1}
+        solve_data.mip_constraint_polynomial_degree = {0, 1}
+    elif config.quadratic_strategy == 1:
+        solve_data.mip_objective_polynomial_degree = {0, 1, 2}
+        solve_data.mip_constraint_polynomial_degree = {0, 1}
+    elif config.quadratic_strategy == 2:
+        solve_data.mip_objective_polynomial_degree = {0, 1, 2}
+        solve_data.mip_constraint_polynomial_degree = {0, 1, 2}
 
     return solve_data
 

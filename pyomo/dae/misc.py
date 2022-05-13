@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -119,7 +120,7 @@ def expand_components(block):
     # BlockData will be added to the indexed Block but will not be
     # constructed correctly.
     for blk in block.component_objects(Block, descend_into=True):
-        missing_idx = set(blk._index) - set(blk._data.keys())
+        missing_idx = set(blk.index_set()) - set(blk._data.keys())
         if missing_idx:
             blk._dae_missing_idx = missing_idx
 
@@ -259,7 +260,7 @@ def _update_var(v):
     #       Var (which is now a IndexedComponent). However, it
     #       would be much slower to rely on that method to generate new
     #       _VarData for a large number of new indices.
-    new_indices = set(v._index) - set(v._data.keys())
+    new_indices = set(v.index_set()) - set(v._data.keys())
     for index in new_indices:
         v.add(index)
 

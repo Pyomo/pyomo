@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -327,7 +328,7 @@ class Test(unittest.TestCase):
         for c in ('x', 'y', 'z'):
             for n in ('1', '2', '3', '4'):
                 var = transformed.__getattribute__(c+n)
-                for ndx in var._index:
+                for ndx in var.index_set():
                     self.assertTrue(self.nonnegativeBounds(var[ndx]))
 
     @unittest.skipIf(not 'glpk' in solvers, "glpk solver is not available")

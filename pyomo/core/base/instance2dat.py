@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -24,7 +25,7 @@ def instance2dat(instance, output_filename):
         if (set_object.initialize is not None) and (type(set_object.initialize) is types.FunctionType):
             continue
 
-        if (set_name.find("_index") == -1) and (set_name.find("_domain") == -1):
+        if (set_name.find("_index_set") == -1) and (set_name.find("_domain") == -1):
             if set_object.dim() == 0:
                 if len(set_object) == 0:
                     continue

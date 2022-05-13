@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -22,7 +23,6 @@ from pyomo.opt import TerminationCondition
 import logging
 
 logger = logging.getLogger('pyomo.contrib.fme')
-NAME_BUFFER = {}
 
 def _check_var_bounds_filter(constraint):
     """Check if the constraint is already implied by the variable bounds"""
@@ -189,7 +189,6 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
     def _apply_to(self, instance, **kwds):
         log_level = logger.level
         try:
-            assert not NAME_BUFFER
             config = self.CONFIG(kwds.pop('options', {}))
             config.set_value(kwds)
             # lower logging values emit more
@@ -203,8 +202,6 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
                 self.verbose = False
             self._apply_to_impl(instance, config)
         finally:
-            # clear the global name buffer
-            NAME_BUFFER.clear()
             # restore logging level
             logger.setLevel(log_level)
 
@@ -399,8 +396,7 @@ class Fourier_Motzkin_Elimination_Transformation(Transformation):
             logger.warning("Projecting out var %s of %s" % (iteration, total))
             if self.verbose:
                 logger.info("Projecting out %s" %
-                            the_var.getname(fully_qualified=True,
-                                            name_buffer=NAME_BUFFER))
+                            the_var.getname(fully_qualified=True))
                 logger.info("New constraints are:")
 
             # we are 'reorganizing' the constraints, we sort based on the sign

@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -1081,14 +1082,24 @@ external
     #                                                                  float(conv_offset))
     #     self._pint_registry.define(defn_str)
 
+    def _rel_diff(self, a, b):
+        scale = min(abs(a), abs(b))
+        if scale < 1.:
+            scale = 1.
+        return abs(a - b) / scale
+
     def _equivalent_pint_units(self, a, b, TOL=1e-12):
         if a is b or a == b:
             return True
         base_a = self._pint_registry.get_base_units(a)
         base_b = self._pint_registry.get_base_units(b)
         if base_a[1] != base_b[1]:
-            return False
-        return abs(base_a[0] - base_b[0]) / min(base_a[0], base_b[0]) <= TOL
+            uc_a = base_a[1].dimensionality
+            uc_b = base_b[1].dimensionality
+            for key in uc_a.keys() | uc_b.keys():
+                if self._rel_diff(uc_a.get(key, 0), uc_b.get(key, 0)) >= TOL:
+                    return False
+        return self._rel_diff(base_a[0], base_b[0]) <= TOL
 
     def _equivalent_to_dimensionless(self, a, TOL=1e-12):
         if a is self._pint_dimensionless or a == self._pint_dimensionless:
@@ -1096,7 +1107,7 @@ external
         base_a = self._pint_registry.get_base_units(a)
         if not base_a[1].dimensionless:
             return False
-        return abs(base_a[0] - 1.) / min(base_a[0], 1.) <= TOL
+        return self._rel_diff(base_a[0], 1.) <= TOL
 
     def _get_pint_units(self, expr):
         """

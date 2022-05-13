@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -370,6 +371,7 @@ class _LinearConstraintData(_ConstraintData):
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = index
         self._active = True
 
 class _LinearMatrixConstraintData(_LinearConstraintData):
@@ -406,7 +408,7 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         _active         A boolean that indicates whether this data is active
     """
 
-    __slots__ = ('_index')
+    __slots__ = ()
 
     def __init__(self, index, component=None):
         #
@@ -429,7 +431,6 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         This method must be defined because this class uses slots.
         """
         result = super(_LinearMatrixConstraintData, self).__getstate__()
-        result['_index'] = self._index
         return result
 
     # Since this class requires no special processing of the state
@@ -696,4 +697,3 @@ class MatrixConstraint(Mapping, IndexedConstraint):
 
     def __delitem__(self):
         raise NotImplementedError
-

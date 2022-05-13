@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -15,9 +16,9 @@ module objects.
 """
 from pyomo.core.base.units_container import units, UnitsError
 from pyomo.core.base import (Objective, Constraint, Var, Param,
-                             Suffix, Set, RangeSet, Block,
+                             Suffix, Set, SetOf, RangeSet, Block,
                              ExternalFunction, Expression,
-                             value, BooleanVar)
+                             value, BooleanVar, BuildAction, BuildCheck)
 from pyomo.dae import ContinuousSet, DerivativeVar
 from pyomo.network import Port, Arc
 from pyomo.mpec import Complementarity
@@ -173,17 +174,24 @@ _component_data_handlers = {
     Expression: _assert_units_consistent_property_expr,
     Suffix: None,
     Param: _assert_units_consistent_expression,
-    Set: None,
-    RangeSet: None,
     Disjunct: _assert_units_consistent_block,
     Disjunction: None,
     BooleanVar: None,
     Block: _assert_units_consistent_block,
     ExternalFunction: None,
-    ContinuousSet: None, # ToDo: change this when continuous sets have units assigned
+    # TODO: change this when Sets / ContinuousSets sets have units:
+    ContinuousSet: None,
+    Set: None,
+    SetOf: None,
+    RangeSet: None,
+    # TODO: Piecewise: _assert_units_consistent_piecewise,
+    # TODO: SOSConstraint: _assert_units_consistent_sos,
+    # TODO: LogicalConstriant: _assert_units_consistent_logical,
+    BuildAction: None,
+    BuildCheck: None,
     # complementarities that are not in normal form are not working yet
     # see comment in test_check_units
-    # Complementarity: _assert_units_complementarity
+    # TODO: Complementarity: _assert_units_complementarity
     }
 
 def assert_units_consistent(obj):

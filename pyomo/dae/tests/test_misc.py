@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -484,7 +485,7 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(model.t, 5)
 
-        missing_idx = set(model.blk._index) - set(model.blk._data.keys())
+        missing_idx = set(model.blk.index_set()) - set(model.blk._data.keys())
         model.blk._dae_missing_idx = missing_idx
 
         update_contset_indexed_component(model.blk, expansion_map)
@@ -537,7 +538,7 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(model.t, 5)
 
-        missing_idx = set(model.blk._index) - set(model.blk._data.keys())
+        missing_idx = set(model.blk.index_set()) - set(model.blk._data.keys())
         model.blk._dae_missing_idx = missing_idx
 
         update_contset_indexed_component(model.blk, expansion_map)
@@ -592,7 +593,7 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(model.t, 5)
 
-        missing_idx = set(model.blk._index) - set(model.blk._data.keys())
+        missing_idx = set(model.blk.index_set()) - set(model.blk._data.keys())
         model.blk._dae_missing_idx = missing_idx
 
         update_contset_indexed_component(model.blk, expansion_map)
@@ -647,7 +648,7 @@ class TestDaeMisc(unittest.TestCase):
 
         generate_finite_elements(model.t, 5)
 
-        missing_idx = set(model.blk._index) - set(model.blk._data.keys())
+        missing_idx = set(model.blk.index_set()) - set(model.blk._data.keys())
         model.blk._dae_missing_idx = missing_idx
 
         update_contset_indexed_component(model.blk, expansion_map)
