@@ -3,6 +3,46 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.4.1    13 May 2022
+-------------------------------------------------------------------------------
+
+- General
+  - Extend linux distribution map logic (#2361)
+  - Improve string processing in ConfigList, ConfigDict and ListOf (#2360)
+  - Update copyright assertion (#2368, #2378)
+  - Deprecate name_buffer argument to getname (#2370)
+  - Defer construction of the main Pyomo parser (#2385)
+  - Improve error checking parsing ConfigDict string value (#2399)
+- Core
+  - Add indices to ComponentData objects (#2351)
+  - Ignore SetOf, BuildAction, and BuildCheck when checking units (#2366)
+  - Improve support for absolute value in differentiation and FBBT (#2347)
+- Solver Interfaces
+  - Fix bug in GLPK solver plugin (#2348)
+  - Update BARON solution parser (#2367)
+- Testing
+  - Turn on failure for codecov-action (#2343)
+  - Fixes to GHA due to updates to Ubuntu runner and Conda (#2356, #2384, #2396)
+  - Update setup-python and pypy in GHA (#2364)
+  - Pin version of openmpi used for testing (#2369)
+- DAE Updates
+  - Fix typo preventing a DAE test from running (#2349)
+- Contributed Packages
+  - APPSI: Move initialization of inf to support Windows (#2383)
+  - APPSI: Support auto-linked binary variables (#2386)
+  - APPSI: Supress cplex output when checking availability (#2389)
+  - APPSI: Remove requirement for C++ extensions if not needed (#2391)
+  - APPSI: Improve handling of fixed binary vars in Appsi NL writer (#2388)
+  - APPSI: Add tests for named expressions (#2392)
+  - incidence_analysis: Add option to ignore inequality constraints in 
+    IncidenceGraphInterface (#2350)
+  - MindtPy: Add quadratic_strategy option to pass quadratic constraints
+    or objectives to MIP solvers (#2338)
+  - Parmest: Skip tests when seaborn and matplotlib are missing (#2394)
+  - PyROS: Modify master feasibility problem (#2353)
+  - PyROS: Fix model objective validation (#2371)
+
+-------------------------------------------------------------------------------
 Pyomo 6.4.0    16 Mar 2022
 -------------------------------------------------------------------------------
 
