@@ -13,7 +13,6 @@ from collections import namedtuple
 from math import copysign
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.config import add_docstring_list
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
