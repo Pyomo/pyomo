@@ -373,7 +373,7 @@ class PyROS(object):
             setattr(model_data.original_model, cname, src_vars)
             model_data.working_model = model_data.original_model.clone()
 
-            # identify active objective function (there should only be one
+            # identify active objective function
             # (there should only be one at this point)
             # recast to minimization if necessary
             active_objs = list(
