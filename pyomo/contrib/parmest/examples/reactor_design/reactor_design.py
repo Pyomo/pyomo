@@ -14,7 +14,7 @@ pyomo/examples/doc/pyomobook/nonlinear-ch/react_design/ReactorDesign.py
 """
 import pandas as pd
 from pyomo.environ import (
-    ConcreteModel, Var, PositiveReals, Objective, Constraint, maximize,
+    ConcreteModel, Param, Var, PositiveReals, Objective, Constraint, maximize,
     SolverFactory
 )
 
