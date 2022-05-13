@@ -26,7 +26,7 @@ from pyomo.core import Objective
 # should get the integer solutions several-at-a-time with a solution pool or
 # something of the like...
 
-class GDP_RIC_Solver():
+class _GDP_RIC_Solver():
     """The GDPopt (Generalized Disjunctive Programming optimizer) relaxation
     with integer cuts (RIC) solver.
 
@@ -87,6 +87,3 @@ class GDP_RIC_Solver():
                                     timing):
         # Nothing to do here
         pass
-
-# GDP_RIC_Solver.solve.__doc__ = add_docstring_list(
-#     GDP_RIC_Solver.solve.__doc__, GDP_RIC_Solver.CONFIG, indent_by=8)

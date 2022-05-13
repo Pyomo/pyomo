@@ -16,7 +16,6 @@ import traceback
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
-#from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block, add_disjunction_list, add_disjunct_list,
     add_algebraic_variable_list, add_boolean_variable_lists,
@@ -45,7 +44,7 @@ BBNodeData = namedtuple('BBNodeData', [
     'unbranched_disjunction_indices',  # list of unbranched disjunction indices
 ])
 
-class GDP_LBB_Solver():
+class _GDP_LBB_Solver():
     def __init__(self, parent):
         self.parent = parent
         self.CONFIG = parent.CONFIG()

@@ -52,16 +52,16 @@ from pyomo.common.config import (
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
-from pyomo.contrib.gdpopt.branch_and_bound import GDP_LBB_Solver
+from pyomo.contrib.gdpopt.branch_and_bound import _GDP_LBB_Solver
 from pyomo.contrib.gdpopt.config_options import (
     _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
     _add_OA_configs, _add_BB_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block, add_disjunct_list, add_boolean_variable_lists,
     add_algebraic_variable_list)
-from pyomo.contrib.gdpopt.gloa import GDP_GLOA_Solver
-from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
-from pyomo.contrib.gdpopt.ric import GDP_RIC_Solver
+from pyomo.contrib.gdpopt.gloa import _GDP_GLOA_Solver
+from pyomo.contrib.gdpopt.loa import _GDP_LOA_Solver
+from pyomo.contrib.gdpopt.ric import _GDP_RIC_Solver
 from pyomo.contrib.gdpopt.util import (
     a_logger, get_main_elapsed_time, lower_logger_level_to,
     solve_continuous_problem, time_code)
@@ -75,10 +75,10 @@ from pytest import set_trace
 
 __version__ = (22, 5, 13)  # Note: date-based version number
 _supported_algorithms = {
-    'LOA': (GDP_LOA_Solver, 'Logic-based Outer Approximation'),
-    'GLOA': (GDP_GLOA_Solver, 'Global Logic-based Outer Approximation'),
-    'LBB': (GDP_LBB_Solver, 'Logic-based Branch and Bound'),
-    'RIC': (GDP_RIC_Solver, 'Relaxation with Integer Cuts')
+    'LOA': (_GDP_LOA_Solver, 'Logic-based Outer Approximation'),
+    'GLOA': (_GDP_GLOA_Solver, 'Global Logic-based Outer Approximation'),
+    'LBB': (_GDP_LBB_Solver, 'Logic-based Branch and Bound'),
+    'RIC': (_GDP_RIC_Solver, 'Relaxation with Integer Cuts')
 }
 
 def _strategy_deprecation(strategy):

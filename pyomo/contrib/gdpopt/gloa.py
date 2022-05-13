@@ -32,7 +32,7 @@ from pyomo.core import Constraint, Block, NonNegativeIntegers, Objective
 from pyomo.core.expr.numvalue import is_potentially_variable
 from pyomo.core.expr.visitor import identify_variables
 
-class GDP_GLOA_Solver():
+class _GDP_GLOA_Solver():
     """The GDPopt (Generalized Disjunctive Programming optimizer) global
     logic-based outer approximation (GLOA) solver.
 
@@ -197,7 +197,3 @@ class GDP_GLOA_Solver():
                 counter += 2
 
                 config.logger.debug("Added %s affine cuts" % counter)
-
-
-# GDP_GLOA_Solver.solve.__doc__ = add_docstring_list(
-#     GDP_GLOA_Solver.solve.__doc__, GDP_GLOA_Solver.CONFIG, indent_by=8)

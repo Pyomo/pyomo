@@ -38,7 +38,7 @@ from pyomo.repn import generate_standard_repn
 MAX_SYMBOLIC_DERIV_SIZE = 1000
 JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
 
-class GDP_LOA_Solver():
+class _GDP_LOA_Solver():
     """The GDPopt (Generalized Disjunctive Programming optimizer) logic-based
     outer approximation (LOA) solver.
 
@@ -255,6 +255,3 @@ class GDP_LOA_Solver():
                 jacobian.jac.clear()
 
         config.logger.debug('Added %s OA cuts' % counter)
-
-# GDP_LOA_Solver.solve.__doc__ = add_docstring_list(
-#     GDP_LOA_Solver.solve.__doc__, GDP_LOA_Solver.CONFIG, indent_by=8)
