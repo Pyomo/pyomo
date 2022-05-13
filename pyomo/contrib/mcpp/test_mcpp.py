@@ -161,7 +161,7 @@ class TestMcCormick(unittest.TestCase):
                     m.z.value = _z
                     mc_expr.changePoint(m.z, _z)
                     self.assertGreaterEqual(mc_expr.concave() + 1e-8, value(e))
-                    self.assertLessEqual(mc_expr.convex() - 1e-8, value(e))
+                    self.assertLessEqual(mc_expr.convex() - 1e-6, value(e))
 
         m.x.value = m.x.lb
         m.y.value = m.y.lb
@@ -198,7 +198,14 @@ class TestMcCormick(unittest.TestCase):
         m.x = Var(bounds=(0, 2), initialize=1)
         m.y = Var(bounds=(1e-4, 2), initialize=1)
         m.z = Var(bounds=(-1, 1), initialize=0)
-        with self.assertRaisesRegex(MCPP_Error, "Square-root with nonpositive values in range"):
+        # Note: the exception raised prior to 2.1 was
+        #    "Log with negative values in range"
+        # This was corrected in 2.1 to
+        #    "Square-root with nonpositive values in range"
+        with self.assertRaisesRegex(
+                MCPP_Error,
+                r"(Square-root with nonpositive values in range)"
+                r"|(Log with negative values in range)"):
             mc(m.z ** 1.5)
         mc_expr = mc(m.y ** 1.5)
         self.assertAlmostEqual(mc_expr.lower(), 1e-4**1.5)
