@@ -1222,10 +1222,18 @@ def _default_string_dict_lexer(value):
         if not key:
             break
         sep = _lex.token()
+        if not sep:
+            raise ValueError(
+                "Expected ':' or '=' but encountered end of string")
         if sep.type not in ':=':
-            raise ValueError("Expected ':' or '=' at "
-                             f"Line {sep.lineno} Column {sep.lexpos+1}")
+            raise ValueError(
+                f"Expected ':' or '=' but found '{sep.value}' at "
+                f"Line {sep.lineno} Column {sep.lexpos+1}")
         val = _lex.token()
+        if not val:
+            raise ValueError(
+                f"Expected value following '{sep.type}' "
+                f"but encountered end of string")
         yield key.value, val.value
 
 _default_string_dict_lexer._lex = None
