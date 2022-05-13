@@ -247,6 +247,12 @@ class GDPoptSolver():
         add_algebraic_variable_list(util_block)
 
     def solve(self, model, **kwds):
+        """Solve the model.
+
+        Args:
+            model (Block): a Pyomo model or block to be solved
+
+        """
         if self._impl is not None:
             algorithm = self._impl.CONFIG.algorithm
             config = self._impl.CONFIG(kwds.pop('options', {}),
