@@ -177,6 +177,7 @@ class _GDPoptAlgorithm(object):
             if (self.pyomo_results.solver.termination_condition not in
                 {tc.infeasible, tc.unbounded}):
                 self._transfer_incumbent_to_original_model(config.logger)
+            self._delete_original_model_util_block()
         return self.pyomo_results
 
     def _update_bounds_after_solve(self, subprob_nm, primal=None, dual=None,
@@ -414,6 +415,13 @@ class _GDPoptAlgorithm(object):
 
             if original_binary is not None:
                 original_binary.set_value(soln)
+
+    def _delete_original_model_util_block(self):
+        """For cleaning up after a solve--we want the original model to be
+        untouched except for the solution being loaded"""
+        blk = self.original_util_block
+        m = blk.model()
+        m.del_component(blk)
 
     def _get_final_pyomo_results_object(self):
         """
