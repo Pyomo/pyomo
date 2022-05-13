@@ -36,9 +36,8 @@ class TestGDPopt_LBB(unittest.TestCase):
             [m.x ** 2 >= 3, m.x >= 3],
             [m.x ** 2 <= -1, m.x <= -1]])
         m.o = Objective(expr=m.x)
-        result = SolverFactory('gdpopt').solve(
+        result = SolverFactory('gdpopt', algorithm='LBB').solve(
             m, tee=False,
-            strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
@@ -55,9 +54,8 @@ class TestGDPopt_LBB(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt').solve(
+        results = SolverFactory('gdpopt', algorithm='LBB').solve(
             eight_process, tee=False,
-            strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
@@ -73,9 +71,8 @@ class TestGDPopt_LBB(unittest.TestCase):
         obj = next(eight_process.component_data_objects(Objective, active=True))
         obj.sense = maximize
         obj.set_value(-1 * obj.expr)
-        SolverFactory('gdpopt').solve(
+        SolverFactory('gdpopt', algorithm='LBB').solve(
             eight_process, tee=False,
-            strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
@@ -88,9 +85,8 @@ class TestGDPopt_LBB(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
-        SolverFactory('gdpopt').solve(
+        SolverFactory('gdpopt', algorithm='LBB').solve(
             strip_pack, tee=False,
-            strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
@@ -105,9 +101,8 @@ class TestGDPopt_LBB(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         cons_layout = exfile.build_constrained_layout_model()
-        SolverFactory('gdpopt').solve(
+        SolverFactory('gdpopt', algorithm='LBB').solve(
             cons_layout, tee=False,
-            strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
@@ -120,9 +115,8 @@ class TestGDPopt_LBB(unittest.TestCase):
         """Test LBB with Francisco thesis example."""
         exfile = import_file(join(exdir, 'small_lit', 'ex_633_trespalacios.py'))
         model = exfile.build_simple_nonconvex_gdp()
-        SolverFactory('gdpopt').solve(
+        SolverFactory('gdpopt', algorithm='LBB').solve(
             model, tee=False,
-            strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
@@ -138,9 +132,8 @@ class TestGDPopt_LBB(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt').solve(
+        results = SolverFactory('gdpopt', algorithm='LBB').solve(
             eight_process, tee=False,
-            strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
             solve_local_rnGDP=True,
@@ -163,9 +156,8 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
             [m.x ** 2 >= 3, m.x >= 3],
             [m.x ** 2 <= -1, m.x <= -1]])
         m.o = Objective(expr=m.x)
-        result = SolverFactory('gdpopt').solve(
+        result = SolverFactory('gdpopt', algorithm='LBB').solve(
             m, tee=False,
-            strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
@@ -184,9 +176,8 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt').solve(
+        results = SolverFactory('gdpopt', algorithm='LBB').solve(
             eight_process, tee=False, check_sat=True,
-            strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
@@ -199,9 +190,8 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
-        SolverFactory('gdpopt').solve(
+        SolverFactory('gdpopt', algorithm='LBB').solve(
             strip_pack, tee=False, check_sat=True,
-            strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
@@ -216,9 +206,8 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         cons_layout = exfile.build_constrained_layout_model()
-        SolverFactory('gdpopt').solve(
+        SolverFactory('gdpopt', algorithm='LBB').solve(
             cons_layout, tee=False, check_sat=True,
-            strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )
@@ -231,9 +220,8 @@ class TestGDPopt_LBB_Z3(unittest.TestCase):
         """Test LBB with Francisco thesis example."""
         exfile = import_file(join(exdir, 'small_lit', 'ex_633_trespalacios.py'))
         model = exfile.build_simple_nonconvex_gdp()
-        SolverFactory('gdpopt').solve(
+        SolverFactory('gdpopt', algorithm='LBB').solve(
             model, tee=False, check_sat=True,
-            strategy='LBB',
             minlp_solver=minlp_solver,
             minlp_solver_args=minlp_args,
         )

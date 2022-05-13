@@ -37,7 +37,7 @@ Usage of GDPopt to solve a Pyomo.GDP concrete model involves:
 
 .. note::
 
-  In the above example, GDPopt uses the GDPopt-LOA strategy.
+  In the above example, GDPopt uses the GDPopt-LOA algorithm.
   Other strategies may be used by specifying them in the ``algorithm`` argument as shown above.
   All GDPopt options are listed below.
 
