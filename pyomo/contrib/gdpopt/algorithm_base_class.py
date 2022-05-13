@@ -98,6 +98,8 @@ class _GDPoptAlgorithm(object):
         self.incumbent_boolean_soln = None
         self.incumbent_continuous_soln = None
 
+        self.original_obj = None
+
         self.log_formatter = ('{:>9}   {:>15}   {:>11.5f}   {:>11.5f}   '
                               '{:>8.2%}   {:>7.2f}  {}')
 
@@ -422,6 +424,10 @@ class _GDPoptAlgorithm(object):
         blk = self.original_util_block
         m = blk.model()
         m.del_component(blk)
+        # We just deleted the linearized objective if we had one, so restore the
+        # prior one.
+        if self.original_obj is not None:
+            self.original_obj.activate()
 
     def _get_final_pyomo_results_object(self):
         """

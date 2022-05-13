@@ -294,7 +294,7 @@ class TestGDPopt(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
             results = SolverFactory('gdpopt', algorithm='LOA').solve(
                 m, mip_solver=mip_solver, nlp_solver=nlp_solver)
-            self.assertIn("Set covering problem was infeasible.",
+            self.assertIn("Set covering problem is infeasible.",
                           output.getvalue().strip())
 
         self.assertEqual(results.solver.termination_condition,
@@ -926,24 +926,15 @@ class TestGDPopt(unittest.TestCase):
 
     @unittest.skipUnless(Gurobi().available(),
                          "APPSI Gurobi solver is not available")
-    def test_non_auto_persistent_solver_error_checking(self):
+    def test_auto_persistent_solver(self):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         m = exfile.build_eight_process_flowsheet()
-        with self.assertRaisesRegex(
-                ValueError,
-                ".*GDPopt does not currently support the 'gurobi_persistent' "
-                "solver. The only supported persistent solvers are those in "
-                "the APPSI package."):
-            SolverFactory('gdpopt', algorithm='LOA').solve(
-                m, mip_solver='gurobi_persistent')
+        results = SolverFactory('gdpopt', algorithm='LOA').solve(
+            m, mip_solver='appsi_gurobi')
 
-        # [ESJ 4/8/22] TODO: This will pass when #2355 is resolved
-        # But APPSI is okay:
-        # SolverFactory('gdpopt', algorithm='LOA').solve(
-        #         m, mip_solver='appsi_gurobi')
-
-        # self.assertTrue(fabs(value(m.profit.expr) - 68) <= 1E-2)
+        self.assertTrue(fabs(value(m.profit.expr) - 68) <= 1E-2)
+        ct.check_8PP_solution(self, m, results)
 
 @unittest.skipIf(not LOA_solvers_available,
                  "Required subsolvers %s are not available"
@@ -965,7 +956,7 @@ class TestGDPoptRIC(unittest.TestCase):
                 m,
                 mip_solver=mip_solver,
                 nlp_solver=nlp_solver)
-            self.assertIn("Set covering problem was infeasible.",
+            self.assertIn("Set covering problem is infeasible.",
                           output.getvalue().strip())
 
     def test_GDP_nonlinear_objective(self):

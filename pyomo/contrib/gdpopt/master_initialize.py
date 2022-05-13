@@ -270,9 +270,9 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                 config.logger.debug('Set covering problem is infeasible. '
                                     'Problem may have no more feasible '
                                     'disjunctive realizations.')
-                if solver.iteration <= 1:
+                if iter_count <= 1:
                     config.logger.warning(
-                        'Set covering problem was infeasible. '
+                        'Set covering problem is infeasible. '
                         'Check your linear and logical constraints '
                         'for contradictions.')
                 solver._update_dual_bound_to_infeasible()

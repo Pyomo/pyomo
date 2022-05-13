@@ -28,7 +28,9 @@ def _get_master_and_subproblem(solver, config):
     if config.force_subproblem_nlp:
         # We'll need to fix these too
         add_discrete_variable_list(util_block)
-    move_nonlinear_objective_to_constraints(util_block, config.logger)
+    original_obj = move_nonlinear_objective_to_constraints(util_block,
+                                                           config.logger)
+    solver.original_obj = original_obj
 
     # create model to hold the subproblems: We create this first because
     # certain initialization strategies for the master problem need it.

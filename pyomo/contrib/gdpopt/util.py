@@ -132,6 +132,11 @@ def move_nonlinear_objective_to_constraints(util_block, logger):
                 util_block.objective_value)
             if hasattr(util_block, 'constraint_list'):
                 util_block.constraint_list.append(util_block.objective_constr)
+        # If we moved the objective, return the original in case we want to
+        # restre it later
+        return main_obj
+    # Nothing was moved
+    return None
 
 def a_logger(str_or_logger):
     """Returns a logger when passed either a logger name or logger object."""
