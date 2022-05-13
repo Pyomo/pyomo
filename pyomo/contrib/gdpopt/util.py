@@ -315,7 +315,6 @@ def setup_results_object(solve_data, config):
     prob = res.problem
     res.problem.name = solve_data.original_model.name
     res.problem.number_of_nonzeros = None  # TODO
-    # TODO work on termination condition and message
     res.solver.termination_condition = None
     res.solver.message = None
     res.solver.user_time = None

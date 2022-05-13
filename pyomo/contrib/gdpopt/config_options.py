@@ -19,24 +19,6 @@ from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.opt import SolverFactory, UnknownSolver
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
-def _valid_solvers(val):
-    # # TODO: Can we change this so that people pass in their SolverFactory,
-    # # because I can't do this--it'll generate an error when pyomo.environ is
-    # # imported withot the right solvers present. And then I can support this for
-    # # strings, but deprecate it and warn that there's no error checking in that
-    # # case... It would simplify the passing solver args stuff too, actually.
-    # opt = SolverFactory(val)
-    # if isinstance(opt, UnknownSolver):
-    #     raise ValueError("Expected a valid name for a solver. Received '%s'"
-    #                      % val)
-    # elif isinstance(opt, PersistentSolver):
-    #     raise ValueError("GDPopt does not currently support the '%s' solver. "
-    #                      "The only supported persistent solvers are those in "
-    #                      "the APPSI package." % val)
-    # # There's still stuff that could have gone wrong that we won't find out
-    # # until we call solve, but what can you do?
-    return val
-
 def _add_OA_configs(CONFIG):
     CONFIG.declare("init_strategy", ConfigValue(
         default="set_covering", domain=In(valid_init_strategies.keys()),
@@ -234,7 +216,6 @@ def _add_BB_configs(CONFIG):
 def _add_mip_solver_configs(CONFIG):
     CONFIG.declare("mip_solver", ConfigValue(
         default="gurobi",
-        domain=_valid_solvers,
         description="""
         Mixed integer linear solver to use. Note that no persisent solvers
         other than the auto-persistent solvers in the APPSI package are
@@ -249,7 +230,6 @@ def _add_mip_solver_configs(CONFIG):
 def _add_nlp_solver_configs(CONFIG):
     CONFIG.declare("nlp_solver", ConfigValue(
         default="ipopt",
-        domain=_valid_solvers,
         description="""
         Nonlinear solver to use. Note that no persisent solvers
         other than the auto-persistent solvers in the APPSI package are
@@ -260,7 +240,6 @@ def _add_nlp_solver_configs(CONFIG):
         implicit=True))
     CONFIG.declare("minlp_solver", ConfigValue(
         default="baron",
-        domain=_valid_solvers,
         description="""
         MINLP solver to use. Note that no persisent solvers
         other than the auto-persistent solvers in the APPSI package are
@@ -272,7 +251,6 @@ def _add_nlp_solver_configs(CONFIG):
         implicit=True))
     CONFIG.declare("local_minlp_solver", ConfigValue(
         default="bonmin",
-        domain=_valid_solvers,
         description="""
         MINLP solver to use. Note that no persisent solvers
         other than the auto-persistent solvers in the APPSI package are
