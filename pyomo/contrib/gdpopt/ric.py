@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.config import add_docstring_list
-from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
     _add_OA_configs)
@@ -22,16 +21,12 @@ from pyomo.contrib.gdpopt.oa_algorithm_utils import (
     _fix_master_soln_solve_subproblem_and_add_cuts)
 from pyomo.contrib.gdpopt.util import time_code
 from pyomo.core import Objective
-from pyomo.opt.base import SolverFactory
 
 # ESJ: In the future, if we have a direct interface to cplex or gurobi, we
 # should get the integer solutions several-at-a-time with a solution pool or
 # something of the like...
 
-@SolverFactory.register(
-    '_relaxation_with_integer_cuts',
-    doc='GDP Relaxation with Integer Cuts (RIC) solver')
-class GDP_RIC_Solver(_GDPoptAlgorithm):
+class GDP_RIC_Solver():
     """The GDPopt (Generalized Disjunctive Programming optimizer) relaxation
     with integer cuts (RIC) solver.
 
@@ -39,27 +34,13 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
     constraints, as well as logical conditions. For non-convex problems, RIC
     will not be exact unless the NLP subproblems are solved globally.
     """
-    CONFIG = _GDPoptAlgorithm.CONFIG()
-    _add_mip_solver_configs(CONFIG)
-    _add_nlp_solver_configs(CONFIG)
-    _add_tolerance_configs(CONFIG)
-    _add_OA_configs(CONFIG)
-
-    def __init__(self, **kwds):
-        self.CONFIG = self.CONFIG(kwds)
-        super(GDP_RIC_Solver, self).__init__()
-
-    def solve(self, model, **kwds):
-        """Solve the model with RIC
-
-        Args:
-            model (Block): a Pyomo model or block to be solved.
-
-        """
-        config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
-        config.set_value(kwds)
-
-        return super().solve(model, config)
+    def __init__(self, parent):
+        self.parent = parent
+        self.CONFIG = parent.CONFIG()
+        _add_mip_solver_configs(self.CONFIG)
+        _add_nlp_solver_configs(self.CONFIG)
+        _add_tolerance_configs(self.CONFIG)
+        _add_OA_configs(self.CONFIG)
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger
@@ -71,34 +52,34 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
         master_obj = next(master.component_data_objects(Objective, active=True,
                                                         descend_into=True))
 
-        self._log_header(logger)
+        self.parent._log_header(logger)
 
         # main loop
-        while self.iteration < config.iterlim:
-            self.iteration += 1
+        while self.parent.iteration < config.iterlim:
+            self.parent.iteration += 1
 
             # solve linear master problem
-            with time_code(self.timing, 'mip'):
+            with time_code(self.parent.timing, 'mip'):
                 mip_feasible = solve_MILP_master_problem(master_util_block,
-                                                         config, self.timing)
-                self._update_bounds_after_master_problem_solve(mip_feasible,
-                                                               master_obj,
-                                                               logger)
+                                                         config,
+                                                         self.parent.timing)
+                self.parent._update_bounds_after_master_problem_solve(
+                    mip_feasible, master_obj, logger)
 
             # Check termination conditions
-            if self.any_termination_criterion_met(config):
+            if self.parent.any_termination_criterion_met(config):
                 break
 
-            with time_code(self.timing, 'nlp'):
+            with time_code(self.parent.timing, 'nlp'):
                 _fix_master_soln_solve_subproblem_and_add_cuts(
                     master_util_block, subproblem_util_block, config, self)
 
             # Add integer cut
-            with time_code(self.timing, "integer cut generation"):
+            with time_code(self.parent.timing, "integer cut generation"):
                 add_no_good_cut(master_util_block, config)
 
             # Check termination conditions
-            if self.any_termination_criterion_met(config):
+            if self.parent.any_termination_criterion_met(config):
                 break
 
     def _add_cuts_to_master_problem(self, subproblem_util_block,
@@ -107,5 +88,5 @@ class GDP_RIC_Solver(_GDPoptAlgorithm):
         # Nothing to do here
         pass
 
-GDP_RIC_Solver.solve.__doc__ = add_docstring_list(
-    GDP_RIC_Solver.solve.__doc__, GDP_RIC_Solver.CONFIG, indent_by=8)
+# GDP_RIC_Solver.solve.__doc__ = add_docstring_list(
+#     GDP_RIC_Solver.solve.__doc__, GDP_RIC_Solver.CONFIG, indent_by=8)

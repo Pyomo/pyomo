@@ -15,7 +15,6 @@ from math import copysign
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import add_docstring_list
 from pyomo.common.modeling import unique_component_name
-from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
@@ -34,16 +33,12 @@ from pyomo.core import (
 from pyomo.core.expr import differentiate
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.gdp import Disjunct
-from pyomo.opt.base import SolverFactory
 from pyomo.repn import generate_standard_repn
 
 MAX_SYMBOLIC_DERIV_SIZE = 1000
 JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
 
-@SolverFactory.register(
-    '_logic_based_oa',
-    doc='GDP Logic-Based Outer Approximation (LOA) solver')
-class GDP_LOA_Solver(_GDPoptAlgorithm):
+class GDP_LOA_Solver():
     """The GDPopt (Generalized Disjunctive Programming optimizer) logic-based
     outer approximation (LOA) solver.
 
@@ -51,33 +46,19 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
     constraints, as well as logical conditions. For nonconvex problems, LOA
     may not report rigorous lower/upper bounds.
     """
-    CONFIG = _GDPoptAlgorithm.CONFIG()
-    _add_OA_configs(CONFIG)
-    _add_mip_solver_configs(CONFIG)
-    _add_nlp_solver_configs(CONFIG)
-    _add_tolerance_configs(CONFIG)
-
-    def __init__(self, **kwds):
-        self.CONFIG = self.CONFIG(kwds)
-        super(GDP_LOA_Solver, self).__init__()
-
-    def solve(self, model, **kwds):
-        """Solve the model with LOA
-
-        Args:
-            model (Block): a Pyomo model or block to be solved.
-
-        """
-        config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
-        config.set_value(kwds)
-
-        return super().solve(model, config)
+    def __init__(self, parent):
+        self.parent = parent
+        self.CONFIG = parent.CONFIG()
+        _add_OA_configs(self.CONFIG)
+        _add_mip_solver_configs(self.CONFIG)
+        _add_nlp_solver_configs(self.CONFIG)
+        _add_tolerance_configs(self.CONFIG)
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger
 
         # We'll need these to get dual info after solving subproblems
-        add_constraint_list(self.original_util_block)
+        add_constraint_list(self.parent.original_util_block)
 
         (master_util_block,
          subproblem_util_block) = _get_master_and_subproblem(self, config)
@@ -88,35 +69,36 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
         original_obj = self._setup_augmented_Lagrangian_objective(
             master_util_block)
 
-        self._log_header(logger)
+        self.parent._log_header(logger)
 
         # main loop
-        while self.iteration < config.iterlim:
-            self.iteration += 1
+        while self.parent.iteration < config.iterlim:
+            self.parent.iteration += 1
 
             # solve linear master problem
-            with time_code(self.timing, 'mip'):
+            with time_code(self.parent.timing, 'mip'):
                 oa_obj = self._update_augmented_Lagrangian_objective(
                     master_util_block, original_obj, config.OA_penalty_factor)
                 mip_feasible = solve_MILP_master_problem(master_util_block,
-                                                         config, self.timing)
-                self._update_bounds_after_master_problem_solve(mip_feasible,
-                                                               oa_obj, logger)
+                                                         config,
+                                                         self.parent.timing)
+                self.parent._update_bounds_after_master_problem_solve(
+                    mip_feasible, oa_obj, logger)
 
             # Check termination conditions
-            if self.any_termination_criterion_met(config):
+            if self.parent.any_termination_criterion_met(config):
                 break
 
-            with time_code(self.timing, 'nlp'):
+            with time_code(self.parent.timing, 'nlp'):
                 _fix_master_soln_solve_subproblem_and_add_cuts(
                     master_util_block, subproblem_util_block, config, self)
 
             # Add integer cut
-            with time_code(self.timing, "integer cut generation"):
+            with time_code(self.parent.timing, "integer cut generation"):
                 add_no_good_cut(master_util_block, config)
 
             # Check termination conditions
-            if self.any_termination_criterion_met(config):
+            if self.parent.any_termination_criterion_met(config):
                 break
 
     def _setup_augmented_Lagrangian_objective(self, master_util_block):
@@ -274,5 +256,5 @@ class GDP_LOA_Solver(_GDPoptAlgorithm):
 
         config.logger.debug('Added %s OA cuts' % counter)
 
-GDP_LOA_Solver.solve.__doc__ = add_docstring_list(
-    GDP_LOA_Solver.solve.__doc__, GDP_LOA_Solver.CONFIG, indent_by=8)
+# GDP_LOA_Solver.solve.__doc__ = add_docstring_list(
+#     GDP_LOA_Solver.solve.__doc__, GDP_LOA_Solver.CONFIG, indent_by=8)

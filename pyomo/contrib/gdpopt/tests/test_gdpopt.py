@@ -25,8 +25,6 @@ from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block, add_disjunct_list, add_constraints_by_disjunct,
     add_global_constraint_list)
-from pyomo.contrib.gdpopt.gloa import GDP_GLOA_Solver
-from pyomo.contrib.gdpopt.loa import GDP_LOA_Solver
 from pyomo.contrib.gdpopt.mip_solve import (
     solve_MILP_master_problem, distinguish_mip_infeasible_or_unbounded)
 import pyomo.contrib.gdpopt.tests.common_tests as ct
@@ -80,7 +78,9 @@ class TestGDPoptUnit(unittest.TestCase):
             with time_code(timing, 'main', is_main_timer=True):
                 tc = solve_MILP_master_problem(
                     m.GDPopt_utils,
-                    GDP_LOA_Solver.CONFIG(dict(mip_solver=mip_solver)),
+                    SolverFactory('gdpopt',
+                                  algorithm='LOA').CONFIG(
+                                      dict(mip_solver=mip_solver)),
                     timing)
             self.assertIn("Master problem was unbounded. Re-solving with "
                           "arbitrary bound values", output.getvalue().strip())
@@ -169,6 +169,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 3), initialize=2)
         m.c = Constraint(expr=m.x == 2)
+        GDP_LOA_Solver = SolverFactory('gdpopt', algorithm='LOA')._impl
         self.assertTrue(
             is_feasible(m, GDP_LOA_Solver.CONFIG()))
 
@@ -258,7 +259,7 @@ class TestGDPoptUnit(unittest.TestCase):
         config = ConfigDict()
         config.declare('integer_tolerance', ConfigValue(1e-6))
 
-        gloa = GDP_GLOA_Solver()
+        gloa = SolverFactory('gdpopt', algorithm='GLOA')._impl
 
         constraints = list(gloa._get_active_untransformed_constraints(
             util_block, config))

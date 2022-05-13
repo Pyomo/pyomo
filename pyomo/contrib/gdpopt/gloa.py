@@ -14,7 +14,6 @@ from pyomo.common.config import add_docstring_list
 from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
-from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
@@ -32,39 +31,21 @@ from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 from pyomo.core import Constraint, Block, NonNegativeIntegers, Objective
 from pyomo.core.expr.numvalue import is_potentially_variable
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.opt.base import SolverFactory
 
-@SolverFactory.register(
-    '_global_logic_based_oa',
-    doc='GDP Global Logic-Based Outer Approximation (GLOA) solver')
-class GDP_GLOA_Solver(_GDPoptAlgorithm):
+class GDP_GLOA_Solver():
     """The GDPopt (Generalized Disjunctive Programming optimizer) global
     logic-based outer approximation (GLOA) solver.
 
     Accepts models that can include nonlinear, continuous variables and
     constraints, as well as logical conditions.
     """
-    CONFIG = _GDPoptAlgorithm.CONFIG()
-    _add_OA_configs(CONFIG)
-    _add_mip_solver_configs(CONFIG)
-    _add_nlp_solver_configs(CONFIG)
-    _add_tolerance_configs(CONFIG)
-
-    def __init__(self, **kwds):
-        self.CONFIG = self.CONFIG(kwds)
-        super(GDP_GLOA_Solver, self).__init__()
-
-    def solve(self, model, **kwds):
-        """Solve the model with GLOA
-
-        Args:
-            model (Block): a Pyomo model or block to be solved.
-
-        """
-        config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
-        config.set_value(kwds)
-
-        return super().solve(model, config)
+    def __init__(self, parent):
+        self.parent = parent
+        self.CONFIG = parent.CONFIG()
+        _add_OA_configs(self.CONFIG)
+        _add_mip_solver_configs(self.CONFIG)
+        _add_nlp_solver_configs(self.CONFIG)
+        _add_tolerance_configs(self.CONFIG)
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger
@@ -72,11 +53,11 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
         # we need to gather a map of Disjuncts to their active Constraints
         # before we call any GDP transformations, as we will need this
         # information for cut generation later
-        add_constraints_by_disjunct(self.original_util_block)
+        add_constraints_by_disjunct(self.parent.original_util_block)
         # We also save these in advance because we know only linear logical
         # constraints will be added by the transformation to a MIP, so these are
         # all we'll ever need.
-        add_global_constraint_list(self.original_util_block)
+        add_global_constraint_list(self.parent.original_util_block)
         (master_util_block,
          subproblem_util_block) = _get_master_and_subproblem(self, config)
 
@@ -85,33 +66,33 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
         master_obj = next(master.component_data_objects(Objective, active=True,
                                                         descend_into=True))
 
-        self._log_header(logger)
+        self.parent._log_header(logger)
 
         # main loop
-        while self.iteration < config.iterlim:
-            self.iteration += 1
+        while self.parent.iteration < config.iterlim:
+            self.parent.iteration += 1
 
             # solve linear master problem
-            with time_code(self.timing, 'mip'):
+            with time_code(self.parent.timing, 'mip'):
                 mip_feasible = solve_MILP_master_problem(master_util_block,
-                                                         config, self.timing)
-                self._update_bounds_after_master_problem_solve(mip_feasible,
-                                                               master_obj,
-                                                               logger)
+                                                         config,
+                                                         self.parent.timing)
+                self.parent._update_bounds_after_master_problem_solve(
+                    mip_feasible, master_obj, logger)
             # Check termination conditions
-            if self.any_termination_criterion_met(config):
+            if self.parent.any_termination_criterion_met(config):
                 break
 
-            with time_code(self.timing, 'nlp'):
+            with time_code(self.parent.timing, 'nlp'):
                 _fix_master_soln_solve_subproblem_and_add_cuts(
                     master_util_block, subproblem_util_block, config, self)
 
             # Add integer cut
-            with time_code(self.timing, "integer cut generation"):
+            with time_code(self.parent.timing, "integer cut generation"):
                 add_no_good_cut(master_util_block, config)
 
             # Check termination conditions
-            if self.any_termination_criterion_met(config):
+            if self.parent.any_termination_criterion_met(config):
                 break
 
     # Utility used in cut_generation: We saved a map of Disjuncts to the
@@ -218,5 +199,5 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm):
                 config.logger.debug("Added %s affine cuts" % counter)
 
 
-GDP_GLOA_Solver.solve.__doc__ = add_docstring_list(
-    GDP_GLOA_Solver.solve.__doc__, GDP_GLOA_Solver.CONFIG, indent_by=8)
+# GDP_GLOA_Solver.solve.__doc__ = add_docstring_list(
+#     GDP_GLOA_Solver.solve.__doc__, GDP_GLOA_Solver.CONFIG, indent_by=8)

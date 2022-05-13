@@ -43,7 +43,7 @@ def preserve_master_problem_feasible_region(master_util_block, config,
 def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                           config, solver):
     """Initialize by using user-specified custom disjuncts."""
-    solver._log_header(config.logger)
+    solver.parent._log_header(config.logger)
 
     used_disjuncts = {}
 
@@ -82,7 +82,8 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
         with preserve_master_problem_feasible_region(master_util_block, config,
                                                      original_bounds):
             mip_termination = solve_MILP_master_problem(master_util_block,
-                                                        config, solver.timing)
+                                                        config, 
+                                                        solver.parent.timing)
         if mip_termination is not tc.infeasible:
             _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                                            subprob_util_block,
@@ -103,7 +104,7 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
     config.logger.info(
         "Generating initial linear GDP approximation by "
         "solving subproblem with original user-specified disjunct values.")
-    solver._log_header(config.logger)
+    solver.parent._log_header(config.logger)
 
     # Again, if we presolve, we are going to tighten the bounds after fixing the
     # indicator_vars, so it won't be valid afterwards and we need to restore it.
@@ -122,7 +123,7 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
         # anything. So first we solve the master problem in case we need values
         # for other discrete variables, and to make sure it's feasible.
         mip_termination = solve_MILP_master_problem(master_util_block, config,
-                                                    solver.timing)
+                                                    solver.parent.timing)
 
         # restore the fixed status of the indicator_variables
         for disj in master_util_block.disjunct_list:
@@ -174,13 +175,13 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
         "Generating initial linear GDP approximation by "
         "solving a subproblem that maximizes "
         "the sum of all binary and logical variables.")
-    solver._log_header(config.logger)
+    solver.parent._log_header(config.logger)
 
     # As with set covering, this is only a change of objective. The formulation
     # may be tightened, but that is valid for the duration.
     with use_master_for_max_binary_initialization(master_util_block):
         mip_termination = solve_MILP_master_problem(master_util_block, config,
-                                                    solver.timing)
+                                                    solver.parent.timing)
         if mip_termination is not tc.infeasible:
             _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                                            subprob_util_block,
@@ -189,7 +190,7 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
             config.logger.debug(
                 "MILP relaxation for initialization was infeasible. "
                 "Problem is infeasible.")
-            solver._update_dual_bound_to_infeasible()
+            solver.parent._update_dual_bound_to_infeasible()
             return False
         add_no_good_cut(master_util_block, config)
 
@@ -235,7 +236,7 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
 
     """
     config.logger.info("Starting set covering initialization.")
-    solver._log_header(config.logger)
+    solver.parent._log_header(config.logger)
 
     # List of True/False if the corresponding disjunct in
     # disjunct_list still needs to be covered by the initialization
@@ -264,7 +265,8 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                                           disjunct_needs_cover)
 
             mip_termination = solve_MILP_master_problem(master_util_block,
-                                                        config, solver.timing)
+                                                        config,
+                                                        solver.parent.timing)
 
             if mip_termination is tc.infeasible:
                 config.logger.debug('Set covering problem is infeasible. '
@@ -275,7 +277,7 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                         'Set covering problem is infeasible. '
                         'Check your linear and logical constraints '
                         'for contradictions.')
-                solver._update_dual_bound_to_infeasible()
+                solver.parent._update_dual_bound_to_infeasible()
                 # problem is infeasible. break
                 return False
             else:

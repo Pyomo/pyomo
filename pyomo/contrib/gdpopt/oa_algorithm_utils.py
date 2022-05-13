@@ -21,19 +21,19 @@ def _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                            subprob_util_block, config,
                                            config.force_subproblem_nlp):
         nlp_termination = solve_subproblem(subprob_util_block, config,
-                                           solver.timing)
+                                           solver.parent.timing)
         if nlp_termination in {tc.optimal, tc.feasible}:
-            primal_improved = solver._update_bounds_after_solve(
+            primal_improved = solver.parent._update_bounds_after_solve(
                 'subproblem', primal=value(subprob_util_block.obj.expr),
                 logger=config.logger)
             if primal_improved:
-                solver.update_incumbent(subprob_util_block)
+                solver.parent.update_incumbent(subprob_util_block)
             solver._add_cuts_to_master_problem(subprob_util_block,
                                                master_util_block,
-                                               solver.objective_sense, config,
-                                               solver.timing)
+                                               solver.parent.objective_sense,
+                                               config, solver.parent.timing)
         elif nlp_termination == tc.unbounded:
             # the whole problem is unbounded, we can stop
-            solver._update_primal_bound_to_unbounded()
+            solver.parent._update_primal_bound_to_unbounded()
 
     return nlp_termination not in {tc.infeasible, tc.unbounded}
