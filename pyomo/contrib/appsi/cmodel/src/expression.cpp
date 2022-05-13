@@ -95,6 +95,10 @@ void LogOperator::evaluate(double *values) {
   values[index] = std::log(operand->get_value_from_array(values));
 }
 
+void AbsOperator::evaluate(double *values) {
+  values[index] = std::fabs(operand->get_value_from_array(values));
+}
+
 void SqrtOperator::evaluate(double *values) {
   values[index] = std::pow(operand->get_value_from_array(values), 0.5);
 }
@@ -422,6 +426,11 @@ void LogOperator::print(std::string *string_array) {
       ("log(" + operand->get_string_from_array(string_array) + ")");
 }
 
+void AbsOperator::print(std::string *string_array) {
+  string_array[index] =
+      ("abs(" + operand->get_string_from_array(string_array) + ")");
+}
+
 void SqrtOperator::print(std::string *string_array) {
   string_array[index] =
       ("sqrt(" + operand->get_string_from_array(string_array) + ")");
@@ -599,6 +608,8 @@ void ExpOperator::write_nl_string(std::ofstream &f) { f << "o44\n"; }
 
 void LogOperator::write_nl_string(std::ofstream &f) { f << "o43\n"; }
 
+void AbsOperator::write_nl_string(std::ofstream &f) { f << "o15\n"; }
+
 void SqrtOperator::write_nl_string(std::ofstream &f) { f << "o39\n"; }
 
 void Log10Operator::write_nl_string(std::ofstream &f) { f << "o42\n"; }
@@ -634,6 +645,8 @@ bool NegationOperator::is_negation_operator() { return true; }
 bool ExpOperator::is_exp_operator() { return true; }
 
 bool LogOperator::is_log_operator() { return true; }
+
+bool AbsOperator::is_abs_operator() { return true; }
 
 bool SqrtOperator::is_sqrt_operator() { return true; }
 
@@ -1270,6 +1283,32 @@ void LogOperator::propagate_bounds_backward(
                                improvement_tol, improved_vars);
 }
 
+void AbsOperator::propagate_bounds_forward(double *lbs, double *ubs,
+                                           double feasibility_tol,
+                                           double integer_tol) {
+  interval_abs(operand->get_lb_from_array(lbs), operand->get_ub_from_array(ubs),
+               &lbs[index], &ubs[index]);
+}
+
+void AbsOperator::propagate_bounds_backward(
+    double *lbs, double *ubs, double feasibility_tol, double integer_tol,
+    double improvement_tol, std::set<std::shared_ptr<Var>> &improved_vars) {
+  double xl = operand->get_lb_from_array(lbs);
+  double xu = operand->get_ub_from_array(ubs);
+  double lb = get_lb_from_array(lbs);
+  double ub = get_ub_from_array(ubs);
+
+  double new_xl, new_xu;
+  _inverse_abs(lb, ub, &new_xl, &new_xu);
+
+  if (new_xl > xl)
+    xl = new_xl;
+  if (new_xu < xu)
+    xu = new_xu;
+  operand->set_bounds_in_array(xl, xu, lbs, ubs, feasibility_tol, integer_tol,
+                               improvement_tol, improved_vars);
+}
+
 void Log10Operator::propagate_bounds_forward(double *lbs, double *ubs,
                                              double feasibility_tol,
                                              double integer_tol) {
@@ -1568,8 +1607,18 @@ appsi_operator_from_pyomo_expr(py::handle expr, py::handle var_map,
     res = std::make_shared<Constant>(expr.attr("value").cast<double>());
     break;
   }
+  case pyomo_unit: {
+    res = std::make_shared<Constant>(1.0);
+    break;
+  }
+  case unary_abs: {
+    res = std::make_shared<AbsOperator>();
+    break;
+  }
   default: {
-    throw py::value_error("Unrecognized expression type");
+    throw py::value_error("Unrecognized expression type: " +
+                          expr_types.builtins.attr("str")(py::type::of(expr))
+                              .cast<std::string>());
     break;
   }
   }
@@ -1678,8 +1727,25 @@ void prep_for_repn_helper(py::handle expr, py::handle named_exprs,
   case numeric_constant: {
     break;
   }
+  case pyomo_unit: {
+    break;
+  }
+  case unary_abs: {
+    py::tuple args = expr.attr("_args_");
+    for (py::handle arg : args) {
+      prep_for_repn_helper(arg, named_exprs, variables, fixed_vars,
+                           external_funcs, expr_types);
+    }
+    break;
+  }
   default: {
-    throw py::value_error("Unrecognized expression type");
+    if (expr_types.builtins.attr("hasattr")(expr, "is_constant").cast<bool>()) {
+      if (expr.attr("is_constant")().cast<bool>())
+        break;
+    }
+    throw py::value_error("Unrecognized expression type: " +
+                          expr_types.builtins.attr("str")(py::type::of(expr))
+                              .cast<std::string>());
     break;
   }
   }
@@ -1708,6 +1774,10 @@ int build_expression_tree(py::handle pyomo_expr,
                           std::shared_ptr<Node> appsi_expr, py::handle var_map,
                           py::handle param_map, PyomoExprTypes &expr_types) {
   int num_nodes = 0;
+
+  if (expr_types.expr_type_map[py::type::of(pyomo_expr)].cast<ExprType>() ==
+      named_expr)
+    pyomo_expr = pyomo_expr.attr("expr");
 
   if (appsi_expr->is_leaf()) {
     ;
@@ -1772,7 +1842,10 @@ int build_expression_tree(py::handle pyomo_expr,
                                 var_map, param_map, expr_types);
     }
   } else {
-    throw py::value_error("Unrecognized expression type");
+    throw py::value_error(
+        "Unrecognized expression type: " +
+        expr_types.builtins.attr("str")(py::type::of(pyomo_expr))
+            .cast<std::string>());
   }
   return num_nodes;
 }

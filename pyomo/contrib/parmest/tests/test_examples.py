@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -10,7 +11,11 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.contrib.parmest.parmest as parmest
+from pyomo.contrib.parmest.graphics import (
+    matplotlib_available, seaborn_available
+)
 from pyomo.opt import SolverFactory
+
 ipopt_available = SolverFactory('ipopt').available()
 
 
@@ -31,14 +36,17 @@ class TestRooneyBieglerExamples(unittest.TestCase):
         from pyomo.contrib.parmest.examples.rooney_biegler import rooney_biegler
         rooney_biegler.main()
 
+    @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_parameter_estimation_example(self):
         from pyomo.contrib.parmest.examples.rooney_biegler import parameter_estimation_example
         parameter_estimation_example.main()
 
+    @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_bootstrap_example(self):
         from pyomo.contrib.parmest.examples.rooney_biegler import bootstrap_example
         bootstrap_example.main()
 
+    @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_likelihood_ratio_example(self):
         from pyomo.contrib.parmest.examples.rooney_biegler import likelihood_ratio_example
         likelihood_ratio_example.main()
@@ -110,6 +118,7 @@ class TestReactorDesignExamples(unittest.TestCase):
         from pyomo.contrib.parmest.examples.reactor_design import parameter_estimation_example
         parameter_estimation_example.main()
 
+    @unittest.skipUnless(seaborn_available, "test requires seaborn")
     def test_bootstrap_example(self):
         from pyomo.contrib.parmest.examples.reactor_design import bootstrap_example
         bootstrap_example.main()
@@ -132,6 +141,7 @@ class TestReactorDesignExamples(unittest.TestCase):
         from pyomo.contrib.parmest.examples.reactor_design import multisensor_data_example
         multisensor_data_example.main()
 
+    @unittest.skipUnless(matplotlib_available, "test requires matplotlib")
     def test_datarec_example(self):
         from pyomo.contrib.parmest.examples.reactor_design import datarec_example
         datarec_example.main()

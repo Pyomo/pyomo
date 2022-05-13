@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -24,6 +25,7 @@ import io
 import logging
 import os
 import pickle
+import ply.lex
 import re
 import sys
 from textwrap import wrap
@@ -32,7 +34,7 @@ import types
 from pyomo.common.collections import Sequence, Mapping
 from pyomo.common.deprecation import deprecated, relocated_module_attribute
 from pyomo.common.fileutils import import_file
-from pyomo.common.modeling import NoArgumentGiven
+from pyomo.common.modeling import NOTSET
 
 logger = logging.getLogger('pyomo.common.config')
 
@@ -238,7 +240,6 @@ class In(object):
         self._domain = domain
         self._cast = cast
 
-
     def __call__(self, value):
         if self._cast is not None:
             v = self._cast(value)
@@ -247,6 +248,13 @@ class In(object):
         if v in self._domain:
             return v
         raise ValueError("value %s not in domain %s" % (value, self._domain))
+
+    def domain_name(self):
+        _dn = str(self._domain)
+        if not _dn or _dn[0] not in '[({':
+            return f'In({_dn})'
+        else:
+            return f'In{_dn}'
 
 
 class InEnum(object):
@@ -278,6 +286,9 @@ class InEnum(object):
         raise ValueError("%r is not a valid %s" % (
             value, self._domain.__name__))
 
+    def domain_name(self):
+        return f'InEnum[{self._domain.__name__}]'
+
 
 class ListOf(object):
     """Domain validator for lists of a specified type
@@ -293,21 +304,36 @@ class ListOf(object):
         element in the list.  If not specified, defaults to the
         `itemtype`.
 
+    string_lexer: Callable
+        A preprocessor (lexer) called for all string values.  If
+        NOTSET, then strings are split on whitespace and/or commas
+        (honoring simple use of single or double quotes).  If None, then
+        no tokenization is performed.
+
     """
-    def __init__(self, itemtype, domain=None):
+    def __init__(self, itemtype, domain=None, string_lexer=NOTSET):
         self.itemtype = itemtype
         if domain is None:
             self.domain = self.itemtype
         else:
             self.domain = domain
+        if string_lexer is NOTSET:
+            self.string_lexer = _default_string_list_lexer
+        else:
+            self.string_lexer = string_lexer
         self.__name__ = 'ListOf(%s)' % (
             getattr(self.domain, '__name__', self.domain),)
 
     def __call__(self, value):
+        if isinstance(value, str) and self.string_lexer is not None:
+            return [self.domain(v) for v in self.string_lexer(value)]
         if hasattr(value, '__iter__') and not isinstance(value, self.itemtype):
             return [self.domain(v) for v in value]
-        else:
-            return [self.domain(value)]
+        return [self.domain(value)]
+
+    def domain_name(self):
+        _dn = _domain_name(self.domain) or ""
+        return f'ListOf[{_dn}]'
 
 
 class Module(object):
@@ -1008,6 +1034,17 @@ def _munge_name(name, space_to_dash=True):
     name = re.sub(r'_', '-', name)
     return re.sub(r'[^a-zA-Z0-9-_]', '_', name)
 
+def _domain_name(domain):
+    if domain is None:
+        return ""
+    elif hasattr(domain, 'domain_name'):
+        return domain.domain_name()
+    elif domain.__class__ is type:
+        return domain.__name__
+    elif inspect.isfunction(domain):
+        return domain.__name__
+    else:
+        return None
 
 _leadingSpace = re.compile('^([ \t]*)')
 
@@ -1111,6 +1148,96 @@ _picklable.known = {}
 # module scope)
 _picklable.unknowable_types = {type, types.FunctionType,}
 
+_store_bool = {'store_true', 'store_false'}
+
+def _build_lexer(literals=''):
+    # Ignore whitespace (space, tab, linefeed, and comma)
+    t_ignore = " \t\r,"
+
+    tokens = [
+        "STRING", # quoted string
+        "WORD",   # unquoted string
+    ]
+
+    # A "string" is a proper quoted string
+    _quoted_str = r"'(?:[^'\\]|\\.)*'"
+    _general_str = "|".join([_quoted_str, _quoted_str.replace("'",'"')])
+    @ply.lex.TOKEN(_general_str)
+    def t_STRING(t):
+        t.value = t.value[1:-1]
+        return t
+
+    # A "word" contains no whitesspace or commas
+    @ply.lex.TOKEN(r'[^' + repr(t_ignore+literals) + r']+')
+    def t_WORD(t):
+        t.value = t.value
+        return t
+
+    # Error handling rule
+    def t_error(t):
+        # Note this parser does not allow "\n", so lexpos is the
+        # column number
+        raise IOError("ERROR: Token '%s' Line %s Column %s"
+          % (t.value, t.lineno, t.lexpos+1))
+
+    return ply.lex.lex()
+
+def _default_string_list_lexer(value):
+    """Simple string tokenizer for lists of words.
+
+    This default lexer splits strings on whitespace and/or commas while
+    honoring use of single and double quotes.  Separators (whitespace or
+    commas) are not returned.  Consecutive delimiters are ignored (and
+    do not yield empty strings).
+
+    """
+    _lex = _default_string_list_lexer._lex
+    if _lex is None:
+        _default_string_list_lexer._lex = _lex = _build_lexer()
+    _lex.input(value)
+    while True:
+        tok = _lex.token()
+        if not tok:
+            break
+        yield tok.value
+
+_default_string_list_lexer._lex = None
+
+def _default_string_dict_lexer(value):
+    """Simple string tokenizer for dict data.
+
+    This default lexer splits strings on whitespace and/or commas while
+    honoring use of single and double quotes.  ':' and '=' are
+    recognized as special tokens.  Separators (whitespace or commas) are
+    not returned.  Consecutive delimiters are ignored (and do not yield
+    empty strings).
+
+    """
+    _lex = _default_string_dict_lexer._lex
+    if _lex is None:
+        _default_string_dict_lexer._lex = _lex = _build_lexer(':=')
+    _lex.input(value)
+    while True:
+        key = _lex.token()
+        if not key:
+            break
+        sep = _lex.token()
+        if not sep:
+            raise ValueError(
+                "Expected ':' or '=' but encountered end of string")
+        if sep.type not in ':=':
+            raise ValueError(
+                f"Expected ':' or '=' but found '{sep.value}' at "
+                f"Line {sep.lineno} Column {sep.lexpos+1}")
+        val = _lex.token()
+        if not val:
+            raise ValueError(
+                f"Expected value following '{sep.type}' "
+                f"but encountered end of string")
+        yield key.value, val.value
+
+_default_string_dict_lexer._lex = None
+
 
 class ConfigBase(object):
     __slots__ = ('_parent', '_name', '_userSet', '_userAccessed', '_data',
@@ -1175,10 +1302,10 @@ class ConfigBase(object):
             # of setting self.__dict__[key] = val.
             object.__setattr__(self, key, val)
 
-    def __call__(self, value=NoArgumentGiven, default=NoArgumentGiven,
-                 domain=NoArgumentGiven,  description=NoArgumentGiven,
-                 doc=NoArgumentGiven, visibility=NoArgumentGiven,
-                 implicit=NoArgumentGiven, implicit_domain=NoArgumentGiven,
+    def __call__(self, value=NOTSET, default=NOTSET,
+                 domain=NOTSET,  description=NOTSET,
+                 doc=NOTSET, visibility=NOTSET,
+                 implicit=NOTSET, implicit_domain=NOTSET,
                  preserve_implicit=False):
         # We will pass through overriding arguments to the constructor.
         # This way if the constructor does special processing of any of
@@ -1190,22 +1317,22 @@ class ConfigBase(object):
         fields = ('description', 'doc', 'visibility')
         if isinstance(self, ConfigDict):
             fields += (('implicit', '_implicit_declaration'), 'implicit_domain')
-            assert domain is NoArgumentGiven
-            assert default is NoArgumentGiven
+            assert domain is NOTSET
+            assert default is NOTSET
         else:
             fields += ('domain',)
             kwds['default'] = (
-                self.value() if default is NoArgumentGiven else default
+                self.value() if default is NOTSET else default
             )
-            assert implicit is NoArgumentGiven
-            assert implicit_domain is NoArgumentGiven
+            assert implicit is NOTSET
+            assert implicit_domain is NOTSET
         for field in fields:
             if type(field) is tuple:
                 field, attr = field
             else:
                 attr = '_'+field
-            if locals()[field] is NoArgumentGiven:
-                kwds[field] = getattr(self, attr, NoArgumentGiven)
+            if locals()[field] is NOTSET:
+                kwds[field] = getattr(self, attr, NOTSET)
             else:
                 kwds[field] = locals()[field]
 
@@ -1227,7 +1354,7 @@ class ConfigBase(object):
                     _tmp._name = v._name
 
         # ... and set the value, if appropriate
-        if value is not NoArgumentGiven:
+        if value is not NOTSET:
             ans.set_value(value)
         return ans
 
@@ -1245,6 +1372,12 @@ class ConfigBase(object):
         else:
             return self._name
 
+    def domain_name(self):
+        _dn = _domain_name(self._domain)
+        if _dn is None:
+            return _munge_name(self.name(), False)
+        return _dn
+
     def set_default_value(self, default):
         self._default = default
 
@@ -1257,7 +1390,7 @@ class ConfigBase(object):
             return value
         if self._domain is not None:
             try:
-                if value is not NoArgumentGiven:
+                if value is not NOTSET:
                     return self._domain(value)
                 else:
                     return self._domain()
@@ -1355,7 +1488,7 @@ class ConfigBase(object):
                     return 0, _grp
             return 0, _parser.add_argument_group(title=name)
 
-        def _process_argparse_def(_args, _kwds):
+        def _process_argparse_def(obj, _args, _kwds):
             _parser = parser
             # shallow copy the dict so we can remove the group flag and
             # add things like documentation, etc.
@@ -1373,21 +1506,17 @@ class ConfigBase(object):
                     _issub, _parser = _get_subparser_or_group(_parser, _group)
             if 'dest' not in _kwds:
                 _kwds['dest'] = 'CONFIGBLOCK.' + obj.name(True)
-                if 'metavar' not in _kwds and \
-                   _kwds.get('action','') not in ('store_true','store_false'):
-                    if obj._domain is not None and \
-                       obj._domain.__class__ is type:
-                        _kwds['metavar'] = obj._domain.__name__.upper()
-                    else:
-                        _kwds['metavar'] = _munge_name(self.name().upper(),
-                                                       False)
+                if ( 'metavar' not in _kwds
+                     and _kwds.get('action','') not in _store_bool
+                     and obj._domain is not None ):
+                    _kwds['metavar'] = obj.domain_name().upper()
             _parser.add_argument(*_args, default=argparse.SUPPRESS, **_kwds)
 
         for level, prefix, value, obj in self._data_collector(None, ""):
             if obj._argparse is None:
                 continue
             for _args, _kwds in obj._argparse:
-                _process_argparse_def(_args, _kwds)
+                _process_argparse_def(obj, _args, _kwds)
 
     def import_argparse(self, parsed_args):
         for level, prefix, value, obj in self._data_collector(None, ""):
@@ -1771,7 +1900,6 @@ class ConfigList(ConfigBase, Sequence):
             self._domain = ConfigValue(None, domain=self._domain)
         self.reset()
 
-
     def __setstate__(self, state):
         state = super(ConfigList, self).__setstate__(state)
         for x in self._data:
@@ -1785,7 +1913,7 @@ class ConfigList(ConfigBase, Sequence):
         else:
             return val
 
-    def get(self, key, default=NoArgumentGiven):
+    def get(self, key, default=NOTSET):
         # Note: get() is borrowed from ConfigDict for cases where we
         # want the raw stored object (and to aviod the implicit
         # conversion of ConfigValue members to their stored data).
@@ -1794,7 +1922,7 @@ class ConfigList(ConfigBase, Sequence):
             self._userAccessed = True
             return val
         except IndexError:
-            if default is NoArgumentGiven:
+            if default is NOTSET:
                 raise
         # Note: self._domain is ALWAYS derived from ConfigBase
         return self._domain(default)
@@ -1826,6 +1954,8 @@ class ConfigList(ConfigBase, Sequence):
         _old = self._data
         self._data = []
         try:
+            if isinstance(value, str):
+                value = list(_default_string_list_lexer(value))
             if (type(value) is list) or \
                isinstance(value, ConfigList):
                 for val in value:
@@ -1848,7 +1978,7 @@ class ConfigList(ConfigBase, Sequence):
         for val in self.user_values():
             val._userSet = False
 
-    def append(self, value=NoArgumentGiven):
+    def append(self, value=NOTSET):
         val = self._cast(value)
         if val is None:
             return
@@ -1863,7 +1993,7 @@ class ConfigList(ConfigBase, Sequence):
 
     @deprecated("ConfigList.add() has been deprecated.  Use append()",
                 version='5.7.2')
-    def add(self, value=NoArgumentGiven):
+    def add(self, value=NOTSET):
         "Append the specified value to the list, casting as necessary."
         return self.append(value)
 
@@ -1953,6 +2083,9 @@ class ConfigDict(ConfigBase, Mapping):
         ConfigBase.__init__(self, None, {}, description, doc, visibility)
         self._data = {}
 
+    def domain_name(self):
+        return _munge_name(self.name(), False)
+
     def __getstate__(self):
         state = super(ConfigDict, self).__getstate__()
         state.update((key, getattr(self, key)) for key in ConfigDict.__slots__)
@@ -1976,12 +2109,12 @@ class ConfigDict(ConfigBase, Mapping):
         else:
             return self._data[_key]
 
-    def get(self, key, default=NoArgumentGiven):
+    def get(self, key, default=NOTSET):
         self._userAccessed = True
         _key = str(key).replace(' ','_')
         if _key in self._data:
             return self._data[_key]
-        if default is NoArgumentGiven:
+        if default is NOTSET:
             return None
         if self._implicit_domain is not None:
             if type(self._implicit_domain) is DynamicImplicitDomain:
@@ -1991,12 +2124,12 @@ class ConfigDict(ConfigBase, Mapping):
         else:
             return ConfigValue(default)
 
-    def setdefault(self, key, default=NoArgumentGiven):
+    def setdefault(self, key, default=NOTSET):
         self._userAccessed = True
         _key = str(key).replace(' ','_')
         if _key in self._data:
             return self._data[_key]
-        if default is NoArgumentGiven:
+        if default is NOTSET:
             return self.add(key, None)
         else:
             return self.add(key, default)
@@ -2153,6 +2286,8 @@ class ConfigDict(ConfigBase, Mapping):
     def set_value(self, value, skip_implicit=False):
         if value is None:
             return self
+        if isinstance(value, str):
+            value = dict(_default_string_dict_lexer(value))
         if (type(value) is not dict) and \
            (not isinstance(value, ConfigDict)):
             raise ValueError("Expected dict value for %s.set_value, found %s" %

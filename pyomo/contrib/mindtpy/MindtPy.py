@@ -3,7 +3,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -145,7 +146,7 @@ class MindtPySolver(object):
             setup_results_object(solve_data, config)
             # In the process_objective function, as long as the objective function is nonlinear, it will be reformulated and the variable/constraint/objective lists will be updated.
             # For OA/GOA/LP-NLP algorithm, if the objective funtion is linear, it will not be reformulated as epigraph constraint.
-            # If the objective function is linear, it will be reformulated as epigraph constraint only if the Feasibility Pump or ROA/RLP-NLP algorithm is activated. (move_linear_objective = True)
+            # If the objective function is linear, it will be reformulated as epigraph constraint only if the Feasibility Pump or ROA/RLP-NLP algorithm is activated. (move_objective = True)
             # In some cases, the variable/constraint/objective lists will not be updated even if the objective is epigraph-reformulated.
             # In Feasibility Pump, since the distance calculation only includes discrete variables and the epigraph slack variables are continuous variables, the Feasibility Pump algorithm will not affected even if the variable list are updated.
             # In ROA and RLP/NLP, since the distance calculation does not include these epigraph slack variables, they should not be added to the variable list. (update_var_con_list = False)
@@ -153,15 +154,18 @@ class MindtPySolver(object):
             # This is because the epigraph constraint is very "flat" for branching rules. The original objective function will be used for the main problem and epigraph reformulation will be used for the projection problem.
             # TODO: The logic here is too complicated, can we simplify it?
             process_objective(solve_data, config,
-                              move_linear_objective=(config.init_strategy == 'FP'
-                                                     or config.add_regularization is not None),
+                              move_objective=(config.init_strategy == 'FP'
+                                                     or config.add_regularization is not None
+                                                     or config.move_objective),
                               use_mcpp=config.use_mcpp,
                               update_var_con_list=config.add_regularization is None,
-                              partition_nonlinear_terms=config.partition_obj_nonlinear_terms
+                              partition_nonlinear_terms=config.partition_obj_nonlinear_terms,
+                              obj_handleable_polynomial_degree=solve_data.mip_objective_polynomial_degree,
+                              constr_handleable_polynomial_degree=solve_data.mip_constraint_polynomial_degree
                               )
             # The epigraph constraint is very "flat" for branching rules.
             # If ROA/RLP-NLP is activated and the original objective function is linear, we will use the original objective for the main mip.
-            if MindtPy.objective_list[0].expr.polynomial_degree() in {1, 0} and config.add_regularization is not None:
+            if MindtPy.objective_list[0].expr.polynomial_degree() in solve_data.mip_objective_polynomial_degree and config.add_regularization is not None:
                 MindtPy.objective_list[0].activate()
                 MindtPy.objective_constr.deactivate()
                 MindtPy.objective.deactivate()

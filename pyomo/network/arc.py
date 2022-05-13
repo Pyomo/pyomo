@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -12,11 +13,13 @@ __all__ = [ 'Arc' ]
 
 from pyomo.network.port import Port
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
-from pyomo.core.base.indexed_component import (ActiveIndexedComponent,
-    UnindexedComponent_set)
+from pyomo.core.base.indexed_component import (
+    ActiveIndexedComponent, UnindexedComponent_set)
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
+from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 from weakref import ref as weakref_ref
 import logging, sys
@@ -77,6 +80,7 @@ class _ArcData(ActiveComponentData):
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NOTSET
         self._active = True
 
         self._ports = None
@@ -330,7 +334,7 @@ class Arc(ActiveIndexedComponent):
                 raise IndexError(
                     "Arc '%s': Cannot initialize multiple indices "
                     "of an arc with single ports" % self.name)
-            for idx in self._index:
+            for idx in self._index_set:
                 try:
                     tmp = apply_indexed_rule(self, self._rule, self_parent, idx)
                 except Exception:
@@ -348,7 +352,7 @@ class Arc(ActiveIndexedComponent):
         """Return data that will be printed for this component."""
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active)],
             self.items(),
             ("Ports", "Directed", "Active"),
@@ -362,6 +366,7 @@ class ScalarArc(_ArcData, Arc):
     def __init__(self, *args, **kwds):
         _ArcData.__init__(self, self)
         Arc.__init__(self, *args, **kwds)
+        self.index = UnindexedComponent_index
 
     def set_value(self, vals):
         """

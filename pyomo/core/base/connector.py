@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -17,9 +18,11 @@ from weakref import ref as weakref_ref
 from pyomo.common.deprecation import deprecated, RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
+from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import IndexedComponent
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.numvalue import NumericValue, value
@@ -42,6 +45,7 @@ class _ConnectorData(ComponentData, NumericValue):
         #   - NumericValue
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NOTSET
 
         self.vars = {}
         self.aggregators = {}
@@ -181,7 +185,7 @@ class Connector(IndexedComponent):
         # Construct _ConnectorData objects for all index values
         #
         if self.is_indexed():
-            self._initialize_members(self._index)
+            self._initialize_members(self._index_set)
         else:
             self._data[None] = self
             self._initialize_members([None])
@@ -218,7 +222,7 @@ class Connector(IndexedComponent):
                     _len = 1
                 yield _k, _len, str(_v)
         return ( [("Size", len(self)),
-                  ("Index", self._index if self.is_indexed() else None),
+                  ("Index", self._index_set if self.is_indexed() else None),
                   ],
                  self._data.items(),
                  ( "Name","Size", "Variable", ),
@@ -261,6 +265,7 @@ class ScalarConnector(Connector, _ConnectorData):
     def __init__(self, *args, **kwd):
         _ConnectorData.__init__(self, component=self)
         Connector.__init__(self, *args, **kwd)
+        self._index = UnindexedComponent_index
 
     #
     # Since this class derives from Component and Component.__getstate__

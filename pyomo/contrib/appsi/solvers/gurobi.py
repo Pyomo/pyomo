@@ -1,9 +1,7 @@
 from collections.abc import Iterable
-import enum
 import logging
 import math
 from typing import List, Dict, Optional
-
 from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
@@ -20,9 +18,6 @@ from pyomo.core.expr.numvalue import (
     value, is_constant, is_fixed, native_numeric_types,
 )
 from pyomo.repn import generate_standard_repn
-from pyomo.core.base.set import (Reals, NonNegativeReals, NonPositiveReals,
-                                 Integers, NonNegativeIntegers, NonPositiveIntegers,
-                                 Binary, PercentFraction, UnitInterval)
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.contrib.appsi.base import (
     PersistentSolver, Results, TerminationCondition, MIPSolverConfig,
@@ -254,22 +249,19 @@ class Gurobi(PersistentBase, PersistentSolver):
         except gurobipy.GurobiError:
             cls._available = Gurobi.Availability.BadLicense
             return
-        if not cmodel_available:
-            cls._available = Gurobi.Availability.NeedsCompiledExtension
-        else:
-            m = gurobipy.Model()
+        m = gurobipy.Model()
+        m.setParam('OutputFlag', 0)
+        try:
+            # As of 3/2021, the limited-size Gurobi license was limited
+            # to 2000 variables.
+            m.addVars(range(2001))
             m.setParam('OutputFlag', 0)
-            try:
-                # As of 3/2021, the limited-size Gurobi license was limited
-                # to 2000 variables.
-                m.addVars(range(2001))
-                m.setParam('OutputFlag', 0)
-                m.optimize()
-                cls._available = Gurobi.Availability.FullLicense
-            except gurobipy.GurobiError:
-                cls._available = Gurobi.Availability.LimitedLicense
-            finally:
-                m.dispose()
+            m.optimize()
+            cls._available = Gurobi.Availability.FullLicense
+        except gurobipy.GurobiError:
+            cls._available = Gurobi.Availability.LimitedLicense
+        finally:
+            m.dispose()
 
     def version(self):
         version = (gurobipy.GRB.VERSION_MAJOR,
@@ -436,7 +428,8 @@ class Gurobi(PersistentBase, PersistentSolver):
         self.gurobi_options = saved_options
         self.update_config = saved_update_config
         self._model = model
-        self._expr_types = cmodel.PyomoExprTypes()
+        if self.use_extensions and cmodel_available:
+            self._expr_types = cmodel.PyomoExprTypes()
 
         if self.config.symbolic_solver_labels:
             self._labeler = TextLabeler()
@@ -622,7 +615,6 @@ class Gurobi(PersistentBase, PersistentSolver):
             solver_con = self._pyomo_con_to_solver_con_map[con]
             self._solver_model.remove(solver_con)
             self._symbol_map.removeSymbol(con)
-            self._labeler.remove_obj(con)
             del self._pyomo_con_to_solver_con_map[con]
             del self._solver_con_to_pyomo_con_map[id(solver_con)]
             self._range_constraints.discard(con)
@@ -637,7 +629,6 @@ class Gurobi(PersistentBase, PersistentSolver):
             solver_sos_con = self._pyomo_sos_to_solver_sos_map[con]
             self._solver_model.remove(solver_sos_con)
             self._symbol_map.removeSymbol(con)
-            self._labeler.remove_obj(con)
             del self._pyomo_sos_to_solver_sos_map[con]
         self._needs_updated = True
 
@@ -649,7 +640,6 @@ class Gurobi(PersistentBase, PersistentSolver):
             solver_var = self._pyomo_var_to_solver_var_map[v_id]
             self._solver_model.remove(solver_var)
             self._symbol_map.removeSymbol(var)
-            self._labeler.remove_obj(var)
             del self._pyomo_var_to_solver_var_map[v_id]
             self._mutable_bounds.pop(v_id, None)
         self._needs_updated = True
@@ -840,6 +830,7 @@ class Gurobi(PersistentBase, PersistentSolver):
     def get_primals(self, vars_to_load=None, solution_number=0):
         if self._needs_updated:
             self._update_gurobi_model()  # this is needed to ensure that solutions cannot be loaded after the model has been changed
+
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
         if vars_to_load is None:

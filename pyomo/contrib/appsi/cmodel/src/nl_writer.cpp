@@ -407,12 +407,11 @@ void NLWriter::write(std::string filename) {
     v_lb = v->get_lb();
     v_ub = v->get_ub();
     v_domain = v->get_domain();
-    if (v_domain != continuous) {
-      throw py::value_error(
-          "NLWriter currently only supports continuous variables.");
-    }
     if (v->fixed) {
       f << "4 " << v->value << "\n";
+    } else if (v_domain != continuous) {
+      throw py::value_error(
+          "NLWriter currently only supports continuous variables.");
     } else if (v_lb == v_ub) {
       f << "4 " << v_lb << "\n";
     } else if (v_lb > -inf && v_ub < inf) {

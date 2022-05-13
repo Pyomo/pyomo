@@ -166,7 +166,9 @@ def ROSolver_iterative_solve(model_data, config):
 
         # === Keep track of total time and subsolver termination conditions
         timing_data.total_master_solve_time += get_time_from_solver(master_soln.results)
-        timing_data.total_master_solve_time += get_time_from_solver(master_soln.feasibility_problem_results)
+
+        if k > 0:  # master feas problem not solved for iteration 0
+            timing_data.total_master_solve_time += get_time_from_solver(master_soln.feasibility_problem_results)
 
         master_soln.master_problem_subsolver_statuses.append(master_soln.results.solver.termination_condition)
 
