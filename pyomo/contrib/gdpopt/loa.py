@@ -35,8 +35,6 @@ from pyomo.core.expr.visitor import identify_variables
 from pyomo.gdp import Disjunct
 from pyomo.repn import generate_standard_repn
 
-from pytest import set_trace
-
 MAX_SYMBOLIC_DERIV_SIZE = 1000
 JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
 
