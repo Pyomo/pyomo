@@ -241,7 +241,7 @@ def _add_subsolver_configs(CONFIG):
     """
     CONFIG.declare('nlp_solver', ConfigValue(
         default='ipopt',
-        domain=In(['ipopt', 'gams', 'baron']),
+        domain=In(['ipopt', 'appsi_ipopt', 'gams', 'baron']),
         description='NLP subsolver name',
         doc='Which NLP subsolver is going to be used for solving the nonlinear'
             'subproblems.'

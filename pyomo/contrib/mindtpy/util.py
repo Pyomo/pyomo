@@ -26,6 +26,7 @@ from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from pyomo.solvers.plugins.solvers.gurobi_persistent import GurobiPersistent
 import math
+from pyomo.opt import TerminationCondition as tc
 
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
@@ -520,7 +521,7 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
     elif solver_name == 'baron':
         opt.options['MaxTime'] = remaining
         opt.options['AbsConFeasTol'] = config.zero_tolerance
-    elif solver_name == 'ipopt':
+    elif solver_name in {'ipopt', 'appsi_ipopt'}:
         opt.options['max_cpu_time'] = remaining
         opt.options['constr_viol_tol'] = config.zero_tolerance
     elif solver_name == 'gams':

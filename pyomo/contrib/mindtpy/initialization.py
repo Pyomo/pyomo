@@ -130,7 +130,12 @@ def init_rNLP(solve_data, config):
     nlpopt = SolverFactory(config.nlp_solver)
     set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
     with SuppressInfeasibleWarning():
-        results = nlpopt.solve(m, tee=config.nlp_solver_tee, **nlp_args)
+        results = nlpopt.solve(m,
+                               tee=config.nlp_solver_tee, 
+                               load_solutions=False,
+                               **nlp_args)
+        if len(results.solution) > 0:
+            m.solutions.load_from(results)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
         main_objective = MindtPy.objective_list[-1]
