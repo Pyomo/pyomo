@@ -1297,7 +1297,7 @@ class TestGLOA(unittest.TestCase):
         SolverFactory('gdpopt', algorithm='GLOA').solve(
             m,
             mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
+            nlp_solver=global_nlp_solver,
             minlp_solver=minlp_solver
         )
         self.assertAlmostEqual(value(m.o.expr), 3)
@@ -1316,7 +1316,7 @@ class TestGLOA(unittest.TestCase):
         SolverFactory('gdpopt', algorithm='GLOA').solve(
             m,
             mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
+            nlp_solver=global_nlp_solver,
             minlp_solver=minlp_solver
         )
         self.assertAlmostEqual(value(m.o.expr), sqrt(3))
@@ -1327,7 +1327,7 @@ class TestGLOA(unittest.TestCase):
         SolverFactory('gdpopt', algorithm='GLOA').solve(
             m,
             mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
+            nlp_solver=global_nlp_solver,
             minlp_solver=minlp_solver,
             force_subproblem_nlp=True
         )
@@ -1344,7 +1344,7 @@ class TestGLOA(unittest.TestCase):
         res = SolverFactory('gdpopt', algorithm='GLOA').solve(
             m,
             mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
+            nlp_solver=global_nlp_solver,
             minlp_solver=minlp_solver
         )
         self.assertEqual(res.solver.termination_condition,
@@ -1355,9 +1355,8 @@ class TestGLOA(unittest.TestCase):
                          "not available.")
     def test_logical_constraints_on_disjuncts(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(m,
-                                                        mip_solver=mip_solver,
-                                                        nlp_solver=nlp_solver)
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            m, mip_solver=mip_solver, nlp_solver=global_nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
     @unittest.skipUnless(license_available and sympy_available,
@@ -1365,9 +1364,8 @@ class TestGLOA(unittest.TestCase):
                          "not available.")
     def test_boolean_vars_on_disjuncts(self):
         m = models.makeBooleanVarsOnDisjuncts()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(m,
-                                                        mip_solver=mip_solver,
-                                                        nlp_solver=nlp_solver)
+        SolverFactory('gdpopt', algorithm='GLOA').solve(
+            m, mip_solver=mip_solver, nlp_solver=global_nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
     @unittest.skipUnless(license_available,
