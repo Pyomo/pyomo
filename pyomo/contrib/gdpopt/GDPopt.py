@@ -67,6 +67,7 @@ from pyomo.contrib.gdpopt.util import (
     a_logger, get_main_elapsed_time, lower_logger_level_to,
     solve_continuous_problem, time_code)
 from pyomo.core.base import Objective, value, minimize, maximize
+from pyomo.core.staleflag import StaleFlagManager
 from pyomo.opt import SolverResults
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt.base import SolverFactory
@@ -505,6 +506,7 @@ class GDPoptSolver():
         return results
 
     def _transfer_incumbent_to_original_model(self, logger):
+        StaleFlagManager.mark_all_as_stale(delayed=False)
         if self.incumbent_boolean_soln is None:
             assert self.incumbent_continuous_soln is None
             # we don't have a solution to transfer
@@ -530,6 +532,7 @@ class GDPoptSolver():
 
             if original_binary is not None:
                 original_binary.set_value(soln)
+        StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def _delete_original_model_util_block(self):
         """For cleaning up after a solve--we want the original model to be
