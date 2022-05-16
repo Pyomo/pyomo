@@ -171,9 +171,7 @@ class GDPoptSolver():
         self._CONFIG.set_value(kwds)
 
         if self._CONFIG.algorithm is not None:
-            print("Calling constructor")
             self._impl = _supported_algorithms[self._CONFIG.algorithm][0](self)
-            print(self._impl)
 
         self.LB = float('-inf')
         self.UB = float('inf')
@@ -256,15 +254,18 @@ class GDPoptSolver():
             model (Block): a Pyomo model or block to be solved
 
         """
+        old_impl = None
+        config_needs_set = False
         if self._impl is not None:
             algorithm = self._impl.CONFIG.algorithm
             config = self._impl.CONFIG(kwds.pop('options', {}),
                                        preserve_implicit=True)
             config.set_value(kwds)
             if config.algorithm != algorithm:
-                # The user pulled a fast one and _impl is wrong.
-                raise NotImplementedError("TODO: I think I can handle this "
-                                          "but let's see if it's worth it.")
+                # The user changed options and _impl is wrong.
+                old_impl = self._impl
+                self._impl = _supported_algorithms[config.algorithm][0](self)
+                config_needs_needs_set = True
         else:
             # parse what was passed here so that we can find the algorithm
             _CONFIG = self._CONFIG(kwds.pop('options', {}),
@@ -273,11 +274,24 @@ class GDPoptSolver():
             # once we've set impl
             _CONFIG.set_value(kwds, skip_implicit=True)
             # Set impl and parse the rest of the config arguments
+            old_impl = self._impl
             self._impl = _supported_algorithms[_CONFIG.algorithm][0](self)
+            config_needs_set = True
+        if config_needs_set:
+            # impl changed, so we need to get the kwd arguments from the new
+            # impl
             config = self._impl.CONFIG(kwds.pop('options', {}),
-                                        preserve_implicit=True)
+                                       preserve_implicit=True)
             config.set_value(kwds)
-        return self._call_main_loop(model, config)
+
+        results = self._call_main_loop(model, config)
+
+        # restore the old implementation. It might be None if an algorithm
+        # wasn't specified to SolverFactory, or else it would be the one that
+        # *was* specified to SolverFactory, which should be the default.
+        self._impl = old_impl
+
+        return results
 
     def _call_main_loop(self, model, config):
         with lower_logger_level_to(config.logger, tee=config.tee):

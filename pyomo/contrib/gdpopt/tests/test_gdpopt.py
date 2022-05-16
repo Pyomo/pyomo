@@ -11,6 +11,7 @@
 
 """Tests for the GDPopt solver plugin."""
 
+from contextlib import redirect_stdout
 from io import StringIO
 import logging
 from math import fabs
@@ -1517,6 +1518,62 @@ class TestGLOA(unittest.TestCase):
         objective_value = value(model.objective.expr)
         self.assertAlmostEqual(objective_value * 1E-5, 1.14385, 2)
 
+@unittest.skipIf(not GLOA_solvers_available,
+                 "Required subsolvers %s are not available"
+                 % (GLOA_solvers,))
+@unittest.skipIf(not LOA_solvers_available,
+                 "Required subsolvers %s are not available"
+                 % (LOA_solvers,))
+class TestSwitchingAlgorithms(unittest.TestCase):
+    def make_model(self):
+        m = ConcreteModel()
+        m.x = Var(bounds=(-10, 10))
+        m.y = Var(bounds=(-10, 10))
+
+        m.disjunction = Disjunction(expr=[[m.y >= m.x**2 + 1],
+                                          [m.y >= m.x**2 -3*m.x + 2]])
+
+        m.obj = Objective(expr=m.y)
+
+        return m
+
+    def test_switch_alg_and_restore_default(self):
+        m = self.make_model()
+
+        loa = SolverFactory('gdpopt', algorithm='LOA')
+        self.assertEqual(loa.CONFIG.algorithm, 'LOA')
+        buf = StringIO()
+        with redirect_stdout(buf):
+            loa.solve(m, tee=True)
+        self.assertIn('using LOA algorithm', buf.getvalue())
+        self.assertAlmostEqual(value(m.obj), -0.25)
+        self.assertEqual(loa.CONFIG.algorithm, 'LOA')
+
+        buf = StringIO()
+        with redirect_stdout(buf):
+            loa.solve(m, algorithm='GLOA', tee=True)
+        self.assertIn('using GLOA algorithm', buf.getvalue())            
+        self.assertAlmostEqual(value(m.obj), -0.25)
+        self.assertEqual(loa.CONFIG.algorithm, 'LOA')
+
+    def test_no_default(self):
+        m = self.make_model()
+
+        opt = SolverFactory('gdpopt')
+        self.assertIsNone(opt.CONFIG.algorithm)
+        buf = StringIO()
+        with redirect_stdout(buf):
+            opt.solve(m, algorithm='RIC', tee=True)
+        self.assertIn('using RIC algorithm', buf.getvalue())
+        self.assertAlmostEqual(value(m.obj), -0.25)
+        self.assertIsNone(opt.CONFIG.algorithm)
+
+        buf = StringIO()
+        with redirect_stdout(buf):
+            opt.solve(m, algorithm='LBB', tee=True)
+        self.assertIn('using LBB algorithm', buf.getvalue())            
+        self.assertAlmostEqual(value(m.obj), -0.25)
+        self.assertIsNone(opt.CONFIG.algorithm)
 
 if __name__ == '__main__':
     unittest.main()
