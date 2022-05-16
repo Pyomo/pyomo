@@ -334,8 +334,6 @@ class TestGDPopt(unittest.TestCase):
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.infeasible)
 
-    @unittest.skipUnless(SolverFactory(mip_solver).available(),
-                         "MIP solver not available")
     def test_unbounded_gdp_minimization(self):
         m = ConcreteModel()
         m.GDPopt_utils = Block()
@@ -354,8 +352,6 @@ class TestGDPopt(unittest.TestCase):
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.unbounded)
 
-    @unittest.skipUnless(SolverFactory(mip_solver).available(),
-                         "MIP solver not available")
     def test_unbounded_gdp_maximization(self):
         m = ConcreteModel()
         m.GDPopt_utils = Block()
@@ -374,6 +370,11 @@ class TestGDPopt(unittest.TestCase):
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.unbounded)
 
+    # [ESJ 5/16/22]: Using Gurobi for this test because glpk seems to get angry
+    # on Windows when the MIP is arbitarily bounded with the large bounds. And I
+    # think I blame glpk...
+    @unittest.skipUnless(SolverFactory('gurobi').available(),
+                         "Gurobi solver not available")
     def test_GDP_nonlinear_objective(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-1, 10))
@@ -382,9 +383,9 @@ class TestGDPopt(unittest.TestCase):
             [m.x + m.y >= 5], [m.x - m.y <= 3]
         ])
         m.o = Objective(expr=m.x ** 2)
-        SolverFactory('gdpopt', algorithm='LOA').solve( m,
-                                                        mip_solver=mip_solver,
-                                                        nlp_solver=nlp_solver )
+        SolverFactory('gdpopt', algorithm='LOA').solve(m,
+                                                       mip_solver='gurobi',
+                                                       nlp_solver=nlp_solver )
         self.assertAlmostEqual(value(m.o), 0)
 
         m = ConcreteModel()
