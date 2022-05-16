@@ -14,6 +14,7 @@ from heapq import heappush, heappop
 import traceback
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
@@ -45,13 +46,22 @@ BBNodeData = namedtuple('BBNodeData', [
 ])
 
 class _GDP_LBB_Solver():
+    CONFIG = ConfigBlock("GDPoptLBB")
+    _add_mip_solver_configs(CONFIG)
+    _add_nlp_solver_configs(CONFIG)
+    _add_tolerance_configs(CONFIG)
+    _add_BB_configs(CONFIG)
+
     def __init__(self, parent):
         self.parent = parent
-        self.CONFIG = parent.CONFIG()
-        _add_mip_solver_configs(self.CONFIG)
-        _add_nlp_solver_configs(self.CONFIG)
-        _add_tolerance_configs(self.CONFIG)
-        _add_BB_configs(self.CONFIG)
+        # Transfer the parent config info: we create it if it is not there, and
+        # overwrite the values if it is already there. The parent defers to what
+        # is in this class during solve.
+        for kwd, val in self.parent.CONFIG.items():
+            if kwd not in self.CONFIG:
+                self.CONFIG.declare(kwd, ConfigValue(default=val))
+            else:
+                self.CONFIG[kwd] = val
 
     def _solve_gdp(self, model, config):
         self.explored_nodes = 0

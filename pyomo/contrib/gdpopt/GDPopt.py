@@ -48,7 +48,7 @@ from textwrap import indent
 
 from pyomo.common.collections import Bunch
 from pyomo.common.config import (
-    add_docstring_list, ConfigBlock, ConfigValue, NonNegativeInt, In,
+    add_docstring_list, In, ConfigBlock, ConfigValue, NonNegativeInt,
     PositiveInt)
 from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError
@@ -167,11 +167,13 @@ class GDPoptSolver():
 
     def __init__(self, **kwds):
         self._CONFIG = self._CONFIG(kwds.pop('options', {}),
-                                  preserve_implicit=True)
+                                    preserve_implicit=True)
         self._CONFIG.set_value(kwds)
 
         if self._CONFIG.algorithm is not None:
+            print("Calling constructor")
             self._impl = _supported_algorithms[self._CONFIG.algorithm][0](self)
+            print(self._impl)
 
         self.LB = float('-inf')
         self.UB = float('inf')
@@ -669,3 +671,14 @@ class GDPoptSolver():
 
 GDPoptSolver.solve.__doc__ = add_docstring_list(
     GDPoptSolver.solve.__doc__, GDPoptSolver._CONFIG, indent_by=8)
+for alg_name, (alg_class, description) in _supported_algorithms.items():
+    GDPoptSolver.solve.__doc__ += (" " * 8).join(
+        alg_class.CONFIG.generate_documentation(
+            block_start="%s Keyword Arguments\n----------------\n" % alg_name,
+            block_end="",
+            item_start="%s\n",
+            item_body=" %s",
+            item_end="",
+            indent_spacing=0,
+            width=256
+        ).splitlines(True))

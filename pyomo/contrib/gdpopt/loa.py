@@ -13,6 +13,7 @@ from collections import namedtuple
 from math import copysign
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
@@ -34,6 +35,8 @@ from pyomo.core.expr.visitor import identify_variables
 from pyomo.gdp import Disjunct
 from pyomo.repn import generate_standard_repn
 
+from pytest import set_trace
+
 MAX_SYMBOLIC_DERIV_SIZE = 1000
 JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
 
@@ -45,13 +48,22 @@ class _GDP_LOA_Solver():
     constraints, as well as logical conditions. For nonconvex problems, LOA
     may not report rigorous lower/upper bounds.
     """
+    CONFIG = ConfigBlock("GDPoptLOA")
+    _add_OA_configs(CONFIG)
+    _add_mip_solver_configs(CONFIG)
+    _add_nlp_solver_configs(CONFIG)
+    _add_tolerance_configs(CONFIG)
+
     def __init__(self, parent):
         self.parent = parent
-        self.CONFIG = parent.CONFIG()
-        _add_OA_configs(self.CONFIG)
-        _add_mip_solver_configs(self.CONFIG)
-        _add_nlp_solver_configs(self.CONFIG)
-        _add_tolerance_configs(self.CONFIG)
+        # Transfer the parent config info: we create it if it is not there, and
+        # overwrite the values if it is already there. The parent defers to what
+        # is in this class during solve.
+        for kwd, val in self.parent.CONFIG.items():
+            if kwd not in self.CONFIG:
+                self.CONFIG.declare(kwd, ConfigValue(default=val))
+            else:
+                self.CONFIG[kwd] = val
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger

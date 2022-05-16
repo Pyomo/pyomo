@@ -395,9 +395,10 @@ class TestGDPopt(unittest.TestCase):
             [m.x + m.y >= 5], [m.x - m.y <= 3]
         ])
         m.o = Objective(expr=-m.x ** 2, sense=maximize)
-        SolverFactory('gdpopt', algorithm='LOA').solve( m,
-                                                        mip_solver=mip_solver,
-                                                        nlp_solver=nlp_solver )
+        print("second")
+        SolverFactory('gdpopt', algorithm='LOA').solve(m,
+                                                       mip_solver='gurobi',
+                                                       nlp_solver=nlp_solver )
         self.assertAlmostEqual(value(m.o), 0)
 
     def test_nested_disjunctions_set_covering(self):
