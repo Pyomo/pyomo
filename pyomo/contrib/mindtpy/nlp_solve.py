@@ -11,9 +11,7 @@
 
 """Solution of NLP subproblems."""
 from __future__ import division
-import logging
 
-from numpy import fix
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
