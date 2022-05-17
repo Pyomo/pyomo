@@ -1553,7 +1553,7 @@ class TestSwitchingAlgorithms(unittest.TestCase):
         buf = StringIO()
         with redirect_stdout(buf):
             loa.solve(m, algorithm='GLOA', tee=True)
-        self.assertIn('using GLOA algorithm', buf.getvalue())            
+        self.assertIn('using GLOA algorithm', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
         self.assertEqual(loa.CONFIG.algorithm, 'LOA')
 
@@ -1572,7 +1572,7 @@ class TestSwitchingAlgorithms(unittest.TestCase):
         buf = StringIO()
         with redirect_stdout(buf):
             opt.solve(m, algorithm='LBB', tee=True)
-        self.assertIn('using LBB algorithm', buf.getvalue())            
+        self.assertIn('using LBB algorithm', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
         self.assertIsNone(opt.CONFIG.algorithm)
 
