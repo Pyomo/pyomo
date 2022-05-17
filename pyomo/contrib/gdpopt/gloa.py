@@ -28,7 +28,8 @@ from pyomo.contrib.gdpopt.util import (
     _add_bigm_constraint_to_transformed_model, time_code)
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
-from pyomo.core import Constraint, Block, NonNegativeIntegers, Objective
+from pyomo.core import (
+    Constraint, Block, NonNegativeIntegers, Objective, value)
 from pyomo.core.expr.numvalue import is_potentially_variable
 from pyomo.core.expr.visitor import identify_variables
 
@@ -166,10 +167,10 @@ class _GDP_GLOA_Solver():
             cvSlope = mc_eqn.subcv()
             ccStart = mc_eqn.concave()
             cvStart = mc_eqn.convex()
-            ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() \
-                     else mc_eqn.upper()
-            lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() \
-                     else mc_eqn.lower()
+            ub_int = min(value(constr.upper),
+                         mc_eqn.upper()) if constr.has_ub() else mc_eqn.upper()
+            lb_int = max(value(constr.lower),
+                         mc_eqn.lower()) if constr.has_lb() else mc_eqn.lower()
 
             parent_block = constr.parent_block()
             # Create a block on which to put outer approximation cuts.
