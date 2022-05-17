@@ -350,6 +350,11 @@ class GDPoptSolver():
         return primal_bound_improved
 
     def relative_gap(self):
+        """Returns current relative optimality gap.
+
+        Note that this gap is not necessarily monotonically decreasing if at
+        some point the primal bound changes signs.
+        """
         absolute_gap = abs(self.UB - self.LB)
         return absolute_gap/(abs(self.primal_bound() + 1e-10))
 
@@ -365,7 +370,7 @@ class GDPoptSolver():
         logger.info(
             '\nSolved in {} iterations and {:.5f} seconds\n'
             'Optimal objective value {:.10f}\n'
-            'Relative optimality gap {:.5f}%'.format(
+            'Relative optimality gap {:.5%}'.format(
                 self.iteration, get_main_elapsed_time(self.timing),
                 self.primal_bound(), self.relative_gap()))
 
