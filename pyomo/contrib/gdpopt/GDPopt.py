@@ -86,6 +86,10 @@ def _strategy_deprecation(strategy):
                         "in favor of 'algorithm.'", version="TBD")
     return In(_supported_algorithms.keys())(strategy)
 
+def _handle_strategy_deprecation(config):
+        if config.strategy is not None and config.algorithm is None:
+            config.algorithm = config.strategy
+
 @SolverFactory.register(
     'gdpopt',
     doc='The GDPopt decomposition-based '
@@ -169,6 +173,7 @@ class GDPoptSolver():
         self._CONFIG = self._CONFIG(kwds.pop('options', {}),
                                     preserve_implicit=True)
         self._CONFIG.set_value(kwds)
+        _handle_strategy_deprecation(self._CONFIG)
 
         if self._CONFIG.algorithm is not None:
             self._impl = _supported_algorithms[self._CONFIG.algorithm][0](self)
@@ -206,14 +211,6 @@ class GDPoptSolver():
         # set up the logger so that we will have a pretty log printed
         logger = config.logger
         self._log_solver_intro_message(config)
-
-        if self._CONFIG.algorithm is not None and \
-           self._CONFIG.algorithm != config.algorithm:
-            deprecation_warning("Changing algorithms using "
-                                "arguments passed to "
-                                "the 'solve' method is deprecated. Please "
-                                "specify the algorithm when the solver is "
-                                "instantiated.", version="TBD")
 
         self.pyomo_results = self._get_pyomo_results_object_with_problem_info(
             model, config)
@@ -261,6 +258,7 @@ class GDPoptSolver():
             config = self._impl.CONFIG(kwds.pop('options', {}),
                                        preserve_implicit=True)
             config.set_value(kwds)
+            _handle_strategy_deprecation(config)
             if config.algorithm != algorithm:
                 # The user changed options and _impl is wrong.
                 old_impl = self._impl
@@ -273,6 +271,7 @@ class GDPoptSolver():
             # There's probably extra stuff, ignore it because we'll deal with it
             # once we've set impl
             _CONFIG.set_value(kwds, skip_implicit=True)
+            _handle_strategy_deprecation(_CONFIG)
             # Set impl and parse the rest of the config arguments
             old_impl = self._impl
             self._impl = _supported_algorithms[_CONFIG.algorithm][0](self)
@@ -283,6 +282,7 @@ class GDPoptSolver():
             config = self._impl.CONFIG(kwds.pop('options', {}),
                                        preserve_implicit=True)
             config.set_value(kwds)
+            _handle_strategy_deprecation(config)
 
         results = self._call_main_loop(model, config)
 
