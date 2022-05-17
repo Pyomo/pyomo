@@ -15,6 +15,7 @@ from pyomo.contrib.pyros.util import selective_clone, add_decision_rule_variable
     coefficient_matching
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
+from pyomo.contrib.pyros.util import identify_objective_functions
 from pyomo.core.expr import current as EXPR
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master, \
@@ -22,6 +23,7 @@ from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, i
 from pyomo.contrib.pyros.solve_data import MasterProblemData
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
+from pyomo.environ import maximize as pyo_max
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest('PyROS unit tests require numpy and scipy')
@@ -246,6 +248,8 @@ class testModelIsValid(unittest.TestCase):
         self.assertTrue(model_is_valid(m))
         m.obj2 = Objective(expr = m.x)
         self.assertFalse(model_is_valid(m))
+        m.obj2.deactivate()
+        self.assertTrue(model_is_valid(m))
         m.del_component("obj1")
         m.del_component("obj2")
         self.assertFalse(model_is_valid(m))
@@ -2251,6 +2255,270 @@ class testUninitializedVars(unittest.TestCase):
                          f"decision rule order {dr_order} is not return "
                          "robust_optimal.")
             )
+
+
+@unittest.skipUnless(SolverFactory('baron').available(exception_flag=False)
+                     and SolverFactory('baron').license_is_valid(),
+                     "Global NLP solver is not available and licensed.")
+class testModelMultipleObjectives(unittest.TestCase):
+    """
+    This class contains tests for models with multiple
+    Objective attributes.
+    """
+    def test_multiple_objs(self):
+        """Test bypassing of global separation solve calls."""
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u ** (0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # add another objective
+        m.obj2 = Objective(expr=m.obj.expr / 2)
+
+        # add block, with another objective
+        m.b = Block()
+        m.b.obj = Objective(expr=m.obj.expr / 2)
+
+        # Define the uncertainty set
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('ipopt')
+        global_subsolver = SolverFactory("baron")
+
+        solve_kwargs = dict(
+             model=m,
+             first_stage_variables=[m.x1],
+             second_stage_variables=[m.x2],
+             uncertain_params=[m.u],
+             uncertainty_set=interval,
+             local_solver=local_subsolver,
+             global_solver=global_subsolver,
+             options={
+                 "objective_focus": ObjectiveType.worst_case,
+                 "solve_master_globally": True,
+                 "decision_rule_order":0,
+             }
+        )
+
+        # check validation error raised due to multiple objectives
+        with self.assertRaisesRegex(
+                AttributeError,
+                "This model structure is not currently handled by the ROSolver."
+                ):
+            pyros_solver.solve(**solve_kwargs)
+
+        # check validation error raised due to multiple objectives
+        m.b.obj.deactivate()
+        with self.assertRaisesRegex(
+                AttributeError,
+                "This model structure is not currently handled by the ROSolver."
+                ):
+            pyros_solver.solve(**solve_kwargs)
+
+        # now solve with only one active obj,
+        # check successful termination
+        m.obj2.deactivate()
+        res = pyros_solver.solve(**solve_kwargs)
+        self.assertIs(res.pyros_termination_condition,
+                      pyrosTerminationCondition.robust_optimal)
+
+        # check active objectives
+        self.assertEqual(
+            len(list(m.component_data_objects(Objective, active=True))),
+            1
+        )
+        self.assertTrue(m.obj.active)
+
+        # swap to maximization objective.
+        # and solve again
+        m.obj_max = Objective(
+            expr=-m.obj.expr,
+            sense=pyo_max,
+        )
+        m.obj.deactivate()
+        res = pyros_solver.solve(**solve_kwargs)
+
+        # check active objectives
+        self.assertEqual(
+            len(list(m.component_data_objects(Objective, active=True))),
+            1
+        )
+        self.assertTrue(m.obj_max.active)
+
+
+class testModelIdentifyObjectives(unittest.TestCase):
+    """
+    This class contains tests for validating routines used to
+    determine the first-stage and second-stage portions of a
+    two-stage expression.
+    """
+    def test_identify_objectives(self):
+        """
+        Test first and second-stage objective identification
+        for a simple two-stage model.
+        """
+        # model
+        m = ConcreteModel()
+
+        # parameters
+        m.p = Param(range(4), initialize=1, mutable=True)
+        m.q = Param(initialize=1)
+
+        # variables
+        m.x = Var(range(4))
+        m.z = Var()
+        m.y = Var(initialize=2)
+
+        # objective
+        m.obj = Objective(
+            expr=(
+                (m.x[0] + m.y) *
+                (sum(m.x[idx] * m.p[idx] for idx in range(3))
+                 + m.q * m.z
+                 + m.x[0] * m.q)
+                + sin(m.x[0] + m.q)
+                + cos(m.x[2] + m.z)
+            )
+        )
+
+        # util block for specifying DOF and uncertainty
+        m.util = Block()
+        m.util.first_stage_variables = list(m.x.values())
+        m.util.second_stage_variables = [m.z]
+        m.util.uncertain_params = [m.p[0], m.p[1]]
+
+        identify_objective_functions(m, m.obj)
+
+        fsv_set = ComponentSet(m.util.first_stage_variables)
+        uncertain_param_set = ComponentSet(m.util.uncertain_params)
+
+        # determine vars and uncertain params participating in
+        # objective
+        fsv_in_obj = ComponentSet(
+            var for var in identify_variables(m.obj)
+            if var in fsv_set
+        )
+        ssv_in_obj = ComponentSet(
+            var for var in identify_variables(m.obj)
+            if var not in fsv_set
+        )
+        uncertain_params_in_obj = ComponentSet(
+            param
+            for param in identify_mutable_parameters(m.obj)
+            if param in uncertain_param_set
+        )
+
+        # determine vars and uncertain params participating in
+        # first-stage objective
+        fsv_in_first_stg_cost = ComponentSet(
+            var for var in identify_variables(m.first_stage_objective)
+            if var in fsv_set
+        )
+        ssv_in_first_stg_cost = ComponentSet(
+            var for var in identify_variables(m.first_stage_objective)
+            if var not in fsv_set
+        )
+        uncertain_params_in_first_stg_cost = ComponentSet(
+            param
+            for param in identify_mutable_parameters(m.first_stage_objective)
+            if param in uncertain_param_set
+        )
+
+        # determine vars and uncertain params participating in
+        # second-stage objective
+        fsv_in_second_stg_cost = ComponentSet(
+            var for var in identify_variables(m.second_stage_objective)
+            if var in fsv_set
+        )
+        ssv_in_second_stg_cost = ComponentSet(
+            var for var in identify_variables(m.second_stage_objective)
+            if var not in fsv_set
+        )
+        uncertain_params_in_second_stg_cost = ComponentSet(
+            param
+            for param in identify_mutable_parameters(m.second_stage_objective)
+            if param in uncertain_param_set
+        )
+
+        # now perform checks
+        self.assertTrue(
+            fsv_in_first_stg_cost | fsv_in_second_stg_cost == fsv_in_obj,
+            f"{{var.name for var in fsv_in_first_stg_cost | fsv_in_second_stg_cost}} "
+            f"is not {{var.name for var in fsv_in_obj}}",
+        )
+        self.assertFalse(
+            ssv_in_first_stg_cost,
+            f"First-stage expression {str(m.first_stage_objective.expr)}"
+            f" consists of non first-stage variables "
+            f"{{var.name for var in fsv_in_second_stg_cost}}"
+        )
+        self.assertTrue(
+            ssv_in_second_stg_cost == ssv_in_obj,
+            f"{[var.name for var in ssv_in_second_stg_cost]} is not"
+            f"{{var.name for var in ssv_in_obj}}",
+        )
+        self.assertFalse(
+            uncertain_params_in_first_stg_cost,
+            f"First-stage expression {str(m.first_stage_objective.expr)}"
+            " consists of uncertain params"
+            f" {{p.name for p in uncertain_params_in_first_stg_cost}}"
+        )
+        self.assertTrue(
+            uncertain_params_in_second_stg_cost == uncertain_params_in_obj,
+            f"{{p.name for p in uncertain_params_in_second_stg_cost}} is not "
+            f"{{p.name for p in uncertain_params_in_obj}}"
+        )
+
+    def test_identify_objectives_var_expr(self):
+        """
+        Test first and second-stage objective identification
+        for an objective expression consisting only of a Var.
+        """
+        # model
+        m = ConcreteModel()
+
+        # parameters
+        m.p = Param(range(4), initialize=1, mutable=True)
+        m.q = Param(initialize=1)
+
+        # variables
+        m.x = Var(range(4))
+
+        # objective
+        m.obj = Objective(expr=m.x[1])
+
+        # util block for specifying DOF and uncertainty
+        m.util = Block()
+        m.util.first_stage_variables = list(m.x.values())
+        m.util.second_stage_variables = list()
+        m.util.uncertain_params = list()
+
+        identify_objective_functions(m, m.obj)
+        fsv_in_second_stg_obj = list(
+            v.name for v in
+            identify_variables(m.second_stage_objective)
+        )
+
+        # perform checks
+        self.assertTrue(
+            list(identify_variables(m.first_stage_objective))
+            == [m.x[1]]
+        )
+        self.assertFalse(
+            fsv_in_second_stg_obj,
+            "Second stage objective contains variable(s) "
+            f"{fsv_in_second_stg_obj}"
+        )
 
 
 if __name__ == "__main__":

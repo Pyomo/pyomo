@@ -17,6 +17,9 @@ from pyomo import gdp
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
+if not param_available:
+    raise unittest.SkipTest('Parameterized is not available.')
+
 all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex), ('cbc', Cbc)]
 mip_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('cbc', Cbc)]
 nlp_solvers = [('ipopt', Ipopt)]
@@ -967,6 +970,32 @@ class TestSolvers(unittest.TestCase):
         res = opt.solve(m)
         self.assertAlmostEqual(res.best_feasible_objective, 0)
         m.x.setlb(0.5)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+
+    @parameterized.expand(input=all_solvers)
+    def test_fixed_binaries(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var(domain=pe.Binary)
+        m.y = pe.Var()
+        m.obj = pe.Objective(expr=m.y)
+        m.c = pe.Constraint(expr=m.y >= m.x)
+        m.x.fix(0)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        m.x.fix(1)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+
+        opt: PersistentSolver = opt_class()
+        opt.update_config.treat_fixed_vars_as_params = False
+        m.x.fix(0)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        m.x.fix(1)
         res = opt.solve(m)
         self.assertAlmostEqual(res.best_feasible_objective, 1)
 

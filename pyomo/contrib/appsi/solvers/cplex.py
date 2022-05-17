@@ -94,12 +94,14 @@ class Cplex(PersistentSolver):
             else:
                 try:
                     m = self._cplex.Cplex()
+                    m.set_results_stream(None)
                     m.variables.add(lb=[0]*1001)
                     m.solve()
                     Cplex._available = self.Availability.FullLicense
                 except self._cplex.exceptions.errors.CplexSolverError:
                     try:
                         m = self._cplex.Cplex()
+                        m.set_results_stream(None)
                         m.variables.add(lb=[0])
                         m.solve()
                         Cplex._available = self.Availability.LimitedLicense
