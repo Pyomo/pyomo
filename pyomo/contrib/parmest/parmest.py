@@ -559,13 +559,12 @@ class Estimator(object):
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
-        instance = _experiment_instance_creation_callback("FOO1", None, dummy_cb)
+        instance = _experiment_instance_creation_callback("FOO0", None, dummy_cb)
         try: # deal with special problems so Ipopt will not crash
             first = next(instance.component_objects(pyo.Constraint, active=True))
+            active_constraints = True
         except:
-            sillylittle = True 
-        else:
-            sillylittle = False
+            active_constraints = False 
         # end block of code to deal with models with no constraints
 
         WorstStatus = pyo.TerminationCondition.optimal
@@ -574,7 +573,7 @@ class Estimator(object):
         for snum in senario_numbers:
             sname = "scenario_NODE"+str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
-            if not sillylittle:
+            if active_constraints:
                 if self.diagnostic_mode:
                     print('      Experiment = ',snum)
                     print('     First solve with with special diagnostics wrapper')
@@ -593,10 +592,11 @@ class Estimator(object):
                     # DLW: Aug2018: not distinguishing "middlish" conditions
                     if WorstStatus != pyo.TerminationCondition.infeasible:
                         WorstStatus = results.solver.termination_condition
-                    
+                
             objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
             totobj += objval
+            
         retval = totobj / len(senario_numbers) # -1??
 
         return retval, thetavals, WorstStatus
