@@ -313,43 +313,6 @@ def is_feasible(model, config):
     config.logger.info('Model is feasible.')
     return True
 
-def setup_results_object(solve_data, config):
-    """Record problem statistics for original model."""
-    # Create the solver results object
-    res = solve_data.results
-    prob = res.problem
-    res.problem.name = solve_data.original_model.name
-    res.problem.number_of_nonzeros = None  # TODO
-    res.solver.termination_condition = None
-    res.solver.message = None
-    res.solver.user_time = None
-    res.solver.system_time = None
-    res.solver.wallclock_time = None
-    res.solver.termination_message = None
-
-    num_of = build_model_size_report(solve_data.original_model)
-
-    # Get count of constraints and variables
-    prob.number_of_constraints = num_of.activated.constraints
-    prob.number_of_disjunctions = num_of.activated.disjunctions
-    prob.number_of_variables = num_of.activated.variables
-    prob.number_of_binary_variables = num_of.activated.binary_variables
-    prob.number_of_continuous_variables = num_of.activated.continuous_variables
-    prob.number_of_integer_variables = num_of.activated.integer_variables
-
-    config.logger.info(
-        "Original model has %s constraints (%s nonlinear) "
-        "and %s disjunctions, "
-        "with %s variables, of which %s are binary, %s are integer, "
-        "and %s are continuous." %
-        (num_of.activated.constraints,
-         num_of.activated.nonlinear_constraints,
-         num_of.activated.disjunctions,
-         num_of.activated.variables,
-         num_of.activated.binary_variables,
-         num_of.activated.integer_variables,
-         num_of.activated.continuous_variables))
-
 @contextmanager
 def time_code(timing_data_obj, code_block_name, is_main_timer=False):
     """Starts timer at entry, stores elapsed time at exit
