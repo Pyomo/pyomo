@@ -1537,6 +1537,7 @@ class TestSwitchingAlgorithms(unittest.TestCase):
 
         return m
 
+    @unittest.skipIf(not mcpp_available(), "MC++ is not available")
     def test_switch_alg_and_restore_default(self):
         m = self.make_model()
 
