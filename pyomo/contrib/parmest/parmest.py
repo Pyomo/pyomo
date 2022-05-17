@@ -541,7 +541,7 @@ class Estimator(object):
             raise RuntimeError("Unknown solver in Q_Opt="+solver)
 
 
-    def _Q_at_theta(self, thetavals):
+    def _Q_at_theta(self, thetavals, initialize_at_theta=False):
         """
         Return the objective function value with fixed theta values.
 
@@ -911,7 +911,8 @@ class Estimator(object):
         return results
 
 
-    def objective_at_theta(self, theta_values=None):
+    def objective_at_theta(self, theta_values=None,
+                            initialize_parmest_model = False):
         """
         Objective value for each theta
 
@@ -919,6 +920,11 @@ class Estimator(object):
         ----------
         theta_values: pd.DataFrame, columns=theta_names
             Values of theta used to compute the objective
+
+        initialize_parmest_model: boolean
+            Build extended form of the model for parameter estimation
+            and set flag
+
 
         Returns
         -------
@@ -943,12 +949,12 @@ class Estimator(object):
         all_obj = list()
         if all_thetas:
             for Theta in local_thetas:
-                obj, thetvals, worststatus = self._Q_at_theta(Theta)
+                obj, thetvals, worststatus = self._Q_at_theta(Theta, initialize_parmest_model=initialize_parmest_model)
                 if worststatus != pyo.TerminationCondition.infeasible:
                      all_obj.append(list(Theta.values()) + [obj])
                 # DLW, Aug2018: should we also store the worst solver status?
         else:
-            obj, thetvals, worststatus = self._Q_at_theta(thetavals=None)
+            obj, thetvals, worststatus = self._Q_at_theta(thetavals=None, initialize_parmest_model=initialize_parmest_model)
             if worststatus != pyo.TerminationCondition.infeasible:
                  all_obj.append(list(thetvals.values()) + [obj])
 
