@@ -82,7 +82,7 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
         with preserve_master_problem_feasible_region(master_util_block, config,
                                                      original_bounds):
             mip_termination = solve_MILP_master_problem(master_util_block,
-                                                        config, 
+                                                        config,
                                                         solver.parent.timing)
         if mip_termination is not tc.infeasible:
             _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
