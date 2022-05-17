@@ -398,7 +398,6 @@ class TestModelVariants(unittest.TestCase):
     def test_parmest_basics(self):
 
         for model_type, parmest_input in self.input.items():
-            print(model_type)
             pest = parmest.Estimator(parmest_input['model'], self.data, parmest_input['theta_names'], self.objective_function)
         
             objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)

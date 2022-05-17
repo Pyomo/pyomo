@@ -350,10 +350,22 @@ class Estimator(object):
         
         # Update theta names list to use CUID string representation
         for i, theta in enumerate(self.theta_names):
-            theta_cuid = ComponentUID(theta)
-            theta_object = theta_cuid.find_component_on(model)
-            self.theta_names[i] = repr(theta_cuid)
-            
+            var_cuid = ComponentUID(theta)
+            var_validate = var_cuid.find_component_on(model)
+            if var_validate is None:
+                logger.warning(
+                    "theta_name[%s] (%s) was not found on the model",
+                    (i, theta))
+            else:
+                try:
+                    # If the component is not a variable,
+                    # this will generate an exception (and the warning
+                    # in the 'except')
+                    var_validate.unfix()
+                    self.theta_names[i] = repr(var_cuid)
+                except:
+                    logger.warning(theta + ' is not a variable')
+
         self.parmest_model = model
         
         return model
