@@ -1545,14 +1545,15 @@ class TestSwitchingAlgorithms(unittest.TestCase):
         self.assertEqual(loa.CONFIG.algorithm, 'LOA')
         buf = StringIO()
         with redirect_stdout(buf):
-            loa.solve(m, tee=True)
+            loa.solve(m, tee=True, mip_solver=mip_solver, nlp_solver=nlp_solver)
         self.assertIn('using LOA algorithm', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
         self.assertEqual(loa.CONFIG.algorithm, 'LOA')
 
         buf = StringIO()
         with redirect_stdout(buf):
-            loa.solve(m, algorithm='GLOA', tee=True)
+            loa.solve(m, algorithm='GLOA', tee=True, mip_solver=mip_solver,
+                      nlp_solver=nlp_solver)
         self.assertIn('using GLOA algorithm', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
         self.assertEqual(loa.CONFIG.algorithm, 'LOA')
@@ -1564,14 +1565,16 @@ class TestSwitchingAlgorithms(unittest.TestCase):
         self.assertIsNone(opt.CONFIG.algorithm)
         buf = StringIO()
         with redirect_stdout(buf):
-            opt.solve(m, algorithm='RIC', tee=True)
+            opt.solve(m, algorithm='RIC', tee=True, mip_solver=mip_solver,
+                      nlp_solver=nlp_solver)
         self.assertIn('using RIC algorithm', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
         self.assertIsNone(opt.CONFIG.algorithm)
 
         buf = StringIO()
         with redirect_stdout(buf):
-            opt.solve(m, algorithm='LBB', tee=True)
+            opt.solve(m, algorithm='LBB', tee=True, mip_solver=mip_solver,
+                      nlp_solver=nlp_solver)
         self.assertIn('using LBB algorithm', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
         self.assertIsNone(opt.CONFIG.algorithm)
