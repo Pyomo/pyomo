@@ -168,6 +168,9 @@ class SCIPAMPL(SystemCallSolver):
                 env_opt.append(key+"="+str(self.options[key]))
             of_opt.append(str(key)+" = "+str(self.options[key]))
 
+        if self._timelimit is not None and self._timelimit > 0.0 and 'limits/time' not in self.options:
+            of_opt.append("limits/time = " + str(self._timelimit))
+
         envstr = "%s_options" % self.options.solver
         # Merge with any options coming in through the environment
         env[envstr] = " ".join(env_opt)
