@@ -258,7 +258,7 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
         for var in subproblem_util_block.discrete_variable_list:
             subprob_var.fixed = False
 
-    # [ESJ 2/25/22] I think we don't need to reset the values of the continuous
+    # [ESJ 2/25/22] We don't need to reset the values of the continuous
     # variables because we will initialize them based on the master solution
     # before we solve again.
 

@@ -589,7 +589,8 @@ class GDPoptSolver():
         pass
 
     def available(self, exception_flag=True):
-        """Check if solver is available.
+        """Solver is always available. Though subsolvers may not be, they will
+        raise an error when the time comes.
         """
         return True
 

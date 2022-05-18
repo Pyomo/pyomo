@@ -226,8 +226,8 @@ def preprocess_subproblem(util_block, config):
         xfrm('contrib.detect_fixed_vars').apply_to(
             m, tolerance=config.variable_tolerance)
 
-        # Restore the original bounds because the NLP solver might like that
-        # better and because, if deactivate_trivial_constraints ever gets
+        # Restore the original bounds because the subproblem solver might like
+        # that better and because, if deactivate_trivial_constraints ever gets
         # fancier, this could change what is and is not trivial.
         if not config.tighten_nlp_var_bounds:
             for v, (lb, ub) in original_bounds.items():
@@ -256,7 +256,7 @@ def preprocess_subproblem(util_block, config):
             v.setlb(lb)
             v.setub(ub)
 
-    # A bit counter-intuitively (but I assume so that it can propogate those
+    # A bit counter-intuitively (but I assume so that it can propagate those
     # bounds elsewhere), fbbt tightens the bounds on the fixed Boolean vars, so
     # we restore the bounds here
     for disj in util_block.disjunct_list:

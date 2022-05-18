@@ -116,7 +116,7 @@ class _GDP_LOA_Solver():
 
         # Set up augmented Lagrangean penalty objective
         main_objective.deactivate()
-        # placeholder for oa objective
+        # placeholder for OA objective
         master_util_block.oa_obj = Objective(sense=minimize)
 
         return main_objective

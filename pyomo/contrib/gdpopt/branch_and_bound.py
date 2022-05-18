@@ -170,10 +170,6 @@ class _GDP_LBB_Solver():
         # Do the branch and bound
         while len(queue) > 0:
             # visit the top node on the heap
-            # from pprint import pprint
-            # pprint([(
-            #     x[0].node_count, x[0].obj_lb, x[0].obj_ub, x[0].num_unbranched_disjunctions
-            # ) for x in sorted(queue)])
             node_data, node_model = heappop(queue)
             config.logger.info("Nodes: %s LB %.10g Unbranched %s" % (
                 self.explored_nodes, node_data.obj_lb,
