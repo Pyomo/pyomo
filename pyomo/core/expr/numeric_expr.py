@@ -1358,14 +1358,10 @@ class LinearExpression(ExpressionBase):
         else:
             self.constant = 0
             first_var = 0
-        if len(value) > 1 or first_var == 0:
-            self.linear_coefs, self.linear_vars = zip(
-                *map(attrgetter('args'), value[first_var:]))
-            self.linear_coefs = list(self.linear_coefs)
-            self.linear_vars = list(self.linear_vars)
-        else:
-            self.linear_vars = list()
-            self.linear_coefs = list()
+        self.linear_coefs, self.linear_vars = zip(
+            *map(attrgetter('args'), value[first_var:]))
+        self.linear_coefs = list(self.linear_coefs)
+        self.linear_vars = list(self.linear_vars)
 
     def _precedence(self):
         return LinearExpression.PRECEDENCE
@@ -1380,7 +1376,7 @@ class LinearExpression(ExpressionBase):
                 classtype = self.__class__
             elif ( args[0].__class__ is MonomialTermExpression or
                    (args[0].__class__ in native_types or args[0].is_constant()
-                ) and all(arg.__class__ is MonomialTermExpression
+                ) and len(args) > 1 and all(arg.__class__ is MonomialTermExpression
                           for arg in args[1:])):
                 classtype = self.__class__
             else:

@@ -376,7 +376,7 @@ class WalkerTests(unittest.TestCase):
         sub_map = dict()
         sub_map[id(m.x)] = 0.5
         e2 = replace_expressions(e, sub_map)
-        self.assertTrue(compare_expressions(e2, LinearExpression(constant=1.25) + m.y))
+        self.assertTrue(compare_expressions(e2, SumExpression([SumExpression([1.25]), m.y])))
 
     def test_replace_expressions_with_monomial_term(self):
         M = ConcreteModel()
