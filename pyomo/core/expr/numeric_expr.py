@@ -1358,10 +1358,14 @@ class LinearExpression(ExpressionBase):
         else:
             self.constant = 0
             first_var = 0
-        self.linear_coefs, self.linear_vars = zip(
-            *map(attrgetter('args'), value[first_var:]))
-        self.linear_coefs = list(self.linear_coefs)
-        self.linear_vars = list(self.linear_vars)
+        if len(value) > 1 or first_var == 0:
+            self.linear_coefs, self.linear_vars = zip(
+                *map(attrgetter('args'), value[first_var:]))
+            self.linear_coefs = list(self.linear_coefs)
+            self.linear_vars = list(self.linear_vars)
+        else:
+            self.linear_vars = list()
+            self.linear_coefs = list()
 
     def _precedence(self):
         return LinearExpression.PRECEDENCE

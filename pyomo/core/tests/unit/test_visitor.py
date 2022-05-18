@@ -367,6 +367,17 @@ class WalkerTests(unittest.TestCase):
         self.assertTrue(compare_expressions(2*LinearExpression(linear_coefs=[i for i in M.z.values()],
                                                                linear_vars=[i for i in M.w.values()]), f))
 
+    def test_replacement_linear_expression_with_constant(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        e = LinearExpression(linear_coefs=[2.5], linear_vars=[m.x])
+        e += m.y
+        sub_map = dict()
+        sub_map[id(m.x)] = 0.5
+        e2 = replace_expressions(e, sub_map)
+        self.assertTrue(compare_expressions(e2, LinearExpression(constant=1.25) + m.y))
+
     def test_replace_expressions_with_monomial_term(self):
         M = ConcreteModel()
         M.x = Var()
