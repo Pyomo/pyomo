@@ -81,9 +81,9 @@ def initialize_master_problem(util_block, subprob_util_block, config, solver):
 
     # Call the specified initialization strategy. (We've already validated the
     # input in the config logic, so we know this is okay.)
-    init_strategy = valid_init_strategies.get(config.init_strategy)
-    init_strategy(util_block, master_util_block, subprob_util_block, config,
-                  solver)
+    init_algorithm = valid_init_strategies.get(config.init_algorithm)
+    init_algorithm(util_block, master_util_block, subprob_util_block, config,
+                   solver)
 
     return master_util_block
 

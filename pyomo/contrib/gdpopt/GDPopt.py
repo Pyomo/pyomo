@@ -283,6 +283,11 @@ class GDPoptSolver():
                                        preserve_implicit=True)
             config.set_value(kwds)
             _handle_strategy_deprecation(config)
+            
+        # Do the right thing if they used the deprecated arg
+        if (config.algorithm in {'LOA', 'GLOA', 'RIC'} and config.init_strategy
+            is not None and config.init_algorithm is None):
+            config.init_algorithm = config.init_strategy
 
         results = self._call_main_loop(model, config)
 

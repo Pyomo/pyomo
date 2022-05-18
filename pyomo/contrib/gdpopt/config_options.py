@@ -12,6 +12,7 @@
 from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue,
                                  In, NonNegativeFloat, NonNegativeInt,
                                  PositiveInt)
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
 from pyomo.contrib.gdpopt.nlp_initialization import (
     restore_vars_to_original_values)
@@ -19,12 +20,21 @@ from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.opt import SolverFactory, UnknownSolver
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
+def _init_strategy_deprecation(strategy):
+    deprecation_warning("The argument 'init_strategy' has been deprecated "
+                        "in favor of 'init_algorithm.'", version="TBD")
+    return In(valid_init_strategies.keys())(strategy)
+
 def _add_OA_configs(CONFIG):
     CONFIG.declare("init_strategy", ConfigValue(
+        default="set_covering", domain=_init_strategy_deprecation,
+        description="DEPRECATED: Please use 'init_algorithm' instead."
+    ))
+    CONFIG.declare("init_algorithm", ConfigValue(
         default="set_covering", domain=In(valid_init_strategies.keys()),
-        description="Initialization strategy to use.",
+        description="Initialization algorithm to use.",
         doc="""
-        Selects the initialization strategy to use when generating
+        Selects the initialization algorithm to use when generating
         the initial cuts to construct the master problem."""
     ))
     CONFIG.declare("custom_init_disjuncts", ConfigList(
