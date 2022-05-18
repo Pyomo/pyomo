@@ -146,7 +146,6 @@ class _GDP_LBB_Solver():
 
         # Add the BigM suffix if it does not already exist. Used later during
         # nonlinear constraint activation.
-        # TODO is this still necessary?
         if not hasattr(root_node, 'BigM'):
             root_node.BigM = Suffix()
 

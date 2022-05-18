@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.gdpopt.nlp_solve import solve_subproblem
+from pyomo.contrib.gdpopt.solve_subproblem import solve_subproblem
 from pyomo.contrib.gdpopt.util import fix_master_solution_in_subproblem
 from pyomo.core import value
 from pyomo.opt import TerminationCondition as tc

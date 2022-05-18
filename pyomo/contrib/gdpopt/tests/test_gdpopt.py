@@ -26,11 +26,11 @@ from pyomo.contrib.appsi.solvers.gurobi import Gurobi
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block, add_disjunct_list, add_constraints_by_disjunct,
     add_global_constraint_list)
-from pyomo.contrib.gdpopt.mip_solve import (
-    solve_MILP_master_problem, distinguish_mip_infeasible_or_unbounded)
 import pyomo.contrib.gdpopt.tests.common_tests as ct
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
+from pyomo.contrib.gdpopt.solve_master_problem import (
+    solve_MILP_master_problem, distinguish_mip_infeasible_or_unbounded)
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.environ import (
     Block, ConcreteModel, Constraint, Integers, LogicalConstraint, maximize,

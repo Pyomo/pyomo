@@ -7,9 +7,9 @@ from math import fabs
 from pyomo.common.collections import ComponentMap
 
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
-from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
     _fix_master_soln_solve_subproblem_and_add_cuts)
+from pyomo.contrib.gdpopt.solve_master_problem import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.core import Block, Constraint, Objective, Var, maximize, value
 from pyomo.gdp import Disjunct

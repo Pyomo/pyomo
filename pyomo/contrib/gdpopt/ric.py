@@ -16,9 +16,9 @@ from pyomo.contrib.gdpopt.config_options import (
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     _get_master_and_subproblem)
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
-from pyomo.contrib.gdpopt.mip_solve import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.oa_algorithm_utils import (
     _fix_master_soln_solve_subproblem_and_add_cuts)
+from pyomo.contrib.gdpopt.solve_master_problem import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.util import time_code
 from pyomo.core import Objective
 
