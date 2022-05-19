@@ -87,8 +87,8 @@ def _strategy_deprecation(strategy):
     return In(_supported_algorithms.keys())(strategy)
 
 def _handle_strategy_deprecation(config):
-        if config.strategy is not None and config.algorithm is None:
-            config.algorithm = config.strategy
+    if config.algorithm is None and config.strategy is not None:
+        config.algorithm = config.strategy
 
 @SolverFactory.register(
     'gdpopt',
@@ -163,20 +163,38 @@ class GDPoptSolver():
     _impl = None
 
     @property
+    def _implementation(self):
+        if self._impl is not None:
+            return self._impl # it exists, we'll just return it
+        # bypass the getter because we know we don't have an _impl.
+        elif self._CONFIG.algorithm is not None:
+            # Check CONFIG block for an algorithm we don't know about
+            self._impl = _supported_algorithms[
+                self._CONFIG.algorithm][0](self)
+        return self._impl
+
+    @_implementation.setter
+    def _implementation(self, impl):
+        self._impl = impl
+
+    @property
     def CONFIG(self):
-        if self._impl is None:
+        impl = self._implementation
+        if impl is None:
             return self._CONFIG
-        else:
-            return self._impl.CONFIG
+        return impl.CONFIG
 
     def __init__(self, **kwds):
         self._CONFIG = self._CONFIG(kwds.pop('options', {}),
                                     preserve_implicit=True)
-        self._CONFIG.set_value(kwds)
+        # First ignore things we don't recognize: we'll do a second pass after
+        # we've set the algorithm.
+        self._CONFIG.set_value(kwds, skip_implicit=True)
         _handle_strategy_deprecation(self._CONFIG)
 
         if self._CONFIG.algorithm is not None:
-            self._impl = _supported_algorithms[self._CONFIG.algorithm][0](self)
+            self._implementation = _supported_algorithms[
+                self._CONFIG.algorithm][0](self, kwds)
 
         self.LB = float('-inf')
         self.UB = float('inf')
@@ -253,16 +271,18 @@ class GDPoptSolver():
         """
         old_impl = None
         config_needs_set = False
-        if self._impl is not None:
-            algorithm = self._impl.CONFIG.algorithm
-            config = self._impl.CONFIG(kwds.pop('options', {}),
-                                       preserve_implicit=True)
+        impl = self._implementation
+        if impl is not None:
+            algorithm = impl.CONFIG.algorithm
+            config = impl.CONFIG(kwds.pop('options', {}),
+                                 preserve_implicit=True)
             config.set_value(kwds)
             _handle_strategy_deprecation(config)
             if config.algorithm != algorithm:
                 # The user changed options and _impl is wrong.
                 old_impl = self._impl
-                self._impl = _supported_algorithms[config.algorithm][0](self)
+                self._implementation = _supported_algorithms[
+                    config.algorithm][0](self)
                 config_needs_needs_set = True
         else:
             # parse what was passed here so that we can find the algorithm
@@ -274,7 +294,8 @@ class GDPoptSolver():
             _handle_strategy_deprecation(_CONFIG)
             # Set impl and parse the rest of the config arguments
             old_impl = self._impl
-            self._impl = _supported_algorithms[_CONFIG.algorithm][0](self)
+            self._implementation = _supported_algorithms[
+                _CONFIG.algorithm][0](self)
             config_needs_set = True
         if config_needs_set:
             # impl changed, so we need to get the kwd arguments from the new
@@ -283,7 +304,7 @@ class GDPoptSolver():
                                        preserve_implicit=True)
             config.set_value(kwds)
             _handle_strategy_deprecation(config)
-            
+
         # Do the right thing if they used the deprecated arg
         if (config.algorithm in {'LOA', 'GLOA', 'RIC'} and config.init_strategy
             is not None and config.init_algorithm is None):
@@ -294,7 +315,7 @@ class GDPoptSolver():
         # restore the old implementation. It might be None if an algorithm
         # wasn't specified to SolverFactory, or else it would be the one that
         # *was* specified to SolverFactory, which should be the default.
-        self._impl = old_impl
+        self._implementation = old_impl
 
         return results
 

@@ -1524,7 +1524,7 @@ class TestGLOA(unittest.TestCase):
 @unittest.skipIf(not LOA_solvers_available,
                  "Required subsolvers %s are not available"
                  % (LOA_solvers,))
-class TestSwitchingAlgorithms(unittest.TestCase):
+class TestConfigOptions(unittest.TestCase):
     def make_model(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-10, 10))
@@ -1538,7 +1538,47 @@ class TestSwitchingAlgorithms(unittest.TestCase):
         return m
 
     @unittest.skipIf(not mcpp_available(), "MC++ is not available")
-    def test_switch_alg_and_restore_default(self):
+    def test_set_options_on_config_block(self):
+        m = self.make_model()
+
+        opt = SolverFactory('gdpopt')
+        opt.CONFIG.algorithm = 'LOA'
+        opt.CONFIG.mip_solver = mip_solver
+        opt.CONFIG.nlp_solver = nlp_solver
+        opt.CONFIG.init_algorithm = 'no_init'
+
+        buf = StringIO()
+        with redirect_stdout(buf):
+            opt.solve(m, tee=True)
+        self.assertIn('using LOA algorithm', buf.getvalue())
+        self.assertAlmostEqual(value(m.obj), -0.25)
+
+        opt.CONFIG.algorithm = 'RIC'
+        # Make sure this didn't change the other options
+        self.assertEqual(opt.CONFIG.mip_solver, mip_solver)
+        self.assertEqual(opt.CONFIG.nlp_solver, nlp_solver)
+        self.assertEqual(opt.CONFIG.init_algorithm, 'no_init')
+        buf = StringIO()
+        with redirect_stdout(buf):
+            opt.solve(m, tee=True)
+        self.assertIn('using RIC algorithm', buf.getvalue())
+        self.assertAlmostEqual(value(m.obj), -0.25)
+
+    def test_set_options_in_solver_factory(self):
+        m = self.make_model()
+
+        opt = SolverFactory('gdpopt', mip_solver=mip_solver,
+                            nlp_solver=nlp_solver, algorithm='GLOA', tee=True)
+        self.assertEqual(opt.CONFIG.mip_solver, mip_solver)
+        self.assertEqual(opt.CONFIG.nlp_solver, nlp_solver)
+        buf = StringIO()
+        with redirect_stdout(buf):
+            opt.solve(m)
+        self.assertIn('using GLOA algorithm', buf.getvalue())
+        self.assertAlmostEqual(value(m.obj), -0.25)
+
+    @unittest.skipIf(not mcpp_available(), "MC++ is not available")
+    def test_switch_alg_and_restore_default_algorithm(self):
         m = self.make_model()
 
         loa = SolverFactory('gdpopt', algorithm='LOA')
@@ -1558,7 +1598,7 @@ class TestSwitchingAlgorithms(unittest.TestCase):
         self.assertAlmostEqual(value(m.obj), -0.25)
         self.assertEqual(loa.CONFIG.algorithm, 'LOA')
 
-    def test_no_default(self):
+    def test_no_default_algorithm(self):
         m = self.make_model()
 
         opt = SolverFactory('gdpopt')

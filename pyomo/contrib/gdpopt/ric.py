@@ -9,7 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.config import ConfigBlock
+from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
     _add_OA_configs)
@@ -26,7 +27,7 @@ from pyomo.core import Objective
 # should get the integer solutions several-at-a-time with a solution pool or
 # something of the like...
 
-class _GDP_RIC_Solver():
+class _GDP_RIC_Solver(_GDPoptAlgorithm):
     """The GDPopt (Generalized Disjunctive Programming optimizer) relaxation
     with integer cuts (RIC) solver.
 
@@ -39,17 +40,6 @@ class _GDP_RIC_Solver():
     _add_nlp_solver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)
     _add_OA_configs(CONFIG)
-
-    def __init__(self, parent):
-        self.parent = parent
-        # Transfer the parent config info: we create it if it is not there, and
-        # overwrite the values if it is already there. The parent defers to what
-        # is in this class during solve.
-        for kwd, val in self.parent.CONFIG.items():
-            if kwd not in self.CONFIG:
-                self.CONFIG.declare(kwd, ConfigValue(default=val))
-            else:
-                self.CONFIG[kwd] = val
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger

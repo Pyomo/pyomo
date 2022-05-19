@@ -10,10 +10,11 @@
 #  ___________________________________________________________________________
 
 from math import fabs
-from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.config import ConfigBlock
 from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
+from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
@@ -33,7 +34,7 @@ from pyomo.core import (
 from pyomo.core.expr.numvalue import is_potentially_variable
 from pyomo.core.expr.visitor import identify_variables
 
-class _GDP_GLOA_Solver():
+class _GDP_GLOA_Solver(_GDPoptAlgorithm):
     """The GDPopt (Generalized Disjunctive Programming optimizer) global
     logic-based outer approximation (GLOA) solver.
 
@@ -45,17 +46,6 @@ class _GDP_GLOA_Solver():
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)
-
-    def __init__(self, parent):
-        self.parent = parent
-        # Transfer the parent config info: we create it if it is not there, and
-        # overwrite the values if it is already there. The parent defers to what
-        # is in this class during solve.
-        for kwd, val in self.parent.CONFIG.items():
-            if kwd not in self.CONFIG:
-                self.CONFIG.declare(kwd, ConfigValue(default=val))
-            else:
-                self.CONFIG[kwd] = val
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger
