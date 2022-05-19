@@ -280,7 +280,7 @@ class GDPoptSolver():
             _handle_strategy_deprecation(config)
             if config.algorithm != algorithm:
                 # The user changed options and _impl is wrong.
-                old_impl = self._impl
+                old_impl = impl
                 self._implementation = _supported_algorithms[
                     config.algorithm][0](self)
                 config_needs_needs_set = True
@@ -293,15 +293,15 @@ class GDPoptSolver():
             _CONFIG.set_value(kwds, skip_implicit=True)
             _handle_strategy_deprecation(_CONFIG)
             # Set impl and parse the rest of the config arguments
-            old_impl = self._impl
+            old_impl = impl
             self._implementation = _supported_algorithms[
                 _CONFIG.algorithm][0](self)
             config_needs_set = True
         if config_needs_set:
             # impl changed, so we need to get the kwd arguments from the new
             # impl
-            config = self._impl.CONFIG(kwds.pop('options', {}),
-                                       preserve_implicit=True)
+            config = self._implementation.CONFIG(kwds.pop('options', {}),
+                                                 preserve_implicit=True)
             config.set_value(kwds)
             _handle_strategy_deprecation(config)
 
@@ -328,7 +328,7 @@ class GDPoptSolver():
                     return results
                 else:
                     # main loop implemented by each algorithm
-                    self._impl._solve_gdp(model, config)
+                    self._implementation._solve_gdp(model, config)
 
             self._get_final_pyomo_results_object()
             self._log_termination_message(config.logger)
