@@ -27,7 +27,8 @@ def _init_strategy_deprecation(strategy):
 
 def _add_OA_configs(CONFIG):
     CONFIG.declare("init_strategy", ConfigValue(
-        default="set_covering", domain=_init_strategy_deprecation,
+        default=None,
+        domain=_init_strategy_deprecation,
         description="DEPRECATED: Please use 'init_algorithm' instead."
     ))
     CONFIG.declare("init_algorithm", ConfigValue(
