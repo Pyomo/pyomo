@@ -37,7 +37,9 @@ from pyomo.core.base import (
 from pyomo.core.base.block import SortComponents
 from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
+from pyomo.core.base.objective import ScalarObjective, _GeneralObjectiveData
 import pyomo.core.kernel as kernel
+from pyomo.core.pyomoobject import PyomoObject
 from pyomo.opt import WriterFactory
 
 from pyomo.repn.plugins.ampl.ampl_ import set_pyomo_amplfunc_env
@@ -54,6 +56,7 @@ from pyomo.core.base import Set, RangeSet
 from pyomo.network import Port
 ###
 
+logger=logging.getLogger(__name__)
 
 class _CONSTANT(object): pass
 class _MONOMIAL(object): pass
@@ -281,13 +284,13 @@ class _SuffixData(object):
                     self.store(o, val)
             else:
                 logger.warning(
-                    f"model contained export suffix {self.name} with "
+                    f"model contained export suffix {self._name} with "
                     f"{obj.ctype.__name__} key '{obj.name}', but that "
                     "object is not exported as part of the NL file.  "
                     "Skipping.")
         else:
             logger.warning(
-                f"model contained export suffix {self.name} with "
+                f"model contained export suffix {self._name} with "
                 f"{obj.__class__.__name__} key '{obj}' that is not "
                 "a Var, Constrtaint, Objective, or the model.  Skipping.")
 
@@ -679,6 +682,11 @@ class _NLWriter_impl(object):
 
         # Collect all defined SOSConstraints on the model
         if component_map[SOSConstraint]:
+            if not row_order:
+                row_order = {id(con[0]): i for i, con in enumerate(constraints)}
+            if not component_map[Suffix]:
+                obj_order = {id(obj[0]): i for i, obj in enumerate(objectives)}
+                model_id = id(model)
             for name in ('sosno', 'ref'):
                 # I am choosing not to allow a user to mix the use of the Pyomo
                 # SOSConstraint component and manual sosno declarations within
