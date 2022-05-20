@@ -407,8 +407,15 @@ class _NLWriter_impl(object):
                 try:
                     obj_vals = obj_comp.values()
                 except AttributeError:
-                    # kernel does not define values() for scalar objectives
-                    obj_vals = (obj_comp,)
+                    # kernel does not define values() for scalar
+                    # objectives or list/tuple containers
+                    try:
+                        # This could be a list/tuple container.  Try to
+                        # iterate over it, and if that fails assume it
+                        # is a scalar
+                        obj_vals = iter(obj_comp)
+                    except:
+                        obj_vals = (obj_comp,)
                 for obj in obj_vals:
                     if not obj.active:
                         continue
@@ -435,8 +442,15 @@ class _NLWriter_impl(object):
                 try:
                     con_vals = con_comp.values()
                 except AttributeError:
-                    # kernel does not define values() for scalar constraints
-                    con_vals = (con_comp,)
+                    # kernel does not define values() for scalar
+                    # constraints or list/tuple containers
+                    try:
+                        # This could be a list/tuple container.  Try to
+                        # iterate over it, and if that fails assume it
+                        # is a scalar
+                        con_vals = iter(con_comp)
+                    except:
+                        con_vals = (con_comp,)
                 for con in con_vals:
                     if not con.active:
                         continue
@@ -702,7 +716,12 @@ class _NLWriter_impl(object):
                             f"SOSContraint '{sos.name}' has sos "
                             f"type='{sos.level}', which is not supported "
                             "by the NL file interface")
-                    for v, r in sos.items():
+                    try:
+                        _items = sos.get_items()
+                    except AttributeError:
+                        # kernel doesn't provide the get_items API
+                        _items = sos.items()
+                    for v, r in _items:
                         sosno.store(v, tag)
                         ref.store(v, r)
 
@@ -1733,6 +1752,11 @@ _operator_handles = {
     _GeneralExpressionData: handle_named_expression_node,
     ScalarExpression: handle_named_expression_node,
     kernel.expression.expression: handle_named_expression_node,
+    kernel.expression.noclone: handle_named_expression_node,
+    # Note: objectives are special named expressions
+    _GeneralObjectiveData: handle_named_expression_node,
+    ScalarObjective: handle_named_expression_node,
+    kernel.objective.objective: handle_named_expression_node,
     ExternalFunctionExpression: handle_external_function_node,
     # These are handled explicitly in beforeChild():
     # LinearExpression: handle_linear_expression,
@@ -1831,8 +1855,11 @@ for _type in native_types:
 for _type in _operator_handles:
     _before_child_handlers[_type] = _before_general_expression
 # named subexpressions
-for _type in (_GeneralExpressionData, ScalarExpression,
-              kernel.expression.expression):
+for _type in (
+        _GeneralExpressionData, ScalarExpression,
+        kernel.expression.expression, kernel.expression.noclone,
+        _GeneralObjectiveData, ScalarObjective, kernel.objective.objective):
+
     _before_child_handlers[_type] = _before_named_expression
 # Special linear / summation expressions
 _before_child_handlers[MonomialTermExpression] = _before_monomial
