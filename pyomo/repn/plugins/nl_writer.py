@@ -58,6 +58,10 @@ from pyomo.network import Port
 
 logger=logging.getLogger(__name__)
 
+# Feasibility tolerance for trivial (fixed) constraints
+TOL = 1e-8
+inf = float('inf')
+
 class _CONSTANT(object): pass
 class _MONOMIAL(object): pass
 class _GENERAL(object): pass
@@ -469,13 +473,31 @@ class _NLWriter_impl(object):
                         n_equality += 1
                     elif _type == 0:
                         n_ranges += 1
+                    elif _type == 3: #and self.config.skip_trivial_constraints:
+                        # FIXME: historically the NL writer was
+                        # hard-coded to skip all unbounded constraints
+                        continue
                     if expr.nonlinear:
                         constraints.append((con, expr, _type, lb, ub))
                     elif expr.linear:
                         linear_cons.append((con, expr, _type, lb, ub))
                     elif not self.config.skip_trivial_constraints:
                         linear_cons.append((con, expr, _type, lb, ub))
-                    # else: constrant constraint and skip_trivial_constraints
+                    else: # constant constraint and skip_trivial_constraints
+                        #
+                        # TODO: skip_trivial_constraints should be an
+                        # enum that also accepts "Exception" so that
+                        # solvers can be (easily) notified of infeasible
+                        # trivial constraints.
+                        if (lb is not None and float(lb) > TOL) or (
+                                ub is not None and float(ub) < -TOL):
+                            logger.warning(
+                                "model contains a trivially infeasible "
+                                f"constraint {con.name}, but "
+                                "skip_trivial_constraints==True and the "
+                                "constraint is being omitted from the NL "
+                                "file.  Solving the model may incorrectly "
+                                "report a feasible solution.")
                 timer.toc('Constraint %s', con_comp, level=logging.DEBUG)
 
         if self.config.row_order:
