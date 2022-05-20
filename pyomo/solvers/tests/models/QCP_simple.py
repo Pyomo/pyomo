@@ -33,14 +33,14 @@ class QCP_simple(_BaseTestModel):
         model = self.model
         model._name = self.description
 
-        model.x = Var(within=NonNegativeReals)
-        model.y = Var(within=NonNegativeReals)
-        model.z = Var(within=NonNegativeReals)
         model.fixed_var = Var()
         model.fixed_var.fix(0.2)
         model.q1 = Var(bounds=(None, 0.2))
         model.q2 = Var(bounds=(-2,None))
-        model.obj = Objective(expr=model.x+model.q1-model.q2,sense=maximize)
+        model.x = Var(within=NonNegativeReals)
+        model.y = Var(within=NonNegativeReals)
+        model.z = Var(within=NonNegativeReals)
+        model.obj = Objective(expr=model.q1-model.q2+model.x,sense=maximize)
         model.c0 = Constraint(expr=model.x+model.y+model.z == 1)
         model.qc0 = Constraint(expr=model.x**2 + model.y**2 + model.fixed_var <= model.z**2)
         model.qc1 = Constraint(expr=model.x**2 <= model.y*model.z)
