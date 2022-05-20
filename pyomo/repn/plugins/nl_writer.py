@@ -733,6 +733,7 @@ class _NLWriter_impl(object):
                         "these methods to define special ordered sets.")
                 suffix_data[name] = _SuffixData(
                     name, column_order, row_order, obj_order, model_id)
+                suffix_data[name].datatype.add(Suffix.INT)
             sos_id = 0
             sosno = suffix_data['sosno']
             ref = suffix_data['ref']
