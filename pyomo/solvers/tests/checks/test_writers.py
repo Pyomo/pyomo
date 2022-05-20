@@ -106,7 +106,7 @@ def create_method(test_name, model,
                     model_class.model.solutions.store_to(results)
                 except ValueError:
                     pass
-            self.fail("Solution mismatch for plugin "+name
+            self.fail("Solution mismatch for plugin "+test_name
                       +', '+io+
                       " interface and problem type "
                       +model_class.description+"\n"+rc[1]+"\n"
