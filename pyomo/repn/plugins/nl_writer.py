@@ -406,7 +406,7 @@ class _NLWriter_impl(object):
         linear_objs = []
         for block in component_map[Objective]:
             for obj_comp in block.component_objects(
-                    Objective, active=True, descend_into=True, sort=sorter):
+                    Objective, active=True, descend_into=False, sort=sorter):
                 try:
                     obj_vals = obj_comp.values()
                 except AttributeError:
@@ -441,7 +441,7 @@ class _NLWriter_impl(object):
         n_equality = 0
         for block in component_map[Constraint]:
             for con_comp in block.component_objects(
-                    Constraint, active=True, descend_into=True, sort=sorter):
+                    Constraint, active=True, descend_into=False, sort=sorter):
                 try:
                     con_vals = con_comp.values()
                 except AttributeError:
@@ -554,7 +554,9 @@ class _NLWriter_impl(object):
         # variable order because the SOS constrint *could* reference a
         # variable not yet seen in the model.
         for block in component_map[SOSConstraint]:
-            for sos in block.component_objects(SOSConstraint, active=True):
+            for sos in block.component_objects(
+                    SOSConstraint, active=True, descend_into=False,
+                    sort=sorter):
                 for v in sos.variables:
                     if id(v) not in var_map:
                         _id = id(v)
@@ -670,7 +672,8 @@ class _NLWriter_impl(object):
             # Note: reverse the block list so that higher-level Suffix
             # components override lower level ones.
             for block in reversed(component_map[Suffix]):
-                for suffix in block.component_objects(Suffix, active=True):
+                for suffix in block.component_objects(
+                        Suffix, active=True, descend_into=False, sort=sorter):
                     if not (suffix.direction & Suffix.EXPORT):
                         continue
                     name = suffix.local_name
@@ -713,7 +716,8 @@ class _NLWriter_impl(object):
             ref = suffix_data['ref']
             for block in reversed(component_map[SOSConstraint]):
                 for sos in block.component_data_objects(
-                        SOSConstraint, active=True, descend_into=False):
+                        SOSConstraint, active=True, descend_into=False,
+                        sort=sorter):
                     sos_id += 1
                     if sos.level == 1:
                         tag = sos_id
