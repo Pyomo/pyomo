@@ -208,7 +208,7 @@ class TestMindtPy(unittest.TestCase):
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
     
-    @unittest.skipUnless(SolverFactory('appsi_cplex').available(), 
+    @unittest.skipUnless(SolverFactory('appsi_cplex').available(exception_flag=False), 
                          "APPSI_CPLEX not available.")
     def test_OA_APPSI_solver(self):
         """Test the outer approximation decomposition algorithm."""
@@ -224,7 +224,7 @@ class TestMindtPy(unittest.TestCase):
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
 
-    @unittest.skipUnless(SolverFactory('appsi_ipopt').available(), 
+    @unittest.skipUnless(SolverFactory('appsi_ipopt').available(exception_flag=False), 
                          "APPSI_IPOPT not available.")
     def test_OA_APPSI_ipopt(self):
         """Test the outer approximation decomposition algorithm."""
