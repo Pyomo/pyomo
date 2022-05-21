@@ -527,10 +527,6 @@ def check_config(config):
             config.threads = 1
             config.logger.info(
                 'The threads parameter is corrected to 1 since lazy constraint callback conflicts with multi-threads mode.')
-    # if the slacks fix to zero, just don't add them
-    if config.max_slack == 0.0:
-        config.add_slack = False
-
     if config.strategy == 'GOA':
         config.add_slack = False
         config.use_mcpp = True
