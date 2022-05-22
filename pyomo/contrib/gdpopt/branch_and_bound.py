@@ -58,7 +58,7 @@ class _GDP_LBB_Solver(_GDPoptAlgorithm):
 
         # Create utility block on the original model so that we will be able to
         # copy solutions between
-        util_block = self.parent.original_util_block = add_util_block(model)
+        util_block = self.original_util_block = add_util_block(model)
         add_disjunct_list(util_block)
         add_algebraic_variable_list(util_block)
         add_boolean_variable_lists(util_block)
@@ -66,7 +66,7 @@ class _GDP_LBB_Solver(_GDPoptAlgorithm):
         root_node = TransformationFactory(
             'core.logical_to_linear').create_using(model)
         root_util_blk = root_node.component(
-            self.parent.original_util_block.name)
+            self.original_util_block.name)
         # Add to root utility block what we will need during the algorithm
         add_disjunction_list(root_util_blk)
         # Now that logical_to_linear has been called.
@@ -165,18 +165,18 @@ class _GDP_LBB_Solver(_GDPoptAlgorithm):
                 node_data.num_unbranched_disjunctions))
 
             # Check time limit
-            if self.parent.reached_time_limit(config):
+            if self.reached_time_limit(config):
                 no_feasible_soln = float('inf')
-                self.parent.LB = node_data.obj_lb if \
+                self.LB = node_data.obj_lb if \
                                  solve_data.objective_sense == minimize else \
                                  -no_feasible_soln
-                self.parent.UB = no_feasible_soln if \
+                self.UB = no_feasible_soln if \
                                  solve_data.objective_sense == minimize else \
                                  -node_data.obj_lb
                 config.logger.info(
                     'Final bound values: LB: {}  UB: {}'.
-                    format(self.parent.LB, self.parent.UB))
-                return self.parent._get_final_results_object()
+                    format(self.LB, self.UB))
+                return self._get_final_results_object()
 
             # Handle current node
             if not node_data.is_screened:
@@ -201,32 +201,32 @@ class _GDP_LBB_Solver(_GDPoptAlgorithm):
                 # infeasible.
 
                 # Update the incumbent and put it in the original model
-                self.parent.update_incumbent(
-                    node_model.component(self.parent.original_util_block.name))
-                self.parent._transfer_incumbent_to_original_model(config.logger)
+                self.update_incumbent(
+                    node_model.component(self.original_util_block.name))
+                self._transfer_incumbent_to_original_model(config.logger)
 
-                self.parent.LB = node_data.obj_lb if \
-                                 self.parent.objective_sense == minimize else \
+                self.LB = node_data.obj_lb if \
+                                 self.objective_sense == minimize else \
                                  -node_data.obj_ub
-                self.parent.UB = node_data.obj_ub if \
-                                 self.parent.objective_sense == minimize else \
+                self.UB = node_data.obj_ub if \
+                                 self.objective_sense == minimize else \
                                  -node_data.obj_lb
-                self.parent.iteration = self.explored_nodes
+                self.iteration = self.explored_nodes
                 if node_data.obj_lb == float('inf'):
-                    self.parent.pyomo_results.solver.\
+                    self.pyomo_results.solver.\
                         termination_condition = tc.infeasible
                 elif node_data.obj_ub == float('-inf'):
-                    self.parent.pyomo_results.solver.\
+                    self.pyomo_results.solver.\
                         termination_condition = tc.unbounded
                 else:
-                    self.parent.pyomo_results.solver.\
+                    self.pyomo_results.solver.\
                         termination_condition = tc.optimal
-                return self.parent._get_final_pyomo_results_object()
+                return self._get_final_pyomo_results_object()
             else:
                 self._branch_on_node(node_data, node_model, config)
 
     def _branch_on_node(self, node_data, node_model, config):
-        node_utils = node_model.component(self.parent.original_util_block.name)
+        node_utils = node_model.component(self.original_util_block.name)
 
         # Keeping the naive branch selection
         disjunction_to_branch_idx = node_data.unbranched_disjunction_indices[0]
@@ -336,10 +336,10 @@ class _GDP_LBB_Solver(_GDPoptAlgorithm):
 
     def _solve_rnGDP_subproblem(self, model, config):
         subproblem = TransformationFactory('gdp.bigm').create_using(model)
-        obj_sense_correction = self.parent.objective_sense != minimize
-        model_utils = model.component(self.parent.original_util_block.name)
+        obj_sense_correction = self.objective_sense != minimize
+        model_utils = model.component(self.original_util_block.name)
         subprob_utils = subproblem.component(
-            self.parent.original_util_block.name)
+            self.original_util_block.name)
 
         try:
             with SuppressInfeasibleWarning():
@@ -355,7 +355,7 @@ class _GDP_LBB_Solver(_GDPoptAlgorithm):
                     return float('inf'), float('inf')
                 minlp_args = dict(config.minlp_solver_args)
                 if config.minlp_solver == 'gams':
-                    elapsed = get_main_elapsed_time(self.parent.timing)
+                    elapsed = get_main_elapsed_time(self.timing)
                     remaining = max(config.time_limit - elapsed, 1)
                     minlp_args['add_options'] = minlp_args.get('add_options',
                                                                [])
@@ -428,10 +428,10 @@ class _GDP_LBB_Solver(_GDPoptAlgorithm):
     def _solve_local_rnGDP_subproblem(self, model, config):
         # TODO for now, return (LB, UB) = (-inf, inf) (for minimize)
         subproblem = TransformationFactory('gdp.bigm').create_using(model)
-        obj_sense_correction = self.parent.objective_sense != minimize
+        obj_sense_correction = self.objective_sense != minimize
         subprob_utils = subproblem.component(
-            self.parent.original_util_block.name)
-        model_utils = model.component(self.parent.original_util_block.name)
+            self.original_util_block.name)
+        model_utils = model.component(self.original_util_block.name)
 
         try:
             with SuppressInfeasibleWarning():

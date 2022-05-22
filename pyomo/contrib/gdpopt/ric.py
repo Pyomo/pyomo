@@ -51,34 +51,34 @@ class _GDP_RIC_Solver(_GDPoptAlgorithm):
         master_obj = next(master.component_data_objects(Objective, active=True,
                                                         descend_into=True))
 
-        self.parent._log_header(logger)
+        self._log_header(logger)
 
         # main loop
-        while self.parent.iteration < config.iterlim:
-            self.parent.iteration += 1
+        while self.iteration < config.iterlim:
+            self.iteration += 1
 
             # solve linear master problem
-            with time_code(self.parent.timing, 'mip'):
+            with time_code(self.timing, 'mip'):
                 mip_feasible = solve_MILP_master_problem(master_util_block,
                                                          config,
-                                                         self.parent.timing)
-                self.parent._update_bounds_after_master_problem_solve(
+                                                         self.timing)
+                self._update_bounds_after_master_problem_solve(
                     mip_feasible, master_obj, logger)
 
             # Check termination conditions
-            if self.parent.any_termination_criterion_met(config):
+            if self.any_termination_criterion_met(config):
                 break
 
-            with time_code(self.parent.timing, 'nlp'):
+            with time_code(self.timing, 'nlp'):
                 _fix_master_soln_solve_subproblem_and_add_cuts(
                     master_util_block, subproblem_util_block, config, self)
 
             # Add integer cut
-            with time_code(self.parent.timing, "integer cut generation"):
+            with time_code(self.timing, "integer cut generation"):
                 add_no_good_cut(master_util_block, config)
 
             # Check termination conditions
-            if self.parent.any_termination_criterion_met(config):
+            if self.any_termination_criterion_met(config):
                 break
 
     def _add_cuts_to_master_problem(self, subproblem_util_block,

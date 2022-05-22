@@ -23,14 +23,14 @@ from pyomo.gdp.disjunct import Disjunct, Disjunction
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
 def _get_master_and_subproblem(solver, config):
-    util_block = solver.parent.original_util_block
+    util_block = solver.original_util_block
     original_model = util_block.model()
     if config.force_subproblem_nlp:
         # We'll need to fix these too
         add_discrete_variable_list(util_block)
     original_obj = move_nonlinear_objective_to_constraints(util_block,
                                                            config.logger)
-    solver.parent.original_obj = original_obj
+    solver.original_obj = original_obj
 
     # create model to hold the subproblems: We create this first because
     # certain initialization strategies for the master problem need it.
@@ -43,14 +43,14 @@ def _get_master_and_subproblem(solver, config):
     subproblem_util_block.obj = Expression(expr=subproblem_obj.expr)
 
     # create master MILP
-    start = get_main_elapsed_time(solver.parent.timing)
+    start = get_main_elapsed_time(solver.timing)
     master_util_block = initialize_master_problem(util_block,
                                                   subproblem_util_block,
                                                   config, solver)
 
     config.logger.info(
         'Finished master problem initialization in {:.2f}s\n'.format(
-            get_main_elapsed_time(solver.parent.timing) - start))
+            get_main_elapsed_time(solver.timing) - start))
 
     return (master_util_block, subproblem_util_block)
 
