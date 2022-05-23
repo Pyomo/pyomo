@@ -74,6 +74,12 @@ class ModuleUnavailable(object):
                                  % (type(self).__name__, attr))
         raise DeferredImportError(self._moduleunavailable_message())
 
+    def __getstate__(self):
+        return (self.__name__, self._moduleunavailable_info_)
+
+    def __setstate__(self, state):
+        self.__name__, self._moduleunavailable_info_ = state
+
     def _moduleunavailable_message(self, msg=None):
         _err, _ver, _imp, _package = self._moduleunavailable_info_
         if msg is None:
@@ -151,6 +157,12 @@ class DeferredImportModule(object):
                 _mod = getattr(_mod, _sub)
         return getattr(_mod, attr)
 
+    def __getstate__(self):
+        return self.__dict__
+
+    def __setstate__(self, state):
+        for k, v in state.items():
+            super().__setattr__(k, v)
 
 class _DeferredImportIndicatorBase(object):
     def __and__(self, other):
