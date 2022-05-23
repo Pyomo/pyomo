@@ -56,9 +56,9 @@ class ModuleUnavailable(object):
         # __sphinx_mock__ attribute on all module-level objects, and we need
         # that to raise an AttributeError and not a DeferredImportError
         '__sphinx_mock__',
-        # We need special handling for dill as well, as dill's attempts
-        # to pickle module gobals look for the '_dill' attribute on all
-        # global objects.
+        # We need special handling for dill as well, as dill attempts to
+        # pickle module globals by looking for the '_dill' attribute on
+        # all global objects.
         '_dill',
     }
 
