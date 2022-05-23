@@ -51,10 +51,16 @@ class ModuleUnavailable(object):
         The module name that originally attempted the import
     """
 
-    # We need special handling for Sphinx here, as it will look for the
-    # __sphinx_mock__ attribute on all module-level objects, and we need
-    # that to raise an AttributeError and not a DeferredImportError
-    _getattr_raises_attributeerror = {'__sphinx_mock__',}
+    _getattr_raises_attributeerror = {
+        # We need special handling for Sphinx here, as it will look for the
+        # __sphinx_mock__ attribute on all module-level objects, and we need
+        # that to raise an AttributeError and not a DeferredImportError
+        '__sphinx_mock__',
+        # We need special handling for dill as well, as dill's attempts
+        # to pickle module gobals look for the '_dill' attribute on all
+        # global objects.
+        '_dill',
+    }
 
     def __init__(self, name, message, version_error, import_error, package):
         self.__name__ = name
