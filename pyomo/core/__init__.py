@@ -119,8 +119,6 @@ from pyomo.core.base.transformation import (
     Transformation,
     TransformationFactory,
 )
-#
-from pyomo.core.base import util
 
 from pyomo.core.base.instance2dat import instance2dat
 
