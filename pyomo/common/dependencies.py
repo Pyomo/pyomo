@@ -83,7 +83,7 @@ class ModuleUnavailable(object):
     # Included because recent dill picklers look for the mro() when
     # detecting numpy types
     def mro(self):
-        return [DeferredImportModule, object]
+        return [ModuleUnavailable, object]
 
     def _moduleunavailable_message(self, msg=None):
         _err, _ver, _imp, _package = self._moduleunavailable_info_
