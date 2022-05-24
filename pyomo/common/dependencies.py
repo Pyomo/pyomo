@@ -51,10 +51,16 @@ class ModuleUnavailable(object):
         The module name that originally attempted the import
     """
 
-    # We need special handling for Sphinx here, as it will look for the
-    # __sphinx_mock__ attribute on all module-level objects, and we need
-    # that to raise an AttributeError and not a DeferredImportError
-    _getattr_raises_attributeerror = {'__sphinx_mock__',}
+    _getattr_raises_attributeerror = {
+        # We need special handling for Sphinx here, as it will look for the
+        # __sphinx_mock__ attribute on all module-level objects, and we need
+        # that to raise an AttributeError and not a DeferredImportError
+        '__sphinx_mock__',
+        # We need special handling for dill as well, as dill attempts to
+        # pickle module globals by looking for the '_dill' attribute on
+        # all global objects.
+        '_dill',
+    }
 
     def __init__(self, name, message, version_error, import_error, package):
         self.__name__ = name
@@ -67,6 +73,17 @@ class ModuleUnavailable(object):
             raise AttributeError("'%s' object has no attribute '%s'"
                                  % (type(self).__name__, attr))
         raise DeferredImportError(self._moduleunavailable_message())
+
+    def __getstate__(self):
+        return (self.__name__, self._moduleunavailable_info_)
+
+    def __setstate__(self, state):
+        self.__name__, self._moduleunavailable_info_ = state
+
+    # Included because recent dill picklers look for the mro() when
+    # detecting numpy types
+    def mro(self):
+        return [ModuleUnavailable, object]
 
     def _moduleunavailable_message(self, msg=None):
         _err, _ver, _imp, _package = self._moduleunavailable_info_
@@ -144,6 +161,18 @@ class DeferredImportModule(object):
             for _sub in self._submodule_name[1:].split('.'):
                 _mod = getattr(_mod, _sub)
         return getattr(_mod, attr)
+
+    def __getstate__(self):
+        return self.__dict__
+
+    def __setstate__(self, state):
+        for k, v in state.items():
+            super().__setattr__(k, v)
+
+    # Included because recent dill picklers look for the mro() when
+    # detecting numpy types
+    def mro(self):
+        return [DeferredImportModule, object]
 
 
 class _DeferredImportIndicatorBase(object):

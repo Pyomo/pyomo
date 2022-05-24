@@ -18,7 +18,8 @@ from pyomo.common.log import LoggingIntercept
 from pyomo.common.dependencies import (
     attempt_import, ModuleUnavailable, DeferredImportModule,
     DeferredImportIndicator, DeferredImportError,
-    _DeferredAnd, _DeferredOr, check_min_version
+    _DeferredAnd, _DeferredOr, check_min_version,
+    dill, dill_available
 )
 
 import pyomo.common.tests.dep_mod as dep_mod
@@ -48,6 +49,26 @@ class TestDependencies(unittest.TestCase):
                 "attribute '__sphinx_mock__'"):
             module_obj.__sphinx_mock__
 
+    @unittest.skipUnless(dill_available, "Test requires dill module")
+    def test_pickle(self):
+        self.assertIs(deps.pkl_test.__class__, DeferredImportModule)
+        # Pickle the DeferredImportModule class
+        pkl = dill.dumps(deps.pkl_test)
+        deps.new_pkl_test = dill.loads(pkl)
+        self.assertIs(deps.pkl_test.__class__, deps.new_pkl_test.__class__)
+        self.assertIs(deps.new_pkl_test.__class__, DeferredImportModule)
+        self.assertIsNot(deps.pkl_test, deps.new_pkl_test)
+        self.assertIn('submod', deps.new_pkl_test.__dict__)
+        with self.assertRaisesRegex(
+                DeferredImportError, 'nonexisting.module.pickle_test module'):
+            deps.new_pkl_test.try_to_call_a_method()
+        # Pickle the ModuleUnavailable class
+        self.assertIs(deps.new_pkl_test.__class__, ModuleUnavailable)
+        pkl = dill.dumps(deps.new_pkl_test)
+        new_pkl_test_2 = dill.loads(pkl)
+        self.assertIs(deps.new_pkl_test.__class__, new_pkl_test_2.__class__)
+        self.assertIsNot(deps.new_pkl_test, new_pkl_test_2)
+        self.assertIs(new_pkl_test_2.__class__, ModuleUnavailable)
 
     def test_import_success(self):
         module_obj, module_available = attempt_import(
