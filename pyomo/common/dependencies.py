@@ -80,6 +80,11 @@ class ModuleUnavailable(object):
     def __setstate__(self, state):
         self.__name__, self._moduleunavailable_info_ = state
 
+    # Included because recent dill picklers look for the mro() when
+    # detecting numpy types
+    def mro(self):
+        return [DeferredImportModule, object]
+
     def _moduleunavailable_message(self, msg=None):
         _err, _ver, _imp, _package = self._moduleunavailable_info_
         if msg is None:
@@ -163,6 +168,12 @@ class DeferredImportModule(object):
     def __setstate__(self, state):
         for k, v in state.items():
             super().__setattr__(k, v)
+
+    # Included because recent dill picklers look for the mro() when
+    # detecting numpy types
+    def mro(self):
+        return [DeferredImportModule, object]
+
 
 class _DeferredImportIndicatorBase(object):
     def __and__(self, other):
