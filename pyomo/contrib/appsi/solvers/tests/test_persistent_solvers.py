@@ -2,8 +2,6 @@ import pyomo.environ as pe
 from pyomo.common.dependencies import attempt_import
 import pyomo.common.unittest as unittest
 parameterized, param_available = attempt_import('parameterized')
-if not param_available:
-    raise unittest.SkipTest('Parameterized is not available.')
 parameterized = parameterized.parameterized
 from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
 from pyomo.contrib.appsi.cmodel import cmodel_available
@@ -13,7 +11,11 @@ from pyomo.core.expr.numeric_expr import LinearExpression
 import os
 numpy, numpy_available = attempt_import('numpy')
 import random
+from pyomo import gdp
 
+
+if not param_available:
+    raise unittest.SkipTest('Parameterized is not available.')
 
 all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex), ('cbc', Cbc)]
 mip_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('cbc', Cbc)]
@@ -960,6 +962,63 @@ class TestSolvers(unittest.TestCase):
         m.x.setlb(0.5)
         res = opt.solve(m)
         self.assertAlmostEqual(res.best_feasible_objective, 1)
+
+    @parameterized.expand(input=all_solvers)
+    def test_fixed_binaries(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+        m = pe.ConcreteModel()
+        m.x = pe.Var(domain=pe.Binary)
+        m.y = pe.Var()
+        m.obj = pe.Objective(expr=m.y)
+        m.c = pe.Constraint(expr=m.y >= m.x)
+        m.x.fix(0)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        m.x.fix(1)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+
+        opt: PersistentSolver = opt_class()
+        opt.update_config.treat_fixed_vars_as_params = False
+        m.x.fix(0)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        m.x.fix(1)
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+
+    @parameterized.expand(input=mip_solvers)
+    def test_with_gdp(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class()
+        if not opt.available():
+            raise unittest.SkipTest
+
+        m = pe.ConcreteModel()
+        m.x = pe.Var(bounds=(-10, 10))
+        m.y = pe.Var(bounds=(-10, 10))
+        m.obj = pe.Objective(expr=m.y)
+        m.d1 = gdp.Disjunct()
+        m.d1.c1 = pe.Constraint(expr=m.y >= m.x + 2)
+        m.d1.c2 = pe.Constraint(expr=m.y >= -m.x + 2)
+        m.d2 = gdp.Disjunct()
+        m.d2.c1 = pe.Constraint(expr=m.y >= m.x + 1)
+        m.d2.c2 = pe.Constraint(expr=m.y >= -m.x + 1)
+        m.disjunction = gdp.Disjunction(expr=[m.d2, m.d1])
+        pe.TransformationFactory("gdp.bigm").apply_to(m)
+
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)
+
+        opt: PersistentSolver = opt_class()
+        opt.use_extensions = True
+        res = opt.solve(m)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 1)
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
