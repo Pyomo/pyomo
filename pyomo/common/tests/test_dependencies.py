@@ -35,11 +35,11 @@ class TestDependencies(unittest.TestCase):
     def test_import_error(self):
         module_obj, module_available = attempt_import(
             '__there_is_no_module_named_this__',
-            'Testing import of a non-existant module',
+            'Testing import of a non-existent module',
             defer_check=False)
         self.assertFalse(module_available)
         with self.assertRaisesRegex(
-                DeferredImportError, 'Testing import of a non-existant module'):
+                DeferredImportError, 'Testing import of a non-existent module'):
             module_obj.try_to_call_a_method()
 
         # Note that some attribute will intentionally raise
