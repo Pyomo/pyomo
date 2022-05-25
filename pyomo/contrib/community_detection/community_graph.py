@@ -140,10 +140,16 @@ def generate_model_graph(model, type_of_graph, with_objective=True, weighted_gra
         variable_nodes = set(number_component_map) - constraint_nodes
         graph_nodes = variable_nodes
 
-    if weighted_graph:
-        projected_model_graph = nx.bipartite.weighted_projected_graph(bipartite_model_graph, graph_nodes)
-    else:
-        projected_model_graph = nx.bipartite.projected_graph(bipartite_model_graph, graph_nodes)
+    try:
+        if weighted_graph:
+            projected_model_graph = nx.bipartite.weighted_projected_graph(bipartite_model_graph, graph_nodes)
+        else:
+            projected_model_graph = nx.bipartite.projected_graph(bipartite_model_graph, graph_nodes)
+    except nx.exception.NetworkXAlgorithmError:
+        # See Pyomo #2413: networkx now raises exceptions for invalid
+        # projections.  This restores the (probably invalid) previous
+        # behavior in community_detection
+        projected_model_graph = nx.Graph()
 
     # Log important information with the following logger function
     _event_log(model, projected_model_graph, set(constraint_variable_map), type_of_graph, with_objective)
