@@ -601,6 +601,8 @@ class Estimator(object):
         for snum in senario_numbers:
             sname = "scenario_NODE"+str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
+            if initialize_parmest_model:
+                theta_init_vals = []
             for i, theta in enumerate(self.theta_names):
                 # Use parser in ComponentUID to locate the component
                 var_cuid = ComponentUID(theta)
@@ -615,8 +617,7 @@ class Estimator(object):
                         # this will generate an exception (and the warning
                         # in the 'except')
                         var_validate.fix()
-
-                        # fitted_vars.append(var_validate)
+                        theta_init_vals.append(var_validate)
 
                         if thetavals is None:
 
@@ -648,7 +649,10 @@ class Estimator(object):
                     # DLW: Aug2018: not distinguishing "middlish" conditions
                     if WorstStatus != pyo.TerminationCondition.infeasible:
                         WorstStatus = results.solver.termination_condition
-                scen_dict[sname] = instance
+                if initialize_parmest_model:
+                    for theta in theta_init_vals:
+                        theta.unfix()
+                    scen_dict[sname] = instance
 
             objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
