@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -14,6 +15,7 @@ __all__ = ['CounterLabeler', 'NumericLabeler', 'CNameLabeler', 'TextLabeler',
 
 import re
 
+from pyomo.common.deprecation import deprecated
 from pyomo.core.base.componentuid import ComponentUID
 
 # This module provides some basic functionality for generating labels
@@ -102,9 +104,11 @@ class NumericLabeler(object):
         self.id += 1
         return self.prefix + str(self.id)
 
+    @deprecated("The 'remove_obj' method is no longer "
+                "necessary now that 'getname' does not "
+                "support the use of a name buffer", version="6.4.1")
     def remove_obj(self, obj):
         pass
-
 #
 # TODO: [JDS] I would like to rename TextLabeler to LPLabeler - as it
 # generated LP-file-compliant labels - and make the CNameLabeler the
@@ -116,35 +120,26 @@ class NumericLabeler(object):
 # actually being LP-compliant.
 #
 class CNameLabeler(object):
-    def __init__(self):
-        self.name_buffer = {}
-
     def __call__(self, obj):
-        return obj.getname(True, self.name_buffer)
+        return obj.getname(True)
 
 class TextLabeler(object):
-    def __init__(self):
-        self.name_buffer = {}
-
     def __call__(self, obj):
-        return cpxlp_label_from_name(obj.getname(True, self.name_buffer))
+        return cpxlp_label_from_name(obj.getname(True))
 
+    @deprecated("The 'remove_obj' method is no longer "
+                "necessary now that 'getname' does not "
+                "support the use of a name buffer", version="6.4.1")
     def remove_obj(self, obj):
-        self.name_buffer.pop(id(obj))
+        pass
 
 class AlphaNumericTextLabeler(object):
-    def __init__(self):
-        self.name_buffer = {}
-
     def __call__(self, obj):
-        return alphanum_label_from_name(obj.getname(True, self.name_buffer))
+        return alphanum_label_from_name(obj.getname(True))
 
 class NameLabeler(object):
-    def __init__(self):
-        self.name_buffer = {}
-
     def __call__(self, obj):
-        return obj.getname(True, self.name_buffer)
+        return obj.getname(True)
 
 class ShortNameLabeler(object):
     def __init__(self, limit, suffix, start=0, labeler=None,
@@ -185,7 +180,7 @@ class ShortNameLabeler(object):
                 raise RuntimeError(
                     "Too many identifiers.\n\t"
                     "The ShortNameLabeler cannot generate a guaranteed unique "
-                    "label limited to %d characters" % (self.limit,)) 
+                    "label limited to %d characters" % (self.limit,))
             lbl = self.prefix + lbl[tail:] + suffix
         if self.known_labels is not None:
             self.known_labels.add(lbl.upper() if self.caseInsensitive else lbl)

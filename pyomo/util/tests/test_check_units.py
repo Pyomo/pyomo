@@ -2,9 +2,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -196,6 +197,32 @@ class TestUnitsChecking(unittest.TestCase):
         # m.compl = Complementarity(expr=complements(m.dx/m.t >= m.vx, m.dx == 0*u.m))
 
         assert_units_consistent(m)
+
+    def test_units_roundoff_error(self):
+        # Issue 2393: this example resulted in roundoff error where the
+        # computed units for var_1 were
+        #(0.9999999999999986,
+        # <Unit('kilogram ** 1 / kelvin / meter ** 1.66533e-16 / second ** 3')>
+        #)
+        m = ConcreteModel()
+        m.var_1 = Var(
+            initialize=400,
+            units=((units.J**0.4) *
+                   (units.kg**0.2) *
+                   (units.W**0.6) /
+                   units.K /
+                   (units.m**2.2) /
+                   (units.Pa**0.2) /
+                   (units.s**0.8))
+        )
+        m.var_1.fix()
+        m.var_2 = Var(
+            initialize=400,
+            units=units.kg/units.s**3/units.K
+        )
+        assert_units_equivalent(m.var_1, m.var_2)
+
+
 
 if __name__ == "__main__":
     unittest.main()

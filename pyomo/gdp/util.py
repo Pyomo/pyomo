@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -367,7 +368,7 @@ def get_transformed_constraints(srcConstraint):
                      % srcConstraint.name)
         raise
 
-def _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER):
+def _warn_for_active_disjunction(disjunction, disjunct):
     # this should only have gotten called if the disjunction is active
     assert disjunction.active
     problemdisj = disjunction
@@ -382,16 +383,15 @@ def _warn_for_active_disjunction(disjunction, disjunct, NAME_BUFFER):
     parentblock = problemdisj.parent_block()
     # the disjunction should only have been active if it wasn't transformed
     assert problemdisj.algebraic_constraint is None
-    _probDisjName = problemdisj.getname(
-        fully_qualified=True, name_buffer=NAME_BUFFER)
-    _disjName = disjunct.getname(fully_qualified=True, name_buffer=NAME_BUFFER)
+    _probDisjName = problemdisj.getname(fully_qualified=True)
+    _disjName = disjunct.getname(fully_qualified=True)
     raise GDP_Error("Found untransformed disjunction '%s' in disjunct '%s'! "
                     "The disjunction must be transformed before the "
                     "disjunct. If you are using targets, put the "
                     "disjunction before the disjunct in the list."
                     % (_probDisjName, _disjName))
 
-def _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER):
+def _warn_for_active_disjunct(innerdisjunct, outerdisjunct):
     assert innerdisjunct.active
     problemdisj = innerdisjunct
     if innerdisjunct.is_indexed():
@@ -406,11 +406,8 @@ def _warn_for_active_disjunct(innerdisjunct, outerdisjunct, NAME_BUFFER):
                     "has not been transformed. {0} needs to be deactivated "
                     "or its disjunction transformed before {1} can be "
                     "transformed.".format(
-                        problemdisj.getname(
-                            fully_qualified=True, name_buffer = NAME_BUFFER),
-                        outerdisjunct.getname(
-                            fully_qualified=True,
-                            name_buffer=NAME_BUFFER)))
+                        problemdisj.getname(fully_qualified=True),
+                        outerdisjunct.getname(fully_qualified=True)))
 
 def check_model_algebraic(instance):
     """Checks if there are any active Disjuncts or Disjunctions reachable via
