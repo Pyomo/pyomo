@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -15,7 +16,9 @@ from pickle import PickleError
 from weakref import ref as weakref_ref
 
 import pyomo.common
-from pyomo.common.deprecation import deprecated, relocated_module_attribute
+from pyomo.common import DeveloperError
+from pyomo.common.deprecation import (
+    deprecated, deprecation_warning, relocated_module_attribute)
 from pyomo.common.factory import Factory
 from pyomo.common.formatting import tabular_writer, StreamIndenter
 from pyomo.common.modeling import NOTSET
@@ -401,7 +404,7 @@ class Component(_ComponentBase):
         # Verify that ctype has been specified.
         #
         if self._ctype is None:
-            raise pyomo.common.DeveloperError(
+            raise DeveloperError(
                 "Must specify a component type for class %s!"
                 % ( type(self).__name__, ) )
         #
@@ -557,11 +560,6 @@ class Component(_ComponentBase):
         fully_qualified: bool
             Generate full name from nested block names
 
-        name_buffer: dict
-            A dictionary that caches encountered names and indices.
-            Providing a ``name_buffer`` can significantly speed up
-            iterative name generation
-
         relative_to: Block
             Generate fully_qualified names reletive to the specified block.
         """
@@ -585,6 +583,13 @@ class Component(_ComponentBase):
             # add quotes or otherwise escape the string.
             ans = local_name
         if name_buffer is not None:
+            deprecation_warning(
+                "The 'name_buffer' argument to getname is deprecated. "
+                "The functionality is no longer necessary since getting names "
+                "is no longer a quadratic operation. Additionally, note that "
+                "use of this argument poses risks if the buffer contains "
+                "names relative to different Blocks in the model hierarchy or "
+                "a mixture of local and fully_qualified names.", version='TODO')
             name_buffer[id(self)] = ans
         return ans
 
@@ -846,8 +851,17 @@ class ComponentData(_ComponentBase):
         - for some unknown reason - this instance does not belong
         to the parent component's index set.
         """
-        if self.parent_component() is None:
-            return None
+        parent = self.parent_component()
+        if ( parent is not None and
+             self._index is not NOTSET and
+             parent[self._index] is not self ):
+            # This error message is a bit goofy, but we can't call self.name
+            # here--it's an infinite loop!
+            raise DeveloperError(
+                "The '_data' dictionary and '_index' attribute are out of "
+                "sync for indexed %s '%s': The %s entry in the '_data' "
+                "dictionary does not map back to this component data object."
+                % (parent.ctype.__name__, parent.name, self._index))
         return self._index
 
     def __str__(self):
@@ -866,9 +880,17 @@ class ComponentData(_ComponentBase):
         #
         # Using the buffer, which is a dictionary:  id -> string
         #
-        if name_buffer is not None and id(self) in name_buffer:
-            # Return the name if it is in the buffer
-            return name_buffer[id(self)]
+        if name_buffer is not None:
+            deprecation_warning(
+                "The 'name_buffer' argument to getname is deprecated. "
+                "The functionality is no longer necessary since getting names "
+                "is no longer a quadratic operation. Additionally, note that "
+                "use of this argument poses risks if the buffer contains "
+                "names relative to different Blocks in the model hierarchy or "
+                "a mixture of local and fully_qualified names.", version='TODO')
+            if id(self) in name_buffer:
+                # Return the name if it is in the buffer
+                return name_buffer[id(self)]
 
         c = self.parent_component()
         if c is self:

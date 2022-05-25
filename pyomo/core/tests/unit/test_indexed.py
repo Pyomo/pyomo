@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -15,6 +16,7 @@ import os
 from os.path import abspath, dirname
 currdir = dirname(abspath(__file__))+os.sep
 
+from pyomo.common import DeveloperError
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import ConcreteModel, Var, Param, Set, value
@@ -200,6 +202,20 @@ class TestIndexedComponent(unittest.TestCase):
         self.assertEqual(list(zip(ordered_keys, [10, 20, 1, 30, 1])),
                          list(m.P.items(True)))
 
+    def test_index_attribute_out_of_sync(self):
+        m = ConcreteModel()
+        m.x = Var([1,2,3])
+        # make sure everything is right to begin with
+        for i in [1, 2, 3]:
+            self.assertEqual(m.x[i].index(), i)
+        # now mess it up
+        m.x[3]._index = 2
+        with self.assertRaisesRegex(
+                DeveloperError,
+                ".*The '_data' dictionary and '_index' attribute are out of "
+                "sync for indexed Var 'x': The 2 entry in the '_data' "
+                "dictionary does not map back to this component data object."):
+            m.x[3].index()
 
 if __name__ == "__main__":
     unittest.main()

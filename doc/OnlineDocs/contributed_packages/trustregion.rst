@@ -23,7 +23,7 @@ Simulation-Based Engineering, Crosscutting Research Program within the U.S.
 Department of Energy’s Office of Fossil Energy and Carbon Management.
 
 .. _Eason & Biegler, 2018: https://doi.org/10.1002/aic.16364
-.. _Yoshio & Biegler, 2021: https://doi.org/10.1016/j.compchemeng.2021.107447
+.. _Yoshio & Biegler, 2021: https://doi.org/10.1002/aic.17054
 
 Methodology Overview
 ---------------------
