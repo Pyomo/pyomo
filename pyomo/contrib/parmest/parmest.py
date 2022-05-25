@@ -439,7 +439,8 @@ class Estimator(object):
                                         scenario_creator_kwargs=scenario_creator_options)
             self.ef_instance = ef
         else:
-            ef = self.ef_instance
+            import copy
+            ef = copy.deepcopy(self.ef_instance)
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
@@ -614,23 +615,20 @@ class Estimator(object):
                         "theta_name[%s] (%s) was not found on the model",
                         (i, theta))
                 else:
-                    try:
+                    # try:
                         # If the component that was found is not a variable,
                         # this will generate an exception (and the warning
                         # in the 'except')
-                        var_validate.fix()
-                        theta_init_vals.append(var_validate)
+                    var_validate.fix()
+                    theta_init_vals.append(var_validate)
 
-                        if thetavals is None:
+                    if thetavals is None:
 
-                            # thetavals[theta] = var_validate
-                            print('Parameter fixed')
-                        # We want to standardize on the CUID string
-                        # representation
-                        # self.theta_names[i] = repr(var_cuid)
+                        # thetavals[theta] = var_validate
+                        print('Parameter fixed')
 
-                    except:
-                        logger.warning(theta + ' is not a variable')
+                    # except:
+                    #     logger.warning(theta + ' is not a variable')
 
             if not sillylittle:
                 if self.diagnostic_mode:
@@ -641,7 +639,7 @@ class Estimator(object):
                     print("   status_obj, solved, iters, time, regularization_stat = ",
                            str(status_obj), str(solved), str(iters), str(time), str(regu))
 
-                results = optimizer.solve(instance)
+                results = optimizer.solve(instance,tee=True)
                 if self.diagnostic_mode:
                     print('standard solve solver termination condition=',
                             str(results.solver.termination_condition))
@@ -652,10 +650,12 @@ class Estimator(object):
                     if WorstStatus != pyo.TerminationCondition.infeasible:
                         WorstStatus = results.solver.termination_condition
                     if initialize_parmest_model:
+                        # raise warning here?
                         print("Scenario {:d} infeasible with initialized parameter values".format(snum))
-
+                else:
+                    if initialize_parmest_model:
+                        print("Scenario {:d} initialization successful with initial parameter values".format(snum))
                 if initialize_parmest_model:
-                    print("Scenario {:d} initialized successfully with initial parameter values".format(snum))
                     for theta in theta_init_vals:
                         theta.unfix()
                     scen_dict[sname] = instance
