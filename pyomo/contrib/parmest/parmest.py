@@ -438,6 +438,8 @@ class Estimator(object):
                                         suppress_warnings=True,
                                         scenario_creator_kwargs=scenario_creator_options)
             self.ef_instance = ef
+        else:
+            ef = self.ef_instance
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
@@ -639,7 +641,7 @@ class Estimator(object):
                     print("   status_obj, solved, iters, time, regularization_stat = ",
                            str(status_obj), str(solved), str(iters), str(time), str(regu))
 
-                results = optimizer.solve(instance,tee=True)
+                results = optimizer.solve(instance)
                 if self.diagnostic_mode:
                     print('standard solve solver termination condition=',
                             str(results.solver.termination_condition))
@@ -649,7 +651,11 @@ class Estimator(object):
                     # DLW: Aug2018: not distinguishing "middlish" conditions
                     if WorstStatus != pyo.TerminationCondition.infeasible:
                         WorstStatus = results.solver.termination_condition
+                    if initialize_parmest_model:
+                        print("Scenario {:d} infeasible with initialized parameter values".format(snum))
+
                 if initialize_parmest_model:
+                    print("Scenario {:d} initialized successfully with initial parameter values".format(snum))
                     for theta in theta_init_vals:
                         theta.unfix()
                     scen_dict[sname] = instance
