@@ -17,7 +17,7 @@
 
 """
 This model is adapted from Noriyuki Yoshio's model for his and Biegler's
-2020 publication in AIChE.
+2021 publication in AIChE.
 
 
 Yoshio, N, Biegler, L.T. Demand-based optimization of a chlorobenzene process
