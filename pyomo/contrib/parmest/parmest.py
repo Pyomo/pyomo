@@ -654,10 +654,13 @@ class Estimator(object):
             objval = pyo.value(objobject)
             totobj += objval
         retval = totobj / len(senario_numbers) # -1??
-        EF_instance = local_ef._create_EF_from_scen_dict(scen_dict,
-                                                EF_name=EF_name,
-                                                nonant_for_fixed_vars=True)
-        if initialize_at_theta:
+        if initialize_parmest_model:
+            for scen in scen_dict.values():
+                scen._mpisppy_probability = 1 / len(scen_dict)
+            EF_instance = local_ef._create_EF_from_scen_dict(scen_dict,
+                                                    EF_name="_Q_at_theta",
+                                                    nonant_for_fixed_vars=True)
+
             self.ef_instance = EF_instance
             self.model_initialized = True
         return retval, thetavals, WorstStatus
