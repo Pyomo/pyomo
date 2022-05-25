@@ -541,7 +541,7 @@ class Estimator(object):
             raise RuntimeError("Unknown solver in Q_Opt="+solver)
 
 
-    def _Q_at_theta(self, thetavals, initialize_at_theta=False):
+    def _Q_at_theta(self, thetavals, initialize_parmest_model=False):
         """
         Return the objective function value with fixed theta values.
 
@@ -593,6 +593,8 @@ class Estimator(object):
         WorstStatus = pyo.TerminationCondition.optimal
         totobj = 0
         senario_numbers = list(range(len(self.callback_data)))
+        scen_dict = {}
+
         for snum in senario_numbers:
             sname = "scenario_NODE"+str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
@@ -610,12 +612,17 @@ class Estimator(object):
                         # this will generate an exception (and the warning
                         # in the 'except')
                         var_validate.fix()
-                        fitted_vars.append(var_validate)
+
+                        # fitted_vars.append(var_validate)
+
                         if thetavals is None:
-                            thetavals[theta] = var_validate.value()
+
+                            # thetavals[theta] = var_validate
+                            print('Parameter fixed')
                         # We want to standardize on the CUID string
                         # representation
                         # self.theta_names[i] = repr(var_cuid)
+
                     except:
                         logger.warning(theta + ' is not a variable')
 
@@ -628,7 +635,7 @@ class Estimator(object):
                     print("   status_obj, solved, iters, time, regularization_stat = ",
                            str(status_obj), str(solved), str(iters), str(time), str(regu))
 
-                results = optimizer.solve(instance)
+                results = optimizer.solve(instance,tee=True)
                 if self.diagnostic_mode:
                     print('standard solve solver termination condition=',
                             str(results.solver.termination_condition))
@@ -638,12 +645,18 @@ class Estimator(object):
                     # DLW: Aug2018: not distinguishing "middlish" conditions
                     if WorstStatus != pyo.TerminationCondition.infeasible:
                         WorstStatus = results.solver.termination_condition
+                scen_dict[sname] = instance
 
             objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
             totobj += objval
         retval = totobj / len(senario_numbers) # -1??
-
+        EF_instance = local_ef._create_EF_from_scen_dict(scen_dict,
+                                                EF_name=EF_name,
+                                                nonant_for_fixed_vars=True)
+        if initialize_at_theta:
+            self.ef_instance = EF_instance
+            self.model_initialized = True
         return retval, thetavals, WorstStatus
 
     def _get_sample_list(self, samplesize, num_samples, replacement=True):
@@ -934,6 +947,7 @@ class Estimator(object):
         """
         if theta_values is None:
             all_thetas = {} # dictionary to store fitted variables
+            theta_names = self.theta_names
         else:
             assert isinstance(theta_values, pd.DataFrame)
 
@@ -954,9 +968,10 @@ class Estimator(object):
                      all_obj.append(list(Theta.values()) + [obj])
                 # DLW, Aug2018: should we also store the worst solver status?
         else:
-            obj, thetvals, worststatus = self._Q_at_theta(thetavals=None, initialize_parmest_model=initialize_parmest_model)
+            obj, thetvals, worststatus = self._Q_at_theta(thetavals={}, initialize_parmest_model=initialize_parmest_model)
             if worststatus != pyo.TerminationCondition.infeasible:
-                 all_obj.append(list(thetvals.values()) + [obj])
+                if theta_values:
+                    all_obj.append(list(thetvals.values()) + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
         dfcols = list(theta_names) + ['obj']
