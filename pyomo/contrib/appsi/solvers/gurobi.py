@@ -1,9 +1,7 @@
 from collections.abc import Iterable
-import enum
 import logging
 import math
 from typing import List, Dict, Optional
-
 from pyomo.common.collections import ComponentSet, ComponentMap, OrderedSet
 from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
@@ -20,9 +18,6 @@ from pyomo.core.expr.numvalue import (
     value, is_constant, is_fixed, native_numeric_types,
 )
 from pyomo.repn import generate_standard_repn
-from pyomo.core.base.set import (Reals, NonNegativeReals, NonPositiveReals,
-                                 Integers, NonNegativeIntegers, NonPositiveIntegers,
-                                 Binary, PercentFraction, UnitInterval)
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.contrib.appsi.base import (
     PersistentSolver, Results, TerminationCondition, MIPSolverConfig,
@@ -254,22 +249,19 @@ class Gurobi(PersistentBase, PersistentSolver):
         except gurobipy.GurobiError:
             cls._available = Gurobi.Availability.BadLicense
             return
-        if not cmodel_available:
-            cls._available = Gurobi.Availability.NeedsCompiledExtension
-        else:
-            m = gurobipy.Model()
+        m = gurobipy.Model()
+        m.setParam('OutputFlag', 0)
+        try:
+            # As of 3/2021, the limited-size Gurobi license was limited
+            # to 2000 variables.
+            m.addVars(range(2001))
             m.setParam('OutputFlag', 0)
-            try:
-                # As of 3/2021, the limited-size Gurobi license was limited
-                # to 2000 variables.
-                m.addVars(range(2001))
-                m.setParam('OutputFlag', 0)
-                m.optimize()
-                cls._available = Gurobi.Availability.FullLicense
-            except gurobipy.GurobiError:
-                cls._available = Gurobi.Availability.LimitedLicense
-            finally:
-                m.dispose()
+            m.optimize()
+            cls._available = Gurobi.Availability.FullLicense
+        except gurobipy.GurobiError:
+            cls._available = Gurobi.Availability.LimitedLicense
+        finally:
+            m.dispose()
 
     def version(self):
         version = (gurobipy.GRB.VERSION_MAJOR,
@@ -328,9 +320,9 @@ class Gurobi(PersistentBase, PersistentSolver):
 
     def solve(self, model, timer: HierarchicalTimer = None) -> Results:
         StaleFlagManager.mark_all_as_stale()
-        avail = self.available()
-        if not avail:
-            raise PyomoException(f'Solver {self.__class__} is not available ({avail}).')
+        # Note: solver availability check happens in set_instance(),
+        # which will be called (either by the user before this call, or
+        # below) before this method calls self._solve.
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
         if timer is None:
@@ -424,7 +416,10 @@ class Gurobi(PersistentBase, PersistentSolver):
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
         if not self.available():
-            raise ImportError('Could not import gurobipy')
+            c = self.__class__
+            raise PyomoException(
+                f'Solver {c.__module__}.{c.__qualname__} is not available '
+                f'({self.available()}).')
         saved_config = self.config
         saved_options = self.gurobi_options
         saved_update_config = self.update_config
@@ -433,7 +428,8 @@ class Gurobi(PersistentBase, PersistentSolver):
         self.gurobi_options = saved_options
         self.update_config = saved_update_config
         self._model = model
-        self._expr_types = cmodel.PyomoExprTypes()
+        if self.use_extensions and cmodel_available:
+            self._expr_types = cmodel.PyomoExprTypes()
 
         if self.config.symbolic_solver_labels:
             self._labeler = TextLabeler()
@@ -619,7 +615,6 @@ class Gurobi(PersistentBase, PersistentSolver):
             solver_con = self._pyomo_con_to_solver_con_map[con]
             self._solver_model.remove(solver_con)
             self._symbol_map.removeSymbol(con)
-            self._labeler.remove_obj(con)
             del self._pyomo_con_to_solver_con_map[con]
             del self._solver_con_to_pyomo_con_map[id(solver_con)]
             self._range_constraints.discard(con)
@@ -634,7 +629,6 @@ class Gurobi(PersistentBase, PersistentSolver):
             solver_sos_con = self._pyomo_sos_to_solver_sos_map[con]
             self._solver_model.remove(solver_sos_con)
             self._symbol_map.removeSymbol(con)
-            self._labeler.remove_obj(con)
             del self._pyomo_sos_to_solver_sos_map[con]
         self._needs_updated = True
 
@@ -646,7 +640,6 @@ class Gurobi(PersistentBase, PersistentSolver):
             solver_var = self._pyomo_var_to_solver_var_map[v_id]
             self._solver_model.remove(solver_var)
             self._symbol_map.removeSymbol(var)
-            self._labeler.remove_obj(var)
             del self._pyomo_var_to_solver_var_map[v_id]
             self._mutable_bounds.pop(v_id, None)
         self._needs_updated = True
@@ -817,15 +810,16 @@ class Gurobi(PersistentBase, PersistentSolver):
             raise ValueError('Cannot obtain suboptimal solutions for a continuous model')
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
-        original_solution_number = self._solver_model.get_gurobi_param('SolutionNumber')
-        self._solver_model.set_gurobi_param('SolutionNumber', solution_number)
-        gurobi_vars_to_load = [var_map[id(pyomo_var)] for pyomo_var in vars_to_load]
+        original_solution_number = self.get_gurobi_param_info('SolutionNumber')[2]
+        self.set_gurobi_param('SolutionNumber', solution_number)
+        gurobi_vars_to_load = [var_map[pyomo_var] for pyomo_var in vars_to_load]
         vals = self._solver_model.getAttr("Xn", gurobi_vars_to_load)
         res = ComponentMap()
-        for var, val in zip(vars_to_load, vals):
-            if ref_vars[id(var)] > 0:
-                res[var] = val
-        self._solver_model.set_gurobi_param('SolutionNumber', original_solution_number)
+        for var_id, val in zip(vars_to_load, vals):
+            using_cons, using_sos, using_obj = ref_vars[var_id]
+            if using_cons or using_sos or (using_obj is not None):
+                res[self._vars[var_id][0]] = val
+        self.set_gurobi_param('SolutionNumber', original_solution_number)
         return res
 
     def load_vars(self, vars_to_load=None, solution_number=0):
@@ -836,6 +830,13 @@ class Gurobi(PersistentBase, PersistentSolver):
     def get_primals(self, vars_to_load=None, solution_number=0):
         if self._needs_updated:
             self._update_gurobi_model()  # this is needed to ensure that solutions cannot be loaded after the model has been changed
+
+        if self._solver_model.SolCount == 0:
+            raise RuntimeError(
+                'Solver does not currently have a valid solution. Please '
+                'check the termination condition.'
+            )
+
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
         if vars_to_load is None:
@@ -860,6 +861,12 @@ class Gurobi(PersistentBase, PersistentSolver):
         if self._needs_updated:
             self._update_gurobi_model()
 
+        if self._solver_model.Status != gurobipy.GRB.OPTIMAL:
+            raise RuntimeError(
+                'Solver does not currently have valid reduced costs. Please '
+                'check the termination condition.'
+            )
+
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
         res = ComponentMap()
@@ -881,6 +888,12 @@ class Gurobi(PersistentBase, PersistentSolver):
     def get_duals(self, cons_to_load=None):
         if self._needs_updated:
             self._update_gurobi_model()
+
+        if self._solver_model.Status != gurobipy.GRB.OPTIMAL:
+            raise RuntimeError(
+                'Solver does not currently have valid duals. Please '
+                'check the termination condition.'
+            )
 
         con_map = self._pyomo_con_to_solver_con_map
         reverse_con_map = self._solver_con_to_pyomo_con_map
@@ -908,6 +921,12 @@ class Gurobi(PersistentBase, PersistentSolver):
     def get_slacks(self, cons_to_load=None):
         if self._needs_updated:
             self._update_gurobi_model()
+
+        if self._solver_model.SolCount == 0:
+            raise RuntimeError(
+                'Solver does not currently have valid slacks. Please '
+                'check the termination condition.'
+            )
 
         con_map = self._pyomo_con_to_solver_con_map
         reverse_con_map = self._solver_con_to_pyomo_con_map

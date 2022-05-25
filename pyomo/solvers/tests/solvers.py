@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -280,23 +281,6 @@ def test_solver_cases(*args):
             #io='mps',
             #capabilities=_cbc_mps_capabilities,
             #import_suffixes=['dual', 'rc'])
-
-        #
-        # PICO
-        #
-        _pico_capabilities = set(['linear', 'integer'])
-
-        _test_solver_cases['pico', 'lp'] = initialize(
-            name='pico',
-            io='lp',
-            capabilities=_pico_capabilities,
-            import_suffixes=['dual'])
-
-        _test_solver_cases['pico', 'nl'] = initialize(
-            name='pico',
-            io='nl',
-            capabilities=_pico_capabilities,
-            import_suffixes=['dual'])
 
         #
         # XPRESS

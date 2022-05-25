@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -40,9 +41,9 @@ def main():
     obj, theta = pest.theta_est()
     
     # Find the objective value at each theta estimate
-    k1 = np.arange(0.78, 0.92, 0.02)
-    k2 = np.arange(1.48, 1.79, 0.05)
-    k3 = np.arange(0.000155, 0.000185, 0.000005)
+    k1 = [0.8, 0.85, 0.9]
+    k2 = [1.6, 1.65, 1.7]
+    k3 = [0.00016, 0.000165, 0.00017]
     theta_vals = pd.DataFrame(list(product(k1, k2, k3)), columns=['k1', 'k2', 'k3'])
     obj_at_theta = pest.objective_at_theta(theta_vals)
     
@@ -50,8 +51,8 @@ def main():
     LR = pest.likelihood_ratio_test(obj_at_theta, obj, [0.8, 0.85, 0.9, 0.95])
     
     # Plot results
-    parmest.graphics.pairwise_plot(LR, theta, 0.8, 
-                          title='LR results within 80% confidence region')
+    parmest.graphics.pairwise_plot(LR, theta, 0.9, 
+                          title='LR results within 90% confidence region')
     
 if __name__ == "__main__":
     main()

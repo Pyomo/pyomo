@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -67,10 +68,10 @@ def this_file(stack_offset=1):
     return os.path.abspath(inspect.getfile(callerFrame))
 
 
-def this_file_dir():
+def this_file_dir(stack_offset=1):
     """Returns the directory containing the module that calls this function.
     """
-    return os.path.dirname(this_file(stack_offset=2))
+    return os.path.dirname(this_file(stack_offset=1 + stack_offset))
 
 
 PYOMO_ROOT_DIR = os.path.dirname(os.path.dirname(this_file_dir()))

@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -109,6 +110,7 @@ class ComponentDict(MutableMapping):
                     # * see __delitem__ for explanation
                     self._data[key]._component = None
                 self._data[key] = val
+                self._data[key]._index = key
                 return
             elif (key in self._data) and (self._data[key] is val):
                 # a very special case that makes sense to handle

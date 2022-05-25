@@ -16,10 +16,10 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.core.expr.visitor import identify_variables, identify_mutable_parameters, replace_expressions
-from pyomo.core.expr.sympy_tools import sympyify_expression, sympy2pyomo_expression
 from pyomo.common.dependencies import scipy as sp
 from pyomo.core.expr.numvalue import native_types
 from pyomo.util.vars_from_expressions import get_vars_from_components
+from pyomo.core.expr.numeric_expr import SumExpression
 import itertools as it
 import timeit
 from contextlib import contextmanager
@@ -114,44 +114,37 @@ class ObjectiveType(Enum):
     worst_case = auto()
     nominal = auto()
 
+
+def recast_to_min_obj(model, obj):
+    """
+    Recast model objective to a minimization objective, as necessary.
+
+    Parameters
+    ----------
+    model : ConcreteModel
+        Model of interest.
+    obj : ScalarObjective
+        Objective of interest.
+    """
+    if obj.sense is not minimize:
+        if isinstance(obj.expr, SumExpression):
+            # ensure additive terms in objective
+            # are split in accordance with user declaration
+            obj.expr = sum(-term for term in obj.expr.args)
+        else:
+            obj.expr = -obj.expr
+        obj.sense = minimize
+
+
 def model_is_valid(model):
-    '''
-    Possibilities:
-    Deterministic model has a single objective
-    Deterministic model has no objective
-    Deterministic model has multiple objectives
-    :param model: the deterministic model
-    :return: True if it satisfies certain properties, else False.
-    '''
-    objectives = list(model.component_data_objects(Objective))
-    for o in objectives:
-        o.deactivate()
-    if len(objectives) == 1:
-        '''
-        Ensure objective is a minimization. If not, change the sense.
-        '''
-        obj = objectives[0]
-
-        if obj.sense is not minimize:
-            sympy_obj = sympyify_expression(-obj.expr)
-            # Use sympy to distribute the negation so the method for determining first/second stage costs is valid
-            min_obj = Objective(expr=sympy2pyomo_expression(sympy_obj[1].simplify(), sympy_obj[0]))
-            model.del_component(obj)
-            model.add_component(unique_component_name(model, obj.name+'_min'), min_obj)
-        return True
-
-    elif len(objectives) > 1:
-        '''
-        User should deactivate all Objectives in the model except the one represented by the output of 
-        first_stage_objective + second_stage_objective
-        '''
-        return False
-    else:
-        '''
-        No Objective objects provided as part of the model, please provide an Objective to your model so that
-        PyROS can infer first- and second-stage objective.
-        '''
-        return False
+    """
+    Assess whether model is valid on basis of the number of active
+    Objectives. A valid model must contain exactly one active Objective.
+    """
+    return (
+        len(list(model.component_data_objects(Objective, active=True)))
+        == 1
+    )
 
 
 def turn_bounds_to_constraints(variable, model, config=None):
@@ -707,8 +700,11 @@ def add_decision_rule_variables(model_data, config):
     bounds = (None, None)
     if degree == 0:
         for i in range(len(second_stage_variables)):
-            model_data.working_model.add_component("decision_rule_var_" + str(i),
-                                                   Var(initialize=value(second_stage_variables[i]),bounds=bounds,domain=Reals))#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
+            model_data.working_model.add_component(
+                    "decision_rule_var_" + str(i),
+                    Var(initialize=value(second_stage_variables[i], exception=False),
+                        bounds=bounds,domain=Reals)
+            )
             first_stage_variables.extend(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values())
             decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
     elif degree == 1:
@@ -718,9 +714,9 @@ def add_decision_rule_variables(model_data, config):
                     Var(index_set,
                         initialize=0,
                         bounds=bounds,
-                        domain=Reals))#bounds=(second_stage_variables[i].lb, second_stage_variables[i].ub)))
+                        domain=Reals))
             # === For affine drs, the [0]th constant term is initialized to the control variable values, all other terms are initialized to 0
-            getattr(model_data.working_model, "decision_rule_var_" + str(i))[0].set_value(value(second_stage_variables[i]), skip_validation=True)
+            getattr(model_data.working_model, "decision_rule_var_" + str(i))[0].set_value(value(second_stage_variables[i], exception=False), skip_validation=True)
             first_stage_variables.extend(list(getattr(model_data.working_model, "decision_rule_var_" + str(i)).values()))
             decision_rule_vars.append(getattr(model_data.working_model, "decision_rule_var_" + str(i)))
     elif degree == 2 or degree == 3 or degree == 4:
@@ -729,7 +725,7 @@ def add_decision_rule_variables(model_data, config):
             dict_init = {}
             for r in range(num_vars):
                 if r == 0:
-                    dict_init.update({r: value(second_stage_variables[i])})
+                    dict_init.update({r: value(second_stage_variables[i], exception=False)})
                 else:
                     dict_init.update({r: 0})
             model_data.working_model.add_component("decision_rule_var_" + str(i),
@@ -743,7 +739,6 @@ def add_decision_rule_variables(model_data, config):
             "Decision rule order " + str(config.decision_rule_order) +
             " is not yet supported. PyROS supports polynomials of degree 0 (static approximation), 1, 2.")
     model_data.working_model.util.decision_rule_vars = decision_rule_vars
-    return
 
 
 def partition_powers(n, v):
@@ -827,70 +822,59 @@ def add_decision_rule_constraints(model_data, config):
                 raise RuntimeError("Construction of the decision rule functions did not work correctly! "
                                    "Did not use all coefficient terms.")
     model_data.working_model.util.decision_rule_eqns = decision_rule_eqns
-    return
 
 
-def identify_objective_functions(model, config):
-    '''
-    Determine the objective first- and second-stage costs based on the user provided variable partition
-    :param model: deterministic model
-    :param config: config block
-    :return:
-    '''
+def identify_objective_functions(model, objective):
+    """
+    Identify the first and second-stage portions of an Objective
+    expression, subject to user-provided variable partitioning and
+    uncertain parameter choice. In doing so, the first and second-stage
+    objective expressions are added to the model as `Expression`
+    attributes.
 
-    m = model
-    obj = [o for o in model.component_data_objects(Objective)]
-    if len(obj) > 1:
-        raise AttributeError("Deterministic model must only have 1 active objective!")
-    if obj[0].sense != minimize:
-        raise AttributeError("PyROS requires deterministic models to have an objective function with  'sense'=minimization. "
-                             "Please specify your objective function as minimization.")
-    first_stage_terms = []
-    second_stage_terms = []
+    Parameters
+    ----------
+    model : ConcreteModel
+        Model of interest.
+    objective : Objective
+        Objective to be resolved into first and second-stage parts.
+    """
+    expr_to_split = objective.expr
 
+    has_args = hasattr(expr_to_split, "args")
+    is_sum = isinstance(expr_to_split, SumExpression)
+
+    # determine additive terms of the objective expression
+    # additive terms are in accordance with user declaration
+    if has_args and is_sum:
+        obj_args = expr_to_split.args
+    else:
+        obj_args = [expr_to_split]
+
+    # initialize first and second-stage cost expressions
     first_stage_cost_expr = 0
     second_stage_cost_expr = 0
-    const_obj_expr = 0
 
-    if isinstance(obj[0].expr, Var):
-        obj_to_parse = [obj[0].expr]
-    else:
-        obj_to_parse = obj[0].expr.args
-    first_stage_variable_set = ComponentSet(model.util.first_stage_variables)
-    second_stage_variable_set = ComponentSet(model.util.second_stage_variables)
-    for term in obj_to_parse:
-        vars_in_term = list(v for v in identify_variables(term))
+    first_stage_var_set = ComponentSet(model.util.first_stage_variables)
+    uncertain_param_set = ComponentSet(model.util.uncertain_params)
 
-        first_stage_vars_in_term = list(v for v in vars_in_term if
-                                        v in first_stage_variable_set)
-        second_stage_vars_in_term = list(v for v in vars_in_term if
-                                         v not in first_stage_variable_set)
-        # By checking not in first_stage_variable_set, you pick up both ssv and state vars
-        for v in first_stage_vars_in_term:
-            if id(v) not in list(id(var) for var in first_stage_terms):
-                first_stage_terms.append(v)
-        for v in second_stage_vars_in_term:
-            if id(v) not in list(id(var) for var in second_stage_terms):
-                second_stage_terms.append(v)
+    for term in obj_args:
+        non_first_stage_vars_in_term = ComponentSet(
+            v for v in identify_variables(term)
+            if v not in first_stage_var_set
+        )
+        uncertain_params_in_term = ComponentSet(
+            param for param in identify_mutable_parameters(term)
+            if param in uncertain_param_set
+        )
 
-        if first_stage_vars_in_term and second_stage_vars_in_term:
+        if non_first_stage_vars_in_term or uncertain_params_in_term:
             second_stage_cost_expr += term
-        elif first_stage_vars_in_term and not second_stage_vars_in_term:
+        else:
             first_stage_cost_expr += term
-        elif not first_stage_vars_in_term and second_stage_vars_in_term:
-            second_stage_cost_expr += term
-        elif not vars_in_term:
-            const_obj_expr += term
-    # convention to add constant objective term to first stage costs
-    # IFF the const_obj_term does not contain an uncertain param! Else, it is second-stage cost
-    mutable_params_in_const_term = identify_mutable_parameters(expr=const_obj_expr)
-    if any(q in ComponentSet(model.util.uncertain_params) for q in mutable_params_in_const_term):
-        m.first_stage_objective = Expression(expr=first_stage_cost_expr )
-        m.second_stage_objective = Expression(expr=second_stage_cost_expr + const_obj_expr)
-    else:
-        m.first_stage_objective = Expression(expr=first_stage_cost_expr + const_obj_expr)
-        m.second_stage_objective = Expression(expr=second_stage_cost_expr)
-    return
+
+    model.first_stage_objective = Expression(expr=first_stage_cost_expr)
+    model.second_stage_objective = Expression(expr=second_stage_cost_expr)
 
 
 def load_final_solution(model_data, master_soln, config):

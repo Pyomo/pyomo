@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -89,7 +90,7 @@ class DualTransformation(IsomorphicTransformation):
 
         # Walk constaints
         for (con_name, con_array) in sf.component_map(Constraint, active=True).items():
-            for con in (con_array[ndx] for ndx in con_array._index):
+            for con in (con_array[ndx] for ndx in con_array.index_set()):
                 # The qualified constraint name
                 cname = "%s%s" % (variable_prefix, con.local_name)
 
@@ -123,7 +124,7 @@ class DualTransformation(IsomorphicTransformation):
         # Walk objectives. Multiply all coefficients by the objective's 'sense'
         # to convert maximizing objectives to minimizing ones.
         for (obj_name, obj_array) in sf.component_map(Objective, active=True).items():
-            for obj in (obj_array[ndx] for ndx in obj_array._index):
+            for obj in (obj_array[ndx] for ndx in obj_array.index_set()):
                 # The qualified objective name
 
                 # Process the objective
@@ -140,7 +141,7 @@ class DualTransformation(IsomorphicTransformation):
         # Make constraint index set
         constraint_set_init = []
         for (var_name, var_array) in sf.component_map(Var, active=True).items():
-            for var in (var_array[ndx] for ndx in var_array._index):
+            for var in (var_array[ndx] for ndx in var_array.index_set()):
                 constraint_set_init.append("%s%s" %
                                            (var.local_name, constraint_suffix))
 
@@ -148,7 +149,7 @@ class DualTransformation(IsomorphicTransformation):
         variable_set_init = []
         dual_variable_roots = []
         for (con_name, con_array) in sf.component_map(Constraint, active=True).items():
-            for con in (con_array[ndx] for ndx in con_array._index):
+            for con in (con_array[ndx] for ndx in con_array.index_set()):
                 dual_variable_roots.append(con.local_name)
                 variable_set_init.append("%s%s" % (variable_prefix, con.local_name))
 

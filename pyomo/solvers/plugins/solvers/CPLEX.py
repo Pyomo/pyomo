@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -891,9 +892,9 @@ class CPLEXSHELL(ILMLicensedSystemCallSolver):
             #       these logs don't matter anyway (we redirect everything),
             #       and are largely an annoyance.
             try:
-                if  re.match('cplex\.log', filename) != None:
+                if  re.match(r'cplex\.log', filename) != None:
                     os.remove(filename)
-                elif re.match('clone\d+\.log', filename) != None:
+                elif re.match(r'clone\d+\.log', filename) != None:
                     os.remove(filename)
             except OSError:
                 pass

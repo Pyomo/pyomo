@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -63,7 +64,7 @@ class BuildCheck(IndexedComponent):
                 raise ValueError("BuildCheck %r identified error" % self.name)
         else:
             # Indexed component
-            for index in self._index:
+            for index in self._index_set:
                 res = apply_indexed_rule(self, self._rule, self._parent(), index)
                 if not res:
                     raise ValueError("BuildCheck %r identified error with index %r" % (self.name, str(index)))

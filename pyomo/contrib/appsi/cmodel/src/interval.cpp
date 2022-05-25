@@ -471,6 +471,27 @@ void interval_log(double xl, double xu, double *res_lb, double *res_ub) {
     *res_ub = -inf;
 }
 
+void interval_abs(double xl, double xu, double *res_lb, double *res_ub) {
+  double abs_xl = std::fabs(xl);
+  double abs_xu = std::fabs(xu);
+  if (xl <= 0 && xu >= 0) {
+    *res_lb = 0;
+    *res_ub = std::max(abs_xl, abs_xu);
+  } else {
+    *res_lb = std::min(abs_xl, abs_xu);
+    *res_ub = std::max(abs_xl, abs_xu);
+  }
+}
+
+void _inverse_abs(double zl, double zu, double *xl, double *xu) {
+  if (zl < 0)
+    zl = 0;
+  if (zu < 0)
+    zu = 0;
+  *xu = std::max(zl, zu);
+  *xl = -(*xu);
+}
+
 void _inverse_power1(double zl, double zu, double yl, double yu, double orig_xl,
                      double orig_xu, double *xl, double *xu,
                      double feasibility_tol) {
@@ -489,7 +510,7 @@ void _inverse_power1(double zl, double zu, double yl, double yu, double orig_xl,
   interval_exp(*xl, *xu, xl, xu);
 
   // if y is an integer, then x can be negative
-  if (yl == yu and yl == round(yl)) // y is a fixed integer
+  if ((yl == yu) && (yl == round(yl))) // y is a fixed integer
   {
     int y = static_cast<int>(yl);
     if (y == 0) {
@@ -706,7 +727,7 @@ void interval_tan(double xl, double xu, double *res_lb, double *res_ub) {
   // minimum value of i such that pi*i + pi/2 >= xl. Then round i up. If pi*i +
   // pi/2 is still less than or equal to xu, then there is an undefined point
   // between xl and xu.
-  if (xl <= -inf or xu >= inf) {
+  if ((xl <= -inf) || (xu >= inf)) {
     *res_lb = -inf;
     *res_ub = inf;
   } else if (_is_inf(xl) || _is_inf(xu))
@@ -1026,6 +1047,18 @@ std::pair<double, double> py_interval_log(double xl, double xu) {
   double res_lb, res_ub;
   interval_log(xl, xu, &res_lb, &res_ub);
   return std::make_pair(res_lb, res_ub);
+}
+
+std::pair<double, double> py_interval_abs(double xl, double xu) {
+  double res_lb, res_ub;
+  interval_abs(xl, xu, &res_lb, &res_ub);
+  return std::make_pair(res_lb, res_ub);
+}
+
+std::pair<double, double> _py_inverse_abs(double zl, double zu) {
+  double xl, xu;
+  _inverse_abs(zl, zu, &xl, &xu);
+  return std::make_pair(xl, xu);
 }
 
 std::pair<double, double> _py_inverse_power1(double zl, double zu, double yl,

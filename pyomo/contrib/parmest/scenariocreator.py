@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -125,7 +126,6 @@ class ScenarioCreator(object):
     def __init__(self, pest, solvername):
         self.pest = pest
         self.solvername = solvername
-        self.experiment_numbers = pest._numbers_list
 
 
     def ScenariosFromExperiments(self, addtoSet):
@@ -138,8 +138,11 @@ class ScenarioCreator(object):
         """
 
         assert(isinstance(addtoSet, ScenarioSet))
-        prob = 1. / len(self.pest._numbers_list)
-        for exp_num in self.pest._numbers_list:
+        
+        senario_numbers = list(range(len(self.pest.callback_data)))
+        
+        prob = 1. / len(senario_numbers)
+        for exp_num in senario_numbers:
             ##print("Experiment number=", exp_num)
             model = self.pest._instance_creation_callback(exp_num,
                                                         self.pest.callback_data)

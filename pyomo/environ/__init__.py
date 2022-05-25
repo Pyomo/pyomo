@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -32,6 +33,7 @@ _packages = [
     'pyomo.dae',
     'pyomo.scripting',
     'pyomo.network',
+    'pyomo.contrib.ampl_function_demo',
     'pyomo.contrib.appsi',
     'pyomo.contrib.community_detection',
     'pyomo.contrib.example',

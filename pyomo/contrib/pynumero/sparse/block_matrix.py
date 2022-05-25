@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -1113,10 +1114,6 @@ class BlockMatrix(BaseBlockMatrix):
 
     def __rmatmul__(self, other):
         return self.__rmul__(other)
-
-    def pprint(self):
-        """Prints BlockMatrix in pretty format"""
-        print(str(self))
 
     def get_block_column_index(self, index):
         """

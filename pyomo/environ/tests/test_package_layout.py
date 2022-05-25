@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -25,6 +26,7 @@ import pyomo.common.unittest as unittest
 _NON_MODULE_DIRS = {
     join('checker', 'doc'),
     join('checker', 'tests', 'examples'),
+    join('contrib', 'ampl_function_demo', 'src'),
     join('contrib', 'appsi', 'cmodel', 'src'),
     join('contrib', 'pynumero', 'src'),
     join('core', 'tests', 'data', 'baselines'),
@@ -35,7 +37,6 @@ _NON_MODULE_DIRS = {
     join('solvers', 'tests', 'mip', 'cbc'),
     join('solvers', 'tests', 'mip', 'cplex'),
     join('solvers', 'tests', 'mip', 'glpk'),
-    join('solvers', 'tests', 'mip', 'pico'),
     join('solvers', 'tests', 'piecewise_linear', 'baselines'),
     join('solvers', 'tests', 'piecewise_linear', 'kernel_baselines'),
     join('solvers', 'tests', 'piecewise_linear', 'kernel_problems'),

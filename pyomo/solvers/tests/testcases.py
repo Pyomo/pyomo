@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -11,11 +12,9 @@
 import sys
 import logging
 
-import pyomo.common.unittest as unittest
-
 from pyomo.common.collections import Bunch
 from pyomo.opt import TerminationCondition
-from pyomo.solvers.tests.models.base import test_models
+from pyomo.solvers.tests.models.base import all_models
 from pyomo.solvers.tests.solvers import test_solver_cases
 from pyomo.core.kernel.block import IBlock
 
@@ -130,81 +129,6 @@ ExpectedFailures['cbc', 'nl', 'SOS2_simple'] = \
     (lambda v: v[:2] == (2, 10),
      "Cbc segfaults for SOS constraints in the NL interface "
      "(reported upstream as coin-or/Cbc#388)")
-
-#
-# PICO
-#
-
-ExpectedFailures['pico', 'lp', 'MILP_discrete_var_bounds'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico ignores bounds on Binary variables through the "
-    "LP file interface. A ticket has been filed.")
-
-ExpectedFailures['pico', 'nl', 'LP_piecewise'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico reports an incorrect dual solution for this "
-    "problem when using the NL file interface.")
-
-ExpectedFailures['pico', 'nl', 'LP_duals_maximize'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico classifies certain models with equality "
-    "constraints as infeasible when using the NL "
-    "file interface. A ticket has been filed.")
-
-ExpectedFailures['pico', 'nl', 'LP_duals_minimize'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico classifies certain models with equality "
-    "constraints as infeasible when using the NL "
-    "file interface. A ticket has been filed.")
-
-ExpectedFailures['pico', 'nl', 'LP_inactive_index'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico reports the wrong objective function value.")
-
-ExpectedFailures['pico', 'nl', 'LP_simple'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'LP_compiled'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'LP_trivial_constraints'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'MILP_unbounded'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'lp', 'MILP_unbounded'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'LP_unbounded'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'lp', 'LP_unbounded'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-
-ExpectedFailures['pico', 'lp', 'MILP_infeasible1'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'MILP_infeasible1'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'LP_infeasible1'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
-
-ExpectedFailures['pico', 'nl', 'LP_infeasible2'] = \
-    (lambda v: v <= _trunk_version,
-    "Pico just gets the wrong answer.")
 
 #
 # XPRESS
@@ -387,13 +311,12 @@ for prob in ('LP_unbounded', 'LP_unbounded_kernel'):
 #
 
 
-@unittest.nottest
-def test_scenarios(arg=None):
+def generate_scenarios(arg=None):
     """
     Generate scenarios
     """
-    for model in sorted(test_models()):
-        _model = test_models(model)
+    for model in sorted(all_models()):
+        _model = all_models(model)
         if not arg is None and not arg(_model):
             continue
         for solver, io in sorted(test_solver_cases()):
@@ -442,14 +365,13 @@ def test_scenarios(arg=None):
                 exclude_suffixes=exclude_suffixes)
 
 
-@unittest.nottest
-def run_test_scenarios(options):
+def run_scenarios(options):
     logging.disable(logging.WARNING)
 
     solvers = set(options.solver)
     stat = {}
 
-    for key, test_case in test_scenarios():
+    for key, test_case in generate_scenarios():
         model, solver, io = key
         if len(solvers) > 0 and not solver in solvers:
             continue
@@ -569,21 +491,19 @@ def run_test_scenarios(options):
 
 
 if __name__ == "__main__":
-    from pyomo.solvers.tests.models.base import test_models
-
     print("")
     print("Testing model generation")
     print("-"*30)
-    for key in sorted(test_models()):
+    for key in sorted(all_models()):
         print(key)
-        obj = test_models(key)()
+        obj = all_models(key)()
         obj.generate_model()
         obj.warmstart_model()
 
     print("")
     print("Testing scenario generation")
     print("-"*30)
-    for key, value in test_scenarios():
+    for key, value in generate_scenarios():
         print(", ".join(key))
         print("   %s: %s" % (value.status, value.msg))
 

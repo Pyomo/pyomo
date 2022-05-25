@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -147,9 +148,41 @@ class TestMcCormick(unittest.TestCase):
         m.x = Var(bounds=(0.1, 500), initialize=33.327)
         m.y = Var(bounds=(0.1, 500), initialize=14.436)
         m.z = Var(bounds=(0, 90), initialize=22.5653)
-        mc_expr = mc(m.z - (m.x * m.y * (m.x + m.y) / 2) ** (1/3))
-        self.assertAlmostEqual(mc_expr.convex(), -407.95444629965016)
-        self.assertAlmostEqual(mc_expr.lower(), -499.99999999999983)
+        e = m.z - (m.x * m.y * (m.x + m.y) / 2) ** (1/3)
+        mc_expr = mc(e)
+
+        for _x in [m.x.lb, m.x.ub]:
+            m.x.value = _x
+            mc_expr.changePoint(m.x, _x)
+            for _y in [m.y.lb, m.y.ub]:
+                m.y.value = _y
+                mc_expr.changePoint(m.y, _y)
+                for _z in [m.z.lb, m.z.ub]:
+                    m.z.value = _z
+                    mc_expr.changePoint(m.z, _z)
+                    self.assertGreaterEqual(mc_expr.concave() + 1e-8, value(e))
+                    self.assertLessEqual(mc_expr.convex() - 1e-6, value(e))
+
+        m.x.value = m.x.lb
+        m.y.value = m.y.lb
+        m.z.value = m.z.lb
+        mc_expr.changePoint(m.x, m.x.value)
+        mc_expr.changePoint(m.y, m.y.value)
+        mc_expr.changePoint(m.z, m.z.value)
+        self.assertAlmostEqual(mc_expr.convex(), value(e))
+        self.assertAlmostEqual(mc_expr.concave(), value(e))
+
+        m.x.value = m.x.ub
+        m.y.value = m.y.ub
+        m.z.value = m.z.ub
+        mc_expr.changePoint(m.x, m.x.value)
+        mc_expr.changePoint(m.y, m.y.value)
+        mc_expr.changePoint(m.z, m.z.value)
+        self.assertAlmostEqual(mc_expr.convex(), value(e))
+        self.assertAlmostEqual(mc_expr.concave(), value(e))
+
+        self.assertAlmostEqual(mc_expr.lower(), -500)
+        self.assertAlmostEqual(mc_expr.upper(), 89.9)
 
     def test_improved_bounds(self):
         m = ConcreteModel()
@@ -164,15 +197,22 @@ class TestMcCormick(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 2), initialize=1)
         m.y = Var(bounds=(1e-4, 2), initialize=1)
-        with self.assertRaisesRegex(MCPP_Error, "Log with negative values in range"):
-            mc(m.x ** 1.5)
+        m.z = Var(bounds=(-1, 1), initialize=0)
+        # Note: the exception raised prior to 2.1 was
+        #    "Log with negative values in range"
+        # This was corrected in 2.1 to
+        #    "Square-root with nonpositive values in range"
+        with self.assertRaisesRegex(
+                MCPP_Error,
+                r"(Square-root with nonpositive values in range)"
+                r"|(Log with negative values in range)"):
+            mc(m.z ** 1.5)
         mc_expr = mc(m.y ** 1.5)
         self.assertAlmostEqual(mc_expr.lower(), 1e-4**1.5)
         self.assertAlmostEqual(mc_expr.upper(), 2**1.5)
         mc_expr = mc(m.y ** m.x)
         self.assertAlmostEqual(mc_expr.lower(), 1e-4**2)
         self.assertAlmostEqual(mc_expr.upper(), 4)
-        m.z = Var(bounds=(-1, 1), initialize=0)
         mc_expr = mc(m.z ** 2)
         self.assertAlmostEqual(mc_expr.lower(), 0)
         self.assertAlmostEqual(mc_expr.upper(), 1)

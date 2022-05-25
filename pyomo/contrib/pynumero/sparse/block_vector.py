@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -347,7 +348,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         assert_block_structure(self)
         results = np.array([self.get_block(i).all() for i in range(self.nblocks)],
-                            dtype=np.bool)
+                            dtype=bool)
         return results.all(axis=axis, out=out, keepdims=keepdims)
 
     def any(self, axis=None, out=None, keepdims=False):
@@ -356,7 +357,7 @@ class BlockVector(np.ndarray, BaseBlockVector):
         """
         assert_block_structure(self)
         results = np.array([self.get_block(i).any() for i in range(self.nblocks)],
-                            dtype=np.bool)
+                            dtype=bool)
         return results.any(axis=axis, out=out, keepdims=keepdims)
 
     def max(self, axis=None, out=None, keepdims=False):

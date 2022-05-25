@@ -40,6 +40,8 @@ void interval_power(double xl, double xu, double yl, double yu, double *res_lb,
                     double *res_ub, double feasibility_tol);
 void interval_exp(double xl, double xu, double *res_lb, double *res_ub);
 void interval_log(double xl, double xu, double *res_lb, double *res_ub);
+void interval_abs(double xl, double xu, double *res_lb, double *res_ub);
+void _inverse_abs(double zl, double zu, double *xl, double *xu);
 void _inverse_power1(double zl, double zu, double yl, double yu, double orig_xl,
                      double orig_xu, double *xl, double *xu,
                      double feasibility_tol);
@@ -69,6 +71,8 @@ std::pair<double, double> py_interval_power(double xl, double xu, double yl,
                                             double yu, double feasibility_tol);
 std::pair<double, double> py_interval_exp(double xl, double xu);
 std::pair<double, double> py_interval_log(double xl, double xu);
+std::pair<double, double> py_interval_abs(double xl, double xu);
+std::pair<double, double> _py_inverse_abs(double zl, double zu);
 std::pair<double, double> _py_inverse_power1(double zl, double zu, double yl,
                                              double yu, double orig_xl,
                                              double orig_xu,

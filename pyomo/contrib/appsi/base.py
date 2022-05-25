@@ -1,30 +1,28 @@
 import abc
 import enum
-from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple
+from typing import Sequence, Dict, Optional, Mapping, NoReturn, List, Tuple, MutableMapping
 from pyomo.core.base.constraint import _GeneralConstraintData, Constraint
 from pyomo.core.base.sos import _SOSConstraintData, SOSConstraint
 from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
+from pyomo.common.collections import ComponentMap
 from collections import OrderedDict
 from .utils.get_objective import get_objective
-from .utils.identify_named_expressions import identify_named_expressions
+from .utils.collect_vars_and_named_exprs import collect_vars_and_named_exprs
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
 from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
 from pyomo.common.factory import Factory
-import logging
 import os
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import Solution as LegacySolution, SolutionStatus as LegacySolutionStatus
 from pyomo.opt.results.solver import TerminationCondition as LegacyTerminationCondition, SolverStatus as LegacySolverStatus
-from pyomo.core.kernel.objective import minimize, maximize
+from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
 import weakref
-from io import StringIO
 from .cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numvalue import NumericConstant
@@ -158,7 +156,6 @@ class SolutionLoaderBase(abc.ABC):
         for v, val in self.get_primals(vars_to_load=vars_to_load).items():
             v.set_value(val, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
-        
 
     @abc.abstractmethod
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
@@ -231,7 +228,13 @@ class SolutionLoaderBase(abc.ABC):
 
 
 class SolutionLoader(SolutionLoaderBase):
-    def __init__(self, primals, duals, slacks, reduced_costs):
+    def __init__(
+        self,
+        primals: Optional[MutableMapping],
+        duals: Optional[MutableMapping],
+        slacks: Optional[MutableMapping],
+        reduced_costs: Optional[MutableMapping]
+    ):
         """
         Parameters
         ----------
@@ -250,14 +253,26 @@ class SolutionLoader(SolutionLoaderBase):
         self._reduced_costs = reduced_costs
 
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
+        if self._primals is None:
+            raise RuntimeError(
+                'Solution loader does not currently have a valid solution. Please '
+                'check the termination condition.'
+            )
         if vars_to_load is None:
             return ComponentMap(self._primals.values())
         else:
             primals = ComponentMap()
             for v in vars_to_load:
                 primals[v] = self._primals[id(v)][1]
+            return primals
 
     def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
+        if self._duals is None:
+            raise RuntimeError(
+                'Solution loader does not currently have valid duals. Please '
+                'check the termination condition and ensure the solver returns duals '
+                'for the given problem type.'
+            )
         if cons_to_load is None:
             duals = dict(self._duals)
         else:
@@ -267,6 +282,12 @@ class SolutionLoader(SolutionLoaderBase):
         return duals
 
     def get_slacks(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
+        if self._slacks is None:
+            raise RuntimeError(
+                'Solution loader does not currently have valid slacks. Please '
+                'check the termination condition and ensure the solver returns slacks '
+                'for the given problem type.'
+            )
         if cons_to_load is None:
             slacks = dict(self._slacks)
         else:
@@ -276,6 +297,12 @@ class SolutionLoader(SolutionLoaderBase):
         return slacks
 
     def get_reduced_costs(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
+        if self._reduced_costs is None:
+            raise RuntimeError(
+                'Solution loader does not currently have valid reduced costs. Please '
+                'check the termination condition and ensure the solver returns reduced '
+                'costs for the given problem type.'
+            )
         if vars_to_load is None:
             rc = ComponentMap(self._reduced_costs.values())
         else:
@@ -326,7 +353,7 @@ class Results(object):
         ...     print('The following termination condition was encountered: ', results.termination_condition) #doctest:+SKIP
     """
     def __init__(self):
-        self.solution_loader: Optional[SolutionLoaderBase] = None
+        self.solution_loader: SolutionLoaderBase = SolutionLoader(None, None, None, None)
         self.termination_condition: TerminationCondition = TerminationCondition.unknown
         self.best_feasible_objective: Optional[float] = None
         self.best_objective_bound: Optional[float] = None
@@ -463,6 +490,12 @@ class Solver(abc.ABC):
 
         def __bool__(self):
             return self._value_ > 0
+
+        def __format__(self, format_spec):
+            # We want general formatting of this Enum to return the
+            # formatted string value and not the int (which is the
+            # default implementation from IntEnum)
+            return format(str(self).split('.')[-1], format_spec)
 
     @abc.abstractmethod
     def solve(self, model: _BlockData, timer: HierarchicalTimer = None) -> Results:
@@ -749,6 +782,7 @@ class PersistentBase(abc.ABC):
         self._vars_referenced_by_con = dict()
         self._vars_referenced_by_obj = list()
         self._expr_types = None
+        self.use_extensions = False
 
     @property
     def update_config(self):
@@ -763,7 +797,8 @@ class PersistentBase(abc.ABC):
         self.__init__()
         self.update_config = saved_update_config
         self._model = model
-        self._expr_types = cmodel.PyomoExprTypes()
+        if self.use_extensions and cmodel_available:
+            self._expr_types = cmodel.PyomoExprTypes()
         self.add_block(model)
         if self._objective is None:
             self.set_objective(None)
@@ -795,12 +830,15 @@ class PersistentBase(abc.ABC):
 
     def add_constraints(self, cons: List[_GeneralConstraintData]):
         all_fixed_vars = dict()
-        expr_types = self._expr_types
         for con in cons:
             if con in self._named_expressions:
                 raise ValueError('constraint {name} has already been added'.format(name=con.name))
             self._active_constraints[con] = (con.lower, con.body, con.upper)
-            named_exprs, variables, fixed_vars, external_functions = cmodel.prep_for_repn(con.body, expr_types)
+            if self.use_extensions and cmodel_available:
+                tmp = cmodel.prep_for_repn(con.body, self._expr_types)
+            else:
+                tmp = collect_vars_and_named_exprs(con.body)
+            named_exprs, variables, fixed_vars, external_functions = tmp
             self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[con] = external_functions
@@ -844,8 +882,11 @@ class PersistentBase(abc.ABC):
             self._objective = obj
             self._objective_expr = obj.expr
             self._objective_sense = obj.sense
-            expr_types = cmodel.PyomoExprTypes()
-            named_exprs, variables, fixed_vars, external_functions = cmodel.prep_for_repn(obj.expr, expr_types)
+            if self.use_extensions and cmodel_available:
+                tmp = cmodel.prep_for_repn(obj.expr, self._expr_types)
+            else:
+                tmp = collect_vars_and_named_exprs(obj.expr)
+            named_exprs, variables, fixed_vars, external_functions = tmp
             self._obj_named_expressions = [(i, i.expr) for i in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[obj] = external_functions

@@ -28,7 +28,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -38,7 +38,7 @@ jobs:
     - name: Build manylinux Python wheels
       uses: RalfG/python-wheels-manylinux-build@v0.4.0-manylinux2010_x86_64
       with:
-        python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39'
+        python-versions: 'cp37-cp37m cp38-cp38 cp39-cp39 cp310-cp310'
         build-requirements: 'cython pybind11'
         package-path: ''
         pip-wheel-args: ''
@@ -71,7 +71,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
     - uses: docker/setup-qemu-action@v1
@@ -83,7 +83,7 @@ jobs:
     - name: Build manylinux Python wheels
       uses: RalfG/python-wheels-manylinux-build@v0.4.0-manylinux2014_aarch64
       with:
-        python-versions: 'cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39'
+        python-versions: 'cp37-cp37m cp38-cp38 cp39-cp39'
         build-requirements: 'cython'
         package-path: ''
         pip-wheel-args: ''
@@ -115,7 +115,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -141,11 +141,11 @@ jobs:
         include:
         - os: macos-latest
           TARGET: osx
-        python-version: [ 3.6, 3.7, 3.8, 3.9 ]
+        python-version: [ 3.7, 3.8, 3.9, '3.10' ]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -172,11 +172,11 @@ jobs:
         include:
         - os: windows-latest
           TARGET: win
-        python-version: [ 3.6, 3.7, 3.8, 3.9 ]
+        python-version: [ 3.7, 3.8, 3.9, '3.10' ]
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies

@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -98,6 +99,7 @@ class ComponentList(MutableSequence):
                     self._active |= getattr(item, '_active', True)
                 self._data[i]._component = None
                 self._data[i] = item
+                item._index = i
                 return
             elif self._data[i] is item:
                 # a very special case that makes sense to handle
@@ -133,6 +135,7 @@ class ComponentList(MutableSequence):
                 if hasattr(self, "_active"):
                     self._active |= getattr(item, '_active', True)
                 self._data.insert(i, item)
+                item._index = i
                 return
             # see note about allowing components to live in more than
             # one container

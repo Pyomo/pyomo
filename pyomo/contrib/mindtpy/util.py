@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -59,8 +60,8 @@ def model_is_valid(solve_data, config):
     if len(MindtPy.discrete_variable_list) == 0:
         config.logger.info('Problem has no discrete decisions.')
         obj = next(m.component_data_objects(ctype=Objective, active=True))
-        if (any(c.body.polynomial_degree() not in {1, 0} for c in MindtPy.constraint_list) or
-                obj.expr.polynomial_degree() not in {1, 0}):
+        if (any(c.body.polynomial_degree() not in solve_data.mip_constraint_polynomial_degree for c in MindtPy.constraint_list) or
+                obj.expr.polynomial_degree() not in solve_data.mip_objective_polynomial_degree):
             config.logger.info(
                 'Your model is a NLP (nonlinear program). '
                 'Using NLP solver %s to solve.' % config.nlp_solver)
@@ -184,7 +185,7 @@ def add_var_bound(solve_data, config):
 
 
 def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model.
+    r"""This function generates objective (FP-NLP subproblem) for minimum euclidean distance to setpoint_model.
 
     L2 distance of (x,y) = \sqrt{\sum_i (x_i - y_i)^2}.
 
@@ -220,7 +221,7 @@ def generate_norm2sq_objective_function(model, setpoint_model, discrete_only=Fal
 
 
 def generate_norm1_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
+    r"""This function generates objective (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
 
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
 
@@ -264,7 +265,7 @@ def generate_norm1_objective_function(model, setpoint_model, discrete_only=False
 
 
 def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=False):
-    """This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
+    r"""This function generates objective (PF-OA main problem) for minimum Norm Infinity distance to setpoint_model.
 
     Norm-Infinity distance of (x,y) = \max_i |x_i - y_i|.
 
@@ -394,7 +395,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
 
 
 def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=True):
-    """This function generates constraint (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
+    r"""This function generates constraint (PF-OA main problem) for minimum Norm1 distance to setpoint_model.
 
     Norm constraint is used to guarantees the monotonicity of the norm objective value sequence of all iterations
     Norm1 distance of (x,y) = \sum_i |x_i - y_i|.
@@ -626,14 +627,20 @@ def set_up_solve_data(model, config):
         solve_data.fp_iter = 1
 
     # set up bounds
-    solve_data.LB = float('-inf')
-    solve_data.UB = float('inf')
-    solve_data.LB_progress = [solve_data.LB]
-    solve_data.UB_progress = [solve_data.UB]
+    if obj.sense == minimize:
+        solve_data.primal_bound = float('inf')
+        solve_data.dual_bound = float('-inf')
+    else:
+        solve_data.primal_bound = float('-inf')
+        solve_data.dual_bound = float('inf')
+    solve_data.primal_bound_progress = [solve_data.primal_bound]
+    solve_data.dual_bound_progress = [solve_data.dual_bound]
+    solve_data.primal_bound_progress_time = [0]
+    solve_data.dual_bound_progress_time = [0]
     solve_data.abs_gap = float('inf')
     solve_data.rel_gap = float('inf')
-    solve_data.log_formatter = ' {:>9}   {:>15}   {:>15g}   {:>11g}   {:>11g}   {:>7.2%}   {:>7.2f}'
-    solve_data.fixed_nlp_log_formatter = '{:1}{:>9}   {:>15}   {:>15g}   {:>11g}   {:>11g}   {:>7.2%}   {:>7.2f}'
+    solve_data.log_formatter = ' {:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
+    solve_data.fixed_nlp_log_formatter = '{:1}{:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
     solve_data.log_note_formatter = ' {:>9}   {:>15}   {:>15}'
     if config.add_regularization is not None:
         if config.add_regularization in {'level_L1', 'level_L_infinity', 'grad_lag'}:
@@ -648,8 +655,8 @@ def set_up_solve_data(model, config):
 
     # Flag indicating whether the solution improved in the past
     # iteration or not
-    solve_data.solution_improved = False
-    solve_data.bound_improved = False
+    solve_data.primal_bound_improved = False
+    solve_data.dual_bound_improved = False
 
     if config.nlp_solver == 'ipopt':
         if not hasattr(solve_data.working_model, 'ipopt_zL_out'):
@@ -658,6 +665,16 @@ def set_up_solve_data(model, config):
         if not hasattr(solve_data.working_model, 'ipopt_zU_out'):
             solve_data.working_model.ipopt_zU_out = Suffix(
                 direction=Suffix.IMPORT)
+    
+    if config.quadratic_strategy == 0:
+        solve_data.mip_objective_polynomial_degree = {0, 1}
+        solve_data.mip_constraint_polynomial_degree = {0, 1}
+    elif config.quadratic_strategy == 1:
+        solve_data.mip_objective_polynomial_degree = {0, 1, 2}
+        solve_data.mip_constraint_polynomial_degree = {0, 1}
+    elif config.quadratic_strategy == 2:
+        solve_data.mip_objective_polynomial_degree = {0, 1, 2}
+        solve_data.mip_constraint_polynomial_degree = {0, 1, 2}
 
     return solve_data
 
@@ -749,9 +766,8 @@ def update_gap(solve_data):
     solve_data : MindtPySolveData
         Data container that holds solve-instance data.
     """
-    solve_data.abs_gap = solve_data.UB - solve_data.LB
-    solve_data.rel_gap = (solve_data.UB - solve_data.LB)/(abs(
-        solve_data.UB if solve_data.objective_sense == minimize else solve_data.LB) + 1E-10)
+    solve_data.abs_gap = abs(solve_data.primal_bound - solve_data.dual_bound)
+    solve_data.rel_gap = solve_data.abs_gap / (abs(solve_data.primal_bound) + 1E-10)
 
 
 def update_dual_bound(solve_data, bound_value):
@@ -770,14 +786,14 @@ def update_dual_bound(solve_data, bound_value):
     if math.isnan(bound_value):
         return
     if solve_data.objective_sense == minimize:
-        solve_data.LB = max(bound_value, solve_data.LB)
-        solve_data.bound_improved = solve_data.LB > solve_data.LB_progress[-1]
-        solve_data.LB_progress.append(solve_data.LB)
+        solve_data.dual_bound = max(bound_value, solve_data.dual_bound)
+        solve_data.dual_bound_improved = solve_data.dual_bound > solve_data.dual_bound_progress[-1]
     else:
-        solve_data.UB = min(bound_value, solve_data.UB)
-        solve_data.bound_improved = solve_data.UB < solve_data.UB_progress[-1]
-        solve_data.UB_progress.append(solve_data.UB)
-    if solve_data.bound_improved:
+        solve_data.dual_bound = min(bound_value, solve_data.dual_bound)
+        solve_data.dual_bound_improved = solve_data.dual_bound < solve_data.dual_bound_progress[-1]
+    solve_data.dual_bound_progress.append(solve_data.dual_bound)
+    solve_data.dual_bound_progress_time.append(get_main_elapsed_time(solve_data.timing))
+    if solve_data.dual_bound_improved:
         update_gap(solve_data)
 
 
@@ -816,14 +832,14 @@ def update_primal_bound(solve_data, bound_value):
     if math.isnan(bound_value):
         return
     if solve_data.objective_sense == minimize:
-        solve_data.UB = min(bound_value, solve_data.UB)
-        solve_data.solution_improved = solve_data.UB < solve_data.UB_progress[-1]
-        solve_data.UB_progress.append(solve_data.UB)
+        solve_data.primal_bound = min(bound_value, solve_data.primal_bound)
+        solve_data.primal_bound_improved = solve_data.primal_bound < solve_data.primal_bound_progress[-1]
     else:
-        solve_data.LB = max(bound_value, solve_data.LB)
-        solve_data.solution_improved = solve_data.LB > solve_data.LB_progress[-1]
-        solve_data.LB_progress.append(solve_data.LB)
-    if solve_data.solution_improved:
+        solve_data.primal_bound = max(bound_value, solve_data.primal_bound)
+        solve_data.primal_bound_improved = solve_data.primal_bound > solve_data.primal_bound_progress[-1]
+    solve_data.primal_bound_progress.append(solve_data.primal_bound)
+    solve_data.primal_bound_progress_time.append(get_main_elapsed_time(solve_data.timing))
+    if solve_data.primal_bound_improved:
         update_gap(solve_data)
 
 
@@ -844,3 +860,76 @@ def set_up_logger(config):
     ch.setFormatter(formatter)
     # add the handlers to logger
     config.logger.addHandler(ch)
+
+
+def get_dual_integral(solve_data, config):
+    """Calculate the dual integral.
+    Ref: The confined primal integral. [http://www.optimization-online.org/DB_FILE/2020/07/7910.pdf]
+
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+
+    Returns
+    -------
+    float
+        The dual integral.
+    """    
+    dual_integral = 0
+    dual_bound_progress = solve_data.dual_bound_progress.copy()
+    # Initial dual bound is set to inf or -inf. To calculate dual integral, we set
+    # initial_dual_bound to 10% greater or smaller than the first_found_dual_bound.
+    # TODO: check if the calculation of initial_dual_bound needs to be modified.
+    for dual_bound in dual_bound_progress:
+        if dual_bound != dual_bound_progress[0]:
+            break
+    for i in range(len(dual_bound_progress)):
+        if dual_bound_progress[i] == solve_data.dual_bound_progress[0]:
+            dual_bound_progress[i] = dual_bound * (1 - config.initial_bound_coef * solve_data.objective_sense * math.copysign(1,dual_bound))
+        else:
+            break
+    for i in range(len(dual_bound_progress)):
+        if i == 0:
+            dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (solve_data.dual_bound_progress_time[i])
+        else:
+            dual_integral += abs(dual_bound_progress[i] - solve_data.dual_bound) * (solve_data.dual_bound_progress_time[i] - solve_data.dual_bound_progress_time[i-1])
+    config.logger.info(' {:<25}:   {:>7.4f} '.format('Dual integral', dual_integral))
+    return dual_integral
+
+
+def get_primal_integral(solve_data, config):
+    """Calculate the primal integral.
+    Ref: The confined primal integral. [http://www.optimization-online.org/DB_FILE/2020/07/7910.pdf]
+
+    Parameters
+    ----------
+    solve_data : MindtPySolveData
+        Data container that holds solve-instance data.
+
+    Returns
+    -------
+    float
+        The primal integral.
+    """    
+    primal_integral = 0
+    primal_bound_progress = solve_data.primal_bound_progress.copy()
+    # Initial primal bound is set to inf or -inf. To calculate primal integral, we set
+    # initial_primal_bound to 10% greater or smaller than the first_found_primal_bound.
+    # TODO: check if the calculation of initial_primal_bound needs to be modified.
+    for primal_bound in primal_bound_progress:
+        if primal_bound != primal_bound_progress[0]:
+            break
+    for i in range(len(primal_bound_progress)):
+        if primal_bound_progress[i] == solve_data.primal_bound_progress[0]:
+            primal_bound_progress[i] = primal_bound * (1 + config.initial_bound_coef * solve_data.objective_sense * math.copysign(1,primal_bound))
+        else:
+            break
+    for i in range(len(primal_bound_progress)):
+        if i == 0:
+            primal_integral += abs(primal_bound_progress[i] - solve_data.primal_bound) * (solve_data.primal_bound_progress_time[i])
+        else:
+            primal_integral += abs(primal_bound_progress[i] - solve_data.primal_bound) * (solve_data.primal_bound_progress_time[i] - solve_data.primal_bound_progress_time[i-1])
+
+    config.logger.info(' {:<25}:   {:>7.4f} '.format('Primal integral', primal_integral))
+    return primal_integral

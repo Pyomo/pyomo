@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -77,11 +78,11 @@ class PyomoModelChecker(SingletonPlugin):
         pass
 
     def _checkerName(self):
-        match = re.search("<class '([a-zA-Z0-9_\.]+)'>", str(self.__class__))
+        match = re.search(r"<class '([a-zA-Z0-9_\.]+)'>", str(self.__class__))
         return match.group(1).split(".")[-1]
 
     def _checkerPackage(self):
-        match = re.search("<class '([a-zA-Z0-9_\.]+)'>", str(self.__class__))
+        match = re.search(r"<class '([a-zA-Z0-9_\.]+)'>", str(self.__class__))
         return match.group(1).split(".")[-3]
         
     def checkerLabel(self):

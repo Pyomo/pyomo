@@ -1,7 +1,8 @@
 /**___________________________________________________________________________
  *
  * Pyomo: Python Optimization Modeling Objects
- * Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+ * Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
  * Under the terms of Contract DE-NA0003525 with National Technology and
  * Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
  * rights in this software.
@@ -112,6 +113,8 @@ public:
    void finalize_solution(int ampl_solve_status_num, char* msg, 
                           double *const_x, int nx, double *const_lam, int nc);
 
+   // get the ASLdate that the interface was compiled against
+   long get_asl_date();
 private:
 
    // Make these private so the compiler does not give default implementations for them

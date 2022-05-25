@@ -101,8 +101,12 @@ def ROSolver_iterative_solve(model_data, config):
         )
     elif config.objective_focus is ObjectiveType.worst_case:
         # === Worst-case cost objective
-        master_data.master_model.zeta = Var(initialize=value(master_data.master_model.scenarios[0, 0].first_stage_objective +
-                                                            master_data.master_model.scenarios[0, 0].second_stage_objective))
+        master_data.master_model.zeta = Var(
+                initialize=value(
+                    master_data.master_model.scenarios[0, 0].first_stage_objective +
+                    master_data.master_model.scenarios[0, 0].second_stage_objective,
+                    exception=False)
+        )
         master_data.master_model.obj = Objective(expr=master_data.master_model.zeta)
         master_data.master_model.scenarios[0,0].epigraph_constr = Constraint(expr=
                         master_data.master_model.scenarios[0, 0].first_stage_objective +
@@ -162,7 +166,9 @@ def ROSolver_iterative_solve(model_data, config):
 
         # === Keep track of total time and subsolver termination conditions
         timing_data.total_master_solve_time += get_time_from_solver(master_soln.results)
-        timing_data.total_master_solve_time += get_time_from_solver(master_soln.feasibility_problem_results)
+
+        if k > 0:  # master feas problem not solved for iteration 0
+            timing_data.total_master_solve_time += get_time_from_solver(master_soln.feasibility_problem_results)
 
         master_soln.master_problem_subsolver_statuses.append(master_soln.results.solver.termination_condition)
 

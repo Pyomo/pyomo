@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -39,9 +40,12 @@ class RemoveZeroTerms(IsomorphicTransformation):
 
         for constr in m.component_data_objects(
                 ctype=Constraint, active=True, descend_into=True):
-            if not constr.body.polynomial_degree() == 1:
-                continue  # we currently only process linear constraints
             repn = generate_standard_repn(constr.body)
+            if not repn.is_linear() or repn.is_constant():
+                continue  # we currently only process linear constraints, and we
+                          # assume that trivial constraints have already been
+                          # deactivated or will be deactivated in a different
+                          # step
 
             # get the index of all nonzero coefficient variables
             nonzero_vars_indx = [

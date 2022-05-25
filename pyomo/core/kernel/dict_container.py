@@ -1,25 +1,19 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import sys
 import logging
 import collections.abc
 
 from pyomo.core.kernel.homogeneous_container import \
     IHomogeneousContainer
-
-if sys.version_info[:2] >= (3,7):
-    # dict became ordered in CPython 3.6 and added to the standard in 3.7
-    _ordered_dict_ = dict
-else:
-    _ordered_dict_ = collections.OrderedDict
 
 logger = logging.getLogger('pyomo.core')
 
@@ -44,7 +38,7 @@ class DictContainer(IHomogeneousContainer,
     _child_storage_entry_string = "[%s]"
 
     def __init__(self, *args, **kwds):
-        self._data = _ordered_dict_()
+        self._data = dict()
         if len(args) > 0:
             if len(args) > 1:
                 raise TypeError(

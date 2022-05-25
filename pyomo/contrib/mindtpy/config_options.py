@@ -208,6 +208,20 @@ def _get_MindtPy_config():
         description='Partition objective with the sum of nonlinear terms using epigraph reformulation.',
         domain=bool
     ))
+    CONFIG.declare('quadratic_strategy', ConfigValue(
+        default=0,
+        domain=In([0, 1, 2]),
+        description='How to treat the quadratic terms in MINLP.'
+                    '0 : treat as nonlinear terms'
+                    '1 : only use quadratic terms in objective function directly in main problem'
+                    '2 : use quadratic terms in objective function and constraints in main problem',
+    ))
+    CONFIG.declare('move_objective', ConfigValue(
+        default=False,
+        domain=bool,
+        description='Whether to replace the objective function to constraint using epigraph constraint.',
+    ))
+    
 
     _add_subsolver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)
@@ -301,7 +315,7 @@ def _add_tolerance_configs(CONFIG):
     CONFIG : ConfigBlock
         The specific configurations for MindtPy.
     """
-    CONFIG.declare('bound_tolerance', ConfigValue(
+    CONFIG.declare('absolute_bound_tolerance', ConfigValue(
         default=1E-4,
         domain=PositiveFloat,
         description='Bound tolerance',
@@ -312,7 +326,7 @@ def _add_tolerance_configs(CONFIG):
         domain=PositiveFloat,
         description='Relative bound tolerance',
         doc='Relative tolerance for bound feasibility checks.'
-            '(UB - LB) / (1e-10+|bestinteger|) <= relative tolerance.'
+            '|Primal Bound - Dual Bound| / (1e-10 + |Primal Bound|) <= relative tolerance.'
     ))
     CONFIG.declare('small_dual_tolerance', ConfigValue(
         default=1E-8,
@@ -368,6 +382,11 @@ def _add_bound_configs(CONFIG):
         default=1e9,
         description='Default bound added to unbounded integral variables in nonlinear constraint if single tree is activated.',
         domain=PositiveFloat
+    ))
+    CONFIG.declare('initial_bound_coef', ConfigValue(
+        default=1E-1,
+        domain=PositiveFloat,
+        description='The coefficient used to approximate the initial primal/dual bound.'
     ))
 
 
@@ -536,7 +555,7 @@ def check_config(config):
             config.equality_relaxation = False
     # if ecp tolerance is not provided use bound tolerance
     if config.ecp_tolerance is None:
-        config.ecp_tolerance = config.bound_tolerance
+        config.ecp_tolerance = config.absolute_bound_tolerance
 
     if config.solver_tee:
         config.mip_solver_tee = True

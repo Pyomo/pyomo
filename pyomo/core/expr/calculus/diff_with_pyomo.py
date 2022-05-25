@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -281,14 +282,9 @@ def _diff_abs(node, val_dict, der_dict):
     arg = node.args[0]
     der = der_dict[node]
     val = val_dict[arg]
-    if not is_constant(val):
-        raise DifferentiationException('Cannot perform symbolic differentiation of abs(x). Please use numeric differentiation')
-    if val == 0:
+    if is_constant(val) and val == 0:
         raise DifferentiationException('Cannot differentiate abs(x) at x=0')
-    elif val < 0:
-        der_dict[arg] -= der
-    else:
-        der_dict[arg] += der
+    der_dict[arg] += der * val / abs(val)
 
 
 _unary_map = dict()

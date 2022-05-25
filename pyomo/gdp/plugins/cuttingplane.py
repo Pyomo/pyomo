@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -38,8 +39,6 @@ from pyomo.contrib.fme.fourier_motzkin_elimination import \
 import logging
 
 logger = logging.getLogger('pyomo.gdp.cuttingplane')
-
-NAME_BUFFER = {}
 
 def do_not_tighten(m):
     return m
@@ -690,7 +689,6 @@ class CuttingPlane_Transformation(Transformation):
         original_log_level = logger.level
         log_level = logger.getEffectiveLevel()
         try:
-            assert not NAME_BUFFER
             self._config = self.CONFIG(kwds.pop('options', {}))
             self._config.set_value(kwds)
 
@@ -717,8 +715,6 @@ class CuttingPlane_Transformation(Transformation):
         finally:
             del self._config
             del self.verbose
-            # clear the global name buffer
-            NAME_BUFFER.clear()
             # restore logging level
             logger.setLevel(original_log_level)
 
@@ -936,8 +932,7 @@ class CuttingPlane_Transformation(Transformation):
                     x_hull.set_value(x_rbigm.value, skip_validation=True)
                 if self.verbose:
                     logger.info("\t%s = %s" % 
-                                (x_rbigm.getname(fully_qualified=True,
-                                                 name_buffer=NAME_BUFFER),
+                                (x_rbigm.getname(fully_qualified=True),
                                  x_rbigm.value))
 
             # compare objectives: check absolute difference close to 0, relative
@@ -968,8 +963,7 @@ class CuttingPlane_Transformation(Transformation):
                 xhat[x_rbigm] = value(x_hull)
                 if self.verbose:
                     logger.info("\t%s = %s" % 
-                                (x_hull.getname(fully_qualified=True,
-                                                name_buffer=NAME_BUFFER), 
+                                (x_hull.getname(fully_qualified=True), 
                                  x_hull.value))
 
             # [JDS 19 Dec 18] Note: we check that the separation objective was
@@ -1063,8 +1057,7 @@ class CuttingPlane_Transformation(Transformation):
                         logger.info("The variable %s will not be included in "
                                     "the separation problem: It was stale in "
                                     "the rBigM solve." % x_rbigm.getname(
-                                        fully_qualified=True,
-                                        name_buffer=NAME_BUFFER))
+                                        fully_qualified=True))
                     to_delete.append(i)
         elif norm == float('inf'):
             u = transBlock_rHull.u = Var(domain=NonNegativeReals)
@@ -1083,8 +1076,7 @@ class CuttingPlane_Transformation(Transformation):
                         logger.info("The variable %s will not be included in "
                                     "the separation problem: It was stale in "
                                     "the rBigM solve." % x_rbigm.getname(
-                                        fully_qualified=True,
-                                        name_buffer=NAME_BUFFER))
+                                        fully_qualified=True))
                     to_delete.append(j)
             # we'll need the duals of these to get the subgradient
             self._add_dual_suffix(transBlock_rHull.model())

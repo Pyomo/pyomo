@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -27,6 +28,7 @@ from pyomo.core import (
 from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
 )
+from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.numvalue import native_types
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
@@ -409,6 +411,7 @@ class ScalarDisjunct(_DisjunctData, Disjunct):
         _DisjunctData.__init__(self, self)
         Disjunct.__init__(self, *args, **kwds)
         self._data[None] = self
+        self._index = UnindexedComponent_index
 
 
 class SimpleDisjunct(metaclass=RenamedClass):
@@ -446,6 +449,7 @@ class _DisjunctionData(ActiveComponentData):
         #   - ComponentData
         self._component = weakref_ref(component) if (component is not None) \
                           else None
+        self._index = NOTSET
         self._active = True
         self.disjuncts = []
         self.xor = True
@@ -637,7 +641,7 @@ class Disjunction(ActiveIndexedComponent):
                 (self.name,) )
         elif self._init_rule is not None:
             _init_rule = self._init_rule
-            for ndx in self._index:
+            for ndx in self._index_set:
                 try:
                     expr = apply_indexed_rule(self,
                                              _init_rule,
@@ -667,7 +671,7 @@ class Disjunction(ActiveIndexedComponent):
         """
         return (
             [("Size", len(self)),
-             ("Index", self._index if self.is_indexed() else None),
+             ("Index", self._index_set if self.is_indexed() else None),
              ("Active", self.active),
              ],
             self.items(),
@@ -681,6 +685,7 @@ class ScalarDisjunction(_DisjunctionData, Disjunction):
     def __init__(self, *args, **kwds):
         _DisjunctionData.__init__(self, component=self)
         Disjunction.__init__(self, *args, **kwds)
+        self._index = UnindexedComponent_index
 
     #
     # Singleton disjunctions are strange in that we want them to be

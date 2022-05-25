@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -16,6 +17,7 @@ from io import StringIO
 import pyomo.common.unittest as unittest
 
 from pyomo.common.getGSL import find_GSL
+from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.environ import (
     ConcreteModel, Block, Var, Objective, Expression, SolverFactory, value,
@@ -368,6 +370,33 @@ class TestPythonCallbackFunction(unittest.TestCase):
 2 Declarations: h i
         """.strip())
 
+    def test_pprint(self):
+        m = ConcreteModel()
+        m.h = ExternalFunction(_g)
+        out = StringIO()
+        m.pprint()
+        m.pprint(ostream=out)
+        self.assertEqual(out.getvalue().strip(), """
+1 ExternalFunction Declarations
+    h : function=_g, units=None, arg_units=None
+
+1 Declarations: h
+        """.strip())
+
+        if not pint_available:
+            return
+        m.i = ExternalFunction(function=_h,
+                               units=units.kg, arg_units=[units.m, units.s])
+        out = StringIO()
+        m.pprint(ostream=out)
+        self.assertEqual(out.getvalue().strip(), """
+2 ExternalFunction Declarations
+    h : function=_g, units=None, arg_units=None
+    i : function=_h, units=kg, arg_units=['m', 's']
+
+2 Declarations: h i
+        """.strip())
+
 
 class TestAMPLExternalFunction(unittest.TestCase):
     def assertListsAlmostEqual(self, first, second, places=7, msg=None):
@@ -422,6 +451,17 @@ class TestAMPLExternalFunction(unittest.TestCase):
                 self.assertAlmostEqual(value(model.o), 2.0, 7)
             finally:
                 os.chdir(orig_dir)
+
+    def test_unknown_library(self):
+        m = ConcreteModel()
+        with LoggingIntercept() as LOG:
+            m.ef = ExternalFunction(
+                library='unknown_pyomo_external_testing_function',
+                function='f')
+        self.assertEqual(
+            LOG.getvalue(),
+            'Defining AMPL external function, but cannot locate '
+            'specified library "unknown_pyomo_external_testing_function"\n')
 
     def test_eval_gsl_function(self):
         DLL = find_GSL()
@@ -532,6 +572,20 @@ class TestAMPLExternalFunction(unittest.TestCase):
         opt = SolverFactory('ipopt')
         res = opt.solve(model, tee=True)
         self.assertAlmostEqual(value(model.o), 0.885603194411, 7)
+
+    @unittest.skipIf(not check_available_solvers('ipopt'),
+                     "The 'ipopt' solver is not available")
+    def test_solve_gsl_function_const_arg(self):
+        DLL = find_GSL()
+        if not DLL:
+            self.skipTest("Could not find the amplgsl.dll library")
+        model = ConcreteModel()
+        model.z_func = ExternalFunction(library=DLL, function="gsl_sf_beta")
+        model.x = Var(initialize=1, bounds=(0.1,None))
+        model.o = Objective(expr=-model.z_func(1, model.x))
+        opt = SolverFactory('ipopt')
+        res = opt.solve(model, tee=True)
+        self.assertAlmostEqual(value(model.x), 0.1, 5)
 
     @unittest.skipIf(not check_available_solvers('ipopt'),
                      "The 'ipopt' solver is not available")

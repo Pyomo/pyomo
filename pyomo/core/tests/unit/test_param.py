@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -787,7 +788,6 @@ class ArrayParam6(unittest.TestCase):
         model.b = Set(initialize=['a','b','c'])
         model.c = model.b * model.b
         model.p = Param(model.a, model.c, within=NonNegativeIntegers, default=0, mutable=True)
-        #print(model.p._index.keys())
         model.p[1,'a','b'] = 1
         model.p[1,('a','b')] = 1
         model.p[(1,'b'),'b'] = 1

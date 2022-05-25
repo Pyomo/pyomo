@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -17,6 +18,7 @@ import pyomo.common.unittest as unittest
 
 import pyomo.opt
 import pyomo.solvers.plugins.solvers
+from pyomo.solvers.plugins.solvers.CBCplugin import MockCBC
 
 class MockSolver2(pyomo.opt.OptSolver):
 
@@ -40,17 +42,17 @@ class OptSolverDebug(unittest.TestCase):
         """
         Verify the processing of 'type', 'name' and 'doc' options
         """
-        ans = pyomo.opt.SolverFactory("_mock_pico")
-        self.assertEqual(type(ans), pyomo.solvers.plugins.solvers.PICO.MockPICO)
-        self.assertEqual(ans._doc, "pico OptSolver")
+        ans = pyomo.opt.SolverFactory("_mock_cbc")
+        self.assertEqual(type(ans), MockCBC)
+        self.assertEqual(ans._doc, "cbc OptSolver")
 
-        ans = pyomo.opt.SolverFactory("_mock_pico", doc="My Doc")
-        self.assertEqual(type(ans), pyomo.solvers.plugins.solvers.PICO.MockPICO)
+        ans = pyomo.opt.SolverFactory("_mock_cbc", doc="My Doc")
+        self.assertEqual(type(ans), MockCBC)
         self.assertEqual(ans._doc, "My Doc")
 
-        ans = pyomo.opt.SolverFactory("_mock_pico", name="my name")
-        self.assertEqual(type(ans), pyomo.solvers.plugins.solvers.PICO.MockPICO)
-        self.assertEqual(ans._doc, "my name OptSolver (type pico)")
+        ans = pyomo.opt.SolverFactory("_mock_cbc", name="my name")
+        self.assertEqual(type(ans), MockCBC)
+        self.assertEqual(ans._doc, "my name OptSolver (type cbc)")
 
     def test_solver_init2(self):
         """
@@ -59,7 +61,7 @@ class OptSolverDebug(unittest.TestCase):
         opt = {}
         opt['a'] = 1
         opt['b'] = "two"
-        ans = pyomo.opt.SolverFactory("_mock_pico", name="solver_init2", options=opt)
+        ans = pyomo.opt.SolverFactory("_mock_cbc", name="solver_init2", options=opt)
         self.assertEqual(ans.options['a'], opt['a'])
         self.assertEqual(ans.options['b'], opt['b'])
 
