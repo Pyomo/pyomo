@@ -62,7 +62,7 @@ from pyomo.dae import *
 
 from itertools import permutations, product, combinations
 
-from fim_doe import *
+from pyomo.contrib.doe.fim_doe import *
 
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()

@@ -56,7 +56,7 @@ import pandas as pd
 from itertools import permutations, product, combinations
 
 import pyomo.common.unittest as unittest
-from fim_doe import *
+from pyomo.contrib.doe.fim_doe import *
 
 class TestMeasurement(unittest.TestCase):
     '''Test the measurement class
