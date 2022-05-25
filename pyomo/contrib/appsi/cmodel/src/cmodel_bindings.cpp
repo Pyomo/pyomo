@@ -18,7 +18,10 @@
 #include "nl_writer.hpp"
 //#include "profiler.h"
 
+extern double inf;
+
 PYBIND11_MODULE(appsi_cmodel, m) {
+  inf = py::module_::import("math").attr("inf").cast<double>();
   m.attr("inf") = inf;
   // m.def("ProfilerStart", &ProfilerStart);
   // m.def("ProfilerStop", &ProfilerStop);

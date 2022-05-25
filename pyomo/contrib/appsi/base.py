@@ -7,24 +7,22 @@ from pyomo.core.base.var import _GeneralVarData, Var
 from pyomo.core.base.param import _ParamData, Param
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.objective import _GeneralObjectiveData
-from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
+from pyomo.common.collections import ComponentMap
 from collections import OrderedDict
 from .utils.get_objective import get_objective
-from .utils.identify_named_expressions import identify_named_expressions
+from .utils.collect_vars_and_named_exprs import collect_vars_and_named_exprs
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
 from pyomo.common.errors import ApplicationError
 from pyomo.opt.base import SolverFactory as LegacySolverFactory
 from pyomo.common.factory import Factory
-import logging
 import os
 from pyomo.opt.results.results_ import SolverResults as LegacySolverResults
 from pyomo.opt.results.solution import Solution as LegacySolution, SolutionStatus as LegacySolutionStatus
 from pyomo.opt.results.solver import TerminationCondition as LegacyTerminationCondition, SolverStatus as LegacySolverStatus
-from pyomo.core.kernel.objective import minimize, maximize
+from pyomo.core.kernel.objective import minimize
 from pyomo.core.base import SymbolMap
 import weakref
-from io import StringIO
 from .cmodel import cmodel, cmodel_available
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numvalue import NumericConstant
@@ -158,7 +156,6 @@ class SolutionLoaderBase(abc.ABC):
         for v, val in self.get_primals(vars_to_load=vars_to_load).items():
             v.set_value(val, skip_validation=True)
         StaleFlagManager.mark_all_as_stale(delayed=True)
-        
 
     @abc.abstractmethod
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
@@ -256,6 +253,7 @@ class SolutionLoader(SolutionLoaderBase):
             primals = ComponentMap()
             for v in vars_to_load:
                 primals[v] = self._primals[id(v)][1]
+            return primals
 
     def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
         if cons_to_load is None:
@@ -755,6 +753,7 @@ class PersistentBase(abc.ABC):
         self._vars_referenced_by_con = dict()
         self._vars_referenced_by_obj = list()
         self._expr_types = None
+        self.use_extensions = False
 
     @property
     def update_config(self):
@@ -769,7 +768,8 @@ class PersistentBase(abc.ABC):
         self.__init__()
         self.update_config = saved_update_config
         self._model = model
-        self._expr_types = cmodel.PyomoExprTypes()
+        if self.use_extensions and cmodel_available:
+            self._expr_types = cmodel.PyomoExprTypes()
         self.add_block(model)
         if self._objective is None:
             self.set_objective(None)
@@ -801,12 +801,15 @@ class PersistentBase(abc.ABC):
 
     def add_constraints(self, cons: List[_GeneralConstraintData]):
         all_fixed_vars = dict()
-        expr_types = self._expr_types
         for con in cons:
             if con in self._named_expressions:
                 raise ValueError('constraint {name} has already been added'.format(name=con.name))
             self._active_constraints[con] = (con.lower, con.body, con.upper)
-            named_exprs, variables, fixed_vars, external_functions = cmodel.prep_for_repn(con.body, expr_types)
+            if self.use_extensions and cmodel_available:
+                tmp = cmodel.prep_for_repn(con.body, self._expr_types)
+            else:
+                tmp = collect_vars_and_named_exprs(con.body)
+            named_exprs, variables, fixed_vars, external_functions = tmp
             self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[con] = external_functions
@@ -850,8 +853,11 @@ class PersistentBase(abc.ABC):
             self._objective = obj
             self._objective_expr = obj.expr
             self._objective_sense = obj.sense
-            expr_types = cmodel.PyomoExprTypes()
-            named_exprs, variables, fixed_vars, external_functions = cmodel.prep_for_repn(obj.expr, expr_types)
+            if self.use_extensions and cmodel_available:
+                tmp = cmodel.prep_for_repn(obj.expr, self._expr_types)
+            else:
+                tmp = collect_vars_and_named_exprs(obj.expr)
+            named_exprs, variables, fixed_vars, external_functions = tmp
             self._obj_named_expressions = [(i, i.expr) for i in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[obj] = external_functions
