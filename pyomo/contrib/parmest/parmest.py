@@ -321,6 +321,8 @@ class Estimator(object):
         self.solver_options = solver_options
 
         self._second_stage_cost_exp = "SecondStageCost"
+        # boolean to indicate if model is initialized using a square solve
+        self.model_initialized = False
 
 
     def _create_parmest_model(self, data):
@@ -403,38 +405,39 @@ class Estimator(object):
         if (solver == "k_aug"):
             raise RuntimeError("k_aug no longer supported.")
 
-        # (Bootstrap scenarios will use indirection through the bootlist)
-        if bootlist is None:
-            senario_numbers = list(range(len(self.callback_data)))
-            scen_names = ["Scenario{}".format(i) for i in senario_numbers]
-        else:
-            scen_names = ["Scenario{}".format(i) for i in range(len(bootlist))]
+        if not self.model_initialized:
+            # (Bootstrap scenarios will use indirection through the bootlist)
+            if bootlist is None:
+                senario_numbers = list(range(len(self.callback_data)))
+                scen_names = ["Scenario{}".format(i) for i in senario_numbers]
+            else:
+                scen_names = ["Scenario{}".format(i) for i in range(len(bootlist))]
 
-        # tree_model.CallbackModule = None
-        outer_cb_data = dict()
-        outer_cb_data["callback"] = self._instance_creation_callback
-        if ThetaVals is not None:
-            outer_cb_data["ThetaVals"] = ThetaVals
-        if bootlist is not None:
-            outer_cb_data["BootList"] = bootlist
-        outer_cb_data["cb_data"] = self.callback_data  # None is OK
-        outer_cb_data["theta_names"] = self.theta_names
+            # tree_model.CallbackModule = None
+            outer_cb_data = dict()
+            outer_cb_data["callback"] = self._instance_creation_callback
+            if ThetaVals is not None:
+                outer_cb_data["ThetaVals"] = ThetaVals
+            if bootlist is not None:
+                outer_cb_data["BootList"] = bootlist
+            outer_cb_data["cb_data"] = self.callback_data  # None is OK
+            outer_cb_data["theta_names"] = self.theta_names
 
-        options = {"solver": "ipopt"}
-        scenario_creator_options = {"cb_data": outer_cb_data}
-        if use_mpisppy:
-            ef = sputils.create_EF(scen_names,
-                              _experiment_instance_creation_callback,
-                              EF_name = "_Q_opt",
-                              suppress_warnings=True,
-                              scenario_creator_kwargs=scenario_creator_options)
-        else:
-            ef = local_ef.create_EF(scen_names,
-                                    _experiment_instance_creation_callback,
-                                    EF_name = "_Q_opt",
-                                    suppress_warnings=True,
-                                    scenario_creator_kwargs=scenario_creator_options)
-        self.ef_instance = ef
+            options = {"solver": "ipopt"}
+            scenario_creator_options = {"cb_data": outer_cb_data}
+            if use_mpisppy:
+                ef = sputils.create_EF(scen_names,
+                                  _experiment_instance_creation_callback,
+                                  EF_name = "_Q_opt",
+                                  suppress_warnings=True,
+                                  scenario_creator_kwargs=scenario_creator_options)
+            else:
+                ef = local_ef.create_EF(scen_names,
+                                        _experiment_instance_creation_callback,
+                                        EF_name = "_Q_opt",
+                                        suppress_warnings=True,
+                                        scenario_creator_kwargs=scenario_creator_options)
+            self.ef_instance = ef
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
