@@ -606,26 +606,26 @@ class Estimator(object):
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
             if initialize_parmest_model:
                 theta_init_vals = []
-            for i, theta in enumerate(self.theta_names):
-                # Use parser in ComponentUID to locate the component
-                var_cuid = ComponentUID(theta)
-                var_validate = var_cuid.find_component_on(instance)
-                if var_validate is None:
-                    logger.warning(
-                        "theta_name[%s] (%s) was not found on the model",
-                        (i, theta))
-                else:
-                    # try:
-                        # If the component that was found is not a variable,
-                        # this will generate an exception (and the warning
-                        # in the 'except')
-                    var_validate.fix()
-                    theta_init_vals.append(var_validate)
+                for i, theta in enumerate(self.theta_names):
+                    # Use parser in ComponentUID to locate the component
+                    var_cuid = ComponentUID(theta)
+                    var_validate = var_cuid.find_component_on(instance)
+                    if var_validate is None:
+                        logger.warning(
+                            "theta_name[%s] (%s) was not found on the model",
+                            (i, theta))
+                    else:
+                        # try:
+                            # If the component that was found is not a variable,
+                            # this will generate an exception (and the warning
+                            # in the 'except')
+                        var_validate.fix()
+                        theta_init_vals.append(var_validate)
 
-                    if thetavals is None:
+                        if thetavals is None:
 
-                        # thetavals[theta] = var_validate
-                        print('Parameter fixed')
+                            # thetavals[theta] = var_validate
+                            print('Parameter fixed')
 
                     # except:
                     #     logger.warning(theta + ' is not a variable')
