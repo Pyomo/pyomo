@@ -48,9 +48,10 @@ def _get_master_and_subproblem(solver, config):
                                                   subproblem_util_block,
                                                   config, solver)
 
-    config.logger.info(
-        'Finished master problem initialization in {:.2f}s\n'.format(
-            get_main_elapsed_time(solver.timing) - start))
+    config.logger.info('Finished master problem initialization in {:.2f}s and '
+                       '{} iterations \n'.format( 
+                           get_main_elapsed_time(solver.timing) - start, 
+                           solver.initialization_iteration))
 
     return (master_util_block, subproblem_util_block)
 

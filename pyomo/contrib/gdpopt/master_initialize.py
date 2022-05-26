@@ -96,6 +96,7 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
                 'custom initialization disjunct set %s. '
                 'Skipping that set and continuing on.'
                 % list(disj.name for disj in active_disjunct_set))
+        solver.initialization_iteration += 1
 
 def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
                          config, solver):
@@ -140,6 +141,7 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
             'MILP relaxation infeasible for initial user-specified '
             'disjunct values. '
             'Skipping initialization.')
+    solver.initialization_iteration += 1
 
 @contextmanager
 def use_master_for_max_binary_initialization(master_util_block):
@@ -193,6 +195,8 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
             solver._update_dual_bound_to_infeasible()
             return False
         add_no_good_cut(master_util_block, config)
+
+    solver.initialization_iteration += 1
 
 @contextmanager
 def use_master_for_set_covering(master_util_block):
@@ -299,6 +303,7 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                     zip(disjunct_needs_cover, active_disjuncts))
             add_no_good_cut(master_util_block, config)
             iter_count += 1
+            solver.initialization_iteration += 1
 
         if any(disjunct_needs_cover):
             # Iteration limit was hit without a full covering of all nonlinear

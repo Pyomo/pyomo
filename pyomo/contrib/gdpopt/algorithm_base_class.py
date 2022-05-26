@@ -69,6 +69,7 @@ class _GDPoptAlgorithm():
         self.UB = float('inf')
         self.unbounded = False
         self.timing = Bunch()
+        self.initialization_iteration = 0
         self.iteration = 0
 
         self.incumbent_boolean_soln = None

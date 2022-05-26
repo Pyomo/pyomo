@@ -890,11 +890,12 @@ class TestGDPopt(unittest.TestCase):
              eight_process.use_unit_8ornot.disjuncts[0]]
         ]
 
+        gdpopt = SolverFactory('gdpopt', algorithm='LOA')
         def assert_correct_disjuncts_active(subprob_util_block,
                                             master_util_block):
             # I can get the iteration based on the number of no-good
             # cuts in this case...
-            iteration = len(master_util_block.no_good_cuts)
+            iteration = gdpopt.iteration
             master = master_util_block.model()
             subprob = subprob_util_block.model()
             if iteration >= 2:
@@ -919,10 +920,9 @@ class TestGDPopt(unittest.TestCase):
                 if disj not in seen:
                     self.assertFalse(disj.active)
 
-        SolverFactory('gdpopt', algorithm='LOA').solve(
+        gdpopt.solve(
             eight_process, init_algorithm='custom_disjuncts',
-            custom_init_disjuncts=initialize,
-            mip_solver=mip_solver,
+            custom_init_disjuncts=initialize, mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             subproblem_initialization_method=assert_correct_disjuncts_active)
 
