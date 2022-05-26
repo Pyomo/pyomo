@@ -639,7 +639,7 @@ class Estimator(object):
                     print("   status_obj, solved, iters, time, regularization_stat = ",
                            str(status_obj), str(solved), str(iters), str(time), str(regu))
 
-                results = optimizer.solve(instance,tee=True)
+                results = optimizer.solve(instance)
                 if self.diagnostic_mode:
                     print('standard solve solver termination condition=',
                             str(results.solver.termination_condition))
