@@ -547,7 +547,7 @@ class Estimator(object):
             raise RuntimeError("Unknown solver in Q_Opt="+solver)
 
 
-    def _Q_at_theta(self, thetavals=None, initialize_parmest_model=False):
+    def _Q_at_theta(self, thetavals, initialize_parmest_model=False):
         """
         Return the objective function value with fixed theta values.
 
@@ -570,7 +570,7 @@ class Estimator(object):
 
         optimizer = pyo.SolverFactory('ipopt')
 
-        if thetavals is not None:
+        if len(thetavals) > 0:
             dummy_cb = {"callback": self._instance_creation_callback,
                         "ThetaVals": thetavals,
                         "theta_names": self.theta_names,
@@ -583,7 +583,7 @@ class Estimator(object):
 
 
         if self.diagnostic_mode:
-            if thetavals:
+            if len(thetavals) > 0:
                 print('    Compute objective at theta = ',str(thetavals))
             else:
                 print('    Compute objective at initial theta')
@@ -608,6 +608,8 @@ class Estimator(object):
             sname = "scenario_NODE"+str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
             if initialize_parmest_model:
+                # list to store fitted parameter names that will be unfixed
+                # after initialization 
                 theta_init_vals = []
                 for i, theta in enumerate(self.theta_names):
                     # Use parser in ComponentUID to locate the component
@@ -618,20 +620,14 @@ class Estimator(object):
                             "theta_name[%s] (%s) was not found on the model",
                             (i, theta))
                     else:
-                        # try:
-                            # If the component that was found is not a variable,
-                            # this will generate an exception (and the warning
-                            # in the 'except')
-                        if len(thetavals) == 0:
-                            var_validate.fix()
-                            theta_init_vals.append(var_validate)
-
-                        else:
-                            var_validate.fix(thetavals[theta])
-                            theta_init_vals.append(var_validate)
-
-                        # except:
-                        #     logger.warning(theta + ' is not a variable')
+                        try:
+                            if len(thetavals) == 0:
+                                var_validate.fix()
+                                theta_init_vals.append(var_validate)
+                            else:
+                                theta_init_vals.append(thetavals[theta])
+                        except:
+                            logger.warning(theta + ' is not a variable')
 
             if not sillylittle:
                 if self.diagnostic_mode:
