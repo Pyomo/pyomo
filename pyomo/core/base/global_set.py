@@ -58,6 +58,7 @@ class GlobalSetBase(object):
 #
 #UnindexedComponent_set = set([None])
 class _UnindexedComponent_set(GlobalSetBase):
+    local_name = 'UnindexedComponent_set'
     def __init__(self, name):
         self.name = name
     def __contains__(self, val):
@@ -89,5 +90,6 @@ class _UnindexedComponent_set(GlobalSetBase):
         # As this set only has a single element, it is implicitly "ordered"
         return True
 UnindexedComponent_set = _UnindexedComponent_set('UnindexedComponent_set')
+GlobalSets[UnindexedComponent_set.local_name] = UnindexedComponent_set
 
 UnindexedComponent_index = next(iter(UnindexedComponent_set))
