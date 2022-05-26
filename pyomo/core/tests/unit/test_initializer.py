@@ -644,7 +644,7 @@ class Test_Initializer(unittest.TestCase):
         self.assertEqual(a(None, 1), 2)
         self.assertEqual(a(None, 2), 4)
 
-        # TODO: How should we handle ndarray matricies?
+        # TODO: How should we handle ndarray matrices?
         # d = np.array([[1,2],[4,6]])
         # a = Initializer(d)
         # self.assertIs(type(a), ItemInitializer)

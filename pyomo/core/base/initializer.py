@@ -66,8 +66,8 @@ def Initializer(init,
         # indexed components).  We will preserve that functionality
         # here.
         #
-        # I was concerned that some builting aren't compatible with
-        # getfullargspec (and woulf need the same try-except logic as in
+        # I was concerned that some builtins aren't compatible with
+        # getfullargspec (and would need the same try-except logic as in
         # the partial handling), but I have been unable to come up with
         # an example.  The closest was getattr(), but that falls back on
         # getattr.__call__, which does support getfullargspec.
