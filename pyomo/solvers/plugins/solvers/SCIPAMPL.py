@@ -78,7 +78,7 @@ class SCIPAMPL(SystemCallSolver):
         executable = Executable("scipampl")
         if not executable:
             logger.warning("Could not locate the 'scipampl' executable or"
-                           " the 'scip' executable since 8.0.0, which is"
+                           " the 'scip' executable since 8.0.0, which is "
                            "required for solver %s" % self.name)
             self.enable = False
             return None
@@ -144,7 +144,7 @@ class SCIPAMPL(SystemCallSolver):
         if executable not in self._known_versions:
             self._known_versions[executable] = self._get_version(executable)
         _ver = self._known_versions[executable]
-        if _ver and _ver > (8, 0, 0):
+        if _ver and _ver >= (8, 0, 0):
             problem_file = os.path.splitext(problem_files[0])[0]
         else:
             problem_file = problem_files[0]
