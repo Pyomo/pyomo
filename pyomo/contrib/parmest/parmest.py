@@ -547,7 +547,7 @@ class Estimator(object):
             raise RuntimeError("Unknown solver in Q_Opt="+solver)
 
 
-    def _Q_at_theta(self, thetavals, initialize_parmest_model=False):
+    def _Q_at_theta(self, thetavals=None, initialize_parmest_model=False):
         """
         Return the objective function value with fixed theta values.
 
@@ -583,7 +583,10 @@ class Estimator(object):
 
 
         if self.diagnostic_mode:
-            print('    Compute objective at theta = ',str(thetavals))
+            if thetavals:
+                print('    Compute objective at theta = ',str(thetavals))
+            else:
+                print('    Compute objective at initial theta')
 
         # start block of code to deal with models with no constraints
         # (ipopt will crash or complain on such problems without special care)
@@ -619,16 +622,16 @@ class Estimator(object):
                             # If the component that was found is not a variable,
                             # this will generate an exception (and the warning
                             # in the 'except')
-                        var_validate.fix()
-                        theta_init_vals.append(var_validate)
+                        if len(thetavals) == 0:
+                            var_validate.fix()
+                            theta_init_vals.append(var_validate)
 
-                        if thetavals is None:
+                        else:
+                            var_validate.fix(thetavals[theta])
+                            theta_init_vals.append(var_validate)
 
-                            # thetavals[theta] = var_validate
-                            print('Parameter fixed')
-
-                    # except:
-                    #     logger.warning(theta + ' is not a variable')
+                        # except:
+                        #     logger.warning(theta + ' is not a variable')
 
             if not sillylittle:
                 if self.diagnostic_mode:
