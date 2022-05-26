@@ -426,7 +426,10 @@ class _GDP_LBB_Solver(_GDPoptAlgorithm):
 
 
     def _solve_local_rnGDP_subproblem(self, model, config):
-        # TODO for now, return (LB, UB) = (-inf, inf) (for minimize)
+        # TODO: The returns of this method should be improved. Currently, it
+        # returns trivial bounds (LB, UB) = (-inf, inf) if there is an error in
+        # the solve, if the problem is infeasible, or if the problem is
+        # unbounded.
         subproblem = TransformationFactory('gdp.bigm').create_using(model)
         obj_sense_correction = self.objective_sense != minimize
         subprob_utils = subproblem.component(
