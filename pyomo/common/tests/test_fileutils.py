@@ -450,7 +450,7 @@ class TestFileUtils(unittest.TestCase):
         self._check_file( Executable(f_in_path).executable,
                           os.path.join(pathdir, f_in_path) )
 
-        # Test the above for a nonexistant file
+        # Test the above for a nonexistent file
         self.assertFalse( Executable(f_in_tmp).available() )
         if Executable(f_in_tmp):
             self.fail("Expected casting Executable(f_in_tmp) to bool=False")

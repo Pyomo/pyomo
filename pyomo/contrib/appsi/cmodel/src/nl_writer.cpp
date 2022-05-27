@@ -310,6 +310,9 @@ void NLWriter::write(std::string filename) {
   // now write the header
 
   int n_vars = all_vars.size();
+  if (n_vars == 0) {
+    throw py::value_error("there are not any unfixed variables in the problem");
+  }
 
   f << "g3 1 1 0\n";
   f << n_vars << " ";
