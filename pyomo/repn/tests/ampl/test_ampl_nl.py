@@ -28,13 +28,16 @@ from pyomo.environ import (
 )
 
 import pyomo.repn.plugins.ampl.ampl_ as ampl_
+import pyomo.repn.plugins.nl_writer as nl_writer
 gsr = ampl_.generate_standard_repn
+template = nl_writer.text_nl_debug_template
 
 thisdir = this_file_dir()
 
 _norm_whitespace = re.compile(r'\s+')
 _norm_comment = re.compile(r'\s*#\s*')
 _strip_comment = re.compile(r'\s*#.*')
+_norm_negation = re.compile(r'(?m)^o2(\s*#\s*\*)?$n-1(.0)?$')
 
 def _to_float_list(line):
     ans = []
@@ -64,9 +67,9 @@ def _update_subsets(subset, base, test):
                 else:
                     base[i] = test[j]
 
-def load_and_normalize_nl_baseline(baseline, testfile, version='nl'):
+def load_nl_baseline(baseline, testfile, version='nl'):
     with open(testfile, 'r') as FILE:
-        test = FILE.read().splitlines()
+        test = FILE.read()
     if baseline.endswith('.nl'):
         _tmp = baseline[:-2] + version
     else:
@@ -74,9 +77,17 @@ def load_and_normalize_nl_baseline(baseline, testfile, version='nl'):
     if os.path.exists(_tmp):
         baseline = _tmp
     with open(baseline, 'r') as FILE:
-        base = FILE.read().splitlines()
+        base = FILE.read()
+    return test, base
+
+def compare_nl_baseline(base, test):
     if test == base:
         return [], []
+    test = _norm_negation.sub(test, template.negation)
+    base = _norm_negation.sub(base, template.negation)
+    test = test.splitlines()
+    base = base.splitlines()
+
     for i in range(min(len(test), len(base))):
         if test[i] == base[i]:
             continue
@@ -104,6 +115,9 @@ def load_and_normalize_nl_baseline(baseline, testfile, version='nl'):
         tofile=testfile)))
     return base, test
 
+def load_and_compare_nl_baseline(baseline, testfile, version='nl'):
+    return compare_nl_baseline(*load_nl_baseline(baseline, testfile, version))
+
 class _NLWriter_suite(object):
     @classmethod
     def setUpClass(cls):
@@ -121,7 +135,7 @@ class _NLWriter_suite(object):
                 os.path.join(self.tempdir, prefix+".nl.out"))
 
     def _compare_nl_baseline(self, baseline, testfile):
-        self.assertEqual(*load_and_normalize_nl_baseline(
+        self.assertEqual(*load_and_compare_nl_baseline(
             baseline, testfile, self._nl_version))
 
     def test_export_nonlinear_variables(self):
