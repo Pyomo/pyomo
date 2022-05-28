@@ -24,7 +24,7 @@ from pyomo.environ import (
     ConcreteModel, Suffix, Var, Objective, Constraint, SOSConstraint,
     sum_product,
 )
-from .test_ampl_nl import load_and_compare_nl_baseline
+from .test_ampl_nl import load_and_compare_nl_baseline, compare_nl_baseline
 
 currdir = this_file_dir()
 
@@ -77,7 +77,7 @@ class TestSuffix(unittest.TestCase):
                     format=ProblemFormat.nl,
                     io_options={"symbolic_solver_labels": False})
         _base = os.path.join(currdir, "EXPORT_suffixes_int.baseline.nl")
-        self.assertEqual(*compare_nl_baseline(*load_nl_baseline(_base, _test)))
+        self.assertEqual(*load_and_compare_nl_baseline(_base, _test))
 
     # test that EXPORT suffixes on variables,
     # constraints, objectives, and models
