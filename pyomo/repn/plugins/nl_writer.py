@@ -824,13 +824,24 @@ class _NLWriter_impl(object):
         #
         # LINE 5
         #
+        # Note: con_vars_nonlinear & obj_vars_nonlinear == both_vars_nonlinear
+        _n_both_vars = len(both_vars_nonlinear)
+        _n_con_vars = len(con_vars_nonlinear)
+        # Subtract _n_both_vars to avoid double-counting the overlapping
+        # variables
+        #
+        # This is used to allocate arrays, so the _n_obj_vars needs to
+        # include the constraint vars (because they appear between the
+        # shared and object0ve-only vars in the standard variable
+        # ordering).  If there are no objective-only variables, then the
+        # vector needs only hold the shared variables.
+        _n_obj_vars = _n_con_vars + len(obj_vars_nonlinear) - _n_both_vars
+        if _n_obj_vars == _n_con_vars:
+            _n_obj_vars = _n_both_vars
         ostream.write(
             " %d %d %d \t"
             "# nonlinear vars in constraints, objectives, both\n"
-            % ( len(con_vars_nonlinear),
-                len(obj_vars_nonlinear),
-                len(both_vars_nonlinear),
-            ))
+            % (_n_con_vars, _n_obj_vars, _n_both_vars))
 
         #
         # LINE 6
