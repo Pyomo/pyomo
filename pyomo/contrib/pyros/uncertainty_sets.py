@@ -804,7 +804,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
         for idx, (param, ctr, half_len) in enumerate(zip_all):
             if half_len > 0:
-                diffs_squared.append((param - ctr) / half_len ** 2)
+                diffs_squared.append((param - ctr) ** 2 / (half_len) ** 2)
             else:
                 certain_params.append((param, ctr))
 
