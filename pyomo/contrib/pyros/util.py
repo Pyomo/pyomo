@@ -176,7 +176,7 @@ def turn_bounds_to_constraints(variable, model, config=None):
                 model,
                 variable.name + f"_lower_bound_con_{count}",
             )
-            model.add_component(name, Constraint(expr=-variable <= -arg))
+            model.add_component(name, Constraint(expr=arg - variable <= 0))
             count += 1
             variable.setlb(None)
 
@@ -187,7 +187,7 @@ def turn_bounds_to_constraints(variable, model, config=None):
                 model,
                 variable.name + f"_upper_bound_con_{count}",
             )
-            model.add_component(name, Constraint(expr=variable <= arg))
+            model.add_component(name, Constraint(expr=variable - arg <= 0))
             count += 1
             variable.setub(None)
 
