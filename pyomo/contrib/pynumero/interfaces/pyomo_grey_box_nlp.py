@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -39,7 +40,6 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
         # this is done over *all* variables in active blocks, even
         # if they are not included in this model
         self._pyomo_model_var_names_to_datas = None
-        _name_buffer = {}
         try:
             # We support Pynumero's ExternalGreyBoxBlock modeling
             # objects that are provided through ExternalGreyBoxBlock objects
@@ -59,7 +59,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             self._pyomo_nlp = PyomoNLP(pyomo_model)
             self._pyomo_model_var_names_to_datas = {
                 v.getname(
-                    fully_qualified=True, name_buffer=_name_buffer
+                    fully_qualified=True
                 ): v
                 for v in pyomo_model.component_data_objects(
                     ctype=pyo.Var, descend_into=True
@@ -67,7 +67,7 @@ class PyomoNLPWithGreyBoxBlocks(NLP):
             }
             self._pyomo_model_constraint_names_to_datas = {
                 c.getname(
-                    fully_qualified=True, name_buffer=_name_buffer
+                    fully_qualified=True
                 ): c 
                 for c in pyomo_model.component_data_objects(
                     ctype=pyo.Constraint, descend_into=True
@@ -461,29 +461,28 @@ class _ExternalGreyBoxAsNLP(NLP):
 
         # create the list of primals and constraint names
         # primals will be ordered inputs, followed by outputs
-        _name_buffer = dict()
         self._primals_names = [
             self._block.inputs[k].getname(
-                fully_qualified=True, name_buffer=_name_buffer
+                fully_qualified=True
             ) for k in self._block.inputs
         ]
         self._primals_names.extend(
             self._block.outputs[k].getname(
-                fully_qualified=True, name_buffer=_name_buffer
+                fully_qualified=True
             )
             for k in self._block.outputs
         )
         n_primals = len(self._primals_names)
 
         prefix = self._block.getname(
-            fully_qualified=True, name_buffer=_name_buffer
+            fully_qualified=True
         )
         self._constraint_names = \
             ['{}.{}'.format(prefix, nm) \
              for nm in self._ex_model.equality_constraint_names()]
         output_var_names = [
             self._block.outputs[k].getname(
-                fully_qualified=False, name_buffer=_name_buffer
+                fully_qualified=False
             ) for k in self._block.outputs
         ]
         self._constraint_names.extend(

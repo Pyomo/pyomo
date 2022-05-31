@@ -288,7 +288,9 @@ jobs:
             done
             # TODO: This is a hack to stop test_qt.py from running until we
             # can better troubleshoot why it fails on GHA
-            conda remove qt pyqt
+            for QTPACKAGE in qt pyqt; do
+                conda remove $QTPACKAGE || echo "$QTPACKAGE not in this environment"
+            done
         fi
         # Re-try Pyomo (optional) dependencies with pip
         if test -n "$PYPI_DEPENDENCIES"; then

@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -449,7 +450,7 @@ class TestFileUtils(unittest.TestCase):
         self._check_file( Executable(f_in_path).executable,
                           os.path.join(pathdir, f_in_path) )
 
-        # Test the above for a nonexistant file
+        # Test the above for a nonexistent file
         self.assertFalse( Executable(f_in_tmp).available() )
         if Executable(f_in_tmp):
             self.fail("Expected casting Executable(f_in_tmp) to bool=False")

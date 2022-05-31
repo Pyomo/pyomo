@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -21,6 +22,12 @@ from pyomo.core.pyomoobject import PyomoObject
 
 initializer_map = {}
 sequence_types = set()
+# initialize with function, method, and method-wrapper types.
+function_types = set([
+    type(PyomoObject.is_expression_type),
+    type(PyomoObject().is_expression_type),
+    type(PyomoObject.is_expression_type.__call__),
+])
 
 #
 # The following set of "Initializer" classes are a general functionality
@@ -48,13 +55,22 @@ def Initializer(init,
             return ItemInitializer(init)
         else:
             return ConstantInitializer(init)
-    if inspect.isfunction(init) or inspect.ismethod(init):
+    if init.__class__ in function_types:
+        # Note: we do not use "inspect.isfunction or inspect.ismethod"
+        # because some function-like things (notably cythonized
+        # functions) return False
         if not allow_generators and inspect.isgeneratorfunction(init):
             raise ValueError("Generator functions are not allowed")
         # Historically pyomo.core.base.misc.apply_indexed_rule
         # accepted rules that took only the parent block (even for
         # indexed components).  We will preserve that functionality
         # here.
+        #
+        # I was concerned that some builtins aren't compatible with
+        # getfullargspec (and would need the same try-except logic as in
+        # the partial handling), but I have been unable to come up with
+        # an example.  The closest was getattr(), but that falls back on
+        # getattr.__call__, which does support getfullargspec.
         _args = inspect.getfullargspec(init)
         _nargs = len(_args.args)
         if inspect.ismethod(init) and init.__self__ is not None:
@@ -110,7 +126,13 @@ def Initializer(init,
         # generator into a tuple and then store it as a constant.
         return ConstantInitializer(tuple(init))
     if type(init) is functools.partial:
-        _args = inspect.getfullargspec(init.func)
+        try:
+            _args = inspect.getfullargspec(init.func)
+        except:
+            # Inspect doesn't work for some built-in callables (notably
+            # 'int').  We will just have to assume this is a "normal"
+            # IndexedCallInitializer
+            return IndexedCallInitializer(init)
         if len(_args.args) - len(init.args) == 1 and _args.varargs is None:
             return ScalarCallInitializer(init)
         else:
@@ -124,10 +146,18 @@ def Initializer(init,
         return ConstantInitializer(init)
     if callable(init) and not isinstance(init, type):
         # We assume any callable thing could be a functor; but, we must
-        # filter out types, as isfunction() and ismethod() both return
-        # False for type.__call__
+        # filter out types, as we use types as special identifiers that
+        # should not be called (e.g., UnknownSetDimen)
+        if inspect.isfunction(init) or inspect.ismethod(init):
+            # Add this to the set of known function types and try again
+            function_types.add(type(init))
+        else:
+            # Try again, but use the __call__ method (for supporting
+            # things like functors and cythonized functions).  __call__
+            # is almost certainly going to be a method-wrapper
+            init = init.__call__
         return Initializer(
-            init.__call__,
+            init,
             allow_generators=allow_generators,
             treat_sequences_as_mappings=treat_sequences_as_mappings,
             arg_not_specified=arg_not_specified,

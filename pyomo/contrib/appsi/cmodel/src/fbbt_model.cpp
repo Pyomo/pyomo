@@ -50,7 +50,7 @@ void FBBTConstraint::perform_fbbt(double feasibility_tol, double integer_tol,
   if (body_lb > con_ub + feasibility_tol ||
       body_ub < con_lb - feasibility_tol) {
     throw InfeasibleConstraintException(
-        "Infeasible constraint; the bounds computed on the body of the "
+        "Infeasible constraint (" + name + "); the bounds computed on the body of the "
         "constraint violate the constraint bounds:\n  con LB: " +
         std::to_string(con_lb) + "\n  con UB: " + std::to_string(con_ub) +
         "\n  body LB: " + std::to_string(body_lb) +

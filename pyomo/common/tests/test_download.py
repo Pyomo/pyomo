@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -49,9 +50,9 @@ class Test_FileDownloader(unittest.TestCase):
         self.assertIsNone(f._fname)
 
         with self.assertRaisesRegex(
-                RuntimeError, "cacert='nonexistant_file_name' does not "
+                RuntimeError, "cacert='nonexistent_file_name' does not "
                 "refer to a valid file."):
-            FileDownloader(True, 'nonexistant_file_name')
+            FileDownloader(True, 'nonexistent_file_name')
 
     def test_parse(self):
         f = FileDownloader()
@@ -94,9 +95,9 @@ class Test_FileDownloader(unittest.TestCase):
 
         f = FileDownloader()
         with self.assertRaisesRegex(
-                RuntimeError, "--cacert='nonexistant_file_name' does "
+                RuntimeError, "--cacert='nonexistent_file_name' does "
                 "not refer to a valid file"):
-            f.parse_args(['--cacert', 'nonexistant_file_name'])
+            f.parse_args(['--cacert', 'nonexistent_file_name'])
 
         f = FileDownloader()
         with capture_output() as io:

@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -24,6 +25,11 @@ from pyomo.common.tests.dep_mod import (
 
 bogus, bogus_available \
     = attempt_import('nonexisting.module.bogus', defer_check=True)
+
+pkl_test, pkl_available = attempt_import(
+    'nonexisting.module.pickle_test',
+    deferred_submodules=['submod'], defer_check=True
+)
 
 pyo, pyo_available = attempt_import(
     'pyomo', alt_names=['pyo'],

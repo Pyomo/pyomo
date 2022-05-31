@@ -1,9 +1,10 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
-#  Under the terms of Contract DE-NA0003525 with National Technology and 
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -21,6 +22,9 @@ from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import scipy_available
 from pyomo.common.dependencies import networkx as nx
 from pyomo.contrib.incidence_analysis.matching import maximum_matching
+from pyomo.contrib.incidence_analysis.connected import (
+    get_independent_submatrices,
+)
 from pyomo.contrib.incidence_analysis.triangularize import (
     block_triangularize,
     get_diagonal_blocks,
@@ -281,6 +285,22 @@ class IncidenceGraphInterface(object):
 
         return ComponentMap((constraints[i], variables[j])
                 for i, j in matching.items())
+
+    def get_connected_components(self, variables=None, constraints=None):
+        """
+        Return lists of lists of variables and constraints that appear in
+        different connected components of the bipartite graph of variables
+        and constraints.
+        """
+        variables, constraints = self._validate_input(variables, constraints)
+        matrix = self._extract_submatrix(variables, constraints)
+
+        row_blocks, col_blocks = get_independent_submatrices(matrix.tocoo())
+        con_blocks = [[constraints[i] for i in block] for block in row_blocks]
+        var_blocks = [[variables[j] for j in block] for block in col_blocks]
+        # Switch the order of the partitions here to match the method call.
+        # Hopefully this does not get too confusing...
+        return var_blocks, con_blocks
 
     def block_triangularize(self, variables=None, constraints=None):
         """
