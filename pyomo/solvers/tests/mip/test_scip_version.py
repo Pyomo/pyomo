@@ -10,11 +10,12 @@
 #  ___________________________________________________________________________
 
 import subprocess
+import sys
 from os.path import join, exists, splitext
 
 import pyomo.common.unittest as unittest
 
-from pyomo.common.fileutils import this_file_dir, ExecutableData
+from pyomo.common.fileutils import this_file_dir
 from pyomo.common.tempfiles import TempfileManager
 
 import pyomo.environ
@@ -26,7 +27,8 @@ import pyomo.solvers.plugins.solvers.SCIPAMPL
 currdir = this_file_dir()
 deleteFiles = True
 
-
+@unittest.skipIf('pypy_version_info' in dir(sys),
+                 "Skip SCIPAMPL tests on Pypy due to performance")
 class Test(unittest.TestCase):
 
     def setUp(self):
