@@ -673,6 +673,33 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None,
                             "Bounds not added correctly for EllipsoidalSet")
 
+    def test_ellipsoidal_set_bounds(self):
+        """Check `EllipsoidalSet` parameter bounds method correct."""
+        cov = [[2, 1], [1, 2]]
+        scales=[0.5, 2]
+        mean = [1, 1]
+
+        for scale in scales:
+            ell = EllipsoidalSet(center=mean, shape_matrix=cov, scale=scale)
+            bounds = ell.parameter_bounds
+            actual_bounds = list()
+            for idx, val in enumerate(mean):
+                diff = (cov[idx][idx] * scale) ** 0.5
+                actual_bounds.append((val - diff, val + diff))
+            self.assertTrue(
+                np.allclose(
+                    np.array(bounds),
+                    np.array(actual_bounds),
+                ),
+                msg=(
+                    f"EllipsoidalSet bounds {bounds} do not match their actual"
+                    f" values {actual_bounds} (for scale {scale}"
+                    f" and shape matrix {cov})."
+                    " Check the `parameter_bounds`"
+                    " method for the EllipsoidalSet."
+                ),
+            )
+
 class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
     '''
     Axis aligned ellipsoidal uncertainty sets. Required inputs are half-lengths, nominal point, and right-hand side.
