@@ -1564,6 +1564,7 @@ class TestConfigOptions(unittest.TestCase):
         self.assertIn('using RIC algorithm', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
 
+    @unittest.skipIf(not mcpp_available(), "MC++ is not available")
     def test_set_options_in_solver_factory(self):
         m = self.make_model()
 
