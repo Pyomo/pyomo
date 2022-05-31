@@ -734,8 +734,8 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             raise AttributeError("Vector of half-lengths must be real-valued and numeric.")
         if not all(isinstance(elem, (int, float)) for elem in center):
             raise AttributeError("Vector center must be real-valued and numeric.")
-        if any(elem <= 0 for elem in half_lengths):
-            raise AttributeError("Half length values must be > 0.")
+        if any(elem < 0 for elem in half_lengths):
+            raise AttributeError("Half length values must be nonnegative.")
         # === Valid variance dimensions
         if not len(center) == len(half_lengths):
             raise AttributeError("Half lengths and center of ellipsoid must have same dimensions.")
@@ -767,31 +767,58 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
-        Function to generate constraints for the AxisAlignedEllipsoid uncertainty set.
+        Generate constraint(s) for the `AxisAlignedEllipsoidSet`
+        class.
 
         Args:
-           uncertain_params: uncertain parameter objects for writing constraint objects
+            uncertain_params: uncertain parameter objects for writing
+            constraint objects. Indexed parameters are accepted, and
+            are unpacked for constraint generation.
         """
-        if len(uncertain_params) != len(self.center):
-               raise AttributeError("Center of ellipsoid must be same dimensions as vector of uncertain parameters.")
-        # square and invert half lengths
-        inverse_squared_half_lengths = list(1.0/(a**2) for a in self.half_lengths)
-        # Calculate row vector of differences
-        diff_squared = []
-        # === Assume VarList uncertain_param_vars
-        for idx, i in enumerate(uncertain_params):
-           if uncertain_params[idx].is_indexed():
-               for index in uncertain_params[idx]:
-                   diff_squared.append((uncertain_params[idx][index] - self.center[idx])**2)
-           else:
-               diff_squared.append((uncertain_params[idx] - self.center[idx])**2)
+        all_params = list()
 
-        # Calculate inner product of difference vector and variance matrix
-        constraint = sum([x * y for x, y in zip(inverse_squared_half_lengths, diff_squared)])
+        # expand all uncertain parameters to a list.
+        # this accounts for the cases in which `uncertain_params`
+        # consists of indexed model components,
+        # or is itself a single indexed component
+        if isinstance(uncertain_params, list):
+            for param in uncertain_params:
+                if param.is_indexed():
+                    all_params.extend(list(param.values()))
+                else:
+                    all_params.append(param)
+        else:
+            # should be a single indexed component
+            all_params = list(uncertain_params.values())
+
+        if len(all_params) != len(self.center):
+            raise AttributeError(
+                f"Center of ellipsoid is of dimension {len(self.center)},"
+                f" but vector of uncertain parameters is of dimension"
+                f" {len(all_params)}"
+            )
+
+        zip_all = zip(all_params, self.center, self.half_lengths)
+        diffs_squared = list()
+        certain_params = list()
+
+        for idx, (param, ctr, half_len) in enumerate(zip_all):
+            if half_len > 0:
+                diffs_squared.append((param - ctr) / half_len ** 2)
+            else:
+                certain_params.append((param, ctr))
+
+        con_lhs = sum(diff for diff in diffs_squared)
 
         conlist = ConstraintList()
         conlist.construct()
-        conlist.add(constraint <= 1)
+        conlist.add(con_lhs <= 1)
+
+        # equality constraints for parameters corresponding to
+        # half-lengths of zero
+        for param, val in certain_params:
+            conlist.add(param == val)
+
         return conlist
 
 

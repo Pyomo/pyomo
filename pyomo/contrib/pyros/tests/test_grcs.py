@@ -774,6 +774,41 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
 
+    def test_set_with_zero_half_lengths(self):
+        # construct ellipsoid
+        half_lengths = [1, 0, 2, 0]
+        center = [1, 1, 1, 1]
+        ell = AxisAlignedEllipsoidalSet(center, half_lengths)
+
+        # construct model
+        m = ConcreteModel()
+        m.v1 = Var()
+        m.v2 = Var([1, 2])
+        m.v3 = Var()
+
+        # test constraints
+        conlist = ell.set_as_constraint([m.v1, m.v2, m.v3])
+        eq_cons = [con for con in conlist.values() if con.equality]
+
+        self.assertEqual(
+            len(conlist),
+            3,
+            msg=(
+                "Constraint list for this `AxisAlignedEllipsoidalSet` should"
+                f" be of length 3, but is of length {len(conlist)}"
+            ),
+        )
+        self.assertEqual(
+            len(eq_cons),
+            2,
+            msg=(
+                "Number of equality constraints for this"
+                "`AxisAlignedEllipsoidalSet` should be 2,"
+                f" there are {len(eq_cons)} such constraints"
+            ),
+        )
+
+
 class testPolyhedralUncertaintySetClass(unittest.TestCase):
     '''
     Polyhedral uncertainty sets. Required inputs are matrix A, right-hand-side b, and list of uncertain params.
