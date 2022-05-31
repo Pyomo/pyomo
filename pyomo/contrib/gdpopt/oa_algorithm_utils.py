@@ -18,10 +18,9 @@ def _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                                    subprob_util_block, config,
                                                    solver):
     with fix_master_solution_in_subproblem(master_util_block,
-                                           subprob_util_block, config,
+                                           subprob_util_block, solver, config,
                                            config.force_subproblem_nlp):
-        nlp_termination = solve_subproblem(subprob_util_block, config,
-                                           solver.timing)
+        nlp_termination = solve_subproblem(subprob_util_block, solver, config)
         if nlp_termination in {tc.optimal, tc.feasible}:
             primal_improved = solver._update_bounds_after_solve(
                 'subproblem', primal=value(subprob_util_block.obj.expr),

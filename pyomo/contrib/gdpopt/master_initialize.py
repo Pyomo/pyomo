@@ -82,8 +82,7 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
         with preserve_master_problem_feasible_region(master_util_block, config,
                                                      original_bounds):
             mip_termination = solve_MILP_master_problem(master_util_block,
-                                                        config,
-                                                        solver.timing)
+                                                        solver, config)
         if mip_termination is not tc.infeasible:
             _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                                            subprob_util_block,
@@ -123,8 +122,8 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
         # are auto-linked to the binaries, we shouldn't have to change
         # anything. So first we solve the master problem in case we need values
         # for other discrete variables, and to make sure it's feasible.
-        mip_termination = solve_MILP_master_problem(master_util_block, config,
-                                                    solver.timing)
+        mip_termination = solve_MILP_master_problem(master_util_block, solver,
+                                                    config)
 
         # restore the fixed status of the indicator_variables
         for disj in master_util_block.disjunct_list:
@@ -182,8 +181,8 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
     # As with set covering, this is only a change of objective. The formulation
     # may be tightened, but that is valid for the duration.
     with use_master_for_max_binary_initialization(master_util_block):
-        mip_termination = solve_MILP_master_problem(master_util_block, config,
-                                                    solver.timing)
+        mip_termination = solve_MILP_master_problem(master_util_block, solver,
+                                                    config)
         if mip_termination is not tc.infeasible:
             _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
                                                            subprob_util_block,
@@ -269,8 +268,7 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                                           disjunct_needs_cover)
 
             mip_termination = solve_MILP_master_problem(master_util_block,
-                                                        config,
-                                                        solver.timing)
+                                                        solver, config)
 
             if mip_termination is tc.infeasible:
                 config.logger.debug('Set covering problem is infeasible. '

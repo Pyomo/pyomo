@@ -75,14 +75,14 @@ class TestGDPoptUnit(unittest.TestCase):
                                         m.d._autodisjuncts[1]]
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-            timing = Bunch()
-            with time_code(timing, 'main', is_main_timer=True):
+            solver = SolverFactory('gdpopt', algorithm='LOA')
+            dummy = Block()
+            dummy.timing = Bunch()
+            with time_code(dummy.timing, 'main', is_main_timer=True):
                 tc = solve_MILP_master_problem(
                     m.GDPopt_utils,
-                    SolverFactory('gdpopt',
-                                  algorithm='LOA').CONFIG(
-                                      dict(mip_solver=mip_solver)),
-                    timing)
+                    dummy,
+                    solver.CONFIG(dict(mip_solver=mip_solver)))
             self.assertIn("Master problem was unbounded. Re-solving with "
                           "arbitrary bound values", output.getvalue().strip())
         self.assertIs(tc, TerminationCondition.unbounded)
@@ -890,12 +890,9 @@ class TestGDPopt(unittest.TestCase):
              eight_process.use_unit_8ornot.disjuncts[0]]
         ]
 
-        gdpopt = SolverFactory('gdpopt', algorithm='LOA')
-        def assert_correct_disjuncts_active(subprob_util_block,
+        def assert_correct_disjuncts_active(solver, subprob_util_block,
                                             master_util_block):
-            # I can get the iteration based on the number of no-good
-            # cuts in this case...
-            iteration = gdpopt.iteration
+            iteration = solver.initialization_iteration
             master = master_util_block.model()
             subprob = subprob_util_block.model()
             if iteration >= 2:
@@ -920,7 +917,7 @@ class TestGDPopt(unittest.TestCase):
                 if disj not in seen:
                     self.assertFalse(disj.active)
 
-        gdpopt.solve(
+        SolverFactory('gdpopt', algorithm='LOA').solve(
             eight_process, init_algorithm='custom_disjuncts',
             custom_init_disjuncts=initialize, mip_solver=mip_solver,
             nlp_solver=nlp_solver,
@@ -1195,11 +1192,11 @@ class TestGDPoptRIC(unittest.TestCase):
              eight_process.use_unit_8ornot.disjuncts[0]]
         ]
 
-        def assert_correct_disjuncts_active(subprob_util_block,
+        def assert_correct_disjuncts_active(solver, subprob_util_block,
                                             master_util_block):
             # I can get the iteration based on the number of no-good
             # cuts in this case...
-            iteration = len(master_util_block.no_good_cuts)
+            iteration = solver.initialization_iteration
             master = master_util_block.model()
             subprob = subprob_util_block.model()
             if iteration >= 2:

@@ -182,8 +182,10 @@ def fix_discrete_var(var, val, config):
 
 @contextmanager
 def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
-                                      config, make_subproblem_continuous=True):
+                                      solver, config,
+                                      make_subproblem_continuous=True):
     # fix subproblem Blocks according to the master solution
+
     fixed = []
     for disjunct, block in zip(master_util_block.disjunct_list,
                                subproblem_util_block.disjunct_list):
@@ -239,7 +241,7 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
                             ", ".join(fixed_discrete))
 
     # Call the subproblem initialization callback
-    config.subproblem_initialization_method(subproblem_util_block,
+    config.subproblem_initialization_method(solver, subproblem_util_block,
                                             master_util_block)
 
     yield

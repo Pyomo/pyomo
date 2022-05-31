@@ -14,7 +14,7 @@ which case you can write your own, and specify it in the
 'subproblem_initialization_method' argument."""
 
 # This is the original GDPopt behavior:
-def restore_vars_to_original_values(nlp_util_block, mip_util_block):
+def restore_vars_to_original_values(solver, nlp_util_block, mip_util_block):
     """Perform initialization of the subproblem.
 
     This just restores the continuous variables to the original

@@ -68,8 +68,8 @@ def _add_OA_configs(CONFIG):
         description="callback hook before calling the master problem solver",
         doc="""
         Callback called right before the MILP master problem is solved.
-        Takes two arguments: The master problem and the GDPopt utility block on
-        the master problem.
+        Takes three arguments: The solver object, the master problem, and the
+        GDPopt utility block on the master problem.
 
         Note that unless you are *very* confident in what you are doing, the
         problem should not be modified in this callback: it should be used
@@ -81,8 +81,8 @@ def _add_OA_configs(CONFIG):
         description="callback hook after a solution of the master problem",
         doc="""
         Callback called right after the MILP master problem is solved.
-        Takes two arguments: The master problem and the GDPopt utility block on
-        the master problem.
+        Takes three arguments: The solver object, the master problem, and the
+        GDPopt utility block on the master problem.
 
         Note that unless you are *very* confident in what you are doing, the
         problem should not be modified in this callback: it should be used
@@ -100,9 +100,9 @@ def _add_OA_configs(CONFIG):
         is fixed in the subproblem and before the subproblem is solved (or
         pre-solved).
 
-        Accepts two arguments: the subproblem GDPopt utility
-        block and the master problem GDPopt utility block. The master problem
-        contains the most recent master problem solution.
+        Accepts three arguments: the solver object, the subproblem GDPopt
+        utility block and the master problem GDPopt utility block. The master
+        problem contains the most recent master problem solution.
 
         The return of this method will be unused: The method should directly
         set the value of the variables on the subproblem
@@ -113,8 +113,8 @@ def _add_OA_configs(CONFIG):
         description="callback hook before calling the subproblem solver",
         doc="""
         Callback called right before the (MI)NLP subproblem is solved.
-        Takes two arguments: The subproblem and the GDPopt utility block on
-        the subproblem.
+        Takes three arguments: The solver object, the subproblem and the
+        GDPopt utility block on the subproblem.
 
         Note that unless you are *very* confident in what you are doing, the
         subproblem should not be modified in this callback: it should be used
@@ -131,8 +131,8 @@ def _add_OA_configs(CONFIG):
         "nonlinear subproblem""",
         doc="""
         Callback called right after the (MI)NLP subproblem is solved.
-        Takes two arguments: The subproblem and the GDPopt utility block on
-        the subproblem.
+        Takes three arguments: The solver object, the subproblem, and the
+        GDPopt utility block on the subproblem.
 
         Note that unless you are *very* confident in what you are doing, the
         subproblem should not be modified in this callback: it should be used
@@ -146,8 +146,8 @@ def _add_OA_configs(CONFIG):
         the nonlinear subproblem""",
         doc="""
         Callback called right after the (MI)NLP subproblem is solved,
-        if it was feasible. Takes two arguments: The subproblem and the GDPopt
-        utility block on the subproblem.
+        if it was feasible. Takes three arguments: The solver object, the
+        subproblem and the GDPopt utility block on the subproblem.
 
         Note that unless you are *very* confident in what you are doing, the
         subproblem should not be modified in this callback: it should be used

@@ -60,8 +60,7 @@ class _GDP_RIC_Solver(_GDPoptAlgorithm):
             # solve linear master problem
             with time_code(self.timing, 'mip'):
                 mip_feasible = solve_MILP_master_problem(master_util_block,
-                                                         config,
-                                                         self.timing)
+                                                         self, config)
                 self._update_bounds_after_master_problem_solve(
                     mip_feasible, master_obj, logger)
 

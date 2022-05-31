@@ -20,11 +20,12 @@ from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
-def solve_MILP_master_problem(util_block, config, timing):
+def solve_MILP_master_problem(util_block, solver, config):
     """Solves the linear GDP model and attempts to resolve solution issues.
     Returns one of TerminationCondition.optimal, TerminationCondition.feasible,
     TerminationCondition.infeasible, or TerminationCondition.unbounded.
     """
+    timing = solver.timing
     m = util_block.model()
 
     if config.mip_presolve:
@@ -55,7 +56,7 @@ def solve_MILP_master_problem(util_block, config, timing):
             "MIP solver %s is not available." % config.mip_solver)
 
     # Callback immediately before solving MIP master problem
-    config.call_before_master_solve(m, util_block)
+    config.call_before_master_solve(solver, m, util_block)
 
     try:
         with SuppressInfeasibleWarning():
@@ -81,7 +82,7 @@ def solve_MILP_master_problem(util_block, config, timing):
         else:
             raise
 
-    config.call_after_master_solve(m, util_block)
+    config.call_after_master_solve(solver, m, util_block)
 
     terminate_cond = results.solver.termination_condition
     if terminate_cond is tc.infeasibleOrUnbounded:

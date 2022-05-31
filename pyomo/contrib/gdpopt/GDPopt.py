@@ -180,15 +180,6 @@ class GDPoptSolver():
             return self._CONFIG
         return impl.CONFIG
 
-    @property
-    def iteration(self):
-        impl = self._implementation
-        if impl is not None:
-            return impl.iteration + impl.initialization_iteration
-        else:
-            # Or give an error? I'm not sure.
-            return None
-
     def __init__(self, **kwds):
         self._CONFIG = self._CONFIG(kwds.pop('options', {}),
                                     preserve_implicit=True)

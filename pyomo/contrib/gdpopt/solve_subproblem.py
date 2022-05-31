@@ -277,9 +277,10 @@ def preprocess_subproblem(util_block, config):
     for v in unfixed_vars:
         v.unfix()
 
-def call_appropriate_subproblem_solver(subprob_util_block, config, timing):
+def call_appropriate_subproblem_solver(subprob_util_block, solver, config):
+    timing = solver.timing
     subprob = subprob_util_block.model()
-    config.call_before_subproblem_solve(subprob, subprob_util_block)
+    config.call_before_subproblem_solve(solver, subprob, subprob_util_block)
 
     # Is the subproblem linear?
     if not any(constr.body.polynomial_degree() not in (1, 0) for constr in
@@ -305,23 +306,24 @@ def call_appropriate_subproblem_solver(subprob_util_block, config, timing):
                                               timing)
 
     # Call the NLP post-solve callback
-    config.call_after_subproblem_solve(subprob, subprob_util_block)
+    config.call_after_subproblem_solve(solver, subprob, subprob_util_block)
 
     # if feasible, call the NLP post-feasible callback
     if subprob_termination in {tc.optimal, tc.feasible}:
-        config.call_after_subproblem_feasible(subprob, subprob_util_block)
+        config.call_after_subproblem_feasible(solver, subprob,
+                                              subprob_util_block)
 
     return subprob_termination
 
-def solve_subproblem(subprob_util_block, config, timing):
+def solve_subproblem(subprob_util_block, solver, config):
     """Set up and solve the local MINLP or NLP subproblem."""
     if config.subproblem_presolve:
         with preprocess_subproblem(subprob_util_block, config) as call_solver:
             if call_solver:
                 return call_appropriate_subproblem_solver(subprob_util_block,
-                                                          config, timing)
+                                                          solver, config)
             else:
                 return tc.infeasible
 
-    return call_appropriate_subproblem_solver(subprob_util_block, config,
-                                              timing)
+    return call_appropriate_subproblem_solver(subprob_util_block, solver,
+                                              config)

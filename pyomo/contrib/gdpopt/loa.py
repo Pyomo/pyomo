@@ -79,8 +79,7 @@ class _GDP_LOA_Solver(_GDPoptAlgorithm):
                 oa_obj = self._update_augmented_Lagrangian_objective(
                     master_util_block, original_obj, config.OA_penalty_factor)
                 mip_feasible = solve_MILP_master_problem(master_util_block,
-                                                         config,
-                                                         self.timing)
+                                                         self, config)
                 self._update_bounds_after_master_problem_solve(
                     mip_feasible, oa_obj, logger)
 
