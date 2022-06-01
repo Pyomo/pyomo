@@ -220,6 +220,7 @@ Step 0: Import Pyomo and the Pyomo.DOE module
     >>> import pyomo.environ as pyo
     >>> from pyomo.dae import *
     >>> import pyomo.contrib.doe.fim_doe as doe
+    >>> import numpy as np
 
 Step 1: Define the Pyomo process model
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -229,79 +230,67 @@ The process model for the reaction kinetics problem is shown below.
 .. doctest::
 
     >>> def create_model():
-    >>>     # === Create model ==
-    >>>     m = pyo.ConcreteModel()
-    >>>     m.R = 8.31446261815324  # J/K/mol
-
-.. doctest::
-
-    >>>     # === Define set ===
-    >>>     m.t0 = pyo.Set(initialize=[0])
-    >>>     m.t = pyo.ContinuousSet(bounds=(0, 1))
-    >>>     m.t_con = pyo.Set(iniitalize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
-    >>>     m.scena = pyo.Set(initialize=scena['scena-name'])
-    >>>     m.y_set = pyo.Set(initialize=['CA', 'CB', 'CC'])
-
-.. doctest::
-
-    >>>     # === Define variables ===
-    >>>     m.CA0 = pyo.Var(m.t0, initialize = CA_init, bounds=(1.0,5.0), within=NonNegativeReals) # mol/L
-    >>>     m.T = pyo.Var(m.t, initialize =T_initial, bounds=(300, 700), within=NonNegativeReals)
-    >>>     m.C = pyo.Var(m.scena, m.y_set, m.t, initialize=C_init, within=NonNegativeReals)
-    >>>     m.dCdt = pyo.DerivativeVar(m.C, wrt=m.t)
-    >>>     m.kp1 = pyo.Var(m.scena, m.t, initialize=kp1_init)
-    >>>     m.kp2 = pyo.Var(m.scena, m.t, initialize=kp2_init)
-
-.. doctest::
-
-    >>>     # === Define Param ===
-    >>>     m.A1 = pyo.Param(m.scena, initialize=scena['A1'],mutable=True)
-    >>>     m.A2 = pyo.Param(m.scena, initialize=scena['A2'],mutable=True)
-    >>>     m.E1 = pyo.Param(m.scena, initialize=scena['E1'],mutable=True)
-    >>>     m.E2 = pyo.Param(m.scena, initialize=scena['E2'],mutable=True)
-
-.. doctest::
-
-    >>>     # === Constraints ===
-    >>>     def T_control(m,t):
-    >>>         if t in m.t_con:
-    >>>             return Constraint.Skip
-    >>>         else:
-    >>>             j = -1
-    >>>             for t_con in m.t_con:
-    >>>                 if t>t_con:
-    >>>                     j+=1
-    >>>             neighbour_t = t_control[j]
-    >>>         return m.T[t] == m.T[neighbour_t]
-    >>>     def cal_kp1(m,z,t):
-    >>>         return m.kp1[z,t] == m.A1[z]*exp(-m.E1[z]*1000/(m.R*m.T[t]))
-    >>>     def cal_kp2(m,z,t):
-    >>>         return m.kp2[z,t] == m.A2[z]*exp(-m.E2[z]*1000/(m.R*m.T[t]))
-    >>>     def dCdt_control(m,z,y,t):
-    >>>         if y=='CA':
-    >>>             return m.dCdt[z,y,t] == -m.kp1[z,t]*m.C[z,'CA',t]
-    >>>         elif y=='CB':
-    >>>             return m.dCdt[z,y,t] == m.kp1[z,t]*m.C[z,'CA',t] - m.kp2[z,t]*m.C[z,'CB',t]
-    >>>         elif y=='CC':
-    >>>             return Constraint.Skip
-    >>>     def alge(m,z,t):
-    >>>         return m.C[z,'CA',t] + m.C[z,'CB',t] + m.C[z,'CC', t] == m.CA0[0]
-    >>>     m.T_rule = pyo.Constraint(m.t, rule=T_control)
-    >>>     m.k1_pert_rule = pyo.Constraint(m.scena, m.t, rule=cal_kp1)
-    >>>     m.k2_pert_rule = pyo.Constraint(m.scena, m.t, rule=cal_kp2)
-    >>>     m.dCdt_rule = pyo.Constraint(m.scena,m.y_set, m.t, rule=dCdt_control)
-    >>>     m.alge_rule = pyo.Constraint(m.scena, m.t, rule=alge)
-    >>>     for z in m.scena:
-    >>>         m.C[z,'CB',0.0].fix(0.0)
-    >>>         m.C[z,'CC',0.0].fix(0.0)
-    >>>     return m
+    ...     # === Create model ==
+    ...     m = pyo.ConcreteModel()
+    ...     m.R = 8.31446261815324  # J/K/mol
+    ...     # === Define set ===
+    ...     m.t0 = pyo.Set(initialize=[0])
+    ...     m.t = pyo.ContinuousSet(bounds=(0, 1))
+    ...     m.t_con = pyo.Set(iniitalize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
+    ...     m.scena = pyo.Set(initialize=scena['scena-name'])
+    ...     m.y_set = pyo.Set(initialize=['CA', 'CB', 'CC'])
+    ...     # === Define variables ===
+    ...     m.CA0 = pyo.Var(m.t0, initialize = CA_init, bounds=(1.0,5.0), within=NonNegativeReals) # mol/L
+    ...     m.T = pyo.Var(m.t, initialize =T_initial, bounds=(300, 700), within=NonNegativeReals)
+    ...     m.C = pyo.Var(m.scena, m.y_set, m.t, initialize=C_init, within=NonNegativeReals)
+    ...     m.dCdt = pyo.DerivativeVar(m.C, wrt=m.t)
+    ...     m.kp1 = pyo.Var(m.scena, m.t, initialize=kp1_init)
+    ...     m.kp2 = pyo.Var(m.scena, m.t, initialize=kp2_init)
+    ...     # === Define Param ===
+    ...     m.A1 = pyo.Param(m.scena, initialize=scena['A1'],mutable=True)
+    ...     m.A2 = pyo.Param(m.scena, initialize=scena['A2'],mutable=True)
+    ...     m.E1 = pyo.Param(m.scena, initialize=scena['E1'],mutable=True)
+    ...     m.E2 = pyo.Param(m.scena, initialize=scena['E2'],mutable=True)
+    ...     # === Constraints ===
+    ...     def T_control(m,t):
+    ...         if t in m.t_con:
+    ...             return Constraint.Skip
+    ...         else:
+    ...             j = -1
+    ...             for t_con in m.t_con:
+    ...                 if t>t_con:
+    ...                     j+=1
+    ...             neighbour_t = t_control[j]
+    ...         return m.T[t] == m.T[neighbour_t]
+    ...     def cal_kp1(m,z,t):
+    ...         return m.kp1[z,t] == m.A1[z]*exp(-m.E1[z]*1000/(m.R*m.T[t]))
+    ...     def cal_kp2(m,z,t):
+    ...         return m.kp2[z,t] == m.A2[z]*exp(-m.E2[z]*1000/(m.R*m.T[t]))
+    ...     def dCdt_control(m,z,y,t):
+    ...         if y=='CA':
+    ...             return m.dCdt[z,y,t] == -m.kp1[z,t]*m.C[z,'CA',t]
+    ...         elif y=='CB':
+    ...             return m.dCdt[z,y,t] == m.kp1[z,t]*m.C[z,'CA',t] - m.kp2[z,t]*m.C[z,'CB',t]
+    ...         elif y=='CC':
+    ...             return Constraint.Skip
+    ...     def alge(m,z,t):
+    ...         return m.C[z,'CA',t] + m.C[z,'CB',t] + m.C[z,'CC', t] == m.CA0[0]
+    ...     m.T_rule = pyo.Constraint(m.t, rule=T_control)
+    ...     m.k1_pert_rule = pyo.Constraint(m.scena, m.t, rule=cal_kp1)
+    ...     m.k2_pert_rule = pyo.Constraint(m.scena, m.t, rule=cal_kp2)
+    ...     m.dCdt_rule = pyo.Constraint(m.scena,m.y_set, m.t, rule=dCdt_control)
+    ...     m.alge_rule = pyo.Constraint(m.scena, m.t, rule=alge)
+    ...     for z in m.scena:
+    ...         m.C[z,'CB',0.0].fix(0.0)
+    ...         m.C[z,'CC',0.0].fix(0.0)
+    ...     return m
 .. doctest::
 
     >>> # === Discretization ===
     >>> def disc(m, NFE=32):
-    >>>     discretizer = TransformationFactory('dae.collocation')
-    >>>     discretizer.apply_to(m, nfe=NFE, ncp=3, wrt=m.t)
-    >>>     return m
+    ...     discretizer = TransformationFactory('dae.collocation')
+    ...     discretizer.apply_to(m, nfe=NFE, ncp=3, wrt=m.t)
+    ...     return m
 
 .. note::
     The first argument of the ``create_model`` function should be ``scena``.
