@@ -55,7 +55,7 @@ from pyomo.common.dependencies import (
     numpy as np, numpy_available,
     pandas as pd, pandas_available,
     scipy, scipy_available,
-    matplotlib.pyplot as plt, matplotlib_available,
+    matplotlib as plt, matplotlib_available,
 )
 
 from pyomo.environ import *
