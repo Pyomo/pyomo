@@ -51,8 +51,14 @@
 
 from pyomo.environ import *
 from pyomo.dae import *
-import numpy as np
-import pandas as pd 
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available,
+    pandas as pd, pandas_available,
+    scipy, scipy_available,
+    matplotlib, matplotlib_available,
+)
+#import numpy as np
+#import pandas as pd
 from itertools import permutations, product, combinations
 
 import pyomo.common.unittest as unittest

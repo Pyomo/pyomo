@@ -49,11 +49,18 @@
 #
 #################################################################################################################
 
-import numpy as np
-import matplotlib.pyplot as plt
+#import numpy as np
+#import matplotlib.pyplot as plt
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available,
+    pandas as pd, pandas_available,
+    scipy, scipy_available,
+    matplotlib.pyplot as plt, matplotlib_available,
+)
+
 from pyomo.environ import *
 from pyomo.dae import *
-import pandas as pd
+#import pandas as pd
 import time
 import pickle
 from itertools import permutations, product
