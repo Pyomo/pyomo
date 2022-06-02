@@ -229,7 +229,7 @@ The process model for the reaction kinetics problem is shown below.
 
 .. doctest::
 
-    >>> def create_model():
+    >>> def create_model(scena, args=None):
     ...     # === Create model ==
     ...     m = pyo.ConcreteModel()
     ...     m.R = 8.31446261815324  # J/K/mol
@@ -335,7 +335,7 @@ This method computes an MBDoE optimization problem with no degree of freedom.
     >>> doe_object = doe.DesignOfExperiments(parameter_dict, dv_pass, measure_class, create_model,
     ...                            prior_FIM=prior_none, discretize_model=disc)
     >>> # === Use ``compute_FIM`` to compute one MBDoE square problem ===
-    >>> result = doe.doe_object.compute_FIM(exp1,mode=sensi_opt, FIM_store_name = 'dynamic.csv',
+    >>> result = doe_object.compute_FIM(exp1,mode=sensi_opt, FIM_store_name = 'dynamic.csv',
     ...                            store_output = 'store_output')
 
 The MBDoE results are stored in this result object. This object can be analyzed as:
@@ -343,12 +343,7 @@ The MBDoE results are stored in this result object. This object can be analyzed 
 .. doctest::
 
     >>> # === Analyze result ===
-    >>> doe.result.calculate_FIM(doe_object.design_values)
-
-FIM information is then available.
-
-.. doctest::
-
+    >>> result.calculate_FIM(doe_object.design_values)
     >>> result.FIM  # FIM matrix
     >>> result.design_variable_name # design variable values at each time point
     >>> result.trace # a scalar number of Trace
@@ -373,7 +368,7 @@ The function ``run_grid_search`` enumerates over the design space, each MBDoE pr
 .. doctest::
 
     >>> # === Specify inputs===
-    >>> design_ranges = [[1,2,3,4,5], [300,400,500,600,700]]] # [CA0 [M], T [K]]
+    >>> design_ranges = [[1,2,3,4,5], [300,400,500,600,700]] # [CA0 [M], T [K]]
     >>> dv_apply_name = ['CA0','T']
     >>> dv_apply_time = [[0],t_control]
     >>> exp1 = {'CA0': {0: 5}, 'T': {0: 570, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}} # CA0 in [M], T in [K]
@@ -382,16 +377,18 @@ The function ``run_grid_search`` enumerates over the design space, each MBDoE pr
     >>> prior_pass=np.asarray(prior_all)
 
     >>> # === Run enumeration ===
-    >>> all_fim = doe.doe_object.run_grid_search(exp1, design_ranges, dv_apply_name, dv_apply_time, mode=sensi_opt)
+    >>> doe_object = doe.DesignOfExperiments(parameter_dict, dv_pass, measure_class, create_model,
+    ...                            prior_FIM=prior_none, discretize_model=disc)
+    >>> all_fim = doe_object.run_grid_search(exp1, design_ranges, dv_apply_name, dv_apply_time, mode=sensi_opt)
 
     >>> # === Analyze results ===
-    >>> test = doe.all_fim.extract_criteria()
+    >>> test = all_fim.extract_criteria()
     >>> # === Draw 1D sensitivity curve===
     >>> fixed = {"'CA0'": 5.0} # fix a dimension
-    >>> doe.all_fim.figure_drawing(fixed, ['T'], 'Reactor case','T [K]','$C_{A0}$ [M]' )
+    >>> all_fim.figure_drawing(fixed, ['T'], 'Reactor case','T [K]','$C_{A0}$ [M]' )
     >>> # === Draw 2D heatmap ===
     >>> fixed = {} # do not need to fix
-    >>> doe.all_fim.figure_drawing(fixed, ['CA0','T'], 'Reactor case','$C_{A0}$ [M]', 'T [K]' )
+    >>> all_fim.figure_drawing(fixed, ['CA0','T'], 'Reactor case','$C_{A0}$ [M]', 'T [K]' )
 
 
 Successful run of the above code shows the following figure:
@@ -413,7 +410,7 @@ This function solves twice: It solves the square version of the MBDoE problem fi
     >>> # === Specify a starting point ===
     >>> exp1 = {'CA0': {0: 5}, 'T': {0: 300, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}}
     >>> # === Define DOE object ===
-    >>> doe_object = DesignOfExperiments(parameter_dict, dv_pass, measure_class, createmod,
+    >>> doe_object = doe.DesignOfExperiments(parameter_dict, dv_pass, measure_class, createmod,
     ...                            prior_FIM=prior_pass, discretize_model=disc)
     >>> # === Optimize ===
     >>> square_result, optimize_result= doe_object.optimize_doe(exp1,
