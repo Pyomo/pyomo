@@ -52,22 +52,22 @@ def _update_subsets(subset, base, test):
                 else:
                     base[i] = test[j]
 
+def _preprocess_data(data):
+    # Normalize negation (convert " * -1" to the negation operator)
+    data = _norm_negation.sub(data, template.negation)
+    # Normalize consecutive whitespace to a single space
+    data = _norm_whitespace.sub(' ', data)
+    # preface all comments with a single tab character
+    data = _norm_comment.sub('\t#', data)
+    # return the sequence of lines
+    return data.splitlines()
+
 def nl_diff(base, test):
     if test == base:
         return [], []
-    test = _norm_negation.sub(test, template.negation)
-    base = _norm_negation.sub(base, template.negation)
-    test = test.splitlines()
-    base = base.splitlines()
 
-    for i in range(min(len(test), len(base))):
-        if test[i] == base[i]:
-            continue
-        # normalize comment whitespace
-        base[i] = _norm_comment.sub(
-            '\t#', _norm_whitespace.sub(' ', base[i]))
-        test[i] = _norm_comment.sub(
-            '\t#', _norm_whitespace.sub(' ', test[i]))
+    test = _preprocess_data(test)
+    base = _preprocess_data(base)
     if test == base:
         return [], []
 
