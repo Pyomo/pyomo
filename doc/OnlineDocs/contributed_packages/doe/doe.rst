@@ -218,7 +218,7 @@ Step 0: Import Pyomo and the Pyomo.DOE module
 
     >>> # === Required import ===
     >>> import pyomo.environ as pyo
-    >>> from pyomo.dae import *
+    >>> from pyomo.dae import ContinuousSet, DerivativeVar
     >>> import pyomo.contrib.doe.fim_doe as doe
     >>> import numpy as np
 
@@ -229,23 +229,23 @@ The process model for the reaction kinetics problem is shown below.
 
 .. doctest::
 
-    >>> def create_model(scena, args=None):
+    >>> def create_model(scena, CA_init=5, T_initial=300,args=None):
     ...     # === Create model ==
     ...     m = pyo.ConcreteModel()
     ...     m.R = 8.31446261815324  # J/K/mol
     ...     # === Define set ===
     ...     m.t0 = pyo.Set(initialize=[0])
-    ...     m.t = pyo.ContinuousSet(bounds=(0, 1))
-    ...     m.t_con = pyo.Set(iniitalize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
+    ...     m.t = ContinuousSet(bounds=(0, 1))
+    ...     m.t_con = pyo.Set(initialize=[0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1])
     ...     m.scena = pyo.Set(initialize=scena['scena-name'])
     ...     m.y_set = pyo.Set(initialize=['CA', 'CB', 'CC'])
     ...     # === Define variables ===
-    ...     m.CA0 = pyo.Var(m.t0, initialize = CA_init, bounds=(1.0,5.0), within=NonNegativeReals) # mol/L
-    ...     m.T = pyo.Var(m.t, initialize =T_initial, bounds=(300, 700), within=NonNegativeReals)
-    ...     m.C = pyo.Var(m.scena, m.y_set, m.t, initialize=C_init, within=NonNegativeReals)
-    ...     m.dCdt = pyo.DerivativeVar(m.C, wrt=m.t)
-    ...     m.kp1 = pyo.Var(m.scena, m.t, initialize=kp1_init)
-    ...     m.kp2 = pyo.Var(m.scena, m.t, initialize=kp2_init)
+    ...     m.CA0 = pyo.Var(m.t0, initialize = CA_init, bounds=(1.0,5.0), within=pyo.NonNegativeReals) # mol/L
+    ...     m.T = pyo.Var(m.t, initialize =T_initial, bounds=(300, 700), within=pyo.NonNegativeReals)
+    ...     m.C = pyo.Var(m.scena, m.y_set, m.t, initialize=3, within=pyo.NonNegativeReals)
+    ...     m.dCdt = DerivativeVar(m.C, wrt=m.t)
+    ...     m.kp1 = pyo.Var(m.scena, m.t, initialize=3)
+    ...     m.kp2 = pyo.Var(m.scena, m.t, initialize=1)
     ...     # === Define Param ===
     ...     m.A1 = pyo.Param(m.scena, initialize=scena['A1'],mutable=True)
     ...     m.A2 = pyo.Param(m.scena, initialize=scena['A2'],mutable=True)
@@ -254,7 +254,7 @@ The process model for the reaction kinetics problem is shown below.
     ...     # === Constraints ===
     ...     def T_control(m,t):
     ...         if t in m.t_con:
-    ...             return Constraint.Skip
+    ...             return pyo.Constraint.Skip
     ...         else:
     ...             j = -1
     ...             for t_con in m.t_con:
@@ -337,12 +337,6 @@ This method computes an MBDoE optimization problem with no degree of freedom.
     >>> # === Use ``compute_FIM`` to compute one MBDoE square problem ===
     >>> result = doe_object.compute_FIM(exp1,mode=sensi_opt, FIM_store_name = 'dynamic.csv',
     ...                            store_output = 'store_output')
-
-The MBDoE results are stored in this result object. This object can be analyzed as:
-
-.. doctest::
-
-    >>> # === Analyze result ===
     >>> result.calculate_FIM(doe_object.design_values)
     >>> result.FIM  # FIM matrix
     >>> result.design_variable_name # design variable values at each time point
