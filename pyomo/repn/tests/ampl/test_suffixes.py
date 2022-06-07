@@ -24,7 +24,7 @@ from pyomo.environ import (
     ConcreteModel, Suffix, Var, Objective, Constraint, SOSConstraint,
     sum_product,
 )
-from .nl_diff import load_and_compare_nl_baseline, compare_nl_baseline
+from .nl_diff import load_and_compare_nl_baseline
 
 currdir = this_file_dir()
 
