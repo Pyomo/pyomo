@@ -263,16 +263,16 @@ The process model for the reaction kinetics problem is shown below.
     ...             neighbour_t = t_control[j]
     ...         return m.T[t] == m.T[neighbour_t]
     ...     def cal_kp1(m,z,t):
-    ...         return m.kp1[z,t] == m.A1[z]*exp(-m.E1[z]*1000/(m.R*m.T[t]))
+    ...         return m.kp1[z,t] == m.A1[z]*pyo.exp(-m.E1[z]*1000/(m.R*m.T[t]))
     ...     def cal_kp2(m,z,t):
-    ...         return m.kp2[z,t] == m.A2[z]*exp(-m.E2[z]*1000/(m.R*m.T[t]))
+    ...         return m.kp2[z,t] == m.A2[z]*pyo.exp(-m.E2[z]*1000/(m.R*m.T[t]))
     ...     def dCdt_control(m,z,y,t):
     ...         if y=='CA':
     ...             return m.dCdt[z,y,t] == -m.kp1[z,t]*m.C[z,'CA',t]
     ...         elif y=='CB':
     ...             return m.dCdt[z,y,t] == m.kp1[z,t]*m.C[z,'CA',t] - m.kp2[z,t]*m.C[z,'CB',t]
     ...         elif y=='CC':
-    ...             return Constraint.Skip
+    ...             return pyo.Constraint.Skip
     ...     def alge(m,z,t):
     ...         return m.C[z,'CA',t] + m.C[z,'CB',t] + m.C[z,'CC', t] == m.CA0[0]
     ...     m.T_rule = pyo.Constraint(m.t, rule=T_control)
@@ -288,7 +288,7 @@ The process model for the reaction kinetics problem is shown below.
 
     >>> # === Discretization ===
     >>> def disc(m, NFE=32):
-    ...     discretizer = TransformationFactory('dae.collocation')
+    ...     discretizer = pyo.TransformationFactory('dae.collocation')
     ...     discretizer.apply_to(m, nfe=NFE, ncp=3, wrt=m.t)
     ...     return m
 
@@ -339,13 +339,10 @@ This method computes an MBDoE optimization problem with no degree of freedom.
     ...                            store_output = 'store_output')
     >>> result.calculate_FIM(doe_object.design_values)
     >>> result.FIM  # FIM matrix
-    >>> result.design_variable_name # design variable values at each time point
     >>> result.trace # a scalar number of Trace
     >>> result.det # a scalar number of determinant
     >>> result.cond # a scalar number of condition number
     >>> result.min_eig  # a scalar number of minimal eigen value
-    >>> result.eig # a list of all eigen values
-    >>> result.eigvals # a list of all eigen vectors
 
 
 Step 4: Exploratory analysis (Enumeration)
