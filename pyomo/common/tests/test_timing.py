@@ -47,7 +47,7 @@ class TestTiming(unittest.TestCase):
         a = ConstructionTimer(_VarData(v))
         self.assertRegex(
             str(a),
-            r"ConstructionTimer object for Var \(unknown\); "
+            r"ConstructionTimer object for Var ScalarVar\[NOTSET\]; "
             r"[0-9\.]+ elapsed seconds")
 
     def test_raw_transformation_timer(self):
