@@ -19,7 +19,7 @@ import pyomo.repn.plugins.nl_writer as nl_writer
 
 template = nl_writer.text_nl_debug_template
 
-_norm_whitespace = re.compile(r'\s+')
+_norm_whitespace = re.compile(r'[^\S\n]+')
 _norm_comment = re.compile(r'\s*#\s*')
 _strip_comment = re.compile(r'\s*#.*')
 _norm_negation = re.compile(r'(?m)^o2(\s*#\s*\*)?$n-1(.0)?$')
