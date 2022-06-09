@@ -644,7 +644,7 @@ class DesignOfExperiments:
                 for no_s in (scena_gen.scena_keys):
 
                     scenario_iter = scena_gen.next_sequential_scenario(no_s)
-                    print('This scenario:', scenario_iter)
+                    #print('This scenario:', scenario_iter)
                     # create the model
                     # TODO:(long term) add options to create model once and then update. only try this after the
                     # package is completed and unitest is finished
@@ -685,7 +685,7 @@ class DesignOfExperiments:
 
                     output_record[no_s] = output_iter
 
-                    print('Output this time: ', output_record[no_s])
+                    #print('Output this time: ', output_record[no_s])
 
                 output_record['design'] = design_values
                 if store_output is not None:
