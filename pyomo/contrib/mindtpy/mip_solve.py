@@ -97,7 +97,6 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
         # Linear solvers will sometimes tell me that it's infeasible or
         # unbounded during presolve, but fails to distinguish. We need to
         # resolve with a solver option flag on.
-        # TODO: appsi_cplex will fail here. Need to be fixed. test_mindtpy_feas_pump.py  test_mindtpy_global.py
         main_mip_results, _ = distinguish_mip_infeasible_or_unbounded(
             solve_data.mip, config)
         return solve_data.mip, main_mip_results
