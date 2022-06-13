@@ -20,33 +20,44 @@ import pyomo.repn.plugins.nl_writer as nl_writer
 template = nl_writer.text_nl_debug_template
 
 _norm_whitespace = re.compile(r'[^\S\n]+')
+_norm_integers = re.compile(r'(?m)\.0+$')
 _norm_comment = re.compile(r'\s*#\s*')
 _strip_comment = re.compile(r'\s*#.*')
-_norm_negation = re.compile(r'(?m)^o2(\s*#\s*\*)?$n-1(.0)?$')
+_norm_negation = re.compile(r'(?m)^o2(\s*#\s*\*)?\nn-1(.0)?\s*\n')
 
-def _to_float_list(line):
-    ans = []
-    for field in line.split():
+def _compare_floats(base, test, abstol=1e-14, reltol=1e-14):
+    base = base.split()
+    test = test.split()
+    if len(base) != len(test):
+        return False
+    for i, b in enumerate(base):
+        if b == test[i]:
+            continue
         try:
-            ans.append(float(field))
+            b = float(b)
+            t = float(test[i])
         except:
-            ans.append(field)
-    return ans
+            return False
+        if abs(b - t) < abstol:
+            continue
+        if abs((b - t) / max(abs(b), abs(t))) < reltol:
+            continue
+        return False
+    return True
 
 def _update_subsets(subset, base, test):
     for i, j in zip(*subset):
         # Try checking for numbers
         if base[i][0] == 'n' and test[j][0] == 'n':
-            if float(base[i][1:]) == float(test[j][1:]):
+            if _compare_floats(base[i][1:], test[j][1:]):
                 test[j] = base[i]
-        elif _to_float_list(base[i]) == _to_float_list(test[j]):
+        elif _compare_floats(base[i], test[j]):
             test[j] = base[i]
         else:
             # try stripping comments, but only if it results in a match
             base_nc = _strip_comment.sub('', base[i])
             test_nc = _strip_comment.sub('', test[j])
-            if base_nc == test_nc or \
-               _to_float_list(base_nc) == _to_float_list(test_nc):
+            if _compare_floats(base_nc, test_nc):
                 if len(base_nc) > len(test_nc):
                     test[j] = base[i]
                 else:
@@ -54,15 +65,17 @@ def _update_subsets(subset, base, test):
 
 def _preprocess_data(data):
     # Normalize negation (convert " * -1" to the negation operator)
-    data = _norm_negation.sub(data, template.negation)
+    data = _norm_negation.sub(template.negation, data)
     # Normalize consecutive whitespace to a single space
     data = _norm_whitespace.sub(' ', data)
     # preface all comments with a single tab character
     data = _norm_comment.sub('\t#', data)
+    # Normalize floating point integers to integers
+    data = _norm_integers.sub('', data)
     # return the sequence of lines
     return data.splitlines()
 
-def nl_diff(base, test):
+def nl_diff(base, test, baseline='baseline', testfile='testfile'):
     if test == base:
         return [], []
 
@@ -98,7 +111,9 @@ def load_nl_baseline(baseline, testfile, version='nl'):
         baseline = _tmp
     with open(baseline, 'r') as FILE:
         base = FILE.read()
-    return test, base
+    return base, test
 
 def load_and_compare_nl_baseline(baseline, testfile, version='nl'):
-    return nl_diff(*load_nl_baseline(baseline, testfile, version))
+    return nl_diff(
+        *load_nl_baseline(baseline, testfile, version), baseline, testfile
+    )
