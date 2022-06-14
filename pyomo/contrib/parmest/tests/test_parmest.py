@@ -66,15 +66,6 @@ class TestRooneyBiegler(unittest.TestCase):
         self.pest = parmest.Estimator(rooney_biegler_model, data, theta_names, SSE,
                 solver_options=solver_options,tee=True)
 
-    def test_theta_est_with_square_initialization(self):
-        obj_init = self.pest.objective_at_theta(initialize_parmest_model=True,theta_values=None)
-        print("obj_init = ", obj_init)
-        objval, thetavals = self.pest.theta_est()
-
-        self.assertAlmostEqual(objval, 4.3317112, places=2)
-        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2)  # 19.1426 from the paper
-        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2)  # 0.5311 from the paper
-
     def test_theta_est(self):
         objval, thetavals = self.pest.theta_est()
 
@@ -617,6 +608,40 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertAlmostEqual(cov_diff, 0, places=6)
 
 
+@unittest.skipIf(not parmest.parmest_available,
+                 "Cannot test parmest: required dependencies are missing")
+@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
+
+    def setUp(self):
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler_with_constraint import rooney_biegler_model_w_constraint
+
+        # Note, the data used in this test has been corrected to use data.loc[5,'hour'] = 7 (instead of 6)
+        data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
+                                  [4,16.0],[5,15.6],[7,19.8]], columns=['hour', 'y'])
+
+        theta_names = ['asymptote', 'rate_constant']
+
+        def SSE(model, data):
+            expr = sum((data.y[i] - model.response_function[data.hour[i]])**2 for i in data.index)
+            return expr
+
+        solver_options = {
+                'tol': 1e-8,
+                }
+
+        self.data = data
+        self.pest = parmest.Estimator(rooney_biegler_model_w_constraint, data, theta_names, SSE,
+                solver_options=solver_options,tee=True)
+
+    def test_theta_est_with_square_initialization(self):
+        obj_init = self.pest.objective_at_theta(initialize_parmest_model=True,theta_values=None)
+        print("obj_init = ", obj_init)
+        objval, thetavals = self.pest.theta_est()
+
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2)  # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2)  # 0.5311 from the paper
 
 if __name__ == '__main__':
     unittest.main()
