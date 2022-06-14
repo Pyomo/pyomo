@@ -654,10 +654,10 @@ class Estimator(object):
                 else:
                     if initialize_parmest_model:
                         print("Scenario {:d} initialization successful with initial parameter values".format(snum))
-            if initialize_parmest_model:
-                for theta in theta_init_vals:
-                    theta.unfix()
-                scen_dict[sname] = instance
+                if initialize_parmest_model:
+                    for theta in theta_init_vals:
+                        theta.unfix()
+                    scen_dict[sname] = instance
             objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
             totobj += objval
