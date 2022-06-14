@@ -439,8 +439,7 @@ class Estimator(object):
                                         scenario_creator_kwargs=scenario_creator_options)
             self.ef_instance = ef
         else:
-            import copy
-            ef = copy.deepcopy(self.ef_instance)
+            ef = self.ef_instance
 
         # Solve the extensive form with ipopt
         if solver == "ef_ipopt":
@@ -602,14 +601,15 @@ class Estimator(object):
         WorstStatus = pyo.TerminationCondition.optimal
         totobj = 0
         senario_numbers = list(range(len(self.callback_data)))
-        scen_dict = {}
+        if initialize_parmest_model:
+            scen_dict = dict()
 
         for snum in senario_numbers:
             sname = "scenario_NODE"+str(snum)
             instance = _experiment_instance_creation_callback(sname, None, dummy_cb)
             if initialize_parmest_model:
                 # list to store fitted parameter names that will be unfixed
-                # after initialization 
+                # after initialization
                 theta_init_vals = []
                 for i, theta in enumerate(self.theta_names):
                     # Use parser in ComponentUID to locate the component
@@ -623,9 +623,9 @@ class Estimator(object):
                         try:
                             if len(thetavals) == 0:
                                 var_validate.fix()
-                                theta_init_vals.append(var_validate)
                             else:
-                                theta_init_vals.append(thetavals[theta])
+                                var_validate.fix(thetavals[theta])
+                            theta_init_vals.append(var_validate)
                         except:
                             logger.warning(theta + ' is not a variable')
 
@@ -654,18 +654,18 @@ class Estimator(object):
                 else:
                     if initialize_parmest_model:
                         print("Scenario {:d} initialization successful with initial parameter values".format(snum))
-                if initialize_parmest_model:
-                    for theta in theta_init_vals:
-                        theta.unfix()
-                    scen_dict[sname] = instance
-
+            if initialize_parmest_model:
+                for theta in theta_init_vals:
+                    theta.unfix()
+                scen_dict[sname] = instance
             objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
             totobj += objval
         retval = totobj / len(senario_numbers) # -1??
         if initialize_parmest_model:
-            for scen in scen_dict.values():
-                scen._mpisppy_probability = 1 / len(scen_dict)
+            if len(scen_dict) > 0:
+                for scen in scen_dict.values():
+                    scen._mpisppy_probability = 1 / len(scen_dict)
             EF_instance = local_ef._create_EF_from_scen_dict(scen_dict,
                                                     EF_name="_Q_at_theta",
                                                     nonant_for_fixed_vars=True)
@@ -976,7 +976,7 @@ class Estimator(object):
 
         # walk over the mesh, return objective function
         all_obj = list()
-        if all_thetas:
+        if len(all_thetas) > 0:
             for Theta in local_thetas:
                 obj, thetvals, worststatus = self._Q_at_theta(Theta, initialize_parmest_model=initialize_parmest_model)
                 if worststatus != pyo.TerminationCondition.infeasible:

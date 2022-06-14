@@ -100,17 +100,17 @@ def create_EF(scenario_names, scenario_creator, scenario_creator_kwargs=None,
         scenario_instance.ref_vars = dict()
         for node in scenario_instance._mpisppy_node_list:
             ndn = node.name
-            nlens = {node.name: len(node.nonant_vardata_list) 
+            nlens = {node.name: len(node.nonant_vardata_list)
                                 for node in scenario_instance._mpisppy_node_list}
             for i in range(nlens[ndn]):
                 v = node.nonant_vardata_list[i]
                 if (ndn, i) not in scenario_instance.ref_vars:
                     scenario_instance.ref_vars[(ndn, i)] = v
-        # patch in EF_Obj        
-        scenario_objs = get_objs(scenario_instance)        
+        # patch in EF_Obj
+        scenario_objs = get_objs(scenario_instance)
         for obj_func in scenario_objs:
             obj_func.deactivate()
-        obj = scenario_objs[0]            
+        obj = scenario_objs[0]
         sense = pyo.minimize if obj.is_minimizing() else pyo.maximize
         scenario_instance.EF_Obj = pyo.Objective(expr=obj.expr, sense=sense)
 
@@ -156,7 +156,7 @@ def _create_EF_from_scen_dict(scen_dict, EF_name=None,
             that node are equal to the reference variables.
 
             This function is called directly when creating bundles for PH.
- 
+
             Does NOT assume that each scenario is equally likely. Raises an
             AttributeError if a scenario object is encountered which does not
             have a ._mpisppy_probability attribute.
@@ -192,7 +192,7 @@ def _create_EF_from_scen_dict(scen_dict, EF_name=None,
         obj_func = scenario_objs[0] # Select the first objective
         try:
             EF_instance.EF_Obj.expr += scenario_instance._mpisppy_probability * obj_func.expr
-            EF_instance._mpisppy_probability   += scenario_instance._mpisppy_probability
+            EF_instance._mpisppy_probability += scenario_instance._mpisppy_probability
         except AttributeError as e:
             raise AttributeError("Scenario " + sname + " has no specified "
                         "probability. Specify a value for the attribute "
@@ -209,7 +209,7 @@ def _create_EF_from_scen_dict(scen_dict, EF_name=None,
 
     ref_suppl_vars = dict()
 
-    EF_instance._nlens = dict() 
+    EF_instance._nlens = dict()
 
     nonant_constr = pyo.Constraint(pyo.Any, name='_C_EF_')
     EF_instance.add_component('_C_EF_', nonant_constr)
@@ -219,9 +219,9 @@ def _create_EF_from_scen_dict(scen_dict, EF_name=None,
     EF_instance.add_component('_C_EF_suppl', nonant_constr_suppl)
 
     for (sname, s) in scen_dict.items():
-        nlens = {node.name: len(node.nonant_vardata_list) 
+        nlens = {node.name: len(node.nonant_vardata_list)
                             for node in s._mpisppy_node_list}
-        
+
         for (node_name, num_nonant_vars) in nlens.items(): # copy nlens to EF
             if (node_name in EF_instance._nlens.keys() and
                 num_nonant_vars != EF_instance._nlens[node_name]):
@@ -265,7 +265,7 @@ def _create_EF_from_scen_dict(scen_dict, EF_name=None,
 
     EF_instance.ref_vars = ref_vars
     EF_instance.ref_suppl_vars = ref_suppl_vars
-                        
+
     return EF_instance
 
 
