@@ -253,6 +253,8 @@ def copy_var_list_values(from_list, to_list, config,
     Rounds to Binary/Integer if necessary
     Sets to zero for NonNegativeReals if necessary
     """
+    if len(from_list) != len(to_list):
+        raise ValueError('The lengths of from_list and to_list do not match.')
     for v_from, v_to in zip(from_list, to_list):
         if skip_stale and v_from.stale:
             continue  # Skip stale variable values.
