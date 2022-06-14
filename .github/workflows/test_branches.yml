@@ -92,7 +92,6 @@ jobs:
           TARGET: win
           PYENV: pip
 
-
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v3

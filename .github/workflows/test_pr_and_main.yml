@@ -227,7 +227,6 @@ jobs:
         channels: conda-forge
         channel-priority: strict
 
-
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
     # Per the setup-miniconda documentation, it is important to always
