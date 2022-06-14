@@ -325,8 +325,8 @@ def _add_tolerance_configs(CONFIG):
         default=1E-3,
         domain=PositiveFloat,
         description='Relative bound tolerance',
-        doc='Relative tolerance for bound feasibility checks.'
-            '|Primal Bound - Dual Bound| / (1e-10 + |Primal Bound|) <= relative tolerance.'
+        doc='Relative tolerance for bound feasibility checks. '
+            ':math:`|Primal Bound - Dual Bound| / (1e-10 + |Primal Bound|) <= relative tolerance`'
     ))
     CONFIG.declare('small_dual_tolerance', ConfigValue(
         default=1E-8,
