@@ -4,9 +4,9 @@ The trust region filter algorithm was initially introduced into Pyomo
 based on the work by Eason/Biegler in their 2016 and 2018 papers in AIChE.
 
 The algorithm has been updated to match work by Yoshio/Biegler in their
-2020 paper in AIChE.
+2021 paper in AIChE.
 
-The algorith, at its core, takes a model and makes incremental steps towards
+The algorithm, at its core, takes a model and makes incremental steps towards
 an optimal solution using a surrogate model.
 
 Full details on the algorithm can be found in:

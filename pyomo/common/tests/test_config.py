@@ -2226,14 +2226,20 @@ Node information:
         self.assertEqual(c.sub.value(), [{'a':4, 'b':None}, {'a':0, 'b':'12'}])
         self.assertEqual(c.listof, [3, 2, 4])
 
-        args = parser.parse_args([
-            '--lst', '42', '--lst', '1',
-            '--sub', 'a=4', '--sub', 'b=12,a 0',
-            '--listof', '3,2 4'
-        ])
+        args = parser.parse_args(['--sub', 'b=12,a 0'])
         with self.assertRaisesRegex(
                 ValueError, r"(?s)invalid value for configuration 'sub':.*"
-                r"Expected ':' or '=' at Line 1 Column 8"):
+                r"Expected ':' or '=' but found '0' at Line 1 Column 8"):
+            leftovers = c.import_argparse(args)
+        args = parser.parse_args(['--sub', 'b='])
+        with self.assertRaisesRegex(
+                ValueError, r"(?s)Expected value following '=' "
+                "but encountered end of string"):
+            leftovers = c.import_argparse(args)
+        args = parser.parse_args(['--sub', 'b'])
+        with self.assertRaisesRegex(
+                ValueError, r"(?s)Expected ':' or '=' "
+                "but encountered end of string"):
             leftovers = c.import_argparse(args)
 
 
