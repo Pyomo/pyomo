@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import os
+import os.path
 import subprocess
 
 from pyomo.common import Executable
@@ -29,6 +30,10 @@ logger = logging.getLogger('pyomo.solvers')
 class SCIPAMPL(SystemCallSolver):
     """A generic optimizer that uses the AMPL Solver Library to interface with applications.
     """
+
+    # Cache default executable, so we do not need to repeatedly query the
+    # versions every time.
+    _known_versions = {}
 
     def __init__(self, **kwds):
         #
@@ -58,22 +63,36 @@ class SCIPAMPL(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
+
+        executable = Executable("scip")
+
+        if executable:
+            executable_path = executable.path()
+            if executable_path not in self._known_versions:
+                self._known_versions[executable_path] = self._get_version(executable_path)
+            _ver = self._known_versions[executable_path]
+            if _ver and _ver >= (8,):
+                return executable_path
+
+        # revert to scipampl for older versions
         executable = Executable("scipampl")
         if not executable:
-            logger.warning("Could not locate the 'scipampl' executable, "
-                           "which is required for solver %s" % self.name)
+            logger.warning("Could not locate the 'scipampl' executable or"
+                           " the 'scip' executable since 8.0.0, which is "
+                           "required for solver %s" % self.name)
             self.enable = False
             return None
         return executable.path()
 
-    def _get_version(self):
+    def _get_version(self, solver_exec=None):
         """
         Returns a tuple describing the solver executable version.
         """
-        solver_exec = self.executable()
         if solver_exec is None:
-            return _extract_version('')
-        results = subprocess.run( [solver_exec], timeout=1,
+            solver_exec = self.executable()
+            if solver_exec is None:
+                return _extract_version('')
+        results = subprocess.run([solver_exec, "--version"], timeout=1,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.STDOUT,
                                  universal_newlines=True)
@@ -120,7 +139,17 @@ class SCIPAMPL(SystemCallSolver):
             else:
                 env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
 
-        cmd = [executable, problem_files[0], '-AMPL']
+        # Since Version 8.0.0 .nl problem file paths should be provided without the .nl
+        # extension
+        if executable not in self._known_versions:
+            self._known_versions[executable] = self._get_version(executable)
+        _ver = self._known_versions[executable]
+        if _ver and _ver >= (8, 0, 0):
+            problem_file = os.path.splitext(problem_files[0])[0]
+        else:
+            problem_file = problem_files[0]
+
+        cmd = [executable, problem_file, '-AMPL']
         if self._timer:
             cmd.insert(0, self._timer)
 
@@ -139,6 +168,9 @@ class SCIPAMPL(SystemCallSolver):
                 env_opt.append(key+"="+str(self.options[key]))
             of_opt.append(str(key)+" = "+str(self.options[key]))
 
+        if self._timelimit is not None and self._timelimit > 0.0 and 'limits/time' not in self.options:
+            of_opt.append("limits/time = " + str(self._timelimit))
+
         envstr = "%s_options" % self.options.solver
         # Merge with any options coming in through the environment
         env[envstr] = " ".join(env_opt)
@@ -156,16 +188,15 @@ class SCIPAMPL(SystemCallSolver):
                                "file '%s' will be ignored."
                                % (default_of_name, default_of_name))
 
+            options_dir = TempfileManager.create_tempdir()
             # Now write the new options file
-            options_filename = TempfileManager.\
-                               create_tempfile(suffix="_scip.set")
-            with open(options_filename, "w") as f:
+            with open(os.path.join(options_dir, 'scip.set'), 'w') as f:
                 for line in of_opt:
                     f.write(line+"\n")
+        else:
+            options_dir = None
 
-            cmd.append(options_filename)
-
-        return Bunch(cmd=cmd, log_file=self._log_file, env=env)
+        return Bunch(cmd=cmd, log_file=self._log_file, env=env, cwd=options_dir)
 
     def _postsolve(self):
         results = super(SCIPAMPL, self)._postsolve()

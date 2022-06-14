@@ -27,6 +27,7 @@ from pyomo.contrib.incidence_analysis.dulmage_mendelsohn import (
 from pyomo.contrib.incidence_analysis.tests.models_for_testing import (
     make_gas_expansion_model,
     make_degenerate_solid_phase_model,
+    make_dynamic_model,
 )
 if scipy_available:
     from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
@@ -1065,6 +1066,79 @@ class TestDulmageMendelsohnInterface(unittest.TestCase):
         N_new, M_new = igraph.incidence_matrix.shape
         self.assertEqual(N_new, N - len(cons_to_remove))
         self.assertEqual(M_new, M - len(vars_to_remove))
+
+
+@unittest.skipUnless(networkx_available, "networkx is not available.")
+@unittest.skipUnless(scipy_available, "scipy is not available.")
+class TestConnectedComponents(unittest.TestCase):
+
+    def test_dynamic_model_backward(self):
+        """
+        This is the same test as performed in the test_connected.py
+        file, now implemented with the Pyomo interface.
+        """
+        m = make_dynamic_model(nfe=5, scheme="BACKWARD")
+        m.height[0].fix()
+        igraph = IncidenceGraphInterface(m)
+        var_blocks, con_blocks = igraph.get_connected_components()
+        vc_blocks = [
+            (tuple(vars), tuple(cons))
+            for vars, cons in zip(var_blocks, con_blocks)
+        ]
+        key_fcn = lambda vc_comps: tuple(
+            tuple(comp.name for comp in comps)
+            for comps in vc_comps
+        )
+        vc_blocks = list(sorted(vc_blocks, key=key_fcn))
+
+        t0_vars = ComponentSet((m.flow_out[0], m.dhdt[0], m.flow_in[0]))
+        t0_cons = ComponentSet((m.flow_out_eqn[0], m.diff_eqn[0]))
+
+        # The variables in these blocks need to be sorted by their coordinates
+        # in the underlying incidence matrix
+        var_idx_map = ComponentMap(
+            (var, i) for i, var in enumerate(igraph.variables)
+        )
+        con_idx_map = ComponentMap(
+            (con, i) for i, con in enumerate(igraph.constraints)
+        )
+        var_key = lambda var: var_idx_map[var]
+        con_key = lambda con: con_idx_map[con]
+        var_blocks = [
+            tuple(sorted(t0_vars, key=var_key)),
+            tuple(sorted(
+                (var for var in igraph.variables if var not in t0_vars),
+                key=var_key,
+            )),
+        ]
+        con_blocks = [
+            tuple(sorted(t0_cons, key=con_key)),
+            tuple(sorted(
+                (con for con in igraph.constraints if con not in t0_cons),
+                key=con_key,
+            )),
+        ]
+        target_blocks = [
+            (tuple(vars), tuple(cons))
+            for vars, cons in zip(var_blocks, con_blocks)
+        ]
+        target_blocks = list(sorted(target_blocks, key=key_fcn))
+
+        # I am somewhat surprised this works. This appears to because
+        # var1 == var2 is a constant equality expression when var1 is var2.
+        # So if this test fails, we'll get a somewhat confusing PyomoException
+        # about not being able to convert non-constant expressions to bool
+        # rather than a message saying that our variables are not the same.
+        #self.assertEqual(target_blocks, vc_blocks)
+        for block, target_block in zip(vc_blocks, target_blocks):
+            vars, cons = block
+            pred_vars, pred_cons = target_block
+            self.assertEqual(len(vars), len(pred_vars))
+            self.assertEqual(len(cons), len(pred_cons))
+            for v1, v2 in zip(vars, pred_vars):
+                self.assertIs(v1, v2)
+            for c1, c2 in zip(cons, pred_cons):
+                self.assertIs(c1, c2)
 
 
 @unittest.skipUnless(networkx_available, "networkx is not available.")
