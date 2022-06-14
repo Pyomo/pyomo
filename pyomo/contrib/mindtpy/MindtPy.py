@@ -60,10 +60,13 @@ from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
 from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger, get_primal_integral, get_dual_integral
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
-                        Var, VarList, TransformationFactory, RangeSet, minimize)
+                        Var, VarList, TransformationFactory, RangeSet, minimize, Constraint, Objective)
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
 from pyomo.common.config import add_docstring_list
+from pyomo.util.vars_from_expressions import get_vars_from_components
+from pyomo.gdp import Disjunct
+from pyomo.common.collections import ComponentSet
 
 __version__ = (0, 1, 0)
 
@@ -240,11 +243,14 @@ class MindtPySolver(object):
                     to_list=MindtPy.variable_list,
                     config=config)
                 # MindtPy.variable_list does not include the unused variables, but component_data_objects(Var) does. component_data_objects(Var) should be used for both working_model and original_model.
+                solve_data.working_model.MindtPy_utils.deactivate()
+                if solve_data.working_model.find_component("_int_to_binary_reform") is not None:
+                    solve_data.working_model._int_to_binary_reform.deactivate()
                 copy_var_list_values(
                     [i for i in solve_data.working_model.component_data_objects(
-                        Var) if not i.fixed],
+                        Var, active=True, descend_into=True) if not i.fixed],
                     [i for i in solve_data.original_model.component_data_objects(
-                        Var) if not i.fixed],
+                        Var, active=True, descend_into=True) if not i.fixed],
                     config)
                 # exclude fixed variables here. This is consistent with the definition of variable_list in GDPopt.util
             if solve_data.objective_sense == minimize:
