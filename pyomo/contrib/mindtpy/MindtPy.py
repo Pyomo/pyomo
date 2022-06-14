@@ -239,8 +239,10 @@ class MindtPySolver(object):
                     from_list=solve_data.best_solution_found.MindtPy_utils.variable_list,
                     to_list=MindtPy.variable_list,
                     config=config)
+                # MindtPy.variable_list does not include the unused variables, but component_data_objects(Var) does. component_data_objects(Var) should be used for both working_model and original_model.
                 copy_var_list_values(
-                    MindtPy.variable_list,
+                    [i for i in solve_data.working_model.component_data_objects(
+                        Var) if not i.fixed],
                     [i for i in solve_data.original_model.component_data_objects(
                         Var) if not i.fixed],
                     config)
