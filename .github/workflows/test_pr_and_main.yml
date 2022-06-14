@@ -275,8 +275,12 @@ jobs:
         conda config --set always_yes yes
         conda config --set auto_update_conda false
         conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
+        conda config --show channels
+        conda config --remove channels defaults
+        conda config --add channels conda-forge
         conda info
         conda config --show-sources
+        conda config --show channels
         conda list --show-channel-urls
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
