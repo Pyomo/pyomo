@@ -282,6 +282,8 @@ jobs:
         conda config --show-sources
         conda config --show channels
         conda list --show-channel-urls
+        which python
+        python --version
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
@@ -311,6 +313,8 @@ jobs:
             done
             # TODO: This is a hack to stop test_qt.py from running until we
             # can better troubleshoot why it fails on GHA
+            which python
+            python --version
             for QTPACKAGE in qt pyqt; do
                 conda remove $QTPACKAGE || echo "$QTPACKAGE not in this environment"
             done
