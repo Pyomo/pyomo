@@ -61,7 +61,7 @@ jobs:
           PACKAGES: glpk
 
         - os: windows-latest
-          python: 3.10
+          python: '3.10'
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
