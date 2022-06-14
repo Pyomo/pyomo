@@ -206,6 +206,8 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
+        channels: conda-forge
+        channel-priority: strict
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
@@ -257,10 +259,6 @@ jobs:
         conda config --set always_yes yes
         conda config --set auto_update_conda false
         conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
-        conda config --show channels
-        conda config --remove channels defaults
-        conda config --add channels conda-forge
-        conda config --set channel_priority strict
         conda info
         conda config --show-sources
         conda config --show channels
@@ -296,8 +294,6 @@ jobs:
             done
             # TODO: This is a hack to stop test_qt.py from running until we
             # can better troubleshoot why it fails on GHA
-            which python
-            python --version
             for QTPACKAGE in qt pyqt; do
                 conda remove $QTPACKAGE || echo "$QTPACKAGE not in this environment"
             done
