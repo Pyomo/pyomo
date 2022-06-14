@@ -222,6 +222,7 @@ setup_kwargs = dict(
             'sphinxcontrib-jsmath',
             'sphinxcontrib-napoleon',
             'numpy', # Needed by autodoc for pynumero
+            'scipy', # Needed by autodoc for pynumero
         ],
         'optional': [
             'dill',      # No direct use, but improves lambda pickle
