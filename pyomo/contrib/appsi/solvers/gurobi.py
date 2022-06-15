@@ -1150,10 +1150,15 @@ class Gurobi(PersistentBase, PersistentSolver):
             .. math::
 
                 min 2*x + y
+                
                 s.t.
+                
                     y >= (x-2)**2
+                    
                     0 <= x <= 4
+                    
                     y >= 0
+                    
                     y integer
 
             as an MILP using extended cutting planes in callbacks.
