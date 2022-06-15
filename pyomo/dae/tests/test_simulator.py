@@ -43,7 +43,7 @@ currdir = dirname(abspath(__file__))
 exdir = normpath(join(currdir, '..', '..', '..', 'examples', 'dae'))
 
 # We will skip tests unless we have scipy and not running in pypy
-scipy_available = scipy_available and not is_pypy
+scipy_available = scipy_available #and not is_pypy
 
 
 class TestSimulator(unittest.TestCase):

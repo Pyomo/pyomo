@@ -406,11 +406,11 @@ class Simulator:
                     "The scipy module is not available. "
                     "You may build the Simulator object but you will not "
                     "be able to run the simulation.")
-            elif is_pypy:
-                logger.warning(
-                    "The scipy ODE integrators do not work in pypy. "
-                    "You may build the Simulator object but you will not "
-                    "be able to run the simulation.")
+            # elif is_pypy:
+            #     logger.warning(
+            #         "The scipy ODE integrators do not work in pypy. "
+            #         "You may build the Simulator object but you will not "
+            #         "be able to run the simulation.")
         else:
             if not casadi_available:
                 # Initializing the simulator for use with casadi requires
@@ -885,9 +885,9 @@ class Simulator:
             if not scipy_available:
                 raise ValueError("The scipy module is not available. "
                                  "Cannot simulate the model.")
-            if is_pypy:
-                raise ValueError("The scipy ODE integrators do not work "
-                                 "under pypy. Cannot simulate the model.")
+            # if is_pypy:
+            #     raise ValueError("The scipy ODE integrators do not work "
+            #                      "under pypy. Cannot simulate the model.")
             tsim, profile = self._simulate_with_scipy(initcon, tsim, switchpts,
                                                       varying_inputs,
                                                       integrator,
