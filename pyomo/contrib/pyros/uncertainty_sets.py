@@ -781,15 +781,12 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         # this accounts for the cases in which `uncertain_params`
         # consists of indexed model components,
         # or is itself a single indexed component
-        if isinstance(uncertain_params, list):
-            for param in uncertain_params:
-                if param.is_indexed():
-                    all_params.extend(list(param.values()))
-                else:
-                    all_params.append(param)
-        else:
-            # should be a single indexed component
-            all_params = list(uncertain_params.values())
+        if not isinstance(uncertain_params, (tuple, list)):
+            uncertain_params = [uncertain_params]
+
+        all_params = []
+        for uparam in uncertain_params:
+            all_params.extend(uparam.values())
 
         if len(all_params) != len(self.center):
             raise AttributeError(
@@ -800,24 +797,19 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
         zip_all = zip(all_params, self.center, self.half_lengths)
         diffs_squared = list()
-        certain_params = list()
 
-        for idx, (param, ctr, half_len) in enumerate(zip_all):
+        # now construct the constraints
+        conlist = ConstraintList()
+        conlist.construct()
+        for param, ctr, half_len in zip_all:
             if half_len > 0:
                 diffs_squared.append((param - ctr) ** 2 / (half_len) ** 2)
             else:
-                certain_params.append((param, ctr))
+                # equality constraints for parameters corresponding to
+                # half-lengths of zero
+                conlist.add(param == ctr)
 
-        con_lhs = sum(diff for diff in diffs_squared)
-
-        conlist = ConstraintList()
-        conlist.construct()
-        conlist.add(con_lhs <= 1)
-
-        # equality constraints for parameters corresponding to
-        # half-lengths of zero
-        for param, val in certain_params:
-            conlist.add(param == val)
+        conlist.add(sum(diffs_squared) <= 1)
 
         return conlist
 
