@@ -1544,7 +1544,7 @@ def node_result_to_amplrepn(data):
         return data[1]
     elif data[0] is _MONOMIAL:
         if data[2]:
-            return AMPLRepn(0, (data[1:],), None)
+            return AMPLRepn(0, [data[1:]], None)
         else:
             return AMPLRepn(0, None, None)
     elif data[0] is _CONSTANT:
