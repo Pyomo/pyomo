@@ -35,62 +35,67 @@ jobs:
         category: [""]
 
         include:
+        # - os: ubuntu-latest
+        #   python: '3.10'
+        #   TARGET: linux
+        #   PYENV: pip
+
         - os: ubuntu-latest
-          python: '3.10'
+          python: 'pypy3.9'
           TARGET: linux
           PYENV: pip
 
-        - os: macos-latest
-          python: 3.8
-          TARGET: osx
-          PYENV: pip
+        # - os: macos-latest
+        #   python: 3.8
+        #   TARGET: osx
+        #   PYENV: pip
 
-        - os: windows-latest
-          python: 3.7
-          TARGET: win
-          PYENV: conda
-          PACKAGES: glpk
+        # - os: windows-latest
+        #   python: 3.7
+        #   TARGET: win
+        #   PYENV: conda
+        #   PACKAGES: glpk
 
-        - os: ubuntu-latest
-          python: 3.9
-          other: /conda
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: conda
-          PACKAGES:
+        # - os: ubuntu-latest
+        #   python: 3.9
+        #   other: /conda
+        #   skip_doctest: 1
+        #   TARGET: linux
+        #   PYENV: conda
+        #   PACKAGES:
 
-        - os: ubuntu-latest
-          python: 3.8
-          other: /mpi
-          mpi: 3
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: conda
-          PACKAGES: mpi4py openmpi
+        # - os: ubuntu-latest
+        #   python: 3.8
+        #   other: /mpi
+        #   mpi: 3
+        #   skip_doctest: 1
+        #   TARGET: linux
+        #   PYENV: conda
+        #   PACKAGES: mpi4py openmpi
 
-        - os: ubuntu-latest
-          python: 3.7
-          other: /slim
-          slim: 1
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
+        # - os: ubuntu-latest
+        #   python: 3.7
+        #   other: /slim
+        #   slim: 1
+        #   skip_doctest: 1
+        #   TARGET: linux
+        #   PYENV: pip
 
-        - os: ubuntu-latest
-          python: 3.8
-          other: /cython
-          setup_options: --with-cython
-          skip_doctest: 1
-          TARGET: linux
-          PYENV: pip
-          PACKAGES: cython
+        # - os: ubuntu-latest
+        #   python: 3.8
+        #   other: /cython
+        #   setup_options: --with-cython
+        #   skip_doctest: 1
+        #   TARGET: linux
+        #   PYENV: pip
+        #   PACKAGES: cython
 
-        - os: windows-latest
-          python: 3.8
-          other: /pip
-          skip_doctest: 1
-          TARGET: win
-          PYENV: pip
+        # - os: windows-latest
+        #   python: 3.8
+        #   other: /pip
+        #   skip_doctest: 1
+        #   TARGET: win
+        #   PYENV: pip
 
     steps:
     - name: Checkout Pyomo source
