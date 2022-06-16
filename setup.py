@@ -222,6 +222,7 @@ setup_kwargs = dict(
             'sphinxcontrib-jsmath',
             'sphinxcontrib-napoleon',
             'numpy', # Needed by autodoc for pynumero
+            'pybind11',
             'scipy',
         ],
         'optional': [
