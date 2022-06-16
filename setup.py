@@ -213,8 +213,7 @@ setup_kwargs = dict(
             'pytest',
             'pytest-parallel',
             'parameterized',
-            'git+https://github.com/pybind/pybind11.git',
-            #'pybind11',
+            'pybind11',
         ],
         'docs': [
             'Sphinx>2',
