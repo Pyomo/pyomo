@@ -213,7 +213,8 @@ setup_kwargs = dict(
             'pytest',
             'pytest-parallel',
             'parameterized',
-            'pybind11',
+            'git+https://github.com/pybind/pybind11.git',
+            #'pybind11',
         ],
         'docs': [
             'Sphinx>2',
@@ -222,7 +223,6 @@ setup_kwargs = dict(
             'sphinxcontrib-jsmath',
             'sphinxcontrib-napoleon',
             'numpy', # Needed by autodoc for pynumero
-            'pybind11',
             'scipy',
         ],
         'optional': [
