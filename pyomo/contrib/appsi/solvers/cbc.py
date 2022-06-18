@@ -54,10 +54,10 @@ class CbcConfig(SolverConfig):
 
 
 class Cbc(PersistentSolver):
-    def __init__(self):
+    def __init__(self, only_child_vars=True):
         self._config = CbcConfig()
         self._solver_options = dict()
-        self._writer = LPWriter()
+        self._writer = LPWriter(only_child_vars=only_child_vars)
         self._filename = None
         self._dual_sol = dict()
         self._primal_sol = dict()

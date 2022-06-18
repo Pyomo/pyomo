@@ -737,7 +737,7 @@ Notes:
 
 
 class PersistentBase(abc.ABC):
-    def __init__(self):
+    def __init__(self, only_child_vars=True):
         self._model = None
         self._active_constraints = dict()  # maps constraint to (lower, body, upper)
         self._vars = dict()  # maps var id to (var, lb, ub, fixed, domain, value)
@@ -754,6 +754,7 @@ class PersistentBase(abc.ABC):
         self._vars_referenced_by_obj = list()
         self._expr_types = None
         self.use_extensions = False
+        self._only_child_vars = only_child_vars
 
     @property
     def update_config(self):
@@ -799,6 +800,23 @@ class PersistentBase(abc.ABC):
     def _add_constraints(self, cons: List[_GeneralConstraintData]):
         pass
 
+    def _check_for_new_vars(self, variables: List[_GeneralVarData]):
+        new_vars = dict()
+        for v in variables:
+            v_id = id(v)
+            if v_id not in self._referenced_variables:
+                new_vars[v_id] = v
+        self.add_variables(list(new_vars.values()))
+
+    def _check_to_remove_vars(self, variables: List[_GeneralVarData]):
+        vars_to_remove = dict()
+        for v in variables:
+            v_id = id(v)
+            ref_cons, ref_sos, ref_obj = self._referenced_variables[v_id]
+            if len(ref_cons) == 0 and len(ref_sos) == 0 and ref_obj is None:
+                vars_to_remove[v_id] = v
+        self.remove_variables(list(vars_to_remove.values()))
+
     def add_constraints(self, cons: List[_GeneralConstraintData]):
         all_fixed_vars = dict()
         for con in cons:
@@ -810,6 +828,8 @@ class PersistentBase(abc.ABC):
             else:
                 tmp = collect_vars_and_named_exprs(con.body)
             named_exprs, variables, fixed_vars, external_functions = tmp
+            if not self._only_child_vars:
+                self._check_for_new_vars(variables)
             self._named_expressions[con] = [(e, e.expr) for e in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[con] = external_functions
@@ -834,6 +854,8 @@ class PersistentBase(abc.ABC):
                 raise ValueError('constraint {name} has already been added'.format(name=con.name))
             self._active_constraints[con] = tuple()
             variables = con.get_variables()
+            if not self._only_child_vars:
+                self._check_for_new_vars(variables)
             self._named_expressions[con] = list()
             self._vars_referenced_by_con[con] = variables
             for v in variables:
@@ -848,6 +870,8 @@ class PersistentBase(abc.ABC):
         if self._objective is not None:
             for v in self._vars_referenced_by_obj:
                 self._referenced_variables[id(v)][2] = None
+            if not self._only_child_vars:
+                self._check_to_remove_vars(self._vars_referenced_by_obj)
             self._external_functions.pop(self._objective, None)
         if obj is not None:
             self._objective = obj
@@ -858,6 +882,8 @@ class PersistentBase(abc.ABC):
             else:
                 tmp = collect_vars_and_named_exprs(obj.expr)
             named_exprs, variables, fixed_vars, external_functions = tmp
+            if not self._only_child_vars:
+                self._check_for_new_vars(variables)
             self._obj_named_expressions = [(i, i.expr) for i in named_exprs]
             if len(external_functions) > 0:
                 self._external_functions[obj] = external_functions
@@ -885,7 +911,8 @@ class PersistentBase(abc.ABC):
                 for _p in p.values():
                     param_dict[id(_p)] = _p
         self.add_params(list(param_dict.values()))
-        self.add_variables(list(OrderedDict((id(var), var) for var in block.component_data_objects(Var, descend_into=True, sort=False)).values()))
+        if self._only_child_vars:
+            self.add_variables(list(OrderedDict((id(var), var) for var in block.component_data_objects(Var, descend_into=True, sort=False)).values()))
         self.add_constraints([con for con in block.component_data_objects(Constraint, descend_into=True,
                                                                           active=True, sort=False)])
         self.add_sos_constraints([con for con in block.component_data_objects(SOSConstraint, descend_into=True,
@@ -905,6 +932,8 @@ class PersistentBase(abc.ABC):
                 raise ValueError('cannot remove constraint {name} - it was not added'.format(name=con.name))
             for v in self._vars_referenced_by_con[con]:
                 self._referenced_variables[id(v)][0].pop(con)
+            if not self._only_child_vars:
+                self._check_to_remove_vars(self._vars_referenced_by_con[con])
             del self._active_constraints[con]
             del self._named_expressions[con]
             self._external_functions.pop(con, None)
@@ -921,6 +950,7 @@ class PersistentBase(abc.ABC):
                 raise ValueError('cannot remove constraint {name} - it was not added'.format(name=con.name))
             for v in self._vars_referenced_by_con[con]:
                 self._referenced_variables[id(v)][1].pop(con)
+            self._check_to_remove_vars(self._vars_referenced_by_con[con])
             del self._active_constraints[con]
             del self._named_expressions[con]
             del self._vars_referenced_by_con[con]
@@ -955,7 +985,8 @@ class PersistentBase(abc.ABC):
                                                                              active=True, sort=False)])
         self.remove_sos_constraints([con for con in block.component_data_objects(ctype=SOSConstraint, descend_into=True,
                                                                                  active=True, sort=False)])
-        self.remove_variables(list(OrderedDict((id(var), var) for var in block.component_data_objects(ctype=Var, descend_into=True, sort=False)).values()))
+        if self._only_child_vars:
+            self.remove_variables(list(OrderedDict((id(var), var) for var in block.component_data_objects(ctype=Var, descend_into=True, sort=False)).values()))
         self.remove_params(list(OrderedDict((id(p), p) for p in block.component_data_objects(ctype=Param, descend_into=True, sort=False)).values()))
 
     @abc.abstractmethod
@@ -987,7 +1018,7 @@ class PersistentBase(abc.ABC):
         current_cons_dict = dict()
         current_sos_dict = dict()
         timer.start('vars')
-        if config.check_for_new_or_removed_vars or config.update_vars:
+        if self._only_child_vars and (config.check_for_new_or_removed_vars or config.update_vars):
             current_vars_dict = {id(v): v for v in self._model.component_data_objects(Var, descend_into=True, sort=False)}
             for v_id, v in current_vars_dict.items():
                 if v_id not in self._vars:
@@ -995,6 +1026,8 @@ class PersistentBase(abc.ABC):
             for v_id, v_tuple in self._vars.items():
                 if v_id not in current_vars_dict:
                     old_vars.append(v_tuple[0])
+        elif config.update_vars:
+            start_vars = {v_id: v_tuple[0] for v_id, v_tuple in self._vars.items()}
         timer.stop('vars')
         timer.start('params')
         if config.check_for_new_or_removed_params:
@@ -1085,11 +1118,15 @@ class PersistentBase(abc.ABC):
             self.add_sos_constraints(sos_to_update)
         timer.stop('cons')
         timer.start('vars')
-        if config.update_vars:
+        if self._only_child_vars and config.update_vars:
             vars_to_check = list()
             for v_id, v in current_vars_dict.items():
                 if v_id not in new_vars_set:
                     vars_to_check.append(v)
+        elif config.update_vars:
+            end_vars = {v_id: v_tuple[0] for v_id, v_tuple in self._vars.items()}
+            vars_to_check = [v for v_id, v in end_vars.items() if v_id in start_vars]
+        if config.update_vars:
             vars_to_update = list()
             for v in vars_to_check:
                 _v, lb, ub, fixed, domain_interval, value = self._vars[id(v)]

@@ -1020,6 +1020,33 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 1)
 
+    @parameterized.expand(input=all_solvers)
+    def test_variables_elsewhere(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class(only_child_vars=False)
+        if not opt.available():
+            raise unittest.SkipTest
+
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.b = pe.Block()
+        m.b.obj = pe.Objective(expr=m.y)
+        m.b.c1 = pe.Constraint(expr=m.y >= m.x + 2)
+        m.b.c2 = pe.Constraint(expr=m.y >= -m.x)
+
+        res = opt.solve(m.b)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        self.assertAlmostEqual(m.x.value, -1)
+        self.assertAlmostEqual(m.y.value, 1)
+
+        m.x.setlb(0)
+        res = opt.solve(m.b)
+        self.assertAlmostEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(res.best_feasible_objective, 2)
+        self.assertAlmostEqual(m.x.value, 0)
+        self.assertAlmostEqual(m.y.value, 2)
+
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
 class TestLegacySolverInterface(unittest.TestCase):
