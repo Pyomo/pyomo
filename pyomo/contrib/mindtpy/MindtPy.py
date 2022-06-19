@@ -242,16 +242,25 @@ class MindtPySolver(object):
                     from_list=solve_data.best_solution_found.MindtPy_utils.variable_list,
                     to_list=MindtPy.variable_list,
                     config=config)
-                # MindtPy.variable_list does not include the unused variables, but component_data_objects(Var) does. component_data_objects(Var) should be used for both working_model and original_model.
+                # The original does not have variable list. Use get_vars_from_components() should be used for both working_model and original_model to exclude the unused variables.
                 solve_data.working_model.MindtPy_utils.deactivate()
                 if solve_data.working_model.find_component("_int_to_binary_reform") is not None:
                     solve_data.working_model._int_to_binary_reform.deactivate()
-                copy_var_list_values(
-                    [i for i in solve_data.working_model.component_data_objects(
-                        Var, active=True, descend_into=True) if not i.fixed],
-                    [i for i in solve_data.original_model.component_data_objects(
-                        Var, active=True, descend_into=True) if not i.fixed],
-                    config)
+                copy_var_list_values(list(get_vars_from_components(block=solve_data.working_model, 
+                                         ctype=(Constraint, Objective), 
+                                         include_fixed=False, 
+                                         active=True,
+                                         sort=False, 
+                                         descend_into=True,
+                                         descent_order=None)),
+                                    list(get_vars_from_components(block=solve_data.original_model, 
+                                    ctype=(Constraint, Objective), 
+                                    include_fixed=False, 
+                                    active=True,
+                                    sort=False, 
+                                    descend_into=True,
+                                    descent_order=None)),
+                                    config=config)
                 # exclude fixed variables here. This is consistent with the definition of variable_list in GDPopt.util
             if solve_data.objective_sense == minimize:
                 solve_data.results.problem.lower_bound = solve_data.dual_bound
