@@ -250,16 +250,16 @@ class MindtPySolver(object):
                                          ctype=(Constraint, Objective), 
                                          include_fixed=False, 
                                          active=True,
-                                         sort=False, 
+                                         sort=True, 
                                          descend_into=True,
                                          descent_order=None)),
                                     list(get_vars_from_components(block=solve_data.original_model, 
-                                    ctype=(Constraint, Objective), 
-                                    include_fixed=False, 
-                                    active=True,
-                                    sort=False, 
-                                    descend_into=True,
-                                    descent_order=None)),
+                                         ctype=(Constraint, Objective), 
+                                         include_fixed=False, 
+                                         active=True,
+                                         sort=True, 
+                                         descend_into=True,
+                                         descent_order=None)),
                                     config=config)
                 # exclude fixed variables here. This is consistent with the definition of variable_list in GDPopt.util
             if solve_data.objective_sense == minimize:
