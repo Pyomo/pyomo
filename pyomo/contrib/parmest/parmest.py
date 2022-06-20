@@ -554,6 +554,10 @@ class Estimator(object):
         ----------
         thetavals: dict
             A dictionary of theta values.
+        
+        initialize_parmest_model: boolean
+            True: Solve square problem instance, build extensive form of the model for 
+            parameter estimation, and set flag model_initialized to True
 
         Returns
         -------
@@ -602,6 +606,7 @@ class Estimator(object):
         totobj = 0
         senario_numbers = list(range(len(self.callback_data)))
         if initialize_parmest_model:
+            # create dictionary to store pyomo model instances (scenarios)
             scen_dict = dict()
 
         for snum in senario_numbers:
@@ -655,6 +660,7 @@ class Estimator(object):
                     if initialize_parmest_model:
                         print("Scenario {:d} initialization successful with initial parameter values".format(snum))
                 if initialize_parmest_model:
+                    # unfix parameters after initialization
                     for theta in theta_init_vals:
                         theta.unfix()
                     scen_dict[sname] = instance
@@ -663,6 +669,7 @@ class Estimator(object):
             totobj += objval
         retval = totobj / len(senario_numbers) # -1??
         if initialize_parmest_model:
+            # create extensive form of the model with using scenario dictionary
             if len(scen_dict) > 0:
                 for scen in scen_dict.values():
                     scen._mpisppy_probability = 1 / len(scen_dict)
@@ -950,8 +957,8 @@ class Estimator(object):
             Values of theta used to compute the objective
 
         initialize_parmest_model: boolean
-            Build extended form of the model for parameter estimation
-            and set flag
+            True: Solve square problem instance, build extensive form of the model for 
+            parameter estimation, and set flag model_initialized to True
 
 
         Returns
@@ -997,7 +1004,7 @@ class Estimator(object):
 
     def likelihood_ratio_test(self, obj_at_theta, obj_value, alphas,
                               return_thresholds=False):
-        r"""
+        """
         Likelihood ratio test to identify theta values within a confidence
         region using the :math:`\chi^2` distribution
 
