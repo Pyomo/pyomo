@@ -765,7 +765,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         parameter_bounds = [(nom_value[i] - half_length[i], nom_value[i] + half_length[i]) for i in range(len(nom_value))]
         return parameter_bounds
 
-    def set_as_constraint(self, uncertain_params, **kwargs):
+    def set_as_constraint(self, uncertain_params, model=None, config=None):
         """
         Generate constraint(s) for the `AxisAlignedEllipsoidSet`
         class.
