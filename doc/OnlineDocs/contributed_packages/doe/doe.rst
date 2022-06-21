@@ -369,7 +369,7 @@ The function ``run_grid_search`` enumerates over the design space, each MBDoE pr
 
     >>> # === Run enumeration ===
     >>> doe_object = doe.DesignOfExperiments(parameter_dict, dv_pass, measure_class, create_model,
-    ...                            prior_FIM=prior_none, discretize_model=disc)
+    ...                            prior_FIM=prior_none, discretize_model=disc) # doctest: +SKIP
     >>> all_fim = doe_object.run_grid_search(exp1, design_ranges, dv_apply_name, dv_apply_time, mode=sensi_opt) # doctest: +SKIP
 
     >>> # === Analyze results ===
@@ -401,7 +401,7 @@ This function solves twice: It solves the square version of the MBDoE problem fi
     >>> exp1 = {'CA0': {0: 5}, 'T': {0: 300, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}}
     >>> # === Define DOE object ===
     >>> doe_object = doe.DesignOfExperiments(parameter_dict, dv_pass, measure_class, createmod,
-    ...                            prior_FIM=prior_pass, discretize_model=disc)
+    ...                            prior_FIM=prior_pass, discretize_model=disc) # doctest: +SKIP
     >>> # === Optimize ===
     >>> square_result, optimize_result= doe_object.optimize_doe(exp1,
     ...                                                         if_optimize=True,
