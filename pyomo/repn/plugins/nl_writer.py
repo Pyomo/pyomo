@@ -1437,14 +1437,14 @@ class AMPLRepn(object):
         elif _type is _GENERAL:
             other = other[1]
             if other.mult != 1:
-                if other.nonlinear and other.nonlinear.__class__ is list:
-                    other.compile_nonlinear_fragment(
-                        self.ActiveVisitor.template)
                 mult = other.mult
                 self.const += mult * other.const
                 if other.linear:
                     self.linear.extend((v, c*mult) for v, c in other.linear)
                 if other.nonlinear:
+                    if other.nonlinear.__class__ is list:
+                        other.compile_nonlinear_fragment(
+                            self.ActiveVisitor.template)
                     if mult == -1:
                         prefix = self.ActiveVisitor.template.negation
                     else:
