@@ -66,7 +66,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py 'openmpi>4,!=4.1.3'
+          PACKAGES: mpi4py openmpi
 
         - os: ubuntu-latest
           python: 3.7
@@ -224,6 +224,8 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
+        channels: conda-forge
+        channel-priority: strict
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
@@ -277,7 +279,10 @@ jobs:
         conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
         conda info
         conda config --show-sources
+        conda config --show channels
         conda list --show-channel-urls
+        which python
+        python --version
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`

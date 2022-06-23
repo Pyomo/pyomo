@@ -328,6 +328,7 @@ class SystemCallSolver(OptSolver):
                     stderr=t.STDERR,
                     timeout=timeout,
                     universal_newlines=True,
+                    cwd=command.cwd if "cwd" in command else None,
                 )
                 t.STDOUT.flush()
                 t.STDERR.flush()
