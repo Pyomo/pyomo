@@ -23,7 +23,7 @@ if not numpy_available:
     numpy.log_import_warning('pyomo.contrib.pynumero')
 
 if not scipy_available:
-    scipy.log_import_warning(
+    scipy.sparse.log_import_warning(
         'pyomo.contrib.pynumero',
         'Pynumero requires the optional Pyomo dependency "scipy.sparse"',
     )
