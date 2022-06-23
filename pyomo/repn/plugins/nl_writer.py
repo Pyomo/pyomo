@@ -1371,18 +1371,15 @@ class AMPLRepn(object):
 
         if args is None:
             args = []
-        nterms = 0
-        if self.const:
-            nterms += 1
-            nl_sum = template.const % self.const
-        else:
-            nl_sum = ''
         if self.linear:
-            nterms += len(self.linear)
-            nl_sum += ''.join(
+            nterms = len(self.linear)
+            nl_sum = ''.join(
                 template.var if c == 1 else template.monomial % c
                 for c in map(itemgetter(1), self.linear))
             args.extend(map(itemgetter(0), self.linear))
+        else:
+            nterms = 0
+            nl_sum = ''
         if self.nonlinear:
             if self.nonlinear.__class__ is list:
                 nterms += len(self.nonlinear)
@@ -1393,6 +1390,9 @@ class AMPLRepn(object):
                 nterms += 1
                 nl_sum += self.nonlinear[0]
                 args.extend(self.nonlinear[1])
+        if self.const:
+            nterms += 1
+            nl_sum += template.const % self.const
 
         if nterms > 2:
             return prefix + (template.nary_sum % nterms) + nl_sum, args
