@@ -470,8 +470,8 @@ class FbbtTestBase(object):
                     xu = m.x.ub
                 _x = np.exp(np.log(y) / _exp_val)
                 for ndx in range(len(_x)):
-                    if xu[ndx] < _x[ndx]:
-                        print(xu[ndx], _x[ndx])
+                    if xu < _x[ndx]:
+                        print(xu, _x[ndx])
                 self.assertTrue(np.all(xl <= _x))
                 self.assertTrue(np.all(xu >= _x))
 
