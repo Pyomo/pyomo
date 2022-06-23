@@ -12,19 +12,21 @@
 # Unit Tests for Python numeric values
 #
 
-import os
-from os.path import abspath, dirname
-currdir = dirname(abspath(__file__))+os.sep
-
 from math import nan, inf
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import (value, ConcreteModel, Param, Var, 
-                           polynomial_degree, is_constant, is_fixed,
-                           is_potentially_variable, is_variable_type)
-from pyomo.core.expr.numvalue import (NumericConstant,
-                                      as_numeric,
-                                      is_numeric_data)
+from pyomo.environ import (
+    value, ConcreteModel, Param, Var,
+    polynomial_degree, is_constant, is_fixed,
+    is_potentially_variable, is_variable_type
+)
+
+from pyomo.core.pyomoobject import PyomoObject
+from pyomo.core.expr.numvalue import (
+    NumericConstant, as_numeric, is_numeric_data,
+    native_types, native_numeric_types, native_integer_types,
+    native_boolean_types,
+)
 
 try:
     import numpy
@@ -132,7 +134,6 @@ class Test_is_numeric_data(unittest.TestCase):
     def test_unknownNumericType(self):
         ref = MyBogusNumericType(42)
         self.assertTrue(is_numeric_data(ref))
-        from pyomo.core.base.numvalue import native_numeric_types, native_types
         self.assertIn(MyBogusNumericType, native_numeric_types)
         self.assertIn(MyBogusNumericType, native_types)
         native_numeric_types.remove(MyBogusNumericType)
@@ -213,18 +214,22 @@ class Test_value(unittest.TestCase):
     def test_error1(self):
         class A(object): pass
         val = A()
-        try:
+        with self.assertRaisesRegex(
+                TypeError, "Cannot evaluate object with unknown type: A"):
             value(val)
-            self.fail("Expected TypeError")
-        except TypeError:
-            pass
+
+    def test_unknownType(self):
+        ref = MyBogusType(42)
+        with self.assertRaisesRegex(
+                TypeError,
+                "Cannot evaluate object with unknown type: MyBogusType"):
+            value(ref)
 
     def test_unknownNumericType(self):
         ref = MyBogusNumericType(42)
         val = value(ref)
         self.assertEqual(val.val, 42.0)
         #self.assertEqual(val().val, 42)
-        from pyomo.core.base.numvalue import native_numeric_types, native_types
         self.assertIn(MyBogusNumericType, native_numeric_types)
         self.assertIn(MyBogusNumericType, native_types)
         native_numeric_types.remove(MyBogusNumericType)
@@ -295,18 +300,16 @@ class Test_polydegree(unittest.TestCase):
     def test_error1(self):
         class A(object): pass
         val = A()
-        try:
+        with self.assertRaisesRegex(
+                TypeError, "Cannot assess properties of object "
+                "with unknown type: A"):
             polynomial_degree(val)
-            self.fail("Expected TypeError")
-        except TypeError:
-            pass
 
     def test_unknownNumericType(self):
         ref = MyBogusNumericType(42)
         val = polynomial_degree(ref)
         self.assertEqual(val, 0)
         #self.assertEqual(val().val, 42)
-        from pyomo.core.base.numvalue import native_numeric_types, native_types
         self.assertIn(MyBogusNumericType, native_numeric_types)
         self.assertIn(MyBogusNumericType, native_types)
         native_numeric_types.remove(MyBogusNumericType)
@@ -345,16 +348,14 @@ class Test_is_constant(unittest.TestCase):
     def test_error(self):
         class A(object): pass
         val = A()
-        try:
+        with self.assertRaisesRegex(
+                TypeError, "Cannot assess properties of object "
+                "with unknown type: A"):
             is_constant(val)
-            self.fail("Expected TypeError")
-        except TypeError:
-            pass
 
     def test_unknownNumericType(self):
         ref = MyBogusNumericType(42)
         self.assertTrue(is_constant(ref))
-        from pyomo.core.base.numvalue import native_numeric_types, native_types
         self.assertIn(MyBogusNumericType, native_numeric_types)
         self.assertIn(MyBogusNumericType, native_types)
         native_numeric_types.remove(MyBogusNumericType)
@@ -389,16 +390,14 @@ class Test_is_fixed(unittest.TestCase):
     def test_error(self):
         class A(object): pass
         val = A()
-        try:
+        with self.assertRaisesRegex(
+                TypeError, "Cannot assess properties of object "
+                "with unknown type: A"):
             is_fixed(val)
-            self.fail("Expected TypeError")
-        except TypeError:
-            pass
 
     def test_unknownNumericType(self):
         ref = MyBogusNumericType(42)
         self.assertTrue(is_fixed(ref))
-        from pyomo.core.base.numvalue import native_numeric_types, native_types
         self.assertIn(MyBogusNumericType, native_numeric_types)
         self.assertIn(MyBogusNumericType, native_types)
         native_numeric_types.remove(MyBogusNumericType)
@@ -479,25 +478,14 @@ class Test_as_numeric(unittest.TestCase):
 
     def test_none(self):
         val = None
-        try:
+        with self.assertRaisesRegex(
+                TypeError, r"NoneType values \('None'\) are not allowed "
+                "in Pyomo numeric expressions"):
             as_numeric(val)
-            self.fail("Expected ValueError")
-        except:
-            pass
 
     def test_bool(self):
-        val = False
-        try:
-            as_numeric(val)
-            self.fail("Expected ValueError")
-        except:
-            pass
-        val = True
-        try:
-            as_numeric(val)
-            self.fail("Expected ValueError")
-        except:
-            pass
+        self.assertEqual(as_numeric(False), 0)
+        self.assertEqual(as_numeric(True), 1)
 
     def test_float(self):
         val = 1.1
@@ -521,11 +509,10 @@ class Test_as_numeric(unittest.TestCase):
 
     def test_string(self):
         val = 'foo'
-        try:
+        with self.assertRaisesRegex(
+                TypeError, r"str values \('foo'\) are not allowed "
+                "in Pyomo numeric expressions"):
             as_numeric(val)
-            self.fail("Expected ValueError")
-        except:
-            pass
 
     def test_const1(self):
         val = NumericConstant(1.0)
@@ -534,35 +521,46 @@ class Test_as_numeric(unittest.TestCase):
     def test_error1(self):
         class A(object): pass
         val = A()
-        try:
+        with self.assertRaisesRegex(
+                TypeError, r"Cannot treat the value '.*' as a "
+                "numeric value because it has unknown type 'A'"):
             as_numeric(val)
-            self.fail("Expected TypeError")
-        except TypeError:
-            pass
 
     def test_unknownType(self):
         ref = MyBogusType(42)
-        try:
-            val = as_numeric(ref)
-            self.fail("Expected TypeError")
-        except TypeError:
-            pass
+        with self.assertRaisesRegex(
+                TypeError, r"Cannot treat the value '.*' as a "
+                "numeric value because it has unknown type 'MyBogusType'"):
+            as_numeric(ref)
+
+    def test_non_numeric_component(self):
+        m = ConcreteModel()
+        m.v = Var([1,2])
+        with self.assertRaisesRegex(
+                TypeError, "The 'IndexedVar' object 'v' is not a valid "
+                "type for Pyomo numeric expressions"):
+            as_numeric(m.v)
+
+        obj = PyomoObject()
+        with self.assertRaisesRegex(
+                TypeError, "The 'PyomoObject' object '.*' is not a valid "
+                "type for Pyomo numeric expressions"):
+            as_numeric(obj)
 
     def test_unknownNumericType(self):
         ref = MyBogusNumericType(42)
-        val = as_numeric(ref)
-        self.assertEqual(val().val, 42.0)
-        #self.assertEqual(val().val, 42)
-        from pyomo.core.base.numvalue import native_numeric_types, native_types
-        self.assertIn(MyBogusNumericType, native_numeric_types)
-        self.assertIn(MyBogusNumericType, native_types)
-        native_numeric_types.remove(MyBogusNumericType)
-        native_types.remove(MyBogusNumericType)
+        self.assertNotIn(MyBogusNumericType, native_numeric_types)
+        self.assertNotIn(MyBogusNumericType, native_types)
+        try:
+            val = as_numeric(ref)
+            self.assertEqual(val().val, 42.0)
+        finally:
+            native_numeric_types.remove(MyBogusNumericType)
+            native_types.remove(MyBogusNumericType)
 
     def test_numpy_basic_float_registration(self):
         if not numpy_available:
             self.skipTest("This test requires NumPy")
-        from pyomo.core.base.numvalue import native_numeric_types, native_integer_types, native_boolean_types, native_types
         self.assertIn(numpy.float_, native_numeric_types)
         self.assertNotIn(numpy.float_, native_integer_types)
         self.assertIn(numpy.float_, native_boolean_types)
@@ -571,7 +569,6 @@ class Test_as_numeric(unittest.TestCase):
     def test_numpy_basic_int_registration(self):
         if not numpy_available:
             self.skipTest("This test requires NumPy")
-        from pyomo.core.base.numvalue import native_numeric_types, native_integer_types, native_boolean_types, native_types
         self.assertIn(numpy.int_, native_numeric_types)
         self.assertIn(numpy.int_, native_integer_types)
         self.assertIn(numpy.int_, native_boolean_types)
@@ -580,7 +577,6 @@ class Test_as_numeric(unittest.TestCase):
     def test_numpy_basic_bool_registration(self):
         if not numpy_available:
             self.skipTest("This test requires NumPy")
-        from pyomo.core.base.numvalue import native_numeric_types, native_integer_types, native_boolean_types, native_types
         self.assertNotIn(numpy.bool_, native_numeric_types)
         self.assertNotIn(numpy.bool_, native_integer_types)
         self.assertIn(numpy.bool_, native_boolean_types)
