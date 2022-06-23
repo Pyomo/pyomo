@@ -117,7 +117,7 @@ def value(obj, exception=True):
     # Test if we have a duck types for Pyomo expressions
     #
     try:
-        obj.is_expression_type()
+        obj.is_numeric_type()
     except AttributeError:
         #
         # If not, then try to coerce this into a numeric constant.  If that
@@ -370,8 +370,17 @@ def as_numeric(obj):
     # Ignore objects that are duck types to work with Pyomo expressions
     #
     try:
-        obj.is_expression_type()
-        return obj
+        if obj.is_numeric_type():
+            return obj
+        else:
+            try:
+                _name = obj.name
+            except AttributeError:
+                _name = str(obj)
+            raise TypeError(
+                "The '%s' object '%s' is not a valid type for Pyomo "
+                "numeric expressions" % (type(obj).__name__, _name))
+
     except AttributeError:
         pass
     #
@@ -386,10 +395,11 @@ def as_numeric(obj):
     # Generate errors
     #
     if obj.__class__ in native_types:
-        raise TypeError("Cannot treat the value '%s' as a constant" % str(obj))
+        raise TypeError("%s values ('%s') are not allowed in Pyomo "
+                        "numeric expressions" % (type(obj).__name__, str(obj)))
     raise TypeError(
-        "Cannot treat the value '%s' as a constant because it has unknown "
-        "type '%s'" % (str(obj), type(obj).__name__))
+        "Cannot treat the value '%s' as a numeric value because it has "
+        "unknown type '%s'" % (str(obj), type(obj).__name__))
 
 
 def check_if_numeric_type_and_cache(obj):
