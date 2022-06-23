@@ -334,11 +334,14 @@ class Estimator(object):
         # Add objective function (optional)
         if self.obj_function:
             for obj in model.component_objects(pyo.Objective):
+                if obj.name in ["Total_Cost_Objective"]:
+                    raise RuntimeError("Parmest will not override the existing model Objective named "+ obj.name)
                 obj.deactivate()
         
-            def FirstStageCost_rule(model):
-                return 0
-            model.FirstStageCost = pyo.Expression(rule=FirstStageCost_rule)
+            for expr in model.component_data_objects(pyo.Expression):
+                if expr.name in ["FirstStageCost", "SecondStageCost"]:
+                    raise RuntimeError("Parmest will not override the existing model Expression named "+ expr.name)
+            model.FirstStageCost = pyo.Expression(expr=0)
             model.SecondStageCost = pyo.Expression(rule=_SecondStageCostExpr(self.obj_function, data))
             
             def TotalCost_rule(model):
