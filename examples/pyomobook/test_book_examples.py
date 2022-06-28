@@ -474,6 +474,9 @@ class TestBookExamples(unittest.TestCase):
         try:
             os.chdir(dir_)
             out_file = os.path.splitext(test_file)[0]+'.out'
+            # This is roughly equivalent to:
+            #    subprocess.run([sys.executable, bname],
+            #                   stdout=f, stderr=f, cwd=dir_)
             with open(out_file, 'w') as f, capture_output(f, True):
                 # Note: we want LoggingIntercept to log to the
                 # *current* stdout (which is the TeeStream from
@@ -483,7 +486,6 @@ class TestBookExamples(unittest.TestCase):
                     import_file(
                         bname, infer_package=False, module_name='__main__'
                     )
-                #subprocess.run([sys.executable, bname], stdout=f, stderr=f, cwd=dir_)
         finally:
             os.chdir(cwd)
 
