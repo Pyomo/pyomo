@@ -301,10 +301,17 @@ class LoggingIntercept(object):
     logger will be temporarily removed and the logger will be set not to
     propagate messages up to higher-level loggers.
 
-    Args:
-        output (FILE): the file stream to send log messages to
-        module (str): the target logger name to intercept
-        level (int): the logging level to intercept
+    Parameters
+    ----------
+    output: io.TextIOBase
+        the file stream to send log messages to
+    module: str
+        the target logger name to intercept
+    level: int
+        the logging level to intercept
+    formatter: logging.Formatter
+        the formatter to use when rendering the log messages.  If not
+        specified, uses `'%(message)s'`
 
     Examples:
         >>> import io, logging
@@ -313,30 +320,42 @@ class LoggingIntercept(object):
         >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
         ...     logging.getLogger('pyomo.core').warning('a simple message')
         >>> buf.getvalue()
+
     """
 
-    def __init__(self, output=None, module=None, level=logging.WARNING):
-        if output is None:
-            output = io.StringIO()
+    def __init__(self, output=None, module=None, level=logging.WARNING,
+                 formatter=None):
+        self.handler = None
         self.output = output
-        self.handler = logging.StreamHandler(output)
-        self.handler.setFormatter(logging.Formatter('%(message)s'))
-        self.handler.setLevel(level)
         self.module = module
+        self._level = level
+        if formatter is None:
+            formatter = logging.Formatter('%(message)s')
+        self._formatter = formatter
         self._save = None
 
     def __enter__(self):
+        # Set up the handler
+        output = self.output
+        if output is None:
+            output = io.StringIO()
+        assert self.handler is None
+        self.handler = logging.StreamHandler(output)
+        self.handler.setFormatter(self._formatter)
+        self.handler.setLevel(self._level)
+        # Register the handler with the appropriate module scope
         logger = logging.getLogger(self.module)
         self._save = logger.level, logger.propagate, logger.handlers
         logger.handlers = []
         logger.propagate = 0
         logger.setLevel(self.handler.level)
         logger.addHandler(self.handler)
-        return self.output
+        return output
 
     def __exit__(self, et, ev, tb):
         logger = logging.getLogger(self.module)
         logger.removeHandler(self.handler)
+        self.handler = None
         logger.setLevel(self._save[0])
         logger.propagate = self._save[1]
         for h in self._save[2]:
