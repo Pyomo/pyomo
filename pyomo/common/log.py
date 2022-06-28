@@ -262,14 +262,15 @@ class _GlobalLogFilter(object):
 # different formatter based on if the main pyomo logger is enabled for
 # debugging.  It has been updated to suppress output if any handlers
 # have been defined at the root level.
-_pyomoLogger = logging.getLogger('pyomo')
-_handler = StdoutHandler()
-_handler.setFormatter(LegacyPyomoFormatter(
+pyomo_logger = logging.getLogger('pyomo')
+pyomo_handler = StdoutHandler()
+pyomo_formatter = LegacyPyomoFormatter(
     base=PYOMO_ROOT_DIR,
-    verbosity=lambda: _pyomoLogger.isEnabledFor(logging.DEBUG),
-))
-_handler.addFilter(_GlobalLogFilter())
-_pyomoLogger.addHandler(_handler)
+    verbosity=lambda: pyomo_logger.isEnabledFor(logging.DEBUG),
+)
+pyomo_handler.setFormatter(pyomo_formatter)
+pyomo_handler.addFilter(_GlobalLogFilter())
+pyomo_logger.addHandler(pyomo_handler)
 
 
 @deprecated('The pyomo.common.log.LogHandler class has been deprecated '
