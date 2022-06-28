@@ -235,6 +235,7 @@ setup_kwargs = dict(
             'pint',      # units
             'python-louvain', # community_detection
             'pyyaml',    # core
+            'scipy',
             'sympy',     # differentiation
             'xlrd',      # dataportals
             'z3-solver', # community_detection
@@ -249,7 +250,6 @@ setup_kwargs = dict(
             'casadi; implementation_name!="pypy"',  # dae
             'numdifftools; implementation_name!="pypy"', # pynumero
             'pandas; implementation_name!="pypy"',
-            'scipy; implementation_name!="pypy"',
             'seaborn; implementation_name!="pypy"',   # parmest.graphics
         ],
     },
