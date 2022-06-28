@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [3.7, 3.8, 3.9, '3.10', pypy-3.9]
+        python: [3.7, 3.8, 3.9, '3.10']
         other: [""]
         category: [""]
 
@@ -100,16 +100,18 @@ jobs:
           PYENV: pip
           PACKAGES: pyutilib
 
+        - os: ubuntu-latest
+          python: pypy-3.9
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+
         - os: windows-latest
           python: 3.8
           other: /pip
           skip_doctest: 1
           TARGET: win
           PYENV: pip
-
-        exclude:
-        - {os: macos-latest, python: pypy-3.9}
-        - {os: windows-latest, python: pypy-3.9}
 
     steps:
     - name: Checkout Pyomo source
