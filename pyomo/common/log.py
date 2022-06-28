@@ -371,10 +371,18 @@ class LogStream(io.TextIOBase):
     def __init__(self, level, logger):
         self._level = level
         self._logger = logger
+        self._buffer = ''
 
     def write(self, s: str) -> int:
         res = len(s)
-        s = s.rstrip('\n')
-        for line in s.split('\n'):
+        if self._buffer:
+            s = self._buffer + s
+        lines = s.split('\n')
+        for line in lines[:-1]:
             self._logger.log(self._level, line)
+        self._buffer = lines[-1]
         return res
+
+    def flush(self):
+        if self._buffer:
+            self.write('\n')
