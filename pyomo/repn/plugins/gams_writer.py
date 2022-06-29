@@ -826,7 +826,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 output_file.write("\nput statresults;")
                 output_file.write("\nput 'SYMBOL   :   VALUE' /;")
                 for stat in stat_vars:
-                    output_file.write("\nput '%s' %s /;\n" % (stat, stat))
+                    output_file.write("\nput '%s' ' ' %s /;\n" % (stat, stat))
 
 valid_solvers = {
 'ALPHAECP': {'MINLP','MIQCP'},
