@@ -469,8 +469,8 @@ class FbbtTestBase(object):
                 else:
                     xu = m.x.ub
                 _x = np.exp(np.log(y) / _exp_val)
-                self.assertTrue(np.all(xl <= _x))
-                self.assertTrue(np.all(xu >= _x))
+                self.assertTrue(np.all(xl - 1e-14 <= _x))
+                self.assertTrue(np.all(xu + 1e-14 >= _x))
 
     def test_sqrt(self):
         m = pyo.ConcreteModel()
@@ -640,8 +640,8 @@ class FbbtTestBase(object):
             else:
                 xu = pyo.value(m.x.ub)
             x = np.exp(z)
-            self.assertTrue(np.all(xl <= x))
-            self.assertTrue(np.all(xu >= x))
+            self.assertTrue(np.all(xl - 1e-14 <= x))
+            self.assertTrue(np.all(xu + 1e-14 >= x))
 
     def test_log10(self):
         if not numpy_available:
