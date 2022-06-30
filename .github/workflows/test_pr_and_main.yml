@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [3.7, 3.8, 3.9, '3.10', pypy-3.9]
+        python: [3.7, 3.8, 3.9, '3.10']
         other: [""]
         category: [""]
 
@@ -100,16 +100,18 @@ jobs:
           PYENV: pip
           PACKAGES: pyutilib
 
+        - os: ubuntu-latest
+          python: pypy-3.9
+          skip_doctest: 1
+          TARGET: linux
+          PYENV: pip
+
         - os: windows-latest
           python: 3.8
           other: /pip
           skip_doctest: 1
           TARGET: win
           PYENV: pip
-
-        exclude:
-        - {os: macos-latest, python: pypy-3.9}
-        - {os: windows-latest, python: pypy-3.9}
 
     steps:
     - name: Checkout Pyomo source
@@ -224,6 +226,8 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
+        channels: conda-forge
+        channel-priority: strict
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
@@ -275,13 +279,12 @@ jobs:
         conda config --set always_yes yes
         conda config --set auto_update_conda false
         conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
-        conda config --show channels
-        conda config --remove channels defaults
-        conda config --add channels conda-forge
         conda info
         conda config --show-sources
         conda config --show channels
         conda list --show-channel-urls
+        which python
+        python --version
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`

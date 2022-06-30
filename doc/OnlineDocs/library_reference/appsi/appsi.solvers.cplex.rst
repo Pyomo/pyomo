@@ -6,6 +6,7 @@ Cplex
   :inherited-members:
   :undoc-members:
   :show-inheritance:
+  :exclude-members: NoArgument
 
 .. autoclass:: pyomo.contrib.appsi.solvers.cplex.CplexResults
   :members:

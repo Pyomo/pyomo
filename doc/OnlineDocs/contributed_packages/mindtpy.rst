@@ -22,11 +22,12 @@ Usage and early implementation details for MindtPy can be found in the PSE 2018 
 .. _Duran & Grossmann, 1986: https://dx.doi.org/10.1007/BF02592064
 .. _Westerlund & Petterson, 1995: http://dx.doi.org/10.1016/0098-1354(95)87027-X
 .. _Kesavan & Allgor, 2004: https://link.springer.com/article/10.1007/s10107-004-0503-1
-.. _MC++: https://omega-icl.github.io/mcpp/
+.. _MC++: https://pyomo.readthedocs.io/en/stable/contributed_packages/mcpp.html
 .. _Bernal & Peng, 2021: http://www.optimization-online.org/DB_HTML/2021/06/8452.html
 .. _Kronqvist & Bernal, 2018: https://link.springer.com/article/10.1007%2Fs10107-018-1356-3
 .. _Bonami & Cornuéjols, 2009: https://link.springer.com/article/10.1007/s10107-008-0212-2
 .. _Bernal & Vigerske, 2019: https://www.tandfonline.com/doi/abs/10.1080/10556788.2019.1641498
+.. _Kronqvist et al., 2019: https://link.springer.com/article/10.1007/s11081-018-9411-8
 
 MINLP Formulation
 -----------------
@@ -252,7 +253,7 @@ Augmented Penalty refers to the introduction of (non-negative) slack variables o
 Global Outer-Approximation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Apart from the decomposition methods for convex MINLP problems [`Kronqvist et al., 2019`_], MindtPy provides an implementation of Global Outer Approximation (GOA) as described in [`Kesavan et al., 2004`_], to provide optimality guaranteed for nonconvex MINLP problems. Here, the validity of the Mixed-integer Linear Programming relaxation of the original problem is guaranteed via the usage of Generalized McCormick envelopes, computed using the package `MC++`_. The NLP subproblems, in this case, need to be solved to global optimality, which can be achieved through global NLP solvers such as `BARON`_ or `SCIP`_.
+Apart from the decomposition methods for convex MINLP problems [`Kronqvist et al., 2019`_], MindtPy provides an implementation of Global Outer Approximation (GOA) as described in [`Kesavan & Allgor, 2004`_], to provide optimality guaranteed for nonconvex MINLP problems. Here, the validity of the Mixed-integer Linear Programming relaxation of the original problem is guaranteed via the usage of Generalized McCormick envelopes, computed using the package `MC++`_. The NLP subproblems, in this case, need to be solved to global optimality, which can be achieved through global NLP solvers such as `BARON`_ or `SCIP`_.
 
 .. _BARON: https://minlp.com/baron-solver
 .. _SCIP: https://www.scipopt.org/
@@ -274,10 +275,6 @@ Since no-good cuts or tabu list is applied in the Global Outer-Approximation (GO
 
 
 The GOA method also has a single-tree implementation with ``cplex_persistent`` and ``gurobi_persistent``. Notice that this method is more computationally expensive than the other strategies implemented for convex MINLP like OA and ECP, which can be used as heuristics for nonconvex MINLP problems.
-
-.. _Kronqvist et al., 2019: https://link.springer.com/article/10.1007/s11081-018-9411-8
-.. _Kesavan et al., 2004: https://link.springer.com/article/10.1007/s10107-004-0503-1
-.. _MC++: https://pyomo.readthedocs.io/en/stable/contributed_packages/mcpp.html
 
 A usage example for GOA is as follows:
 
