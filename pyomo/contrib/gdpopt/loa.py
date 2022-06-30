@@ -186,8 +186,8 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                     'the ignore set.' % constr.name)
                 continue
 
-            config.logger.debug( "Adding OA cut for %s with dual value %s" %
-                                 (constr.name, dual_value))
+            config.logger.debug("Adding OA cut for %s with dual value %s" %
+                                (constr.name, dual_value))
 
             # Cache jacobian
             jacobian = master_util_block.jacobians.get(constr, None)
@@ -200,8 +200,8 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                     mode = differentiate.Modes.sympy
 
                 try:
-                    jac_list = differentiate( constr.body, wrt_list=constr_vars,
-                                              mode=mode)
+                    jac_list = differentiate(constr.body, wrt_list=constr_vars,
+                                             mode=mode)
                     jac_map = ComponentMap(zip(constr_vars, jac_list))
                 except:
                     if mode is differentiate.Modes.reverse_numeric:
@@ -212,8 +212,8 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 master_util_block.jacobians[constr] = jacobian
             # Recompute numeric derivatives
             if not jacobian.jac:
-                jac_list = differentiate( constr.body, wrt_list=jacobian.vars,
-                                          mode=jacobian.mode)
+                jac_list = differentiate(constr.body, wrt_list=jacobian.vars,
+                                         mode=jacobian.mode)
                 jacobian.jac.update(zip(jacobian.vars, jac_list))
 
             # Create a block on which to put outer approximation cuts, if we
@@ -231,9 +231,9 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 master_oa_utils = master_util_block.GDPopt_OA_slacks = Block(
                     doc="Block holding outer approximation slacks for the "
                     "whole model (so that the writers can find them).")
-                master_oa_utils.slacks = VarList( bounds=(0, config.max_slack),
-                                                  domain=NonNegativeReals,
-                                                  initialize=0)
+                master_oa_utils.slacks = VarList(bounds=(0, config.max_slack),
+                                                 domain=NonNegativeReals,
+                                                 initialize=0)
 
             oa_cuts = oa_utils.cuts
             slack_var = master_oa_utils.slacks.add()

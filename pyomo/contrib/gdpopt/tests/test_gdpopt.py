@@ -407,9 +407,9 @@ class TestGDPopt(unittest.TestCase):
         # initialization. This makes sure we get the correct answer anyway, as
         # there is a feasible solution.
         m = models.makeNestedNonlinearModel()
-        SolverFactory('gdpopt.loa').solve( m, mip_solver=mip_solver,
-                                           nlp_solver=nlp_solver,
-                                           init_algorithm='set_covering')
+        SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver,
+                                          init_algorithm='set_covering')
         self.assertAlmostEqual(value(m.x), sqrt(2)/2)
         self.assertAlmostEqual(value(m.y), sqrt(2)/2)
         self.assertTrue(value(m.disj.disjuncts[1].indicator_var))
@@ -426,10 +426,10 @@ class TestGDPopt(unittest.TestCase):
                                    [m.x + m.y >= 4, m.y == m.x + 1]])
         m.cons = Constraint(expr=m.x == 3)
         m.obj = Objective(expr=m.x + m.y)
-        SolverFactory('gdpopt').solve( m, mip_solver=mip_solver,
-                                       nlp_solver=nlp_solver,
-                                       init_algorithm='set_covering',
-                                       algorithm='RIC')
+        SolverFactory('gdpopt').solve(m, mip_solver=mip_solver,
+                                      nlp_solver=nlp_solver,
+                                      init_algorithm='set_covering',
+                                      algorithm='RIC')
         self.assertAlmostEqual(value(m.x), 3)
         self.assertAlmostEqual(value(m.y), 4)
         self.assertFalse(value(m.disj.disjuncts[0].indicator_var))
@@ -598,9 +598,9 @@ class TestGDPopt(unittest.TestCase):
 
     def test_nested_disjunctions_max_binary(self):
         m = models.makeNestedNonlinearModel()
-        SolverFactory('gdpopt.loa').solve( m, mip_solver=mip_solver,
-                                           nlp_solver=nlp_solver,
-                                           init_algorithm='max_binary')
+        SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver,
+                                          init_algorithm='max_binary')
         self.assertAlmostEqual(value(m.x), sqrt(2)/2)
         self.assertAlmostEqual(value(m.y), sqrt(2)/2)
 
@@ -1502,7 +1502,7 @@ class TestConfigOptions(unittest.TestCase):
 
         opt = SolverFactory('gdpopt.loa')
         with self.assertRaisesRegex(
-                ValueError, 
+                ValueError,
                 "Changing the algorithm in the solve method "
                 "is not supported for algorithm-specific "
                 "GDPopt solvers. Either use "
@@ -1526,7 +1526,7 @@ class TestConfigOptions(unittest.TestCase):
         self.assertEqual(opt.CONFIG.mip_solver, mip_solver)
         self.assertEqual(opt.CONFIG.nlp_solver, nlp_solver)
         self.assertEqual(opt.CONFIG.init_algorithm, 'no_init')
-        
+
         buf = StringIO()
         with redirect_stdout(buf):
             opt.solve(m, tee=True)

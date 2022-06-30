@@ -112,9 +112,9 @@ def process_nonlinear_problem_results(results, model, problem_type, config):
             return tc.feasible
         return tc.noSolution
     elif term_cond == tc.intermediateNonInteger:
-        config.logger.debug( "%s solver could not find feasible integer"
-                             " solution: %s" % (problem_type,
-                                                results.solver.message))
+        config.logger.debug("%s solver could not find feasible integer"
+                            " solution: %s" % (problem_type,
+                                               results.solver.message))
         return tc.noSolution
     elif term_cond == tc.unbounded:
         config.logger.debug("The NLP subproblem is unbounded, meaning that "

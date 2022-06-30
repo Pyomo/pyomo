@@ -303,10 +303,10 @@ class _GDP_LBB_Solver(_GDPoptAlgorithm):
         self.created_nodes += newly_created_nodes
 
         config.logger.info("Added %s new nodes with %s relaxed disjunctions to "
-                           "the heap. Size now %s." %
-                           ( num_unfixed_disjuncts,
-                             node_data.num_unbranched_disjunctions - 1,
-                             len(self.bb_queue)))
+                           "the heap. Size now %s." % (
+                               num_unfixed_disjuncts,
+                               node_data.num_unbranched_disjunctions - 1,
+                               len(self.bb_queue)))
 
     def _prescreen_node(self, node_data, node_model, config):
         # Check node for satisfiability if sat-solver is enabled
