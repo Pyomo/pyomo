@@ -44,12 +44,8 @@
 - start keeping basic changelog
 
 """
-from textwrap import indent
-
 from pyomo.common.config import (
-    add_docstring_list, In, ConfigBlock, ConfigValue, NonNegativeInt,
-    PositiveInt)
-from pyomo.common.deprecation import deprecation_warning
+    add_docstring_list, ConfigBlock)
 from pyomo.contrib.gdpopt.config_options import (
     _add_common_configs, _supported_algorithms, _get_algorithm_config)
 from pyomo.opt.base import SolverFactory

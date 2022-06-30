@@ -14,7 +14,6 @@ from heapq import heappush, heappop
 import traceback
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm

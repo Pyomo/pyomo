@@ -17,8 +17,6 @@ from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
 from pyomo.contrib.gdpopt.nlp_initialization import (
     restore_vars_to_original_values)
 from pyomo.contrib.gdpopt.util import a_logger, _DoNothing
-from pyomo.opt import SolverFactory, UnknownSolver
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
 _supported_algorithms = {
     'LOA': ('gdpopt.loa', 'Logic-based Outer Approximation'),

@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 from math import fabs
-from pyomo.common.config import ConfigBlock
 from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds

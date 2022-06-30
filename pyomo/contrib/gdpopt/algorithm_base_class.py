@@ -15,9 +15,7 @@ from pyomo.common.collections import Bunch
 from pyomo.common.config import ConfigBlock
 from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
-from pyomo.contrib.gdpopt.config_options import (
-    _add_common_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
-    _add_tolerance_configs, _add_OA_configs, _add_BB_configs)
+from pyomo.contrib.gdpopt.config_options import _add_common_configs
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block, add_disjunct_list, add_boolean_variable_lists,
     add_algebraic_variable_list)

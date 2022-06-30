@@ -13,7 +13,6 @@ from collections import namedtuple
 from math import copysign
 
 from pyomo.common.collections import ComponentMap
-from pyomo.common.config import ConfigBlock
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
