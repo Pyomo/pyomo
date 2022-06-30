@@ -85,18 +85,17 @@ class _GDPoptAlgorithm():
     _metasolver = False
 
     def solve(self, model, **kwds):
-        # TODO: Should I be this nice? I'm doing it at the moment to debug, but
-        # technically the config validation will complain and I don't have to
-        # bother.
+        # I'm going to be nice for now and intercept with a more informative
+        # error message than what the Config system would give.
         alg = kwds.pop('algorithm', None)
         if alg is None:
             alg = kwds.pop('strategy', None)
         if alg is not None:
-            raise RuntimeError("Changing the algorithm in the solve method "
-                               "is not supported for algorithm-specific "
-                               "GDPopt solvers. Either use "
-                               "SolverFactory('gdpopt') or instantiate a "
-                               "solver with the algorithm you want to use.")
+            raise ValueError("Changing the algorithm in the solve method "
+                             "is not supported for algorithm-specific "
+                             "GDPopt solvers. Either use "
+                             "SolverFactory('gdpopt') or instantiate a "
+                             "solver with the algorithm you want to use.")
 
         config = self.config(kwds.pop('options', {}),
                                  preserve_implicit=True)

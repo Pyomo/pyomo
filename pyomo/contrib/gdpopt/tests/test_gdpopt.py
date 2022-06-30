@@ -1501,10 +1501,14 @@ class TestConfigOptions(unittest.TestCase):
         m = self.make_model()
 
         opt = SolverFactory('gdpopt.loa')
-        # opt.CONFIG = ... # make class
-        # opt.config # make instance
-        #with self.assertRaisesRegex():
-        opt.solve(algorithm='RIC')
+        with self.assertRaisesRegex(
+                ValueError, 
+                "Changing the algorithm in the solve method "
+                "is not supported for algorithm-specific "
+                "GDPopt solvers. Either use "
+                "SolverFactory\('gdpopt'\) or instantiate a "
+                "solver with the algorithm you want to use."):
+            opt.solve(m, algorithm='RIC')
 
         opt.CONFIG.mip_solver = mip_solver
         opt.CONFIG.nlp_solver = nlp_solver
@@ -1513,67 +1517,32 @@ class TestConfigOptions(unittest.TestCase):
         buf = StringIO()
         with redirect_stdout(buf):
             opt.solve(m, tee=True)
-        self.assertIn('using LOA algorithm', buf.getvalue())
+        self.assertIn('mip_solver: gurobi', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
 
-        opt.CONFIG.algorithm = 'RIC'
+        opt = SolverFactory('gdpopt.loa')
+        opt.config.mip_solver = 'glpk'
         # Make sure this didn't change the other options
         self.assertEqual(opt.CONFIG.mip_solver, mip_solver)
         self.assertEqual(opt.CONFIG.nlp_solver, nlp_solver)
         self.assertEqual(opt.CONFIG.init_algorithm, 'no_init')
+        
         buf = StringIO()
         with redirect_stdout(buf):
             opt.solve(m, tee=True)
-        self.assertIn('using RIC algorithm', buf.getvalue())
+        self.assertIn('mip_solver: glpk', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
-
-    @unittest.skipIf(not mcpp_available(), "MC++ is not available")
-    def test_set_options_in_solver_factory(self):
-        m = self.make_model()
-
-        opt = SolverFactory('gdpopt', mip_solver=mip_solver,
-                            nlp_solver=nlp_solver, algorithm='GLOA', tee=True)
-        self.assertEqual(opt.CONFIG.mip_solver, mip_solver)
-        self.assertEqual(opt.CONFIG.nlp_solver, nlp_solver)
-        buf = StringIO()
-        with redirect_stdout(buf):
-            opt.solve(m)
-        self.assertIn('using GLOA algorithm', buf.getvalue())
-        self.assertAlmostEqual(value(m.obj), -0.25)
-
-    @unittest.skipIf(not mcpp_available(), "MC++ is not available")
-    def test_switch_alg_and_restore_default_algorithm(self):
-        m = self.make_model()
-
-        loa = SolverFactory('gdpopt', algorithm='LOA')
-        self.assertEqual(loa.CONFIG.algorithm, 'LOA')
-        buf = StringIO()
-        with redirect_stdout(buf):
-            loa.solve(m, tee=True, mip_solver=mip_solver, nlp_solver=nlp_solver)
-        self.assertIn('using LOA algorithm', buf.getvalue())
-        self.assertAlmostEqual(value(m.obj), -0.25)
-        self.assertEqual(loa.CONFIG.algorithm, 'LOA')
-
-        buf = StringIO()
-        with redirect_stdout(buf):
-            loa.solve(m, algorithm='GLOA', tee=True, mip_solver=mip_solver,
-                      nlp_solver=nlp_solver)
-        self.assertIn('using GLOA algorithm', buf.getvalue())
-        self.assertAlmostEqual(value(m.obj), -0.25)
-        self.assertEqual(loa.CONFIG.algorithm, 'LOA')
 
     def test_no_default_algorithm(self):
         m = self.make_model()
 
         opt = SolverFactory('gdpopt')
-        self.assertIsNone(opt.CONFIG.algorithm)
         buf = StringIO()
         with redirect_stdout(buf):
             opt.solve(m, algorithm='RIC', tee=True, mip_solver=mip_solver,
                       nlp_solver=nlp_solver)
         self.assertIn('using RIC algorithm', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
-        self.assertIsNone(opt.CONFIG.algorithm)
 
         buf = StringIO()
         with redirect_stdout(buf):
@@ -1581,7 +1550,6 @@ class TestConfigOptions(unittest.TestCase):
                       nlp_solver=nlp_solver)
         self.assertIn('using LBB algorithm', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
-        self.assertIsNone(opt.CONFIG.algorithm)
 
 if __name__ == '__main__':
     unittest.main()
