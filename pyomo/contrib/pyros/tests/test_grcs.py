@@ -673,6 +673,33 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None,
                             "Bounds not added correctly for EllipsoidalSet")
 
+    def test_ellipsoidal_set_bounds(self):
+        """Check `EllipsoidalSet` parameter bounds method correct."""
+        cov = [[2, 1], [1, 2]]
+        scales=[0.5, 2]
+        mean = [1, 1]
+
+        for scale in scales:
+            ell = EllipsoidalSet(center=mean, shape_matrix=cov, scale=scale)
+            bounds = ell.parameter_bounds
+            actual_bounds = list()
+            for idx, val in enumerate(mean):
+                diff = (cov[idx][idx] * scale) ** 0.5
+                actual_bounds.append((val - diff, val + diff))
+            self.assertTrue(
+                np.allclose(
+                    np.array(bounds),
+                    np.array(actual_bounds),
+                ),
+                msg=(
+                    f"EllipsoidalSet bounds {bounds} do not match their actual"
+                    f" values {actual_bounds} (for scale {scale}"
+                    f" and shape matrix {cov})."
+                    " Check the `parameter_bounds`"
+                    " method for the EllipsoidalSet."
+                ),
+            )
+
 class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
     '''
     Axis aligned ellipsoidal uncertainty sets. Required inputs are half-lengths, nominal point, and right-hand side.
@@ -746,6 +773,102 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for AxisAlignedEllipsoidalSet")
+
+    def test_set_with_zero_half_lengths(self):
+        # construct ellipsoid
+        half_lengths = [1, 0, 2, 0]
+        center = [1, 1, 1, 1]
+        ell = AxisAlignedEllipsoidalSet(center, half_lengths)
+
+        # construct model
+        m = ConcreteModel()
+        m.v1 = Var()
+        m.v2 = Var([1, 2])
+        m.v3 = Var()
+
+        # test constraints
+        conlist = ell.set_as_constraint([m.v1, m.v2, m.v3])
+        eq_cons = [con for con in conlist.values() if con.equality]
+
+        self.assertEqual(
+            len(conlist),
+            3,
+            msg=(
+                "Constraint list for this `AxisAlignedEllipsoidalSet` should"
+                f" be of length 3, but is of length {len(conlist)}"
+            ),
+        )
+        self.assertEqual(
+            len(eq_cons),
+            2,
+            msg=(
+                "Number of equality constraints for this"
+                "`AxisAlignedEllipsoidalSet` should be 2,"
+                f" there are {len(eq_cons)} such constraints"
+            ),
+        )
+
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_two_stg_mod_with_axis_aligned_set(self):
+        """
+        Test two-stage model with `AxisAlignedEllipsoidalSet`
+        as the uncertainty set.
+        """
+        # define model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u1 = Param(initialize=1.125, mutable=True)
+        m.u2 = Param(initialize=1, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+
+        # Define the uncertainty set
+        # we take the parameter `u2` to be 'fixed'
+        ellipsoid = AxisAlignedEllipsoidalSet(
+            center=[1.125, 1],
+            half_lengths=[1, 0],
+        )
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u1, m.u2],
+            uncertainty_set=ellipsoid,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            }
+        )
+
+        # check successful termination
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Did not identify robust optimal solution to problem instance."
+        )
+        self.assertGreater(
+            results.iterations,
+            0,
+            msg="Robust infeasible model terminated in 0 iterations (nominal case)."
+        )
+
 
 class testPolyhedralUncertaintySetClass(unittest.TestCase):
     '''

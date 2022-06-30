@@ -734,8 +734,8 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
             raise AttributeError("Vector of half-lengths must be real-valued and numeric.")
         if not all(isinstance(elem, (int, float)) for elem in center):
             raise AttributeError("Vector center must be real-valued and numeric.")
-        if any(elem <= 0 for elem in half_lengths):
-            raise AttributeError("Half length values must be > 0.")
+        if any(elem < 0 for elem in half_lengths):
+            raise AttributeError("Half length values must be nonnegative.")
         # === Valid variance dimensions
         if not len(center) == len(half_lengths):
             raise AttributeError("Half lengths and center of ellipsoid must have same dimensions.")
@@ -765,33 +765,52 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         parameter_bounds = [(nom_value[i] - half_length[i], nom_value[i] + half_length[i]) for i in range(len(nom_value))]
         return parameter_bounds
 
-    def set_as_constraint(self, uncertain_params, **kwargs):
+    def set_as_constraint(self, uncertain_params, model=None, config=None):
         """
-        Function to generate constraints for the AxisAlignedEllipsoid uncertainty set.
+        Generate constraint(s) for the `AxisAlignedEllipsoidSet`
+        class.
 
         Args:
-           uncertain_params: uncertain parameter objects for writing constraint objects
+            uncertain_params: uncertain parameter objects for writing
+            constraint objects. Indexed parameters are accepted, and
+            are unpacked for constraint generation.
         """
-        if len(uncertain_params) != len(self.center):
-               raise AttributeError("Center of ellipsoid must be same dimensions as vector of uncertain parameters.")
-        # square and invert half lengths
-        inverse_squared_half_lengths = list(1.0/(a**2) for a in self.half_lengths)
-        # Calculate row vector of differences
-        diff_squared = []
-        # === Assume VarList uncertain_param_vars
-        for idx, i in enumerate(uncertain_params):
-           if uncertain_params[idx].is_indexed():
-               for index in uncertain_params[idx]:
-                   diff_squared.append((uncertain_params[idx][index] - self.center[idx])**2)
-           else:
-               diff_squared.append((uncertain_params[idx] - self.center[idx])**2)
+        all_params = list()
 
-        # Calculate inner product of difference vector and variance matrix
-        constraint = sum([x * y for x, y in zip(inverse_squared_half_lengths, diff_squared)])
+        # expand all uncertain parameters to a list.
+        # this accounts for the cases in which `uncertain_params`
+        # consists of indexed model components,
+        # or is itself a single indexed component
+        if not isinstance(uncertain_params, (tuple, list)):
+            uncertain_params = [uncertain_params]
 
+        all_params = []
+        for uparam in uncertain_params:
+            all_params.extend(uparam.values())
+
+        if len(all_params) != len(self.center):
+            raise AttributeError(
+                f"Center of ellipsoid is of dimension {len(self.center)},"
+                f" but vector of uncertain parameters is of dimension"
+                f" {len(all_params)}"
+            )
+
+        zip_all = zip(all_params, self.center, self.half_lengths)
+        diffs_squared = list()
+
+        # now construct the constraints
         conlist = ConstraintList()
         conlist.construct()
-        conlist.add(constraint <= 1)
+        for param, ctr, half_len in zip_all:
+            if half_len > 0:
+                diffs_squared.append((param - ctr) ** 2 / (half_len) ** 2)
+            else:
+                # equality constraints for parameters corresponding to
+                # half-lengths of zero
+                conlist.add(param == ctr)
+
+        conlist.add(sum(diffs_squared) <= 1)
+
         return conlist
 
 
@@ -802,13 +821,19 @@ class EllipsoidalSet(UncertaintySet):
 
     def __init__(self, center, shape_matrix, scale=1):
         """
-        EllipsoidalSet constructor
+        EllipsoidalSet constructor.
 
-        Args:
-            center: Vector (``list``) of uncertain parameter values around which deviations are restrained.
-            shape_matrix: Positive semi-definite matrix, effectively a covariance matrix for
-            constraint and bounds determination.
-            scale: Right-hand side value for the ellipsoid.
+        Parameters
+        ----------
+        center : (N,) array-like
+            Center of the ellipsoid.
+        shape_matrix : (N, N) array-like
+            A positive definite matrix characterizing the shape
+            and orientation of the ellipsoid.
+        scale : float
+            Square of the factor by which to scale the semi-axes
+            of the ellipsoid (i.e. the eigenvectors of the covariance
+            matrix).
         """
 
         # === Valid data in lists/matrixes
@@ -875,8 +900,8 @@ class EllipsoidalSet(UncertaintySet):
         scale = self.scale
         nom_value = self.center
         P = self.shape_matrix
-        parameter_bounds = [(nom_value[i] - np.power(P[i][i], 0.5) * scale,
-                             nom_value[i] + np.power(P[i][i], 0.5) * scale) for i in range(self.dim)]
+        parameter_bounds = [(nom_value[i] - np.power(P[i][i] * scale, 0.5),
+                             nom_value[i] + np.power(P[i][i] * scale, 0.5)) for i in range(self.dim)]
         return parameter_bounds
 
     def set_as_constraint(self, uncertain_params, **kwargs):
