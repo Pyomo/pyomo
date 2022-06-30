@@ -46,12 +46,18 @@ BBNodeData = namedtuple('BBNodeData', [
     'unbranched_disjunction_indices',  # list of unbranched disjunction indices
 ])
 
+@SolverFactory.register(
+    'gdpopt.lbb',
+    doc="The LBB (logic-based branch and bound) Generalized Disjunctive "
+    "Programming (GDP) solver")
 class _GDP_LBB_Solver(_GDPoptAlgorithm):
-    CONFIG = ConfigBlock("GDPoptLBB")
+    CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)
     _add_BB_configs(CONFIG)
+
+    algorithm = 'LBB'
 
     def _log_citation(self, config):
         config.logger.info("\n" + """- LBB algorithm:
