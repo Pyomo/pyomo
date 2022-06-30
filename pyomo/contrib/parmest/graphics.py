@@ -204,12 +204,12 @@ def pairwise_plot(theta_values, theta_star=None, alpha=None, distributions=[],
           Boolean results from confidence interval tests (labeled using the alpha value). 
           Each row is a sample.
           
-          * Theta variables can be computed from ``theta_est_bootstrap``, 
-            ``theta_est_leaveNout``, and  ``leaveNout_bootstrap_test``.
-          * The objective value can be computed using the ``likelihood_ratio_test``.
-          * Results from confidence interval tests can be computed using the  
-           ``leaveNout_bootstrap_test``, ``likelihood_ratio_test``, and 
-           ``confidence_region_test``.
+            * Theta variables can be computed from ``theta_est_bootstrap``, 
+              ``theta_est_leaveNout``, and  ``leaveNout_bootstrap_test``.
+            * The objective value can be computed using the ``likelihood_ratio_test``.
+            * Results from confidence interval tests can be computed using the  
+              ``leaveNout_bootstrap_test``, ``likelihood_ratio_test``, and 
+              ``confidence_region_test``.
 
         * If theta_values is a tuple, then it contains a mean, covariance, and number 
           of samples (mean, cov, n) where mean is a dictionary or Series 

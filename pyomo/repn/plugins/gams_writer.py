@@ -813,9 +813,9 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 output_file.write("\nput results;")
                 output_file.write("\nput 'SYMBOL  :  LEVEL  :  MARGINAL' /;")
                 for var in var_list:
-                    output_file.write("\nput %s %s.l %s.m /;" % (var, var, var))
+                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;" % (var, var, var))
                 for con in constraint_names:
-                    output_file.write("\nput %s %s.l %s.m /;" % (con, con, con))
+                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;" % (con, con, con))
                 output_file.write("\nput GAMS_OBJECTIVE GAMS_OBJECTIVE.l "
                                   "GAMS_OBJECTIVE.m;\n")
 
@@ -826,7 +826,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 output_file.write("\nput statresults;")
                 output_file.write("\nput 'SYMBOL   :   VALUE' /;")
                 for stat in stat_vars:
-                    output_file.write("\nput '%s' %s /;\n" % (stat, stat))
+                    output_file.write("\nput '%s' ' ' %s /;\n" % (stat, stat))
 
 valid_solvers = {
 'ALPHAECP': {'MINLP','MIQCP'},
