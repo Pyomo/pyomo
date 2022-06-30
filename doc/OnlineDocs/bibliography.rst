@@ -15,6 +15,11 @@ Bibliography
    engineering. AIChE J. 2021; 67:e17175. DOI `10.1002/aic.17175
    <https://aiche.onlinelibrary.wiley.com/doi/abs/10.1002/aic.17175>`_
 
+.. [mpisppy] Bernard Knueven, David Mildebrath, Christopher Muir,
+   John D Siirola, Jean-Paul Watson, and David L Woodruff, A Parallel 
+   Hub-and-Spoke System for Large-Scale Scenario-Based Optimization 
+   Under Uncertainty, pre-print, 2020
+  
 .. [ParmestPaper] Katherine A. Klise, Bethany L. Nicholson, Andrea
    Staid, David L.Woodruff.  Parmest: Parameter Estimation Via Pyomo.
    Computer Aided Chemical Engineering, 47 (2019): 41-46.
