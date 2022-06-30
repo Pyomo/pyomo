@@ -5,7 +5,7 @@ The Pyomo-MC++ interface allows for bounding of factorable functions using the M
 the OMEGA research group at Imperial College London.
 Documentation for MC++ may be found on the `MC++ website`_.
 
-.. _MC++ website: https://omega-icl.github.io/mcpp/
+.. _MC++ website: https://github.com/omega-icl/mcpp
 
 
 Default Installation

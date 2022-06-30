@@ -7,10 +7,6 @@ Bibliography
 
 .. [AIMMS] http://www.aimms.com/
 
-.. [BirgeLouveauxBook] J.R. Birge and F. Louveaux. Introduction to
-                        Stochastic Programming. Springer Series in
-                        Operations Research. New York. Springer, 1997
-
 .. [GAMS] http://www.gams.com
 
 .. [GRCSPaper] Isenberg, NM, Akula, P, Eslick, JC, Bhattacharyya, D,
@@ -49,11 +45,6 @@ Bibliography
               optimization with differential and algebraic equations."
               Mathematical Programming Computation 10(2) (2018):
               187-223.
-
-.. [PySPJournal] Jean-Paul Watson, David L. Woodruff, William E. Hart.
-                 "Pyomo: modeling and solving mathematical programs in
-                 Python," Mathematical Programming Computation, Volume
-                 4, Number 2, June 2012, Pages 109-142
 
 .. [RooneyBiegler] W.C. Rooney, L.T. Biegler, "Design for model parameter 
                    uncertainty using nonlinear confidence regions", AIChE 
