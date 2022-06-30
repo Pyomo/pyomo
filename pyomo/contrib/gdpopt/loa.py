@@ -22,8 +22,7 @@ from pyomo.contrib.gdpopt.config_options import (
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     _get_master_and_subproblem, add_constraint_list)
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
-from pyomo.contrib.gdpopt.oa_algorithm_utils import (
-    _fix_master_soln_solve_subproblem_and_add_cuts)
+from pyomo.contrib.gdpopt.oa_algorithm_utils import _OAAlgorithmMixIn
 from pyomo.contrib.gdpopt.solve_master_problem import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.util import (
     time_code, _add_bigm_constraint_to_transformed_model)
@@ -34,12 +33,17 @@ from pyomo.core import (
 from pyomo.core.expr import differentiate
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.gdp import Disjunct
+from pyomo.opt.base import SolverFactory
 from pyomo.repn import generate_standard_repn
 
 MAX_SYMBOLIC_DERIV_SIZE = 1000
 JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
 
-class _GDP_LOA_Solver(_GDPoptAlgorithm):
+@SolverFactory.register(
+    'gdpopt.loa',
+    doc="The LOA (logic-based outer approximation) Generalized Disjunctive "
+    "Programming (GDP) solver")
+class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     """The GDPopt (Generalized Disjunctive Programming optimizer) logic-based
     outer approximation (LOA) solver.
 
@@ -47,11 +51,21 @@ class _GDP_LOA_Solver(_GDPoptAlgorithm):
     constraints, as well as logical conditions. For nonconvex problems, LOA
     may not report rigorous lower/upper bounds.
     """
-    CONFIG = ConfigBlock("GDPoptLOA")
+    CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_OA_configs(CONFIG)
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)
+
+    algorithm = 'LOA'
+
+    def _log_citation(self, config):
+        config.logger.info("\n" + """- LOA algorithm:
+        Türkay, M; Grossmann, IE.
+        Logic-based MINLP algorithms for the optimal synthesis of process
+        networks. Comp. and Chem. Eng. 1996, 20(8), 959–978.
+        DOI: 10.1016/0098-1354(95)00219-7.
+        """.strip())
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger
@@ -88,8 +102,8 @@ class _GDP_LOA_Solver(_GDPoptAlgorithm):
                 break
 
             with time_code(self.timing, 'nlp'):
-                _fix_master_soln_solve_subproblem_and_add_cuts(
-                    master_util_block, subproblem_util_block, config, self)
+                self._fix_master_soln_solve_subproblem_and_add_cuts(
+                    master_util_block, subproblem_util_block, config)
 
             # Add integer cut
             with time_code(self.timing, "integer cut generation"):

@@ -22,8 +22,7 @@ from pyomo.contrib.gdpopt.create_oa_subproblems import (
     _get_master_and_subproblem, add_constraints_by_disjunct,
     add_global_constraint_list)
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
-from pyomo.contrib.gdpopt.oa_algorithm_utils import (
-    _fix_master_soln_solve_subproblem_and_add_cuts)
+from pyomo.contrib.gdpopt.oa_algorithm_utils import _OAAlgorithmMixIn
 from pyomo.contrib.gdpopt.solve_master_problem import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.util import (
     _add_bigm_constraint_to_transformed_model, time_code)
@@ -33,19 +32,35 @@ from pyomo.core import (
     Constraint, Block, NonNegativeIntegers, Objective, value)
 from pyomo.core.expr.numvalue import is_potentially_variable
 from pyomo.core.expr.visitor import identify_variables
+from pyomo.opt.base import SolverFactory
 
-class _GDP_GLOA_Solver(_GDPoptAlgorithm):
+@SolverFactory.register(
+    'gdpopt.gloa',
+    doc="The GLOA (global logic-based outer approximation) Generalized "
+    "Disjunctive Programming (GDP) solver")
+class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     """The GDPopt (Generalized Disjunctive Programming optimizer) global
     logic-based outer approximation (GLOA) solver.
 
     Accepts models that can include nonlinear, continuous variables and
     constraints, as well as logical conditions.
     """
-    CONFIG = ConfigBlock("GDPoptGLOA")
+    CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_OA_configs(CONFIG)
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)
+
+    algorithm='GLOA'
+
+    def _log_citation(self, config):
+        config.logger.info("\n" + """- GLOA algorithm:
+        Lee, S; Grossmann, IE.
+        A Global Optimization Algorithm for Nonconvex Generalized
+        Disjunctive Programming and Applications to Process Systems.
+        Comp. and Chem. Eng. 2001, 25, 1675-1697.
+        DOI: 10.1016/S0098-1354(01)00732-3.
+        """.strip())
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger
@@ -83,8 +98,8 @@ class _GDP_GLOA_Solver(_GDPoptAlgorithm):
                 break
 
             with time_code(self.timing, 'nlp'):
-                _fix_master_soln_solve_subproblem_and_add_cuts(
-                    master_util_block, subproblem_util_block, config, self)
+                self._fix_master_soln_solve_subproblem_and_add_cuts(
+                    master_util_block, subproblem_util_block, config)
 
             # Add integer cut
             with time_code(self.timing, "integer cut generation"):

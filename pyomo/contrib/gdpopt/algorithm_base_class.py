@@ -9,18 +9,22 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from io import StringIO
+
 from pyomo.common.collections import Bunch
-from pyomo.common.config import ConfigValue
+from pyomo.common.config import ConfigBlock
 from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.config_options import (
-    _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
-    _add_OA_configs, _add_BB_configs)
+    _add_common_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
+    _add_tolerance_configs, _add_OA_configs, _add_BB_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block, add_disjunct_list, add_boolean_variable_lists,
     add_algebraic_variable_list)
+from pyomo.contrib.gdpopt.GDPopt import __version__
 from pyomo.contrib.gdpopt.util import (
-    get_main_elapsed_time, solve_continuous_problem, time_code)
+    get_main_elapsed_time, lower_logger_level_to,
+    solve_continuous_problem, time_code)
 from pyomo.core.base import Objective, value, minimize, maximize
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.opt import SolverResults
@@ -28,40 +32,18 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.util.model_size import build_model_size_report
 
 class _GDPoptAlgorithm():
-    def __init__(self, parent, kwds=None):
+    CONFIG = ConfigBlock("GDPopt")
+    _add_common_configs(CONFIG)
+
+    def __init__(self, **kwds):
         """
         This is a common init method for all the GDPopt algorithms, so that we
-        correctly set up the config arguments based on what the 'parent' class
-        (GDPoptSolver) already knows. It has parsed the common arguments, such
-        as time limit and iteration limit, but the config block on this class
-        is about to become the ground truth for as long as the algorithm is the
-        same.
-
-        Then, we initialize the generic parts of the algorithm state.
+        correctly set up the config arguments and initialize the generic parts
+        of the algorithm state.
         """
-        # Transfer the parent config info: we create it if it is not there, and
-        # overwrite the values if it is already there. The parent defers to what
-        # is in this class during solve. We bypass the parent config's getter
-        # because that's an infinite loop: we know it doesn't have an impl,
-        # we're *setting* it's impl.
-        for kwd, val in parent._CONFIG.items():
-            if kwd not in self.CONFIG:
-                self.CONFIG.declare(kwd, ConfigValue(default=val))
-            else:
-                self.CONFIG[kwd] = val
-        # kwds might be a superset of what we saw in the previous loop if there
-        # are algorithm-specific options that the parent ignored in it's pass
-        # through what was specified, so we go through again to find them.
-        if kwds is not None:
-            for kwd, val in kwds.items():
-                if kwd not in self.CONFIG and kwd in parent._CONFIG:
-                    self.CONFIG.declare(kwd, ConfigValue(default=val))
-                else:
-                    self.CONFIG[kwd] = val
-
-        # Store the solver version since it will get put on the results object
-        # later.
-        self.version = parent.version()
+        self.config = self.CONFIG(kwds.pop('options', {}),
+                                  preserve_implicit=True)
+        self.config.set_value(kwds)
 
         # We store bounds, timing info, iteration count, incumbent, and the
         # expression of the original (possibly nonlinear) objective function.
@@ -80,9 +62,74 @@ class _GDPoptAlgorithm():
         self.log_formatter = ('{:>9}   {:>15}   {:>11.5f}   {:>11.5f}   '
                               '{:>8.2%}   {:>7.2f}  {}')
 
+    # Support use as a context manager under current solver API
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+
+    def available(self, exception_flag=True):
+        """Solver is always available. Though subsolvers may not be, they will
+        raise an error when the time comes.
+        """
+        return True
+
+    def license_is_valid(self):
+        return True
+
+    def version(self):
+        """Return a 3-tuple describing the solver version."""
+        return __version__
+
+    _metasolver = False
+
+    def solve(self, model, **kwds):
+        # TODO: Should I be this nice? I'm doing it at the moment to debug, but
+        # technically the config validation will complain and I don't have to
+        # bother.
+        alg = kwds.pop('algorithm', None)
+        if alg is None:
+            alg = kwds.pop('strategy', None)
+        if alg is not None:
+            raise RuntimeError("Changing the algorithm in the solve method "
+                               "is not supported for algorithm-specific "
+                               "GDPopt solvers. Either use "
+                               "SolverFactory('gdpopt') or instantiate a "
+                               "solver with the algorithm you want to use.")
+
+        config = self.config(kwds.pop('options', {}),
+                                 preserve_implicit=True)
+        config.set_value(kwds)
+
+        with lower_logger_level_to(config.logger, tee=config.tee):
+            self._log_solver_intro_message(config)
+
+            # Call the solver's main loop implementation to solve the problem
+            return self._call_main_loop(model, config)
+
     def _solve_gdp(self, original_model, config):
         # To be implemented by the algorithms
         pass
+
+    def _log_solver_intro_message(self, config):
+        config.logger.info(
+            "Starting GDPopt version %s using %s algorithm"
+            % (".".join(map(str, self.version())), self.algorithm)
+        )
+        os = StringIO()
+        config.display(ostream=os)
+        config.logger.info(os.getvalue())
+
+        config.logger.info("""
+        If you use this software, you may cite the following:
+        - Implementation:
+        Chen, Q; Johnson, ES; Bernal, DE; Valentin, R; Kale, S;
+        Bates, J; Siirola, JD; Grossmann, IE.
+        Pyomo.GDP: an ecosystem for logic based modeling and optimization
+        development.
+        Optimization and Engineering, 2021.
+        """.strip())
 
     def _log_header(self, logger):
         logger.info(
@@ -318,8 +365,8 @@ class _GDPoptAlgorithm():
         """
         results = SolverResults()
 
-        results.solver.name = 'GDPopt %s - %s' % (self.version,
-                                                  config.algorithm)
+        results.solver.name = 'GDPopt %s - %s' % (self.version(),
+                                                  self.algorithm)
 
         prob = results.problem
         prob.name = original_model.name

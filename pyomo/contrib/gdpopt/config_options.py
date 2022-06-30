@@ -16,14 +16,63 @@ from pyomo.common.deprecation import deprecation_warning
 from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
 from pyomo.contrib.gdpopt.nlp_initialization import (
     restore_vars_to_original_values)
-from pyomo.contrib.gdpopt.util import _DoNothing
+from pyomo.contrib.gdpopt.util import a_logger, _DoNothing
 from pyomo.opt import SolverFactory, UnknownSolver
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+
+_supported_algorithms = {
+    'LOA': ('gdpopt.loa', 'Logic-based Outer Approximation'),
+    'GLOA': ('gdpopt.gloa', 'Global Logic-based Outer Approximation'),
+    'LBB': ('gdpopt.lbb', 'Logic-based Branch and Bound'),
+    'RIC': ('gdpopt.ric', 'Relaxation with Integer Cuts')
+}
+
+def _strategy_deprecation(strategy):
+    deprecation_warning("The argument 'strategy' has been deprecated "
+                        "in favor of 'algorithm.'", version="TBD")
+    return In(_supported_algorithms.keys())(strategy)
 
 def _init_strategy_deprecation(strategy):
     deprecation_warning("The argument 'init_strategy' has been deprecated "
                         "in favor of 'init_algorithm.'", version="TBD")
     return In(valid_init_strategies.keys())(strategy)
+
+def _get_algorithm_config():
+    CONFIG = ConfigBlock("GDPoptAlgorithm")
+    CONFIG.declare("strategy", ConfigValue(
+        default=None, domain=_strategy_deprecation,
+        description="DEPRECATED: Please use 'algorithm' instead."
+    ))
+    CONFIG.declare("algorithm", ConfigValue(
+        default=None, domain=In(_supported_algorithms.keys()),
+        description="Algorithm to use."
+    ))
+    return CONFIG
+
+def _add_common_configs(CONFIG):
+    CONFIG.declare("iterlim", ConfigValue(
+        default=100, domain=NonNegativeInt,
+        description="Iteration limit."
+    ))
+    CONFIG.declare("time_limit", ConfigValue(
+        default=600,
+        domain=PositiveInt,
+        description="Time limit (seconds, default=600)",
+        doc="""
+        Seconds allowed until terminated. Note that the time limit can
+        currently only be enforced between subsolver invocations. You may
+        need to set subsolver time limits as well."""
+    ))
+    CONFIG.declare("tee", ConfigValue(
+        default=False,
+        description="Stream output to terminal.",
+        domain=bool
+    ))
+    CONFIG.declare("logger", ConfigValue(
+        default='pyomo.contrib.gdpopt',
+        description="The logger object or name to use for reporting.",
+        domain=a_logger
+    ))
 
 def _add_OA_configs(CONFIG):
     CONFIG.declare("init_strategy", ConfigValue(

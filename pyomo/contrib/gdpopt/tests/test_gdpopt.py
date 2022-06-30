@@ -75,7 +75,7 @@ class TestGDPoptUnit(unittest.TestCase):
                                         m.d._autodisjuncts[1]]
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-            solver = SolverFactory('gdpopt', algorithm='LOA')
+            solver = SolverFactory('gdpopt.loa')
             dummy = Block()
             dummy.timing = Bunch()
             with time_code(dummy.timing, 'main', is_main_timer=True):
@@ -96,7 +96,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=m.x)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            results = SolverFactory('gdpopt', algorithm='LOA').solve(
+            results = SolverFactory('gdpopt.loa').solve(
                 m, mip_solver=mip_solver)
             self.assertIn("Your model is an LP (linear program).",
                           output.getvalue().strip())
@@ -117,7 +117,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=m.x ** 2)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            results = SolverFactory('gdpopt', algorithm='LOA').solve(
+            results = SolverFactory('gdpopt.loa').solve(
                 m, nlp_solver='gurobi')
             self.assertIn("Your model is an NLP (nonlinear program).",
                           output.getvalue().strip())
@@ -138,7 +138,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o = Objective(expr=1)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            SolverFactory('gdpopt', algorithm='LOA').solve(
+            SolverFactory('gdpopt.loa').solve(
                 m, mip_solver=mip_solver)
             self.assertIn("Your model is an LP (linear program).",
                           output.getvalue().strip())
@@ -152,7 +152,7 @@ class TestGDPoptUnit(unittest.TestCase):
         m.c = Constraint(expr=m.x ** 2 >= 1)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-            SolverFactory('gdpopt', algorithm='LOA').solve(
+            SolverFactory('gdpopt.loa').solve(
                 m, nlp_solver=nlp_solver)
             self.assertIn("Model has no active objectives. Adding dummy "
                           "objective.", output.getvalue().strip())
@@ -164,13 +164,13 @@ class TestGDPoptUnit(unittest.TestCase):
         m.o2 = Objective(expr=m.x + 1)
         with self.assertRaisesRegex(ValueError, "Model has multiple active "
                                     "objectives"):
-            SolverFactory('gdpopt', algorithm='LOA').solve(m)
+            SolverFactory('gdpopt.loa').solve(m)
 
     def test_is_feasible_function(self):
         m = ConcreteModel()
         m.x = Var(bounds=(0, 3), initialize=2)
         m.c = Constraint(expr=m.x == 2)
-        GDP_LOA_Solver = SolverFactory('gdpopt', algorithm='LOA')._impl
+        GDP_LOA_Solver = SolverFactory('gdpopt.loa')
         self.assertTrue(
             is_feasible(m, GDP_LOA_Solver.CONFIG()))
 
@@ -260,7 +260,7 @@ class TestGDPoptUnit(unittest.TestCase):
         config = ConfigDict()
         config.declare('integer_tolerance', ConfigValue(1e-6))
 
-        gloa = SolverFactory('gdpopt', algorithm='GLOA')._impl
+        gloa = SolverFactory('gdpopt.gloa')
 
         constraints = list(gloa._get_active_untransformed_constraints(
             util_block, config))
@@ -294,8 +294,9 @@ class TestGDPopt(unittest.TestCase):
         m = self.make_infeasible_gdp_model()
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-            results = SolverFactory('gdpopt', algorithm='LOA').solve(
-                m, mip_solver=mip_solver, nlp_solver=nlp_solver)
+            results = SolverFactory('gdpopt.loa').solve(m,
+                                                        mip_solver=mip_solver,
+                                                        nlp_solver=nlp_solver)
             self.assertIn("Set covering problem is infeasible.",
                           output.getvalue().strip())
 
@@ -309,9 +310,9 @@ class TestGDPopt(unittest.TestCase):
         m.o.sense = maximize
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            results = SolverFactory('gdpopt', algorithm='LOA').solve(
+            results = SolverFactory('gdpopt').solve(
                 m, mip_solver=mip_solver, nlp_solver=nlp_solver,
-                init_algorithm='no_init')
+                init_algorithm='no_init', algorithm='LOA')
             self.assertIn("GDPopt exiting--problem is infeasible.",
                           output.getvalue().strip())
 
@@ -327,7 +328,7 @@ class TestGDPopt(unittest.TestCase):
         m = self.make_infeasible_gdp_model()
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.DEBUG):
-            results = SolverFactory('gdpopt', algorithm='LOA').solve(
+            results = SolverFactory('gdpopt.loa').solve(
                 m, mip_solver=mip_solver, nlp_solver=nlp_solver,
                 init_algorithm='max_binary')
             self.assertIn("MILP relaxation for initialization was infeasible. "
@@ -348,7 +349,7 @@ class TestGDPopt(unittest.TestCase):
         m.GDPopt_utils.variable_list = [m.x, m.y, m.z]
         m.GDPopt_utils.disjunct_list = [m.d._autodisjuncts[0],
                                         m.d._autodisjuncts[1]]
-        results = SolverFactory('gdpopt', algorithm='LOA').solve(
+        results = SolverFactory('gdpopt.loa').solve(
             m, mip_solver=mip_solver, nlp_solver=nlp_solver)
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.unbounded)
@@ -366,7 +367,7 @@ class TestGDPopt(unittest.TestCase):
         m.GDPopt_utils.variable_list = [m.x, m.y, m.z]
         m.GDPopt_utils.disjunct_list = [m.d._autodisjuncts[0],
                                         m.d._autodisjuncts[1]]
-        results = SolverFactory('gdpopt', algorithm='LOA').solve(
+        results = SolverFactory('gdpopt.loa').solve(
             m, mip_solver=mip_solver, nlp_solver=nlp_solver)
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.unbounded)
@@ -384,9 +385,8 @@ class TestGDPopt(unittest.TestCase):
             [m.x + m.y >= 5], [m.x - m.y <= 3]
         ])
         m.o = Objective(expr=m.x ** 2)
-        SolverFactory('gdpopt', algorithm='LOA').solve(m,
-                                                       mip_solver='gurobi',
-                                                       nlp_solver=nlp_solver )
+        SolverFactory('gdpopt.loa').solve(m, mip_solver='gurobi',
+                                          nlp_solver=nlp_solver )
         self.assertAlmostEqual(value(m.o), 0)
 
         m = ConcreteModel()
@@ -397,9 +397,8 @@ class TestGDPopt(unittest.TestCase):
         ])
         m.o = Objective(expr=-m.x ** 2, sense=maximize)
         print("second")
-        SolverFactory('gdpopt', algorithm='LOA').solve(m,
-                                                       mip_solver='gurobi',
-                                                       nlp_solver=nlp_solver )
+        SolverFactory('gdpopt.loa').solve(m, mip_solver='gurobi',
+                                          nlp_solver=nlp_solver )
         self.assertAlmostEqual(value(m.o), 0)
 
     def test_nested_disjunctions_set_covering(self):
@@ -408,10 +407,9 @@ class TestGDPopt(unittest.TestCase):
         # initialization. This makes sure we get the correct answer anyway, as
         # there is a feasible solution.
         m = models.makeNestedNonlinearModel()
-        SolverFactory('gdpopt', algorithm='LOA').solve(
-            m, mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
-            init_algorithm='set_covering')
+        SolverFactory('gdpopt.loa').solve( m, mip_solver=mip_solver,
+                                           nlp_solver=nlp_solver,
+                                           init_algorithm='set_covering')
         self.assertAlmostEqual(value(m.x), sqrt(2)/2)
         self.assertAlmostEqual(value(m.y), sqrt(2)/2)
         self.assertTrue(value(m.disj.disjuncts[1].indicator_var))
@@ -428,10 +426,10 @@ class TestGDPopt(unittest.TestCase):
                                    [m.x + m.y >= 4, m.y == m.x + 1]])
         m.cons = Constraint(expr=m.x == 3)
         m.obj = Objective(expr=m.x + m.y)
-        SolverFactory('gdpopt', algorithm='RIC').solve(
-            m, mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
-            init_algorithm='set_covering')
+        SolverFactory('gdpopt').solve( m, mip_solver=mip_solver,
+                                       nlp_solver=nlp_solver,
+                                       init_algorithm='set_covering',
+                                       algorithm='RIC')
         self.assertAlmostEqual(value(m.x), 3)
         self.assertAlmostEqual(value(m.y), 4)
         self.assertFalse(value(m.disj.disjuncts[0].indicator_var))
@@ -445,7 +443,7 @@ class TestGDPopt(unittest.TestCase):
         m.disj = Disjunction(expr=[[m.x == m.y, m.x + m.y >= 8],
                                    [m.x == 4]])
         m.obj = Objective(expr=m.x + m.y)
-        SolverFactory('gdpopt', algorithm='RIC').solve(
+        SolverFactory('gdpopt.ric').solve(
             m, mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             init_algorithm='set_covering',
@@ -465,10 +463,9 @@ class TestGDPopt(unittest.TestCase):
         m.obj = Objective(expr=-m.z)
         m.disjunction.disjuncts[0].indicator_var.fix(True)
         m.disjunction.disjuncts[1].indicator_var.fix(False)
-        SolverFactory('gdpopt',
-                      algorithm='RIC').solve(m, mip_solver=mip_solver,
-                                             nlp_solver=nlp_solver,
-                                             init_algorithm='fix_disjuncts')
+        SolverFactory('gdpopt.ric').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver,
+                                          init_algorithm='fix_disjuncts')
         # The real test is that this doesn't throw an error when we preprocess
         # to solve the first subproblem (in the initialization). The nonlinear
         # constraint becomes trivial, which we need to make sure is handled
@@ -495,9 +492,8 @@ class TestGDPopt(unittest.TestCase):
         # works out.
         m = self.make_convex_circle_and_circle_slice_disjunction()
 
-        results = SolverFactory('gdpopt',
-                                algorithm='LOA').solve(m, mip_solver=mip_solver,
-                                                       nlp_solver=nlp_solver)
+        results = SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver)
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.optimal)
         self.assertAlmostEqual(results.problem.upper_bound, 1)
@@ -510,8 +506,8 @@ class TestGDPopt(unittest.TestCase):
 
         # first, force ourselves into the suboptimal disjunct
         m.disjunction.disjuncts[0].indicator_var.fix(False)
-        SolverFactory('gdpopt', algorithm='LOA').solve(m, mip_solver=mip_solver,
-                                                       nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertTrue(value(m.disjunction.disjuncts[1].indicator_var))
         self.assertFalse(value(m.disjunction.disjuncts[0].indicator_var))
         self.assertTrue(m.disjunction.disjuncts[0].indicator_var.fixed)
@@ -522,8 +518,8 @@ class TestGDPopt(unittest.TestCase):
         # Now, do it by fixing a continuous variable
         m.disjunction.disjuncts[0].indicator_var.fixed = False
         m.x.fix(3)
-        SolverFactory('gdpopt', algorithm='LOA').solve(m, mip_solver=mip_solver,
-                                                       nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertTrue(value(m.disjunction.disjuncts[1].indicator_var))
         self.assertFalse(value(m.disjunction.disjuncts[0].indicator_var))
         self.assertEqual(value(m.x), 3)
@@ -538,8 +534,8 @@ class TestGDPopt(unittest.TestCase):
             m.disjunction.disjuncts[1].constraint[1]]
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.DEBUG):
-            SolverFactory('gdpopt', algorithm='LOA').solve(
-                m, mip_solver=mip_solver, nlp_solver=nlp_solver)
+            SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
+                                              nlp_solver=nlp_solver)
             self.assertIn('OA cut addition for '
                           'disjunction_disjuncts[1].constraint[1] skipped '
                           'because it is in the ignore set.',
@@ -565,8 +561,8 @@ class TestGDPopt(unittest.TestCase):
         # we'll go in the sphere centered at (0,0,...,0)
         m.obj = Objective(expr=sum(m.x[i] for i in m.s))
 
-        results = SolverFactory('gdpopt', algorithm='LOA').solve(
-            m, mip_solver=mip_solver, nlp_solver=nlp_solver)
+        results = SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver)
 
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.optimal)
@@ -581,40 +577,38 @@ class TestGDPopt(unittest.TestCase):
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_logical_constraints_on_disjuncts(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
-        SolverFactory('gdpopt', algorithm='LOA').solve(m, mip_solver=mip_solver,
-                                                       nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_logical_constraints_on_disjuncts_nonlinear_convex(self):
         m = models.makeLogicalConstraintsOnDisjuncts_NonlinearConvex()
-        SolverFactory('gdpopt', algorithm='LOA').solve(m, mip_solver=mip_solver,
-                                                       nlp_solver=nlp_solver,
-                                                       tee=True)
+        SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver, tee=True)
         self.assertAlmostEqual(value(m.x), 4)
 
     def test_nested_disjunctions_no_init(self):
         m = models.makeNestedNonlinearModel()
-        SolverFactory('gdpopt', algorithm='LOA').solve(m, mip_solver=mip_solver,
-                                                       nlp_solver=nlp_solver,
-                                                       init_algorithm='no_init')
+        SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver,
+                                          init_algorithm='no_init')
         self.assertAlmostEqual(value(m.x), sqrt(2)/2)
         self.assertAlmostEqual(value(m.y), sqrt(2)/2)
 
     def test_nested_disjunctions_max_binary(self):
         m = models.makeNestedNonlinearModel()
-        SolverFactory('gdpopt', algorithm='LOA').solve(
-            m, mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
-            init_algorithm='max_binary')
+        SolverFactory('gdpopt.loa').solve( m, mip_solver=mip_solver,
+                                           nlp_solver=nlp_solver,
+                                           init_algorithm='max_binary')
         self.assertAlmostEqual(value(m.x), sqrt(2)/2)
         self.assertAlmostEqual(value(m.y), sqrt(2)/2)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_boolean_vars_on_disjuncts(self):
         m = models.makeBooleanVarsOnDisjuncts()
-        SolverFactory('gdpopt', algorithm='LOA').solve(m, mip_solver=mip_solver,
-                                                       nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
     def test_LOA_8PP_default_init(self):
@@ -622,10 +616,9 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='LOA').solve(
-            eight_process,
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+        results = SolverFactory('gdpopt.loa').solve(eight_process,
+                                                    mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver)
         ct.check_8PP_solution(self, eight_process, results)
 
     def test_iteration_limit(self):
@@ -634,11 +627,10 @@ class TestGDPopt(unittest.TestCase):
         eight_process = exfile.build_eight_process_flowsheet()
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            results = SolverFactory('gdpopt', algorithm='LOA').solve(
-                eight_process,
-                mip_solver=mip_solver,
-                nlp_solver=nlp_solver,
-                iterlim=2)
+            results = SolverFactory('gdpopt.loa').solve(eight_process,
+                                                        mip_solver=mip_solver,
+                                                        nlp_solver=nlp_solver,
+                                                        iterlim=2)
             self.assertIn("GDPopt unable to converge bounds within iteration "
                           "limit of 2 iterations.", output.getvalue().strip())
         self.assertEqual(results.solver.termination_condition,
@@ -650,11 +642,10 @@ class TestGDPopt(unittest.TestCase):
         eight_process = exfile.build_eight_process_flowsheet()
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            results = SolverFactory('gdpopt', algorithm='LOA').solve(
-                eight_process,
-                mip_solver=mip_solver,
-                nlp_solver=nlp_solver,
-                time_limit=1)
+            results = SolverFactory('gdpopt.loa').solve(eight_process,
+                                                        mip_solver=mip_solver,
+                                                        nlp_solver=nlp_solver,
+                                                        time_limit=1)
             self.assertIn("GDPopt exiting--Did not converge bounds before "
                           "time limit of 1 seconds.", output.getvalue().strip())
         self.assertEqual(results.solver.termination_condition,
@@ -666,11 +657,10 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_logical.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='LOA').solve(
-            eight_process,
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
-            tee=False)
+        results = SolverFactory('gdpopt.loa').solve(eight_process,
+                                                    mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver,
+                                                    tee=False)
         ct.check_8PP_logical_solution(self, eight_process, results)
 
     @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False),
@@ -680,24 +670,21 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='LOA').solve(
-            eight_process,
-            mip_solver=mip_solver,
-            nlp_solver='gams',
-            max_slack=0,
-            tee=False)
+        results = SolverFactory('gdpopt.loa').solve(eight_process,
+                                                    mip_solver=mip_solver,
+                                                    nlp_solver='gams',
+                                                    max_slack=0, tee=False)
         ct.check_8PP_solution(self, eight_process, results)
 
     def test_LOA_8PP_force_NLP(self):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='LOA').solve(
-            eight_process,
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
-            force_subproblem_nlp=True,
-            tee=False)
+        results = SolverFactory('gdpopt.loa').solve(eight_process,
+                                                    mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver,
+                                                    force_subproblem_nlp=True,
+                                                    tee=False)
         ct.check_8PP_solution(self, eight_process, results)
 
     def test_LOA_strip_pack_default_init(self):
@@ -705,10 +692,8 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
-        SolverFactory('gdpopt', algorithm='LOA').solve(
-            strip_pack,
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.loa').solve(strip_pack, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
@@ -726,9 +711,8 @@ class TestGDPopt(unittest.TestCase):
         strip_pack.Rec3RightOrLeftOfRec2 = LogicalConstraint(
             expr=strip_pack.no_overlap[2,3].disjuncts[0].indicator_var.lor(
                 strip_pack.no_overlap[2,3].disjuncts[1].indicator_var))
-        SolverFactory('gdpopt', algorithm='LOA').solve(
-            strip_pack,
-            mip_solver=mip_solver,
+        SolverFactory('gdpopt.loa').solve(
+            strip_pack, mip_solver=mip_solver,
             nlp_solver=nlp_solver,
             subproblem_presolve=False)# skip preprocessing for linear problem
                                       # and so that we test everything is still
@@ -742,7 +726,7 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         cons_layout = exfile.build_constrained_layout_model()
-        SolverFactory('gdpopt', algorithm='LOA').solve(
+        SolverFactory('gdpopt.loa').solve(
             cons_layout,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
@@ -759,10 +743,10 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='LOA').solve(
-            eight_process, init_algorithm='max_binary',
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+        results = SolverFactory('gdpopt.loa').solve(eight_process,
+                                                    init_algorithm='max_binary',
+                                                    mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver)
         ct.check_8PP_solution(self, eight_process, results)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
@@ -771,10 +755,10 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_logical.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='LOA').solve(
-            eight_process, init_algorithm='max_binary',
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+        results = SolverFactory('gdpopt.loa').solve(eight_process,
+                                                    init_algorithm='max_binary',
+                                                    mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver)
         ct.check_8PP_logical_solution(self, eight_process, results)
 
     def test_LOA_strip_pack_maxBinary(self):
@@ -782,10 +766,10 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
-        SolverFactory('gdpopt', algorithm='LOA').solve(
-            strip_pack, init_algorithm='max_binary',
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.loa').solve(strip_pack,
+                                          init_algorithm='max_binary',
+                                          mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
@@ -803,10 +787,10 @@ class TestGDPopt(unittest.TestCase):
         strip_pack.Rec3RightOrLeftOfRec2 = LogicalConstraint(
             expr=strip_pack.no_overlap[2,3].disjuncts[0].indicator_var.lor(
                 strip_pack.no_overlap[2,3].disjuncts[1].indicator_var))
-        SolverFactory('gdpopt', algorithm='LOA').solve(
-            strip_pack, init_algorithm='max_binary',
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.loa').solve(strip_pack,
+                                          init_algorithm='max_binary',
+                                          mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 13) <= 1E-2)
 
@@ -828,8 +812,9 @@ class TestGDPopt(unittest.TestCase):
                 disj.binary_indicator_var.set_value(1)
             else:
                 disj.binary_indicator_var.set_value(0)
-        results = SolverFactory('gdpopt', algorithm='LOA').solve(
-            eight_process, init_algorithm='fix_disjuncts',
+        results = SolverFactory('gdpopt.loa').solve(
+            eight_process,
+            init_algorithm='fix_disjuncts',
             mip_solver=mip_solver,
             nlp_solver=nlp_solver)
         ct.check_8PP_solution(self, eight_process, results)
@@ -859,7 +844,7 @@ class TestGDPopt(unittest.TestCase):
         ]
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-            results = SolverFactory('gdpopt', algorithm='LOA').solve(
+            results = SolverFactory('gdpopt.loa').solve(
                 eight_process, init_algorithm='custom_disjuncts',
                 custom_init_disjuncts=initialize, mip_solver=mip_solver,
                 nlp_solver=nlp_solver)
@@ -917,7 +902,7 @@ class TestGDPopt(unittest.TestCase):
                 if disj not in seen:
                     self.assertFalse(disj.active)
 
-        SolverFactory('gdpopt', algorithm='LOA').solve(
+        SolverFactory('gdpopt.loa').solve(
             eight_process, init_algorithm='custom_disjuncts',
             custom_init_disjuncts=initialize, mip_solver=mip_solver,
             nlp_solver=nlp_solver,
@@ -931,8 +916,8 @@ class TestGDPopt(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         m = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='LOA').solve(
-            m, mip_solver='appsi_gurobi')
+        results = SolverFactory('gdpopt.loa').solve(m,
+                                                    mip_solver='appsi_gurobi')
 
         self.assertTrue(fabs(value(m.profit.expr) - 68) <= 1E-2)
         ct.check_8PP_solution(self, m, results)
@@ -953,10 +938,8 @@ class TestGDPoptRIC(unittest.TestCase):
         m.o = Objective(expr=m.x)
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
-            SolverFactory('gdpopt', algorithm='RIC').solve(
-                m,
-                mip_solver=mip_solver,
-                nlp_solver=nlp_solver)
+            SolverFactory('gdpopt.ric').solve(m, mip_solver=mip_solver,
+                                              nlp_solver=nlp_solver)
             self.assertIn("Set covering problem is infeasible.",
                           output.getvalue().strip())
 
@@ -968,11 +951,8 @@ class TestGDPoptRIC(unittest.TestCase):
             [m.x + m.y >= 5], [m.x - m.y <= 3]
         ])
         m.o = Objective(expr=m.x ** 2)
-        SolverFactory('gdpopt', algorithm='RIC').solve(
-            m,
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver
-        )
+        SolverFactory('gdpopt.ric').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver )
         self.assertAlmostEqual(value(m.o), 0)
 
         m = ConcreteModel()
@@ -982,23 +962,22 @@ class TestGDPoptRIC(unittest.TestCase):
             [m.x + m.y >= 5], [m.x - m.y <= 3]
         ])
         m.o = Objective(expr=-m.x ** 2, sense=maximize)
-        SolverFactory('gdpopt', algorithm='RIC').solve( m,
-                                                        mip_solver=mip_solver,
-                                                        nlp_solver=nlp_solver )
+        SolverFactory('gdpopt.ric').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver )
         self.assertAlmostEqual(value(m.o), 0)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_logical_constraints_on_disjuncts(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
-        SolverFactory('gdpopt', algorithm='RIC').solve(m, mip_solver=mip_solver,
-                                                       nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.ric').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_boolean_vars_on_disjuncts(self):
         m = models.makeBooleanVarsOnDisjuncts()
-        SolverFactory('gdpopt', algorithm='RIC').solve(m, mip_solver=mip_solver,
-                                                       nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.ric').solve(m, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
     def test_RIC_8PP_default_init(self):
@@ -1006,11 +985,10 @@ class TestGDPoptRIC(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='RIC').solve(
-            eight_process,
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
-            tee=False)
+        results = SolverFactory('gdpopt.ric').solve(eight_process,
+                                                    mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver,
+                                                    tee=False)
         ct.check_8PP_solution(self, eight_process, results)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
@@ -1019,11 +997,10 @@ class TestGDPoptRIC(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_logical.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='RIC').solve(
-            eight_process,
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
-            tee=False)
+        results = SolverFactory('gdpopt.ric').solve(eight_process,
+                                                    mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver,
+                                                    tee=False)
         ct.check_8PP_logical_solution(self, eight_process, results)
 
     @unittest.skipUnless(SolverFactory('gams').available(exception_flag=False),
@@ -1033,24 +1010,21 @@ class TestGDPoptRIC(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='RIC').solve(
-            eight_process,
-            mip_solver=mip_solver,
-            nlp_solver='gams',
-            max_slack=0,
-            tee=False)
+        results = SolverFactory('gdpopt.ric').solve(eight_process,
+                                                    mip_solver=mip_solver,
+                                                    nlp_solver='gams',
+                                                    max_slack=0, tee=False)
         ct.check_8PP_solution(self, eight_process, results)
 
     def test_RIC_8PP_force_NLP(self):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='RIC').solve(
-            eight_process,
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver,
-            force_subproblem_nlp=True,
-            tee=False)
+        results = SolverFactory('gdpopt.ric').solve(eight_process,
+                                                    mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver,
+                                                    force_subproblem_nlp=True,
+                                                    tee=False)
         ct.check_8PP_solution(self, eight_process, results)
 
     def test_RIC_strip_pack_default_init(self):
@@ -1058,10 +1032,8 @@ class TestGDPoptRIC(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
-        SolverFactory('gdpopt', algorithm='RIC').solve(
-            strip_pack,
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.ric').solve(strip_pack, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
@@ -1079,10 +1051,8 @@ class TestGDPoptRIC(unittest.TestCase):
         strip_pack.Rec3RightOrLeftOfRec2 = LogicalConstraint(
             expr=strip_pack.no_overlap[2,3].disjuncts[0].indicator_var.lor(
                 strip_pack.no_overlap[2,3].disjuncts[1].indicator_var))
-        SolverFactory('gdpopt', algorithm='RIC').solve(
-            strip_pack,
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.ric').solve(strip_pack, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 13) <= 1E-2)
 
@@ -1092,7 +1062,7 @@ class TestGDPoptRIC(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         cons_layout = exfile.build_constrained_layout_model()
-        SolverFactory('gdpopt', algorithm='RIC').solve(
+        SolverFactory('gdpopt.ric').solve(
             cons_layout,
             mip_solver=mip_solver,
             nlp_solver=nlp_solver,
@@ -1109,10 +1079,10 @@ class TestGDPoptRIC(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='RIC').solve(
-            eight_process, init_algorithm='max_binary',
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+        results = SolverFactory('gdpopt.ric').solve(eight_process,
+                                                    init_algorithm='max_binary',
+                                                    mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver)
         ct.check_8PP_solution(self, eight_process, results)
 
     def test_RIC_strip_pack_maxBinary(self):
@@ -1120,10 +1090,10 @@ class TestGDPoptRIC(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
-        SolverFactory('gdpopt', algorithm='RIC').solve(
-            strip_pack, init_algorithm='max_binary',
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.ric').solve(strip_pack,
+                                          init_algorithm='max_binary',
+                                          mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
@@ -1141,10 +1111,10 @@ class TestGDPoptRIC(unittest.TestCase):
         strip_pack.Rec3RightOrLeftOfRec2 = LogicalConstraint(
             expr=strip_pack.no_overlap[2,3].disjuncts[0].indicator_var.lor(
                 strip_pack.no_overlap[2,3].disjuncts[1].indicator_var))
-        SolverFactory('gdpopt', algorithm='RIC').solve(
-            strip_pack, init_algorithm='max_binary',
-            mip_solver=mip_solver,
-            nlp_solver=nlp_solver)
+        SolverFactory('gdpopt.ric').solve(strip_pack,
+                                          init_algorithm='max_binary',
+                                          mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 13) <= 1E-2)
 
@@ -1166,8 +1136,9 @@ class TestGDPoptRIC(unittest.TestCase):
                 disj.binary_indicator_var.set_value(1)
             else:
                 disj.binary_indicator_var.set_value(0)
-        results = SolverFactory('gdpopt', algorithm='RIC').solve(
-            eight_process, init_algorithm='fix_disjuncts',
+        results = SolverFactory('gdpopt.ric').solve(
+            eight_process,
+            init_algorithm='fix_disjuncts',
             mip_solver=mip_solver,
             nlp_solver=nlp_solver)
         ct.check_8PP_solution(self, eight_process, results)
@@ -1221,7 +1192,7 @@ class TestGDPoptRIC(unittest.TestCase):
                 if disj not in seen:
                     self.assertFalse(disj.active)
 
-        SolverFactory('gdpopt', algorithm='RIC').solve(
+        SolverFactory('gdpopt.ric').solve(
             eight_process, init_algorithm='custom_disjuncts',
             custom_init_disjuncts=initialize,
             mip_solver=mip_solver,
@@ -1238,9 +1209,10 @@ class TestGDPoptRIC(unittest.TestCase):
                                           [(m.x - 1)**2 + (m.y - 1)**2 <= 4,
                                            m.y <= 4]])
         m.obj = Objective(expr=-m.y - m.x)
-        results = SolverFactory('gdpopt', algorithm='RIC').solve(
-            m, init_algorithm='no_init', mip_solver=mip_solver,
-            nlp_solver=nlp_solver, force_subproblem_nlp=True)
+        results = SolverFactory('gdpopt.ric').solve(m, init_algorithm='no_init',
+                                                    mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver,
+                                                    force_subproblem_nlp=True)
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.optimal)
         self.assertAlmostEqual(value(m.x), 2)
@@ -1266,7 +1238,7 @@ class TestGDPoptRIC(unittest.TestCase):
         # correctly.
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
-            results = SolverFactory('gdpopt', algorithm='RIC').solve(
+            results = SolverFactory('gdpopt.ric').solve(
                 m, init_algorithm='no_init', mip_solver=mip_solver,
                 nlp_solver=nlp_solver, force_subproblem_nlp=True, iterlim=5)
         self.assertIn("No feasible solutions found.", output.getvalue().strip())
@@ -1294,8 +1266,8 @@ class TestGLOA(unittest.TestCase):
         m.d = Disjunction(expr=[[m.x >= m.y, m.y >= 3.5],
                                 [m.x >= m.y, m.y >= 2.5]])
         m.o = Objective(expr=m.x)
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
-            m,
+        SolverFactory('gdpopt').solve(
+            m, algorithm='GLOA',
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             minlp_solver=minlp_solver
@@ -1313,24 +1285,18 @@ class TestGLOA(unittest.TestCase):
 
     def test_nonlinear_GDP_integer_vars(self):
         m = self.make_nonlinear_gdp_with_int_vars()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
-            m,
-            mip_solver=mip_solver,
-            nlp_solver=global_nlp_solver,
-            minlp_solver=minlp_solver
-        )
+        SolverFactory('gdpopt.gloa').solve(m, mip_solver=mip_solver,
+                                           nlp_solver=global_nlp_solver,
+                                           minlp_solver=minlp_solver )
         self.assertAlmostEqual(value(m.o.expr), sqrt(3))
         self.assertAlmostEqual(value(m.y), 3)
 
     def test_nonlinear_GDP_integer_vars_force_nlp_subproblem(self):
         m = self.make_nonlinear_gdp_with_int_vars()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
-            m,
-            mip_solver=mip_solver,
-            nlp_solver=global_nlp_solver,
-            minlp_solver=minlp_solver,
-            force_subproblem_nlp=True
-        )
+        SolverFactory('gdpopt.gloa').solve(m, mip_solver=mip_solver,
+                                           nlp_solver=global_nlp_solver,
+                                           minlp_solver=minlp_solver,
+                                           force_subproblem_nlp=True )
         self.assertAlmostEqual(value(m.o.expr), sqrt(3))
         self.assertAlmostEqual(value(m.y), 3)
 
@@ -1341,12 +1307,9 @@ class TestGLOA(unittest.TestCase):
         m.d = Disjunction(expr=[[m.x >= m.y, m.y >= 3.5],
                                 [m.x >= m.y, m.y >= 2.5]])
         m.o = Objective(expr=m.x)
-        res = SolverFactory('gdpopt', algorithm='GLOA').solve(
-            m,
-            mip_solver=mip_solver,
-            nlp_solver=global_nlp_solver,
-            minlp_solver=minlp_solver
-        )
+        res = SolverFactory('gdpopt.gloa').solve(m, mip_solver=mip_solver,
+                                                 nlp_solver=global_nlp_solver,
+                                                 minlp_solver=minlp_solver )
         self.assertEqual(res.solver.termination_condition,
                          TerminationCondition.infeasible)
 
@@ -1355,8 +1318,8 @@ class TestGLOA(unittest.TestCase):
                          "not available.")
     def test_logical_constraints_on_disjuncts(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
-            m, mip_solver=mip_solver, nlp_solver=global_nlp_solver)
+        SolverFactory('gdpopt.gloa').solve(m, mip_solver=mip_solver,
+                                           nlp_solver=global_nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
     @unittest.skipUnless(license_available and sympy_available,
@@ -1364,8 +1327,8 @@ class TestGLOA(unittest.TestCase):
                          "not available.")
     def test_boolean_vars_on_disjuncts(self):
         m = models.makeBooleanVarsOnDisjuncts()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
-            m, mip_solver=mip_solver, nlp_solver=global_nlp_solver)
+        SolverFactory('gdpopt.gloa').solve(m, mip_solver=mip_solver,
+                                           nlp_solver=global_nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
     @unittest.skipUnless(license_available,
@@ -1375,7 +1338,7 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='GLOA').solve(
+        results = SolverFactory('gdpopt.gloa').solve(
             eight_process, tee=False,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
@@ -1391,7 +1354,7 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_logical.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='GLOA').solve(
+        results = SolverFactory('gdpopt.gloa').solve(
             eight_process, tee=False,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
@@ -1406,7 +1369,7 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'eight_process', 'eight_proc_model.py'))
         eight_process = exfile.build_eight_process_flowsheet()
-        results = SolverFactory('gdpopt', algorithm='GLOA').solve(
+        results = SolverFactory('gdpopt.gloa').solve(
             eight_process, tee=False,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
@@ -1422,7 +1385,7 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'strip_packing', 'strip_packing_concrete.py'))
         strip_pack = exfile.build_rect_strip_packing_model()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
+        SolverFactory('gdpopt.gloa').solve(
             strip_pack,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
@@ -1445,9 +1408,8 @@ class TestGLOA(unittest.TestCase):
         strip_pack.Rec3RightOrLeftOfRec2 = LogicalConstraint(
             expr=strip_pack.no_overlap[2,3].disjuncts[0].indicator_var.lor(
                 strip_pack.no_overlap[2,3].disjuncts[1].indicator_var))
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
-            strip_pack,
-            mip_solver=mip_solver,
+        SolverFactory('gdpopt.gloa').solve(
+            strip_pack, mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args)
         self.assertTrue(
@@ -1461,7 +1423,7 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         cons_layout = exfile.build_constrained_layout_model()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
+        SolverFactory('gdpopt.gloa').solve(
             cons_layout,
             mip_solver=mip_solver,
             iterlim=36,
@@ -1477,7 +1439,7 @@ class TestGLOA(unittest.TestCase):
         """Test LOA with Francisco thesis example."""
         exfile = import_file(join(exdir, 'small_lit', 'ex_633_trespalacios.py'))
         model = exfile.build_simple_nonconvex_gdp()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
+        SolverFactory('gdpopt.gloa').solve(
             model,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
@@ -1491,7 +1453,7 @@ class TestGLOA(unittest.TestCase):
     def test_GLOA_nonconvex_HENS(self):
         exfile = import_file(join(exdir, 'small_lit', 'nonconvex_HEN.py'))
         model = exfile.build_gdp_model()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
+        SolverFactory('gdpopt.gloa').solve(
             model,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
@@ -1505,7 +1467,7 @@ class TestGLOA(unittest.TestCase):
     def test_GLOA_disjunctive_bounds(self):
         exfile = import_file(join(exdir, 'small_lit', 'nonconvex_HEN.py'))
         model = exfile.build_gdp_model()
-        SolverFactory('gdpopt', algorithm='GLOA').solve(
+        SolverFactory('gdpopt.gloa').solve(
             model,
             mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,
@@ -1538,8 +1500,12 @@ class TestConfigOptions(unittest.TestCase):
     def test_set_options_on_config_block(self):
         m = self.make_model()
 
-        opt = SolverFactory('gdpopt')
-        opt.CONFIG.algorithm = 'LOA'
+        opt = SolverFactory('gdpopt.loa')
+        # opt.CONFIG = ... # make class
+        # opt.config # make instance
+        #with self.assertRaisesRegex():
+        opt.solve(algorithm='RIC')
+
         opt.CONFIG.mip_solver = mip_solver
         opt.CONFIG.nlp_solver = nlp_solver
         opt.CONFIG.init_algorithm = 'no_init'

@@ -53,6 +53,14 @@ class _GDP_LBB_Solver(_GDPoptAlgorithm):
     _add_tolerance_configs(CONFIG)
     _add_BB_configs(CONFIG)
 
+    def _log_citation(self, config):
+        config.logger.info("\n" + """- LBB algorithm:
+        Lee, S; Grossmann, IE.
+        New algorithms for nonlinear generalized disjunctive programming.
+        Comp. and Chem. Eng. 2000, 24, 2125-2141.
+        DOI: 10.1016/S0098-1354(00)00581-0.
+        """.strip())
+
     def _solve_gdp(self, model, config):
         self.explored_nodes = 0
 

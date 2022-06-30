@@ -7,8 +7,6 @@ from math import fabs
 from pyomo.common.collections import ComponentMap
 
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
-from pyomo.contrib.gdpopt.oa_algorithm_utils import (
-    _fix_master_soln_solve_subproblem_and_add_cuts)
 from pyomo.contrib.gdpopt.solve_master_problem import solve_MILP_master_problem
 from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.core import Block, Constraint, Objective, Var, maximize, value
@@ -84,9 +82,8 @@ def init_custom_disjuncts(util_block, master_util_block, subprob_util_block,
             mip_termination = solve_MILP_master_problem(master_util_block,
                                                         solver, config)
         if mip_termination is not tc.infeasible:
-            _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
-                                                           subprob_util_block,
-                                                           config, solver)
+            solver._fix_master_soln_solve_subproblem_and_add_cuts(
+                master_util_block, subprob_util_block, config)
             # remove the integer solution
             add_no_good_cut(master_util_block, config)
         else:
@@ -131,9 +128,8 @@ def init_fixed_disjuncts(util_block, master_util_block, subprob_util_block,
                 disj.indicator_var.unfix()
 
     if mip_termination is not tc.infeasible:
-        _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
-                                                       subprob_util_block,
-                                                       config, solver)
+        solver._fix_master_soln_solve_subproblem_and_add_cuts(
+            master_util_block, subprob_util_block, config)
         add_no_good_cut(master_util_block, config)
     else:
         config.logger.error(
@@ -184,9 +180,8 @@ def init_max_binaries(util_block, master_util_block, subprob_util_block, config,
         mip_termination = solve_MILP_master_problem(master_util_block, solver,
                                                     config)
         if mip_termination is not tc.infeasible:
-            _fix_master_soln_solve_subproblem_and_add_cuts(master_util_block,
-                                                           subprob_util_block,
-                                                           config, solver)
+            solver._fix_master_soln_solve_subproblem_and_add_cuts(
+                master_util_block, subprob_util_block, config)
         else:
             config.logger.debug(
                 "MILP relaxation for initialization was infeasible. "
@@ -286,8 +281,9 @@ def init_set_covering(util_block, master_util_block, subprob_util_block, config,
                 config.logger.debug('Solved set covering MIP')
 
             ## solve local NLP
-            nlp_feasible = _fix_master_soln_solve_subproblem_and_add_cuts(
-                master_util_block, subprob_util_block, config, solver)
+            nlp_feasible = solver.\
+                           _fix_master_soln_solve_subproblem_and_add_cuts(
+                               master_util_block, subprob_util_block, config)
             if nlp_feasible:
                 # if successful, update sets
                 active_disjuncts = list(
