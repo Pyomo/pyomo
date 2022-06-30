@@ -18,7 +18,7 @@ model parameter uncertainty using nonlinear confidence regions. AIChE Journal,
 import pandas as pd
 import pyomo.environ as pyo
 
-def rooney_biegler_model_w_constraint(data):
+def rooney_biegler_model_with_constraint(data):
 
     model = pyo.ConcreteModel()
 
@@ -42,7 +42,7 @@ def main():
     data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],[4,16.0],[5,15.6],[7,19.8]],
                         columns=['hour', 'y'])
 
-    model = rooney_biegler_model_w_constraint(data)
+    model = rooney_biegler_model_with_constraint(data)
     solver = pyo.SolverFactory('ipopt')
     solver.solve(model)
 

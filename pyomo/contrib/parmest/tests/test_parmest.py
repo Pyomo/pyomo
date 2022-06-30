@@ -605,7 +605,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
 class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
 
     def setUp(self):
-        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler_with_constraint import rooney_biegler_model_w_constraint
+        from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler_with_constraint import rooney_biegler_model_with_constraint
 
         # Note, the data used in this test has been corrected to use data.loc[5,'hour'] = 7 (instead of 6)
         data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
@@ -622,7 +622,7 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
                 }
 
         self.data = data
-        self.pest = parmest.Estimator(rooney_biegler_model_w_constraint, data, theta_names, SSE,
+        self.pest = parmest.Estimator(rooney_biegler_model_with_constraint, data, theta_names, SSE,
                 solver_options=solver_options,tee=True)
 
     def test_theta_est_with_square_initialization(self):
