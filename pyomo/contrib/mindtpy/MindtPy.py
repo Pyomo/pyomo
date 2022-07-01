@@ -65,8 +65,6 @@ from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
 from pyomo.common.config import add_docstring_list
 from pyomo.util.vars_from_expressions import get_vars_from_components
-from pyomo.gdp import Disjunct
-from pyomo.common.collections import ComponentSet
 
 __version__ = (0, 1, 0)
 
