@@ -674,5 +674,16 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
         self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2)  # 19.1426 from the paper
         self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2)  # 0.5311 from the paper
 
+    def test_theta_est_with_square_initialization_diagnostic_mode_true(self):
+        self.pest.diagnostic_mode = True
+        obj_init = self.pest.objective_at_theta(initialize_parmest_model=True)
+        print("obj_init = ", obj_init)
+        objval, thetavals = self.pest.theta_est()
+
+        self.assertAlmostEqual(objval, 4.3317112, places=2)
+        self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2)  # 19.1426 from the paper
+        self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2)  # 0.5311 from the paper
+
+        self.pest.diagnostic_mode = False
 if __name__ == '__main__':
     unittest.main()
