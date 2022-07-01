@@ -40,7 +40,7 @@ Interface to MA27
    >>> solver.set_cntl(1, 1e-6)  # set the pivot tolerance
    >>> status = solver.do_symbolic_factorization(A)
    >>> status = solver.do_numeric_factorization(A)
-   >>> x, status = solver.do_backsolve(rhs)
+   >>> x, status = solver.do_back_solve(rhs)
    >>> np.max(np.abs(A*x - rhs)) <= 1e-15
    True
 

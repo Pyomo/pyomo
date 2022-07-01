@@ -155,15 +155,41 @@ def turn_bounds_to_constraints(variable, model, config=None):
     :param config: solver config
     :return: the list of inequality constraints that are the bounds
     '''
-    if variable.lb is not None:
-        name = variable.name + "_lower_bound_con"
-        model.add_component(name, Constraint(expr=-variable <= -variable.lb))
-        variable.setlb(None)
-    if variable.ub is not None:
-        name = variable.name + "_upper_bound_con"
-        model.add_component(name, Constraint(expr=variable <= variable.ub))
-        variable.setub(None)
-    return
+    lb, ub = variable.lower, variable.upper
+    if variable.domain is not Reals:
+        variable.domain = Reals
+
+    if isinstance(lb, NPV_MaxExpression):
+        lb_args = lb.args
+    else:
+        lb_args = (lb,)
+
+    if isinstance(ub, NPV_MinExpression):
+        ub_args = ub.args
+    else:
+        ub_args = (ub,)
+
+    count = 0
+    for arg in lb_args:
+        if arg is not None:
+            name = unique_component_name(
+                model,
+                variable.name + f"_lower_bound_con_{count}",
+            )
+            model.add_component(name, Constraint(expr=arg - variable <= 0))
+            count += 1
+            variable.setlb(None)
+
+    count = 0
+    for arg in ub_args:
+        if arg is not None:
+            name = unique_component_name(
+                model,
+                variable.name + f"_upper_bound_con_{count}",
+            )
+            model.add_component(name, Constraint(expr=variable - arg <= 0))
+            count += 1
+            variable.setub(None)
 
 
 def get_time_from_solver(results):
