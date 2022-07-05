@@ -30,7 +30,7 @@ Credit for prototyping and development can be found in the ``GDPopt`` class docu
 .. _Chen et al., 2018: https://doi.org/10.1016/B978-0-444-64241-7.50143-9
 
 GDPopt can be used to solve a Pyomo.GDP concrete model in two ways.
-The simplest is to instantiate the generic GDPopt solver and specify the desired algorithm as an argument to the `solve' method:
+The simplest is to instantiate the generic GDPopt solver and specify the desired algorithm as an argument to the ``solve`` method:
 
 .. code::
 
@@ -42,8 +42,8 @@ The alternative is to instantiate an algorithm-specific GDPopt solver:
 
   >>> SolverFactory('gdpopt.loa').solve(model)
 
-  In the above examples, GDPopt uses the GDPopt-LOA algorithm.
-  Other algorithms may be used by specifying them in the ``algorithm`` argument when using the generic solver or by instantiating the algorithm-specific GDPopt solvers. All GDPopt options are listed below.
+In the above examples, GDPopt uses the GDPopt-LOA algorithm.
+Other algorithms may be used by specifying them in the ``algorithm`` argument when using the generic solver or by instantiating the algorithm-specific GDPopt solvers. All GDPopt options are listed below.
 
 .. note::
 
@@ -123,6 +123,7 @@ Global Logic-based Outer Approximation (GLOA)
 The same algorithm can be used to solve GDPs involving nonconvex nonlinear constraints by solving the subproblems globally:
 
 .. code::
+
   >>> SolverFactory('gdpopt.gloa').solve(model)
 
 .. warning::
@@ -135,11 +136,13 @@ Relaxation with Integer Cuts (RIC)
 Instead of outer approximation, GDPs can be solved using the same MILP relaxation as in the previous two algorithms, but instead of using the subproblems to generate outer-approximation cuts, the algorithm adds only no-good cuts for every discrete solution encountered:
 
 .. code::
+
   >>> SolverFactory('gdpopt.ric').solve(model)
 
 Again, this is a global algorithm if the subproblems are solved globally, and is not otherwise.
 
 .. note::
+
   The RIC algorithm will not necessarily enumerate all discrete solutions as it is possible for the bounds to converge first. However, full enumeration is not uncommon.
 
 Logic-based Branch-and-Bound (LBB)
