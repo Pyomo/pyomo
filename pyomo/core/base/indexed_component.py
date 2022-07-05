@@ -403,14 +403,7 @@ class IndexedComponent(Component):
 
         """
         sort_needed = ordered
-        if not self._index_set.isordered():
-            #
-            # If the index set is not ordered, then return the
-            # data iterator.  This is in an arbitrary order, which is
-            # fine because the data is unordered.
-            #
-            # As non-finite sets are unordered by definition (only
-            # finite sets are be ordered), this will also catch them.
+        if not self._index_set.isfinite():
             #
             # If the index set is virtual (e.g., Any) then return the
             # data iterator.  Note that since we cannot check the length
@@ -451,8 +444,7 @@ You can silence this warning by one of three ways:
        where it is empty.
 """ % (self.name,) )
 
-            if not hasattr(self._index_set, 'isordered') or \
-               not self._index_set.isordered():
+            if not self._index_set.isordered():
                 #
                 # If the index set is not ordered, then return the
                 # data iterator.  This is in an arbitrary order, which is

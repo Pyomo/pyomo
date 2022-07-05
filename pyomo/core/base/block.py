@@ -1383,8 +1383,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         if SortComponents.sort_indices(sort):
             # We need the indices so that we can correctly sort.  Fall
             # back on _component_data_iteritems.
-            for k,v in self._component_data_iteritems(ctype, active, sort):
-                yield v
+            yield from map(
+                itemgetter(1),
+                self._component_data_iteritems(ctype, active, sort)
+            )
             return
 
         _subcomp = PseudoMap(self, ctype, active, sort)
@@ -1409,12 +1411,9 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 _values = (comp,)
 
             if active is None or not isinstance(comp, ActiveIndexedComponent):
-                for compData in _values:
-                    yield compData
+                yield from _values
             else:
-                for compData in _values:
-                    if compData.active == active:
-                        yield compData
+                yield from filter(lambda cDat: cDat.active == active, _values)
 
     @deprecated("The all_components method is deprecated.  "
                 "Use the Block.component_objects() method.",
