@@ -165,6 +165,8 @@ def _gather_disjunctions(block, gdp_tree):
             # might be a Block, in case it wouldn't get added below.)
             gdp_tree.add_node(disjunction)
             for disjunct in disjunction.disjuncts:
+                if not disjunct.active:
+                    continue
                 gdp_tree.add_edge(disjunction, disjunct)
                 to_explore.append(disjunct)
             if block.ctype is Disjunct:
@@ -183,8 +185,12 @@ def get_gdp_tree(targets, instance, knownBlocks):
         if t.ctype is Block or isinstance(t, _BlockData):
             if t.is_indexed():
                 for block in t.values():
+                    if not t.active:
+                        continue
                     gdp_tree = _gather_disjunctions(block, gdp_tree)
             else:
+                if not t.active:
+                    continue
                 gdp_tree = _gather_disjunctions(t, gdp_tree)
         elif t.ctype is Disjunction:
             parent = _parent_disjunct(t)
@@ -194,11 +200,15 @@ def get_gdp_tree(targets, instance, knownBlocks):
                 for disjunction in t.values():
                     gdp_tree.add_node(disjunction)
                     for disjunct in disjunction.disjuncts:
+                        if not disjunct.active:
+                            continue
                         gdp_tree.add_edge(disjunction, disjunct)
                         gdp_tree = _gather_disjunctions(disjunct, gdp_tree)
             else:
                 gdp_tree.add_node(t)
                 for disjunct in t.disjuncts:
+                    if not disjunct.active:
+                        continue
                     gdp_tree.add_edge(t, disjunct)
                     gdp_tree = _gather_disjunctions(disjunct, gdp_tree)
         else:

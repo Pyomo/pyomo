@@ -230,6 +230,22 @@ class BigM_Transformation(Transformation):
         knownBlocks = {}
         if targets is None:
             targets = (instance, )
+
+        # FIXME: For historical reasons, BigM would silently skip
+        # any targets that were explicitly deactivated.  This
+        # preserves that behavior (although adds a warning).  We
+        # should revisit that design decision and probably remove
+        # this filter, as it is slightly ambiguous as to what it
+        # means for the target to be deactivated: is it just the
+        # target itself [historical implementation] or any block in
+        # the hierarchy?
+        def _filter_inactive(t):
+            if not t.active:
+                logger.warn('GDP.BigM transformation passed a deactivated '
+                            'target (%s). Skipping.' % (t.name,))
+            return t.active
+        targets = list(filter(_filter_inactive, targets))
+
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
         # the list.
