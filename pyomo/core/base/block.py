@@ -1337,9 +1337,14 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             return PseudoMap(self, ctype, active, sort)
 
     def _component_data_iteritems(self, ctype=None, active=None, sort=False):
-        """
-        Generator that returns a 3-tuple of (component name, index value,
-        and _ComponentData) for every component data in the block.
+        """return the name, index, and component data for matching ctypes
+
+        Generator that returns a nested 2-tuple of
+
+            ((component name, index value), _ComponentData)
+
+        for every component data in the block matching the specified
+        ctype(s).
         """
         _sort_indices = SortComponents.sort_indices(sort)
         _subcomp = PseudoMap(self, ctype, active, sort)
