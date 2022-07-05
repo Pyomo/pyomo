@@ -54,7 +54,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_OA_configs(CONFIG)
     _add_mip_solver_configs(CONFIG)
-    _add_nlp_solver_configs(CONFIG)
+    _add_nlp_solver_configs(CONFIG, default_solver='ipopt')
     _add_tolerance_configs(CONFIG)
 
     algorithm = 'LOA'

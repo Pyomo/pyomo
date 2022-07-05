@@ -53,7 +53,7 @@ BBNodeData = namedtuple('BBNodeData', [
 class GDP_LBB_Solver(_GDPoptAlgorithm):
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_mip_solver_configs(CONFIG)
-    _add_nlp_solver_configs(CONFIG)
+    _add_nlp_solver_configs(CONFIG, default_solver='ipopt')
     _add_tolerance_configs(CONFIG)
     _add_BB_configs(CONFIG)
 

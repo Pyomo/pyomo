@@ -285,9 +285,9 @@ def _add_mip_solver_configs(CONFIG):
         implicit=True))
 
 
-def _add_nlp_solver_configs(CONFIG):
+def _add_nlp_solver_configs(CONFIG, default_solver):
     CONFIG.declare("nlp_solver", ConfigValue(
-        default="ipopt",
+        default=default_solver,
         description="""
         Nonlinear solver to use. Note that no persisent solvers
         other than the auto-persistent solvers in the APPSI package are
