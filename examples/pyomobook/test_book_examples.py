@@ -20,7 +20,8 @@ import sys
 from itertools import zip_longest
 from pyomo.opt import check_available_solvers
 from pyomo.common.dependencies import attempt_import, check_min_version
-from pyomo.common.fileutils import this_file_dir
+from pyomo.common.fileutils import this_file_dir, import_file
+from pyomo.common.log import LoggingIntercept, pyomo_formatter
 from pyomo.common.tee import capture_output
 import pyomo.environ as pyo
 
@@ -238,8 +239,9 @@ def filter(line):
                    'function calls',
                    'List reduced',
                    '.py:',
-                   'built-in method',
-                   '{method'):
+                   '{built-in method',
+                   '{method',
+                   '{pyomo.core.expr.numvalue.as_numeric}'):
         if field in line:
             return True
     return False
@@ -310,19 +312,25 @@ for testdir in glob.glob(os.path.join(currdir,'*')):
         name=os.path.splitext(bname)[0]
         tname = os.path.basename(dir_)+'_'+name
 
+        # If there is both a .py and a .sh, defer to the sh
+        if os.path.exists(os.path.join(dir_, name + '.sh')):
+            continue
+
         suffix = None
         # Look for txt and yml file names matching py file names. Add
         # a test for any found
         for suffix_ in ['.txt', '.yml']:
-            if os.path.exists(os.path.join(dir_,name+suffix_)):
+            if os.path.exists(os.path.join(dir_, name+suffix_)):
                 suffix = suffix_
                 break
-        if not suffix is None:
+        if suffix is not None:
             tname = tname.replace('-','_')
             tname = tname.replace('.','_')
 
             # Create list of tuples with (test_name, test_file, baseline_file)
-            py_test_tuples.append((tname, test_file, os.path.join(dir_,name+suffix)))
+            py_test_tuples.append(
+                (tname, test_file, os.path.join(dir_, name + suffix))
+            )
 
     # Find all .sh files in the test directory
     for file in list(glob.glob(os.path.join(testdir,'*.sh'))) \
@@ -463,11 +471,23 @@ class TestBookExamples(unittest.TestCase):
             raise unittest.SkipTest(skip_msg)
 
         cwd = os.getcwd()
-        os.chdir(dir_)
-        out_file = os.path.splitext(test_file)[0]+'.out'
-        with open(out_file, 'w') as f:
-            subprocess.run([sys.executable, bname], stdout=f, stderr=f, cwd=dir_)
-        os.chdir(cwd)
+        try:
+            os.chdir(dir_)
+            out_file = os.path.splitext(test_file)[0]+'.out'
+            # This is roughly equivalent to:
+            #    subprocess.run([sys.executable, bname],
+            #                   stdout=f, stderr=f, cwd=dir_)
+            with open(out_file, 'w') as f, capture_output(f, True):
+                # Note: we want LoggingIntercept to log to the
+                # *current* stdout (which is the TeeStream from
+                # capture_output).  This ensures that log messages and
+                # normal output appear in the correct order.
+                with LoggingIntercept(sys.stdout, formatter=pyomo_formatter):
+                    import_file(
+                        bname, infer_package=False, module_name='__main__'
+                    )
+        finally:
+            os.chdir(cwd)
 
         self.compare_files(out_file, base_file)
         os.remove(out_file)
