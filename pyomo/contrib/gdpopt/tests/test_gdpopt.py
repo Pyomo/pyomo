@@ -1497,17 +1497,19 @@ class TestConfigOptions(unittest.TestCase):
         return m
 
     @unittest.skipIf(not mcpp_available(), "MC++ is not available")
+    @unittest.skipUnless(SolverFactory('gurobi').available(),
+                         'Gurobi not available')
     def test_set_options_on_config_block(self):
         m = self.make_model()
 
         opt = SolverFactory('gdpopt.loa')
         with self.assertRaisesRegex(
                 ValueError,
-                "Changing the algorithm in the solve method "
-                "is not supported for algorithm-specific "
-                "GDPopt solvers. Either use "
-                "SolverFactory\('gdpopt'\) or instantiate a "
-                "solver with the algorithm you want to use."):
+                r"Changing the algorithm in the solve method "
+                r"is not supported for algorithm-specific "
+                r"GDPopt solvers. Either use "
+                r"SolverFactory[(]'gdpopt'[)] or instantiate a "
+                r"solver with the algorithm you want to use."):
             opt.solve(m, algorithm='RIC')
 
         opt.CONFIG.mip_solver = mip_solver
@@ -1532,6 +1534,28 @@ class TestConfigOptions(unittest.TestCase):
             opt.solve(m, tee=True)
         self.assertIn('mip_solver: glpk', buf.getvalue())
         self.assertAlmostEqual(value(m.obj), -0.25)
+
+    @unittest.skipIf(not mcpp_available(), "MC++ is not available")
+    @unittest.skipUnless(SolverFactory('gurobi').available(),
+                         'Gurobi not available')
+    def test_set_options_in_init(self):
+        m = self.make_model()
+
+        opt = SolverFactory('gdpopt.loa', mip_solver='gurobi',
+                            nlp_solver=nlp_solver, init_algorithm='no_init')
+
+        buf = StringIO()
+        with redirect_stdout(buf):
+            opt.solve(m, tee=True)
+        self.assertIn('mip_solver: gurobi', buf.getvalue())
+        self.assertAlmostEqual(value(m.obj), -0.25)
+
+        buf = StringIO()
+        with redirect_stdout(buf):
+            opt.solve(m, tee=True, mip_solver='glpk')
+        self.assertIn('mip_solver: glpk', buf.getvalue())
+        self.assertAlmostEqual(value(m.obj), -0.25)
+        self.assertEqual(opt.config.mip_solver, 'gurobi')
 
     def test_no_default_algorithm(self):
         m = self.make_model()
