@@ -193,3 +193,15 @@ GDPopt implementation and optional arguments
 
 .. autoclass:: pyomo.contrib.gdpopt.GDPopt.GDPoptSolver
     :members:
+
+.. autoclass:: pyomo.contrib.gdpopt.loa.GDP_LOA_Solver
+    :members:
+
+.. autoclass:: pyomo.contrib.gdpopt.gloa.GDP_GLOA_Solver
+    :members:
+
+.. autoclass:: pyomo.contrib.gdpopt.ric.GDP_RIC_Solver
+    :members:
+
+.. autoclass:: pyomo.contrib.gdpopt.branch_and_bound.GDP_LBB_Solver
+    :members:
