@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from math import fabs
+from pyomo.common.config import add_docstring_list
 from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
@@ -60,6 +61,15 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         Comp. and Chem. Eng. 2001, 25, 1675-1697.
         DOI: 10.1016/S0098-1354(01)00732-3.
         """.strip())
+
+    def solve(self, model, **kwds):
+        """Solve the model.
+
+        Args:
+            model (Block): a Pyomo model or block to be solved
+
+        """
+        return super().solve(model, **kwds)
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger
@@ -210,3 +220,6 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 counter += 2
 
                 config.logger.debug("Added %s affine cuts" % counter)
+
+GDP_GLOA_Solver.solve.__doc__ = add_docstring_list(
+    GDP_GLOA_Solver.solve.__doc__, GDP_GLOA_Solver.CONFIG, indent_by=8)

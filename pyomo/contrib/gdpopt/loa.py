@@ -13,6 +13,7 @@ from collections import namedtuple
 from math import copysign
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.config import add_docstring_list
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
@@ -65,6 +66,15 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         networks. Comp. and Chem. Eng. 1996, 20(8), 959–978.
         DOI: 10.1016/0098-1354(95)00219-7.
         """.strip())
+
+    def solve(self, model, **kwds):
+        """Solve the model.
+
+        Args:
+            model (Block): a Pyomo model or block to be solved
+
+        """
+        return super().solve(model, **kwds)
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger
@@ -266,3 +276,6 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 jacobian.jac.clear()
 
         config.logger.debug('Added %s OA cuts' % counter)
+
+GDP_LOA_Solver.solve.__doc__ = add_docstring_list(
+    GDP_LOA_Solver.solve.__doc__, GDP_LOA_Solver.CONFIG, indent_by=8)

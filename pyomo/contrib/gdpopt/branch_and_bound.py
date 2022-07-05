@@ -14,6 +14,7 @@ from heapq import heappush, heappop
 import traceback
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.config import add_docstring_list
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
@@ -49,7 +50,7 @@ BBNodeData = namedtuple('BBNodeData', [
     'gdpopt.lbb',
     doc="The LBB (logic-based branch and bound) Generalized Disjunctive "
     "Programming (GDP) solver")
-class _GDP_LBB_Solver(_GDPoptAlgorithm):
+class GDP_LBB_Solver(_GDPoptAlgorithm):
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG)
@@ -65,6 +66,15 @@ class _GDP_LBB_Solver(_GDPoptAlgorithm):
         Comp. and Chem. Eng. 2000, 24, 2125-2141.
         DOI: 10.1016/S0098-1354(00)00581-0.
         """.strip())
+
+    def solve(self, model, **kwds):
+        """Solve the model.
+
+        Args:
+            model (Block): a Pyomo model or block to be solved
+
+        """
+        return super().solve(model, **kwds)
 
     def _solve_gdp(self, model, config):
         self.explored_nodes = 0
@@ -513,3 +523,6 @@ class _GDP_LBB_Solver(_GDPoptAlgorithm):
                 config=config, ignore_integrality=True
             )
             return float('-inf'), float('inf')
+
+GDP_LBB_Solver.solve.__doc__ = add_docstring_list(
+    GDP_LBB_Solver.solve.__doc__, GDP_LBB_Solver.CONFIG, indent_by=8)

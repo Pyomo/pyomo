@@ -83,6 +83,12 @@ class _GDPoptAlgorithm():
     _metasolver = False
 
     def solve(self, model, **kwds):
+        """Solve the model.
+
+        Args:
+            model (Block): a Pyomo model or block to be solved
+
+        """
         # I'm going to be nice for now and intercept with a more informative
         # error message than what the Config system would give.
         alg = kwds.pop('algorithm', None)
@@ -102,8 +108,23 @@ class _GDPoptAlgorithm():
         with lower_logger_level_to(config.logger, tee=config.tee):
             self._log_solver_intro_message(config)
 
-            # Call the solver's main loop implementation to solve the problem
-            return self._call_main_loop(model, config)
+            with time_code(self.timing, 'total', is_main_timer=True):
+                results = self._gather_problem_info_and_solve_non_gdps(model,
+                                                                       config)
+                # If it wasn't disjunctive, we solved it
+                if results:
+                    return results
+                else:
+                    # main loop implemented by each algorithm
+                    self._solve_gdp(model, config)
+
+            self._get_final_pyomo_results_object()
+            self._log_termination_message(config.logger)
+            if (self.pyomo_results.solver.termination_condition not in
+                {tc.infeasible, tc.unbounded}):
+                self._transfer_incumbent_to_original_model(config.logger)
+            self._delete_original_model_util_block()
+            return self.pyomo_results
 
     def _solve_gdp(self, original_model, config):
         # To be implemented by the algorithms
@@ -178,25 +199,6 @@ class _GDPoptAlgorithm():
         add_boolean_variable_lists(util_block)
         # To transfer solutions between cloned models
         add_algebraic_variable_list(util_block)
-
-    def _call_main_loop(self, model, config):
-        with time_code(self.timing, 'total', is_main_timer=True):
-            results = self._gather_problem_info_and_solve_non_gdps(model,
-                                                                   config)
-            # If it wasn't disjunctive, we solved it
-            if results:
-                return results
-            else:
-                # main loop implemented by each algorithm
-                self._solve_gdp(model, config)
-
-        self._get_final_pyomo_results_object()
-        self._log_termination_message(config.logger)
-        if (self.pyomo_results.solver.termination_condition not in
-            {tc.infeasible, tc.unbounded}):
-            self._transfer_incumbent_to_original_model(config.logger)
-        self._delete_original_model_util_block()
-        return self.pyomo_results
 
     def _update_bounds_after_solve(self, subprob_nm, primal=None, dual=None,
                                    logger=None):
