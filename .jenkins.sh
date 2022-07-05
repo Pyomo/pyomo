@@ -73,7 +73,7 @@ if test -z "$MODE" -o "$MODE" == setup; then
     echo "#"
     echo "# Setting up virtual environment"
     echo "#"
-    virtualenv python $VENV_SYSTEM_PACKAGES --clear
+    virtualenv python $VENV_SYSTEM_PACKAGES --clear || exit 1
     source python/bin/activate
     # Because modules set the PYTHONPATH, we need to make sure that the
     # virtualenv appears first
