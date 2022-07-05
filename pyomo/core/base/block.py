@@ -368,8 +368,8 @@ class PseudoMap(object):
         # declaration order
         #
         # Ironically, the values are the fundamental thing that we
-        # can (efficiently) iterate over in decl_order.  iterkeys
-        # just wraps itervalues.
+        # can (efficiently) iterate over in decl_order.  keys()
+        # just wraps values().
         for obj in self.values():
             yield obj._name
 
@@ -414,8 +414,8 @@ class PseudoMap(object):
         defined on the Block
         """
         # Ironically, the values are the fundamental thing that we
-        # can (efficiently) iterate over in decl_order.  iteritems
-        # just wraps itervalues.
+        # can (efficiently) iterate over in decl_order.  items()
+        # just wraps values().
         for obj in self.values():
             yield (obj._name, obj)
 
@@ -1388,7 +1388,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             return
 
         _subcomp = PseudoMap(self, ctype, active, sort)
-        for comp in _subcomp.itervalues():
+        for comp in _subcomp.values():
             # NOTE: Suffix has a dict interface (something other derived
             #   non-indexed Components may do as well), so we don't want
             #   to test the existence of iteritems as a check for
@@ -1397,13 +1397,13 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             #   processing for the scalar components to catch the case
             #   where there are "sparse scalar components"
             if comp.is_indexed():
-                _values = comp.itervalues()
+                _values = comp.values()
             elif hasattr(comp, '_data'):
                 # This is a Scalar component, which may be empty (e.g.,
                 # from Constraint.Skip on a scalar Constraint).  Only
                 # return a ComponentData if one officially exists.
                 assert len(comp._data) <= 1
-                _values = itervalues(comp._data)
+                _values = comp._data.values()
             else:
                 # This is a non-IndexedComponent Component.  Return it.
                 _values = (comp,)
@@ -1452,7 +1452,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         for _block in self.block_data_objects(
                 active, sort, descend_into, descent_order):
             yield from _block.component_map(ctype, active, sort).values()
-                yield x
 
     def component_data_objects(self,
                                ctype=None,
@@ -1468,9 +1467,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         """
         for _block in self.block_data_objects(
                 active, sort, descend_into, descent_order):
-            for x in _block._component_data_itervalues(
-                    ctype=ctype, active=active, sort=sort):
-                yield x
+            yield from _block._component_data_itervalues(
+                    ctype=ctype, active=active, sort=sort)
 
     def component_data_iterindex(self,
                                  ctype=None,
@@ -1490,7 +1488,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         for _block in self.block_data_objects(
                 active, sort, descend_into, descent_order):
             yield from _block._component_data_iteritems(
-                    ctype=ctype, active=active, sort=sort):
+                    ctype=ctype, active=active, sort=sort)
 
     @deprecated("The all_blocks method is deprecated.  "
                 "Use the Block.block_data_objects() method.",

@@ -403,7 +403,7 @@ class IndexedComponent(Component):
 
         """
         sort_needed = ordered
-        if not self._index.isordered():
+        if not self._index_set.isordered():
             #
             # If the index set is not ordered, then return the
             # data iterator.  This is in an arbitrary order, which is
