@@ -1469,10 +1469,17 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         block.  By default, this generator recursively
         descends into sub-blocks.
         """
+        seen = set()
+        seen_add = seen.add
+        in_seen = seen.__contains__
         for _block in self.block_data_objects(
                 active, sort, descend_into, descent_order):
-            yield from _block._component_data_itervalues(
-                    ctype=ctype, active=active, sort=sort)
+            for data in _block._component_data_itervalues(
+                    ctype=ctype, active=active, sort=sort):
+                _id = id(data)
+                if not in_seen(_id):
+                    seen_add(_id)
+                    yield data
 
     def component_data_iterindex(self,
                                  ctype=None,
@@ -1489,10 +1496,17 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             ((component name, index value), _ComponentData)
 
         """
+        seen = set()
+        seen_add = seen.add
+        in_seen = seen.__contains__
         for _block in self.block_data_objects(
                 active, sort, descend_into, descent_order):
-            yield from _block._component_data_iteritems(
-                    ctype=ctype, active=active, sort=sort)
+            for data in _block._component_data_iteritems(
+                    ctype=ctype, active=active, sort=sort):
+                _id = id(data[1])
+                if not in_seen(_id):
+                    seen_add(_id)
+                    yield data
 
     @deprecated("The all_blocks method is deprecated.  "
                 "Use the Block.block_data_objects() method.",
@@ -1523,41 +1537,35 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
         """
         if descend_into is False:
-            return (self,).__iter__()
-        #
-        # Rely on the _tree_iterator:
-        #
+            yield from (self,)
+            return
+
         if descend_into is True:
             descend_into = (Block,)
         elif isclass(descend_into):
             descend_into = (descend_into,)
-        return self._tree_iterator(ctype=descend_into,
-                                   active=active,
-                                   sort=sort,
-                                   traversal=descent_order)
 
-    def _tree_iterator(self,
-                       ctype=None,
-                       active=None,
-                       sort=None,
-                       traversal=None):
-
-        # TODO: merge into block_data_objects
-        if ctype is None:
-            ctype = (Block,)
-        elif isclass(ctype):
-            ctype = (ctype,)
-
-        if traversal is None or \
-                traversal == TraversalStrategy.PrefixDepthFirstSearch:
-            return self._prefix_dfs_iterator(ctype, active, sort)
-        elif traversal == TraversalStrategy.BreadthFirstSearch:
-            return self._bfs_iterator(ctype, active, sort)
-        elif traversal == TraversalStrategy.PostfixDepthFirstSearch:
-            return self._postfix_dfs_iterator(ctype, active, sort)
+        if descent_order is None or \
+                descent_order == TraversalStrategy.PrefixDepthFirstSearch:
+            walker = self._prefix_dfs_iterator(descend_into, active, sort)
+        elif descent_order == TraversalStrategy.BreadthFirstSearch:
+            walker = self._bfs_iterator(descend_into, active, sort)
+        elif descent_order == TraversalStrategy.PostfixDepthFirstSearch:
+            walker = self._postfix_dfs_iterator(descend_into, active, sort)
         else:
             raise RuntimeError("unrecognized traversal strategy: %s"
-                               % (traversal, ))
+                               % (descent_order, ))
+        # Walk the block hierarchy, removing any duplicates (due to,
+        # e.g., References)
+        seen = set()
+        seen_add = seen.add
+        in_seen = seen.__contains__
+        for b in walker:
+            _id = id(b)
+            if not in_seen(_id):
+                seen_add(_id)
+                yield b
+
 
     def _prefix_dfs_iterator(self, ctype, active, sort):
         """Helper function implementing a non-recursive prefix order
