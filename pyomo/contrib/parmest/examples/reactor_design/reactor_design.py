@@ -14,9 +14,10 @@ pyomo/examples/doc/pyomobook/nonlinear-ch/react_design/ReactorDesign.py
 """
 import pandas as pd
 from pyomo.environ import (
-    ConcreteModel, Var, PositiveReals, Objective, Constraint, maximize,
+    ConcreteModel, Param, Var, PositiveReals, Objective, Constraint, maximize,
     SolverFactory
 )
+
 
 def reactor_design_model(data):
     
@@ -24,20 +25,15 @@ def reactor_design_model(data):
     model = ConcreteModel()
     
     # Rate constants
-    model.k1 = Var(initialize = 5.0/6.0, within=PositiveReals) # min^-1
-    model.k2 = Var(initialize = 5.0/3.0, within=PositiveReals) # min^-1
-    model.k3 = Var(initialize = 1.0/6000.0, within=PositiveReals) # m^3/(gmol min)
-    model.k1.fixed = True
-    model.k2.fixed = True
-    model.k3.fixed = True
-    
+    model.k1 = Param(initialize = 5.0/6.0, within=PositiveReals, mutable=True) # min^-1
+    model.k2 = Param(initialize = 5.0/3.0, within=PositiveReals, mutable=True) # min^-1
+    model.k3 = Param(initialize = 1.0/6000.0, within=PositiveReals, mutable=True) # m^3/(gmol min)
+
     # Inlet concentration of A, gmol/m^3
-    model.caf = Var(initialize = float(data['caf']), within=PositiveReals)
-    model.caf.fixed = True
+    model.caf = Param(initialize = float(data['caf']), within=PositiveReals)
     
 	# Space velocity (flowrate/volume)
-    model.sv = Var(initialize = float(data['sv']), within=PositiveReals)
-    model.sv.fixed = True
+    model.sv = Param(initialize = float(data['sv']), within=PositiveReals)
     
     # Outlet concentration of each component
     model.ca = Var(initialize = 5000.0, within=PositiveReals) 

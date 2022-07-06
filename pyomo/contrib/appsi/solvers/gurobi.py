@@ -280,11 +280,13 @@ class Gurobi(PersistentBase, PersistentSolver):
     @property
     def gurobi_options(self):
         """
+        A dictionary mapping solver options to values for those options. These
+        are solver specific.
+
         Returns
         -------
-        gurobi_options: dict
-            A dictionary mapping solver options to values for those options. These
-            are solver specific.
+        dict
+            A dictionary mapping solver options to values for those options
         """
         return self._solver_options
 
@@ -1145,14 +1147,21 @@ class Gurobi(PersistentBase, PersistentSolver):
             gurobipy.GRB.Callback. This will indicate where in the branch and bound algorithm gurobi is at. For
             example, suppose we want to solve
 
-            min 2*x + y
-            s.t.
-                y >= (x-2)**2
-                0 <= x <= 4
-                y >= 0
-                y integer
+            .. math::
 
-            as an MILP using exteneded cutting planes in callbacks.
+                min 2*x + y
+                
+                s.t.
+                
+                    y >= (x-2)**2
+                    
+                    0 <= x <= 4
+                    
+                    y >= 0
+                    
+                    y integer
+
+            as an MILP using extended cutting planes in callbacks.
 
                 >>> from gurobipy import GRB # doctest:+SKIP
                 >>> import pyomo.environ as pe
@@ -1169,7 +1178,7 @@ class Gurobi(PersistentBase, PersistentSolver):
                 ...     # a function to generate the cut
                 ...     m.x.value = xval
                 ...     return m.cons.add(m.y >= taylor_series_expansion((m.x - 2)**2))
-                >>>
+                ...
                 >>> _c = _add_cut(0)  # start with 2 cuts at the bounds of x
                 >>> _c = _add_cut(4)  # this is an arbitrary choice
                 >>>
@@ -1184,7 +1193,7 @@ class Gurobi(PersistentBase, PersistentSolver):
                 ...         cb_opt.cbGetSolution(vars=[m.x, m.y])
                 ...         if m.y.value < (m.x.value - 2)**2 - 1e-6:
                 ...             cb_opt.cbLazy(_add_cut(m.x.value))
-                >>>
+                ...
                 >>> opt.set_callback(my_callback)
                 >>> res = opt.solve(m) # doctest:+SKIP
 

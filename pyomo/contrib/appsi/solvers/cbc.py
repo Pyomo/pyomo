@@ -112,11 +112,13 @@ class Cbc(PersistentSolver):
     @property
     def cbc_options(self):
         """
+        A dictionary mapping solver options to values for those options. These
+        are solver specific.
+
         Returns
         -------
-        cbc_options: dict
-            A dictionary mapping solver options to values for those options. These
-            are solver specific.
+        dict
+            A dictionary mapping solver options to values for those options
         """
         return self._solver_options
 
