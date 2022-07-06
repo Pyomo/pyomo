@@ -182,15 +182,14 @@ def get_gdp_tree(targets, instance, knownBlocks):
                            knownBlocks=knownBlocks):
             raise GDP_Error("Target '%s' is not a component on instance "
                             "'%s'!" % (t.name, instance.name))
+        if not t.active:
+            continue
         if t.ctype is Block or isinstance(t, _BlockData):
             if t.is_indexed():
                 for block in t.values():
-                    if not t.active:
-                        continue
-                    gdp_tree = _gather_disjunctions(block, gdp_tree)
+                    if block.active:
+                        gdp_tree = _gather_disjunctions(block, gdp_tree)
             else:
-                if not t.active:
-                    continue
                 gdp_tree = _gather_disjunctions(t, gdp_tree)
         elif t.ctype is Disjunction:
             parent = _parent_disjunct(t)

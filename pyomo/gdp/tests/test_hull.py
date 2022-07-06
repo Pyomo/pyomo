@@ -23,7 +23,6 @@ from pyomo.repn import generate_standard_repn
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 import pyomo.gdp.tests.models as models
 import pyomo.gdp.tests.common_tests as ct
-from pytest import set_trace
 
 import random
 from io import StringIO

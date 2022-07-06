@@ -249,12 +249,12 @@ class Hull_Reformulation(Transformation):
         # means for the target to be deactivated: is it just the
         # target itself [historical implementation] or any block in
         # the hierarchy?
-        def _filter_inactive(t):
-            if not t.active:
-                logger.warn('GDP.Hull transformation passed a deactivated '
-                            'target (%s). Skipping.' % (t.name,))
-            return t.active
-        targets = list(filter(_filter_inactive, targets))
+        # def _filter_inactive(t):
+        #     if not t.active:
+        #         logger.warn('GDP.Hull transformation passed a deactivated '
+        #                     'target (%s). Skipping.' % (t.name,))
+        #     return t.active
+        # targets = list(filter(_filter_inactive, targets))
 
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
@@ -421,6 +421,8 @@ class Hull_Reformulation(Transformation):
         localVarsByDisjunct = ComponentMap()
         include_fixed_vars = not self._config.assume_fixed_vars_permanent
         for disjunct in obj.disjuncts:
+            if not disjunct.active:
+                continue
             disjunctVars = varsByDisjunct[disjunct] = ComponentSet()
             # create the key for each disjunct now
             transBlock._disaggregatedVarMap['disaggregatedVar'][
