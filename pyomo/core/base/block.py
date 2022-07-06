@@ -120,6 +120,15 @@ class SubclassOf(object):
     def __getitem__(self, item):
         return self
 
+class _DeduplicateInfo(object):
+    __slots__ = ('seen_components', 'seen_comp_thru_reference', 'seen_data')
+
+    def __init__(self):
+        self.seen_components = set()
+        self.seen_comp_thru_reference = set()
+        self.seen_data = set()
+
+
 class SortComponents(object):
 
     """
@@ -1336,7 +1345,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         else:
             return PseudoMap(self, ctype, active, sort)
 
-    def _component_data_iteritems(self, ctype=None, active=None, sort=False):
+    def _component_data_iteritems(self, ctype, active, sort, dedup):
         """return the name, index, and component data for matching ctypes
 
         Generator that returns a nested 2-tuple of
@@ -1346,6 +1355,14 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         for every component data in the block matching the specified
         ctype(s).
         """
+        seen_components_contains = dedup.seen_components.__contains__
+        seen_components_add = dedup.seen_components.add
+        seen_comp_thru_reference_contains \
+            = dedup.seen_comp_thru_reference.__contains__
+        seen_comp_thru_reference_add = dedup.seen_comp_thru_reference.add
+        seen_data_contains = dedup.seen_data.__contains__
+        seen_data_add = dedup.seen_data.add
+
         _sort_indices = SortComponents.sort_indices(sort)
         _subcomp = PseudoMap(self, ctype, active, sort)
         for name, comp in _subcomp.items():
@@ -1373,14 +1390,36 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 _items = ((None, comp),)
 
             if active is None or not isinstance(comp, ActiveIndexedComponent):
-                for idx, compData in _items:
-                    yield (name, idx), compData
+                _items = (((name, idx), compData) for idx, compData in _items)
             else:
-                for idx, compData in _items:
-                    if compData.active == active:
-                        yield (name, idx), compData
+                _items = (((name, idx), compData) for idx, compData in _items
+                          if compData.active == active)
 
-    def _component_data_itervalues(self, ctype=None, active=None, sort=False):
+            if comp.is_reference():
+                for _item in _items:
+                    _data = _item[1]
+                    _id = id(_data.parent_component())
+                    if seen_components_contains(_id):
+                        continue
+                    if seen_comp_thru_reference_contains(_id):
+                        seen_reference_add(_id)
+                    _id = id(_data)
+                    if seen_data_contains(_id):
+                        seen_data_add(_id)
+                        yield _item
+            else:
+                _id = id(comp)
+                seen_components_add(_id)
+                if not seen_comp_thru_reference_contains(_id):
+                    yield from _items
+                else:
+                    for _item in _items:
+                        _id = id(_item[0])
+                        if not seen_data_contains(_id):
+                            seen_data_add(_id)
+                            yield _item
+
+    def _component_data_itervalues(self, ctype, active, sort, dedup):
         """Generator that returns the _ComponentData for every component data
         in the block.
 
@@ -1390,9 +1429,17 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             # back on _component_data_iteritems.
             yield from map(
                 itemgetter(1),
-                self._component_data_iteritems(ctype, active, sort)
+                self._component_data_iteritems(ctype, active, sort, dedup)
             )
             return
+
+        seen_components_contains = dedup.seen_components.__contains__
+        seen_components_add = dedup.seen_components.add
+        seen_comp_thru_reference_contains \
+            = dedup.seen_comp_thru_reference.__contains__
+        seen_comp_thru_reference_add = dedup.seen_comp_thru_reference.add
+        seen_data_contains = dedup.seen_data.__contains__
+        seen_data_add = dedup.seen_data.add
 
         _subcomp = PseudoMap(self, ctype, active, sort)
         for comp in _subcomp.values():
@@ -1415,10 +1462,31 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 # This is a non-IndexedComponent Component.  Return it.
                 _values = (comp,)
 
-            if active is None or not isinstance(comp, ActiveIndexedComponent):
-                yield from _values
+            if active is not None and isinstance(comp, ActiveIndexedComponent):
+                _values = filter(lambda cDat: cDat.active == active, _values)
+
+            if comp.is_reference():
+                for _data in _values:
+                    _id = id(_data.parent_component())
+                    if seen_components_contains(_id):
+                        continue
+                    if seen_comp_thru_reference_contains(_id):
+                        seen_reference_add(_id)
+                    _id = id(_data)
+                    if seen_data_contains(_id):
+                        seen_data_add(_id)
+                        yield _data
             else:
-                yield from filter(lambda cDat: cDat.active == active, _values)
+                _id = id(comp)
+                seen_components_add(_id)
+                if not seen_comp_thru_reference_contains(_id):
+                    yield from _values
+                else:
+                    for _data in _values:
+                        _id = id(_data)
+                        if not seen_data_contains(_id):
+                            seen_data_add(_id)
+                            yield _data
 
     @deprecated("The all_components method is deprecated.  "
                 "Use the Block.component_objects() method.",
@@ -1469,17 +1537,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         block.  By default, this generator recursively
         descends into sub-blocks.
         """
-        seen = set()
-        seen_add = seen.add
-        in_seen = seen.__contains__
+        dedup = _DeduplicateInfo()
         for _block in self.block_data_objects(
                 active, sort, descend_into, descent_order):
-            for data in _block._component_data_itervalues(
-                    ctype=ctype, active=active, sort=sort):
-                _id = id(data)
-                if not in_seen(_id):
-                    seen_add(_id)
-                    yield data
+            yield from _block._component_data_itervalues(
+                ctype, active, sort, dedup)
 
     def component_data_iterindex(self,
                                  ctype=None,
@@ -1496,17 +1558,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             ((component name, index value), _ComponentData)
 
         """
-        seen = set()
-        seen_add = seen.add
-        in_seen = seen.__contains__
+        dedup = _DeduplicateInfo()
         for _block in self.block_data_objects(
                 active, sort, descend_into, descent_order):
-            for data in _block._component_data_iteritems(
-                    ctype=ctype, active=active, sort=sort):
-                _id = id(data[1])
-                if not in_seen(_id):
-                    seen_add(_id)
-                    yield data
+            yield from _block._component_data_iteritems(
+                ctype, active, sort, dedup)
 
     @deprecated("The all_blocks method is deprecated.  "
                 "Use the Block.block_data_objects() method.",
@@ -1541,33 +1597,27 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             return
 
         if descend_into is True:
-            descend_into = (Block,)
+            ctype = (Block,)
         elif isclass(descend_into):
-            descend_into = (descend_into,)
+            ctype = (descend_into,)
+        else:
+            ctype = descend_into
+        dedup = _DeduplicateInfo()
 
         if descent_order is None or \
                 descent_order == TraversalStrategy.PrefixDepthFirstSearch:
-            walker = self._prefix_dfs_iterator(descend_into, active, sort)
+            walker = self._prefix_dfs_iterator(ctype, active, sort, dedup)
         elif descent_order == TraversalStrategy.BreadthFirstSearch:
-            walker = self._bfs_iterator(descend_into, active, sort)
+            walker = self._bfs_iterator(ctype, active, sort, dedup)
         elif descent_order == TraversalStrategy.PostfixDepthFirstSearch:
-            walker = self._postfix_dfs_iterator(descend_into, active, sort)
+            walker = self._postfix_dfs_iterator(ctype, active, sort, dedup)
         else:
             raise RuntimeError("unrecognized traversal strategy: %s"
                                % (descent_order, ))
-        # Walk the block hierarchy, removing any duplicates (due to,
-        # e.g., References)
-        seen = set()
-        seen_add = seen.add
-        in_seen = seen.__contains__
-        for b in walker:
-            _id = id(b)
-            if not in_seen(_id):
-                seen_add(_id)
-                yield b
+        yield from walker
 
 
-    def _prefix_dfs_iterator(self, ctype, active, sort):
+    def _prefix_dfs_iterator(self, ctype, active, sort, dedup):
         """Helper function implementing a non-recursive prefix order
         depth-first search.  That is, the parent is returned before its
         children.
@@ -1576,6 +1626,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         method, which centralizes certain error checking and
         preliminaries.
         """
+        # We will unconditionally return self, so preemptively add it to
+        # the list of "seen" IDs
+        dedup.seen_data.add(id(self))
+
         PM = PseudoMap(self, ctype, active, sort)
         _stack = [(self,).__iter__(), ]
         while _stack:
@@ -1584,13 +1638,13 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 yield _block
                 if not PM:
                     continue
-                _stack.append(_block.component_data_objects(
-                    ctype, active, sort, False)
+                _stack.append(_block._component_data_itervalues(
+                    ctype, active, sort, dedup)
                 )
             except StopIteration:
                 _stack.pop()
 
-    def _postfix_dfs_iterator(self, ctype, active, sort):
+    def _postfix_dfs_iterator(self, ctype, active, sort, dedup):
         """
         Helper function implementing a non-recursive postfix
         order depth-first search.  That is, the parent is
@@ -1600,21 +1654,24 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         _tree_iterator method, which centralizes certain
         error checking and preliminaries.
         """
+        # We will unconditionally return self, so preemptively add it to
+        # the list of "seen" IDs
+        dedup.seen_data.add(id(self))
+
         _stack = [
-            (self, self.component_data_objects(ctype, active, sort, False))
+            (self, self._component_data_itervalues(ctype, active, sort, dedup))
         ]
         while _stack:
             try:
                 _sub = next(_stack[-1][1])
                 _stack.append((
                     _sub,
-                    _sub.component_data_objects(
-                        ctype, active, sort, False)
+                    _sub._component_data_itervalues(ctype, active, sort, dedup)
                  ))
             except StopIteration:
                 yield _stack.pop()[0]
 
-    def _bfs_iterator(self, ctype, active, sort):
+    def _bfs_iterator(self, ctype, active, sort, dedup):
         """Helper function implementing a non-recursive breadth-first search.
         That is, all children at one level in the tree are returned
         before any of the children at the next level.
@@ -1624,6 +1681,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         preliminaries.
 
         """
+        # We will unconditionally return self, so preemptively add it to
+        # the list of "seen" IDs
+        dedup.seen_data.add(id(self))
+
         if SortComponents.sort_indices(sort):
             if SortComponents.sort_names(sort):
                 sorter = itemgetter(1, 2)
@@ -1654,8 +1715,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 yield _items[-1]  # _block
                 _levelQueue[_level].append(
                     tmp[0] + (tmp[1],) for tmp in
-                    _items[-1].component_data_iterindex(
-                        ctype, active, sort, False)
+                    _items[-1]._component_data_iteritems(
+                        ctype, active, sort, dedup)
                 )
 
     def fix_all_vars(self):
