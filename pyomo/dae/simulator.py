@@ -24,19 +24,6 @@ from pyomo.common.dependencies import (
     numpy as np, numpy_available, scipy, scipy_available, attempt_import,
 )
 
-# Check integrator availability
-# scipy_available = True
-# try:
-#     import platform
-#     if platform.python_implementation() == "PyPy":  # pragma:nocover
-#         # scipy is importable into PyPy, but ODE integrators don't work. (2/18)
-#         raise ImportError
-#     import scipy.integrate as scipy
-# except ImportError:
-#     scipy_available = False
-import platform
-is_pypy = platform.python_implementation() == "PyPy"
-
 casadi_intrinsic = {}
 def _finalize_casadi(casadi, available):
     if available:
@@ -404,11 +391,6 @@ class Simulator:
                 # can be tested even when scipy is unavailable
                 logger.warning(
                     "The scipy module is not available. "
-                    "You may build the Simulator object but you will not "
-                    "be able to run the simulation.")
-            elif is_pypy:
-                logger.warning(
-                    "The scipy ODE integrators do not work in pypy. "
                     "You may build the Simulator object but you will not "
                     "be able to run the simulation.")
         else:
@@ -885,9 +867,6 @@ class Simulator:
             if not scipy_available:
                 raise ValueError("The scipy module is not available. "
                                  "Cannot simulate the model.")
-            if is_pypy:
-                raise ValueError("The scipy ODE integrators do not work "
-                                 "under pypy. Cannot simulate the model.")
             tsim, profile = self._simulate_with_scipy(initcon, tsim, switchpts,
                                                       varying_inputs,
                                                       integrator,

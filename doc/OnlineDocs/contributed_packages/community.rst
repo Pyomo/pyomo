@@ -24,6 +24,7 @@ detection. Thus, this package provides the user with a lot of control over the c
 function we use for this community detection is shown below:
 
 .. autofunction:: pyomo.contrib.community_detection.detection.detect_communities
+  :noindex:
 
 As stated above, the characteristics of the NetworkX graph of the Pyomo model are very important to the
 community detection. The main graph features the user can specify are the type of community map,
@@ -87,6 +88,7 @@ The pip install and conda install commands are included below as well::
 
     pip install networkx
     pip install python-louvain
+
     conda install -c anaconda networkx
     conda install -c conda-forge python-louvain
 

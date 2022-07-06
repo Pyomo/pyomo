@@ -43,20 +43,20 @@ def assert_block_structure(vec):
 class BlockVector(np.ndarray, BaseBlockVector):
     """
     Structured vector interface. This interface can be used to
-    performe operations on vectors composed by vectors. For example,
+    perform operations on vectors composed by vectors. For example,
 
-    >> import numpy as np
-    >> from pyomo.contrib.pynumero.sparse import BlockVector
-    >> bv = BlockVector(3)
-    >> v0 = np.ones(3)
-    >> v1 = v0*2
-    >> v2 = np.random.normal(size=4)
-    >> bv.set_block(0, v0)
-    >> bv.set_block(1, v1)
-    >> bv.set_block(2, v2)
-    >> bv2 = BlockVector(2)
-    >> bv2.set_block(0, v0)
-    >> bv2.set_block(1, bv)
+    >>> import numpy as np
+    >>> from pyomo.contrib.pynumero.sparse import BlockVector
+    >>> bv = BlockVector(3)
+    >>> v0 = np.ones(3)
+    >>> v1 = v0*2
+    >>> v2 = np.random.normal(size=4)
+    >>> bv.set_block(0, v0)
+    >>> bv.set_block(1, v1)
+    >>> bv.set_block(2, v2)
+    >>> bv2 = BlockVector(2)
+    >>> bv2.set_block(0, v0)
+    >>> bv2.set_block(1, bv)
 
     Attributes
     ----------
