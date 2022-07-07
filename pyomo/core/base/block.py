@@ -1602,14 +1602,28 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                            descent_order=None):
         """Generator returning this block and an any matching sub-blocks.
 
-        This is semantically equivalent to
+        This is roughly equivalent to
 
-            iter([self, list(self.component_data_objects(Block, ...))])
+            iter(block for block in itertools.chain(
+                [self], self.component_data_objects(descend_into, ...))
+                if block.active == active
+            )
 
-        Note that the `self` block is *always* returned, regardless of
-        the active flag.
+        Notes
+        -----
+        The `self` block is *always* returned, regardless of the types
+        indicated by descend_into.
+
+        The active flag is enforced on *all* blocks, inclufing self.
 
         """
+        # TODO: we should determine if that is desirable behavior(it is
+        # historical, so there are backwards compatibility arguments to
+        # not change it, but because of block_data_objects() use in
+        # component_data_objects, it might be desirable to always return
+        # self.
+        if active is not None and self.active != active:
+            return
         if not descend_into:
             yield self
             return
