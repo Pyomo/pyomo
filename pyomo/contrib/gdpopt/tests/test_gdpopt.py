@@ -53,7 +53,6 @@ GLOA_solvers_available = all(SolverFactory(s).available() for s in GLOA_solvers)
 license_available = SolverFactory(global_nlp_solver).license_is_valid() if \
                     GLOA_solvers_available else False
 
-
 class TestGDPoptUnit(unittest.TestCase):
     """Real unit tests for GDPopt"""
 
@@ -1423,13 +1422,14 @@ class TestGLOA(unittest.TestCase):
         exfile = import_file(
             join(exdir, 'constrained_layout', 'cons_layout_model.py'))
         cons_layout = exfile.build_constrained_layout_model()
-        SolverFactory('gdpopt.gloa').solve(
+        results = SolverFactory('gdpopt.gloa').solve(
             cons_layout,
             mip_solver=mip_solver,
-            iterlim=36,
             nlp_solver=global_nlp_solver,
             nlp_solver_args=global_nlp_solver_args,
             tee=False)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
         objective_value = value(cons_layout.min_dist_cost.expr)
         self.assertTrue(
             fabs(objective_value - 41573) <= 200,
