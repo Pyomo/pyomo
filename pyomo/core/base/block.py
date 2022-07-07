@@ -120,13 +120,90 @@ class SubclassOf(object):
     def __getitem__(self, item):
         return self
 
+
 class _DeduplicateInfo(object):
+    """Class implementing a unique component data object filter
+
+    This class implements :py:meth:`unique()`, which is an efficient
+    Reference-aware filter that wraps a generator and returns only
+    unique component data objects.  This is nominally the same as:
+
+        seen = set()
+        for data in iterator:
+            if id(data) not in seen:
+                seen.add(id(data))
+                yield data
+
+    However, it is aware of the existence of Reference components (and
+    that the only way you should ever encounter a duplicate is through a
+    Reference).  This allows it to avoid generating and storing the id()
+    of every data object.
+
+    """
     __slots__ = ('seen_components', 'seen_comp_thru_reference', 'seen_data')
 
     def __init__(self):
         self.seen_components = set()
         self.seen_comp_thru_reference = set()
         self.seen_data = set()
+
+    @staticmethod
+    def item(item):
+        return item[0]
+
+    @staticmethod
+    def value(item):
+        return item
+
+    def unique(self, comp, items, are_values):
+        if comp.is_reference():
+            seen_components_contains = self.seen_components.__contains__
+            seen_comp_thru_reference_contains \
+                = self.seen_comp_thru_reference.__contains__
+            seen_comp_thru_reference_add = self.seen_comp_thru_reference.add
+            seen_data_contains = self.seen_data.__contains__
+            seen_data_add = self.seen_data.add
+
+            for _item in items:
+                _data = _item if are_values else _item[1]
+                # If the data is contained in a component we have
+                # already processed, then it is a duplicate and we can
+                # bypass forther checks.
+                _id = id(_data.parent_component())
+                if seen_components_contains(_id):
+                    continue
+                # Remember that this component has already been
+                # partially visited (important for the case that we hit
+                # the "natural" component later in the generator)
+                if not seen_comp_thru_reference_contains(_id):
+                    seen_comp_thru_reference_add(_id)
+                # Yield any data objects we haven't seen yet (and
+                # remember them)
+                _id = id(_data)
+                if not seen_data_contains(_id):
+                    seen_data_add(_id)
+                    yield _item
+        else: # this is a "natural" component
+            # Remember that we have completely processed this component
+            _id = id(comp)
+            self.seen_components.add(_id)
+            if _id not in self.seen_comp_thru_reference:
+                # No data in this component has yet been emitted
+                # (through a Referenec), so we can just yield all the
+                # values.
+                yield from items
+            else:
+                # This component has had some data yielded (through
+                # References).  We need to check for conflicts before
+                # yielding each data.  Note that since we have already
+                # marked the entire component as processed and data can
+                # not reappear in natural components, we only need to
+                # check for duplicates and not remember them.
+                seen_data_contains = self.seen_data.__contains__
+                for _item in items:
+                    if not seen_data_contains(id(
+                            _item if are_values else _item[0])):
+                        yield _item
 
 
 class SortComponents(object):
@@ -1355,14 +1432,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         for every component data in the block matching the specified
         ctype(s).
         """
-        seen_components_contains = dedup.seen_components.__contains__
-        seen_components_add = dedup.seen_components.add
-        seen_comp_thru_reference_contains \
-            = dedup.seen_comp_thru_reference.__contains__
-        seen_comp_thru_reference_add = dedup.seen_comp_thru_reference.add
-        seen_data_contains = dedup.seen_data.__contains__
-        seen_data_add = dedup.seen_data.add
-
         _sort_indices = SortComponents.sort_indices(sort)
         _subcomp = PseudoMap(self, ctype, active, sort)
         for name, comp in _subcomp.items():
@@ -1395,29 +1464,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 _items = (((name, idx), compData) for idx, compData in _items
                           if compData.active == active)
 
-            if comp.is_reference():
-                for _item in _items:
-                    _data = _item[1]
-                    _id = id(_data.parent_component())
-                    if seen_components_contains(_id):
-                        continue
-                    if seen_comp_thru_reference_contains(_id):
-                        seen_reference_add(_id)
-                    _id = id(_data)
-                    if seen_data_contains(_id):
-                        seen_data_add(_id)
-                        yield _item
-            else:
-                _id = id(comp)
-                seen_components_add(_id)
-                if not seen_comp_thru_reference_contains(_id):
-                    yield from _items
-                else:
-                    for _item in _items:
-                        _id = id(_item[0])
-                        if not seen_data_contains(_id):
-                            seen_data_add(_id)
-                            yield _item
+            yield from dedup.unique(comp, _items, False)
 
     def _component_data_itervalues(self, ctype, active, sort, dedup):
         """Generator that returns the _ComponentData for every component data
@@ -1432,14 +1479,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 self._component_data_iteritems(ctype, active, sort, dedup)
             )
             return
-
-        seen_components_contains = dedup.seen_components.__contains__
-        seen_components_add = dedup.seen_components.add
-        seen_comp_thru_reference_contains \
-            = dedup.seen_comp_thru_reference.__contains__
-        seen_comp_thru_reference_add = dedup.seen_comp_thru_reference.add
-        seen_data_contains = dedup.seen_data.__contains__
-        seen_data_add = dedup.seen_data.add
 
         _subcomp = PseudoMap(self, ctype, active, sort)
         for comp in _subcomp.values():
@@ -1465,28 +1504,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             if active is not None and isinstance(comp, ActiveIndexedComponent):
                 _values = filter(lambda cDat: cDat.active == active, _values)
 
-            if comp.is_reference():
-                for _data in _values:
-                    _id = id(_data.parent_component())
-                    if seen_components_contains(_id):
-                        continue
-                    if seen_comp_thru_reference_contains(_id):
-                        seen_reference_add(_id)
-                    _id = id(_data)
-                    if seen_data_contains(_id):
-                        seen_data_add(_id)
-                        yield _data
-            else:
-                _id = id(comp)
-                seen_components_add(_id)
-                if not seen_comp_thru_reference_contains(_id):
-                    yield from _values
-                else:
-                    for _data in _values:
-                        _id = id(_data)
-                        if not seen_data_contains(_id):
-                            seen_data_add(_id)
-                            yield _data
+            yield from dedup.unique(comp, _values, True)
 
     @deprecated("The all_components method is deprecated.  "
                 "Use the Block.component_objects() method.",
@@ -1592,8 +1610,8 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         the active flag.
 
         """
-        if descend_into is False:
-            yield from (self,)
+        if not descend_into:
+            yield self
             return
 
         if descend_into is True:
