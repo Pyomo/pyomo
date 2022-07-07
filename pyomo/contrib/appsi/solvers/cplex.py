@@ -136,11 +136,13 @@ class Cplex(PersistentSolver):
     @property
     def cplex_options(self):
         """
+        A dictionary mapping solver options to values for those options. These
+        are solver specific.
+
         Returns
         -------
-        cplex_options: dict
-            A dictionary mapping solver options to values for those options. These
-            are solver specific.
+        dict
+            A dictionary mapping solver options to values for those options
         """
         return self._solver_options
 

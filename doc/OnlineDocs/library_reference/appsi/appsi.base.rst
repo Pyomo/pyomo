@@ -30,15 +30,18 @@ APPSI Base Classes
   :inherited-members:
   :undoc-members:
   :show-inheritance:
+  :exclude-members: NoArgument
 
 .. autoclass:: pyomo.contrib.appsi.base.MIPSolverConfig
   :members:
   :inherited-members:
   :undoc-members:
   :show-inheritance:
+  :exclude-members: NoArgument
 
 .. autoclass:: pyomo.contrib.appsi.base.UpdateConfig
   :members:
   :inherited-members:
   :undoc-members:
   :show-inheritance:
+  :exclude-members: NoArgument

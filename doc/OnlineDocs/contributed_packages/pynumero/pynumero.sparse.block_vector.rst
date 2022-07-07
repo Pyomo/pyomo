@@ -16,9 +16,10 @@ Methods specific to :py:class:`pyomo.contrib.pynumero.sparse.block_vector.BlockV
 
 Attributes specific to :py:class:`pyomo.contrib.pynumero.sparse.block_vector.BlockVector`:
 
-  * :py:meth:`~pyomo.contrib.pynumero.sparse.block_vector.BlockVector.nblocks`
-  * :py:meth:`~pyomo.contrib.pynumero.sparse.block_vector.BlockVector.bshape`
-  * :py:meth:`~pyomo.contrib.pynumero.sparse.block_vector.BlockVector.has_none`
+  * :py:attr:`~pyomo.contrib.pynumero.sparse.block_vector.BlockVector.nblocks`
+  * :py:attr:`~pyomo.contrib.pynumero.sparse.block_vector.BlockVector.bshape`
+  * :py:attr:`~pyomo.contrib.pynumero.sparse.block_vector.BlockVector.has_none`
+
 
 NumPy compatible methods:
 
@@ -148,6 +149,6 @@ For example,
 .. automethod:: pyomo.contrib.pynumero.sparse.block_vector.BlockVector.copy_structure
 .. automethod:: pyomo.contrib.pynumero.sparse.block_vector.BlockVector.set_blocks
 .. automethod:: pyomo.contrib.pynumero.sparse.block_vector.BlockVector.pprint
-.. automethod:: pyomo.contrib.pynumero.sparse.block_vector.BlockVector.nblocks
-.. automethod:: pyomo.contrib.pynumero.sparse.block_vector.BlockVector.bshape
-.. automethod:: pyomo.contrib.pynumero.sparse.block_vector.BlockVector.has_none
+.. autoproperty:: pyomo.contrib.pynumero.sparse.block_vector.BlockVector.nblocks
+.. autoproperty:: pyomo.contrib.pynumero.sparse.block_vector.BlockVector.bshape
+.. autoproperty:: pyomo.contrib.pynumero.sparse.block_vector.BlockVector.has_none

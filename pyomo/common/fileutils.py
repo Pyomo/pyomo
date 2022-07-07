@@ -417,7 +417,7 @@ def find_executable(exename, cwd=True, include_PATH=True, pathlist=None):
                      pathlist=pathlist, allow_pathlist_deep_references=False)
 
 
-def import_file(path, clear_cache=False, infer_package=True):
+def import_file(path, clear_cache=False, infer_package=True, module_name=None):
     """
     Import a module given the full path/filename of the file.
     Replaces import_file from pyutilib (Pyomo 6.0.0).
@@ -436,7 +436,8 @@ def import_file(path, clear_cache=False, infer_package=True):
     if not os.path.exists(path):
         raise FileNotFoundError('File does not exist. Check path.')
     module_dir, module_file = os.path.split(path)
-    module_name, module_ext = os.path.splitext(module_file)
+    if module_name is None:
+        module_name, module_ext = os.path.splitext(module_file)
     if infer_package:
         while module_dir and os.path.exists(
                 os.path.join(module_dir, '__init__.py')):
