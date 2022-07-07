@@ -553,7 +553,7 @@ class Estimator(object):
             A dictionary of theta values.
         
         initialize_parmest_model: boolean
-            True: Solve square problem instance, build extensive form of the model for 
+            If True: Solve square problem instance, build extensive form of the model for 
             parameter estimation, and set flag model_initialized to True
 
         Returns
@@ -577,7 +577,6 @@ class Estimator(object):
                         "cb_data": self.callback_data}
         else:
             dummy_cb = {"callback": self._instance_creation_callback,
-                        # "ThetaVals": thetavals,
                         "theta_names": self.theta_names,
                         "cb_data": self.callback_data}
 
@@ -629,11 +628,12 @@ class Estimator(object):
                                 var_validate.fix(thetavals[theta])
                             theta_init_vals.append(var_validate)
                         except:
-                            logger.warning(theta + ' is not a variable')
+                            logger.warning('Unable to fix model parameter value for %s (%s not a Pyomo model Var)', 
+                            (theta, i))
             if active_constraints:
                 if self.diagnostic_mode:
                     print('      Experiment = ',snum)
-                    print('     First solve with with special diagnostics wrapper')
+                    print('     First solve with special diagnostics wrapper')
                     status_obj, solved, iters, time, regu \
                         = utils.ipopt_solve_with_stats(instance, optimizer, max_iter=500, max_cpu_time=120)
                     print("   status_obj, solved, iters, time, regularization_stat = ",
@@ -650,11 +650,12 @@ class Estimator(object):
                     if WorstStatus != pyo.TerminationCondition.infeasible:
                         WorstStatus = results.solver.termination_condition
                     if initialize_parmest_model:
-                        # raise warning here?
-                        print("Scenario {:d} infeasible with initialized parameter values".format(snum))
+                        if self.diagnostic_mode:
+                            print("Scenario {:d} infeasible with initialized parameter values".format(snum))
                 else:
                     if initialize_parmest_model:
-                        print("Scenario {:d} initialization successful with initial parameter values".format(snum))
+                        if self.diagnostic_mode:
+                            print("Scenario {:d} initialization successful with initial parameter values".format(snum))
                 if initialize_parmest_model:
                     # unfix parameters after initialization
                     for theta in theta_init_vals:
@@ -666,16 +667,30 @@ class Estimator(object):
             
         retval = totobj / len(senario_numbers) # -1??
         if initialize_parmest_model:
-            # create extensive form of the model with using scenario dictionary
+            # create extensive form of the model using scenario dictionary
             if len(scen_dict) > 0:
                 for scen in scen_dict.values():
                     scen._mpisppy_probability = 1 / len(scen_dict)
-            EF_instance = local_ef._create_EF_from_scen_dict(scen_dict,
-                                                    EF_name="_Q_at_theta",
-                                                    nonant_for_fixed_vars=True)
+            
+            # TODO: if statement to check if use_mpisppy, then create EF using sputils.create_EF just like in _Q_opt()
+            if use_mpisppy:
+                ef = sputils._create_EF_from_scen_dict(scen_dict,
+                                                EF_name = "_Q_at_theta",
+                                                suppress_warnings=True)
+            else:
+                EF_instance = local_ef._create_EF_from_scen_dict(scen_dict,
+                                                        EF_name="_Q_at_theta",
+                                                        nonant_for_fixed_vars=True)
 
             self.ef_instance = EF_instance
+            # set self.model_initialized flag to True to skip extensive form model 
+            # creation using theta_est()
             self.model_initialized = True
+
+            # return initialized theta values
+            for i, theta in enumerate(self.theta_names):
+                thetavals[theta] = theta_init_vals[i]()
+
         return retval, thetavals, WorstStatus
 
     def _get_sample_list(self, samplesize, num_samples, replacement=True):
@@ -954,7 +969,7 @@ class Estimator(object):
             Values of theta used to compute the objective
 
         initialize_parmest_model: boolean
-            True: Solve square problem instance, build extensive form of the model for 
+            If True: Solve square problem instance, build extensive form of the model for 
             parameter estimation, and set flag model_initialized to True
 
 
@@ -964,7 +979,7 @@ class Estimator(object):
             Objective value for each theta (infeasible solutions are
             omitted).
         """
-        if theta_values is None:
+        if theta_values is None:    
             all_thetas = {} # dictionary to store fitted variables
             theta_names = self.theta_names
         else:
@@ -974,10 +989,14 @@ class Estimator(object):
             theta_names = theta_values.columns
             all_thetas = theta_values.to_dict('records')
 
-        task_mgr = utils.ParallelTaskManager(len(all_thetas))
+        
         if all_thetas:
+            task_mgr = utils.ParallelTaskManager(len(all_thetas))
             local_thetas = task_mgr.global_to_local_data(all_thetas)
-
+        else:
+            if initialize_parmest_model:
+                task_mgr = utils.ParallelTaskManager(1) # initialization performed using just 1 set of theta values
+                # local_thetas = task_mgr.global_to_local_data(all_thetas)
         # walk over the mesh, return objective function
         all_obj = list()
         if len(all_thetas) > 0:
@@ -988,9 +1007,9 @@ class Estimator(object):
                 # DLW, Aug2018: should we also store the worst solver status?
         else:
             obj, thetvals, worststatus = self._Q_at_theta(thetavals={}, initialize_parmest_model=initialize_parmest_model)
+            print(thetvals)
             if worststatus != pyo.TerminationCondition.infeasible:
-                if theta_values:
-                    all_obj.append(list(thetvals.values()) + [obj])
+                all_obj.append(list(thetvals.values()) + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
         dfcols = list(theta_names) + ['obj']
