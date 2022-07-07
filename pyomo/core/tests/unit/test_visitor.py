@@ -384,7 +384,7 @@ class WalkerTests(unittest.TestCase):
         e2 = replace_expressions(e, sub_map)
         self.assertTrue(compare_expressions(
             e2,
-            LinearExpression(constant=4, linear_coefs=[3], linear_vars=[m.y])
+            LinearExpression(constant=10, linear_coefs=[3], linear_vars=[m.y])
         ))
 
     def test_replacement_linear_expression_with_nonlinear(self):
