@@ -371,12 +371,34 @@ class WalkerTests(unittest.TestCase):
         m = ConcreteModel()
         m.x = Var()
         m.y = Var()
-        e = LinearExpression(linear_coefs=[2.5], linear_vars=[m.x])
+        e = LinearExpression(linear_coefs=[2], linear_vars=[m.x])
         e += m.y
         sub_map = dict()
-        sub_map[id(m.x)] = 0.5
+        sub_map[id(m.x)] = 5
         e2 = replace_expressions(e, sub_map)
-        self.assertTrue(compare_expressions(e2, SumExpression([1.25, m.y])))
+        self.assertTrue(compare_expressions(e2, SumExpression([10, m.y])))
+
+        e = LinearExpression(linear_coefs=[2, 3], linear_vars=[m.x, m.y])
+        sub_map = dict()
+        sub_map[id(m.x)] = 5
+        e2 = replace_expressions(e, sub_map)
+        self.assertTrue(compare_expressions(
+            e2,
+            LinearExpression(constant=4, linear_coefs=[3], linear_vars=[m.y])
+        ))
+
+    def test_replacement_linear_expression_with_nonlinear(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        e = LinearExpression(linear_coefs=[2, 3], linear_vars=[m.x, m.y])
+        sub_map = dict()
+        sub_map[id(m.x)] = m.x**2
+        e2 = replace_expressions(e, sub_map)
+        self.assertTrue(compare_expressions(
+            e2,
+            SumExpression([2*m.x**2, 3*m.y])
+        ))
 
     def test_replace_expressions_with_monomial_term(self):
         M = ConcreteModel()
