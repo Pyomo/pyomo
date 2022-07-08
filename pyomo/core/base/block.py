@@ -147,14 +147,6 @@ class _DeduplicateInfo(object):
         self.seen_comp_thru_reference = set()
         self.seen_data = set()
 
-    @staticmethod
-    def item(item):
-        return item[0]
-
-    @staticmethod
-    def value(item):
-        return item
-
     def unique(self, comp, items, are_values):
         if comp.is_reference():
             seen_components_contains = self.seen_components.__contains__
@@ -189,7 +181,7 @@ class _DeduplicateInfo(object):
             self.seen_components.add(_id)
             if _id not in self.seen_comp_thru_reference:
                 # No data in this component has yet been emitted
-                # (through a Referenec), so we can just yield all the
+                # (through a Reference), so we can just yield all the
                 # values.
                 yield from items
             else:
