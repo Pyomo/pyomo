@@ -3677,6 +3677,27 @@ class TestSumExpression(unittest.TestCase):
         e = quicksum(self.m.p[i]*self.m.q[i] for i in self.m.I)
         self.assertEqual( e(), 15 )
         self.assertIs(type(e), SumExpression)
+        
+    def test_quicksum_reject_noniterable(self):
+        msg = 'Failed to recognize non-iterable args.'
+        try:
+            e = quicksum(1)
+            self.fail(msg)
+        except Exception as ex:
+            self.assertIsInstance(ex, TypeError, msg)
+
+    def test_quicksum_exception_exposure(self):
+        msg = 'Exception raised in the iterator was hidden.'
+        ex0 = Exception()
+        def f(): raise ex0
+        
+        try:
+            e = quicksum((f() for i in [1, 2, 3]))
+            self.fail(msg)
+        except Exception as ex:
+            self.assertIs(ex, ex0, msg)
+
+
 
 
 class TestCloneExpression(unittest.TestCase):
