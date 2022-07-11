@@ -514,7 +514,7 @@ class TestManualModel(unittest.TestCase):
 
         opt = self.opt
         opt.set_instance(m)
-        self.assertEqual(opt._solver_model.getAttr('NumQConstrs'), 0)
+        self.assertEqual(opt._solver_model.getAttr('NumQConstrs'), 1)
 
         opt.remove_constraints([m.c1])
         opt.update()
@@ -536,7 +536,7 @@ class TestManualModel(unittest.TestCase):
         opt = self.opt
         opt.config.symbolic_solver_labels = True
         opt.set_instance(m)
-        self.assertEqual(opt._solver_model.getAttr('NumConstrs'), 0)
+        self.assertEqual(opt._solver_model.getAttr('NumConstrs'), 1)
 
         opt.remove_constraints([m.c2])
         opt.update()
@@ -595,7 +595,7 @@ class TestManualModel(unittest.TestCase):
 
         opt = self.opt
         opt.set_instance(m)
-        self.assertEqual(opt._solver_model.getAttr('NumSOS'), 0)
+        self.assertEqual(opt._solver_model.getAttr('NumSOS'), 1)
 
         opt.remove_sos_constraints([m.c1])
         opt.update()
@@ -632,7 +632,7 @@ class TestManualModel(unittest.TestCase):
 
         opt = self.opt
         opt.set_instance(m)
-        self.assertEqual(opt._solver_model.getAttr('NumVars'), 0)
+        self.assertEqual(opt._solver_model.getAttr('NumVars'), 2)
 
         opt.remove_variables([m.x])
         opt.update()
