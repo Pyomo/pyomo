@@ -477,8 +477,6 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
         term_cond = result.solver.termination_condition
         if term_cond == tc.optimal:
             assert result.solver.status is SolverStatus.ok
-            lb = result.problem.lower_bound if not obj_sense_correction else \
-                 -result.problem.upper_bound
             ub = result.problem.upper_bound if not obj_sense_correction else \
                  -result.problem.lower_bound
             copy_var_list_values(
@@ -489,11 +487,8 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
             return float('-inf'), ub
         elif term_cond == tc.locallyOptimal or term_cond == tc.feasible:
             assert result.solver.status is SolverStatus.ok
-            lb = result.problem.lower_bound if not obj_sense_correction else \
-                 -result.problem.upper_bound
             ub = result.problem.upper_bound if not obj_sense_correction else \
                  -result.problem.lower_bound
-            # TODO handle LB absent
             copy_var_list_values(
                 from_list=subprob_utils.algebraic_variable_list,
                 to_list=model_utils.algebraic_variable_list,
@@ -513,6 +508,9 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 to_list=model_utils.algebraic_variable_list,
                 config=config, ignore_integrality=True
             )
+            # [ESJ 7/11/22]: Making this float('inf'), float('inf') doesn't
+            # break tests, and makes more sense. But I'm not sure why it's not
+            # that way already?
             return float('-inf'), float('inf')
         else:
             config.logger.warning("Unknown termination condition of %s. "
