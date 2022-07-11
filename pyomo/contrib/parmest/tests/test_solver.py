@@ -46,7 +46,7 @@ class TestSolver(unittest.TestCase):
     def test_ipopt_solve_with_stats(self):
         
         from pyomo.contrib.parmest.examples.rooney_biegler.rooney_biegler import rooney_biegler_model
-        from pyomo.contrib.parmest.ipopt_solver_wrapper import ipopt_solve_with_stats
+        from pyomo.contrib.parmest.utils import ipopt_solve_with_stats
         
         data = pd.DataFrame(data=[[1,8.3],[2,10.3],[3,19.0],
                                   [4,16.0],[5,15.6],[7,19.8]], columns=['hour', 'y'])
