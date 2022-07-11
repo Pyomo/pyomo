@@ -76,18 +76,11 @@ def quicksum(args, start=0, linear=None):
             #
             # Get the first term, which we will test for linearity
             #
-            if '__next__' not in args.__dir__():
-                # Since `IndexedComponent_slice` implements `__getattr__`,
-                # `hasattr(args,'__next__')` can not distinguish
-                # `IndexedComponent_slice` from `_IndexedComponent_slice_iter'
-                if hasattr(args, '__iter__'):
-                    args = args.__iter__()
-                else:
-                    raise RuntimeError("The argument to quicksum() is not iterable!")
-            # No `try...except...`
-            # to prevent hiding exceptions raised in the iterator from the user
-            first = next(args, None)
+            
+            # Ensure that args is an iterator (this manages things like IndexedComponent_slice objects)
+            args = iter(args)
 
+            first = next(args, None)
             if first is None:
                 return start
             #
