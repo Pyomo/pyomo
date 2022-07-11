@@ -1042,10 +1042,45 @@ class TestSolvers(unittest.TestCase):
 
         m.x.setlb(0)
         res = opt.solve(m.b)
-        self.assertAlmostEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
         self.assertAlmostEqual(res.best_feasible_objective, 2)
         self.assertAlmostEqual(m.x.value, 0)
         self.assertAlmostEqual(m.y.value, 2)
+
+    @parameterized.expand(input=all_solvers)
+    def test_variables_elsewhere2(self, name: str, opt_class: Type[PersistentSolver]):
+        opt: PersistentSolver = opt_class(only_child_vars=False)
+        if not opt.available():
+            raise unittest.SkipTest
+
+        m = pe.ConcreteModel()
+        m.x = pe.Var()
+        m.y = pe.Var()
+        m.z = pe.Var()
+
+        m.obj = pe.Objective(expr=m.y)
+        m.c1 = pe.Constraint(expr=m.y >= m.x)
+        m.c2 = pe.Constraint(expr=m.y >= -m.x)
+        m.c3 = pe.Constraint(expr=m.y >= m.z + 1)
+        m.c4 = pe.Constraint(expr=m.y >= -m.z + 1)
+
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(res.best_feasible_objective, 1)
+        sol = res.solution_loader.get_primals()
+        self.assertIn(m.x, sol)
+        self.assertIn(m.y, sol)
+        self.assertIn(m.z, sol)
+
+        del m.c3
+        del m.c4
+        res = opt.solve(m)
+        self.assertEqual(res.termination_condition, TerminationCondition.optimal)
+        self.assertAlmostEqual(res.best_feasible_objective, 0)
+        sol = res.solution_loader.get_primals()
+        self.assertIn(m.x, sol)
+        self.assertIn(m.y, sol)
+        self.assertNotIn(m.z, sol)
 
 
 @unittest.skipUnless(cmodel_available, 'appsi extensions are not available')
