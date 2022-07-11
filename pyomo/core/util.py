@@ -66,6 +66,13 @@ def quicksum(args, start=0, linear=None):
     Returns:
         The value of the sum, which may be a Pyomo expression object.
     """
+
+    # Ensure that args is an iterator (this manages things like IndexedComponent_slice objects)
+    try:
+        args = iter(args)
+    except:
+        raise TypeError('The argument `args` to quicksum() is not iterable!')
+
     #
     # If we're starting with a numeric value, then 
     # create a new nonlinear sum expression but 
@@ -76,10 +83,6 @@ def quicksum(args, start=0, linear=None):
             #
             # Get the first term, which we will test for linearity
             #
-            
-            # Ensure that args is an iterator (this manages things like IndexedComponent_slice objects)
-            args = iter(args)
-
             first = next(args, None)
             if first is None:
                 return start
