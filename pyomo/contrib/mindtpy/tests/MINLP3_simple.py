@@ -33,6 +33,7 @@ from __future__ import division
 
 from pyomo.environ import (Binary, ConcreteModel, Constraint, Reals,
                            Objective, RangeSet, Var, minimize, log)
+from pyomo.common.collections import ComponentMap
 
 
 class SimpleMINLP(ConcreteModel):
@@ -69,3 +70,7 @@ class SimpleMINLP(ConcreteModel):
         m.objective = Objective(expr=10*X[1]**2 - X[2] + 5*(Y[1] - 1),
                                 sense=minimize)
         m.optimal_value = -5.512
+        m.optimal_solution = ComponentMap()
+        m.optimal_solution[m.X[1]] = 0.20710677582302733
+        m.optimal_solution[m.X[2]] = 0.9411320859243828
+        m.optimal_solution[m.Y[1]] = 0.0
