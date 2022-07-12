@@ -36,6 +36,10 @@ model_list = [EightProcessFlowsheet(convex=False),
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
+    def check_optimal_solution(self, model, places=1):
+        for var in model.optimal_solution:
+            self.assertAlmostEqual(var.value, model.optimal_solution[var], places=places)
+
     def test_GOA(self):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -49,6 +53,7 @@ class TestMindtPy(unittest.TestCase):
                     TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=2)
+                self.check_optimal_solution(model)
 
     def test_GOA_tabu_list(self):
         """Test the global outer approximation decomposition algorithm."""
@@ -64,6 +69,7 @@ class TestMindtPy(unittest.TestCase):
                     TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=2)
+                self.check_optimal_solution(model)
 
 
 if __name__ == '__main__':
