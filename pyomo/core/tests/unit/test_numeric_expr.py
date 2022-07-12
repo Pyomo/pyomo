@@ -3692,7 +3692,19 @@ class TestSumExpression(unittest.TestCase):
         def f(): raise ex0
         
         try:
-            e = quicksum((f() for i in [1, 2, 3]))
+            e = quicksum((f() for i in [1, 2, 3]), linear=None)
+            self.fail(msg)
+        except Exception as ex:
+            self.assertIs(ex, ex0, msg)
+
+        try:
+            e = quicksum((f() for i in [1, 2, 3]), linear=True)
+            self.fail(msg)
+        except Exception as ex:
+            self.assertIs(ex, ex0, msg)
+
+        try:
+            e = quicksum((f() for i in [1, 2, 3]), start=self.m.a[1])
             self.fail(msg)
         except Exception as ex:
             self.assertIs(ex, ex0, msg)
