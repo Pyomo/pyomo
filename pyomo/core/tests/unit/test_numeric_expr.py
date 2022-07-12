@@ -3702,6 +3702,12 @@ class TestSumExpression(unittest.TestCase):
             self.fail(msg)
         except Exception as ex:
             self.assertIs(ex, ex0, msg)
+        
+        try:
+            e = quicksum((f() for i in [1, 2, 3]), linear=False)
+            self.fail(msg)
+        except Exception as ex:
+            self.assertIs(ex, ex0, msg)
 
         try:
             e = quicksum((f() for i in [1, 2, 3]), start=self.m.a[1])
