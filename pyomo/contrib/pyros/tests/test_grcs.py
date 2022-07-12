@@ -2644,5 +2644,79 @@ class testModelIdentifyObjectives(unittest.TestCase):
         )
 
 
+class testMasterFeasibilityUnitConsistency(unittest.TestCase):
+    """
+    Test cases for models with unit-laden model components.
+    """
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_two_stg_mod_with_axis_aligned_set(self):
+        """
+        Test two-stage model with `AxisAlignedEllipsoidalSet`
+        as the uncertainty set.
+        """
+        from pyomo.environ import units as u
+
+        # define model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None), units=u.m)
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u1 = Param(initialize=1.125, mutable=True, units=u.s)
+        m.u2 = Param(initialize=1, mutable=True, units=u.m ** 2)
+
+        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+
+        # Define the uncertainty set
+        # we take the parameter `u2` to be 'fixed'
+        ellipsoid = AxisAlignedEllipsoidalSet(
+            center=[1.125, 1],
+            half_lengths=[1, 0],
+        )
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        # note: second-stage variable and uncertain params have units
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u1, m.u2],
+            uncertainty_set=ellipsoid,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            }
+        )
+
+        # check successful termination
+        # and that more than one iteration required
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Did not identify robust optimal solution to problem instance."
+        )
+        self.assertGreater(
+            results.iterations,
+            1,
+            msg=(
+                "PyROS requires no more than one iteration to solve the model."
+                " Hence master feasibility problem construction not tested."
+                " Consider implementing a more challenging model for this"
+                " test case."
+            )
+        )
+
 if __name__ == "__main__":
     unittest.main()
