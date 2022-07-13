@@ -40,6 +40,7 @@ def validate_arg_type(
         valid_types,
         valid_type_desc=None,
         is_entry_of_arg=False,
+        check_numeric_type_finite=True,
         ):
     """
     Perform type validation of an argument to a function/method.
@@ -62,11 +63,18 @@ def validate_arg_type(
         described by `arg_name` (such as entry of an array or list).
         This will be indicated in the exception message.
         The default is `False`.
+    check_numeric_type_finite : bool, optional
+        If the valid types comprise a sequence of numeric types,
+        check that the argument value is finite (and also not NaN),
+        as well. The default is `True`.
 
     Raises
     ------
-    ValueError
+    TypeError
         If the argument value is not a valid type.
+    ValueError
+        If the finiteness check on a numerical value returns
+        a negative result.
     """
     if not isinstance(arg_val, valid_types):
         if valid_type_desc is not None:
@@ -85,6 +93,24 @@ def validate_arg_type(
                 f"Argument `{arg_name}` is {type_phrase} "
                 f"(provided type '{type(arg_val).__name__}')"
             )
+
+    # check for finiteness, if desired
+    if check_numeric_type_finite:
+        if isinstance(valid_types, type):
+            numeric_types_required = valid_types in valid_num_types
+        else:
+            numeric_types_required = set(valid_types).issubset(valid_num_types)
+        if numeric_types_required and (math.isinf(arg_val) or math.isnan(arg_val)):
+            if is_entry_of_arg:
+                raise ValueError(
+                    f"Entry '{arg_val}' of the argument `{arg_name}` "
+                    f"is not a finite numeric value"
+                )
+            else:
+                raise ValueError(
+                    f"Argument `{arg_name}` is not a finite numeric value "
+                    f"(provided value '{arg_val}')"
+                )
 
 
 def is_ragged(arr, arr_types=None):
