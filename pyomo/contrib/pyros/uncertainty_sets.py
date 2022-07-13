@@ -87,22 +87,66 @@ def validate_arg_type(
             )
 
 
+def is_ragged(arr, arr_types=None):
+    """
+    Determine whether an array-like (such as a list or ndarray)
+    is ragged.
+
+    NOTE: if ndarrays are considered are considered arr types,
+    we do not consider zero-dimensional arrays to be as such.
+    """
+    arr_types = (list, np.ndarray, tuple) if arr_types is None else arr_types
+
+    is_zero_dim_arr = isinstance(arr, np.ndarray) and len(arr.shape) == 0
+    if not isinstance(arr, arr_types) or is_zero_dim_arr:
+        return False
+
+    entries_are_seqs = []
+    for entry in arr:
+        if np.ndarray in arr_types and isinstance(entry, np.ndarray):
+            # account for 0-D arrays (treat as non-arrays)
+            entries_are_seqs.append(len(entry.shape) > 0)
+        else:
+            entries_are_seqs.append(isinstance(entry, arr_types))
+
+    if not any(entries_are_seqs):
+        return False
+    if not all(entries_are_seqs):
+        return True
+
+    entries_ragged = [is_ragged(entry for entry in arr)]
+    if any(entries_ragged):
+        return True
+    else:
+        return any(
+            np.array(arr[0]).shape != np.array(entry).shape for entry in arr
+        )
+
+
 def validate_dimensions(arr_name, arr, dim, display_value=False):
     """
     Validate dimension of an array-like object.
     Raise Exception if validation fails.
     """
+    if is_ragged(arr):
+        raise ValueError(
+            f"Argument `{arr_name}` should not be a ragged array-like "
+            "(nested sequence of lists, tuples, arrays of different shape)"
+        )
+
+    # check dimensions matched
     array = np.asarray(arr)
     if len(array.shape) != dim:
         val_str = f" from provided value {str(arr)}" if display_value else ""
         raise ValueError(
-            f"Argument `{arr_name}` must be a non-empty "
+            f"Argument `{arr_name}` must be a "
             f"{dim}-dimensional array-like "
             f"(detected {len(array.shape)} dimensions{val_str})"
         )
     elif array.shape[-1] == 0:
         raise ValueError(
-            f"Argument `{arr_name}` must be non-empty"
+            f"Last dimension of argument `{arr_name}` must be non-empty "
+            f"(detected shape {array.shape})"
         )
 
 
@@ -307,9 +351,9 @@ class BoxSet(UncertaintySet):
         array([[1, 2],
                [3, 4]])
         """
-        bounds_arr = np.asarray(bounds)
         # validate shape
         validate_dimensions("bounds", bounds, 2)
+        bounds_arr = np.asarray(bounds)
         if bounds_arr.shape[-1] != 2:
             raise ValueError(
                 "Argument `bounds` to BoxSet constructor should be of shape "
@@ -853,7 +897,7 @@ class FactorModelSet(UncertaintySet):
         # ensure psi matrix shape matches origin dimensions
         # and number of factors
         if psi_mat_arr.shape != (len(origin), number_of_factors):
-            raise AttributeError(
+            raise ValueError(
                 "Psi matrix for factor model set with "
                 f"{number_of_factors} factors and "
                 f"origin with {len(origin)} entries "
@@ -892,7 +936,7 @@ class FactorModelSet(UncertaintySet):
 
         # === Ensure beta in [0,1]
         if beta > 1 or beta < 0:
-            raise AttributeError(
+            raise ValueError(
                 "Beta parameter must be in [0, 1] "
                 f"(provided value {beta})"
             )
@@ -1013,7 +1057,7 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
         # check parity of lengths
         if not len(center) == len(half_lengths):
-            raise AttributeError(
+            raise ValueError(
                 f"Arguments `center` (length {len(center)}) and "
                 f"`half_lengths` (length {len(half_lengths)}) "
                 "are not of the same length"
@@ -1151,9 +1195,9 @@ class EllipsoidalSet(UncertaintySet):
             )
         if center_arr.shape[0] != shape_matrix_arr.shape[0]:
             raise ValueError(
-                f"Arguments `center` ({len(center_arr.shape[0])} entries) "
+                f"Arguments `center` ({center_arr.shape[0]} entries) "
                 "does not have as many entries as there are rows in "
-                f"and `shape_matrix` ({len(shape_matrix_arr.shape[0])} rows) "
+                f"`shape_matrix` ({shape_matrix_arr.shape[0]} rows) "
             )
 
         # validate types
@@ -1183,28 +1227,22 @@ class EllipsoidalSet(UncertaintySet):
 
         # validate scale
         if scale < 0:
-            raise AttributeError(
+            raise ValueError(
                 f"Argument `scale` (value {scale}) should be non-negative "
             )
 
-        # ---------- CHECK SHAPE MATRIX POSITIVE DEFINITE 
+        # ---------- CHECK SHAPE MATRIX POSITIVE DEFINITE
         # check symmetric
         if not np.allclose(shape_matrix_arr, shape_matrix_arr.T, atol=1e-8):
-            raise AttributeError("Shape matrix must be symmetric.")
+            raise ValueError("Shape matrix must be symmetric.")
 
-        # check invertible
-        try:
-            np.linalg.inv(shape_matrix)
-        except np.linalg.LinAlgError as err:
-            raise(
-                "Unable to compute inverse of shape matrix. "
-                "Check that shape matrix is nonsingular"
-            )
+        # check invertible (Exception raised)
+        np.linalg.inv(shape_matrix)
 
         # check positive semi-definite.
         # since also invertible, means positive definite
         eigvals = np.linalg.eigvals(shape_matrix)
-        if np.min(np.linalg.eigvals(shape_matrix)) < 0:
+        if np.min(eigvals) < 0:
             raise ValueError(
                 "Non positive-definite shape matrix "
                 f"(detected eigenvalues {eigvals})"
@@ -1409,7 +1447,7 @@ class IntersectionSet(UncertaintySet):
                     )
 
         if len(unc_sets) < 2:
-            raise AttributeError(
+            raise ValueError(
                 "IntersectionSet construction requires at least 2 "
                 "UncertaintySet objects "
                 f"(detected {len(uncertainty_sets)} objects)"
