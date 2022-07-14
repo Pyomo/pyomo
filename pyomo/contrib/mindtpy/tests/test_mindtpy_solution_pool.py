@@ -33,6 +33,11 @@ gurobi_persistent_available = SolverFactory(
                  'Symbolic differentiation is not available')
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
+
+    def check_optimal_solution(self, model, places=1):
+        for var in model.optimal_solution:
+            self.assertAlmostEqual(var.value, model.optimal_solution[var], places=places)
+
     @unittest.skipIf(not(ipopt_available and cplex_persistent_available and cplexpy_available),
                      'Required subsolvers are not available')
     def test_OA_solution_pool_cplex(self):
@@ -49,6 +54,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=2)
+                self.check_optimal_solution(model)
 
     @unittest.skipIf(not(ipopt_available and gurobi_persistent_available),
                      'Required subsolvers are not available')
@@ -66,6 +72,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=2)
+                self.check_optimal_solution(model)
 
     # the following tests are used to increase the code coverage
     @unittest.skipIf(not(ipopt_available and cplex_persistent_available),
@@ -85,6 +92,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=2)
+                self.check_optimal_solution(model)
 
 
 if __name__ == '__main__':
