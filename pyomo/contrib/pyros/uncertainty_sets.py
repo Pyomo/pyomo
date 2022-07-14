@@ -1,21 +1,49 @@
 """
-UncertaintySet class: defines generic methods and attributes
-of an uncertainty set in the context of robust optimization. UncertaintySet objects only
-contain data which describes the set, and does not contain any Pyomo object information.
+Abstract and pre-defined classes for representing uncertainty sets (or
+uncertain parameter spaces) of two-stage nonlinear robust optimization
+models.
 
-Supports the following classes of uncertainty sets:
+Along with a ``ConcreteModel`` object representing a deterministic model
+formulation, an uncertainty set object may be passed to the PyROS solver
+to obtain a solution to the model's two-stage robust optimization
+counterpart.
 
-- UncertaintySet (user defined/implemented)
-- Ellipsoidal
-- AxesAlignedEllipsoidal
-- Polyhedral
-- Box
-- BudgetSet
-- Cardinality/Gamma
-- Discrete
-- FactorModel
-- IntersectedSet
+Classes
+-------
+``UncertaintySet``
+    Abstract base class for a generic uncertainty set. All other set
+    types defined in this module are subclasses.  A user may implement
+    their own uncertainty set type as a custom-written subclass.
+
+``EllipsoidalSet``
+    A hyperellipsoid.
+
+``AxisAlignedEllipsoidalSet``
+    An axis-aligned hyperellipsoid.
+
+``PolyhedralSet``
+    A bounded convex polyhedron/polytope.
+
+``BoxSet``
+    A hyperrectangle.
+
+``BudgetSet``
+    A budget set.
+
+``CardinalitySet``
+    A cardinality set (or gamma set)
+
+``DiscreteScenarioSet``
+    A discrete set of finitely many points.
+
+``FactorModelSet``
+    A factor model set (or alpha model set).
+
+``IntersectionSet``
+    An intersection of two or more sets, each represented by an
+    ``UncertaintySet`` object.
 """
+
 
 import abc
 import functools
@@ -186,6 +214,7 @@ def column(matrix, i):
     # Get column i of a given multi-dimensional list
     return [row[i] for row in matrix]
 
+
 class Geometry(Enum):
     '''
     Enum defining uncertainty set geometries
@@ -198,14 +227,19 @@ class Geometry(Enum):
 
 class UncertaintySet(object, metaclass=abc.ABCMeta):
     """
-    An object representing a uncertainty set for a two-stage robust
-    optimization model. In tandem with a Pyomo `ConcreteModel` object,
-    the uncertainty set may be passed to the PyROS meta-solver to
-    obtain a robust model solution.
+    An object representing an uncertainty set for a two-stage robust
+    optimization model. Along with with a `ConcreteModel` object
+    representing the corresponding deterministic model formulation, the
+    uncertainty set object may be passed to the PyROS solver to obtain a
+    robust model solution.
+
+    An `UncertaintySet` object should be viewed as merely a container
+    for data needed to parameterize the set, such that its attributes do
+    not, in general, reference the components of a modeling object.
 
     Parameters
     ----------
-    **kwargs : dict, optional
+    **kwargs :
         Data structures used for constructing the set attributes.
     """
 
@@ -255,15 +289,15 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         -------
         : bool
             True if the uncertainty set is certified to be bounded,
-            and False otherwise. Therefore, False is if any of the
-            optimization models cannot be solved successfully.
+            and False otherwise.
 
         Notes
         -----
-        This check is carried out by solving a sequence of
-        optimization models (in which the objectives are
-        the uncertain parameters), and is invoked during the
-        validation step of a PyROS solver call.
+        This check is carried out by solving a sequence of optimization
+        models (in which the objectives are the uncertain parameters),
+        and is invoked during the validation step of a PyROS solver
+        call. If any of the optimization models cannot be solved
+        successfully to optimality, then False is returned.
         """
         # === Determine bounds on all uncertain params
         bounding_model = ConcreteModel()
@@ -313,14 +347,14 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     def set_as_constraint(self, **kwargs):
         """
         Construct a (sequence of) mathematical constraint(s)
-        (represented by Pyomo `Constraint` objects) on the
-        uncertain parameters to represent the uncertainty
-        set for use in a two-stage robust optimization problem
-        or subproblem (such as a PyROS separation subproblem).
+        (represented by Pyomo `Constraint` objects) on the uncertain
+        parameters to represent the uncertainty set for use in a
+        two-stage robust optimization problem or subproblem (such as a
+        PyROS separation subproblem).
 
         Parameters
         ----------
-        **kwargs : dict, optional
+        **kwargs : dict
             Keyword arguments containing, at the very least, a sequence
             of `Param` or `Var` objects representing the uncertain
             parameters of interest, and any additional information
@@ -330,8 +364,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
     def point_in_set(self, point):
         """
-        Determine whether a given point lies in the uncertainty
-        set.
+        Determine whether a given point lies in the uncertainty set.
 
         Parameters
         ----------
@@ -346,9 +379,9 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Notes
         -----
-        This method is invoked at the outset of a PyROS solver
-        call to determine whether a user-specified nominal parameter
-        realization lies in the uncertainty set.
+        This method is invoked at the outset of a PyROS solver call to
+        determine whether a user-specified nominal parameter realization
+        lies in the uncertainty set.
         """
 
         # === Ensure point is of correct dimensionality as the uncertain parameters
@@ -379,11 +412,10 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        kwargs : dict, optional
-            Keyword arguments consisting of a Pyomo `ConfigDict`
-            and a Pyomo `ConcreteModel` object, representing a
-            PyROS solver configuration and the optimization model
-            of interest.
+        kwargs : dict
+            Keyword arguments consisting of a Pyomo `ConfigDict` and a
+            Pyomo `ConcreteModel` object, representing a PyROS solver
+            configuration and the optimization model of interest.
 
         Notes
         -----
@@ -406,10 +438,9 @@ class BoxSet(UncertaintySet):
     Parameters
     ----------
     bounds : (N, 2) array_like
-        Lower and upper bounds for each uncertain
-        parameter (i.e. each dimension of the set).
-        The order of the dimensions corresponds to
-        the order of the uncertain parameters of interest.
+        Lower and upper bounds for each uncertain parameter (i.e. each
+        dimension of the set).  The order of the dimensions corresponds
+        to the order of the uncertain parameters of interest.
 
     Attributes
     ----------
@@ -664,7 +695,7 @@ class CardinalitySet(UncertaintySet):
         uncertain_params : list of Param or list of Var
             Uncertain parameter objects upon which the constraints
             are imposed.
-        **kwargs : dict, optional
+        **kwargs : dict
             Additional arguments. This dictionary should consist
             of a `model` entry, which maps to a `ConcreteModel`
             object representing the model of interest (parent model
@@ -1283,7 +1314,7 @@ class FactorModelSet(UncertaintySet):
         uncertain_params : list of Param or list of Var
             Uncertain parameter objects upon which the constraints
             are imposed.
-        **kwargs : dict, optional
+        **kwargs : dict
             Additional arguments. This dictionary should consist
             of a `model` entry, which maps to a `ConcreteModel`
             object representing the model of interest (parent model
@@ -1516,7 +1547,7 @@ class EllipsoidalSet(UncertaintySet):
     scale : numeric type, optional
         Square of the factor by which to scale the semi-axes
         of the ellipsoid (i.e. the eigenvectors of the shape
-        matrix).
+        matrix). The default is `1`.
 
     Attributes
     ----------
@@ -1525,7 +1556,7 @@ class EllipsoidalSet(UncertaintySet):
     shape_matrix : (N, N) array-like
         A positive definite matrix characterizing the shape
         and orientation of the ellipsoid.
-    scale : numeric type, optional
+    scale : numeric type
         Square of the factor by which to scale the semi-axes
         of the ellipsoid (i.e. the eigenvectors of the shape
         matrix).
@@ -1844,7 +1875,7 @@ class IntersectionSet(UncertaintySet):
 
     Parameters
     ----------
-    **uncertainty_sets : dict, optional
+    **uncertainty_sets : dict
         PyROS ``UncertaintySet`` objects of which to construct
         an intersection. At least two uncertainty sets must
         be provided.
@@ -2023,7 +2054,7 @@ class IntersectionSet(UncertaintySet):
         uncertain_params : list of Param or list of Var
             Uncertain parameter objects upon which the constraints
             are imposed.
-        **kwargs : dict, optional
+        **kwargs : dict
             Additional arguments. Must contain a `config` entry,
             which maps to a `ConfigDict` containing an entry
             entitled `global_solver`. The `global_solver`
