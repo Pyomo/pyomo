@@ -203,7 +203,7 @@ def _add_OA_configs(CONFIG):
     ))
     CONFIG.declare("round_discrete_vars", ConfigValue(
         default=True,
-        description="""flag to round subproblem discrete variable values to the
+        description="""Flag to round subproblem discrete variable values to the
         nearest integer. Rounding is done before fixing disjuncts."""
     ))
     CONFIG.declare("force_subproblem_nlp", ConfigValue(
@@ -275,7 +275,7 @@ def _add_mip_solver_configs(CONFIG):
     CONFIG.declare("mip_solver", ConfigValue(
         default="gurobi",
         description="""
-        Mixed integer linear solver to use. Note that no persisent solvers
+        Mixed-integer linear solver to use. Note that no persisent solvers
         other than the auto-persistent solvers in the APPSI package are
         supported."""
     ))
@@ -330,7 +330,7 @@ def _add_tolerance_configs(CONFIG):
         default=1E-8,
         description="""
         When generating cuts, small duals multiplied by expressions can
-        cause problems. Exclude all duals  smaller in absolue value than the
+        cause problems. Exclude all duals smaller in absolue value than the
         following."""
     ))
     CONFIG.declare("integer_tolerance", ConfigValue(
