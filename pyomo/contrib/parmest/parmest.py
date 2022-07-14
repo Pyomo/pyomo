@@ -672,7 +672,6 @@ class Estimator(object):
                 for scen in scen_dict.values():
                     scen._mpisppy_probability = 1 / len(scen_dict)
             
-            # TODO: if statement to check if use_mpisppy, then create EF using sputils.create_EF just like in _Q_opt()
             if use_mpisppy:
                 ef = sputils._create_EF_from_scen_dict(scen_dict,
                                                 EF_name = "_Q_at_theta",
@@ -688,8 +687,9 @@ class Estimator(object):
             self.model_initialized = True
 
             # return initialized theta values
-            for i, theta in enumerate(self.theta_names):
-                thetavals[theta] = theta_init_vals[i]()
+            if len(thetavals) == 0:
+                for i, theta in enumerate(self.theta_names):
+                    thetavals[theta] = theta_init_vals[i]()
 
         return retval, thetavals, WorstStatus
 
@@ -984,7 +984,6 @@ class Estimator(object):
             theta_names = self.theta_names
         else:
             assert isinstance(theta_values, pd.DataFrame)
-
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
             all_thetas = theta_values.to_dict('records')
@@ -996,25 +995,23 @@ class Estimator(object):
         else:
             if initialize_parmest_model:
                 task_mgr = utils.ParallelTaskManager(1) # initialization performed using just 1 set of theta values
-                # local_thetas = task_mgr.global_to_local_data(all_thetas)
         # walk over the mesh, return objective function
         all_obj = list()
         if len(all_thetas) > 0:
             for Theta in local_thetas:
                 obj, thetvals, worststatus = self._Q_at_theta(Theta, initialize_parmest_model=initialize_parmest_model)
                 if worststatus != pyo.TerminationCondition.infeasible:
-                     all_obj.append(list(Theta.values()) + [obj])
+                    all_obj.append(list(Theta.values()) + [obj])
                 # DLW, Aug2018: should we also store the worst solver status?
         else:
             obj, thetvals, worststatus = self._Q_at_theta(thetavals={}, initialize_parmest_model=initialize_parmest_model)
-            print(thetvals)
+            print(obj,thetvals)
             if worststatus != pyo.TerminationCondition.infeasible:
                 all_obj.append(list(thetvals.values()) + [obj])
 
         global_all_obj = task_mgr.allgather_global_data(all_obj)
         dfcols = list(theta_names) + ['obj']
         obj_at_theta = pd.DataFrame(data=global_all_obj, columns=dfcols)
-
         return obj_at_theta
 
 

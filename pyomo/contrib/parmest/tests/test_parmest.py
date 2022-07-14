@@ -658,7 +658,6 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
 
     def test_theta_est_with_square_initialization(self):
         obj_init = self.pest.objective_at_theta(initialize_parmest_model=True)
-        print("obj_init = ", obj_init)
         objval, thetavals = self.pest.theta_est()
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
@@ -669,7 +668,6 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
         theta_vals_init = pd.DataFrame(data=[[19.0,0.5]],columns=['asymptote','rate_constant'])
         obj_init = self.pest.objective_at_theta(theta_values=theta_vals_init, initialize_parmest_model=True)
         objval, thetavals = self.pest.theta_est()
-        print("obj_init = ", obj_init)
         self.assertAlmostEqual(objval, 4.3317112, places=2)
         self.assertAlmostEqual(thetavals['asymptote'], 19.1426, places=2)  # 19.1426 from the paper
         self.assertAlmostEqual(thetavals['rate_constant'], 0.5311, places=2)  # 0.5311 from the paper
@@ -677,7 +675,6 @@ class TestSquareInitialization_RooneyBiegler(unittest.TestCase):
     def test_theta_est_with_square_initialization_diagnostic_mode_true(self):
         self.pest.diagnostic_mode = True
         obj_init = self.pest.objective_at_theta(initialize_parmest_model=True)
-        print("obj_init = ", obj_init)
         objval, thetavals = self.pest.theta_est()
 
         self.assertAlmostEqual(objval, 4.3317112, places=2)
