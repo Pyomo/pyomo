@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from math import fabs
 from pyomo.contrib.gdpopt.solve_subproblem import solve_subproblem
 from pyomo.contrib.gdpopt.util import fix_master_solution_in_subproblem
 from pyomo.core import value
@@ -39,3 +40,24 @@ class _OAAlgorithmMixIn(object):
                 self._update_primal_bound_to_unbounded()
 
         return nlp_termination not in {tc.infeasible, tc.unbounded}
+
+    # Utility used in cut_generation: We saved a map of Disjuncts to the
+    # active constraints they contain on the master problem util_block, and use
+    # it here to find the active constraints under the current discrete
+    # solution. Note that this preprocesses not just to be efficient, but
+    # because everything on the Disjuncts is deactivated at this point, since
+    # we've already transformed the master problem to a MILP
+    def _get_active_untransformed_constraints(self, util_block, config):
+        """Yield constraints in disjuncts where the indicator value is set or
+        fixed to True."""
+        model = util_block.model()
+        # Get active global constraints
+        for constr in util_block.global_constraint_list:
+            yield constr
+        # get all the disjuncts in the original model. Check which ones are
+        # True.
+        for disj, constr_list in util_block.constraints_by_disjunct.items():
+            if fabs(disj.binary_indicator_var.value - 1) \
+               <= config.integer_tolerance:
+                for constr in constr_list:
+                    yield constr

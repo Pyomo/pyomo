@@ -17,7 +17,7 @@ from pyomo.common.config import add_docstring_list
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
-    _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
+    _add_oa_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     _get_master_and_subproblem, add_constraint_list)
@@ -49,10 +49,10 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
 
     Accepts models that can include nonlinear, continuous variables and
     constraints, as well as logical conditions. For nonconvex problems, LOA
-    may not report rigorous lower/upper bounds.
+    may not report rigorous dual bounds.
     """
     CONFIG = _GDPoptAlgorithm.CONFIG()
-    _add_OA_configs(CONFIG)
+    _add_oa_configs(CONFIG)
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG, default_solver='ipopt')
     _add_tolerance_configs(CONFIG)

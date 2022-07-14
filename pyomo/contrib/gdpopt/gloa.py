@@ -9,14 +9,13 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from math import fabs
 from pyomo.common.config import add_docstring_list
 from pyomo.common.errors import DeveloperError
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
-    _add_OA_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
+    _add_oa_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     _get_master_and_subproblem, add_constraints_by_disjunct,
@@ -46,7 +45,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     constraints, as well as logical conditions.
     """
     CONFIG = _GDPoptAlgorithm.CONFIG()
-    _add_OA_configs(CONFIG)
+    _add_oa_configs(CONFIG)
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG, default_solver='couenne')
     _add_tolerance_configs(CONFIG)
@@ -117,27 +116,6 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
             # Check termination conditions
             if self.any_termination_criterion_met(config):
                 break
-
-    # Utility used in cut_generation: We saved a map of Disjuncts to the
-    # active constraints they contain on the master problem util_block, and use
-    # it here to find the active constraints under the current discrete
-    # solution. Note that this preprocesses not just to be efficient, but
-    # because everything on the Disjuncts is deactivated at this point, since
-    # we've already transformed the master problem to a MILP
-    def _get_active_untransformed_constraints(self, util_block, config):
-        """Yield constraints in disjuncts where the indicator value is set or
-        fixed to True."""
-        model = util_block.model()
-        # Get active global constraints
-        for constr in util_block.global_constraint_list:
-            yield constr
-        # get all the disjuncts in the original model. Check which ones are
-        # True.
-        for disj, constr_list in util_block.constraints_by_disjunct.items():
-            if fabs(disj.binary_indicator_var.value - 1) \
-               <= config.integer_tolerance:
-                for constr in constr_list:
-                    yield constr
 
     def _add_cuts_to_master_problem(self, subproblem_util_block,
                                     master_util_block, objective_sense, config,

@@ -72,7 +72,7 @@ def _add_common_configs(CONFIG):
         domain=a_logger
     ))
 
-def _add_OA_configs(CONFIG):
+def _add_oa_configs(CONFIG):
     CONFIG.declare("init_strategy", ConfigValue(
         default=None,
         domain=_init_strategy_deprecation,

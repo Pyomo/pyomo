@@ -13,7 +13,7 @@ from pyomo.common.config import add_docstring_list
 from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
-    _add_OA_configs)
+    _add_oa_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     _get_master_and_subproblem)
 from pyomo.contrib.gdpopt.oa_algorithm_utils import _OAAlgorithmMixIn
@@ -46,7 +46,7 @@ class GDP_RIC_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG, default_solver='ipopt')
     _add_tolerance_configs(CONFIG)
-    _add_OA_configs(CONFIG)
+    _add_oa_configs(CONFIG)
 
     algorithm = 'RIC'
 
