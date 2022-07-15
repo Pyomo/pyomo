@@ -49,6 +49,7 @@ from pyomo.environ import Block, ComponentUID
 
 import pyomo.contrib.parmest.utils as utils
 import pyomo.contrib.parmest.graphics as graphics
+from pyomo.dae import ContinuousSet
 
 parmest_available = numpy_available & pandas_available & scipy_available
 
@@ -520,7 +521,11 @@ class Estimator(object):
                         exp_i_var = exp_i.find_component(str(var))
                         if exp_i_var is None:  # we might have a block such as _mpisppy_data
                             continue
-                        temp = [pyo.value(_) for _ in exp_i_var.values()]
+                        # if value to return is ContinuousSet
+                        if type(exp_i_var) == ContinuousSet:
+                            temp = [pyo.value(_) for _ in exp_i_var]
+                        else:
+                            temp = [pyo.value(_) for _ in exp_i_var.values()]
                         if len(temp) == 1:
                             vals[var] = temp[0]
                         else:
