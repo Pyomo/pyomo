@@ -87,7 +87,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         main = main_problem_util_block.model()
         subproblem = subproblem_util_block.model()
         main_obj = next(main.component_data_objects(Objective, active=True,
-                                                        descend_into=True))
+                                                    descend_into=True))
 
         self._log_header(logger)
 
@@ -98,7 +98,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
             # solve linear main problem
             with time_code(self.timing, 'mip'):
                 mip_feasible = solve_MILP_main_problem(main_problem_util_block,
-                                                         self, config)
+                                                       self, config)
                 self._update_bounds_after_main_problem_solve(
                     mip_feasible, main_obj, logger)
             # Check termination conditions
@@ -177,7 +177,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                            vars_in_constr if not var.fixed)
             if not is_potentially_variable(cut_body):
                 if (cut_body + ccStart >= lb_int - config.constraint_tolerance
-                    and cut_body + cvStart <= ub_int +
+                    and cut_body + cvStart <= ub_int + 
                     config.constraint_tolerance):
                     # We won't add them, but nothing is wrong--they hold
                     config.logger.debug("Affine cut is trivially True.")
@@ -194,7 +194,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 _add_bigm_constraint_to_transformed_model(m, aff_cuts[idx],
                                                           aff_cuts)
                 _add_bigm_constraint_to_transformed_model(m, aff_cuts[idx+1],
-                aff_cuts)
+                                                          aff_cuts)
                 counter += 2
 
                 config.logger.debug("Added %s affine cuts" % counter)

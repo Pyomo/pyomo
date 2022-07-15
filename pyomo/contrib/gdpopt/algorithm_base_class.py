@@ -102,7 +102,7 @@ class _GDPoptAlgorithm():
                              "solver with the algorithm you want to use.")
 
         config = self.config(kwds.pop('options', {}),
-                                 preserve_implicit=True)
+                             preserve_implicit=True)
         config.set_value(kwds)
 
         with lower_logger_level_to(config.logger, tee=config.tee):
@@ -274,8 +274,8 @@ class _GDPoptAlgorithm():
         self.incumbent_boolean_soln = [
             v.value for v in util_block.transformed_boolean_variable_list]
 
-    def _update_bounds_after_main_problem_solve(self, mip_termination,
-                                                  obj_expr, logger):
+    def _update_bounds_after_main_problem_solve(self, mip_termination, obj_expr,
+                                                logger):
         if mip_termination is tc.optimal:
             self._update_bounds_after_solve('main', dual=value(obj_expr),
                                             logger=logger)

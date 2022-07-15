@@ -78,7 +78,7 @@ class GDP_RIC_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
             # solve linear main problem
             with time_code(self.timing, 'mip'):
                 mip_feasible = solve_MILP_main_problem(main_problem_util_block,
-                                                         self, config)
+                                                       self, config)
                 self._update_bounds_after_main_problem_solve(
                     mip_feasible, main_problem_obj, logger)
 

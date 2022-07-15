@@ -18,10 +18,9 @@ from pyomo.opt import TerminationCondition as tc
 class _OAAlgorithmMixIn(object):
     def _fix_main_problem_soln_solve_subproblem_and_add_cuts(
             self, main_prob_util_block, subprob_util_block, config):
-        with fix_main_problem_solution_in_subproblem(main_prob_util_block,
-                                               subprob_util_block, self,
-                                               config,
-                                               config.force_subproblem_nlp):
+        with fix_main_problem_solution_in_subproblem(
+                main_prob_util_block, subprob_util_block, self, config,
+                config.force_subproblem_nlp):
             nlp_termination = solve_subproblem(subprob_util_block, self,
                                                config)
             if nlp_termination in {tc.optimal, tc.feasible}:

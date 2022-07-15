@@ -37,7 +37,7 @@ from pyomo.opt.base import SolverFactory
 from pyomo.repn import generate_standard_repn
 
 MAX_SYMBOLIC_DERIV_SIZE = 1000
-JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
+JacInfo = namedtuple('JacInfo', ['mode', 'vars', 'jac'])
 
 @SolverFactory.register(
     'gdpopt.loa',
@@ -135,8 +135,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         return main_objective
 
     def _update_augmented_penalty_objective(self, main_problem_util_block,
-                                               main_objective,
-                                               OA_penalty_factor):
+                                            main_objective, OA_penalty_factor):
         m = main_problem_util_block.model()
         sign_adjust = 1 if main_objective.sense == minimize else -1
         OA_penalty_expr = sign_adjust * OA_penalty_factor * \
@@ -150,8 +149,8 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         return main_problem_util_block.oa_obj.expr
 
     def _add_cuts_to_main_problem(self, subproblem_util_block,
-                                    main_problem_util_block, objective_sense,
-                                    config, timing):
+                                  main_problem_util_block, objective_sense,
+                                  config, timing):
         """Add outer approximation cuts to the linear GDP model."""
         m = main_problem_util_block.model()
         nlp = subproblem_util_block.model()
@@ -244,7 +243,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 main_prob_oa_utils = main_problem_util_block.\
                                   GDPopt_OA_slacks = Block(
                     doc="Block holding outer approximation slacks for the "
-                    "whole model (so that the writers can find them).")
+                        "whole model (so that the writers can find them).")
                 main_prob_oa_utils.slacks = VarList(bounds=(0,
                                                             config.max_slack),
                                                     domain=NonNegativeReals,

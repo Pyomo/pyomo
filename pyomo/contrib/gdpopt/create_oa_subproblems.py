@@ -45,8 +45,8 @@ def _get_main_problem_and_subproblem(solver, config):
     # create main problem--the MILP relaxation
     start = get_main_elapsed_time(solver.timing)
     main_problem_util_block = initialize_main_problem(util_block,
-                                                  subproblem_util_block,
-                                                  config, solver)
+                                                      subproblem_util_block,
+                                                      config, solver)
 
     config.logger.info('Finished main problem initialization in {:.2f}s and '
                        '{} iterations \n'.format(
@@ -71,7 +71,7 @@ def initialize_main_problem(util_block, subprob_util_block, config, solver):
 
     # deactivate nonlinear constraints
     for c in main.component_data_objects(Constraint, active=True,
-                                           descend_into=(Block, Disjunct)):
+                                         descend_into=(Block, Disjunct)):
         if c.body.polynomial_degree() not in (1, 0):
             c.deactivate()
 

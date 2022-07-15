@@ -11,9 +11,9 @@
 
 """This module provides functions for cut generation used across multiple
 algorithms."""
+from math import fabs
 from pyomo.common.collections import ComponentSet
 from pyomo.core import TransformationFactory, value, Constraint, Block
-from math import fabs
 
 def _record_binary_value(var, var_value_is_one, var_value_is_zero, int_tol):
     val = value(var)

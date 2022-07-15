@@ -385,7 +385,7 @@ class TestGDPopt(unittest.TestCase):
         ])
         m.o = Objective(expr=m.x ** 2)
         SolverFactory('gdpopt.loa').solve(m, mip_solver='gurobi',
-                                          nlp_solver=nlp_solver )
+                                          nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.o), 0)
 
         m = ConcreteModel()
@@ -397,7 +397,7 @@ class TestGDPopt(unittest.TestCase):
         m.o = Objective(expr=-m.x ** 2, sense=maximize)
         print("second")
         SolverFactory('gdpopt.loa').solve(m, mip_solver='gurobi',
-                                          nlp_solver=nlp_solver )
+                                          nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.o), 0)
 
     def test_nested_disjunctions_set_covering(self):
@@ -437,8 +437,8 @@ class TestGDPopt(unittest.TestCase):
 
     def test_bound_infeasibility_in_subproblems(self):
         m = ConcreteModel()
-        m.x = Var(bounds=(2,4))
-        m.y = Var(bounds=(5,10))
+        m.x = Var(bounds=(2, 4))
+        m.y = Var(bounds=(5, 10))
         m.disj = Disjunction(expr=[[m.x == m.y, m.x + m.y >= 8],
                                    [m.x == 4]])
         m.obj = Objective(expr=m.x + m.y)
@@ -478,7 +478,7 @@ class TestGDPopt(unittest.TestCase):
         m = ConcreteModel()
         # x will only appear in nonlinear expressions
         m.x = Var(bounds=(-10, 18))
-        m.y = Var(bounds=(0,7))
+        m.y = Var(bounds=(0, 7))
         m.obj = Objective(expr=m.x**2 + m.y)
         m.disjunction = Disjunction(expr=[[m.x**2 + m.y**2 <= 3, m.y >= 1],
                                           (m.x - 3)**2 + (m.y - 2)**2 <= 1])
@@ -705,11 +705,11 @@ class TestGDPopt(unittest.TestCase):
         strip_pack = exfile.build_rect_strip_packing_model()
         # add logical constraints
         strip_pack.Rec3AboveOrBelowRec1 = LogicalConstraint(
-            expr=strip_pack.no_overlap[1,3].disjuncts[2].indicator_var.lor(
-                strip_pack.no_overlap[1,3].disjuncts[3].indicator_var))
+            expr=strip_pack.no_overlap[1, 3].disjuncts[2].indicator_var.lor(
+                strip_pack.no_overlap[1, 3].disjuncts[3].indicator_var))
         strip_pack.Rec3RightOrLeftOfRec2 = LogicalConstraint(
-            expr=strip_pack.no_overlap[2,3].disjuncts[0].indicator_var.lor(
-                strip_pack.no_overlap[2,3].disjuncts[1].indicator_var))
+            expr=strip_pack.no_overlap[2, 3].disjuncts[0].indicator_var.lor(
+                strip_pack.no_overlap[2, 3].disjuncts[1].indicator_var))
         SolverFactory('gdpopt.loa').solve(
             strip_pack, mip_solver=mip_solver,
             nlp_solver=nlp_solver,
@@ -781,11 +781,11 @@ class TestGDPopt(unittest.TestCase):
         strip_pack = exfile.build_rect_strip_packing_model()
         # add logical constraints
         strip_pack.Rec3AboveOrBelowRec1 = LogicalConstraint(
-            expr=strip_pack.no_overlap[1,3].disjuncts[2].indicator_var.lor(
-                strip_pack.no_overlap[1,3].disjuncts[3].indicator_var))
+            expr=strip_pack.no_overlap[1, 3].disjuncts[2].indicator_var.lor(
+                strip_pack.no_overlap[1, 3].disjuncts[3].indicator_var))
         strip_pack.Rec3RightOrLeftOfRec2 = LogicalConstraint(
-            expr=strip_pack.no_overlap[2,3].disjuncts[0].indicator_var.lor(
-                strip_pack.no_overlap[2,3].disjuncts[1].indicator_var))
+            expr=strip_pack.no_overlap[2, 3].disjuncts[0].indicator_var.lor(
+                strip_pack.no_overlap[2, 3].disjuncts[1].indicator_var))
         SolverFactory('gdpopt.loa').solve(strip_pack,
                                           init_algorithm='max_binary',
                                           mip_solver=mip_solver,
@@ -952,7 +952,7 @@ class TestGDPoptRIC(unittest.TestCase):
         ])
         m.o = Objective(expr=m.x ** 2)
         SolverFactory('gdpopt.ric').solve(m, mip_solver=mip_solver,
-                                          nlp_solver=nlp_solver )
+                                          nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.o), 0)
 
         m = ConcreteModel()
@@ -963,7 +963,7 @@ class TestGDPoptRIC(unittest.TestCase):
         ])
         m.o = Objective(expr=-m.x ** 2, sense=maximize)
         SolverFactory('gdpopt.ric').solve(m, mip_solver=mip_solver,
-                                          nlp_solver=nlp_solver )
+                                          nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.o), 0)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
@@ -1046,11 +1046,11 @@ class TestGDPoptRIC(unittest.TestCase):
         strip_pack = exfile.build_rect_strip_packing_model()
         # add logical constraints
         strip_pack.Rec3AboveOrBelowRec1 = LogicalConstraint(
-            expr=strip_pack.no_overlap[1,3].disjuncts[2].indicator_var.lor(
-                strip_pack.no_overlap[1,3].disjuncts[3].indicator_var))
+            expr=strip_pack.no_overlap[1, 3].disjuncts[2].indicator_var.lor(
+                strip_pack.no_overlap[1, 3].disjuncts[3].indicator_var))
         strip_pack.Rec3RightOrLeftOfRec2 = LogicalConstraint(
-            expr=strip_pack.no_overlap[2,3].disjuncts[0].indicator_var.lor(
-                strip_pack.no_overlap[2,3].disjuncts[1].indicator_var))
+            expr=strip_pack.no_overlap[2, 3].disjuncts[0].indicator_var.lor(
+                strip_pack.no_overlap[2, 3].disjuncts[1].indicator_var))
         SolverFactory('gdpopt.ric').solve(strip_pack, mip_solver=mip_solver,
                                           nlp_solver=nlp_solver)
         self.assertTrue(
@@ -1106,11 +1106,11 @@ class TestGDPoptRIC(unittest.TestCase):
         strip_pack = exfile.build_rect_strip_packing_model()
         # add logical constraints
         strip_pack.Rec3AboveOrBelowRec1 = LogicalConstraint(
-            expr=strip_pack.no_overlap[1,3].disjuncts[2].indicator_var.lor(
-                strip_pack.no_overlap[1,3].disjuncts[3].indicator_var))
+            expr=strip_pack.no_overlap[1, 3].disjuncts[2].indicator_var.lor(
+                strip_pack.no_overlap[1, 3].disjuncts[3].indicator_var))
         strip_pack.Rec3RightOrLeftOfRec2 = LogicalConstraint(
-            expr=strip_pack.no_overlap[2,3].disjuncts[0].indicator_var.lor(
-                strip_pack.no_overlap[2,3].disjuncts[1].indicator_var))
+            expr=strip_pack.no_overlap[2, 3].disjuncts[0].indicator_var.lor(
+                strip_pack.no_overlap[2, 3].disjuncts[1].indicator_var))
         SolverFactory('gdpopt.ric').solve(strip_pack,
                                           init_algorithm='max_binary',
                                           mip_solver=mip_solver,
@@ -1226,7 +1226,7 @@ class TestGDPoptRIC(unittest.TestCase):
     # correct, I guess people can learn the hard way)
     def test_force_nlp_subproblem_with_unbounded_integer_variables(self):
         m = ConcreteModel()
-        m.x = Var(domain=Integers, bounds=(0,10))
+        m.x = Var(domain=Integers, bounds=(0, 10))
         m.y = Var(bounds=(0, 10))
         m.w = Var(domain=Integers)
         m.disjunction = Disjunction(expr=[[m.x**2 <= 4, m.y**2 <= 1],
@@ -1288,7 +1288,7 @@ class TestGLOA(unittest.TestCase):
         m = self.make_nonlinear_gdp_with_int_vars()
         SolverFactory('gdpopt.gloa').solve(m, mip_solver=mip_solver,
                                            nlp_solver=global_nlp_solver,
-                                           minlp_solver=minlp_solver )
+                                           minlp_solver=minlp_solver)
         self.assertAlmostEqual(value(m.o.expr), sqrt(3))
         self.assertAlmostEqual(value(m.y), 3)
 
@@ -1297,7 +1297,7 @@ class TestGLOA(unittest.TestCase):
         SolverFactory('gdpopt.gloa').solve(m, mip_solver=mip_solver,
                                            nlp_solver=global_nlp_solver,
                                            minlp_solver=minlp_solver,
-                                           force_subproblem_nlp=True )
+                                           force_subproblem_nlp=True)
         self.assertAlmostEqual(value(m.o.expr), sqrt(3))
         self.assertAlmostEqual(value(m.y), 3)
 
@@ -1310,7 +1310,7 @@ class TestGLOA(unittest.TestCase):
         m.o = Objective(expr=m.x)
         res = SolverFactory('gdpopt.gloa').solve(m, mip_solver=mip_solver,
                                                  nlp_solver=global_nlp_solver,
-                                                 minlp_solver=minlp_solver )
+                                                 minlp_solver=minlp_solver)
         self.assertEqual(res.solver.termination_condition,
                          TerminationCondition.infeasible)
 
@@ -1404,11 +1404,11 @@ class TestGLOA(unittest.TestCase):
         strip_pack = exfile.build_rect_strip_packing_model()
         # add logical constraints
         strip_pack.Rec3AboveOrBelowRec1 = LogicalConstraint(
-            expr=strip_pack.no_overlap[1,3].disjuncts[2].indicator_var.lor(
-                strip_pack.no_overlap[1,3].disjuncts[3].indicator_var))
+            expr=strip_pack.no_overlap[1, 3].disjuncts[2].indicator_var.lor(
+                strip_pack.no_overlap[1, 3].disjuncts[3].indicator_var))
         strip_pack.Rec3RightOrLeftOfRec2 = LogicalConstraint(
-            expr=strip_pack.no_overlap[2,3].disjuncts[0].indicator_var.lor(
-                strip_pack.no_overlap[2,3].disjuncts[1].indicator_var))
+            expr=strip_pack.no_overlap[2, 3].disjuncts[0].indicator_var.lor(
+                strip_pack.no_overlap[2, 3].disjuncts[1].indicator_var))
         SolverFactory('gdpopt.gloa').solve(
             strip_pack, mip_solver=mip_solver,
             nlp_solver=global_nlp_solver,

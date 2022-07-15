@@ -29,7 +29,7 @@ def _restore_bounds(original_bounds):
 # preprocessing is not valid later, and we need to restore the variable bounds.
 @contextmanager
 def preserve_main_problem_feasible_region(main_problem_util_block, config,
-                                            original_bounds=None):
+                                          original_bounds=None):
     if config.mip_presolve and original_bounds is None:
         original_bounds = _collect_original_bounds(main_problem_util_block)
 
@@ -81,7 +81,7 @@ def init_custom_disjuncts(util_block, main_problem_util_block,
         with preserve_main_problem_feasible_region(main_problem_util_block,
                                                    config, original_bounds):
             mip_termination = solve_MILP_main_problem(main_problem_util_block,
-                                                        solver, config)
+                                                      solver, config)
         if mip_termination is not tc.infeasible:
             solver._fix_main_problem_soln_solve_subproblem_and_add_cuts(
                 main_problem_util_block, subprob_util_block, config)
@@ -152,7 +152,7 @@ def use_main_problem_for_max_binary_initialization(main_problem_util_block):
         ctype=Var, descend_into=(Block, Disjunct))
                    if v.is_binary() and not v.fixed)
     main_problem_util_block.max_binary_obj = Objective(expr=sum(binary_vars),
-                                                 sense=maximize)
+                                                       sense=maximize)
 
     yield
 
@@ -266,7 +266,7 @@ def init_set_covering(util_block, main_problem_util_block, subprob_util_block,
                                           disjunct_needs_cover)
 
             mip_termination = solve_MILP_main_problem(main_problem_util_block,
-                                                        solver, config)
+                                                      solver, config)
 
             if mip_termination is tc.infeasible:
                 config.logger.debug('Set covering problem is infeasible. '
