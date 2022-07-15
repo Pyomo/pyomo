@@ -31,7 +31,7 @@ Classes
     A budget set.
 
 ``CardinalitySet``
-    A cardinality set (or gamma set)
+    A cardinality set (or gamma set).
 
 ``DiscreteScenarioSet``
     A discrete set of finitely many points.
@@ -216,9 +216,9 @@ def column(matrix, i):
 
 
 class Geometry(Enum):
-    '''
-    Enum defining uncertainty set geometries
-    '''
+    """
+    Geometry classifications for PyROS uncertainty set objects.
+    """
     LINEAR = 1
     CONVEX_NONLINEAR = 2
     GENERAL_NONLINEAR = 3
@@ -234,8 +234,9 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     robust model solution.
 
     An `UncertaintySet` object should be viewed as merely a container
-    for data needed to parameterize the set, such that its attributes do
-    not, in general, reference the components of a modeling object.
+    for data needed to parameterize the set it represents, such that the
+    object's attributes attributes do not, in general, reference the
+    components of a modeling object.
 
     Parameters
     ----------
