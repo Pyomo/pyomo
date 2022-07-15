@@ -88,7 +88,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         master = master_util_block.model()
         subproblem = subproblem_util_block.model()
 
-        original_obj = self._setup_augmented_Lagrangian_objective(
+        original_obj = self._setup_augmented_penalty_objective(
             master_util_block)
 
         self._log_header(logger)
@@ -99,7 +99,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
 
             # solve linear master problem
             with time_code(self.timing, 'mip'):
-                oa_obj = self._update_augmented_Lagrangian_objective(
+                oa_obj = self._update_augmented_penalty_objective(
                     master_util_block, original_obj, config.OA_penalty_factor)
                 mip_feasible = solve_MILP_master_problem(master_util_block,
                                                          self, config)
@@ -122,18 +122,18 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
             if self.any_termination_criterion_met(config):
                 break
 
-    def _setup_augmented_Lagrangian_objective(self, master_util_block):
+    def _setup_augmented_penalty_objective(self, master_util_block):
         m = master_util_block.model()
         main_objective = next(m.component_data_objects(Objective, active=True))
 
-        # Set up augmented Lagrangean penalty objective
+        # Set up augmented penalty objective
         main_objective.deactivate()
         # placeholder for OA objective
         master_util_block.oa_obj = Objective(sense=minimize)
 
         return main_objective
 
-    def _update_augmented_Lagrangian_objective(self, master_util_block,
+    def _update_augmented_penalty_objective(self, master_util_block,
                                                main_objective,
                                                OA_penalty_factor):
         m = master_util_block.model()

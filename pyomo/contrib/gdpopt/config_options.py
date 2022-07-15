@@ -299,7 +299,7 @@ def _add_nlp_solver_configs(CONFIG, default_solver):
     CONFIG.declare("minlp_solver", ConfigValue(
         default="baron",
         description="""
-        MINLP solver to use. Note that no persisent solvers
+        Mixed-integer nonlinear solver to use. Note that no persisent solvers
         other than the auto-persistent solvers in the APPSI package are
         supported."""
     ))
@@ -310,7 +310,7 @@ def _add_nlp_solver_configs(CONFIG, default_solver):
     CONFIG.declare("local_minlp_solver", ConfigValue(
         default="bonmin",
         description="""
-        MINLP solver to use. Note that no persisent solvers
+        Mixed-integer nonlinear solver to use. Note that no persisent solvers
         other than the auto-persistent solvers in the APPSI package are
         supported."""
     ))
