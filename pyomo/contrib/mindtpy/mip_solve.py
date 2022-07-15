@@ -16,7 +16,7 @@ from pyomo.core import Constraint, Expression, Objective, minimize, value
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, time_code
-from pyomo.contrib.gdpopt.solve_master_problem import (
+from pyomo.contrib.gdpopt.solve_main_problem import (
     distinguish_mip_infeasible_or_unbounded)
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.dependencies import attempt_import

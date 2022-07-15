@@ -11,15 +11,14 @@
 
 from math import fabs
 from pyomo.contrib.gdpopt.solve_subproblem import solve_subproblem
-from pyomo.contrib.gdpopt.util import fix_master_solution_in_subproblem
+from pyomo.contrib.gdpopt.util import fix_main_problem_solution_in_subproblem
 from pyomo.core import value
 from pyomo.opt import TerminationCondition as tc
 
 class _OAAlgorithmMixIn(object):
-    def _fix_master_soln_solve_subproblem_and_add_cuts(self, master_util_block,
-                                                       subprob_util_block,
-                                                       config):
-        with fix_master_solution_in_subproblem(master_util_block,
+    def _fix_main_problem_soln_solve_subproblem_and_add_cuts(
+            self, main_prob_util_block, subprob_util_block, config):
+        with fix_main_problem_solution_in_subproblem(main_prob_util_block,
                                                subprob_util_block, self,
                                                config,
                                                config.force_subproblem_nlp):
@@ -31,10 +30,10 @@ class _OAAlgorithmMixIn(object):
                     logger=config.logger)
                 if primal_improved:
                     self.update_incumbent(subprob_util_block)
-                self._add_cuts_to_master_problem(subprob_util_block,
-                                                   master_util_block,
-                                                   self.objective_sense,
-                                                   config, self.timing)
+                self._add_cuts_to_main_problem(subprob_util_block,
+                                               main_prob_util_block,
+                                               self.objective_sense, config,
+                                               self.timing)
             elif nlp_termination == tc.unbounded:
                 # the whole problem is unbounded, we can stop
                 self._update_primal_bound_to_unbounded()
@@ -42,11 +41,11 @@ class _OAAlgorithmMixIn(object):
         return nlp_termination not in {tc.infeasible, tc.unbounded}
 
     # Utility used in cut_generation: We saved a map of Disjuncts to the
-    # active constraints they contain on the master problem util_block, and use
+    # active constraints they contain on the main problem util_block, and use
     # it here to find the active constraints under the current discrete
     # solution. Note that this preprocesses not just to be efficient, but
     # because everything on the Disjuncts is deactivated at this point, since
-    # we've already transformed the master problem to a MILP
+    # we've already transformed the main problem to a MILP
     def _get_active_untransformed_constraints(self, util_block, config):
         """Yield constraints in disjuncts where the indicator value is set or
         fixed to True."""

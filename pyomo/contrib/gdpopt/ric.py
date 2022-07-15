@@ -15,10 +15,10 @@ from pyomo.contrib.gdpopt.config_options import (
     _add_mip_solver_configs, _add_nlp_solver_configs, _add_tolerance_configs,
     _add_oa_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
-    _get_master_and_subproblem)
+    _get_main_problem_and_subproblem)
 from pyomo.contrib.gdpopt.oa_algorithm_utils import _OAAlgorithmMixIn
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
-from pyomo.contrib.gdpopt.solve_master_problem import solve_MILP_master_problem
+from pyomo.contrib.gdpopt.solve_main_problem import solve_MILP_main_problem
 from pyomo.contrib.gdpopt.util import time_code
 from pyomo.core import Objective
 from pyomo.opt.base import SolverFactory
@@ -62,12 +62,12 @@ class GDP_RIC_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     def _solve_gdp(self, original_model, config):
         logger = config.logger
 
-        (master_util_block,
-         subproblem_util_block) = _get_master_and_subproblem(self, config)
-        master = master_util_block.model()
+        (main_problem_util_block,
+         subproblem_util_block) = _get_main_problem_and_subproblem(self, config)
+        main_problem = main_problem_util_block.model()
         subproblem = subproblem_util_block.model()
-        master_obj = next(master.component_data_objects(Objective, active=True,
-                                                        descend_into=True))
+        main_problem_obj = next(main_problem.component_data_objects(
+            Objective, active=True, descend_into=True))
 
         self._log_header(logger)
 
@@ -75,32 +75,32 @@ class GDP_RIC_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         while self.iteration < config.iterlim:
             self.iteration += 1
 
-            # solve linear master problem
+            # solve linear main problem
             with time_code(self.timing, 'mip'):
-                mip_feasible = solve_MILP_master_problem(master_util_block,
+                mip_feasible = solve_MILP_main_problem(main_problem_util_block,
                                                          self, config)
-                self._update_bounds_after_master_problem_solve(
-                    mip_feasible, master_obj, logger)
+                self._update_bounds_after_main_problem_solve(
+                    mip_feasible, main_problem_obj, logger)
 
             # Check termination conditions
             if self.any_termination_criterion_met(config):
                 break
 
             with time_code(self.timing, 'nlp'):
-                self._fix_master_soln_solve_subproblem_and_add_cuts(
-                    master_util_block, subproblem_util_block, config)
+                self._fix_main_problem_soln_solve_subproblem_and_add_cuts(
+                    main_problem_util_block, subproblem_util_block, config)
 
             # Add integer cut
             with time_code(self.timing, "integer cut generation"):
-                add_no_good_cut(master_util_block, config)
+                add_no_good_cut(main_problem_util_block, config)
 
             # Check termination conditions
             if self.any_termination_criterion_met(config):
                 break
 
-    def _add_cuts_to_master_problem(self, subproblem_util_block,
-                                    master_util_block, objective_sense, config,
-                                    timing):
+    def _add_cuts_to_main_problem(self, subproblem_util_block,
+                                  main_problem_util_block, objective_sense,
+                                  config, timing):
         # Nothing to do here
         pass
 

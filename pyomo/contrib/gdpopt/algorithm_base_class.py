@@ -212,8 +212,8 @@ class _GDPoptAlgorithm():
         """
         Update bounds correctly depending on objective sense.
 
-        primal: bound from solving subproblem with fixed master solution
-        dual: bound from solving master problem (relaxation of original problem)
+        primal: bound from solving subproblem with fixed main-problem solution
+        dual: bound from solving main problem (relaxation of original problem)
         force_update: flag so this function will set the bound even if it's
                       not an improvement. (Used at termination if the bounds
                       cross.)
@@ -274,13 +274,13 @@ class _GDPoptAlgorithm():
         self.incumbent_boolean_soln = [
             v.value for v in util_block.transformed_boolean_variable_list]
 
-    def _update_bounds_after_master_problem_solve(self, mip_termination,
+    def _update_bounds_after_main_problem_solve(self, mip_termination,
                                                   obj_expr, logger):
         if mip_termination is tc.optimal:
-            self._update_bounds_after_solve('master', dual=value(obj_expr),
+            self._update_bounds_after_solve('main', dual=value(obj_expr),
                                             logger=logger)
         elif mip_termination is tc.infeasible:
-            # Master problem was infeasible.
+            # Main problem was infeasible.
             self._update_dual_bound_to_infeasible()
         elif mip_termination is tc.feasible or tc.unbounded:
             # we won't update the bound, because we didn't solve to
@@ -320,7 +320,7 @@ class _GDPoptAlgorithm():
                 self.pyomo_results.solver.termination_condition = tc.infeasible
             else:
                 # if they've crossed, then the gap is actually 0: Update the
-                # dual (master problem) bound to be equal to the primal
+                # dual (main problem) bound to be equal to the primal
                 # (subproblem) bound
                 if self.LB + config.bound_tolerance > self.UB:
                     self._update_bounds(dual=self.primal_bound(),
@@ -402,15 +402,15 @@ class _GDPoptAlgorithm():
         if number_of_objectives == 0:
             config.logger.warning(
                 'Model has no active objectives. Adding dummy objective.')
-            main_obj = Objective(expr=1)
+            main_prob_obj = Objective(expr=1)
             original_model.add_component(unique_component_name(original_model,
                                                                'dummy_obj'),
-                                         main_obj)
+                                         main_prob_obj)
         elif number_of_objectives > 1:
             raise ValueError('Model has multiple active objectives.')
         else:
-            main_obj = active_objectives[0]
-        prob.sense = minimize if main_obj.sense == 1 else maximize
+            main_prob_obj = active_objectives[0]
+        prob.sense = minimize if main_prob_obj.sense == 1 else maximize
 
         return results
 

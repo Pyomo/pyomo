@@ -16,13 +16,13 @@ from pyomo.core.base import (
 from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
-from pyomo.contrib.gdpopt.master_initialize import valid_init_strategies
+from pyomo.contrib.gdpopt.main_problem_initialize import valid_init_strategies
 from pyomo.contrib.gdpopt.util import (
     get_main_elapsed_time, move_nonlinear_objective_to_constraints)
 from pyomo.gdp.disjunct import Disjunct, Disjunction
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
-def _get_master_and_subproblem(solver, config):
+def _get_main_problem_and_subproblem(solver, config):
     util_block = solver.original_util_block
     original_model = util_block.model()
     if config.force_subproblem_nlp:
@@ -33,7 +33,7 @@ def _get_master_and_subproblem(solver, config):
     solver.original_obj = original_obj
 
     # create model to hold the subproblems: We create this first because
-    # certain initialization strategies for the master problem need it.
+    # certain initialization strategies for the main problem need it.
     subproblem = get_subproblem(original_model)
     subproblem_util_block = subproblem.component(util_block.name)
     save_initial_values(subproblem_util_block)
@@ -42,57 +42,58 @@ def _get_master_and_subproblem(solver, config):
         Objective, active=True, descend_into=True))
     subproblem_util_block.obj = Expression(expr=subproblem_obj.expr)
 
-    # create master MILP
+    # create main problem--the MILP relaxation
     start = get_main_elapsed_time(solver.timing)
-    master_util_block = initialize_master_problem(util_block,
+    main_problem_util_block = initialize_main_problem(util_block,
                                                   subproblem_util_block,
                                                   config, solver)
 
-    config.logger.info('Finished master problem initialization in {:.2f}s and '
+    config.logger.info('Finished main problem initialization in {:.2f}s and '
                        '{} iterations \n'.format(
-                           get_main_elapsed_time(solver.timing) - start, 
+                           get_main_elapsed_time(solver.timing) - start,
                            solver.initialization_iteration))
 
-    return (master_util_block, subproblem_util_block)
+    return (main_problem_util_block, subproblem_util_block)
 
-def initialize_master_problem(util_block, subprob_util_block, config, solver):
+def initialize_main_problem(util_block, subprob_util_block, config, solver):
     """
     Calls the specified transformation (by default bigm) on the original
-    model and removes nonlinear constraints to create a MILP master problem.
+    model and removes nonlinear constraints to create a MILP main problem.
     """
     config.logger.info("---Starting GDPopt initialization---")
     # clone the original model
-    master = util_block.model().clone()
-    master.name = master.name + ": master problem"
+    main = util_block.model().clone()
+    main.name = main.name + ": main problem"
 
-    master_util_block = master.component(util_block.name)
-    master_util_block.no_good_cuts = ConstraintList()
-    master_util_block.no_good_disjunctions = Disjunction(Integers)
+    main_problem_util_block = main.component(util_block.name)
+    main_problem_util_block.no_good_cuts = ConstraintList()
+    main_problem_util_block.no_good_disjunctions = Disjunction(Integers)
 
     # deactivate nonlinear constraints
-    for c in master.component_data_objects(Constraint, active=True,
+    for c in main.component_data_objects(Constraint, active=True,
                                            descend_into=(Block, Disjunct)):
         if c.body.polynomial_degree() not in (1, 0):
             c.deactivate()
 
     # Transform to a MILP
-    TransformationFactory(config.master_problem_transformation).apply_to(master)
-    add_transformed_boolean_variable_list(master_util_block)
-    add_algebraic_variable_list(master_util_block, name='all_mip_variables')
+    TransformationFactory(config.main_problem_transformation).apply_to(main)
+    add_transformed_boolean_variable_list(main_problem_util_block)
+    add_algebraic_variable_list(main_problem_util_block,
+                                name='all_mip_variables')
 
     # Call the specified initialization strategy. (We've already validated the
     # input in the config logic, so we know this is okay.)
     init_algorithm = valid_init_strategies.get(config.init_algorithm)
-    init_algorithm(util_block, master_util_block, subprob_util_block, config,
-                   solver)
+    init_algorithm(util_block, main_problem_util_block, subprob_util_block,
+                   config, solver)
 
-    return master_util_block
+    return main_problem_util_block
 
-def add_util_block(master):
+def add_util_block(main):
     # create a block to store the cuts
-    name = unique_component_name(master, '_gdpopt_cuts')
+    name = unique_component_name(main, '_gdpopt_cuts')
     block = Block()
-    master.add_component(name, block)
+    main.add_component(name, block)
 
     return block
 
@@ -166,7 +167,7 @@ def add_boolean_variable_lists(util_block):
             util_block.boolean_variable_list.append(v)
             util_block.non_indicator_boolean_variable_list.append(v)
 
-# For the master problem, we want the corresponding binaries for all of the
+# For the main problem, we want the corresponding binaries for all of the
 # BooleanVars. This must be called after logical_to_linear has been called.
 def add_transformed_boolean_variable_list(util_block):
     util_block.transformed_boolean_variable_list = [

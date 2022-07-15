@@ -188,13 +188,14 @@ def fix_discrete_var(var, val, config):
             var.fix(val, skip_validation=True)
 
 @contextmanager
-def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
-                                      solver, config,
-                                      make_subproblem_continuous=True):
-    # fix subproblem Blocks according to the master solution
+def fix_main_problem_solution_in_subproblem(main_problem_util_block,
+                                            subproblem_util_block, solver,
+                                            config,
+                                            make_subproblem_continuous=True):
+    # fix subproblem Blocks according to the main problem solution
 
     fixed = []
-    for disjunct, block in zip(master_util_block.disjunct_list,
+    for disjunct, block in zip(main_problem_util_block.disjunct_list,
                                subproblem_util_block.disjunct_list):
         if not disjunct.indicator_var.value:
             block.deactivate()
@@ -206,17 +207,17 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
                         % ", ".join(fixed))
 
     fixed_bools = []
-    for master_bool, subprob_bool in zip(
-            master_util_block.non_indicator_boolean_variable_list,
+    for main_problem_bool, subprob_bool in zip(
+            main_problem_util_block.non_indicator_boolean_variable_list,
             subproblem_util_block.non_indicator_boolean_variable_list):
-        master_binary = master_bool.get_associated_binary()
+        main_problem_binary = main_problem_bool.get_associated_binary()
         subprob_binary = subprob_bool.get_associated_binary()
-        val = master_binary.value
+        val = main_problem_binary.value
         if val is None:
-            # If it's None, it's not yet constrained in master problem: make an
-            # arbitrary decision for now, and store it in the master problem so
+            # If it's None, it's not yet constrained in main problem: make an
+            # arbitrary decision for now, and store it in the main problem so
             # the no-good cut will be right.
-            master_binary.set_value(1)
+            main_problem_binary.set_value(1)
             subprob_binary.fix(1)
             bool_val = True
         elif val > 0.5:
@@ -229,27 +230,28 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
     config.logger.debug("Fixed the following Boolean variables: %s"
                         % ", ".join(fixed_bools))
 
-    # Fix subproblem discrete variables according to the master solution
+    # Fix subproblem discrete variables according to the main problem solution
     if make_subproblem_continuous:
         fixed_discrete = []
-        for master_var, subprob_var in zip(
-                master_util_block.discrete_variable_list,
+        for main_problem_var, subprob_var in zip(
+                main_problem_util_block.discrete_variable_list,
                 subproblem_util_block.discrete_variable_list):
-            # [ESJ 1/24/21]: We don't check if master_var actually has a value
-            # here because we are going to have to do that error checking
+            # [ESJ 1/24/21]: We don't check if main problem_var actually has a
+            # value here because we are going to have to do that error checking
             # later. This is because the subproblem could have discrete
-            # variables that aren't in the master and vice versa since master is
-            # linearized, but subproblem is a specific realization of the
-            # disjuncts. All this means we don't have enough info to do it here.
-            fix_discrete_var(subprob_var, master_var.value, config)
+            # variables that aren't in the main problem and vice versa since
+            # main problem is linearized, but subproblem is a specific
+            # realization of the disjuncts. All this means we don't have enough
+            # info to do it here.
+            fix_discrete_var(subprob_var, main_problem_var.value, config)
             fixed_discrete.append("%s = %s" % (subprob_var.name,
-                                               master_var.value))
+                                               main_problem_var.value))
         config.logger.debug("Fixed the following integer variables: %s" %
                             ", ".join(fixed_discrete))
 
     # Call the subproblem initialization callback
     config.subproblem_initialization_method(solver, subproblem_util_block,
-                                            master_util_block)
+                                            main_problem_util_block)
 
     yield
 
@@ -268,8 +270,8 @@ def fix_master_solution_in_subproblem(master_util_block, subproblem_util_block,
             subprob_var.fixed = False
 
     # [ESJ 2/25/22] We don't need to reset the values of the continuous
-    # variables because we will initialize them based on the master solution
-    # before we solve again.
+    # variables because we will initialize them based on the main problem
+    # solution before we solve again.
 
 def is_feasible(model, config):
     """Checks to see if the algebraic model is feasible in its current state.
@@ -387,7 +389,7 @@ def lower_logger_level_to(logger, level=None, tee=False):
         logger.setLevel(old_logger_level)
 
 def _add_bigm_constraint_to_transformed_model(m, constraint, block):
-    """Adds the given constraint to the master problem model as if it had
+    """Adds the given constraint to the main problem model as if it had
     been on the model originally, before the bigm transformation was called.
     Note this method doesn't actually add the constraint to the model, it just
     takes a constraint that has been added and transforms it.
@@ -405,7 +407,7 @@ def _add_bigm_constraint_to_transformed_model(m, constraint, block):
 
     Parameters
     ----------
-    m: Master problem model that has been transformed with bigm.
+    m: Main problem model that has been transformed with bigm.
     constraint: Already-constructed ConstraintData somewhere on m
     block: The block that constraint lives on. This Block may or may not be on
            a Disjunct.

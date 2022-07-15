@@ -18,11 +18,11 @@ from pyomo.contrib.gdpopt.config_options import (
     _add_oa_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
-    _get_master_and_subproblem, add_constraints_by_disjunct,
+    _get_main_problem_and_subproblem, add_constraints_by_disjunct,
     add_global_constraint_list)
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
 from pyomo.contrib.gdpopt.oa_algorithm_utils import _OAAlgorithmMixIn
-from pyomo.contrib.gdpopt.solve_master_problem import solve_MILP_master_problem
+from pyomo.contrib.gdpopt.solve_main_problem import solve_MILP_main_problem
 from pyomo.contrib.gdpopt.util import (
     _add_bigm_constraint_to_transformed_model, time_code)
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
@@ -50,7 +50,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     _add_nlp_solver_configs(CONFIG, default_solver='couenne')
     _add_tolerance_configs(CONFIG)
 
-    algorithm='GLOA'
+    algorithm = 'GLOA'
 
     def _log_citation(self, config):
         config.logger.info("\n" + """- GLOA algorithm:
@@ -81,12 +81,12 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         # constraints will be added by the transformation to a MIP, so these are
         # all we'll ever need.
         add_global_constraint_list(self.original_util_block)
-        (master_util_block,
-         subproblem_util_block) = _get_master_and_subproblem(self, config)
+        (main_problem_util_block,
+         subproblem_util_block) = _get_main_problem_and_subproblem(self, config)
 
-        master = master_util_block.model()
+        main = main_problem_util_block.model()
         subproblem = subproblem_util_block.model()
-        master_obj = next(master.component_data_objects(Objective, active=True,
+        main_obj = next(main.component_data_objects(Objective, active=True,
                                                         descend_into=True))
 
         self._log_header(logger)
@@ -95,49 +95,49 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         while self.iteration < config.iterlim:
             self.iteration += 1
 
-            # solve linear master problem
+            # solve linear main problem
             with time_code(self.timing, 'mip'):
-                mip_feasible = solve_MILP_master_problem(master_util_block,
+                mip_feasible = solve_MILP_main_problem(main_problem_util_block,
                                                          self, config)
-                self._update_bounds_after_master_problem_solve(
-                    mip_feasible, master_obj, logger)
+                self._update_bounds_after_main_problem_solve(
+                    mip_feasible, main_obj, logger)
             # Check termination conditions
             if self.any_termination_criterion_met(config):
                 break
 
             with time_code(self.timing, 'nlp'):
-                self._fix_master_soln_solve_subproblem_and_add_cuts(
-                    master_util_block, subproblem_util_block, config)
+                self._fix_main_problem_soln_solve_subproblem_and_add_cuts(
+                    main_problem_util_block, subproblem_util_block, config)
 
             # Add integer cut
             with time_code(self.timing, "integer cut generation"):
-                add_no_good_cut(master_util_block, config)
+                add_no_good_cut(main_problem_util_block, config)
 
             # Check termination conditions
             if self.any_termination_criterion_met(config):
                 break
 
-    def _add_cuts_to_master_problem(self, subproblem_util_block,
-                                    master_util_block, objective_sense, config,
-                                    timing):
+    def _add_cuts_to_main_problem(self, subproblem_util_block,
+                                  main_problem_util_block, objective_sense,
+                                  config, timing):
         """Add affine cuts"""
-        m = master_util_block.model()
-        if hasattr(master_util_block, "aff_utils_blocks"):
-            aff_utils_blocks = master_util_block.aff_utils_blocks
+        m = main_problem_util_block.model()
+        if hasattr(main_problem_util_block, "aff_utils_blocks"):
+            aff_utils_blocks = main_problem_util_block.aff_utils_blocks
         else:
-            aff_utils_blocks = master_util_block.aff_utils_blocks = dict()
+            aff_utils_blocks = main_problem_util_block.aff_utils_blocks = dict()
 
         config.logger.debug("Adding affine cuts.")
         counter = 0
-        for master_var, subprob_var in zip(
-                master_util_block.algebraic_variable_list,
+        for main_var, subprob_var in zip(
+                main_problem_util_block.algebraic_variable_list,
                 subproblem_util_block.algebraic_variable_list):
             val = subprob_var.value
-            if val is not None and not master_var.fixed:
-                master_var.set_value(val, skip_validation=True)
+            if val is not None and not main_var.fixed:
+                main_var.set_value(val, skip_validation=True)
 
         for constr in self._get_active_untransformed_constraints(
-                master_util_block, config):
+                main_problem_util_block, config):
             disjunctive_var_bounds = disjunctive_bounds(constr.parent_block())
 
             if constr.body.polynomial_degree() in (1, 0):
