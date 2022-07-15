@@ -11,6 +11,7 @@
 """Functions for solving the main problem."""
 from copy import deepcopy
 
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
@@ -57,6 +58,11 @@ def solve_MILP_main_problem(util_block, solver, config):
 
     # Callback immediately before solving MIP main problem
     config.call_before_main_problem_solve(solver, m, util_block)
+    if config.call_before_master_solve is not _DoNothing:
+        deprecation_warning(
+            "The 'call_before_master_solve' argument is deprecated. "
+            "Please use the 'call_before_main_problem_solve' option to specify "
+            "the callback.", version="TBD")
 
     with SuppressInfeasibleWarning():
         mip_args = dict(config.mip_solver_args)
@@ -71,6 +77,11 @@ def solve_MILP_main_problem(util_block, solver, config):
         results = SolverFactory(config.mip_solver).solve(m, **mip_args)
 
     config.call_after_main_problem_solve(solver, m, util_block)
+    if config.call_after_master_solve is not _DoNothing:
+        deprecation_warning(
+            "The 'call_after_master_solve' argument is deprecated. "
+            "Please use the 'call_after_main_problem_solve' option to specify "
+            "the callback.", version="TBD")
 
     terminate_cond = results.solver.termination_condition
     if terminate_cond is tc.infeasibleOrUnbounded:
