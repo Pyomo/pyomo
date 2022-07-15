@@ -200,6 +200,7 @@ class SCIPAMPL(SystemCallSolver):
 
     def _postsolve(self):
         # results = super(SCIPAMPL, self)._postsolve() # previous way
+        # copied super(SCIPAMPL, self)._postsolve() to access the log file
         if self._log_file is not None:
             OUTPUT=open(self._log_file,"w")
             OUTPUT.write("Solver command line: "+str(self._command.cmd)+'\n')
@@ -221,14 +222,10 @@ class SCIPAMPL(SystemCallSolver):
 
         if self._results_format is not None:
             results = self.process_output(self._rc)
-            # solution part of the results object looks okay here
-            # print('hoy hoy hoy')
-            # print(results)
             if (self._log_file is not None) and \
                (os.path.exists(self._log_file)):
                    
                log_dict = self.read_scip_log(self._log_file)
-               #print(log_dict)
             
                results.solver.time = log_dict['solving_time']
                results.solver.gap = log_dict['gap']
@@ -445,8 +442,7 @@ class SCIPAMPL(SystemCallSolver):
     
     @staticmethod
     def read_scip_log(filename: str):
-        
-        # TODO: check file exists, ensure opt has finished, etc
+        """Read the SCIP log file and get relevant information from it."""
         
         from collections import deque
         
