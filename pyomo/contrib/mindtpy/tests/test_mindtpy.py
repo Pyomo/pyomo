@@ -68,6 +68,10 @@ else:
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
+    def check_optimal_solution(self, model, places=1):
+        for var in model.optimal_solution:
+            self.assertAlmostEqual(var.value, model.optimal_solution[var], places=places)
+
     def test_OA_rNLP(self):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -82,6 +86,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_OA_extreme_model(self):
         """Test the outer approximation decomposition algorithm."""
@@ -108,6 +113,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_OA_L_infinity_norm(self):
         """Test the outer approximation decomposition algorithm."""
@@ -124,6 +130,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_OA_max_binary(self):
         """Test the outer approximation decomposition algorithm."""
@@ -140,6 +147,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_OA_sympy(self):
         """Test the outer approximation decomposition algorithm."""
@@ -155,6 +163,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_OA_initial_binary(self):
         """Test the outer approximation decomposition algorithm."""
@@ -170,6 +179,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_OA_no_good_cuts(self):
         """Test the outer approximation decomposition algorithm."""
@@ -185,6 +195,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     @unittest.skipUnless(SolverFactory('cplex').available() or SolverFactory('gurobi').available(), 
                          "CPLEX or GUROBI not available.")
@@ -207,6 +218,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_OA_integer_to_binary(self):
         """Test the outer approximation decomposition algorithm."""
@@ -222,6 +234,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_OA_partition_obj_nonlinear_terms(self):
         """Test the outer approximation decomposition algorithm (partition_obj_nonlinear_terms)."""
@@ -237,6 +250,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_OA_add_slack(self):
         """Test the outer approximation decomposition algorithm."""
@@ -253,6 +267,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
                 results = opt.solve(model, strategy='OA',
                                     init_strategy='rNLP',
@@ -265,6 +280,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_OA_nonconvex(self):
         """Test the outer approximation decomposition algorithm."""
@@ -280,6 +296,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_iteration_limit(self):
         with SolverFactory('mindtpy') as opt:

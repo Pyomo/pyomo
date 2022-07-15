@@ -148,11 +148,18 @@ def a_logger(str_or_logger):
 def copy_var_list_values(from_list, to_list, config,
                          skip_stale=False, skip_fixed=True,
                          ignore_integrality=False):
-    """Copy variable values from one list to another, without validation"""
+    """Copy variable values from one list to another.
+
+    Rounds to Binary/Integer if necessary
+    Sets to zero for NonNegativeReals if necessary
+    """
     if ignore_integrality:
-        deprecation_warning("The 'ignore_integrality' argument is no longer "
-                            "has any functionality since this function does "
-                            "not validate the values.", version="TBD")
+        deprecation_warning("The 'ignore_integrality' argument no longer "
+                            "has any functionality.", version="TBD")
+
+    if len(from_list) != len(to_list):
+        raise ValueError('The lengths of from_list and to_list do not match.')
+
     for v_from, v_to in zip(from_list, to_list):
         if skip_stale and v_from.stale:
             continue  # Skip stale variable values.
