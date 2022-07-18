@@ -154,7 +154,7 @@ Pyomo.DOE Solver Interface
 
 
 .. autoclass:: pyomo.contrib.doe.fim_doe.DesignOfExperiments
-    :members:
+    :members: __init__, optimize_doe, compute_FIM, run_grid_search
 
 .. Note::
     ``optimize_doe()`` includes the following steps:
@@ -163,7 +163,7 @@ Pyomo.DOE Solver Interface
         #.  Unfix the experiment design decisions and solve the two-stage DOE problem.
 
 .. autoclass:: pyomo.contrib.doe.fim_doe.Measurements
-    :members:
+    :members: __init__, check_subset
 
 .. autoclass:: pyomo.contrib.doe.fim_doe.Scenario_generator
     :special-members: __init__
