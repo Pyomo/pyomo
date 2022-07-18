@@ -1,14 +1,10 @@
-############
 Pyomo.DOE
-############
-
-Pyomo.DOE
-===================================
+=========
 
 **Pyomo.DOE** (Pyomo Design of Experiments) is a Python library for model-based design of experiments using science-based models.
 
-Pyomo.DOE was developed by **Jialu Wang** and **Alexander W. Dowling** of University of Notre Dame as part of the Carbon Capture Simulation for Industry Impact (CCSI2)
-(https://www.acceleratecarboncapture.org/ ) project, funded through the U.S. DOE Office of Fossil Energy.
+Pyomo.DOE was developed by **Jialu Wang** and **Alexander W. Dowling** at the University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact (CCSI2) <https://www.acceleratecarboncapture.org/>`_.
+project, funded through the U.S. Department Of Energy Office of Fossil Energy.
 
 If you use Pyomo.DOE, please cite:
 
@@ -21,15 +17,14 @@ Model-based Design of Experiments (MBDoE) is a technique to maximize the informa
 
 .. figure:: flowchart.png
    :scale: 25 %
-   :alt: map to buried treasure
 
    The exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE are combined into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty. Currently, Pyomo.DOE focused on increasing parameter precision.
 
-Pyomo.DOE provides the exploratory anlaysis and MBDoE capabilities to the Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
+Pyomo.DOE provides the exploratory analysis and MBDoE capabilities to the Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
 the allowable design spaces for design variables, and the assumed observation error model.
-During exploratory analysis, Pyomo.DOE checks if this model parameters can be inferred from the postulated measurements or preliminary data.
+During exploratory analysis, Pyomo.DOE checks if the model parameters can be inferred from the postulated measurements or preliminary data.
 MBDoE then recommends optimized experimental conditions for collecting more data.
-Parameter estimation packages such as **Parmest** can perform parameter estimation using the available data to infer values for parameters,
+Parameter estimation packages such as `Parmest <https://pyomo.readthedocs.io/en/stable/contributed_packages/parmest/index.html>`_ can perform parameter estimation using the available data to infer values for parameters,
 and facilitate an uncertainty analysis to approximate the parameter covariance matrix.
 If the parameter uncertainties are sufficiently small, the workflow terminates and returns the final model with quantified parametric uncertainty.
 If not, MBDoE recommends optimized experimental conditions to generate new data.
@@ -69,7 +64,7 @@ where:
 .. note::
     * Process models provided to Pyomo.DOE should define an extra scenario index for all state variables and all parameters, as the first index before any other index.
     * Process models must include an index for time, named ``t``. For steady-state models, t should be [0].
-    * Parameter and design variables should defined as variables.
+    * Parameters and design variables should be defined as Pyomo ``var`` components on the model to use ``direct_kaug`` mode, and can be defined as Pyomo ``Param`` object if not using ``direct_kaug``.
     * Create model function should take scenarios as the first argument of this function.
     * Design variables are defined with and only with a time index.
 
@@ -91,9 +86,9 @@ Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DO
 
 where:
 
-*  :math:`\boldsymbol{\varphi}` are design variables, which are manipulated to maximize the information content of experiments. It should consist one or more of  :math:`\mathbf{u}(t), \mathbf{y}^{\mathbf{0}}({t_0}),\overline{\mathbf{w}}`. With a proper model formulation, the timepoints for control or measurements :math:`\mathbf{t}` can also be degree of freedoms.
-*  :math:`\mathbf{M}` is Fisher information matrix (FIM), estimated as the inverse of the covariance matrix of parameter estimates  :math:`\boldsymbol{\hat{\theta}}`. A large FIM indicates more information contained in the experiment for parameter estimation.
-*  :math:`\mathbf{Q}` is dynamic sensitivity matrix, containing the partial derivatives of  :math:`\mathbf{y}` with respect to  :math:`\boldsymbol{\theta}`.
+*  :math:`\boldsymbol{\varphi}` are design variables, which are manipulated to maximize the information content of experiments. It should consist of one or more of  :math:`\mathbf{u}(t), \mathbf{y}^{\mathbf{0}}({t_0}),\overline{\mathbf{w}}`. With a proper model formulation, the timepoints for control or measurements :math:`\mathbf{t}` can also be degrees of freedom.
+*  :math:`\mathbf{M}` is the Fisher information matrix (FIM), estimated as the inverse of the covariance matrix of parameter estimates  :math:`\boldsymbol{\hat{\theta}}`. A large FIM indicates more information contained in the experiment for parameter estimation.
+*  :math:`\mathbf{Q}` is the dynamic sensitivity matrix, containing the partial derivatives of  :math:`\mathbf{y}` with respect to  :math:`\boldsymbol{\theta}`.
 *  :math:`\Psi` is the design criteria to measure FIM.
 *  :math:`\mathbf{V}_{\boldsymbol{\theta}}(\boldsymbol{\hat{\theta}})^{-1}` is the FIM of previous experiments.
 
@@ -141,22 +136,21 @@ design_variable_timepoints : ``dictionary``
     A ``dictionary`` of design variable names and its control time points. If this design var is independent of time (constant), set the time to [0]
 
 measurement_object : ``object``
-    A ``object`` of the measurements, provided by the measurement class.
+    An ``object`` of the measurements, provided by the measurement class.
 
 
 create_model : ``function``
-    A ``function`` representing a deterministic process model.
+    A ``function`` returning a deterministic process model.
 
 
 prior_FIM : ``array``
-    A ``array`` defining the Fisher information matrix (FIM) for prior experiments, default is a zero matrix.
+    An ``array`` defining the Fisher information matrix (FIM) for prior experiments, default is a zero matrix.
 
 Pyomo.DOE Solver Interface
 ---------------------------
 
 .. figure:: uml.png
    :scale: 25 %
-   :alt: map to buried treasure
 
 
 .. autoclass:: fim_doe.DesignOfExperiments
@@ -187,7 +181,7 @@ Pyomo.DOE Usage Example
 ------------------------
 
 We illustrate the use of Pyomo.DOE using a reaction kinetics example (Wang and Dowling, 2022).
-The Arrhenius equations model the temperature dependence of the reaction rate coefficient  :math:`k_1, k_2`. Assuming a first-order reaction mechanism gives the reaction rate model. Further, we assume only sepcies A is fed to the reactor.
+The Arrhenius equations model the temperature dependence of the reaction rate coefficient  :math:`k_1, k_2`. Assuming a first-order reaction mechanism gives the reaction rate model. Further, we assume only species A is fed to the reactor.
 
 
 .. math::
@@ -195,7 +189,7 @@ The Arrhenius equations model the temperature dependence of the reaction rate co
     \begin{aligned}
         k_1 & = A_1 e^{-\frac{E_1}{RT}} \\
         k_2 & = A_2 e^{-\frac{E_2}{RT}} \\
-        \frac{d{C_A}}{dt} & = -k_1{C_A}$  \\
+        \frac{d{C_A}}{dt} & = -k_1{C_A}  \\
         \frac{d{C_B}}{dt} &  = k_1{C_A} - k_2{C_B}  \\
         C_{A0}& = C_A + C_B + C_C \\
         C_B(t_0) & = 0 \\
@@ -327,7 +321,11 @@ Step 3: Compute the FIM of a square MBDoE problem
 
 This method computes an MBDoE optimization problem with no degree of freedom.
 
+This method can be accomplished by two modes, ``direct_kaug`` and ``sequential_finite``.
+``direct_kaug`` mode requires the installation of the solver `k_aug <https://github.com/dthierry/k_aug>`_.
+
 .. doctest::
+
     >>> # === Decide mode ===
     >>> sensi_opt = 'sequential_finite'
     >>> # === Specify an experiment ===
@@ -338,7 +336,9 @@ This method computes an MBDoE optimization problem with no degree of freedom.
     >>> # === Use ``compute_FIM`` to compute one MBDoE square problem ===
     >>> result = doe_object.compute_FIM(exp1,mode=sensi_opt, FIM_store_name = 'dynamic.csv',
     ...                            store_output = 'store_output') # doctest: +SKIP
+    >>> # === Use ``calculate_FIM`` method of the result object to evaluate the FIM ===
     >>> result.calculate_FIM(doe_object.design_values) # doctest: +SKIP
+    >>> # === Print FIM and its trace, determinant, condition number and minimal eigen value ===
     >>> result.FIM  # doctest: +SKIP
     >>> result.trace # doctest: +SKIP
     >>> result.det # doctest: +SKIP
@@ -349,15 +349,16 @@ This method computes an MBDoE optimization problem with no degree of freedom.
 Step 4: Exploratory analysis (Enumeration)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable, i.e., ensure that D-, E-optimality metrics is not an infinite small number near zero, and Modified E-optimality is not a big number.
+Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable, i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number.
 
 Pyomo.DOE accomplishes the exploratory analysis with the ``run_grid_search`` function.
-It allows to define any number of design decisions. Heatmaps can be drawn by two design variables, fixing other design variables.
+It allows users to define any number of design decisions. Heatmaps can be drawn by two design variables, fixing other design variables.
 1D curve can be drawn by one design variable, fixing all other variables.
 The function ``run_grid_search`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method. Therefore, ``run_grid_search`` supports only two modes: ``sequential_finite`` and ``direct_kaug``.
 
 
 .. doctest::
+
     >>> # === Specify inputs===
     >>> design_ranges = [[1,2,3,4,5], [300,400,500,600,700]] # [CA0 [M], T [K]]
     >>> dv_apply_name = ['CA0','T']
@@ -386,17 +387,17 @@ Successful run of the above code shows the following figure:
 
 .. figure:: grid-1.png
    :scale: 35 %
-   :alt: map to buried treasure
 
 
 Step 5: Gradient-based optimization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Pyomo.DOE accomplishes gradient-based optimization with ``optimize_doe`` function for A- and D-optimality design. 
+Pyomo.DOE accomplishes gradient-based optimization with the ``optimize_doe`` function for A- and D-optimality design.
 
 This function solves twice: It solves the square version of the MBDoE problem first, and then unfixes the design variables as degree of freedoms and solves again. In this way the optimization problem can be well initialized.
 
 .. doctest::
+
     >>> # === Specify a starting point ===
     >>> exp1 = {'CA0': {0: 5}, 'T': {0: 300, 0.125:300,  0.25:300,  0.375:300,  0.5:300,  0.625:300,  0.75:300,  0.875:300, 1:300}}
     >>> # === Define DOE object ===
