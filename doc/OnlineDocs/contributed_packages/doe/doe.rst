@@ -153,7 +153,7 @@ Pyomo.DOE Solver Interface
    :scale: 25 %
 
 
-.. autoclass:: pyomo.contrib.doe.DesignOfExperiments
+.. autoclass:: pyomo.contrib.doe.fim_doe.DesignOfExperiments
     :members:  __init__, optimize_doe, compute_FIM, run_grid_search
 
 
@@ -163,16 +163,16 @@ Pyomo.DOE Solver Interface
         #.  Fix the experiment design decisions and solve a square (i.e., zero degrees of freedom) instance of the two-stage DOE problem. This step is for initialization.
         #.  Unfix the experiment design decisions and solve the two-stage DOE problem.
 
-.. autoclass:: pyomo.contrib.doe.Measurements
+.. autoclass:: pyomo.contrib.doe.fim_doe.Measurements
     :members: __init__, check_subset
 
-.. autoclass:: pyomo.contrib.doe.Scenario_generator
+.. autoclass:: pyomo.contrib.doe.fim_doe.Scenario_generator
     :special-members: __init__
 
-.. autoclass:: pyomo.contrib.doe.FIM_result
+.. autoclass:: pyomo.contrib.doe.fim_doe.FIM_result
     :special-members: __init__, calculate_FIM
 
-.. autoclass:: pyomo.contrib.doe.Grid_Search_Result
+.. autoclass:: pyomo.contrib.doe.fim_doe.Grid_Search_Result
     :special-members: __init__
 
 
