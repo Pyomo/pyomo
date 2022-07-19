@@ -47,7 +47,7 @@ def MindtPy_initialize_main(solve_data, config):
         Objective, active=True)).deactivate()
 
     MindtPy = m.MindtPy_utils
-    if config.calculate_dual:
+    if config.calculate_dual_at_solution:
         m.dual.deactivate()
 
     if config.init_strategy == 'FP':
@@ -130,7 +130,12 @@ def init_rNLP(solve_data, config):
     nlpopt = SolverFactory(config.nlp_solver)
     set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
     with SuppressInfeasibleWarning():
-        results = nlpopt.solve(m, tee=config.nlp_solver_tee, **nlp_args)
+        results = nlpopt.solve(m,
+                               tee=config.nlp_solver_tee, 
+                               load_solutions=False,
+                               **nlp_args)
+        if len(results.solution) > 0:
+            m.solutions.load_from(results)
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
         main_objective = MindtPy.objective_list[-1]
@@ -141,7 +146,7 @@ def init_rNLP(solve_data, config):
                 'relaxed NLP is not solved to optimality.')
             update_suboptimal_dual_bound(solve_data, results)
         dual_values = list(
-            m.dual[c] for c in MindtPy.constraint_list) if config.calculate_dual else None
+            m.dual[c] for c in MindtPy.constraint_list) if config.calculate_dual_at_solution else None
         config.logger.info(solve_data.log_formatter.format('-', 'Relaxed NLP', value(main_objective.expr),
                                                            solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
                                                            get_main_elapsed_time(solve_data.timing)))
@@ -205,7 +210,7 @@ def init_max_binaries(solve_data, config):
         MindtPy unable to handle the termination condition of the MILP main problem.
     """
     m = solve_data.working_model.clone()
-    if config.calculate_dual:
+    if config.calculate_dual_at_solution:
         m.dual.deactivate()
     MindtPy = m.MindtPy_utils
     solve_data.mip_subiter += 1
@@ -228,7 +233,12 @@ def init_max_binaries(solve_data, config):
         mipopt.set_instance(m)
     mip_args = dict(config.mip_solver_args)
     set_solver_options(mipopt, solve_data, config, solver_type='mip')
-    results = mipopt.solve(m, tee=config.mip_solver_tee, **mip_args)
+    results = mipopt.solve(m, 
+                           tee=config.mip_solver_tee, 
+                           load_solutions=False,
+                           **mip_args)
+    if len(results.solution) > 0:
+        m.solutions.load_from(results)
 
     solve_terminate_cond = results.solver.termination_condition
     if solve_terminate_cond is tc.optimal:
@@ -236,8 +246,12 @@ def init_max_binaries(solve_data, config):
             MindtPy.variable_list,
             solve_data.working_model.MindtPy_utils.variable_list,
             config)
-        config.logger.info(solve_data.log_formatter.format('-', 'Max binary MILP', value(MindtPy.max_binary_obj.expr),
-                                                           solve_data.primal_bound, solve_data.dual_bound, solve_data.rel_gap,
+        config.logger.info(solve_data.log_formatter.format('-',
+                                                           'Max binary MILP', 
+                                                           value(MindtPy.max_binary_obj.expr),
+                                                           solve_data.primal_bound,
+                                                           solve_data.dual_bound,
+                                                           solve_data.rel_gap,
                                                            get_main_elapsed_time(solve_data.timing)))
     elif solve_terminate_cond is tc.infeasible:
         raise ValueError(
