@@ -56,6 +56,10 @@ def known_solver_failure(mip_solver, model):
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
+    def check_optimal_solution(self, model, places=1):
+        for var in model.optimal_solution:
+            self.assertAlmostEqual(var.value, model.optimal_solution[var], places=places)
+
     @unittest.skipUnless('cplex_persistent' in available_mip_solvers,
                          'cplex_persistent solver is not available')
     def test_LPNLP_CPLEX(self):
@@ -71,6 +75,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     @unittest.skipUnless('gurobi_persistent' in available_mip_solvers,
                          'gurobi_persistent solver is not available')
@@ -87,6 +92,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_RLPNLP_L1(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -103,6 +109,7 @@ class TestMindtPy(unittest.TestCase):
                                   [TerminationCondition.optimal, TerminationCondition.feasible])
                     self.assertAlmostEqual(
                         value(model.objective.expr), model.optimal_value, places=1)
+                    self.check_optimal_solution(model)
 
     def test_RLPNLP_L2(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -121,6 +128,7 @@ class TestMindtPy(unittest.TestCase):
                                   [TerminationCondition.optimal, TerminationCondition.feasible])
                     self.assertAlmostEqual(
                         value(model.objective.expr), model.optimal_value, places=1)
+                    self.check_optimal_solution(model)
 
     def test_RLPNLP_Linf(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -137,6 +145,7 @@ class TestMindtPy(unittest.TestCase):
                                   [TerminationCondition.optimal, TerminationCondition.feasible])
                     self.assertAlmostEqual(
                         value(model.objective.expr), model.optimal_value, places=1)
+                    self.check_optimal_solution(model)
 
     def test_RLPNLP_grad_lag(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -153,6 +162,7 @@ class TestMindtPy(unittest.TestCase):
                                   [TerminationCondition.optimal, TerminationCondition.feasible])
                     self.assertAlmostEqual(
                         value(model.objective.expr), model.optimal_value, places=1)
+                    self.check_optimal_solution(model)
 
     def test_RLPNLP_hess_lag(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -171,6 +181,7 @@ class TestMindtPy(unittest.TestCase):
                                   [TerminationCondition.optimal, TerminationCondition.feasible])
                     self.assertAlmostEqual(
                         value(model.objective.expr), model.optimal_value, places=1)
+                    self.check_optimal_solution(model)
 
     def test_RLPNLP_hess_only_lag(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -189,6 +200,7 @@ class TestMindtPy(unittest.TestCase):
                                   [TerminationCondition.optimal, TerminationCondition.feasible])
                     self.assertAlmostEqual(
                         value(model.objective.expr), model.optimal_value, places=1)
+                    self.check_optimal_solution(model)
 
     def test_RLPNLP_sqp_lag(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -207,6 +219,7 @@ class TestMindtPy(unittest.TestCase):
                                   [TerminationCondition.optimal, TerminationCondition.feasible])
                     self.assertAlmostEqual(
                         value(model.objective.expr), model.optimal_value, places=1)
+                    self.check_optimal_solution(model)
 
 
 if __name__ == '__main__':

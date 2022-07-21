@@ -33,6 +33,10 @@ model_list = [EightProcessFlowsheet(convex=True),
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
+    def check_optimal_solution(self, model, places=1):
+        for var in model.optimal_solution:
+            self.assertAlmostEqual(var.value, model.optimal_solution[var], places=places)
+
     def test_ECP(self):
         """Test the extended cutting plane decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -47,6 +51,7 @@ class TestMindtPy(unittest.TestCase):
                               TerminationCondition.optimal)
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_ECP_add_slack(self):
         """Test the extended cutting plane decomposition algorithm."""
@@ -63,6 +68,7 @@ class TestMindtPy(unittest.TestCase):
                               TerminationCondition.optimal)
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
 
 if __name__ == '__main__':

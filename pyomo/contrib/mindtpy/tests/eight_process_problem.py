@@ -26,6 +26,7 @@ from __future__ import division
 
 from pyomo.environ import (Binary, ConcreteModel, Constraint, NonNegativeReals,
                            Objective, Param, RangeSet, Var, exp, minimize)
+from pyomo.common.collections import ComponentMap
 
 
 class EightProcessFlowsheet(ConcreteModel):
@@ -156,3 +157,36 @@ class EightProcessFlowsheet(ConcreteModel):
         for i, x_ub in x_ubs.items():
             X[i].setub(x_ub)
         m.optimal_value = 68.0097
+        m.optimal_solution = ComponentMap()
+        m.optimal_solution[m.X[2]] = 0.0
+        m.optimal_solution[m.X[3]] = 0.0
+        m.optimal_solution[m.X[4]] = 4.294490050470028
+        m.optimal_solution[m.X[5]] = 1.9999999999999998
+        m.optimal_solution[m.X[6]] = 0.6666666666666665
+        m.optimal_solution[m.X[7]] = 0.1979983174202069
+        m.optimal_solution[m.X[8]] = 0.4686683492464596
+        m.optimal_solution[m.X[9]] = 0.0
+        m.optimal_solution[m.X[10]] = 0.4686683492464596
+        m.optimal_solution[m.X[11]] = 1.3333333333333333
+        m.optimal_solution[m.X[12]] = 1.3333333333333333
+        m.optimal_solution[m.X[13]] = 2.0
+        m.optimal_solution[m.X[14]] = .26666666666666666
+        m.optimal_solution[m.X[15]] = 0.0
+        m.optimal_solution[m.X[16]] = 0.0
+        m.optimal_solution[m.X[17]] = 0.5858354365580745
+        m.optimal_solution[m.X[18]] = 0.720035498875516
+        m.optimal_solution[m.X[19]] = 2.0
+        m.optimal_solution[m.X[20]] = 1.6479184330021648
+        m.optimal_solution[m.X[21]] = 0.0
+        m.optimal_solution[m.X[22]] = 0.0
+        m.optimal_solution[m.X[23]] = 1.6479184330021648
+        m.optimal_solution[m.X[24]] = 1.3812517663354982
+        m.optimal_solution[m.X[25]] = 0.5858354365580745
+        m.optimal_solution[m.Y[1]] = 0.0
+        m.optimal_solution[m.Y[2]] = 1.0
+        m.optimal_solution[m.Y[3]] = 0.0
+        m.optimal_solution[m.Y[4]] = 1.0
+        m.optimal_solution[m.Y[5]] = 0.0
+        m.optimal_solution[m.Y[6]] = 1.0
+        m.optimal_solution[m.Y[7]] = 0.0
+        m.optimal_solution[m.Y[8]] = 1.0

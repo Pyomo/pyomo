@@ -331,17 +331,6 @@ class TestMindtPy(unittest.TestCase):
             check_config(config)
             self.assertEqual(config.regularization_mip_threads, 8)
 
-            config.mip_solver = 'cplex'
-            config.single_tree = True
-            check_config(config)
-            self.assertEqual(config.mip_solver, 'cplex_persistent')
-            self.assertEqual(config.threads, 1)
-
-            config.add_slack = True
-            config.max_slack == 0.0
-            check_config(config)
-            self.assertEqual(config.add_slack, False)
-
             config.strategy = 'GOA'
             config.add_slack = True
             config.use_mcpp = False
