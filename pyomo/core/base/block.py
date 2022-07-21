@@ -148,6 +148,23 @@ class _DeduplicateInfo(object):
         self.seen_data = set()
 
     def unique(self, comp, items, are_values):
+        """Generator that filters duplicate _ComponentData objects from items
+
+        Parameters
+        ----------
+        comp: ComponentBase
+           The Component (indexed or scalar) that contains all
+           _ComponentData returned by the `items` generator.
+
+        items: generator
+            Generator yielding either the values or the items from the
+            `comp` Component.
+
+        are_values: bool
+            If `True`, `items` yields _ComponentData objects, otherwise,
+            `items` yields `(index, _ComponentData)` tuples.
+
+        """
         if comp.is_reference():
             seen_components_contains = self.seen_components.__contains__
             seen_comp_thru_reference_contains \
@@ -160,7 +177,7 @@ class _DeduplicateInfo(object):
                 _data = _item if are_values else _item[1]
                 # If the data is contained in a component we have
                 # already processed, then it is a duplicate and we can
-                # bypass forther checks.
+                # bypass further checks.
                 _id = id(_data.parent_component())
                 if seen_components_contains(_id):
                     continue
@@ -1366,11 +1383,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             Specifies the component types (`ctypes`) to include in the
             resulting PseudoMap
 
-                =============   ===================
+                =============   ===================================
                 None            All components
                 type            A single component type
                 iterable        All component types in the iterable
-                =============   ===================
+                =============   ===================================
 
         active: None or bool
             Filter components by the active flag
@@ -1382,7 +1399,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 =====  ===============================
 
         sort: bool
-            Iterate over the components in a sorted otder
+            Iterate over the components in a sorted order
 
                 =====  ================================================
                 True   Iterate using Block.alphabetizeComponentAndIndex
@@ -1423,6 +1440,20 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
 
         for every component data in the block matching the specified
         ctype(s).
+
+        Parameters
+        ----------
+        ctype:  None or type or iterable
+            Specifies the component types (`ctypes`) to include
+
+        active: None or bool
+            Filter components by the active flag
+
+        sort: None or bool or SortComponents
+            Iterate over the components in a specified sorted order
+
+        dedup: _DeduplicateInfo
+            Deduplicator to prevent returning the same _ComponentData twice
         """
         _sort_indices = SortComponents.sort_indices(sort)
         _subcomp = PseudoMap(self, ctype, active, sort)
@@ -1462,6 +1493,19 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         """Generator that returns the _ComponentData for every component data
         in the block.
 
+        Parameters
+        ----------
+        ctype:  None or type or iterable
+            Specifies the component types (`ctypes`) to include
+
+        active: None or bool
+            Filter components by the active flag
+
+        sort: None or bool or SortComponents
+            Iterate over the components in a specified sorted order
+
+        dedup: _DeduplicateInfo
+            Deduplicator to prevent returning the same _ComponentData twice
         """
         if SortComponents.sort_indices(sort):
             # We need the indices so that we can correctly sort.  Fall
@@ -1592,7 +1636,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                            sort=False,
                            descend_into=True,
                            descent_order=None):
-        """Generator returning this block and an any matching sub-blocks.
+        """Generator returning this block and any matching sub-blocks.
 
         This is roughly equivalent to
 
@@ -1604,9 +1648,26 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         Notes
         -----
         The `self` block is *always* returned, regardless of the types
-        indicated by descend_into.
+        indicated by `descend_into`.
 
-        The active flag is enforced on *all* blocks, inclufing self.
+        The active flag is enforced on *all* blocks, including `self`.
+
+        Parameters
+        ----------
+        active: None or bool
+            If not None, filter components by the active flag
+
+        sort: None or bool or SortComponents
+            Iterate over the components in a specified sorted order
+
+        descend_into:  None or type or iterable
+            Specifies the component types (`ctypes`) to return and to
+            descend into.  If `True` or `None`, defaults to `(Block,)`.
+            If `False`, only `self` is returned.
+
+        descent_order: None or TraversalStrategy
+            The stratecy used to walk the block hierarchy.  Defaults to
+            `TraversalStrategy.PrefixDepthFirstSearch`.
 
         """
         # TODO: we should determine if that is desirable behavior(it is
