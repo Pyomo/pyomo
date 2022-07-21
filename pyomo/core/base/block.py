@@ -1666,7 +1666,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             If `False`, only `self` is returned.
 
         descent_order: None or TraversalStrategy
-            The stratecy used to walk the block hierarchy.  Defaults to
+            The strategy used to walk the block hierarchy.  Defaults to
             `TraversalStrategy.PrefixDepthFirstSearch`.
 
         """
