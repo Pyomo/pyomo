@@ -450,8 +450,13 @@ def fix_dual_bound(solve_data, config, last_iter_cuts):
             mainopt._solver_model.set_error_stream(None)
         mip_args = dict(config.mip_solver_args)
         set_solver_options(mainopt, solve_data, config, solver_type='mip')
-        main_mip_results = mainopt.solve(
-            solve_data.mip, tee=config.mip_solver_tee, **mip_args)
+        main_mip_results = mainopt.solve(solve_data.mip, 
+                                         tee=config.mip_solver_tee, 
+                                         load_solutions=False,
+                                         **mip_args)
+        if len(main_mip_results.solution) > 0:
+            solve_data.mip.solutions.load_from(main_mip_results)
+
         if main_mip_results.solver.termination_condition is tc.infeasible:
             config.logger.info(
                 'Bound fix failed. The bound fix problem is infeasible')

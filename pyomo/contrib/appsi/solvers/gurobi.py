@@ -724,6 +724,12 @@ class Gurobi(PersistentBase, PersistentSolver):
                                               mutable_linear_coefficients,
                                               mutable_quadratic_coefficients)
         self._mutable_objective = mutable_objective
+
+        # These two lines are needed as a workaround
+        # see PR #2454
+        self._solver_model.setObjective(0)
+        self._solver_model.update()
+
         self._solver_model.setObjective(gurobi_expr + value(repn_constant), sense=sense)
         self._needs_updated = True
 
