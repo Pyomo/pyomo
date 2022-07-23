@@ -143,11 +143,11 @@ def validate_arg_type(
 
 def is_ragged(arr, arr_types=None):
     """
-    Determine whether an array-like (such as a list or ndarray)
+    Determine whether an array-like (such as a list or Numpy ndarray)
     is ragged.
 
-    NOTE: if ndarrays are considered are considered arr types,
-    we do not consider zero-dimensional arrays to be as such.
+    NOTE: if Numpy ndarrays are considered to be arr types,
+    then zero-dimensional arrays are not considered to be as such.
     """
     arr_types = (list, np.ndarray, tuple) if arr_types is None else arr_types
 
