@@ -37,7 +37,7 @@ Classes
     A discrete set of finitely many points.
 
 ``FactorModelSet``
-    A factor model set (or alpha model set).
+    A factor model set (or net-alpha model set).
 
 ``IntersectionSet``
     An intersection of two or more sets, each represented by an
@@ -228,27 +228,16 @@ class Geometry(Enum):
 class UncertaintySet(object, metaclass=abc.ABCMeta):
     """
     An object representing an uncertainty set for a two-stage robust
-    optimization model. Along with with a `ConcreteModel` object
+    optimization model. Along with a `ConcreteModel` object
     representing the corresponding deterministic model formulation, the
     uncertainty set object may be passed to the PyROS solver to obtain a
     robust model solution.
 
     An `UncertaintySet` object should be viewed as merely a container
     for data needed to parameterize the set it represents, such that the
-    object's attributes attributes do not, in general, reference the
-    components of a modeling object.
-
-    Parameters
-    ----------
-    **kwargs :
-        Data structures used for constructing the set attributes.
+    object's attributes do not, in general, reference the
+    components of a Pyomo modeling object.
     """
-
-    def __init__(self, **kwargs):
-        """Initialize self (see class docstring).
-
-        """
-        return
 
     @property
     @abc.abstractmethod
@@ -294,11 +283,14 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
         Notes
         -----
-        This check is carried out by solving a sequence of optimization
-        models (in which the objectives are the uncertain parameters),
-        and is invoked during the validation step of a PyROS solver
-        call. If any of the optimization models cannot be solved
-        successfully to optimality, then False is returned.
+        This check is carried out by solving a sequence of maximization
+        and minimization problems (in which the objective for each
+        problem is the value of a single uncertain parameter). If any of
+        the optimization models cannot be solved successfully to
+        optimality, then False is returned.
+
+        This method is invoked during the validation step of a PyROS
+        solver call.
         """
         # === Determine bounds on all uncertain params
         bounding_model = ConcreteModel()
@@ -406,10 +398,11 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
     @staticmethod
     def add_bounds_on_uncertain_parameters(**kwargs):
         """
-        Specify the numerical bounds for each of a sequence of uncertain
-        parameters, represented by Pyomo `Var` objects, in a modeling
-        object. The numerical bounds are specified through the `.lb()`
-        and `.ub()` attributes of the `Var` objects.
+        Specify the numerical bounds for the uncertain parameters
+        restricted by the set. Each uncertain parameter is represented
+        by a Pyomo `Var` object in a model passed to this method,
+        and the numerical bounds are specified by setting the
+        `.lb()` and `.ub()` attributes of the `Var` object.
 
         Parameters
         ----------
@@ -440,8 +433,7 @@ class BoxSet(UncertaintySet):
     ----------
     bounds : (N, 2) array_like
         Lower and upper bounds for each uncertain parameter (i.e. each
-        dimension of the set).  The order of the dimensions corresponds
-        to the order of the uncertain parameters of interest.
+        dimension of the set).
 
     Attributes
     ----------
@@ -450,20 +442,6 @@ class BoxSet(UncertaintySet):
         dimensions.
     type : str
         Brief descriptor of the type of the uncertainty set.
-
-    Examples
-    --------
-    1-D box set (interval):
-    >>> interval = BoxSet(bounds=[(1, 2)])
-    >>> box_set.bounds
-    [(1, 2)]
-
-    2-D box set with bounds specified by Numpy array:
-    >>> import numpy as np
-    >>> box_set = BoxSet(bounds=np.array([[1, 2], [3, 4]]))
-    >>> box_set.bounds
-    array([[1, 2],
-           [3, 4]])
     """
 
     def __init__(self, bounds):
@@ -565,8 +543,8 @@ class CardinalitySet(UncertaintySet):
     origin : (N,) array_like
         Origin of the set (e.g. nominal parameter values).
     positive_deviation : (N,) array_like
-        Maximal deviations in each dimension (i.e. for each
-        uncertain parameter).
+        Maximal deviation in each dimension (i.e. for the value
+        of each uncertain parameter).
     gamma : numeric type
         Scalar which provides an upper bound for the number
         of uncertain parameters which may maximally deviate
@@ -593,17 +571,6 @@ class CardinalitySet(UncertaintySet):
         are [origin, origin + max deviation] in each dimension.
     type : str
         Brief descriptor of the type of the uncertainty set.
-
-    Examples
-    --------
-    3-D cardinality set:
-    >>> gamma_set = CardinalitySet([0, 0, 0], [1.0, 2.0, 1.5], 1)
-    >>> gamma_set.origin
-    [0, 0, 0]
-    >>> gamma_set.positive_deviation
-    [1.0, 2.0, 1.5]
-    >>> gamma_set.gamma
-    1
     """
 
     def __init__(self, origin, positive_deviation, gamma):
@@ -760,7 +727,7 @@ class PolyhedralSet(UncertaintySet):
     lhs_coefficients_mat : (M, N) array_like
         Left-hand side coefficients for the linear
         inequality constraints defining the polyhedral set.
-    rhs_vec : (N,) array_like
+    rhs_vec : (M,) array_like
         Right-hand side values for the linear inequality
         constraints defining the polyhedral set.
 
@@ -769,7 +736,7 @@ class PolyhedralSet(UncertaintySet):
     coefficients_mat : (M, N) array_like
         Left-hand side coefficients for the linear
         inequality constraints defining the polyhedral set.
-    rhs_vec : (N,) array_like
+    rhs_vec : (M,) array_like
         Right-hand side values for the linear inequality
         constraints defining the polyhedral set.
         The polyedral set is the set of points ``q`` satisfying
@@ -938,7 +905,6 @@ class PolyhedralSet(UncertaintySet):
         subproblem.
         """
         add_bounds_for_uncertain_parameters(model=model, config=config)
-        return
 
 
 class BudgetSet(PolyhedralSet):
@@ -1148,7 +1114,7 @@ class FactorModelSet(UncertaintySet):
         factors will be above 0 as there will be below 0
         (i.e., "zero-net-alpha" model). Setting 'beta = 1'
         produces the hyper-rectangle
-        [origin - psi e, origin + psi e],
+        [origin - psi @ e, origin + psi @ e],
         where 'e' is a vector of ones.
 
     Attributes
@@ -1384,18 +1350,14 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
     center : (N,) array_like
         Center of the ellipsoid.
     half_lengths : (N,) aray_like
-        Semi-axis lengths of the ellipsoid. Each value
-        specifies the maximal deviation of its corresponding
-        uncertain parameter from the central point.
+        Semi-axis lengths of the ellipsoid.
 
     Attributes
     ----------
     center : (N,) array_like
         Center of the ellipsoid.
     half_lengths : (N,) aray_like
-        Semi-axis lengths of the ellipsoid. Each value
-        specifies the maximal deviation of its corresponding
-        uncertain parameter from the central point.
+        Semi-axis lengths of the ellipsoid.
     type : str
         Brief descriptor for the type of the uncertainty set.
     """
@@ -2024,7 +1986,9 @@ class IntersectionSet(UncertaintySet):
         Returns
         -------
         : DiscreteScenarioSet or IntersectionSet
-            Intersection of the sets.
+            Intersection of the sets. A `DiscreteScenarioSet` is
+            returned if both operand sets are `DiscreteScenarioSet`
+            instances; otherwise, an `IntersectionSet` is returned.
         """
         constraints = ConstraintList()
         constraints.construct()
