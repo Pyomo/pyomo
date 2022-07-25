@@ -1377,6 +1377,7 @@ class AMPLRepn(object):
             nl, nl_args = self.nl
             visitor.used_named_expressions.update(nl_args)
             for _named_expr_id in nl_args:
+                # Record that the named expression was used
                 info = visitor.subexpression_cache[_named_expr_id][2]
                 _idx = visitor.active_expression_source[0]
                 if info[_idx] is None:
@@ -2009,8 +2010,21 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def finalizeResult(self, result):
         ans = node_result_to_amplrepn(result)
-        if ans.nl:
+        # If this was a nonlinear named expression, and that expression
+        # has no linear portion, then we will directly use this as a
+        # named expression.  We need to mark that the expression was
+        # used and return it as a simple nonlinear expression pointing
+        # to this named expression.  In all other cases, we will return
+        # the processed representation (which will reference the
+        # nonlinear-only named subexpression - if it exists - but not
+        # this outer named expression).  This prevents accidentally
+        # recharacterizing variables that only appear linearly as
+        # nonlinear variables.
+        if ans.nl and ans.nonlinear and not ans.linear:
+            ans.linear = None
+            ans.nonlinear = ans.nl
             self.used_named_expressions.update(ans.nl[1])
+            # Record that this named expression was used
             for _named_expr_id in ans.nl[1]:
                 info = self.subexpression_cache[_named_expr_id][2]
                 _idx = self.active_expression_source[0]
@@ -2018,10 +2032,8 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                     info[_idx] = self.active_expression_source[1]
                 elif info[_idx] != self.active_expression_source[1]:
                     info[_idx] = 0
-            ans.const = 0
-            ans.linear = None
-            ans.nonlinear = ans.nl
-            ans.nl = None
+        ans.nl = None
+
         if ans.nonlinear.__class__ is list:
             if ans.nonlinear:
                 ans.compile_nonlinear_fragment(self.template)
