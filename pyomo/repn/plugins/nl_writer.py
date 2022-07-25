@@ -501,17 +501,21 @@ class _NLWriter_impl(object):
                 timer.toc('Constraint %s', con_comp, level=logging.DEBUG)
 
         if self.config.row_order:
+            # Note: this relies on two things: 1) dict are ordered, and
+            # 2) updating an entry in a dict does not change its
+            # ordering.
             row_order = {}
             for con in self.config.row_order:
                 if con.is_indexed():
                     for c in con.values():
-                        row_order[id(c)] = _c
+                        row_order[id(c)] = c
                 else:
-                    row_order[id(con)] = _c
+                    row_order[id(con)] = con
             for c in constraints:
-                row_order[id(c)] = _c
+                row_order[id(c)] = c
             for c in linear_cons:
-                row_order[id(c)] = _c
+                row_order[id(c)] = c
+            # map the implicit dict ordering to an explicit 0..n ordering
             row_order = {_id: i for i, _id in enumerate(row_order.keys())}
             constraints.sort(key=itemgetter(row_order))
             linear_cons.sort(key=itemgetter(row_order))
