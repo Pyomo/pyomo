@@ -947,18 +947,19 @@ class _NLWriter_impl(object):
         for _id in self.subexpression_order:
             if _id not in self.used_named_expressions:
                 continue
-            cache = self.subexpression_cache[_id]
-            if cache[2][2]:
+            cache_info = self.subexpression_cache[_id][2]
+            if cache_info[2]:
                 # substitute expression directly into expression trees
                 # and do NOT emit the V line
-                pass
-            elif 0 in cache[2] or None not in cache[2]:
+                continue
+            elif 0 in cache_info[:2] or None not in cache_info[:2]:
                 self._write_v_line(_id, 0)
             else:
-                target_expr = tuple(filter(None, cache[2]))[0]
+                target_expr = tuple(filter(None, cache_info))[0]
                 if target_expr not in single_use_subexpressions:
                     single_use_subexpressions[target_expr] = []
                 single_use_subexpressions[target_expr].append(_id)
+
         #
         # "C" lines (constraints: nonlinear expression)
         #
