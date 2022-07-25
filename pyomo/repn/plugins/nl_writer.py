@@ -1887,6 +1887,9 @@ def _before_monomial(visitor, child):
         # else:
         #     arg1 = visitor.value_cache[_id] = arg1()
         arg1 = arg1()
+    # Trap multiplication by 0
+    if not arg1:
+        return False, (_CONSTANT, 0)
     _id = id(arg2)
     if _id not in visitor.var_map:
         if arg2.fixed:
@@ -1904,7 +1907,9 @@ def _before_linear(visitor, child):
     for v, c in zip(child.linear_vars, child.linear_coefs):
         if c.__class__ not in native_types:
             c = c()
-        if v.fixed:
+        if not c:
+            continue
+        elif v.fixed:
             const += c * v()
         else:
             _id = id(v)
