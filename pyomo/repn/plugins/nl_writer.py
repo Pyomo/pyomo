@@ -1269,9 +1269,11 @@ class _NLWriter_impl(object):
                         # a different id.  If we need to update the
                         # flag, then do so and recurse into it
                         target = cache[subid][2]
-                        if (target[idx] is None
-                            or (target[idx] and target[idx] != src_id)):
+                        if target[idx] is None:
                             target[idx] = src_id
+                            queue.append(subid)
+                        elif target[idx] and target[idx] != src_id:
+                            target[idx] = 0
                             queue.append(subid)
         # Now we can reliably know where nested subexpressions are used.
         # Group them into:
