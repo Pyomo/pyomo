@@ -881,7 +881,7 @@ class _NLWriter_impl(object):
         ostream.write(
             " %d %d \t# nonzeros in Jacobian, obj. gradient\n"
             % ( sum(con_nnz_by_var.values()),
-                len(obj_vars),
+                sum(obj_nnz_by_var.values()),
             ))
         #
         # LINE 9
