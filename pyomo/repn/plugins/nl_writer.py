@@ -1323,7 +1323,11 @@ class _NLWriter_impl(object):
         else:
             lbl = ''
         self.var_id_to_nl[expr_id] = f"{self.next_V_line_id}{lbl}"
-        linear = info[1].linear
+        # Do NOT write out 0 coeffficients here: doing so fouls up the
+        # ASL's logic for calculating derivatives, leading to 'nan' in
+        # the Hessian results.
+        linear = dict(item for item in info[1].linear.items() if item[1])
+        #
         ostream.write(f'V{self.next_V_line_id} {len(linear)} {k}{lbl}\n')
         for _id in sorted(linear, key=column_order.__getitem__):
             ostream.write(f'{column_order[_id]} {linear[_id]!r}\n')
