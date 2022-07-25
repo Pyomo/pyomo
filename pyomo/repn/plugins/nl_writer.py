@@ -843,9 +843,9 @@ class _NLWriter_impl(object):
         #
         # This is used to allocate arrays, so the _n_obj_vars needs to
         # include the constraint vars (because they appear between the
-        # shared and object0ve-only vars in the standard variable
+        # shared and objective-only vars in the standard variable
         # ordering).  If there are no objective-only variables, then the
-        # vector needs only hold the shared variables.
+        # vector only needs to hold the shared variables.
         _n_obj_vars = _n_con_vars + len(obj_vars_nonlinear) - _n_both_vars
         if _n_obj_vars == _n_con_vars:
             _n_obj_vars = _n_both_vars
@@ -1446,6 +1446,9 @@ class AMPLRepn(object):
         custom callback)
 
         """
+        # Note that self.mult will always be 1 (we only call apend()
+        # within a sum, so there is no opportunity for self.mult to
+        # change)
         #assert self.mult == 1
         _type = other[0]
         if _type is _MONOMIAL:
