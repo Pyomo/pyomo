@@ -13,7 +13,7 @@ import logging
 import os
 import sys
 from collections import deque
-from operator import itemgetter, attrgetter
+from operator import itemgetter, attrgetter, setitem
 
 from pyomo.common.backports import nullcontext
 from pyomo.common.config import ConfigBlock, ConfigValue, InEnum
@@ -1365,6 +1365,13 @@ class AMPLRepn(object):
         if self.nl is not None:
             nl, nl_args = self.nl
             visitor.used_named_expressions.update(nl_args)
+            for _named_expr_id in nl_args:
+                info = visitor.subexpression_cache[_named_expr_id][2]
+                _idx = visitor.active_expression_source[0]
+                if info[_idx] is None:
+                    info[_idx] = visitor.active_expression_source[1]
+                elif info[_idx] != visitor.active_expression_source[1]:
+                    info[_idx] = 0
             if prefix:
                 nl = prefix + nl
             if args is not None and args is not nl_args:
@@ -1671,7 +1678,7 @@ def handle_named_expression_node(visitor, node, arg1):
     # A local copy of the expression source list.  This will be updated
     # later if the same Expression node is encountered in another
     # expression tree.
-    expression_source = list(visitor.active_expression_source)
+    expression_source = [None, None, False]
 
     if repn.nonlinear:
         # As we will eventually need the compiled form of any nonlinear
@@ -1696,8 +1703,9 @@ def handle_named_expression_node(visitor, node, arg1):
             sub_repn = AMPLRepn(0, None, repn.nonlinear)
             sub_repn.nl = (visitor.template.var, (sub_id,))
             # See below for the meaning of this tuple
+            nl_info = list(expression_source)
             visitor.subexpression_cache[sub_id] = (
-                sub_node, sub_repn, list(expression_source),
+                sub_node, sub_repn, nl_info,
             )
             repn.nonlinear = sub_repn.nl
             # It is important that the NL subexpression comes before the
@@ -1705,6 +1713,11 @@ def handle_named_expression_node(visitor, node, arg1):
             visitor.subexpression_order.append(sub_id)
             # The nonlinear identifier is *always* used
             visitor.used_named_expressions.add(sub_id)
+        else:
+            nl_info = expression_source
+        # The nonlinear component of this named expression is
+        # guaranteed to be used by this expression
+        setitem(nl_info, *visitor.active_expression_source)
     else:
         repn.nonlinear = None
         if repn.linear:
@@ -1743,9 +1756,9 @@ def handle_named_expression_node(visitor, node, arg1):
         repn,
         # 2: the (single) component that uses this subexpression.  This
         # is a 3-tuple [con_id, obj_id, substitute_expression].  If the
-        # expression is used by 1 constraint / objective, then the id is
-        # set to 0.  If it is not used by any, then it is None.
-        # substitue_expression is a bool indicating if this named
+        # expression is used by more than 1 constraint / objective, then
+        # the id is set to 0.  If it is not used by any, then it is
+        # None.  substitue_expression is a bool indicating if this named
         # subexpression tree should be directly substituted into any
         # expression tree that references this node (i.e., do NOT emit
         # the V line).
@@ -1759,7 +1772,7 @@ def handle_named_expression_node(visitor, node, arg1):
 def handle_external_function_node(visitor, node, *args):
     func = node._fcn._function
     # There is a special case for external functions: these are the only
-    # expressions thatncan accept string arguments. As we currently pass
+    # expressions that can accept string arguments. As we currently pass
     # these as 'precompiled' general NL fragments, the normal trap for
     # constant subexpressions will miss constant external function calls
     # that contain strings.  We will catch that case here.
@@ -1889,7 +1902,6 @@ def _before_named_expression(visitor, child):
     _id = id(child)
     if _id in visitor.subexpression_cache:
         obj, repn, info = visitor.subexpression_cache[_id]
-        info[visitor.active_expression_source_idx] = 0
         ans = AMPLRepn(repn.const, repn.linear, repn.nonlinear)
         ans.nl = repn.nl
         return False, (_GENERAL, ans)
@@ -1943,9 +1955,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def initializeWalker(self, expr):
         expr, src, src_idx = expr
-        self.active_expression_source = [None, None, False]
-        self.active_expression_source[src_idx] = id(src)
-        self.active_expression_source_idx = src_idx
+        self.active_expression_source = (src_idx, id(src))
         walk, result = self.beforeChild(None, expr, 0)
         if not walk:
             return False, self.finalizeResult(result)
@@ -1987,6 +1997,13 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         ans = node_result_to_amplrepn(result)
         if ans.nl:
             self.used_named_expressions.update(ans.nl[1])
+            for _named_expr_id in ans.nl[1]:
+                info = self.subexpression_cache[_named_expr_id][2]
+                _idx = self.active_expression_source[0]
+                if info[_idx] is None:
+                    info[_idx] = self.active_expression_source[1]
+                elif info[_idx] != self.active_expression_source[1]:
+                    info[_idx] = 0
             ans.const = 0
             ans.linear = None
             ans.nonlinear = ans.nl
