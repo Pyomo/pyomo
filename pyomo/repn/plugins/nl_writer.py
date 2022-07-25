@@ -980,7 +980,7 @@ class _NLWriter_impl(object):
                 break
             if single_use_subexpressions:
                 for _id in single_use_subexpressions.get(id(info[0]), ()):
-                    self._write_v_line(_id, row_idx)
+                    self._write_v_line(_id, row_idx + 1)
             ostream.write(f'C{row_idx}{row_comments[row_idx]}\n')
             self._write_nl_expression(info[1], False)
 
@@ -988,8 +988,12 @@ class _NLWriter_impl(object):
         # "O" lines (objectives: nonlinear expression)
         #
         for obj_idx, info in enumerate(objectives):
-            for _id in single_use_subexpressions.get(id(info[0]), ()):
-                self._write_v_line(_id, n_cons + n_lcons + obj_idx)
+            if single_use_subexpressions:
+                for _id in single_use_subexpressions.get(id(info[0]), ()):
+                    # Note that "Writing .nl files" (2005) is incorrectly
+                    # missing the "+ 1" in the description of V lines
+                    # appearing in only Objectives (bottom of page 9).
+                    self._write_v_line(_id, n_cons + n_lcons + obj_idx + 1)
             lbl = row_comments[n_cons + obj_idx]
             sense = 0 if info[0].sense == minimize else 1
             ostream.write(f'O{obj_idx} {sense}{lbl}\n')
