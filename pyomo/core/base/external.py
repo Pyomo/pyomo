@@ -13,7 +13,7 @@ import logging
 import os
 import types
 import weakref
-from typing import overload
+from pyomo.common.pyomo_typing import overload
 
 from ctypes import (
     Structure, POINTER, CFUNCTYPE, cdll, byref,
