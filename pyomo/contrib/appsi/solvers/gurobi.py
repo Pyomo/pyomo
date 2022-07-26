@@ -205,8 +205,8 @@ class Gurobi(PersistentBase, PersistentSolver):
     """
     _available = None
 
-    def __init__(self):
-        super(Gurobi, self).__init__()
+    def __init__(self, only_child_vars=True):
+        super(Gurobi, self).__init__(only_child_vars=only_child_vars)
         self._config = GurobiConfig()
         self._solver_options = dict()
         self._solver_model = None
@@ -425,7 +425,7 @@ class Gurobi(PersistentBase, PersistentSolver):
         saved_config = self.config
         saved_options = self.gurobi_options
         saved_update_config = self.update_config
-        self.__init__()
+        self.__init__(only_child_vars=self._only_child_vars)
         self.config = saved_config
         self.gurobi_options = saved_options
         self.update_config = saved_update_config

@@ -125,7 +125,9 @@ class MindtPySolver(object):
         }), preserve_implicit=True)  # TODO: do we need to set preserve_implicit=True?
         config.set_value(kwds)
         set_up_logger(config)
-        check_config(config)
+        new_logging_level = logging.INFO if config.tee else None
+        with lower_logger_level_to(config.logger, new_logging_level):
+            check_config(config)
 
         solve_data = set_up_solve_data(model, config)
 
@@ -133,7 +135,6 @@ class MindtPySolver(object):
             TransformationFactory('contrib.integer_to_binary'). \
                 apply_to(solve_data.working_model)
 
-        new_logging_level = logging.INFO if config.tee else None
         with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 lower_logger_level_to(config.logger, new_logging_level), \
                 create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
