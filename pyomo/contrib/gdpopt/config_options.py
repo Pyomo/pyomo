@@ -13,7 +13,8 @@ from pyomo.common.config import (ConfigBlock, ConfigList, ConfigValue,
                                  In, NonNegativeFloat, NonNegativeInt,
                                  PositiveInt)
 from pyomo.common.deprecation import deprecation_warning
-from pyomo.contrib.gdpopt.main_problem_initialize import valid_init_strategies
+from pyomo.contrib.gdpopt.principal_problem_initialize import (
+    valid_init_strategies)
 from pyomo.contrib.gdpopt.nlp_initialization import (
     restore_vars_to_original_values)
 from pyomo.contrib.gdpopt.util import a_logger, _DoNothing
@@ -83,7 +84,7 @@ def _add_oa_configs(CONFIG):
         description="Initialization algorithm to use.",
         doc="""
         Selects the initialization algorithm to use when generating
-        the initial cuts to construct the main problem."""
+        the initial cuts to construct the principal problem."""
     ))
     CONFIG.declare("custom_init_disjuncts", ConfigList(
         # domain=ComponentSets of Disjuncts,
@@ -104,32 +105,32 @@ def _add_oa_configs(CONFIG):
         default=8, domain=NonNegativeInt,
         description="Limit on the number of set covering iterations."
     ))
-    CONFIG.declare("main_problem_transformation", ConfigValue(
+    CONFIG.declare("principal_problem_transformation", ConfigValue(
         default='gdp.bigm',
         description="""
         Name of the transformation to use to transform the
-        main problem from a GDP to an algebraic model."""
+        principal problem from a GDP to an algebraic model."""
     ))
-    CONFIG.declare("call_before_main_problem_solve", ConfigValue(
+    CONFIG.declare("call_before_principal_problem_solve", ConfigValue(
         default=_DoNothing,
-        description="callback hook before calling the main problem solver",
+        description="callback hook before calling the principal problem solver",
         doc="""
-        Callback called right before the MILP main problem is solved.
-        Takes three arguments: The solver object, the main problem, and the
-        GDPopt utility block on the main problem.
+        Callback called right before the MILP principal problem is solved.
+        Takes three arguments: The solver object, the principal problem, and the
+        GDPopt utility block on the principal problem.
 
         Note that unless you are *very* confident in what you are doing, the
         problem should not be modified in this callback: it should be used
         to interrogate the problem only.
         """
     ))
-    CONFIG.declare("call_after_main_problem_solve", ConfigValue(
+    CONFIG.declare("call_after_principal_problem_solve", ConfigValue(
         default=_DoNothing,
-        description="callback hook after a solution of the main problem",
+        description="callback hook after a solution of the principal problem",
         doc="""
-        Callback called right after the MILP main problem is solved.
-        Takes three arguments: The solver object, the main problem, and the
-        GDPopt utility block on the main problem.
+        Callback called right after the MILP principal problem is solved.
+        Takes three arguments: The solver object, the principal problem, and the
+        GDPopt utility block on the principal problem.
 
         Note that unless you are *very* confident in what you are doing, the
         problem should not be modified in this callback: it should be used
@@ -138,11 +139,13 @@ def _add_oa_configs(CONFIG):
     ))
     CONFIG.declare("call_before_master_solve", ConfigValue(
         default=_DoNothing,
-        description="DEPRECATED: Please use 'call_before_main_problem_solve",
+        description="DEPRECATED: Please use "
+        "'call_before_principal_problem_solve",
     ))
     CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing,
-        description="DEPRECATED: Please use 'call_after_main_problem_solve",
+        description="DEPRECATED: Please use "
+        "'call_after_principal_problem_solve",
     ))
     CONFIG.declare("subproblem_initialization_method", ConfigValue(
         default=restore_vars_to_original_values, # Historical default
@@ -151,13 +154,13 @@ def _add_oa_configs(CONFIG):
         (MI)NLP subproblems.""",
         doc="""
         Callback to specify custom routines for initializing the (MI)NLP
-        subproblems. This method is called after the main problem solution
+        subproblems. This method is called after the principal problem solution
         is fixed in the subproblem and before the subproblem is solved (or
         pre-solved).
 
         Accepts three arguments: the solver object, the subproblem GDPopt
-        utility block and the main problem GDPopt utility block. The main
-        problem contains the most recent main-problem solution.
+        utility block and the principal problem GDPopt utility block. The
+        principal problem contains the most recent principal-problem solution.
 
         The return of this method will be unused: The method should directly
         set the value of the variables on the subproblem

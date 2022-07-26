@@ -11,15 +11,16 @@
 
 from math import fabs
 from pyomo.contrib.gdpopt.solve_subproblem import solve_subproblem
-from pyomo.contrib.gdpopt.util import fix_main_problem_solution_in_subproblem
+from pyomo.contrib.gdpopt.util import (
+    fix_principal_problem_solution_in_subproblem)
 from pyomo.core import value
 from pyomo.opt import TerminationCondition as tc
 
 class _OAAlgorithmMixIn(object):
-    def _fix_main_problem_soln_solve_subproblem_and_add_cuts(
-            self, main_prob_util_block, subprob_util_block, config):
-        with fix_main_problem_solution_in_subproblem(
-                main_prob_util_block, subprob_util_block, self, config,
+    def _fix_principal_soln_solve_subproblem_and_add_cuts(
+            self, principal_prob_util_block, subprob_util_block, config):
+        with fix_principal_problem_solution_in_subproblem(
+                principal_prob_util_block, subprob_util_block, self, config,
                 config.force_subproblem_nlp):
             nlp_termination = solve_subproblem(subprob_util_block, self,
                                                config)
@@ -29,22 +30,22 @@ class _OAAlgorithmMixIn(object):
                     logger=config.logger)
                 if primal_improved:
                     self.update_incumbent(subprob_util_block)
-                self._add_cuts_to_main_problem(subprob_util_block,
-                                               main_prob_util_block,
-                                               self.objective_sense, config,
-                                               self.timing)
+                self._add_cuts_to_principal_problem(subprob_util_block,
+                                                    principal_prob_util_block,
+                                                    self.objective_sense,
+                                                    config, self.timing)
             elif nlp_termination == tc.unbounded:
                 # the whole problem is unbounded, we can stop
                 self._update_primal_bound_to_unbounded()
 
         return nlp_termination not in {tc.infeasible, tc.unbounded}
 
-    # Utility used in cut_generation: We saved a map of Disjuncts to the
-    # active constraints they contain on the main problem util_block, and use
-    # it here to find the active constraints under the current discrete
+    # Utility used in cut_generation: We saved a map of Disjuncts to the active
+    # constraints they contain on the principal problem util_block, and use it
+    # here to find the active constraints under the current discrete
     # solution. Note that this preprocesses not just to be efficient, but
     # because everything on the Disjuncts is deactivated at this point, since
-    # we've already transformed the main problem to a MILP
+    # we've already transformed the principal problem to a MILP
     def _get_active_untransformed_constraints(self, util_block, config):
         """Yield constraints in disjuncts where the indicator value is set or
         fixed to True."""

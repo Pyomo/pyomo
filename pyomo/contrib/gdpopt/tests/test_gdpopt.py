@@ -29,8 +29,8 @@ from pyomo.contrib.gdpopt.create_oa_subproblems import (
 import pyomo.contrib.gdpopt.tests.common_tests as ct
 from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
-from pyomo.contrib.gdpopt.solve_main_problem import (
-    solve_MILP_main_problem, distinguish_mip_infeasible_or_unbounded)
+from pyomo.contrib.gdpopt.solve_principal_problem import (
+    solve_MILP_principal_problem, distinguish_mip_infeasible_or_unbounded)
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.environ import (
     Block, ConcreteModel, Constraint, Integers, LogicalConstraint, maximize,
@@ -58,7 +58,7 @@ class TestGDPoptUnit(unittest.TestCase):
 
     @unittest.skipUnless(SolverFactory(mip_solver).available(),
                          "MIP solver not available")
-    def test_solve_main_problem_unbounded(self):
+    def test_solve_principal_problem_unbounded(self):
         m = ConcreteModel()
         m.GDPopt_utils = Block()
         m.x = Var(bounds=(-1, 10))
@@ -78,11 +78,11 @@ class TestGDPoptUnit(unittest.TestCase):
             dummy = Block()
             dummy.timing = Bunch()
             with time_code(dummy.timing, 'main', is_main_timer=True):
-                tc = solve_MILP_main_problem(
+                tc = solve_MILP_principal_problem(
                     m.GDPopt_utils,
                     dummy,
                     solver.CONFIG(dict(mip_solver=mip_solver)))
-            self.assertIn("Main problem was unbounded. Re-solving with "
+            self.assertIn("Principal problem was unbounded. Re-solving with "
                           "arbitrary bound values", output.getvalue().strip())
         self.assertIs(tc, TerminationCondition.unbounded)
 
@@ -487,8 +487,8 @@ class TestGDPopt(unittest.TestCase):
 
     def test_some_vars_only_in_subproblem(self):
         # Even variables that only appear in nonlinear constraints will be
-        # introduced to the main problem via the cuts, so we check that that
-        # works out.
+        # introduced to the principal problem via the cuts, so we check that
+        # that works out.
         m = self.make_convex_circle_and_circle_slice_disjunction()
 
         results = SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
@@ -875,9 +875,9 @@ class TestGDPopt(unittest.TestCase):
         ]
 
         def assert_correct_disjuncts_active(solver, subprob_util_block,
-                                            main_problem_util_block):
+                                            principal_problem_util_block):
             iteration = solver.initialization_iteration
-            main_problem = main_problem_util_block.model()
+            principal_problem = principal_problem_util_block.model()
             subprob = subprob_util_block.model()
             if iteration >= 2:
                 return  # only checking initialization
@@ -886,15 +886,16 @@ class TestGDPopt(unittest.TestCase):
             for orig_disj in disjs_should_be_active:
                 parent_nm = orig_disj.parent_component().name
                 idx = orig_disj.index()
-                # Find the corresponding components on the main problem and
+                # Find the corresponding components on the principal problem and
                 # subproblem
-                main_problem_parent = main_problem.component(parent_nm)
+                principal_problem_parent = principal_problem.component(
+                    parent_nm)
                 subprob_parent = subprob.component(parent_nm)
-                self.assertIsInstance(main_problem_parent, Disjunct)
+                self.assertIsInstance(principal_problem_parent, Disjunct)
                 self.assertIsInstance(subprob_parent, Block)
-                main_problem_disj = main_problem_parent[idx]
+                principal_problem_disj = principal_problem_parent[idx]
                 subprob_disj = subprob_parent[idx]
-                self.assertTrue(value(main_problem_disj.indicator_var))
+                self.assertTrue(value(principal_problem_disj.indicator_var))
                 self.assertTrue(subprob_disj.active)
                 seen.add(subprob_disj)
             # check that all the others are inactive (False)
@@ -1164,11 +1165,11 @@ class TestGDPoptRIC(unittest.TestCase):
         ]
 
         def assert_correct_disjuncts_active(solver, subprob_util_block,
-                                            main_problem_util_block):
+                                            principal_problem_util_block):
             # I can get the iteration based on the number of no-good
             # cuts in this case...
             iteration = solver.initialization_iteration
-            main_problem = main_problem_util_block.model()
+            principal_problem = principal_problem_util_block.model()
             subprob = subprob_util_block.model()
             if iteration >= 2:
                 return  # only checking initialization
@@ -1177,15 +1178,16 @@ class TestGDPoptRIC(unittest.TestCase):
             for orig_disj in disjs_should_be_active:
                 parent_nm = orig_disj.parent_component().name
                 idx = orig_disj.index()
-                # Find the corresponding components on the main_problem and
+                # Find the corresponding components on the principal problem and
                 # subproblem
-                main_problem_parent = main_problem.component(parent_nm)
+                principal_problem_parent = principal_problem.component(
+                    parent_nm)
                 subprob_parent = subprob.component(parent_nm)
-                self.assertIsInstance(main_problem_parent, Disjunct)
+                self.assertIsInstance(principal_problem_parent, Disjunct)
                 self.assertIsInstance(subprob_parent, Block)
-                main_problem_disj = main_problem_parent[idx]
+                principal_problem_disj = principal_problem_parent[idx]
                 subprob_disj = subprob_parent[idx]
-                self.assertTrue(value(main_problem_disj.indicator_var))
+                self.assertTrue(value(principal_problem_disj.indicator_var))
                 self.assertTrue(subprob_disj.active)
                 seen.add(subprob_disj)
             # check that all the others are inactive (False)

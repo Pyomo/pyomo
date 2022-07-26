@@ -95,46 +95,46 @@ def solve_continuous_problem(m, config):
 
 def move_nonlinear_objective_to_constraints(util_block, logger):
     m = util_block.model()
-    main_obj = next(m.component_data_objects(Objective, descend_into=True,
-                                             active=True))
+    principal_obj = next(m.component_data_objects(Objective, descend_into=True,
+                                                  active=True))
 
     # Move the objective to the constraints if it is nonlinear
-    if main_obj.expr.polynomial_degree() not in (1, 0):
+    if principal_obj.expr.polynomial_degree() not in (1, 0):
         logger.info("Objective is nonlinear. Moving it to constraint set.")
 
         util_block.objective_value = Var(domain=Reals, initialize=0)
         if mcpp_available():
-            mc_obj = McCormick(main_obj.expr)
+            mc_obj = McCormick(principal_obj.expr)
             util_block.objective_value.setub(mc_obj.upper())
             util_block.objective_value.setlb(mc_obj.lower())
         else:
             # Use Pyomo's contrib.fbbt package
-            lb, ub = compute_bounds_on_expr(main_obj.expr)
-            if main_obj.sense == minimize:
+            lb, ub = compute_bounds_on_expr(principal_obj.expr)
+            if principal_obj.sense == minimize:
                 util_block.objective_value.setlb(lb)
             else:
                 util_block.objective_value.setub(ub)
 
-        if main_obj.sense == minimize:
+        if principal_obj.sense == minimize:
             util_block.objective_constr = Constraint(
-                expr=util_block.objective_value >= main_obj.expr)
+                expr=util_block.objective_value >= principal_obj.expr)
         else:
             util_block.objective_constr = Constraint(
-                expr=util_block.objective_value <= main_obj.expr)
+                expr=util_block.objective_value <= principal_obj.expr)
         # Deactivate the original objective and add this new one.
-        main_obj.deactivate()
+        principal_obj.deactivate()
         util_block.objective = Objective(
-            expr=util_block.objective_value, sense=main_obj.sense)
+            expr=util_block.objective_value, sense=principal_obj.sense)
 
         # Add the new variable and constraint to the working lists
-        if main_obj.expr.polynomial_degree() not in (1, 0):
+        if principal_obj.expr.polynomial_degree() not in (1, 0):
             util_block.algebraic_variable_list.append(
                 util_block.objective_value)
             if hasattr(util_block, 'constraint_list'):
                 util_block.constraint_list.append(util_block.objective_constr)
         # If we moved the objective, return the original in case we want to
         # restre it later
-        return main_obj
+        return principal_obj
     # Nothing was moved
     return None
 
@@ -188,14 +188,13 @@ def fix_discrete_var(var, val, config):
             var.fix(val, skip_validation=True)
 
 @contextmanager
-def fix_main_problem_solution_in_subproblem(main_problem_util_block,
-                                            subproblem_util_block, solver,
-                                            config,
-                                            make_subproblem_continuous=True):
-    # fix subproblem Blocks according to the main problem solution
+def fix_principal_problem_solution_in_subproblem(
+        principal_problem_util_block, subproblem_util_block, solver, config,
+        make_subproblem_continuous=True):
+    # fix subproblem Blocks according to the principal problem solution
 
     fixed = []
-    for disjunct, block in zip(main_problem_util_block.disjunct_list,
+    for disjunct, block in zip(principal_problem_util_block.disjunct_list,
                                subproblem_util_block.disjunct_list):
         if not disjunct.indicator_var.value:
             block.deactivate()
@@ -207,17 +206,18 @@ def fix_main_problem_solution_in_subproblem(main_problem_util_block,
                         % ", ".join(fixed))
 
     fixed_bools = []
-    for main_problem_bool, subprob_bool in zip(
-            main_problem_util_block.non_indicator_boolean_variable_list,
+    for principal_problem_bool, subprob_bool in zip(
+            principal_problem_util_block.non_indicator_boolean_variable_list,
             subproblem_util_block.non_indicator_boolean_variable_list):
-        main_problem_binary = main_problem_bool.get_associated_binary()
+        principal_problem_binary = principal_problem_bool.\
+                                   get_associated_binary()
         subprob_binary = subprob_bool.get_associated_binary()
-        val = main_problem_binary.value
+        val = principal_problem_binary.value
         if val is None:
-            # If it's None, it's not yet constrained in main problem: make an
-            # arbitrary decision for now, and store it in the main problem so
-            # the no-good cut will be right.
-            main_problem_binary.set_value(1)
+            # If it's None, it's not yet constrained in principal problem: make
+            # an arbitrary decision for now, and store it in the principal
+            # problem so the no-good cut will be right.
+            principal_problem_binary.set_value(1)
             subprob_binary.fix(1)
             bool_val = True
         elif val > 0.5:
@@ -230,28 +230,29 @@ def fix_main_problem_solution_in_subproblem(main_problem_util_block,
     config.logger.debug("Fixed the following Boolean variables: %s"
                         % ", ".join(fixed_bools))
 
-    # Fix subproblem discrete variables according to the main problem solution
+    # Fix subproblem discrete variables according to the principal problem
+    # solution
     if make_subproblem_continuous:
         fixed_discrete = []
-        for main_problem_var, subprob_var in zip(
-                main_problem_util_block.discrete_variable_list,
+        for principal_problem_var, subprob_var in zip(
+                principal_problem_util_block.discrete_variable_list,
                 subproblem_util_block.discrete_variable_list):
-            # [ESJ 1/24/21]: We don't check if main problem_var actually has a
-            # value here because we are going to have to do that error checking
-            # later. This is because the subproblem could have discrete
-            # variables that aren't in the main problem and vice versa since
-            # main problem is linearized, but subproblem is a specific
-            # realization of the disjuncts. All this means we don't have enough
-            # info to do it here.
-            fix_discrete_var(subprob_var, main_problem_var.value, config)
+            # [ESJ 1/24/21]: We don't check if principal problem_var actually
+            # has a value here because we are going to have to do that error
+            # checking later. This is because the subproblem could have discrete
+            # variables that aren't in the principal problem and vice versa
+            # since principal problem is linearized, but subproblem is a
+            # specific realization of the disjuncts. All this means we don't
+            # have enough info to do it here.
+            fix_discrete_var(subprob_var, principal_problem_var.value, config)
             fixed_discrete.append("%s = %s" % (subprob_var.name,
-                                               main_problem_var.value))
+                                               principal_problem_var.value))
         config.logger.debug("Fixed the following integer variables: %s" %
                             ", ".join(fixed_discrete))
 
     # Call the subproblem initialization callback
     config.subproblem_initialization_method(solver, subproblem_util_block,
-                                            main_problem_util_block)
+                                            principal_problem_util_block)
 
     yield
 
@@ -270,7 +271,7 @@ def fix_main_problem_solution_in_subproblem(main_problem_util_block,
             subprob_var.fixed = False
 
     # [ESJ 2/25/22] We don't need to reset the values of the continuous
-    # variables because we will initialize them based on the main problem
+    # variables because we will initialize them based on the principal problem
     # solution before we solve again.
 
 def is_feasible(model, config):
@@ -389,7 +390,7 @@ def lower_logger_level_to(logger, level=None, tee=False):
         logger.setLevel(old_logger_level)
 
 def _add_bigm_constraint_to_transformed_model(m, constraint, block):
-    """Adds the given constraint to the main problem model as if it had
+    """Adds the given constraint to the principal problem model as if it had
     been on the model originally, before the bigm transformation was called.
     Note this method doesn't actually add the constraint to the model, it just
     takes a constraint that has been added and transforms it.
@@ -407,7 +408,7 @@ def _add_bigm_constraint_to_transformed_model(m, constraint, block):
 
     Parameters
     ----------
-    m: Main problem model that has been transformed with bigm.
+    m: Principal problem model that has been transformed with bigm.
     constraint: Already-constructed ConstraintData somewhere on m
     block: The block that constraint lives on. This Block may or may not be on
            a Disjunct.
