@@ -4,14 +4,11 @@ Overview
 What does this package contain?
 -------------------------------
 
-This package contains data structures for values and time series data
-associated with time-indexed variables (or parameters, or named expressions).
-Examples are setpoint values associated with a subset of state variables
-or time series data from a simulation.
-It also contains utilities for loading and extracting this data into and from
-variables in a model, and utilities for constructing components from this data
-(expressions, constraints, and objectives) that are useful for dynamic
-optimization.
+#. Data structures for values and time series data associated with time-indexed variables (or parameters, or named expressions). Examples are setpoint values associated with a subset of state variables or time series data from a simulation
+
+#. Utilities for loading and extracting this data into and from variables in a model
+
+#. Utilities for constructing components from this data (expressions, constraints, and objectives) that are useful for dynamic optimization
 
 What is the goal of this package?
 ---------------------------------
