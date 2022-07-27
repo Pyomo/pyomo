@@ -269,8 +269,8 @@ class _SuffixData(object):
 
     def update(self, suffix):
         self.datatype.add(suffix.datatype)
-        for obj, val in suffix.items():
-            self.store(obj, val)
+        for item in suffix.items():
+            self.store(*item)
 
     def store(self, obj, val):
         _id = id(obj)
@@ -1396,9 +1396,10 @@ class AMPLRepn(object):
             args = []
         if self.linear:
             nterms = len(self.linear)
-            nl_sum = ''.join(
-                template.var if c == 1 else template.monomial % c
-                for c in map(itemgetter(1), self.linear))
+            _v_template = template.var
+            _m_template = template.monomial
+            nl_sum = ''.join(_v_template if c == 1 else _m_template % c
+                             for c in map(itemgetter(1), self.linear))
             args.extend(map(itemgetter(0), self.linear))
         else:
             nterms = 0
