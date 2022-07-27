@@ -60,10 +60,11 @@ from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
 from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger, get_primal_integral, get_dual_integral
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
-                        Var, VarList, TransformationFactory, RangeSet, minimize)
+                        Var, VarList, TransformationFactory, RangeSet, minimize, Constraint, Objective)
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
 from pyomo.common.config import add_docstring_list
+from pyomo.util.vars_from_expressions import get_vars_from_components
 
 __version__ = (0, 1, 0)
 
@@ -124,7 +125,9 @@ class MindtPySolver(object):
         }), preserve_implicit=True)  # TODO: do we need to set preserve_implicit=True?
         config.set_value(kwds)
         set_up_logger(config)
-        check_config(config)
+        new_logging_level = logging.INFO if config.tee else None
+        with lower_logger_level_to(config.logger, new_logging_level):
+            check_config(config)
 
         solve_data = set_up_solve_data(model, config)
 
@@ -132,7 +135,6 @@ class MindtPySolver(object):
             TransformationFactory('contrib.integer_to_binary'). \
                 apply_to(solve_data.working_model)
 
-        new_logging_level = logging.INFO if config.tee else None
         with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 lower_logger_level_to(config.logger, new_logging_level), \
                 create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
@@ -239,11 +241,25 @@ class MindtPySolver(object):
                     from_list=solve_data.best_solution_found.MindtPy_utils.variable_list,
                     to_list=MindtPy.variable_list,
                     config=config)
-                copy_var_list_values(
-                    MindtPy.variable_list,
-                    [i for i in solve_data.original_model.component_data_objects(
-                        Var) if not i.fixed],
-                    config)
+                # The original does not have variable list. Use get_vars_from_components() should be used for both working_model and original_model to exclude the unused variables.
+                solve_data.working_model.MindtPy_utils.deactivate()
+                if solve_data.working_model.find_component("_int_to_binary_reform") is not None:
+                    solve_data.working_model._int_to_binary_reform.deactivate()
+                copy_var_list_values(list(get_vars_from_components(block=solve_data.working_model, 
+                                         ctype=(Constraint, Objective), 
+                                         include_fixed=False, 
+                                         active=True,
+                                         sort=True, 
+                                         descend_into=True,
+                                         descent_order=None)),
+                                    list(get_vars_from_components(block=solve_data.original_model, 
+                                         ctype=(Constraint, Objective), 
+                                         include_fixed=False, 
+                                         active=True,
+                                         sort=True, 
+                                         descend_into=True,
+                                         descent_order=None)),
+                                    config=config)
                 # exclude fixed variables here. This is consistent with the definition of variable_list in GDPopt.util
             if solve_data.objective_sense == minimize:
                 solve_data.results.problem.lower_bound = solve_data.dual_bound

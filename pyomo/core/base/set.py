@@ -15,7 +15,7 @@ import logging
 import math
 import sys
 import weakref
-from typing import overload
+from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.deprecation import (
     deprecated, deprecation_warning, RenamedClass,

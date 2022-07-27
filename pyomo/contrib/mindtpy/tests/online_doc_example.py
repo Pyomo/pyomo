@@ -23,6 +23,7 @@ from __future__ import division
 
 from pyomo.environ import (Binary, ConcreteModel, Constraint,
                            Objective, Var, minimize, log)
+from pyomo.common.collections import ComponentMap
 
 
 class OnlineDocExample(ConcreteModel):
@@ -39,3 +40,6 @@ class OnlineDocExample(ConcreteModel):
         m.c2 = Constraint(expr=m.x*log(m.x) + 5 <= 50.0*(m.y))
         m.objective = Objective(expr=m.x, sense=minimize)
         m.optimal_value = 2.438447
+        m.optimal_solution = ComponentMap()
+        m.optimal_solution[m.x] = 2.4384471855377243
+        m.optimal_solution[m.y] = 1.0

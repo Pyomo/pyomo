@@ -18,7 +18,7 @@ import sys
 import logging
 import math
 from weakref import ref as weakref_ref
-from typing import overload
+from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.errors import DeveloperError

@@ -7,6 +7,7 @@ Link: https://www.researchgate.net/project/Convex-MINLP/update/5c7eb2ee3843b0342
 from __future__ import division
 from pyomo.environ import (ConcreteModel, Constraint, Reals, Integers,
                            Objective, Var, sqrt, minimize)
+from pyomo.common.collections import ComponentMap
 
 
 class ProposalModel(ConcreteModel):
@@ -26,3 +27,6 @@ class ProposalModel(ConcreteModel):
 
         m.objective = Objective(expr=m.x - m.y / 4.5 + 2, sense=minimize)
         m.optimal_value = 0.66555
+        m.optimal_solution = ComponentMap()
+        m.optimal_solution[m.x] = 1.1099999999999999
+        m.optimal_solution[m.y] = 11.0

@@ -14,7 +14,7 @@ __all__ = ['Var', '_VarData', '_GeneralVarData', 'VarList', 'SimpleVar',
 
 import logging
 import sys
-from typing import overload
+from pyomo.common.pyomo_typing import overload
 from weakref import ref as weakref_ref
 
 from pyomo.common.collections import Sequence

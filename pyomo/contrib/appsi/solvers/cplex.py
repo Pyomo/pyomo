@@ -57,10 +57,10 @@ class CplexResults(Results):
 class Cplex(PersistentSolver):
     _available = None
 
-    def __init__(self):
+    def __init__(self, only_child_vars=True):
         self._config = CplexConfig()
         self._solver_options = dict()
-        self._writer = LPWriter()
+        self._writer = LPWriter(only_child_vars=only_child_vars)
         self._filename = None
         self._last_results_object: Optional[CplexResults] = None
 
@@ -342,7 +342,7 @@ class Cplex(PersistentSolver):
         if self._cplex_model.get_problem_type() in [self._cplex_model.problem_type.MILP,
                                                     self._cplex_model.problem_type.MIQP,
                                                     self._cplex_model.problem_type.MIQCP]:
-            raise RuntimeError('Cannot get get duals for mixed-integer problems')
+            raise RuntimeError('Cannot get duals for mixed-integer problems')
 
         symbol_map = self._writer.symbol_map
 
@@ -382,7 +382,7 @@ class Cplex(PersistentSolver):
         if self._cplex_model.get_problem_type() in [self._cplex_model.problem_type.MILP,
                                                     self._cplex_model.problem_type.MIQP,
                                                     self._cplex_model.problem_type.MIQCP]:
-            raise RuntimeError('Cannot get get reduced costs for mixed-integer problems')
+            raise RuntimeError('Cannot get reduced costs for mixed-integer problems')
 
         symbol_map = self._writer.symbol_map
         if vars_to_load is None:
