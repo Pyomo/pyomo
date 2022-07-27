@@ -1419,7 +1419,7 @@ class AMPLRepn(object):
         else: # nterms == 0
             return prefix + (template.const % 0), []
 
-    def compile_nonlinear_fragment(self, template):
+    def compile_nonlinear_fragment(self, visitor):
         args = []
         nterms = len(self.nonlinear)
         nl_sum = ''.join(map(itemgetter(0), self.nonlinear))
@@ -1427,9 +1427,9 @@ class AMPLRepn(object):
               maxlen=0)
 
         if nterms > 2:
-            self.nonlinear = (template.nary_sum % nterms) + nl_sum, args
+            self.nonlinear = (visitor.template.nary_sum % nterms) + nl_sum, args
         elif nterms == 2:
-            self.nonlinear = template.binary_sum + nl_sum, args
+            self.nonlinear = visitor.template.binary_sum + nl_sum, args
         elif nterms == 1:
             self.nonlinear = nl_sum, args
         else: # nterms == 0
@@ -1482,8 +1482,7 @@ class AMPLRepn(object):
                     self.linear.extend((v, c*mult) for v, c in other.linear)
                 if other.nonlinear:
                     if other.nonlinear.__class__ is list:
-                        other.compile_nonlinear_fragment(
-                            self.ActiveVisitor.template)
+                        other.compile_nonlinear_fragment(self.ActiveVisitor)
                     if mult == -1:
                         prefix = self.ActiveVisitor.template.negation
                     else:
@@ -1716,7 +1715,7 @@ def handle_named_expression_node(visitor, node, arg1):
         # original (linear + nonlinear) V line (which will not happen if
         # the V line is part of a larger linear operator).
         if repn.nonlinear.__class__ is list:
-            repn.compile_nonlinear_fragment(visitor.template)
+            repn.compile_nonlinear_fragment(visitor)
 
         if repn.linear:
             # If this expession has both linear and nonlinear
@@ -2049,7 +2048,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
         if ans.nonlinear.__class__ is list:
             if ans.nonlinear:
-                ans.compile_nonlinear_fragment(self.template)
+                ans.compile_nonlinear_fragment(self)
             else:
                 ans.nonlinear = None
         linear = {}
