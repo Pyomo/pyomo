@@ -1375,15 +1375,7 @@ class AMPLRepn(object):
                 prefix += template.multiplier % self.mult
         if self.nl is not None:
             nl, nl_args = self.nl
-            visitor.used_named_expressions.update(nl_args)
-            for _named_expr_id in nl_args:
-                # Record that the named expression was used
-                info = visitor.subexpression_cache[_named_expr_id][2]
-                _idx = visitor.active_expression_source[0]
-                if info[_idx] is None:
-                    info[_idx] = visitor.active_expression_source[1]
-                elif info[_idx] != visitor.active_expression_source[1]:
-                    info[_idx] = 0
+            visitor._mark_named_expression_as_used(nl_args)
             if prefix:
                 nl = prefix + nl
             if args is not None and args is not nl_args:
@@ -1463,6 +1455,26 @@ class AMPLRepn(object):
             self.linear.append(other[1:])
         elif _type is _GENERAL:
             other = other[1]
+            if other.nl is not None and other.nonlinear:
+                if other.linear:
+                    # This is a named expression with both a linear and
+                    # nonlinear component.  We want to merge it with
+                    # this AMPLRepn, preserving the named expression for
+                    # only the nonlinear component (merging the linear
+                    # component with this AMPLRepn).  We need to make
+                    # sure that we have marked that we are using the
+                    # named expression for the nonlinear component.
+                    self.ActiveVisitor._mark_named_expression_as_used(
+                        other.nonlinear[1])
+                else:
+                    # This is a nonlinear-only named expression,
+                    # possibly with a multiplier that is not 1.  Compile
+                    # it and append it (this both resolves the
+                    # multiplier, and marks the named expression as
+                    # having been used)
+                    self.nonlinear.append(
+                        other.compile_repn(self.ActiveVisitor))
+                    return
             if other.mult != 1:
                 mult = other.mult
                 self.const += mult * other.const
@@ -2026,18 +2038,13 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         # this outer named expression).  This prevents accidentally
         # recharacterizing variables that only appear linearly as
         # nonlinear variables.
-        if ans.nl and ans.nonlinear and not ans.linear:
-            ans.linear = None
-            ans.nonlinear = ans.nl
-            self.used_named_expressions.update(ans.nl[1])
-            # Record that this named expression was used
-            for _named_expr_id in ans.nl[1]:
-                info = self.subexpression_cache[_named_expr_id][2]
-                _idx = self.active_expression_source[0]
-                if info[_idx] is None:
-                    info[_idx] = self.active_expression_source[1]
-                elif info[_idx] != self.active_expression_source[1]:
-                    info[_idx] = 0
+        if ans.nl and ans.nonlinear:
+            if ans.linear:
+                self._mark_named_expression_as_used(ans.nonlinear[1])
+            else:
+                self._mark_named_expression_as_used(ans.nl[1])
+                ans.nonlinear = ans.nl
+
         ans.nl = None
 
         if ans.nonlinear.__class__ is list:
@@ -2094,3 +2101,15 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             handlers[child_type] = _before_named_expression
         else:
             handlers[child_type] = _before_general_expression
+
+    def _mark_named_expression_as_used(self, ref):
+        assert len(ref) == 1
+        _named_expr_id = ref[0]
+        self.used_named_expressions.add(_named_expr_id)
+        # Record that this named expression was used
+        info = self.subexpression_cache[_named_expr_id][2]
+        _idx = self.active_expression_source[0]
+        if info[_idx] is None:
+            info[_idx] = self.active_expression_source[1]
+        elif info[_idx] != self.active_expression_source[1]:
+            info[_idx] = 0
