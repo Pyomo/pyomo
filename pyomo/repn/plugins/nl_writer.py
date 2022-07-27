@@ -1705,6 +1705,14 @@ def handle_named_expression_node(visitor, node, arg1):
     # A local copy of the expression source list.  This will be updated
     # later if the same Expression node is encountered in another
     # expression tree.
+    #
+    # This is a 3-tuple [con_id, obj_id, substitute_expression].  If the
+    # expression is used by more than 1 constraint / objective, then the
+    # id is set to 0.  If it is not used by any, then it is None.
+    # substitue_expression is a bool indicating if this named
+    # subexpression tree should be directly substituted into any
+    # expression tree that references this node (i.e., do NOT emit the V
+    # line).
     expression_source = [None, None, False]
 
     if repn.nonlinear:
@@ -1729,7 +1737,7 @@ def handle_named_expression_node(visitor, node, arg1):
             sub_id = id(sub_node)
             sub_repn = AMPLRepn(0, None, repn.nonlinear)
             sub_repn.nl = (visitor.template.var, (sub_id,))
-            # See below for the meaning of this tuple
+            # See above for the meaning of this source information
             nl_info = list(expression_source)
             visitor.subexpression_cache[sub_id] = (
                 sub_node, sub_repn, nl_info,
@@ -1781,14 +1789,8 @@ def handle_named_expression_node(visitor, node, arg1):
         node,
         # 1: the common subexpression (to be written out)
         repn,
-        # 2: the (single) component that uses this subexpression.  This
-        # is a 3-tuple [con_id, obj_id, substitute_expression].  If the
-        # expression is used by more than 1 constraint / objective, then
-        # the id is set to 0.  If it is not used by any, then it is
-        # None.  substitue_expression is a bool indicating if this named
-        # subexpression tree should be directly substituted into any
-        # expression tree that references this node (i.e., do NOT emit
-        # the V line).
+        # 2: the source usage information for this subexpression:
+        #    [(con_id, obj_id, substitute); see above]
         expression_source,
     )
     visitor.subexpression_order.append(_id)
