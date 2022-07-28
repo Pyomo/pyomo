@@ -11,11 +11,6 @@
 
 from collections import namedtuple
 
-from pyomo.core.base.componentuid import ComponentUID
-from pyomo.util.slices import slice_component_along_sets
-from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
-from pyomo.dae.flatten import get_slice_for_set
-
 from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
 )
