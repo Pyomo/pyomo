@@ -16,7 +16,7 @@ from pyomo.contrib.mpc.data.get_cuid import (
 
 class _DynamicDataBase(object):
     """
-    A class for storing data associated with time-indexed variables.
+    A base class for storing data associated with time-indexed variables.
 
     """
     
