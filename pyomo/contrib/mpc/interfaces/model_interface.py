@@ -16,7 +16,7 @@ from pyomo.core.base.expression import Expression
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.expr.numeric_expr import value as pyo_value
 
-from pyomo.contrib.mpc.model_linker import copy_values_at_time
+from pyomo.contrib.mpc.interfaces.copy_values import copy_values_at_time
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.modeling.cost_expressions import (
@@ -37,12 +37,14 @@ def _to_iterable(item):
         yield item
 
 
-class DynamicModelHelper(object):
-    """
-    Somewhat like a serializer, with the ability to generate and load
-    different types of data from a dynamic model. Also somewhat like a
-    wrapper around the flattened indexed variables, with the ability
-    to shift values between different points in time.
+class DynamicModelInterface(object):
+    """A helper class for working with dynamic models, e.g. those where
+    many components are indexed by some ordered set referred to as "time."
+
+    This class provides methods for interacting with time-indexed
+    components, for instance, loading and extracting data or shifting
+    values by some time offset. It also provides methods for constructing
+    components useful for dynamic optimization.
 
     """
 

@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from .model_helper import DynamicModelHelper
+from .interfaces.model_interface import DynamicModelInterface
 from .data.series_data import TimeSeriesData
 from .data.scalar_data import ScalarData
 from .data.get_cuid import get_time_indexed_cuid

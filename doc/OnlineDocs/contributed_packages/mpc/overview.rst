@@ -98,7 +98,7 @@ as:
 .. doctest::
 
    >>> import pyomo.environ as pyo
-   >>> from pyomo.contrib.mpc import DynamicModelHelper
+   >>> from pyomo.contrib.mpc import DynamicModelInterface
 
    >>> m = pyo.ConcreteModel()
    >>> m.time = pyo.Set(initialize=[0, 1, 2])
@@ -106,7 +106,7 @@ as:
    >>> m.var = pyo.Var(m.time, m.comp, initialize=1.0)
 
    >>> # Construct a helper class for interfacing model with data
-   >>> helper = DynamicModelHelper(m, m.time)
+   >>> helper = DynamicModelInterface(m, m.time)
 
    >>> # Generates a TimeSeriesData object
    >>> series_data = helper.get_data_at_time()
@@ -116,7 +116,7 @@ as:
    >>> data
    {var[*,A]: [1.0, 1.0, 1.0], var[*,B]: [1.0, 1.0, 1.0]}
 
-The first value proposition of this package is that ``DynamicModelHelper``
+The first value proposition of this package is that ``DynamicModelInterface``
 and ``TimeSeriesData`` provide wrappers to ease loading and extraction of data
 via ``flatten_dae_components`` and ``ComponentUID``.
 
@@ -129,7 +129,7 @@ as initial conditions. This can be done as follows:
 .. doctest::
 
    >>> import pyomo.environ as pyo
-   >>> from pyomo.contrib.mpc import DynamicModelHelper
+   >>> from pyomo.contrib.mpc import DynamicModelInterface
 
    >>> m1 = pyo.ConcreteModel()
    >>> m1.time = pyo.Set(initialize=[0, 1, 2])
@@ -142,8 +142,8 @@ as initial conditions. This can be done as follows:
    >>> m2.var = pyo.Var(m2.time, m2.comp, initialize=2.0)
 
    >>> # Construct helper objects
-   >>> m1_helper = DynamicModelHelper(m1, m1.time)
-   >>> m2_helper = DynamicModelHelper(m2, m2.time)
+   >>> m1_helper = DynamicModelInterface(m1, m1.time)
+   >>> m2_helper = DynamicModelInterface(m2, m2.time)
 
    >>> # Extract data from final time point of m2
    >>> tf = m2.time.last()
@@ -174,7 +174,7 @@ a tracking cost expression.
    >>> import pyomo.environ as pyo
    >>> from pyomo.contrib.mpc import (
    ...     ScalarData,
-   ...     DynamicModelHelper,
+   ...     DynamicModelInterface,
    ... )
 
    >>> m = pyo.ConcreteModel()
@@ -183,7 +183,7 @@ a tracking cost expression.
    >>> m.var = pyo.Var(m.time, m.comp, initialize=1.0)
 
    >>> # Construct helper object
-   >>> helper = DynamicModelHelper(m, m.time)
+   >>> helper = DynamicModelInterface(m, m.time)
 
    >>> # Construct data structure for setpoints
    >>> setpoint = ScalarData(
