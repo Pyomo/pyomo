@@ -17,7 +17,6 @@ from idaes.apps.nmpc.dynamic_data.find_nearest_index import (
 )
 
 
-@pytest.mark.component
 class TestFindNearestIndex(unittest.TestCase):
 
     def test_two_points(self):

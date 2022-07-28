@@ -33,7 +33,7 @@ from idaes.apps.nmpc.dynamic_data import (
     interval_data_from_time_series,
 )
 
-@pytest.mark.unit
+
 class TestAssertDisjoint(unittest.TestCase):
 
     def test_disjoint(self):
@@ -59,7 +59,6 @@ class TestAssertDisjoint(unittest.TestCase):
             assert_disjoint_intervals(intervals)
 
 
-@pytest.mark.unit
 class TestLoadInputs(unittest.TestCase):
 
     def make_model(self):
@@ -118,7 +117,6 @@ class TestLoadInputs(unittest.TestCase):
             load_inputs_into_model(m, m.time, inputs)
 
 
-@pytest.mark.unit
 class TestIntervalFromTimeSeries(unittest.TestCase):
 
     def test_singleton(self):
