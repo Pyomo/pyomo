@@ -9,8 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from .cost_expressions import get_tracking_cost_from_constant_setpoint
-from .input_constraints import get_piecewise_constant_constraints
 from .model_helper import DynamicModelHelper
 from .data.series_data import TimeSeriesData
 from .data.scalar_data import ScalarData
