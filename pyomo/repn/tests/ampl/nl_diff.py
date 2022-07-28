@@ -87,6 +87,21 @@ def nl_diff(base, test, baseline='baseline', testfile='testfile'):
     if test == base:
         return [], []
 
+    # First do a quick pass to check / standardize embedded numbers.
+    # This is a little fragile (it requires that the embedded constants
+    # appear in the same order in the base and test files), but we see
+    # cases where differences within numerical tolerances lead to huge
+    # add / delete chunks (instead of small replace chunks) from the
+    # SequenceMatcher (because it is not as fast / aggressive as Unix
+    # diff).  Those add/remove chunks are ignored by the _update_subsets
+    # code below, leading to unnecessary test failures.
+    test_nlines = list(x for x in enumerate(test) if x[1] and x[1][0] == 'n')
+    base_nlines = list(x for x in enumerate(base) if x[1] and x[1][0] == 'n')
+    if len(test_nlines) == len(base_nlines):
+        for t_line, b_line in zip(test_nlines, base_nlines):
+            if _compare_floats(t_line[1][1:], b_line[1][1:]):
+                test[t_line[0]] = base[b_line[0]]
+
     for group in SequenceMatcher(None, base, test).get_grouped_opcodes(3):
         for tag, i1, i2, j1, j2 in group:
             if tag != 'replace':
