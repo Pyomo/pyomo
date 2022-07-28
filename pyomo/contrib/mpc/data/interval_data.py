@@ -22,8 +22,8 @@
 # license information.
 #################################################################################
 
-from pyomo.contrib.mpc.dynamic_data.series_data import TimeSeriesData
-from pyomo.contrib.mpc.dynamic_data.find_nearest_index import (
+from pyomo.contrib.mpc.data.series_data import TimeSeriesData
+from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
 )
 

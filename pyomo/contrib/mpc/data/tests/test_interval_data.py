@@ -27,7 +27,7 @@ import pytest
 
 import pyomo.environ as pyo
 import pyomo.dae as dae
-from idaes.apps.nmpc.dynamic_data import (
+from pyomo.contrib.mpc.data.interval_data import (
     assert_disjoint_intervals,
     load_inputs_into_model,
     interval_data_from_time_series,

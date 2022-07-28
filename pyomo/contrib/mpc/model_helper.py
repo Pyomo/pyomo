@@ -17,8 +17,8 @@ from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.expr.numeric_expr import value as pyo_value
 
 from pyomo.contrib.mpc.model_linker import copy_values_at_time
-from pyomo.contrib.mpc.dynamic_data.series_data import TimeSeriesData
-from pyomo.contrib.mpc.dynamic_data.scalar_data import ScalarData
+from pyomo.contrib.mpc.data.series_data import TimeSeriesData
+from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.cost_expressions import (
     get_tracking_cost_from_constant_setpoint,
 )

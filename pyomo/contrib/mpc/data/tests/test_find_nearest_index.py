@@ -12,7 +12,7 @@
 import pyomo.common.unittest as unittest
 import pytest
 
-from idaes.apps.nmpc.dynamic_data.find_nearest_index import (
+from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
 )
 
