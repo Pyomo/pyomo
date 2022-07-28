@@ -113,6 +113,7 @@ as:
 
    >>> # Get the underlying dictionary
    >>> data = series_data.get_data()
+   >>> data
    {var[*,A]: [1.0, 1.0, 1.0], var[*,B]: [1.0, 1.0, 1.0]}
 
 The first value proposition of this package is that ``DynamicModelHelper``
@@ -133,12 +134,12 @@ as initial conditions. This can be done as follows:
    >>> m1 = pyo.ConcreteModel()
    >>> m1.time = pyo.Set(initialize=[0, 1, 2])
    >>> m1.comp = pyo.Set(initialize=["A", "B"])
-   >>> m1.var = pyo.Var(m.time, m.comp, initialize=1.0)
+   >>> m1.var = pyo.Var(m1.time, m1.comp, initialize=1.0)
 
    >>> m2 = pyo.ConcreteModel()
    >>> m2.time = pyo.Set(initialize=[0, 1, 2])
    >>> m2.comp = pyo.Set(initialize=["A", "B"])
-   >>> m2.var = pyo.Var(m.time, m.comp, initialize=2.0)
+   >>> m2.var = pyo.Var(m2.time, m2.comp, initialize=2.0)
 
    >>> # Construct helper objects
    >>> m1_helper = DynamicModelHelper(m1, m1.time)
@@ -146,13 +147,16 @@ as initial conditions. This can be done as follows:
 
    >>> # Extract data from final time point of m2
    >>> tf = m2.time.last()
-   >>> tf_data = m2.get_data_at_time(tf)
+   >>> tf_data = m2_helper.get_data_at_time(tf)
 
    >>> # Load data into initial time point of m1
    >>> t0 = m1.time.first()
-   >>> m1_helper.load_data_at_time(t0)
-   >>> data = m1_helper.get_data_at_time()
-   >>> data
+   >>> m1_helper.load_data_at_time(tf_data, t0)
+
+   >>> # Get TimeSeriesData object
+   >>> series_data = m1_helper.get_data_at_time()
+   >>> # Get underlying dictionary
+   >>> series_data.get_data()
    {var[*,A]: [2.0, 1.0, 1.0], var[*,B]: [2.0, 1.0, 1.0]}
 
 .. note::
