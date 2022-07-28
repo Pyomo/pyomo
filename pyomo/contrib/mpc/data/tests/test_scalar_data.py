@@ -40,6 +40,18 @@ class TestScalarData(unittest.TestCase):
         with self.assertRaisesRegex(TypeError, msg):
             data = ScalarData({m.var[:, "A"]: [1, 2]})
 
+    def test_eq(self):
+        m = self._make_model()
+        data1 = ScalarData({m.var[:, "A"]: 0.5, m.var[:, "B"]: 2.0})
+        data2 = ScalarData({m.var[:, "A"]: 0.5, m.var[:, "B"]: 2.0})
+        data3 = ScalarData({m.var[:, "A"]: 0.5, m.var[:, "B"]: 3.0})
+        self.assertEqual(data1, data2)
+        self.assertNotEqual(data1, data3)
+        data_dict = data2.get_data()
+        msg = "not comparable"
+        with self.assertRaisesRegex(TypeError, msg):
+            data1 == data_dict
+
     def test_get_data_from_key(self):
         m = self._make_model()
         data = ScalarData(
