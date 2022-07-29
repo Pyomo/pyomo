@@ -394,6 +394,7 @@ class _GeneralConstraintData(_ConstraintData):
         if bound.__class__ not in native_types:
             bound = value(bound)
         if bound in _nonfinite_values or bound != bound:
+            # Note that "bound != bound" catches float('nan')
             if bound == -_inf:
                 bound = None
             else:
@@ -409,6 +410,7 @@ class _GeneralConstraintData(_ConstraintData):
         if bound.__class__ not in native_types:
             bound = value(bound)
         if bound in _nonfinite_values or bound != bound:
+            # Note that "bound != bound" catches float('nan')
             if bound == _inf:
                 bound = None
             else:
@@ -631,6 +633,7 @@ class _GeneralConstraintData(_ConstraintData):
         if self._lower.__class__ in native_numeric_types:
             bound = self._lower
             if bound in _nonfinite_values or bound != bound:
+                # Note that "bound != bound" catches float('nan')
                 if bound == -_inf:
                     self._lower = None
                 else:
@@ -640,6 +643,7 @@ class _GeneralConstraintData(_ConstraintData):
         if self._upper.__class__ in native_numeric_types:
             bound = self._upper
             if bound in _nonfinite_values or bound != bound:
+                # Note that "bound != bound" catches float('nan')
                 if bound == _inf:
                     self._upper = None
                 else:
