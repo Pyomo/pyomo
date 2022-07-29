@@ -20,14 +20,19 @@ class _DynamicDataBase(object):
 
     """
     
-    def __init__(self, data, time_set=None):
+    def __init__(self, data, time_set=None, context=None):
         """
-        Processes keys of the data dict and makes sure
+        Processes keys of the data dict.
 
         """
+        # This is used if we ever need to process a VarData to get
+        # a time-indexed CUID. We need to know what set to slice.
         self._orig_time_set = time_set
+
         self._data = {
-            get_time_indexed_cuid(key, (self._orig_time_set,)): val
+            get_time_indexed_cuid(
+                key, (self._orig_time_set,), context=context
+            ): val
             for key, val in data.items()
         }
 
@@ -48,20 +53,24 @@ class _DynamicDataBase(object):
         """
         return self._data
 
-    def get_data_from_key(self, key):
+    def get_data_from_key(self, key, context=None):
         """
         Returns the value associated with the given key.
 
         """
-        cuid = get_time_indexed_cuid(key, (self._orig_time_set,))
+        cuid = get_time_indexed_cuid(
+            key, (self._orig_time_set,), context=context
+        )
         return self._data[cuid]
 
-    def contains_key(self, key):
+    def contains_key(self, key, context=None):
         """
         Returns whether this object's dict contains the given key.
 
         """
-        cuid = get_time_indexed_cuid(key, (self._orig_time_set,))
+        cuid = get_time_indexed_cuid(
+            key, (self._orig_time_set,), context=context
+        )
         return cuid in self._data
 
     def update_data(self, other):
@@ -73,7 +82,9 @@ class _DynamicDataBase(object):
             self._data.update(other.get_data())
         else:
             other = {
-                get_time_indexed_cuid(key, (self._orig_time_set,)): val
+                get_time_indexed_cuid(
+                    key, (self._orig_time_set,), context=context
+                ): val
                 for key, val in other.items()
             }
             self._data.update(other)
@@ -90,7 +101,7 @@ class _DynamicDataBase(object):
             % self.__class__
         )
 
-    def extract_variables(self, variables, copy_values=False):
+    def extract_variables(self, variables, context=None, copy_values=False):
         """
         Return a new object that only keep data values for the variables
         specified.
@@ -106,7 +117,9 @@ class _DynamicDataBase(object):
             )
         data = {}
         for var in variables:        
-            cuid = get_time_indexed_cuid(var, (self._orig_time_set,))
+            cuid = get_time_indexed_cuid(
+                var, (self._orig_time_set,), context=context
+            )
             data[cuid] = self._data[cuid]
         MyClass = self.__class__
         return MyClass(data, time_set=self._orig_time_set)
