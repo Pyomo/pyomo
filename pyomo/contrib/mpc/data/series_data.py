@@ -17,7 +17,10 @@ from pyomo.contrib.mpc.data.find_nearest_index import (
 from pyomo.contrib.mpc.data.get_cuid import (
     get_time_indexed_cuid,
 )
-from pyomo.contrib.mpc.data.dynamic_data_base import _DynamicDataBase
+from pyomo.contrib.mpc.data.dynamic_data_base import (
+    _is_iterable,
+    _DynamicDataBase,
+)
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 
 
@@ -41,7 +44,12 @@ class TimeSeriesData(_DynamicDataBase):
             Contains the time points corresponding to variable data points.
 
         """
-        self._time = list(time)
+        _time = list(time)
+        if _time != list(sorted(time)):
+            raise ValueError(
+                "Time points are not sorted in increasing order"
+            )
+        self._time = _time
 
         # When looking up a value at a particular time point, we will use
         # this map to try and find the index of the time point. If this lookup
@@ -61,9 +69,23 @@ class TimeSeriesData(_DynamicDataBase):
                 )
         super().__init__(data, time_set=time_set, context=context)
 
+    def __eq__(self, other):
+        if isinstance(other, TimeSeriesData):
+            return (
+                self._data == other._data
+                and self._time == other._time
+            )
+        else:
+            # Should this return False or raise TypeError?
+            raise TypeError(
+                "%s and %s are not comparable"
+                % (self.__class__, other.__class__)
+            )
+
     def get_time_points(self):
         """
         Get time points of the time series data
+
         """
         return self._time
 
@@ -71,9 +93,10 @@ class TimeSeriesData(_DynamicDataBase):
         """
         Returns data at the specified index or indices of this object's list
         of time points.
+
         """
-        try:
-            # Probably should raise an error if indices are not already sorted.
+        if _is_iterable(indices):
+            # Raise error if indices not sorted?
             index_list = list(sorted(indices))
             time_list = [self._time[i] for i in indices]
             data = {
@@ -82,7 +105,7 @@ class TimeSeriesData(_DynamicDataBase):
             }
             time_set = self._orig_time_set
             return TimeSeriesData(data, time_list, time_set=time_set)
-        except TypeError:
+        else:
             # indices is a scalar
             return ScalarData({
                 cuid: values[indices] for cuid, values in self._data.items()
@@ -106,7 +129,7 @@ class TimeSeriesData(_DynamicDataBase):
 
         Returns
         -------
-        TimeSeriesData or dict
+        TimeSeriesData or ScalarData
             TimeSeriesData containing only the specified time points
             or dict mapping CUIDs to values at the specified scalar time
             point.
@@ -117,38 +140,49 @@ class TimeSeriesData(_DynamicDataBase):
             # set. Skip all the overhead, don't create a new object, and
             # return self.
             return self
-        try:
-            indices = [
-                self._time_idx_map[t] if t in self._time_idx_map else
-                find_nearest_index(self._time, t, tolerance=tolerance)
-                for t in time
-            ]
-        except TypeError:
-            # TODO: Probably shouldn't rely on TypeError here.
-            # time is a scalar
-            indices = (
-                self._time_idx_map[time]
-                if time in self._time_idx_map
-                else find_nearest_index(self._time, time, tolerance=tolerance)
-            )
+        is_iterable = _is_iterable(time)
+        time_iter = iter(time) if is_iterable else (time,)
+        indices = []
+        # Allocate indices list dynamically to support a general iterator
+        # for time. Not sure if this will ever matter...
+        for t in time_iter:
+            if t in self._time_idx_map:
+                idx = self._time_idx_map[t]
+            else:
+                idx = find_nearest_index(self._time, t, tolerance=tolerance)
+            if idx is None:
+                raise ValueError(
+                    "Time point %s is invalid within tolerance %s"
+                    % (t, tolerance)
+                )
+            indices.append(idx)
+        if not is_iterable:
+            indices = indices[0]
         return self.get_data_at_time_indices(indices)
 
     def to_serializable(self):
         """
         Convert to json-serializable object.
+
         """
         time = self._time
         data = {str(cuid): values for cuid, values in self._data.items()}
         return TimeSeriesTuple(data, time)
 
-    def concatenate(self, other):
+    def concatenate(self, other, tolerance=0.0):
         """
         Extend time list and variable data lists with the time points
         and variable values in the provided TimeSeriesData
+
         """
-        # TODO: Potentially check here for "incompatible" time points,
-        # i.e. violating sorted order. We don't assume that anywhere yet,
-        # but it may be convenient to eventually.
+        other_time = other.get_time_points()
+        time = self._time
+        if other_time[0] <= time[-1] + tolerance:
+            raise ValueError(
+                "Initial time point of target, %s, is not greater than"
+                " final time point of source, %s, within tolerance %s."
+                % (other_time[0], time[-1], tolerance)
+            )
         time = self._time.extend(other.get_time_points())
 
         data = self._data
@@ -161,23 +195,29 @@ class TimeSeriesData(_DynamicDataBase):
     def shift_time_points(self, offset):
         """
         Apply an offset to stored time points.
+
         """
         # Note that this is different from what we are doing in
         # shift_values_by_time in the helper class.
         self._time = [t + offset for t in self._time]
 
-    #def extract_variables(self, variables, context=None):
-    #    """
-    #    Only keep variables specified by the user.
-    #    """
-    #    data = {}
-    #    for var in variables:        
-    #        cuid = get_time_indexed_cuid(
-    #            var, (self._orig_time_set,), context=context
-    #        )
-    #        data[cuid] = self._data[cuid]
-    #    return TimeSeriesData(
-    #        data,
-    #        self._time,
-    #        time_set=self._orig_time_set,
-    #    )
+    def extract_variables(self, variables, context=None, copy_values=False):
+        """
+        Only keep variables specified by the user.
+
+        """
+        if copy_values:
+            raise NotImplementedError(
+                "extract_variables with copy_values=True has not been"
+                " implemented by %s"
+                % self.__class__
+            )
+        data = {}
+        for var in variables:
+            cuid = get_time_indexed_cuid(
+                var, (self._orig_time_set,), context=context
+            )
+            data[cuid] = self._data[cuid]
+        return TimeSeriesData(
+            data, self._time, time_set=self._orig_time_set
+        )
