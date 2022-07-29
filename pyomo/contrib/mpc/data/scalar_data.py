@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.core.expr.numvalue import value as pyo_value
 from pyomo.contrib.mpc.data.dynamic_data_base import (
     _DynamicDataBase,
 )
@@ -23,7 +24,7 @@ class ScalarData(_DynamicDataBase):
     variables.
     """
 
-    def __init__(self, data, time_set=None):
+    def __init__(self, data, time_set=None, context=None):
         """
         Arguments:
         ----------
@@ -37,12 +38,12 @@ class ScalarData(_DynamicDataBase):
                     "Value %s corresponding to key %s is not a scalar"
                     % (val, key)
                 )
-        super().__init__(data, time_set=time_set)
+        super().__init__(data, time_set=time_set, context=context)
 
     def to_serializable(self):
         """
         Convert to json-serializable object.
 
         """
-        data = {str(cuid): val for cuid, val in self._data.items()}
+        data = {str(cuid): pyo_value(val) for cuid, val in self._data.items()}
         return data
