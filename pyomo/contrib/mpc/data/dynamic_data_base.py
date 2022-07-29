@@ -73,7 +73,7 @@ class _DynamicDataBase(object):
         )
         return cuid in self._data
 
-    def update_data(self, other):
+    def update_data(self, other, context=None):
         """
         Updates this object's data dict.
 
