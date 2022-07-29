@@ -24,11 +24,13 @@ def get_time_indexed_cuid(var, sets=None, dereference=None, context=None):
     ---------
     var:
         Object to process
-    time: Set
-        Set to use if slicing a vardata object
+    sets: Tuple of sets
+        Sets to use if slicing a vardata object
     dereference: None or int
         Number of times we may access referent attribute to recover a
         "base component" from a reference.
+    context: Block
+        Block with respect to which slices and CUIDs will be generated
 
     """
     # TODO: Does this function have a good name?
@@ -62,7 +64,7 @@ def get_time_indexed_cuid(var, sets=None, dereference=None, context=None):
                         remaining_dereferences
                 # NOTE: Calling this function recursively
                 return get_time_indexed_cuid(
-                    referent, time, dereference=dereference
+                    referent, sets, dereference=dereference
                 )
         else:
             # Assume that var is indexed only by time
