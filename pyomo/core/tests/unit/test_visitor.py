@@ -16,8 +16,6 @@ import os
 import platform
 import sys
 
-#import pyomo.core.tests.unit.test_visitor
-
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (

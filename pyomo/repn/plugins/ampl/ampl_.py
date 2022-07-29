@@ -361,7 +361,7 @@ class ProblemWriter_nl(AbstractProblemWriter):
         export_nonlinear_variables = \
             io_options.pop("export_nonlinear_variables", False)
 
-        # column_order is a new option supported by the nl wraiter v2
+        # column_order is a new option supported by the nl writer v2
         _column_order = io_options.pop("column_order", True)
         assert _column_order in {True,}
 

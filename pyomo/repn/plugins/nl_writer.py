@@ -394,7 +394,7 @@ class _NLWriter_impl(object):
                 Var, descend_into=True, sort=sorter))
         if self.config.column_order is not None:
             # Note that Vars that appear twice (e.g., through a
-            # Reference) will be sorted with the FIRST occurance.
+            # Reference) will be sorted with the FIRST occurrence.
             for var in self.config.column_order:
                 if var.is_indexed():
                     for _v in var.values():
@@ -1036,16 +1036,7 @@ class _NLWriter_impl(object):
             "\t#%d ranges (rhs's)" % len(constraints)
             if symbolic_solver_labels else '',
         ))
-        # _bound_writer = {
-        #     0: lambda i, c: ostream.write(f"0 {i[3]} {i[4]}{c}\n"),
-        #     1: lambda i, c: ostream.write(f"1 {i[4]}{c}\n"),
-        #     2: lambda i, c: ostream.write(f"2 {i[3]}{c}\n"),
-        #     3: lambda i, c: ostream.write(f"3{c}\n"),
-        #     4: lambda i, c: ostream.write(f"4 {i[3]}{c}\n"),
-        # }
         for row_idx, info in enumerate(constraints):
-            # _bound_writer[info[2]](info, row_comments[row_idx])
-            ###
             i = info[2]
             if i == 4:   # ==
                 ostream.write(f"4 {info[3]}{row_comments[row_idx]}\n")
@@ -1173,7 +1164,9 @@ class _NLWriter_impl(object):
             # Note: mult will be 1 here: it is either cleared by
             # finalizeResult, or this is a named expression, in which
             # case the mult was reset within handle_named_expression_node
-            #assert expr_info.mult == 1
+            #
+            # For efficiency, we will omit the obvious assertion:
+            #   assert expr_info.mult == 1
             #
             # Process the linear portion of this component
             if expr_info.linear:
@@ -1190,7 +1183,8 @@ class _NLWriter_impl(object):
             # else:
             #     # NOTE: we only create the linear_vars set if there
             #     # are linear vars: the use of linear_vars below is
-            #     # guarded by 'if expr_info.linear'
+            #     # guarded by 'if expr_info.linear', so it is OK to
+            #     # leave the symbol undefined here:
             #     linear_vars = set()
 
             # Process the nonlinear portion of this component
@@ -1215,7 +1209,6 @@ class _NLWriter_impl(object):
                 all_nonlinear_vars.update(nonlinear_vars)
 
             # Update the count of components that each variable appears in
-            #nnz_by_var.update(nz)
             for v in expr_info.linear:
                 if v in nnz_by_var:
                     nnz_by_var[v] += 1
@@ -1298,6 +1291,9 @@ class _NLWriter_impl(object):
         return n_subexpressions
 
     def _write_nl_expression(self, repn, include_const):
+        # Note that repn.mult should always be 1 (the AMPLRepn was
+        # compiled before this point).  Omitting the assertion for
+        # efficiency.
         #assert repn.mult == 1
         if repn.nonlinear:
             nl, args = repn.nonlinear
@@ -1448,7 +1444,7 @@ class AMPLRepn(object):
         """
         # Note that self.mult will always be 1 (we only call apend()
         # within a sum, so there is no opportunity for self.mult to
-        # change)
+        # change). Omitting the assertion for efficiency.
         #assert self.mult == 1
         _type = other[0]
         if _type is _MONOMIAL:
@@ -1689,7 +1685,6 @@ def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_named_expression_node(visitor, node, arg1):
-    #return arg1
     _id = id(node)
     # Note that while named subexpressions ('defined variables' in the
     # ASL NL file vernacular) look like variables, they are not allowed
@@ -1885,11 +1880,16 @@ def _before_var(visitor, child):
     return False, (_MONOMIAL, _id, 1)
 
 def _before_npv(visitor, child):
+    # TBD: It might be more efficient to cache the value of NPV
+    # expressions to avoid duplicate evaluations.  However, current
+    # examples do not benefit from this cache.
+    #
     # _id = id(child)
     # if _id in visitor.value_cache:
     #     child = visitor.value_cache[_id]
     # else:
     #     child = visitor.value_cache[_id] = child()
+    # return False, (_CONSTANT, child)
     return False, (_CONSTANT, child())
 
 def _before_monomial(visitor, child):
@@ -1899,6 +1899,10 @@ def _before_monomial(visitor, child):
     #
     arg1, arg2 = child._args_
     if arg1.__class__ not in native_types:
+        # TBD: It might be more efficient to cache the value of NPV
+        # expressions to avoid duplicate evaluations.  However, current
+        # examples do not benefit from this cache.
+        #
         # _id = id(arg1)
         # if _id in visitor.value_cache:
         #     arg1 = visitor.value_cache[_id]

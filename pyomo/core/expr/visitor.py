@@ -177,7 +177,14 @@ class StreamBasedExpressionVisitor(object):
 
     # The list of event methods that can either be implemented by
     # derived classes or specified as callback functions to the class
-    # constructor:
+    # constructor.
+    #
+    # This is a dict mapping the callback name to a single character
+    # that we can use to classify the set of callbacks used by a
+    # particular Visitor (we define special-purpose node processors for
+    # certain common combinations).  For example, a 'bex' visitor is one
+    # that supports beforeChild, enterNode, and exitNode, but NOT
+    # afterChild or acceptChildResult.
     client_methods = {
         'enterNode': 'e',
         'exitNode': 'x',
@@ -187,6 +194,7 @@ class StreamBasedExpressionVisitor(object):
         'initializeWalker': '',
         'finalizeResult': '',
     }
+
     def __init__(self, **kwds):
         # This is slightly tricky: We want derived classes to be able to
         # override the "None" defaults here, and for keyword arguments
@@ -310,7 +318,7 @@ class StreamBasedExpressionVisitor(object):
             descend = True
             child_idx = -1
             # Note: this relies on iter(iterator) returning the
-            # iterator.  This seems to hold got all common iterators
+            # iterator.  This seems to hold for all common iterators
             # (list, tuple, generator, etc)
             arg_iter = iter(args)
             for child in arg_iter:
@@ -349,11 +357,12 @@ class StreamBasedExpressionVisitor(object):
             return data
 
     def _process_node_bex(self, node, recursion_limit):
-        """Recursive routine for processing nodes with only bex callbacks
+        """Recursive routine for processing nodes with only 'bex' callbacks
 
         This is a special-case implementation of the "general"
         StreamBasedExpressionVisitor node processor for the case that
-        only beforeChild, enterNode, and exitNode are defined.
+        only beforeChild, enterNode, and exitNode are defined (see
+        also the definition of the client_methods dict).
 
         """
         if not recursion_limit:
@@ -382,7 +391,7 @@ class StreamBasedExpressionVisitor(object):
         try:
             child_idx = -1
             # Note: this relies on iter(iterator) returning the
-            # iterator.  This seems to hold got all common iterators
+            # iterator.  This seems to hold for all common iterators
             # (list, tuple, generator, etc)
             arg_iter = iter(args)
             for child in arg_iter:
@@ -410,11 +419,12 @@ class StreamBasedExpressionVisitor(object):
         return self.exitNode(node, data)
 
     def _process_node_bx(self, node, recursion_limit):
-        """Recursive routine for processing nodes with only bx callbacks
+        """Recursive routine for processing nodes with only 'bx' callbacks
 
         This is a special-case implementation of the "general"
         StreamBasedExpressionVisitor node processor for the case that
-        only beforeChild and exitNode are defined.
+        only beforeChild and exitNode are defined (see also the
+        definition of the client_methods dict).
 
         """
         if not recursion_limit:
@@ -431,7 +441,7 @@ class StreamBasedExpressionVisitor(object):
         try:
             child_idx = -1
             # Note: this relies on iter(iterator) returning the
-            # iterator.  This seems to hold got all common iterators
+            # iterator.  This seems to hold for all common iterators
             # (list, tuple, generator, etc)
             arg_iter = iter(args)
             for child in arg_iter:
