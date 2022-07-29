@@ -14,6 +14,29 @@ from pyomo.contrib.mpc.data.get_cuid import (
 )
 
 
+def _is_iterable(obj):
+    if not hasattr(obj, "__iter__") and not hasattr(obj, "__getitem__"):
+        # Here we know obj is not iterable.
+        return False
+    elif hasattr(obj, "is_indexed"):
+        # Pyomo scalar components define __iter__ and __getitem__,
+        # however for our purpose we would like to consider them
+        # as not iterable.
+        return not obj.is_indexed()
+    else:
+        try:
+            iter(obj)
+            return True
+        except TypeError as err:
+            if "not iterable" in str(err):
+                # Hopefully this error message is not implementation
+                # or version specific. Tested in CPython 3.7.8 and
+                # PyPy 3.7.10.
+                return False
+            else:
+                raise err
+
+
 class _DynamicDataBase(object):
     """
     A base class for storing data associated with time-indexed variables.
@@ -122,4 +145,6 @@ class _DynamicDataBase(object):
             )
             data[cuid] = self._data[cuid]
         MyClass = self.__class__
+        # Subclasses likely have different construction signatures,
+        # so this maybe shouldn't be implemented on the base class.
         return MyClass(data, time_set=self._orig_time_set)
