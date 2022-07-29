@@ -11,6 +11,7 @@
 
 from pyomo.core.expr.numvalue import value as pyo_value
 from pyomo.contrib.mpc.data.dynamic_data_base import (
+    _is_iterable,
     _DynamicDataBase,
 )
 from pyomo.contrib.mpc.data.get_cuid import (
@@ -30,10 +31,10 @@ class ScalarData(_DynamicDataBase):
         ----------
         data: dict or ComponentMap
             Maps variables, names, or CUIDs to lists of values
+
         """
         for key, val in data.items():
-            # Is there a better way to check if val is iterable?
-            if hasattr(val, "__iter__") or hasattr(val, "__getitem__"):
+            if _is_iterable(val):
                 raise TypeError(
                     "Value %s corresponding to key %s is not a scalar"
                     % (val, key)
