@@ -199,7 +199,8 @@ def get_index_of_max_violation(model_data, config, solve_data_list):
         indices_of_violating_realizations.extend(i for i,x in enumerate(solve_data_list) if x[idx_j].found_violation==True)
 
     if matrix_dim == 0:
-        return 0, 0 # Just a dummy index...
+        # no violating realizations
+        return None, None
 
     matrix_of_violations = np.zeros(shape=(matrix_dim, len(model_data.separation_model.util.performance_constraints)))
     violation_dict = {}
@@ -332,12 +333,19 @@ def solve_separation_problem(model_data, config):
                 separation_obj.deactivate()
 
         # Do we return?
-        # If their are multiple violations in this bucket, pick the worst-case
-        idx_i, idx_j = get_index_of_max_violation(model_data=model_data, config=config,
-                                                              solve_data_list=solve_data_list)
+        # If there are multiple violations in this bucket, pick the worst-case
+        idx_i, idx_j = get_index_of_max_violation(
+            model_data=model_data,
+            config=config,
+            solve_data_list=solve_data_list,
+        )
 
-        violating_realizations = [v for v in solve_data_list[idx_i][idx_j].violating_param_realization]
-        violations = solve_data_list[idx_i][idx_j].list_of_scaled_violations
+        if (idx_i, idx_j) != (None, None):
+            violating_realizations = [v for v in solve_data_list[idx_i][idx_j].violating_param_realization]
+            violations = solve_data_list[idx_i][idx_j].list_of_scaled_violations
+        else:
+            violating_realizations = []
+            violations = []
 
         if any(s.found_violation for solve_list in solve_data_list for s in solve_list):
             #config.progress_logger.info(
