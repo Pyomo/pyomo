@@ -30,6 +30,7 @@ from pyomo.core.expr.compare import compare_expressions
 from pyomo.contrib.mpc.modeling.cost_expressions import (
     get_tracking_cost_from_constant_setpoint,
 )
+from pyomo.contrib.mpc.data.scalar_data import ScalarData
 
 
 class TestTrackingCost(unittest.TestCase):
@@ -40,11 +41,7 @@ class TestTrackingCost(unittest.TestCase):
         m.v1 = pyo.Var(m.time, initialize={i: 1*i for i in m.time})
         m.v2 = pyo.Var(m.time, initialize={i: 2*i for i in m.time})
 
-        setpoint_data = {
-            str(pyo.ComponentUID(m.v1)): 3.0,
-            str(pyo.ComponentUID(m.v2)): 4.0,
-        }
-
+        setpoint_data = ScalarData({m.v1[:]: 3.0, m.v2[:]: 4.0})
         m.tracking_expr = get_tracking_cost_from_constant_setpoint(
             [m.v1, m.v2],
             m.time,
@@ -71,15 +68,8 @@ class TestTrackingCost(unittest.TestCase):
         m.v1 = pyo.Var(m.time, initialize={i: 1*i for i in m.time})
         m.v2 = pyo.Var(m.time, initialize={i: 2*i for i in m.time})
 
-        setpoint_data = {
-            str(pyo.ComponentUID(m.v1)): 3.0,
-            str(pyo.ComponentUID(m.v2)): 4.0,
-        }
-        weight_data = {
-            str(pyo.ComponentUID(m.v1)): 0.1,
-            str(pyo.ComponentUID(m.v2)): 0.5,
-        }
-
+        setpoint_data = ScalarData({m.v1[:]: 3.0, m.v2[:]: 4.0})
+        weight_data = ScalarData({m.v1[:]: 0.1, m.v2[:]: 0.5})
         m.tracking_expr = get_tracking_cost_from_constant_setpoint(
             [m.v1, m.v2],
             m.time,
@@ -107,13 +97,8 @@ class TestTrackingCost(unittest.TestCase):
         m.v1 = pyo.Var(m.time, initialize={i: 1*i for i in m.time})
         m.v2 = pyo.Var(m.time, initialize={i: 2*i for i in m.time})
 
-        setpoint_data = {
-            str(pyo.ComponentUID(m.v1)): 3.0,
-        }
-        weight_data = {
-            str(pyo.ComponentUID(m.v1)): 0.1,
-        }
-
+        setpoint_data = ScalarData({m.v1[:]: 3.0})
+        weight_data = ScalarData({m.v2[:]: 0.1})
         with self.assertRaisesRegex(KeyError, "Setpoint data"):
             m.tracking_expr = get_tracking_cost_from_constant_setpoint(
                 [m.v1, m.v2],
@@ -121,11 +106,7 @@ class TestTrackingCost(unittest.TestCase):
                 setpoint_data,
             )
 
-        setpoint_data = {
-            str(pyo.ComponentUID(m.v1)): 3.0,
-            str(pyo.ComponentUID(m.v2)): 4.0,
-        }
-
+        setpoint_data = ScalarData({m.v1[:]: 3.0, m.v2[:]: 4.0})
         with self.assertRaisesRegex(KeyError, "Tracking weight"):
             m.tracking_expr = get_tracking_cost_from_constant_setpoint(
                 [m.v1, m.v2],
