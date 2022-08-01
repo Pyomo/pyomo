@@ -21,6 +21,8 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.component import _ComponentBase
+import logging
+logger = logging.getLogger(__name__)
 
 def prod(terms):
     """
@@ -71,7 +73,8 @@ def quicksum(args, start=0, linear=None):
     try:
         args = iter(args)
     except:
-        raise TypeError('The argument `args` to quicksum() is not iterable!')
+        logger.error('The argument `args` to quicksum() is not iterable!')
+        raise
 
     #
     # If we're starting with a numeric value, then 
