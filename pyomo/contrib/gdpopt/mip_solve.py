@@ -184,7 +184,9 @@ def distinguish_mip_infeasible_or_unbounded(m, config):
     if isinstance(mipopt, PersistentSolver):
         mipopt.set_instance(m)
     with SuppressInfeasibleWarning():
-        results = mipopt.solve(m, **tmp_args)
+        results = mipopt.solve(m, load_solutions=False, **tmp_args)
+        if len(results.solution) > 0:
+            m.solutions.load_from(results)
     termination_condition = results.solver.termination_condition
     return results, termination_condition
 

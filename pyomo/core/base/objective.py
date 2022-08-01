@@ -20,7 +20,7 @@ __all__ = ('Objective',
 import sys
 import logging
 from weakref import ref as weakref_ref
-from typing import overload
+from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
