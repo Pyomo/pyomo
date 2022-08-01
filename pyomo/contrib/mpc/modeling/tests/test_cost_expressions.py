@@ -33,6 +33,7 @@ from pyomo.contrib.mpc.modeling.cost_expressions import (
     get_tracking_cost_from_time_varying_setpoint,
 )
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
+from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 
 
 class TestTrackingCostConstantSetpoint(unittest.TestCase):
@@ -157,6 +158,211 @@ class TestTrackingCostPiecewiseSetpoint(unittest.TestCase):
             self.assertTrue(compare_expressions(
                 pred_expr, m.tracking_cost[i].expr
             ))
+
+    def test_piecewise_tracking_cost_with_weights(self):
+        m = self._make_model(n_time_points=5)
+
+        variables = [
+            pyo.Reference(m.var[:, "A"]),
+            pyo.Reference(m.var[:, "B"]),
+        ]
+        setpoint_data = {
+            pyo.ComponentUID(m.var[:, "A"]): {(0, 2): 2.0, (2, 4): 2.5},
+            pyo.ComponentUID(m.var[:, "B"]): {(0, 2): 3.0, (2, 4): 3.5},
+        }
+        weight_data = {
+            pyo.ComponentUID(m.var[:, "A"]): 10.0,
+            pyo.ComponentUID(m.var[:, "B"]): 0.1,
+        }
+        m.tracking_cost = get_tracking_cost_from_piecewise_constant_setpoint(
+            variables,
+            m.time,
+            setpoint_data,
+            weight_data=weight_data,
+        )
+        for i in m.time:
+            if i <= 2:
+                pred_expr = (
+                    10.0*(m.var[i, "A"] - 2.0)**2
+                    + 0.1*(m.var[i, "B"] - 3.0)**2
+                )
+            else:
+                pred_expr = (
+                    10.0*(m.var[i, "A"] - 2.5)**2
+                    + 0.1*(m.var[i, "B"] - 3.5)**2
+                )
+            pred_value = pyo.value(pred_expr)
+            self.assertEqual(pred_value, pyo.value(m.tracking_cost[i]))
+            self.assertTrue(compare_expressions(
+                pred_expr, m.tracking_cost[i].expr
+            ))
+
+    def test_piecewise_tracking_cost_exceptions(self):
+        m = self._make_model(n_time_points=5)
+
+        variables = [
+            pyo.Reference(m.var[:, "A"]),
+            pyo.Reference(m.var[:, "B"]),
+        ]
+        setpoint_data = {
+            pyo.ComponentUID(m.var[:, "A"]): {(0, 2): 2.0, (2, 4): 2.5},
+        }
+        weight_data = {
+            pyo.ComponentUID(m.var[:, "A"]): 10.0,
+            pyo.ComponentUID(m.var[:, "B"]): 0.1,
+        }
+        msg = "Setpoint data dictionary does not contain"
+        with self.assertRaisesRegex(KeyError, msg):
+            tr_cost = get_tracking_cost_from_piecewise_constant_setpoint(
+                variables,
+                m.time,
+                setpoint_data,
+                weight_data=weight_data,
+            )
+
+        setpoint_data = {
+            pyo.ComponentUID(m.var[:, "A"]): {(0, 2): 2.0, (2, 4): 2.5},
+            pyo.ComponentUID(m.var[:, "B"]): {(0, 2): 3.0, (2, 4): 3.5},
+        }
+        weight_data = {
+            pyo.ComponentUID(m.var[:, "A"]): 10.0,
+        }
+        msg = "Tracking weight dictionary does not contain"
+        with self.assertRaisesRegex(KeyError, msg):
+            tr_cost = get_tracking_cost_from_piecewise_constant_setpoint(
+                variables,
+                m.time,
+                setpoint_data,
+                weight_data=weight_data,
+            )
+
+
+class TestTrackingCostVaryingSetpoint(unittest.TestCase):
+
+    def _make_model(self, n_time_points=3):
+        m = pyo.ConcreteModel()
+        m.time = pyo.Set(initialize=list(range(n_time_points)))
+        m.comp = pyo.Set(initialize=["A", "B"])
+        m.var = pyo.Var(
+            m.time,
+            m.comp,
+            initialize={(i, j): 1.1*i for i, j in m.time*m.comp},
+        )
+        return m
+
+    def test_varying_setpoint_no_weights(self):
+        m = self._make_model(n_time_points=5)
+        variables = [
+            pyo.Reference(m.var[:, "A"]),
+            pyo.Reference(m.var[:, "B"]),
+        ]
+        A_setpoint = [1.0 - 0.1*i for i in range(len(m.time))]
+        B_setpoint = [5.0 + 0.1*i for i in range(len(m.time))]
+        setpoint_data = TimeSeriesData(
+            {m.var[:, "A"]: A_setpoint, m.var[:, "B"]: B_setpoint},
+            m.time,
+        )
+        m.tracking_cost = get_tracking_cost_from_time_varying_setpoint(
+            variables,
+            m.time,
+            setpoint_data,
+        )
+        for i, t in enumerate(m.time):
+            pred_expr = (
+                (m.var[t, "A"] - A_setpoint[i])**2
+                + (m.var[t, "B"] - B_setpoint[i])**2
+            )
+            pred_value = pyo.value(pred_expr)
+            self.assertEqual(pred_value, pyo.value(m.tracking_cost[t]))
+            self.assertTrue(compare_expressions(
+                pred_expr, m.tracking_cost[t].expr
+            ))
+
+    def test_varying_setpoint_with_weights(self):
+        m = self._make_model(n_time_points=5)
+        variables = [
+            pyo.Reference(m.var[:, "A"]),
+            pyo.Reference(m.var[:, "B"]),
+        ]
+        A_setpoint = [1.0 - 0.1*i for i in range(len(m.time))]
+        B_setpoint = [5.0 + 0.1*i for i in range(len(m.time))]
+        setpoint_data = TimeSeriesData(
+            {m.var[:, "A"]: A_setpoint, m.var[:, "B"]: B_setpoint},
+            m.time,
+        )
+        weight_data = {
+            pyo.ComponentUID(m.var[:, "A"]): 10.0,
+            pyo.ComponentUID(m.var[:, "B"]): 0.1,
+        }
+        m.tracking_cost = get_tracking_cost_from_time_varying_setpoint(
+            variables,
+            m.time,
+            setpoint_data,
+            weight_data=weight_data,
+        )
+        for i, t in enumerate(m.time):
+            pred_expr = (
+                10.0*(m.var[t, "A"] - A_setpoint[i])**2
+                + 0.1*(m.var[t, "B"] - B_setpoint[i])**2
+            )
+            pred_value = pyo.value(pred_expr)
+            self.assertEqual(pred_value, pyo.value(m.tracking_cost[t]))
+            self.assertTrue(compare_expressions(
+                pred_expr, m.tracking_cost[t].expr
+            ))
+
+    def test_varying_setpoint_exceptions(self):
+        m = self._make_model(n_time_points=5)
+        variables = [
+            pyo.Reference(m.var[:, "A"]),
+            pyo.Reference(m.var[:, "B"]),
+        ]
+        A_setpoint = [1.0 - 0.1*i for i in range(len(m.time))]
+        B_setpoint = [5.0 + 0.1*i for i in range(len(m.time))]
+        setpoint_data = TimeSeriesData(
+            {m.var[:, "A"]: A_setpoint, m.var[:, "B"]: B_setpoint},
+            [i + 10 for i in m.time],
+        )
+        weight_data = {
+            pyo.ComponentUID(m.var[:, "A"]): 10.0,
+            pyo.ComponentUID(m.var[:, "B"]): 0.1,
+        }
+        msg = "Mismatch in time points"
+        with self.assertRaisesRegex(ValueError, msg):
+            # Time-varying setpoint specifies different time points
+            # from our time set.
+            tr_cost = get_tracking_cost_from_time_varying_setpoint(
+                variables,
+                m.time,
+                setpoint_data,
+                weight_data=weight_data,
+            )
+
+        setpoint_data = TimeSeriesData({m.var[:, "A"]: A_setpoint}, m.time)
+        msg = "Setpoint data dictionary does not contain"
+        with self.assertRaisesRegex(KeyError, msg):
+            tr_cost = get_tracking_cost_from_time_varying_setpoint(
+                variables,
+                m.time,
+                setpoint_data,
+                weight_data=weight_data,
+            )
+
+        setpoint_data = TimeSeriesData(
+            {m.var[:, "A"]: A_setpoint, m.var[:, "B"]: B_setpoint},
+            m.time,
+        )
+        weight_data = {
+            pyo.ComponentUID(m.var[:, "A"]): 10.0,
+        }
+        msg = "Tracking weight dictionary does not contain"
+        with self.assertRaisesRegex(KeyError, msg):
+            tr_cost = get_tracking_cost_from_time_varying_setpoint(
+                variables,
+                m.time,
+                setpoint_data,
+                weight_data=weight_data,
+            )
 
 
 if __name__ == "__main__":
