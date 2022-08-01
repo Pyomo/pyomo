@@ -33,7 +33,6 @@ def get_piecewise_constant_constraints(
             # its time point. If the wrong direction for a discretization
             # is used, we could have different inputs applied within the same
             # finite element, which I think we never want.
-            #t_prev = time.prev(t)
             var = inputs[i]
             if use_next:
                 t_next = time.next(t)
