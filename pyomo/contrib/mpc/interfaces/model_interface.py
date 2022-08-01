@@ -25,6 +25,9 @@ from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.modeling.cost_expressions import (
     get_tracking_cost_from_constant_setpoint,
 )
+from pyomo.contrib.mpc.modeling.input_constraints import (
+    get_piecewise_constant_constraints,
+)
 
 iterable_scalars = (str, bytes)
 
@@ -332,4 +335,19 @@ class DynamicModelInterface(object):
             ]
         return get_tracking_cost_from_constant_setpoint(
             variables, time, setpoint_data, weight_data=weight_data
+        )
+
+    def get_piecewise_constant_constraints(
+        self, variables, sample_points, use_next=True,
+    ):
+        cuids = [
+            get_time_indexed_cuid(var, (self.time,))
+            for var in variables
+        ]
+        variables = [self.model.find_component(cuid) for cuid in cuids]
+        return get_piecewise_constant_constraints(
+            variables,
+            self.time,
+            sample_points,
+            use_next=use_next,
         )
