@@ -29,11 +29,13 @@ from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.expr.compare import compare_expressions
 from pyomo.contrib.mpc.modeling.cost_expressions import (
     get_tracking_cost_from_constant_setpoint,
+    get_tracking_cost_from_piecewise_constant_setpoint,
+    get_tracking_cost_from_time_varying_setpoint,
 )
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 
 
-class TestTrackingCost(unittest.TestCase):
+class TestTrackingCostConstantSetpoint(unittest.TestCase):
 
     def test_tracking_cost_no_weights(self):
         m = pyo.ConcreteModel()
@@ -114,3 +116,48 @@ class TestTrackingCost(unittest.TestCase):
                 setpoint_data,
                 weight_data=weight_data,
             )
+
+
+class TestTrackingCostPiecewiseSetpoint(unittest.TestCase):
+
+    def _make_model(self, n_time_points=3):
+        m = pyo.ConcreteModel()
+        m.time = pyo.Set(initialize=list(range(n_time_points)))
+        m.comp = pyo.Set(initialize=["A", "B"])
+        m.var = pyo.Var(
+            m.time,
+            m.comp,
+            initialize={(i, j): 1.1*i for i, j in m.time*m.comp},
+        )
+        return m
+
+    def test_piecewise_tracking_cost_no_weights(self):
+        m = self._make_model(n_time_points=5)
+
+        variables = [
+            pyo.Reference(m.var[:, "A"]),
+            pyo.Reference(m.var[:, "B"]),
+        ]
+        setpoint_data = {
+            pyo.ComponentUID(m.var[:, "A"]): {(0, 2): 2.0, (2, 4): 2.5},
+            pyo.ComponentUID(m.var[:, "B"]): {(0, 2): 3.0, (2, 4): 3.5},
+        }
+        m.tracking_cost = get_tracking_cost_from_piecewise_constant_setpoint(
+            variables,
+            m.time,
+            setpoint_data,
+        )
+        for i in m.time:
+            if i <= 2:
+                pred_expr = (m.var[i, "A"] - 2.0)**2 + (m.var[i, "B"] - 3.0)**2
+            else:
+                pred_expr = (m.var[i, "A"] - 2.5)**2 + (m.var[i, "B"] - 3.5)**2
+            pred_value = pyo.value(pred_expr)
+            self.assertEqual(pred_value, pyo.value(m.tracking_cost[i]))
+            self.assertTrue(compare_expressions(
+                pred_expr, m.tracking_cost[i].expr
+            ))
+
+
+if __name__ == "__main__":
+    unittest.main()
