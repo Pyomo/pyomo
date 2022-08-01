@@ -36,9 +36,9 @@ def get_piecewise_constant_constraints(
             var = inputs[i]
             if use_next:
                 t_next = time.next(t)
-                return var[t] == var[t_next]
+                return var[t] - var[t_next] == 0
             else:
                 t_prev = time.prev(t)
-                return var[t_prev] == var[t]
+                return var[t_prev] - var[t] == 0
     pwc_con = Constraint(input_set, time, rule=piecewise_constant_rule)
     return input_set, pwc_con
