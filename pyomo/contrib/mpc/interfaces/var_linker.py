@@ -33,7 +33,7 @@ class DynamicVarLinker(object):
         if len(source_variables) != len(target_variables):
             raise ValueError(
                 "%s must be provided two lists of time-indexed variables "
-                "of equal length.\nGot lengths %s and %s"
+                "of equal length. Got lengths %s and %s"
                 % (type(self), len(source_variables), len(target_variables))
             )
         self._source_variables = source_variables
