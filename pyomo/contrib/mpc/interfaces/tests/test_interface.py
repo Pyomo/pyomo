@@ -169,6 +169,87 @@ class TestDynamicModelInterface(unittest.TestCase):
                 self.assertEqual(m.var[t, "A"].value, old_A[t])
                 self.assertEqual(m.input[t].value, old_input[t])
 
+    def test_load_data_from_dict_scalar_var(self):
+        m = self._make_model()
+        interface = DynamicModelInterface(m, m.time)
+        data = {pyo.ComponentUID(m.scalar): 6.0}
+        interface.load_data(data)
+        self.assertEqual(m.scalar.value, 6.0)
+
+    def test_load_data_from_dict_indexed_var(self):
+        m = self._make_model()
+        interface = DynamicModelInterface(m, m.time)
+        data = {pyo.ComponentUID(m.input): 6.0}
+        interface.load_data(data)
+        for t in m.time:
+            self.assertEqual(m.input[t].value, 6.0)
+
+    def test_load_data_from_dict_indexed_var_list_data(self):
+        m = self._make_model()
+        interface = DynamicModelInterface(m, m.time)
+        data_list = [2, 3, 4]
+        data = {pyo.ComponentUID(m.input): data_list}
+        interface.load_data(data)
+        for i, t in enumerate(m.time):
+            self.assertEqual(m.input[t].value, data_list[i])
+
+    def test_load_data_from_ScalarData_toall(self):
+        m = self._make_model()
+        interface = DynamicModelInterface(m, m.time)
+        data = ScalarData({m.var[:, "A"]: 5.5, m.input[:]: 6.6})
+        interface.load_data(data)
+
+        B_data = [m.var[t, "B"].value for t in m.time]
+        # var[:,B] has not been changed
+        self.assertEqual(B_data, [1.0, 1.1, 1.2])
+
+        for t in m.time:
+            self.assertEqual(m.var[t, "A"].value, 5.5)
+            self.assertEqual(m.input[t].value, 6.6)
+
+    def test_load_data_from_ScalarData_tosubset(self):
+        m = self._make_model()
+        interface = DynamicModelInterface(m, m.time)
+
+        old_A = {t: m.var[t, "A"].value for t in m.time}
+        old_input = {t: m.input[t].value for t in m.time}
+
+        data = ScalarData({m.var[:, "A"]: 5.5, m.input[:]: 6.6})
+        time_points = [1, 2]
+        time_set = set(time_points)
+        interface.load_data(data, time_points=[1, 2])
+
+        B_data = [m.var[t, "B"].value for t in m.time]
+        # var[:,B] has not been changed
+        self.assertEqual(B_data, [1.0, 1.1, 1.2])
+
+        for t in m.time:
+            if t in time_set:
+                self.assertEqual(m.var[t, "A"].value, 5.5)
+                self.assertEqual(m.input[t].value, 6.6)
+            else:
+                self.assertEqual(m.var[t, "A"].value, old_A[t])
+                self.assertEqual(m.input[t].value, old_input[t])
+
+    def test_load_data_from_TimeSeriesData(self):
+        m = self._make_model()
+        interface = DynamicModelInterface(m, m.time)
+        new_A = [1.0, 2.0, 3.0]
+        new_input = [4.0, 5.0, 6.0]
+        data = TimeSeriesData(
+            {m.var[:, "A"]: new_A, m.input[:]: new_input},
+            m.time,
+        )
+        interface.load_data(data)
+
+        B_data = [m.var[t, "B"].value for t in m.time]
+        # var[:,B] has not been changed
+        self.assertEqual(B_data, [1.0, 1.1, 1.2])
+
+        for i, t in enumerate(m.time):
+            self.assertEqual(m.var[t, "A"].value, new_A[i])
+            self.assertEqual(m.input[t].value, new_input[i])
+
     def test_copy_values_at_time_default(self):
         m = self._make_model()
         interface = DynamicModelInterface(m, m.time)
