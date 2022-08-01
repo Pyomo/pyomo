@@ -8,7 +8,6 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-
 #################################################################################
 # The Institute for the Design of Advanced Energy Systems Integrated Platform
 # Framework (IDAES IP) was produced under the DOE Institute for the
@@ -22,6 +21,7 @@
 # license information.
 #################################################################################
 
+from pyomo.common.collections import ComponentMap
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.expression import Expression
 
@@ -39,8 +39,8 @@ def get_tracking_cost_from_constant_setpoint(
     weight_data=None,
 ):
     """
-    This function returns a tracking cost expression for the given time-indexed
-    variables and associated setpoint data.
+    This function returns a tracking cost expression for the given
+    time-indexed variables and associated setpoint data.
 
     Arguments
     ---------
@@ -49,9 +49,9 @@ def get_tracking_cost_from_constant_setpoint(
         expression
     time: iterable
         Set by which to index the tracking expression
-    setpoint_data: dict
+    setpoint_data: ScalarData, dict, or ComponentMap
         Maps variable names to setpoint values
-    weight_data: dict
+    weight_data: ScalarData, dict, or ComponentMap
         Optional. Maps variable names to tracking cost weights. If not
         provided, weights of one are used.
 
@@ -61,100 +61,6 @@ def get_tracking_cost_from_constant_setpoint(
     squared difference between variables and setpoint values.
 
     """
-    cuids = [
-        get_time_indexed_cuid(var, sets=(time,))
-        for var in variables
-    ]
-    if weight_data is None:
-        weight_data = {cuid: 1.0 for cuid in cuids}
-    elif isinstance(weight_data, ScalarData):
-        weight_data = weight_data.get_data()
-    else:
-        weight_data = ScalarData(weight_data, time_set=time).get_data()
-    # Note that if we used ScalarData everywhere, we wouldn't have to
-    # process the incoming variables with get_time_indexed_cuid.
-    # We would process them on lookup, which would be slightly more work,
-    # but this function would be nicer. ScalarData would have to implement
-    # __contains__ in that case.
-
-    if isinstance(setpoint_data, ScalarData):
-        setpoint_data = setpoint_data.get_data()
-    else:
-        setpoint_data = ScalarData(setpoint_data, time_set=time).get_data()
-
-    # Note that at this point both weight_data and setpoint_data are dicts
-    # mapping CUIDs to values.
-
-    for i, cuid in enumerate(cuids):
-        if cuid not in setpoint_data:
-            raise KeyError(
-                "Setpoint data dictionary does not contain a key for variable\n"
-                "%s with ComponentUID %s" % (variables[i].name, cuid)
-            )
-        if cuid not in weight_data:
-            raise KeyError(
-                "Tracking weight dictionary does not contain a key for "
-                "variable\n%s with ComponentUID %s" % (variables[i].name, cuid)
-            )
-
-    def tracking_rule(m, t):
-        return sum(
-            weight_data[cuid] * (var[t] - setpoint_data[cuid])**2
-            for cuid, var in zip(cuids, variables)
-        )
-    tracking_expr = Expression(time, rule=tracking_rule)
-    return tracking_expr
-
-
-def _get_tracking_cost_from_constant_setpoint(
-    variables,
-    time,
-    setpoint_data,
-    weight_data=None,
-):
-    """
-    Re-implementation of the above, trying to be simpler by leveraging
-    ScalarData
-    """
-    # If provided, weight and setpoint data should be ScalarData.
-    # ... it wouldn't be too hard to convert them if they are dicts/maps...
-    if weight_data is None:
-        weight_data = ScalarData(
-            # var must be a variable because it needs to participate in an
-            # expression below. (Reference is fine. We will immediately extract
-            # the underlying slice.)
-            ComponentMap((var, 1.0) for var in variables),
-            # If time is not a set, it just won't get matched anywhere when
-            # trying to replace indices with slices in a VarData.
-            #time_set=time,
-            # Should never be used; VarData should not be supported here.
-        )
-    # What if these were ScalarData at this point?
-    # We could process variables at lookup time. This does extra processing
-    # but makes this function simpler.
-    # This defers the expense of generating cuids (from slices) to the calling
-    # of this rule. Will this be too expensive?
-    # The rule is called for every time point. This may get too expensive.
-    def tracking_rule(m, t):
-        return sum(
-            (
-                weight_data.get_data_from_key(var)
-                * (var[t] - setpoint_data.get_data_from_key(var))**2
-            ) for var in variables
-        )
-    tracking_expr = Expression(time, rule=tracking_rule)
-    return tracking_expr
-
-
-def _get_tracking_cost_from_constant_setpoint_2(
-    variables,
-    time,
-    setpoint_data,
-    weight_data=None,
-):
-    """
-    Another re-implementation. I think I like this one.
-    """
     if weight_data is None:
         weight_data = ScalarData(ComponentMap((var, 1.0) for var in variables))
     if not isinstance(weight_data, ScalarData):
@@ -162,7 +68,18 @@ def _get_tracking_cost_from_constant_setpoint_2(
     if not isinstance(setpoint_data, ScalarData):
         setpoint_data = ScalarData(setpoint_data)
 
-    # TODO: Make sure data have keys for each var
+    # Make sure data have keys for each var
+    for var in variables:
+        if not setpoint_data.contains_key(var):
+            raise KeyError(
+                "Setpoint data dictionary does not contain a"
+                " key for variable %s" % var.name
+            )
+        if not weight_data.contains_key(var):
+            raise KeyError(
+                "Tracking weight dictionary does not contain a"
+                " key for variable %s" % var.name
+            )
 
     # Set up data structures so we don't have to re-process keys for each
     # time index in the rule.
@@ -171,7 +88,9 @@ def _get_tracking_cost_from_constant_setpoint_2(
     weight_data = weight_data.get_data()
     def tracking_rule(m, t):
         return sum(
-            weight_data[cuid] * (var[t] - setpoint_data[cuid])**2
+            get_quadratic_tracking_cost_at_time(
+                var, t, setpoint_data[cuid], weight=weight_data[cuid]
+            )
             for cuid, var in zip(cuids, variables)
         )
     tracking_expr = Expression(time, rule=tracking_rule)
