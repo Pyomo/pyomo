@@ -139,17 +139,26 @@ def get_tracking_cost_expressions_from_time_varying_setpoint(
     # Here, setpoint_data is a TimeSeriesData object. Need to get
     # the actual dictionary that we can use for lookup.
     setpoint_dict = setpoint_data.get_data()
+    # NOTE: We may eventually want to support providing more time points
+    # in the setpoint than are in the time set used as an indexing set.
+    # We would just need the indexing points to exist in the time set.
+    if list(time) != setpoint_data.get_time_points():
+        raise ValueError(
+            "Mismatch in time points between time set and points"
+            " in the setpoint data structure"
+        )
 
     for i, cuid in enumerate(cuids):
         if cuid not in setpoint_dict:
             raise KeyError(
-                "Setpoint data dictionary does not contain a key for variable\n"
-                "%s with ComponentUID %s" % (variables[i].name, cuid)
+                "Setpoint data dictionary does not contain a key for variable"
+                " %s with ComponentUID %s" % (variables[i].name, cuid)
             )
         if cuid not in weight_data:
             raise KeyError(
-                "Tracking weight dictionary does not contain a key for "
-                "variable\n%s with ComponentUID %s" % (variables[i].name, cuid)
+                "Tracking weight dictionary does not contain a key for"
+                " variable %s with ComponentUID %s"
+                % (variables[i].name, cuid)
             )
     tracking_costs = [
         {
