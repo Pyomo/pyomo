@@ -17,6 +17,9 @@ from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.expr.numeric_expr import value as pyo_value
 
 from pyomo.contrib.mpc.interfaces.copy_values import copy_values_at_time
+from pyomo.contrib.mpc.data.find_nearest_index import find_nearest_index
+from pyomo.contrib.mpc.data.get_cuid import get_time_indexed_cuid
+from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.modeling.cost_expressions import (
@@ -52,34 +55,46 @@ class DynamicModelInterface(object):
         """
         Construct with a model and a set. We will flatten the model
         with respect to this set and generate CUIDs with wildcards.
+
         """
         scalar_vars, dae_vars = flatten_dae_components(model, time, Var)
         scalar_expr, dae_expr = flatten_dae_components(model, time, Expression)
         self.model = model
         self.time = time
-        self.scalar_vars = scalar_vars
-        self.dae_vars = dae_vars
-        self.scalar_expr = scalar_expr
-        self.dae_expr = dae_expr
+        self._scalar_vars = scalar_vars
+        self._dae_vars = dae_vars
+        self._scalar_expr = scalar_expr
+        self._dae_expr = dae_expr
 
         if context is NOTSET:
             context = model
 
         # Use buffer to reduce repeated work during name/cuid generation
         cuid_buffer = {}
-        self.scalar_var_cuids = [
+        self._scalar_var_cuids = [
             ComponentUID(var, cuid_buffer=cuid_buffer, context=context)
-            for var in self.scalar_vars
+            for var in self._scalar_vars
         ]
-        self.dae_var_cuids = [
+        self._dae_var_cuids = [
             ComponentUID(var.referent, cuid_buffer=cuid_buffer, context=context)
-            for var in self.dae_vars
+            for var in self._dae_vars
+        ]
+        self._dae_expr_cuids = [
+            ComponentUID(expr.referent, cuid_buffer=cuid_buffer, context=context)
+            for expr in self._dae_expr
         ]
 
-        self.dae_expr_cuids = [
-            ComponentUID(expr.referent, cuid_buffer=cuid_buffer, context=context)
-            for expr in self.dae_expr
-        ]
+    def get_scalar_variables(self):
+        return self._scalar_vars
+
+    def get_indexed_variables(self):
+        return self._dae_vars
+
+    def get_scalar_expressions(self):
+        return self._scalar_expr
+
+    def get_indexed_expressions(self):
+        return self._dae_expr
 
     def get_scalar_variable_data(self):
         """
@@ -90,10 +105,11 @@ class DynamicModelInterface(object):
         dict
             Maps CUIDs of non-time-indexed variables to the value of these
             variables.
+
         """
         return {
             cuid: var.value
-            for cuid, var in zip(self.scalar_var_cuids, self.scalar_vars)
+            for cuid, var in zip(self._scalar_var_cuids, self._scalar_vars)
         }
 
     def get_data_at_time(self, time=None, include_expr=False):
@@ -101,60 +117,114 @@ class DynamicModelInterface(object):
         Gets data at a single time point or set of time point. Note that
         the returned type changes depending on whether a scalar or iterable
         is supplied.
+
         """
         if time is None:
-            # TODO: Default should be entire time set?
-            # What about for steady models? Should this branch on length
-            # of time?
+            # Default is to use the entire time set, treating a singleton
+            # as a scalar.
             time = self.time if len(self.time) > 1 else self.time.at(1)
-        try:
+        if _is_iterable(time):
             # Assume time is iterable
             time_list = list(time)
             data = {
                 cuid: [var[t].value for t in time]
-                for cuid, var in zip(self.dae_var_cuids, self.dae_vars)
+                for cuid, var in zip(self._dae_var_cuids, self._dae_vars)
             }
             if include_expr:
                 data.update({
                     cuid: [pyo_value(expr[t]) for t in time]
-                    for cuid, expr in zip(self.dae_expr_cuids, self.dae_expr)
+                    for cuid, expr in zip(self._dae_expr_cuids, self._dae_expr)
                 })
-            # Return a TimeSeriesData object, as this is more convenient
-            # for the calling code.
+            # Return a TimeSeriesData object
             return TimeSeriesData(data, time_list, time_set=self.time)
-        except TypeError:
+        else:
             # time is a scalar
-            # Maybe checking if time is an instance of numeric_types would
-            # be better.
-            # Return a dict mapping CUIDs to values. Should I have a similar
-            # class for "scalar data"?
             data = {
                 cuid: var[time].value
-                for cuid, var in zip(self.dae_var_cuids, self.dae_vars)
+                for cuid, var in zip(self._dae_var_cuids, self._dae_vars)
             }
             if include_expr:
                 data.update({
                     cuid: pyo_value(expr[time])
-                    for cuid, expr in zip(self.dae_expr_cuids, self.dae_expr)
+                    for cuid, expr in zip(self._dae_expr_cuids, self._dae_expr)
                 })
+            # Return ScalarData object
             return ScalarData(data)
 
-    # TODO: A unified load_data method would be nice:
-    # - Branch on type (ScalarData and SeriesData handled)
-    # - Branch on key (find_component -> is_indexed)
-    # - Branch on iterable value. Iterable => load at all time
-    # This is something to do once I have tests.
+    def load_data(self, data, time_points=None):
+        """Method to load data into the model.
+
+        Loads data into indicated variables in the model, possibly
+        at specified time points.
+
+        Arguments
+        ---------
+            data: ScalarData, TimeSeriesData, or mapping
+                If ScalarData, loads values into indicated variables at
+                all (or specified) time points. If TimeSeriesData, loads
+                lists of values into time points.
+                If mapping, checks whether each variable and value is
+                indexed or iterable and correspondingly loads data into
+                variables.
+            time_points: Iterable (optional)
+                Subset of time points into which data should be loaded.
+                Default of None corresponds to loading into all time points.
+
+        """
+        if time_points is None:
+            time_points = self.time
+        if isinstance(data, ScalarData):
+            data = data.get_data()
+            for cuid, val in data.items():
+                var = self.model.find_component(cuid)
+                for t in time_points:
+                    var[t].set_value(val)
+        elif isinstance(data, TimeSeriesData):
+            if list(time_points) != data.get_time_points():
+                raise RuntimeError(
+                    "Cannot load time series data when time sets have"
+                    " different lengths"
+                )
+            data = data.get_data()
+            for cuid, vals in data.items():
+                var = self.model.find_component(cuid)
+                for t, val in zip(time_points, vals):
+                    var[t].set_value(val)
+        else:
+            # Attempt to load data by assuming it is a map from something
+            # find_component-compatible to values.
+            for cuid, vals in data.items():
+                var = self.model.find_component(cuid)
+                if var.is_indexed():
+                    # Assume we are indexed by time.
+                    if not _is_iterable(vals):
+                        # Load value into all time points
+                        for t in time_points:
+                            var[t].set_value(vals)
+                    else:
+                        # Load values into corresponding time points
+                        if len(time_points) != len(vals):
+                            raise RuntimeError(
+                                "Cannot load a different number of values"
+                                " than we have time points"
+                            )
+                        for i, t in enumerate(time_points):
+                            var[t].set_value(vals[i])
+                else:
+                    # Assume vals is a scalar
+                    var.set_value(vals)
 
     def load_scalar_data(self, data):
         """
         Expects a dict mapping CUIDs (or strings) to values. Keys can
         correspond to time-indexed or non-time-indexed variables.
         """
-        for cuid, val in data.items():
-            var = self.model.find_component(cuid)
-            var_iter = (var,) if not var.is_indexed() else var.values()
-            for var in var_iter:
-                var.set_value(val)
+        #for cuid, val in data.items():
+        #    var = self.model.find_component(cuid)
+        #    var_iter = (var,) if not var.is_indexed() else var.values()
+        #    for var in var_iter:
+        #        var.set_value(val)
+        self.load_data(data)
 
     def load_data_at_time(self, data, time_points=None):
         """
@@ -163,20 +233,21 @@ class DynamicModelInterface(object):
         combined with the above method (which could then check
         if the variable is indexed).
         """
-        if time_points is None:
-            time_points = self.time
-        else:
-            time_points = list(_to_iterable(time_points))
-        if isinstance(data, ScalarData):
-            data = data.get_data()
-        else:
-            # This processes keys in the incoming data dictionary
-            # so they don't necessarily have to be CUIDs.
-            data = ScalarData(data, time_set=self.time).get_data()
-        for cuid, val in data.items():
-            var = self.model.find_component(cuid)
-            for t in time_points:
-                var[t].set_value(val)
+        #if time_points is None:
+        #    time_points = self.time
+        #else:
+        #    time_points = list(_to_iterable(time_points))
+        #if isinstance(data, ScalarData):
+        #    data = data.get_data()
+        #else:
+        #    # This processes keys in the incoming data dictionary
+        #    # so they don't necessarily have to be CUIDs.
+        #    data = ScalarData(data, time_set=self.time).get_data()
+        #for cuid, val in data.items():
+        #    var = self.model.find_component(cuid)
+        #    for t in time_points:
+        #        var[t].set_value(val)
+        self.load_data(data, time_points=time_points)
 
     def copy_values_at_time(self, source_time=None, target_time=None):
         """
@@ -196,8 +267,8 @@ class DynamicModelInterface(object):
         if target_time is None:
             target_time = self.time
         copy_values_at_time(
-            self.dae_vars,
-            self.dae_vars,
+            self._dae_vars,
+            self._dae_vars,
             source_time,
             target_time,
         )
@@ -210,7 +281,8 @@ class DynamicModelInterface(object):
         t0 = self.time.first()
         tf = self.time.last()
         time_map = {}
-        for var in self.dae_vars:
+        time_list = list(self.time)
+        for var in self._dae_vars:
             if id(var[tf]) in seen:
                 # Assume that if var[tf] has been encountered, this is a
                 # reference to a "variable" we have already processed.
@@ -218,19 +290,18 @@ class DynamicModelInterface(object):
             else:
                 seen.add(id(var[tf]))
             new_values = []
-            for t in self.time:
+            for t in time_list:
                 if t not in time_map:
                     # Build up a map from target to source time points,
-                    # as I don't want to call find_nearest_index
-                    # more frequently than I have to.
+                    # as I don't want to call find_nearest_index more
+                    # frequently than I have to.
                     t_new = t + dt
-                    idx = self.time.find_nearest_index(t_new, tolerance=None)
-                    # TODO: What if t_new is not a valid time point?
-                    # Right now we just proceed with the closest valid time
-                    # point. We're relying on the fact that indices of t0 or
-                    # tf are returned if t_new is outside the bounds of the
-                    # time set.
-                    t_new = self.time.at(idx)
+                    idx = find_nearest_index(time_list, t_new, tolerance=None)
+                    # If t_new is not a valid time point, we proceed with the
+                    # closest valid time point.
+                    # We're relying on the fact that indices of t0 or tf are
+                    # returned if t_new is outside the bounds of the time set.
+                    t_new = time_list[idx]
                     time_map[t] = t_new
                 t_new = time_map[t]
                 new_values.append(var[t_new].value)
