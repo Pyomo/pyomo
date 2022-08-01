@@ -53,20 +53,20 @@ def get_penalty_expressions_at_time(
         for var in variables
     ]
     # TODO: Weight data (and setpoint data) are user-provided and don't
-    # necessarily have CUIDs as keys. Should I processes the keys here
+    # necessarily have CUIDs as keys. Should I process the keys here
     # with get_time_indexed_cuid?
     if weight_data is None:
         weight_data = {cuid: 1.0 for cuid in cuids}
     for i, cuid in enumerate(cuids):
         if cuid not in target_data:
             raise KeyError(
-                "Target data dictionary does not contain a key for variable\n"
-                "%s with ComponentUID %s" % (variables[i].name, cuid)
+                "Target data dictionary does not contain a key for variable"
+                " %s with ComponentUID %s" % (variables[i].name, cuid)
             )
         if cuid not in weight_data:
             raise KeyError(
-                "Terminal penalty weight dictionary does not contain a key for "
-                "variable\n%s with ComponentUID %s" % (variables[i].name, cuid)
+                "Terminal penalty weight dictionary does not contain a key for"
+                " variable %s with ComponentUID %s" % (variables[i].name, cuid)
             )
 
     penalties = [
