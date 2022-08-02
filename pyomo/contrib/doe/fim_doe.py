@@ -49,8 +49,6 @@
 #
 #################################################################################################################
 
-#import numpy as np
-#import matplotlib.pyplot as plt
 from pyomo.common.dependencies import (
     numpy as np, numpy_available,
     pandas as pd, pandas_available,
@@ -58,26 +56,27 @@ from pyomo.common.dependencies import (
     matplotlib as plt, matplotlib_available,
 )
 
-from pyomo.environ import *
-from pyomo.dae import *
-#import pandas as pd
+import pyomo.environ as pyo
+from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 import time
 import pickle
 from itertools import permutations, product
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation, get_dsdp
 
 class Measurements:
-    def __init__(self, measurement_index_time, variance=None, ind_string='_index_'):
+    def __init__(self, measurement_index_time, variance=None, ind_string='_index_', verbose=False):
         """This class stores measurements' information
 
         Parameters
         ----------
         measurement_index_time:
-            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index, values are its measuring time points, values are a list of measuring time point if there is no extra index for this measurement.
+            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index,
+            values are its measuring time points, values are a list of measuring time point if there is no extra index for this measurement.
             For e.g., for the kinetics illustrative example, it should be {'C':{'CA':[0,1,..], 'CB':[0,2,...]}, 'k':[0,4,..]},
             so the measurements are C[scenario, 'CA', 0]..., k[scenario, 0]....
         variance:
-            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index, values are its variance (a scalar number), values are its variance if there is no extra index for this measurement.
+            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index,
+            values are its variance (a scalar number), values are its variance if there is no extra index for this measurement.
             For e.g., for the kinetics illustrative example, it should be {'C':{'CA': 10, 'CB': 1, 'CC': 2}}.
             If given None, the default is {'C':{'CA': 1, 'CB': 1, 'CC': 1}}.
         ind_string:
@@ -94,9 +93,9 @@ class Measurements:
         self.__generate_variance(self.flatten_measure_name, variance, self.name_and_index)
         self.__generate_flatten_timeset(self.measurement_all_info, self.flatten_measure_name, self.name_and_index)
         self.__model_measure_name()
-        print('All measurements are flattened.')
-        print('Flatten measurement name:', self.flatten_measure_name)
-        #print('Flatten measurement timeset:', self.flatten_measure_timeset)
+        if verbose:
+            print('All measurements are flattened.')
+            print('Flatten measurement name:', self.flatten_measure_name)
 
         # generate the overall measurement time points set, including the measurement time for all measurements
         flatten_timepoint = list(self.flatten_measure_timeset.values())
@@ -132,11 +131,7 @@ class Measurements:
             elif type(all_info[i]) is list:
                 measurement_extra_index.append(None)
         # a dictionary, keys are measurement names, values are a list of extra indexes
-        name_and_index = {}
-        for i, iname in enumerate(measurement_name):
-            name_and_index[iname] = measurement_extra_index[i]
-
-        self.name_and_index = name_and_index
+        self.name_and_index = dict(zip(measurement_name, measurement_extra_index))
 
     def __generate_flatten_name(self, measure_name_and_index):
         """Generate measurement flattened names
@@ -165,7 +160,8 @@ class Measurements:
         ----------
         flatten_measure_name: flattened measurement names. For e.g., flattenning {'C':{'CA': 10, 'CB': 1, 'CC': 2}} will be 'C_index_CA', ..., 'C_index_CC'.
         variance:
-            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index, values are its variance (a scalar number), values are its variance if there is no extra index for this measurement.
+            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index,
+            values are its variance (a scalar number), values are its variance if there is no extra index for this measurement.
             For e.g., for the kinetics illustrative example, it should be {'C':{'CA': 10, 'CB': 1, 'CC': 2}}.
             If given None, the default is {'C':{'CA': 1, 'CB': 1, 'CC': 1}}.
         """
@@ -660,7 +656,7 @@ class DesignOfExperiments:
                     # extract (discretized) time
                     time_set = []
                     for t in mod.t:
-                        time_set.append(value(t))
+                        time_set.append(pyo.value(t))
 
                     # solve model
                     time0_solve = time.time()
@@ -680,7 +676,7 @@ class DesignOfExperiments:
                     for j in self.flatten_measure_name:
                         for t in self.flatten_measure_timeset[j]:
                             measure_string_name = self.measure.SP_measure_name(j,t,mode='sequential_finite')
-                            C_value = value(eval(measure_string_name))
+                            C_value = pyo.value(eval(measure_string_name))
                             output_iter.append(C_value)
 
                     output_record[no_s] = output_iter
@@ -1087,7 +1083,7 @@ class DesignOfExperiments:
             jac_para = []
             for n1, name1 in enumerate(self.jac_involved_name):
                 for t, tim in enumerate(self.timepoint_overall_set):
-                    jac_para.append(value(m.jac[name1, p, tim]))
+                    jac_para.append(pyo.value(m.jac[name1, p, tim]))
             jac[p] = jac_para
         
         return jac
@@ -1358,19 +1354,19 @@ class DesignOfExperiments:
         # extract (discretized) time 
         time_set=[]
         for t in m.t:
-            time_set.append(value(t))
+            time_set.append(pyo.value(t))
         self.time_set = time_set
 
         # create parameter, measurement, time and measurement time set
-        m.para_set = Set(initialize=self.param_name)
+        m.para_set = pyo.Set(initialize=self.param_name)
         param_name = self.param_name
-        m.y_set = Set(initialize=self.jac_involved_name)
-        m.t_set = Set(initialize=time_set)
+        m.y_set = pyo.Set(initialize=self.jac_involved_name)
+        m.t_set = pyo.Set(initialize=time_set)
 
-        m.tmea_set = Set(initialize=self.timepoint_overall_set)
+        m.tmea_set = pyo.Set(initialize=self.timepoint_overall_set)
 
         # we can be sure about the name of scenarios, because they are generated by our function
-        m.scenario = Set(initialize=scenario_all['scena-name'])
+        m.scenario = pyo.Set(initialize=scenario_all['scena-name'])
         m.optimize = self.optimize
 
         # check if measurement time points are in the time set
@@ -1398,10 +1394,10 @@ class DesignOfExperiments:
             def jac_initialize(m,i,j,t):
                 return dict_jac[(bu,un,tim)]
 
-            m.jac = Var(m.y_set, m.para_set, m.tmea_set, initialize=jac_initialize)
+            m.jac = pyo.Var(m.y_set, m.para_set, m.tmea_set, initialize=jac_initialize)
 
         else:
-            m.jac = Var(m.y_set, m.para_set, m.tmea_set, initialize=1E-20)
+            m.jac = pyo.Var(m.y_set, m.para_set, m.tmea_set, initialize=1E-20)
 
         # Initialize Hessian with an identity matrix
         def identity_matrix(m,j,d):
@@ -1419,16 +1415,16 @@ class DesignOfExperiments:
 
             def initialize_fim(m, j, d):
                 return dict_fim[(j,d)]
-            m.FIM = Var(m.para_set, m.para_set, initialize=initialize_fim)
+            m.FIM = pyo.Var(m.para_set, m.para_set, initialize=initialize_fim)
         else:
-            m.FIM = Var(m.para_set, m.para_set, initialize=identity_matrix)
+            m.FIM = pyo.Var(m.para_set, m.para_set, initialize=identity_matrix)
 
         if self.objective_option=='trace':
             # Trace of FIM
-            m.trace = Var(initialize=1, within=NonNegativeReals)
+            m.trace = pyo.Var(initialize=1, within=pyo.NonNegativeReals)
         elif self.objective_option=='det':
             # Determinant of FIM
-            m.det = Var(initialize=0.5, within=NonNegativeReals)
+            m.det = pyo.Var(initialize=0.5, within=pyo.NonNegativeReals)
         elif (self.objective_option != 'zero'):
             raise ValueError('Undefined objective function type. Available options are "trace" and "det".')
 
@@ -1446,10 +1442,10 @@ class DesignOfExperiments:
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
             if self.L_initial is not None:
-                m.L_ele = Var(m.para_set, m.para_set, initialize=init_cho)
+                m.L_ele = pyo.Var(m.para_set, m.para_set, initialize=init_cho)
             # or initialize with the identity matrix
             else:
-                m.L_ele = Var(m.para_set, m.para_set, initialize=identity_matrix)
+                m.L_ele = pyo.Var(m.para_set, m.para_set, initialize=identity_matrix)
 
             # loop over parameter name
             for c in m.para_set:
@@ -1494,7 +1490,7 @@ class DesignOfExperiments:
 
         def ele_todict(m,i,j):
             return dict_fele[(i,j)]
-        m.refele = Expression(m.para_set, m.para_set, rule=ele_todict)
+        m.refele = pyo.Expression(m.para_set, m.para_set, rule=ele_todict)
 
         def calc_FIM(m,j,d):
             """
@@ -1552,35 +1548,35 @@ class DesignOfExperiments:
                 return m.FIM[c,d] ==  sum(m.L_ele[c, param_name[k]]*m.L_ele[d, param_name[k]] for k in range(param_name.index(d)+1))  
             else:
                 # This is the empty half of L above the diagonal
-                return Constraint.Skip
+                return pyo.Constraint.Skip
 
 
         ### Constraints and Objective function
-        m.dC_value = Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
-        m.ele_rule = Constraint(m.para_set, m.para_set, rule=calc_FIM)
+        m.dC_value = pyo.Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
+        m.ele_rule = pyo.Constraint(m.para_set, m.para_set, rule=calc_FIM)
 
         #if m.Obj.available():
         #m.Obj.deactivate()
 
             # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
         if no_obj:
-            m.Obj = Objective(expr=0)
+            m.Obj = pyo.Objective(expr=0)
         else:
             if self.optimize:
                 # if cholesky, calculating L and evaluate the OBJ with Cholesky decomposition
                 if self.Cholesky_option:
-                    m.cholesky_cons = Constraint(m.para_set, m.para_set, rule=cholesky_imp)
-                    m.Obj = Objective(expr=2*sum(log(m.L_ele[j,j]) for j in m.para_set), sense=maximize)
+                    m.cholesky_cons = pyo.Constraint(m.para_set, m.para_set, rule=cholesky_imp)
+                    m.Obj = pyo.Objective(expr=2*sum(log(m.L_ele[j,j]) for j in m.para_set), sense=pyo.maximize)
                 # if not cholesky but determinant, calculating det and evaluate the OBJ with det
                 elif (self.objective_option=='det'):
-                    m.det_rule =  Constraint(rule=det_general)
-                    m.Obj = Objective(expr=log(m.det), sense=maximize)
+                    m.det_rule =  pyo.Constraint(rule=det_general)
+                    m.Obj = pyo.Objective(expr=log(m.det), sense=pyo.maximize)
                 # if not determinant or cholesky, calculating the OBJ with trace
                 elif (self.objective_option=='trace'):
-                    m.trace_rule = Constraint(rule=trace_calc)
-                    m.Obj = Objective(expr=log(m.trace), sense=maximize)
+                    m.trace_rule = pyo.Constraint(rule=trace_calc)
+                    m.Obj = pyo.Objective(expr=log(m.trace), sense=pyo.maximize)
                 elif (self.objective_option=='zero'):
-                    m.Obj = Objective(expr=0)
+                    m.Obj = pyo.Objective(expr=0)
             #else:
             #    m.Obj = Objective(expr=0)
 
@@ -1601,7 +1597,7 @@ class DesignOfExperiments:
                     m.L_ele[c, self.param_name[k]] * m.L_ele[d, self.param_name[k]] for k in range(self.param_name.index(d) + 1))
             else:
         # This is the empty half of L above the diagonal
-                return Constraint.Skip
+                return pyo.Constraint.Skip
 
 
         def det_general(m):
@@ -1630,18 +1626,18 @@ class DesignOfExperiments:
             return m.det == det_perm
 
         if self.Cholesky_option:
-            m.cholesky_cons = Constraint(m.para_set, m.para_set, rule=cholesky_imp)
-            m.Obj = Objective(expr=2 * sum(log(m.L_ele[j, j]) for j in m.para_set), sense=maximize)
+            m.cholesky_cons = pyo.Constraint(m.para_set, m.para_set, rule=cholesky_imp)
+            m.Obj = pyo.Objective(expr=2 * sum(pyo.log(m.L_ele[j, j]) for j in m.para_set), sense=pyo.maximize)
         # if not cholesky but determinant, calculating det and evaluate the OBJ with det
         elif (self.objective_option == 'det'):
-            m.det_rule = Constraint(rule=det_general)
-            m.Obj = Objective(expr=log(m.det), sense=maximize)
+            m.det_rule = pyo.Constraint(rule=det_general)
+            m.Obj = pyo.Objective(expr=pyo.log(m.det), sense=pyo.maximize)
         # if not determinant or cholesky, calculating the OBJ with trace
         elif (self.objective_option == 'trace'):
-            m.trace_rule = Constraint(rule=trace_calc)
-            m.Obj = Objective(expr=log(m.trace), sense=maximize)
+            m.trace_rule = pyo.Constraint(rule=trace_calc)
+            m.Obj = pyo.Objective(expr=pyo.log(m.trace), sense=pyo.maximize)
         elif (self.objective_option == 'zero'):
-            m.Obj = Objective(expr=0)
+            m.Obj = pyo.Objective(expr=0)
 
         return m
 
