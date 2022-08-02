@@ -1,4 +1,15 @@
 #!/usr/bin/env python
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 import argparse
 import gc
 import logging
@@ -34,26 +45,24 @@ class TimingHandler(logging.Handler):
     def emit(self, record):
         if self._testRecord is None:
             return
-        cat = record.msg.__class__.__name__
-        if cat in self._testRecord:
-            _cat = self._testRecord[cat]
+        cat_name = record.msg.__class__.__name__
+        if cat_name in self._testRecord:
+            cat_data = self._testRecord[cat_name]
         else:
-            _cat = self._testRecord[cat] = OrderedDict()
-        if isinstance(record.msg, str):
-            name = record.msg
-        else:
+            cat_data = self._testRecord[cat_name] = OrderedDict()
+        try:
+            name = record.msg.name
+            val = record.msg.timer
+        except AttributeError:
+            name = None
+            val = str(record.msg)
+        if name in cat_data:
             try:
-                name = record.msg.obj.name
+                cat_data[name].append(val)
             except AttributeError:
-                name = record.msg.obj.__class__.__name__
-        if name in _cat:
-            _val = _cat[name]
-            if type(_val) is not list:
-                _val = [_val]
-            _val.append(record.msg.timer)
+                cat_data[name] = [cat_data[name], val]
         else:
-            _val = record.msg.timer
-        _cat[name] = _val
+            cat_data[name] = val
 
 
 class DataRecorder(object):
