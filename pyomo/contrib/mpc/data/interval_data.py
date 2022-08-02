@@ -22,10 +22,12 @@
 # license information.
 #################################################################################
 
+from pyomo.contrib.mpc.data.dynamic_data_base import _DynamicDataBase
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
 )
+
 
 def assert_disjoint_intervals(intervals):
     """
@@ -52,6 +54,33 @@ def assert_disjoint_intervals(intervals):
                     "Intervals %s and %s are not disjoint"
                     % ((prev_lo, prev_hi), (lo, hi))
                 )
+
+
+class IntervalData(_DynamicDataBase):
+
+    def __init__(self, data, intervals, time_set=None, context=None):
+        intervals = list(intervals)
+        if not intervals == list(sorted(intervals)):
+            raise RuntimeError(
+                "Intervals are not sorted in increasing order."
+            )
+        assert_disjoint_intervals(intervals)
+        self._intervals = intervals
+
+        # First make sure provided lists of variable data have the
+        # same lengths as the provided time list.
+        for key, data_list in data.items():
+            if len(data_list) != len(intervals):
+                raise ValueError(
+                    "Data lists must have same length as time. "
+                    "Length of time is %s while length of data for "
+                    "key %s is %s."
+                    % (len(intervals), key, len(data_list))
+                )
+        super().__init__(data, time_set=time_set, context=context)
+
+    def get_intervals(self):
+        return self._intervals
 
 
 def load_inputs_into_model(model, time, input_data, time_tol=0):

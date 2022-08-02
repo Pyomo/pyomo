@@ -31,7 +31,33 @@ from pyomo.contrib.mpc.data.interval_data import (
     assert_disjoint_intervals,
     load_inputs_into_model,
     interval_data_from_time_series,
+    IntervalData,
 )
+
+
+class TestIntervalData(unittest.TestCase):
+
+    def _make_model(self):
+        m = pyo.ConcreteModel()
+        m.time = pyo.Set(initialize=[0.1*i for i in range(11)])
+        m.comp = pyo.Set(initialize=["A", "B"])
+        m.var = pyo.Var(m.time, m.comp, initialize=1.0)
+        return m
+
+    def test_construct(self):
+        m = self._make_model()
+        intervals = [(0, 5), (5, 10)]
+        data = {
+            m.var[:, "A"]: [1.0, 2.0],
+            m.var[:, "B"]: [3.0, 4.0],
+        }
+        interval_data = IntervalData(data, intervals)
+
+        self.assertEqual(
+            interval_data.get_data(),
+            {pyo.ComponentUID(key): val for key, val in data.items()},
+        )
+        self.assertEqual(intervals, interval_data.get_intervals())
 
 
 class TestAssertDisjoint(unittest.TestCase):
@@ -173,3 +199,7 @@ class TestIntervalFromTimeSeries(unittest.TestCase):
                 name: {(1, 2): 4.0, (2, 3): 5.0},
             },
         )
+
+
+if __name__ == "__main__":
+    unittest.main()
