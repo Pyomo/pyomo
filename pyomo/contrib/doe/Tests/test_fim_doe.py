@@ -49,24 +49,12 @@
 #
 #################################################################################################################
 
-from pyomo.environ import *
-from pyomo.dae import *
-from pyomo.common.dependencies import (
-    numpy as np, numpy_available,
-    pandas as pd, pandas_available,
-    scipy, scipy_available,
-    matplotlib, matplotlib_available,
-)
-#import numpy as np
-#import pandas as pd
-from itertools import permutations, product, combinations
-
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe.fim_doe import *
+from pyomo.contrib.doe.fim_doe import Measurements, Scenario_generator
 
 class TestMeasurement(unittest.TestCase):
-    '''Test the measurement class
-    '''
+    """Test the measurement class
+    """
     def test_setup(self):
         # generate a set of measurements with extra index CA, CB, CC
         # each extra index has different measure time points
@@ -90,8 +78,8 @@ class TestMeasurement(unittest.TestCase):
         
 
 class TestParameter(unittest.TestCase):
-    ''' Test the parameter class 
-    '''
+    """ Test the parameter class
+    """
     def test_setup(self):
         # set up parameter class
         param_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
