@@ -308,9 +308,11 @@ class DesignOfExperiments:
         Parameters
         ----------
         param_init:
-            A  ``dictionary`` of parameter names and values. If they are an indexed variable, put the variable name and index, such as 'theta["A1"]'. Note: if sIPOPT is used, parameter shouldn't be indexed.
+            A  ``dictionary`` of parameter names and values. If they are an indexed variable, put the variable name and index, such as 'theta["A1"]'.
+            Note: if sIPOPT is used, parameter shouldn't be indexed.
         design_variable_timepoints:
-            A ``dictionary`` where keys are design variable names, values are its control time points. If this design var is independent of time (constant), set the time to [0]
+            A ``dictionary`` where keys are design variable names, values are its control time points.
+            If this design var is independent of time (constant), set the time to [0]
         measurement_object:
             A measurement ``object``.
         create_model:
@@ -408,7 +410,8 @@ class DesignOfExperiments:
         Parameters
         -----------
         design_values:
-            a ``dict`` where keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
+            a ``dict`` where keys are design variable names, values are a dict whose keys are time point
+            and values are the design variable value at that time point
         if_optimize:
             if true, continue to do optimization. else, just run square problem with given design variable values
         objective_option:
@@ -511,10 +514,12 @@ class DesignOfExperiments:
             m = self.__add_objective(m, deactive_obj=True)
 
             # solve problem with DOF then
-            print('First solve with given objective:')
+            if self.verbose:
+                print('First solve with given objective:')
             result_doe1 = self.__solve_doe(m, fix=True)
 
-            print('Second solve with given objective:')
+            if self.verbose:
+                print('Second solve with given objective:')
             time0_solve2 = time.time()
             result_doe = self.__solve_doe(m, fix=False)
             time1_solve2 = time.time()
@@ -539,7 +544,6 @@ class DesignOfExperiments:
                 print('Total wall clock time [s]:', time1-time0)
 
             return analysis_square, analysis_optimize
-            print('changed')
 
         else:
 
@@ -640,10 +644,7 @@ class DesignOfExperiments:
                 for no_s in (scena_gen.scena_keys):
 
                     scenario_iter = scena_gen.next_sequential_scenario(no_s)
-                    #print('This scenario:', scenario_iter)
                     # create the model
-                    # TODO:(long term) add options to create model once and then update. only try this after the
-                    # package is completed and unitest is finished
                     time0_build = time.time()
                     mod = self.create_model(scenario_iter, args=self.args)
                     time1_build = time.time()
@@ -681,8 +682,6 @@ class DesignOfExperiments:
 
                     output_record[no_s] = output_iter
 
-                    #print('Output this time: ', output_record[no_s])
-
                 output_record['design'] = design_values
                 if store_output is not None:
                     f = open(store_output, 'wb')
@@ -711,7 +710,6 @@ class DesignOfExperiments:
                                       prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
             # Store the Jacobian information for access by users
-
             self.jac = jac
 
             if read_output is None:
@@ -735,7 +733,6 @@ class DesignOfExperiments:
             jac={}
 
             # if measurements are provided
-            # TODO: update this read_output toggle
             if read_output is not None:
                 with open(read_output, 'rb') as f:
                     output_record = pickle.load(f)
@@ -923,10 +920,8 @@ class DesignOfExperiments:
                     else:
                         measurement_accurate_time[j][no_t] = t_all[t_all.index(tt)]
 
-            print('After practice:', measurement_accurate_time)
-
-            # fix model DOF
-            #mod = self.__fix_design(mod, self.design_values, fix_opt=True)
+            if self.verbose:
+                print('After practice:', measurement_accurate_time)
 
             # set ub and lb to parameters
             for par in self.param_name:
@@ -950,11 +945,6 @@ class DesignOfExperiments:
 
             # analyze result
             dsdp_array = dsdp_re.toarray().T
-            # here for construction. Remove after finishing.
-            #dd = pd.DataFrame(dsdp_array)
-            #print(dd)
-            #dd.to_csv('test_kaug.csv')
-            # here for fixed bed
             self.dsdp = dsdp_array
             self.dsdp = col
             # store dsdp returned
@@ -1129,8 +1119,8 @@ class DesignOfExperiments:
         fim_list = []
         # loop over experiments
         for i in range(self.no_exp):
-            print('========This is the No.', i, ' experiment.========')
             if self.verbose:
+                print('========This is the No.', i, ' experiment.========')
                 print('Design variables:', self.design_values_set[i])
 
             # call compute_FIM to get FIM
@@ -1215,8 +1205,6 @@ class DesignOfExperiments:
         # to store all FIM results
         result_combine = {}
 
-
-
         # iteration 0
         count = 0
         failed_count = 0
@@ -1224,7 +1212,8 @@ class DesignOfExperiments:
         total_count = 1
         for i in range(grid_dimension):
             total_count *= len(design_ranges[i])
-        print(total_count, ' design vectors will be searched.')
+        if self.verbose:
+            print(total_count, ' design vectors will be searched.')
 
         # generate combinations of design variable values to go over
         search_design_set = product(*design_ranges)
@@ -1243,8 +1232,9 @@ class DesignOfExperiments:
                 for v, value in enumerate(design_control_time[i]):
                     design_iter[design_dimension_names[i]][value] = list(design_set_iter)[i]
 
-            print('=======This is the ', count+1, 'th iteration=======')
-            print('Design variable values of this iteration:', design_iter)
+            if self.verbose:
+                print('=======This is the ', count+1, 'th iteration=======')
+                print('Design variable values of this iteration:', design_iter)
 
             # generate store name
             if store_name is None:
@@ -1264,7 +1254,6 @@ class DesignOfExperiments:
                                                scale_nominal_param_value=scale_nominal_param_value,
                                                scale_constant_value = scale_constant_value,
                                                store_output=store_output_name, read_output=read_input_name,
-                                               #extract_single_model=extract3_v2,
                                                formula=formula, step=step)
                 if read_input_name is None:
                     build_time_store.append(result_iter.build_time)
@@ -1296,16 +1285,8 @@ class DesignOfExperiments:
         # For user's access
         self.all_fim = result_combine
 
-        #
-
         # Create figure drawing object
         figure_draw_object = Grid_Search_Result(design_ranges, design_dimension_names, design_control_time, result_combine, store_optimality_name=filename)
-
-        # store results
-        #if self.filename is not None:
-        #    f = open(filename, 'wb')
-        #    pickle.dump(result_combine, f)
-        #    f.close()
 
         t_enumeration_stop = time.time()
         if self.verbose:
@@ -1555,10 +1536,7 @@ class DesignOfExperiments:
         m.dC_value = pyo.Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
         m.ele_rule = pyo.Constraint(m.para_set, m.para_set, rule=calc_FIM)
 
-        #if m.Obj.available():
-        #m.Obj.deactivate()
-
-            # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
+        # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
         if no_obj:
             m.Obj = pyo.Objective(expr=0)
         else:
@@ -1577,8 +1555,6 @@ class DesignOfExperiments:
                     m.Obj = pyo.Objective(expr=log(m.trace), sense=pyo.maximize)
                 elif (self.objective_option=='zero'):
                     m.Obj = pyo.Objective(expr=0)
-            #else:
-            #    m.Obj = Objective(expr=0)
 
         return m
 
@@ -1666,7 +1642,6 @@ class DesignOfExperiments:
 
                     if fix_opt:
                         newvar.fix(fix_v)
-                        #print(newvar, 'is fixed at ', fix_v)
                     else:
                         if optimize_option is None:
                             newvar.unfix()
@@ -1679,7 +1654,6 @@ class DesignOfExperiments:
 
                 if fix_opt:
                     newvar.fix(fix_v)
-                    #print(newvar, 'is fixed at ', fix_v)
                 else:
                     newvar.unfix()
         return m
