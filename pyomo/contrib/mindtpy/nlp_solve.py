@@ -11,18 +11,17 @@
 
 """Solution of NLP subproblems."""
 from __future__ import division
-import logging
+
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.mindtpy.cut_generation import (add_oa_cuts,
                                                   add_no_good_cuts, add_affine_cuts)
 from pyomo.contrib.mindtpy.util import add_feas_slacks, set_solver_options, update_primal_bound
-from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
+from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code, SuppressInfeasibleWarning
 from pyomo.core import (Constraint, Objective,
                         TransformationFactory, minimize, value)
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolverFactory, SolverResults, SolverStatus
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning
 
 
 def solve_subproblem(solve_data, config):
@@ -53,7 +52,7 @@ def solve_subproblem(solve_data, config):
     TransformationFactory('core.fix_integer_vars').apply_to(fixed_nlp)
 
     MindtPy.cuts.deactivate()
-    if config.calculate_dual:
+    if config.calculate_dual_at_solution:
         fixed_nlp.tmp_duals = ComponentMap()
         # tmp_duals are the value of the dual variables stored before using deactivate trivial contraints
         # The values of the duals are computed as follows: (Complementary Slackness)
@@ -99,8 +98,12 @@ def solve_subproblem(solve_data, config):
     set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
     with SuppressInfeasibleWarning():
         with time_code(solve_data.timing, 'fixed subproblem'):
-            results = nlpopt.solve(
-                fixed_nlp, tee=config.nlp_solver_tee, **nlp_args)
+            results = nlpopt.solve(fixed_nlp,
+                                   tee=config.nlp_solver_tee,
+                                   load_solutions=False,
+                                   **nlp_args)
+            if len(results.solution) > 0:
+                fixed_nlp.solutions.load_from(results)
     return fixed_nlp, results
 
 
@@ -164,7 +167,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
         fixed_nlp.MindtPy_utils.variable_list,
         solve_data.working_model.MindtPy_utils.variable_list,
         config)
-    if config.calculate_dual:
+    if config.calculate_dual_at_solution:
         for c in fixed_nlp.tmp_duals:
             if fixed_nlp.dual.get(c, None) is None:
                 fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
@@ -247,7 +250,7 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt=None):
     # value?
     config.logger.info('NLP subproblem was locally infeasible.')
     solve_data.nlp_infeasible_counter += 1
-    if config.calculate_dual:
+    if config.calculate_dual_at_solution:
         for c in fixed_nlp.MindtPy_utils.constraint_list:
             rhs = value(c.upper) if c. has_ub() else value(c.lower)
             c_geq = -1 if c.has_ub() else 1
@@ -375,8 +378,12 @@ def solve_feasibility_subproblem(solve_data, config):
     with SuppressInfeasibleWarning():
         try:
             with time_code(solve_data.timing, 'feasibility subproblem'):
-                feas_soln = nlpopt.solve(
-                    feas_subproblem, tee=config.nlp_solver_tee, **nlp_args)
+                feas_soln = nlpopt.solve(feas_subproblem,
+                                         tee=config.nlp_solver_tee,
+                                         load_solutions=config.nlp_solver!='appsi_ipopt',
+                                         **nlp_args)
+                if len(feas_soln.solution) > 0:
+                    feas_subproblem.solutions.load_from(feas_soln)
         except (ValueError, OverflowError) as error:
             for nlp_var, orig_val in zip(
                     MindtPy.variable_list,
@@ -384,8 +391,12 @@ def solve_feasibility_subproblem(solve_data, config):
                 if not nlp_var.fixed and not nlp_var.is_binary():
                     nlp_var.set_value(orig_val, skip_validation=True)
             with time_code(solve_data.timing, 'feasibility subproblem'):
-                feas_soln = nlpopt.solve(
-                    feas_subproblem, tee=config.nlp_solver_tee, **nlp_args)
+                feas_soln = nlpopt.solve(feas_subproblem,
+                                         tee=config.nlp_solver_tee,
+                                         load_solutions=config.nlp_solver!='appsi_ipopt',
+                                         **nlp_args)
+                if len(feas_soln.solution) > 0:
+                    feas_soln.solutions.load_from(feas_soln)
     handle_feasibility_subproblem_tc(
         feas_soln.solver.termination_condition, MindtPy, solve_data, config)
     return feas_subproblem, feas_soln

@@ -1371,17 +1371,23 @@ class LinearExpression(ExpressionBase):
     # being pickled through the base class _args_ attribute.
 
     def create_node_with_local_data(self, args, classtype=None):
-        if classtype is None:
-            if not args:
-                classtype = self.__class__
-            elif ( args[0].__class__ is MonomialTermExpression or
-                   (args[0].__class__ in native_types or args[0].is_constant()
-                ) and all(arg.__class__ is MonomialTermExpression
-                          for arg in args[1:])):
-                classtype = self.__class__
-            else:
-                classtype = SumExpression
-        return classtype(args)
+        if classtype is not None:
+            return classtype(args)
+        else:
+            const = 0
+            new_args = []
+            for arg in args:
+                if arg.__class__ is MonomialTermExpression:
+                    new_args.append(arg)
+                elif arg.__class__ in native_types or arg.is_constant():
+                    const += arg
+                else:
+                    return SumExpression(args)
+            if not new_args:
+                return const
+            if const:
+                new_args.insert(0, const)
+            return self.__class__(new_args)
 
     def getname(self, *args, **kwds):
         return 'sum'

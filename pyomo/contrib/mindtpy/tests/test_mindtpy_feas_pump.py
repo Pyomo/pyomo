@@ -40,6 +40,10 @@ model_list = [EightProcessFlowsheet(convex=True),
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver."""
 
+    def check_optimal_solution(self, model, places=1):
+        for var in model.optimal_solution:
+            self.assertAlmostEqual(var.value, model.optimal_solution[var], places=places)
+
     def get_config(self, solver):
         config = solver.CONFIG
         return config
@@ -69,6 +73,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
 
 if __name__ == '__main__':

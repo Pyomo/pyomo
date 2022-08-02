@@ -119,13 +119,13 @@ def construct_master_feasibility_problem(model_data, config):
                 # update var value for initialization
                 # fine since DR eqns are f(d) - z == 0 (not z - f(d) == 0)
                 ssv_in_dr_eq.set_value(0)
-                ssv_in_dr_eq.set_value(eq.body)
+                ssv_in_dr_eq.set_value(value(eq.body))
 
     # initialize state vars to previous master solution values
     if iteration != 0:
         stvar_map = get_state_vars(model, [iteration, iteration-1])
         for current, prev in zip(stvar_map[iteration], stvar_map[iteration-1]):
-            current.set_value(prev)
+            current.set_value(value(prev))
 
     # constraints to which slacks should be added
     # (all the constraints for the current iteration, except the DR eqns)
