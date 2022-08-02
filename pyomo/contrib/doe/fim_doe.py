@@ -68,7 +68,7 @@ from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculati
 
 class Measurements:
     def __init__(self, measurement_index_time, variance=None, ind_string='_index_'):
-        '''This class stores measurements' information
+        """This class stores measurements' information
 
         Parameters
         ----------
@@ -83,7 +83,7 @@ class Measurements:
         ind_string:
             a ''string'', used to flatten the name of variables and extra index. Default is '_index_'.
             For e.g., for {'C':{'CA': 10, 'CB': 1, 'CC': 2}}, the reformulated name is 'C_index_CA'.
-        '''
+        """
         self.measurement_all_info = measurement_index_time
         self.ind_string = ind_string
         # a list of measurement names
@@ -108,7 +108,7 @@ class Measurements:
 
 
     def __name_and_index_generator(self, all_info):
-        '''
+        """
         Generate a dictionary, keys are the variable names, values are the indexes of this variable.
         For e.g., name_and_index = {'C': ['CA', 'CB', 'CC']}
         Parameters
@@ -117,7 +117,7 @@ class Measurements:
                 values are a dictionary, keys are its extra index, values are its measuring time points
                 values are a list of measuring time point if there is no extra index for this measurement
             Note: all_info can be the self.measurement_all_info, but does not have to be it.
-        '''
+        """
         measurement_name = list(all_info.keys())
         # a list of measurement extra indexes
         measurement_extra_index = []
@@ -139,7 +139,7 @@ class Measurements:
         self.name_and_index = name_and_index
 
     def __generate_flatten_name(self, measure_name_and_index):
-        '''Generate measurement flattened names
+        """Generate measurement flattened names
         Parameters
         ----------
         measure_name_and_index: a dictionary, keys are measurement names, values are lists of extra indexes
@@ -147,7 +147,7 @@ class Measurements:
         Returns
         ------
         jac_involved_name: a list of flattened measurement names
-        '''
+        """
         flatten_names = []
         for j in list(measure_name_and_index.keys()):
             if measure_name_and_index[j] is not None: # if it has extra index
@@ -160,7 +160,7 @@ class Measurements:
         self.flatten_measure_name = flatten_names
 
     def __generate_variance(self, flatten_measure_name, variance, name_and_index):
-        '''Generate the variance dictionary
+        """Generate the variance dictionary
         Parameters
         ----------
         flatten_measure_name: flattened measurement names. For e.g., flattenning {'C':{'CA': 10, 'CB': 1, 'CC': 2}} will be 'C_index_CA', ..., 'C_index_CC'.
@@ -168,7 +168,7 @@ class Measurements:
             a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index, values are its variance (a scalar number), values are its variance if there is no extra index for this measurement.
             For e.g., for the kinetics illustrative example, it should be {'C':{'CA': 10, 'CB': 1, 'CC': 2}}.
             If given None, the default is {'C':{'CA': 1, 'CB': 1, 'CC': 1}}.
-        '''
+        """
         flatten_variance = {}
         for i in flatten_measure_name:
             if variance is None:
@@ -186,11 +186,11 @@ class Measurements:
         self.flatten_variance = flatten_variance
 
     def __generate_flatten_timeset(self, all_info, flatten_measure_name,name_and_index):
-        '''
+        """
         Generate flatten variables timeset. Return a dict where keys are the flattened variable names,
         values are a list of measurement time.
 
-        '''
+        """
         flatten_measure_timeset = {}
         for i in flatten_measure_name:
             # split the flattened name if needed
@@ -205,8 +205,8 @@ class Measurements:
         self.flatten_measure_timeset = flatten_measure_timeset
 
     def __model_measure_name(self):
-        '''Return pyomo string name 
-        '''
+        """Return pyomo string name
+        """
         # store pyomo string name
         measurement_names = []
         # loop over measurement name
@@ -227,7 +227,7 @@ class Measurements:
         self.model_measure_name = measurement_names
 
     def SP_measure_name(self, j, t,scenario_all=None, p=None, mode=None, legal_t=True):
-        '''Return pyomo string name for different modes
+        """Return pyomo string name for different modes
         Arguments
         ---------
         j: flatten measurement name
@@ -242,7 +242,7 @@ class Measurements:
         up_C, lo_C: two measurement pyomo string names for simultaneous mode
         legal_t: if the time point is legal for this measurement 
         string_name: one measurement pyomo string name for sequential 
-        '''
+        """
         if mode=='simultaneous_finite':
             # check extra index
             if self.ind_string in j:
@@ -276,14 +276,14 @@ class Measurements:
 
 
     def check_subset(self,subset, throw_error=True, valid_subset=True):
-        '''
+        """
         Check if the subset is correctly defined with right name, index and time.
 
         subset:
             a ''dict'' where measurement name and index are involved in jacobian calculation
         throw_error:
             if the given subset is not a subset of the measurement set, throw error message
-        '''
+        """
         flatten_subset = subset.flatten_measure_name
         flatten_timeset = subset.flatten_measure_timeset
         # loop over subset measurement names
@@ -369,12 +369,12 @@ class DesignOfExperiments:
 
         
     def __check_inputs(self, check_mode=False):
-        '''Check if inputs are consistent
+        """Check if inputs are consistent
 
         Parameters
         ----------
         check_mode: check FIM calculation mode
-        '''
+        """
         if self.objective_option not in ['det', 'trace', 'zero']:
             raise ValueError('Error: Objective function should be chosen from "det", "zero" and "trace"')
 
@@ -402,7 +402,7 @@ class DesignOfExperiments:
                      scale_nominal_param_value=False, scale_constant_value=1, optimize_opt=None, if_Cholesky=False, L_LB = 1E-10, L_initial=None,
                      jac_initial=None, fim_initial=None,
                      formula='central', step=0.001, check=True):
-        '''Optimize DOE problem with design variables being the decisions.
+        """Optimize DOE problem with design variables being the decisions.
         The DOE model is formed invasively and all scenarios are computed simultaneously.
         The function will first fun a square problem with design variable being fixed at
         the given initial points (Objective function being 0), then a square problem with
@@ -447,7 +447,7 @@ class DesignOfExperiments:
         analysis_square: result summary of the square problem solved at the initial point
         analysis_optimize: result summary of the optimization problem solved
 
-        '''
+        """
         time0 = time.time()
 
         # store inputs in object
@@ -561,7 +561,7 @@ class DesignOfExperiments:
                     store_output = None, read_output=None, extract_single_model=None,
                     formula='central', step=0.001,
                     objective_option='det'):
-        '''This function solves a square Pyomo model with fixed design variables to compute the FIM.
+        """This function solves a square Pyomo model with fixed design variables to compute the FIM.
         It calculates FIM with sensitivity information from four modes:
             1.  sequential_finite: Calculates a one scenario model multiple times for multiple scenarios. Sensitivity info estimated by finite difference
             2.  sequential_sipopt: calculate sensitivity by sIPOPT [Experimental]
@@ -592,7 +592,7 @@ class DesignOfExperiments:
         Return
         ------
         FIM_analysis: result summary object of this solve
-        '''
+        """
         
         # save inputs in object
         self.design_values = design_values
@@ -1034,7 +1034,7 @@ class DesignOfExperiments:
             raise ValueError('This is not a valid mode. Choose from "sequential_finite", "simultaneous_finite", "sequential_sipopt", "sequential_kaug"')
 
     def __finite_calculation(self, output_record, scena_gen):
-        '''
+        """
         Calculate Jacobian for sequential_finite mode
 
         Parameters
@@ -1045,7 +1045,7 @@ class DesignOfExperiments:
         Returns
         --------
         jac: Jacobian matrix, a dictionary, keys are parameter names, values are a list of jacobian values with respect to this parameter
-        '''
+        """
         # dictionary form of jacobian
         jac = {}
 
@@ -1070,7 +1070,7 @@ class DesignOfExperiments:
         return jac
 
     def __extract_jac(self, m):
-        '''
+        """
         Extract jacobian from simultaneous mode
         Arguments
         ---------
@@ -1078,7 +1078,7 @@ class DesignOfExperiments:
         Returns
         ------
         JAC: the overall jacobian as a dictionary
-        '''
+        """
         no_para = len(self.param_name)
         # dictionary form of jacobian
         jac = {}
@@ -1095,7 +1095,7 @@ class DesignOfExperiments:
     def generate_sequential_experiments(self, design_values_set, mode='sequential_finite', tee_option=False,
                        scale_nominal_param_value=False, scale_constant_value=1,
                        formula='central', step=0.001):
-        '''
+        """
         Run a series of experiments sequentially, and use the FIM from one experiment as the prior information for the next experiment
         Parameters:
         -----------
@@ -1111,7 +1111,7 @@ class DesignOfExperiments:
         --------
         result_obj_list: a list of the result summary objects of every experiment
         fim_list: a list of the FIM of every experiment
-        '''
+        """
         # how many exps to run in a row
         self.no_exp = len(design_values_set)
         self.design_values_set = design_values_set
@@ -1321,7 +1321,7 @@ class DesignOfExperiments:
 
 
     def __create_doe_model(self, no_obj=True):
-        '''
+        """
         Add features for DOE.
 
         Parameters:
@@ -1344,7 +1344,7 @@ class DesignOfExperiments:
         Return:
         -------
         m: the DOE model
-        '''
+        """
         # call generator function to get scenario dictionary
         scena_gen = Scenario_generator(self.param_init, formula=self.formula, step=self.step, store=True)
         scenario_all = scena_gen.simultaneous_scenario()
@@ -1464,12 +1464,12 @@ class DesignOfExperiments:
 
 
         def jac_numerical(m,j,p,t):
-            '''
+            """
             Calculate the Jacobian
             j: model responses
             p: model parameters
             t: timepoints
-            '''
+            """
             # A better way to do this: 
             # https://github.com/IDAES/idaes-pse/blob/274e58bef55f2f969f0df97cbb1fb7d99342388e/idaes/apps/uncertainty_propagation/sens.py#L296
             # check if j is a measurement with extra index by checking if there is '_index_' in its name
@@ -1497,9 +1497,9 @@ class DesignOfExperiments:
         m.refele = Expression(m.para_set, m.para_set, rule=ele_todict)
 
         def calc_FIM(m,j,d):
-            '''
+            """
             Calculate FIM elements
-            '''
+            """
             # check if scale
             if self.scale_nominal_param_value:
                 return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*self.param_init[j]*self.param_init[d]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
@@ -1507,9 +1507,9 @@ class DesignOfExperiments:
                 return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
 
         def trace_calc(m):
-            '''
+            """
             Calculate FIM elements. Can scale each element with 1000 for performance
-            '''
+            """
             sum_x = 0  
             for j in m.para_set:
                 for d in m.para_set:
@@ -1518,10 +1518,10 @@ class DesignOfExperiments:
             return m.trace == sum_x 
 
         def det_general(m):
-            '''Calculate determinant. Can be applied to FIM of any size. 
+            """Calculate determinant. Can be applied to FIM of any size.
             det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             Use permutation() to get permutations, sgn() to get signature
-            '''
+            """
             r_list = list(range(len(m.para_set)))
             # get all permutations 
             object_p = itertools.permutations(r_list)
@@ -1544,9 +1544,9 @@ class DesignOfExperiments:
 
 
         def cholesky_imp(m,c,d):
-            '''
+            """
             Calculate Cholesky L matrix using algebraic constraints
-            '''
+            """
             # If it is the left bottom half of L
             if (param_name.index(c)>=param_name.index(d)):
                 return m.FIM[c,d] ==  sum(m.L_ele[c, param_name[k]]*m.L_ele[d, param_name[k]] for k in range(param_name.index(d)+1))  
@@ -1592,9 +1592,9 @@ class DesignOfExperiments:
             m.Obj.deactivate()
 
         def cholesky_imp(m, c, d):
-            '''
+            """
             Calculate Cholesky L matrix using algebraic constraints
-            '''
+            """
         # If it is the left bottom half of L
             if (self.param_name.index(c) >= self.param_name.index(d)):
                 return m.FIM[c, d] == sum(
@@ -1605,10 +1605,10 @@ class DesignOfExperiments:
 
 
         def det_general(m):
-            '''Calculate determinant. Can be applied to FIM of any size.
+            """Calculate determinant. Can be applied to FIM of any size.
             det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
             Use permutation() to get permutations, sgn() to get signature
-            '''
+            """
             r_list = list(range(len(m.para_set)))
             # get all permutations
             object_p = permutations(r_list)
@@ -1646,7 +1646,8 @@ class DesignOfExperiments:
         return m
 
     def __fix_design(self, m, design_val, fix_opt=True, optimize_option=None):
-        ''' Fix design variable
+        """
+        Fix design variable
 
         Parameters:
         -----------
@@ -1658,7 +1659,7 @@ class DesignOfExperiments:
         Returns:
         --------
         m: model
-        '''
+        """
         # loop over the design variables and time index and to fix values specified in design_val
         for d, dname in enumerate(self.design_name):
             # if design variables are indexed by time
@@ -1688,8 +1689,8 @@ class DesignOfExperiments:
         return m
 
     def __get_default_ipopt_solver(self):
-        ''' Default solver
-        '''
+        """Default solver
+        """
         solver = SolverFactory('ipopt')
         solver.options['linear_solver'] = 'ma57'
         solver.options['halt_on_ampl_error'] = 'yes'
@@ -1697,7 +1698,7 @@ class DesignOfExperiments:
         return solver
 
     def __solve_doe(self, m, fix=False, opt_option=None):
-        '''Solve DOE model.
+        """Solve DOE model.
         If it's a square problem, fix design variable and solve.
         Else, fix design variable and solve square problem firstly, then unfix them and solve the optimization problem
 
@@ -1709,7 +1710,7 @@ class DesignOfExperiments:
         Return:
         -------
         solver_results: solver results
-        '''
+        """
         ### Solve square problem
         mod = self.__fix_design(m, self.design_values, fix_opt=fix, optimize_option=opt_option)
 
@@ -1719,7 +1720,7 @@ class DesignOfExperiments:
         return solver_result
 
     def __add_parameter(self, m, perturb=0):
-        '''
+        """
         For sIPOPT: add parameter perturbation set
 
         Parameters:
@@ -1727,7 +1728,7 @@ class DesignOfExperiments:
         m: model name
         self.param_names: perturbation parameter names
         perturb: which parameter to perturb
-        '''
+        """
         # model parameters perturbation, backward disturb
         param_backward = self.param_value.copy()
         # perturb parameter
@@ -1750,7 +1751,7 @@ class DesignOfExperiments:
         return m
 
     def __sgn(self,p):
-        '''
+        """
         Give the signature of a permutation
 
         Parameters:
@@ -1761,7 +1762,7 @@ class DesignOfExperiments:
         ------
         1 if the number of exchange is an even number
         -1 if the number is an odd number
-        '''
+        """
 
         if len(p) == 1:
             return True
@@ -1783,7 +1784,7 @@ class DesignOfExperiments:
 
 class Scenario_generator:
     def __init__(self, para_dict, formula='central', step=0.001, store=False):
-        '''Generate scenarios.
+        """Generate scenarios.
         DoE library first calls this function to generate scenarios.
         For sequential and simultaneous models, call different functions in this class.
 
@@ -1797,7 +1798,7 @@ class Scenario_generator:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
         store:
             if True, store results.
-        '''
+        """
 
         if formula not in ['central', 'forward', 'backward', None]:
             raise ValueError('Error: undefined formula. Available formulas: central, forward, backward, none.')
@@ -1815,7 +1816,7 @@ class Scenario_generator:
             self.scenario_nominal.append(para_dict[d])
 
     def simultaneous_scenario(self):
-        '''
+        """
         Generate scenario dict for simultaneous models
 
         Returns:
@@ -1830,7 +1831,7 @@ class Scenario_generator:
         scena_overall = {'P': {0: 101.0, 1: 100, 2: 99.0, 3: 100}, 'D': {0: 20, 1: 20.2, 2: 20, 3: 19.8}, 'jac-index': {'P': [0, 2], 'D': [1, 3]}, 'eps-abs': {'P': 2.0, 'D': 0.4}, 'scena-name': [0, 1, 2, 3]}
         if formula ='forward', it will return:
         scena_overall = {'P':{'0':110, '1':100, '2':100}, 'D':{'0':20, '1':22, '2':20}, 'jac-index':{'P':[0,2], 'D':[1,2]}, 'eps-abs':{'P':10,'D':2}, 'scena-name': [0,1,2]}
-        '''
+        """
         # generate scenarios
         scena_keys, scena = self.__scena_generate(self.scenario_nominal, self.formula)
         self.scena_keys = scena_keys
@@ -1849,7 +1850,7 @@ class Scenario_generator:
         return scenario_overall
 
     def next_sequential_scenario(self, count):
-        '''
+        """
         Generate a single scenario class for one of the sequential models
 
         Parameters:
@@ -1859,7 +1860,7 @@ class Scenario_generator:
         Returns:
         -------
         scenario_next: scenario dict for this sequential model
-        '''
+        """
         scena_keys, scena = self.__scena_generate(list(self.scena[count].values()), None)
 
         # each model is basically a 'none' case of an invasive model
@@ -1869,7 +1870,7 @@ class Scenario_generator:
         return scenario_next
 
     def generate_sequential_para(self):
-        '''
+        """
         Generate object and some 'parameters' for sequential models
 
         Returns (added to self object):
@@ -1878,7 +1879,7 @@ class Scenario_generator:
         self.scena: a list of parameter dictionaries for all sequential models
         self.scenario_para: a list of two No. of models involved in calculating one parameter sensitivity
         self.eps_abs: keys are parameter name, values are the step it is perturbed
-        '''
+        """
 
         scena_keys, scena = self.__scena_generate(self.scenario_nominal, self.formula)
         self.scena_keys = scena_keys
@@ -1909,14 +1910,14 @@ class Scenario_generator:
         self.eps_abs = eps_abs
 
     def __scena_generate(self, para_nominal, formula):
-        '''
+        """
         Generate scenario logics
 
         Returns: (store in self object)
         --------
         self.scena_keys: a list of scenario names
         self.scena: a dict, keys are scenario names, values are a list of parameter values
-        '''
+        """
         # generate scenario names
         if formula == 'central':
             scena_keys = list(range(2 * self.no_para))
@@ -1966,7 +1967,7 @@ class Scenario_generator:
 
 class Scenario_data:
     def __init__(self, parameter_dict, scena_keys, scena, form, step):
-        '''
+        """
         Generate scenario for a simultaneous model
 
         parameter_dict: parameter dictionaries
@@ -1987,7 +1988,7 @@ class Scenario_data:
         scena_dict = {'P': {0: 101.0, 1: 100, 2: 99.0, 3: 100}, 'D': {0: 20, 1: 20.2, 2: 20, 3: 19.8}, 'jac-index': {'P': [0, 2], 'D': [1, 3]}, 'eps-abs': {'P': 2.0, 'D': 0.4}, 'scena-name': [0, 1, 2, 3]}
         if formula ='forward', it will return:
         scena_dict = {'P':{'0':110, '1':100, '2':100}, 'D':{'0':20, '1':22, '2':20}, 'jac-index':{'P':[0,2], 'D':[1,2]}, 'eps-abs':{'P':10,'D':2}, 'scena-name': [0,1,2]}
-        '''
+        """
         # get info from parameter dictionary
         self.para_dict = parameter_dict
         self.para_names = list(parameter_dict.keys())
@@ -2048,7 +2049,7 @@ class Scenario_data:
 class FIM_result:
     def __init__(self, para_name, measure_object, jacobian_info=None, all_jacobian_info=None, prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
                  verbose=True):
-        '''Analyze the FIM result for a single run
+        """Analyze the FIM result for a single run
 
         Parameters
         -----------
@@ -2070,7 +2071,7 @@ class FIM_result:
             max condition number
         verbose:
             if True, print statements are used
-        '''
+        """
         self.para_name = para_name
         self.measure_object = measure_object
         self.measurement_variables = measure_object.measurement_name
@@ -2091,7 +2092,7 @@ class FIM_result:
         self.verbose = verbose
 
     def calculate_FIM(self, dv_values, result=None):
-        '''Calculate FIM from Jacobian information. This is for grid search (combined models) results
+        """Calculate FIM from Jacobian information. This is for grid search (combined models) results
 
         Parameters
         ----------
@@ -2105,7 +2106,7 @@ class FIM_result:
         ------
         fim_info: a FIM dictionary
         solver_info: a solver information dictionary
-        '''
+        """
         self.result = result
         self.doe_result = None
 
@@ -2147,16 +2148,13 @@ class FIM_result:
             self.__store_FIM()
 
     def subset(self, measurement_subset):
-        ''' Create new FIM_result object corresponding to provided measurement_subset.
-    
+        """Create new FIM_result object corresponding to provided measurement_subset.
         This requires that measurement_subset is a true subset of the original measurement object.
-    
         Arguments:
             measurement_subset: Instance of Measurements class
-    
         Returns:
             new_result: New instance of FIM_result
-        '''
+        """
 
         # Check that measurement_subset is a valid subset of self.measurement
         self.measure_object.check_subset(measurement_subset)
@@ -2170,14 +2168,14 @@ class FIM_result:
         return FIM_subclass
 
     def __split_jacobian(self, measurement_subset):
-        '''
+        """
         Split jacobian
         Args:
             measure_subclass: the class of the measurement subsets
 
         Returns:
             jaco_info: splitted Jacobian
-        '''
+        """
         # create a dict for FIM. It has the same keys as the Jacobian dict.
         jaco_info = {}
 
@@ -2203,9 +2201,9 @@ class FIM_result:
         return jaco_info
 
     def __jac_reform_3D(self, jac_original, Q_response=False):
-        '''
+        """
         Reform the Jacobian returned by __finite_calculation() to be a 3D numpy array, [measurements, parameters, time]
-        '''
+        """
         # 3-D array form of jacobian [measurements, parameters, time]
         self.measure_timeset = list(self.measurement_timeset.values())[0]
         no_time = len(self.measure_timeset)
@@ -2231,7 +2229,7 @@ class FIM_result:
 
 
     def __print_FIM_info(self, FIM, dv_set=None):
-        '''
+        """
         using a dictionary to store all FIM information
 
         Parameters:
@@ -2250,7 +2248,7 @@ class FIM_result:
             ~['Minimal eigen value:']: a scalar number of minimal eigen value
             ~['Eigen values:']: a list of all eigen values
             ~['Eigen vectors:']: a list of all eigen vectors
-        '''
+        """
         eig = np.linalg.eigvals(FIM)
         self.FIM = FIM
         self.trace = np.trace(FIM)
@@ -2279,7 +2277,7 @@ class FIM_result:
             print('Eigen vectors:', self.eig_vecs)
 
     def __solution_info(self, m, dv_set):
-        '''
+        """
         Solution information. Only for optimization problem
 
         Parameters:
@@ -2295,7 +2293,7 @@ class FIM_result:
             is calculated by numpy)
             -['trace']: a scalar number of trace calculated by the model
             -[design variable name]: a list of design variable solution
-        '''
+        """
         self.obj_value = value(m.obj)
         print('Model objective:', self.obj_value)
 
@@ -2334,7 +2332,7 @@ class FIM_result:
         FIM_store.to_csv(self.store_FIM, index=False)
 
     def __get_solver_info(self):
-        '''
+        """
         Solver information dictionary
 
         Return:
@@ -2342,7 +2340,7 @@ class FIM_result:
         solver_status: a solver infomation dictionary containing the following key:value pairs
             ~['square']: a string of square result solver status
             -['doe']: a string of doe result solver status
-        '''
+        """
         print('======problem solver output======')
 
         if (self.result.solver.status == SolverStatus.ok) and (
@@ -2359,7 +2357,7 @@ class FIM_result:
 
 class Grid_Search_Result:
     def __init__(self, design_ranges, design_dimension_names, design_control_time, FIM_result_list, store_optimality_name=None, verbose=True):
-        '''This class deals with the FIM results from grid search, providing A, D, E, ME-criteria results for each design variable.
+        """This class deals with the FIM results from grid search, providing A, D, E, ME-criteria results for each design variable.
         Can choose to draw 1D sensitivity curves and 2D heatmaps.
 
         Parameters:
@@ -2376,7 +2374,7 @@ class Grid_Search_Result:
             a .csv file name containing all four optimalities value
         verbose:
             if True, print statements
-        '''
+        """
         # design variables
         self.design_names = design_dimension_names
         self.design_ranges = design_ranges
@@ -2387,14 +2385,14 @@ class Grid_Search_Result:
         self.verbose = verbose
 
     def extract_criteria(self):
-        '''
+        """
         Extract design criteria values for every 'grid' (design variable combination) searched.
 
         Returns:
         -------
         self.store_all_results_dataframe: a pandas dataframe with columns as design variable names and A, D, E, ME-criteria names.
             Each row contains the design variable value for this 'grid', and the 4 design criteria value for this 'grid'.
-        '''
+        """
 
         # a list store all results
         store_all_results = []
@@ -2450,7 +2448,7 @@ class Grid_Search_Result:
 
 
     def figure_drawing(self, fixed_design_dimensions, sensitivity_dimension, title_text, xlabel_text, ylabel_text, font_axes=16, font_tick=14, log_scale=True):
-        '''
+        """
         Extract results needed for drawing figures from the overall result dataframe.
         Draw 1D sensitivity curve or 2D heatmap.
         It can be applied to results of any dimensions, but requires design variable values in other dimensions be fixed.
@@ -2474,7 +2472,7 @@ class Grid_Search_Result:
         Returns:
         --------
         None
-        '''
+        """
         self.fixed_design_names = list(fixed_design_dimensions.keys())
         self.fixed_design_values = list(fixed_design_dimensions.values())
         self.sensitivity_dimension = sensitivity_dimension
@@ -2519,7 +2517,7 @@ class Grid_Search_Result:
 
 
     def __curve1D(self, title_text, xlabel_text, font_axes=16, font_tick=14, log_scale=True):
-        '''
+        """
         Draw 1D sensitivity curves for all design criteria
 
         Parameters:
@@ -2534,7 +2532,7 @@ class Grid_Search_Result:
         Returns:
         --------
         4 Figures of 1D sensitivity curves for each criteria
-        '''
+        """
 
         # extract the range of the DOF design variable
         x_range = self.figure_result_data[self.sensitivity_dimension[0]].values.tolist()
@@ -2616,7 +2614,7 @@ class Grid_Search_Result:
         plt.show()
 
     def __heatmap(self, title_text, xlabel_text, ylabel_text, font_axes=16, font_tick=14, log_scale=True):
-        '''
+        """
         Draw 2D heatmaps for all design criteria
 
         Parameters:
@@ -2633,7 +2631,7 @@ class Grid_Search_Result:
         Returns:
         --------
         4 Figures of 2D heatmap for each criteria
-        '''
+        """
 
         # achieve the design variable ranges this figure needs
         # create a dictionary for sensitivity dimensions
@@ -2763,29 +2761,29 @@ class Grid_Search_Result:
         plt.title(title_text + ' - Modified E-optimality')
         plt.show()
 
-    
 
-    
+
+
 def simulate_discretize_model(m,NFE,collo=True,initialize=True):
-    ''' Simulation, discretize, and initialize the Pyomo model.
+    """Simulation, discretize, and initialize the Pyomo model.
     This is only used with Pyomo.DAE models.
-    
+
     Args:
         m: Pyomo model
         NFE: number of finite elements to consider (integer)
         initialize: if True, initialize the discretized model with the
          integrator solution (boolean)
-    
+
     Returns:
     -------
     sim: Simulator object from Pyomo.DAE
     tsim: Timesteps returned from simulator
     profiles: Results returned from simulator
-    '''
+    """
     # Simulate the model using casadi
     sim = Simulator(m, package='casadi')
     tsim, profiles = sim.simulate(integrator='idas', varying_inputs=m.var_input)
-    
+
     if not collo:
         discretizer = TransformationFactory('dae.finite_difference')
         discretizer.apply_to(m, nfe=NFE, scheme='BACKWARD', wrt=m.t)
@@ -2798,9 +2796,9 @@ def simulate_discretize_model(m,NFE,collo=True,initialize=True):
     if initialize:
     # Initialize the discretized model using the simulator profiles
         sim.initialize_model()
-    
+
     return sim, tsim, profiles
 
-    
-    
-    
+
+
+
