@@ -10,7 +10,9 @@ Problem type:   nonconvex MINLP
                 3  constraints
 
 """
-from pyomo.environ import *
+from pyomo.environ import (ConcreteModel, Constraint, Reals, Integers,
+                           Objective, Var, minimize, exp)
+from pyomo.common.collections import ComponentMap
 
 
 class SimpleMINLP5(ConcreteModel):
@@ -30,3 +32,6 @@ class SimpleMINLP5(ConcreteModel):
         m.c2 = Constraint(expr=1/m.x + 1/m.x - m.x**0.5*m.y**0.5 <= -1)
         m.c3 = Constraint(expr=2 * m.x - 5 * m.y <= -1)
         m.optimal_value = 3.6572
+        m.optimal_solution = ComponentMap()
+        m.optimal_solution[m.x] = 4.991797840270567
+        m.optimal_solution[m.y] = 7.0

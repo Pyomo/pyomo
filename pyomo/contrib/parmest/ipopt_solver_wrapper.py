@@ -9,23 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.deprecation import relocated_module_attribute
+from .utils.ipopt_solver_wrapper import *
 
-relocated_module_attribute(
-    'create_ef', 
-    'pyomo.contrib.parmest.utils.create_ef', 
-    'TBD')
-relocated_module_attribute(
-    'ipopt_solver_wrapper', 
-    'pyomo.contrib.parmest.utils.ipopt_solver_wrapper', 
-    'TBD')
-relocated_module_attribute(
-    'mpi_utils', 
-    'pyomo.contrib.parmest.utils.mpi_utils', 
-    'TBD')
-relocated_module_attribute(
-    'scenario_tree', 
-    'pyomo.contrib.parmest.utils.scenario_tree', 
-    'TBD')
-
-
+from pyomo.common.deprecation import deprecation_warning
+deprecation_warning(
+    'The pyomo.contrib.parmest.ipopt_solver_wrapper module has been moved to '
+    'pyomo.contrib.parmest.utils.ipopt_solver_wrapper. Please update your import',
+    version='TBD')

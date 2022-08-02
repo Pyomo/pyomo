@@ -366,8 +366,14 @@ class BARONSHELL(SystemCallSolver):
             results.problem.name = line[0]
             results.problem.number_of_constraints = int(line[1])
             results.problem.number_of_variables = int(line[2])
-            results.problem.lower_bound = float(line[5])
-            results.problem.upper_bound = float(line[6])
+            try:
+                results.problem.lower_bound = float(line[5])
+            except ValueError:
+                results.problem.lower_bound = None
+            try:
+                results.problem.upper_bound = float(line[6])
+            except ValueError:
+                results.problem.upper_bound = None
             results.problem.missing_bounds = line[9]
             results.problem.iterations = line[10]
             results.problem.node_opt = line[11]

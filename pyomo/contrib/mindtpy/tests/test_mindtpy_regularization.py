@@ -26,6 +26,10 @@ model_list = [EightProcessFlowsheet(convex=True),
 class TestMindtPy(unittest.TestCase):
     """Tests for the MindtPy solver plugin."""
 
+    def check_optimal_solution(self, model, places=1):
+        for var in model.optimal_solution:
+            self.assertAlmostEqual(var.value, model.optimal_solution[var], places=places)
+
     def test_ROA_L1(self):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
@@ -39,6 +43,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_ROA_L2(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -53,6 +58,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_ROA_Linf(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -67,6 +73,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_ROA_grad_lag(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -81,6 +88,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_ROA_hess_lag(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -95,6 +103,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_ROA_hess_only_lag(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -109,6 +118,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_ROA_sqp_lag(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -123,6 +133,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_ROA_sqp_lag_equality_relaxation(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -139,6 +150,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_ROA_sqp_lag_add_no_good_cuts(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -156,6 +168,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
     def test_ROA_sqp_lag_level_coef(self):
         """Test the LP/NLP decomposition algorithm."""
@@ -173,6 +186,7 @@ class TestMindtPy(unittest.TestCase):
                               [TerminationCondition.optimal, TerminationCondition.feasible])
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
+                self.check_optimal_solution(model)
 
 
 if __name__ == '__main__':
