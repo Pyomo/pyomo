@@ -253,9 +253,6 @@ class NegationExpression(ExpressionBase):
     def _compute_polynomial_degree(self, result):
         return result[0]
 
-    def _precedence(self):
-        return NegationExpression.PRECEDENCE
-
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             return "{0}({1})".format(self.getname(), values[0])
@@ -344,6 +341,12 @@ class PowExpression(ExpressionBase):
     __slots__ = ()
     PRECEDENCE = 2
 
+    # "**" is right-to-left associative in Python (so this should
+    # return -1), however, as this rule is not widely known and can
+    # confuse novice users, we will make our "**" operator
+    # non-associative (forcing parens)
+    ASSOCIATIVITY = OperatorAssociativity.NON_ASSOCIATIVE
+
     def _compute_polynomial_degree(self, result):
         # PowExpression is a tricky thing.  In general, a**b is
         # nonpolynomial, however, if b == 0, it is a constant
@@ -373,16 +376,6 @@ class PowExpression(ExpressionBase):
         if not args[1]:
             return False
         return args[0] or value(self._args_[1]) == 0
-
-    def _precedence(self):
-        return PowExpression.PRECEDENCE
-
-    def _associativity(self):
-        # "**" is right-to-left associative in Python (so this should
-        # return -1), however, as this rule is not widely known and can
-        # confuse novice users, we will make our "**" operator
-        # non-associative (forcing parens)
-        return OperatorAssociativity.NON_ASSOCIATIVE
 
     def _apply_operation(self, result):
         _l, _r = result
@@ -471,9 +464,6 @@ class ProductExpression(ExpressionBase):
     __slots__ = ()
     PRECEDENCE = 4
 
-    def _precedence(self):
-        return ProductExpression.PRECEDENCE
-
     def _compute_polynomial_degree(self, result):
         # NB: We can't use sum() here because None (non-polynomial)
         # overrides a numeric value (and sum() just ignores it - or
@@ -555,9 +545,6 @@ class DivisionExpression(ExpressionBase):
     def nargs(self):
         return 2
 
-    def _precedence(self):
-        return DivisionExpression.PRECEDENCE
-
     def _compute_polynomial_degree(self, result):
         if result[1] == 0:
             return result[0]
@@ -621,9 +608,6 @@ class SumExpressionBase(_LinearOperatorExpression):
 
     __slots__ = ()
     PRECEDENCE = 6
-
-    def _precedence(self):
-        return SumExpressionBase.PRECEDENCE
 
     def getname(self, *args, **kwds):
         return 'sum'
@@ -697,9 +681,6 @@ class SumExpression(SumExpressionBase):
 
     def nargs(self):
         return self._nargs
-
-    def _precedence(self):
-        return SumExpression.PRECEDENCE
 
     def _apply_operation(self, result):
         return sum(result)
@@ -1024,9 +1005,6 @@ class LinearExpression(ExpressionBase):
             *map(attrgetter('args'), value[first_var:]))
         self.linear_coefs = list(self.linear_coefs)
         self.linear_vars = list(self.linear_vars)
-
-    def _precedence(self):
-        return LinearExpression.PRECEDENCE
 
     # __getstate__ is not needed, as while we are defining local slots,
     # all the data in the slot is redundant to the information already

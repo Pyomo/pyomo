@@ -44,6 +44,9 @@ from pyomo.repn.util import valid_expr_ctypes_minlp, \
 
 logger = logging.getLogger('pyomo.core')
 
+LEFT_TO_RIGHT = EXPR.common.OperatorAssociativity.LEFT_TO_RIGHT
+RIGHT_TO_LEFT = EXPR.common.OperatorAssociativity.RIGHT_TO_LEFT
+
 #
 # A visitor pattern that creates a string for an expression
 # that is compatible with the BARON syntax.
@@ -72,13 +75,13 @@ class ToBaronVisitor(EXPR.ExpressionValueVisitor):
                 elif arg.__class__ in nonpyomo_leaf_types:
                     val = "'{0}'".format(val)
                 elif arg.is_expression_type():
-                    if node._precedence() < arg._precedence():
+                    if node.PRECEDENCE < arg.PRECEDENCE:
                         parens = True
-                    elif node._precedence() == arg._precedence():
+                    elif node.PRECEDENCE == arg.PRECEDENCE:
                         if i == 0:
-                            parens = node._associativity() != 1
+                            parens = node.ASSOCIATIVITY != LEFT_TO_RIGHT
                         elif i == len(node._args_)-1:
-                            parens = node._associativity() != -1
+                            parens = node.ASSOCIATIVITY != RIGHT_TO_LEFT
                         else:
                             parens = True
                 if parens:

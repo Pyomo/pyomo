@@ -30,6 +30,16 @@ class ExpressionBaseMixin(object):
 
     PRECEDENCE = 0
 
+    # Most operators in Python are left-to-right associative
+    """Return the associativity of this operator.
+
+    Returns 1 if this operator is left-to-right associative or -1 if
+    it is right-to-left associative.  Any other return value will be
+    interpreted as "not associative" (implying any arguments that
+    are at this operator's PRECEDENCE will be enclosed in parens).
+    """
+    ASSOCIATIVITY = common.OperatorAssociativity.LEFT_TO_RIGHT
+
     def nargs(self):
         """Returns the number of child nodes.
 
@@ -156,20 +166,6 @@ class ExpressionBaseMixin(object):
         """
         return expression_to_string(self, verbose=verbose, labeler=labeler,
                                     smap=smap, compute_values=compute_values)
-
-    def _precedence(self):
-        return self.PRECEDENCE
-
-    def _associativity(self):
-        """Return the associativity of this operator.
-
-        Returns 1 if this operator is left-to-right associative or -1 if
-        it is right-to-left associative.  Any other return value will be
-        interpreted as "not associative" (implying any arguments that
-        are at this operator's _precedence() will be enclosed in parens).
-        """
-        # Most operators in Python are left-to-right associative
-        return common.OperatorAssociativity.LEFT_TO_RIGHT
 
     def _to_string(self, values, verbose, smap, compute_values):
         """

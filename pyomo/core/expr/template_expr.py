@@ -35,9 +35,6 @@ class GetItemExpression(ExpressionBase):
     """
     PRECEDENCE = 1
 
-    def _precedence(self):
-        return GetItemExpression.PRECEDENCE
-
     def __init__(self, args):
         """Construct an expression with an operation and a set of arguments"""
         self._args_ = args
@@ -135,9 +132,6 @@ class GetAttrExpression(ExpressionBase):
     """
     __slots__ = ()
     PRECEDENCE = 1
-
-    def _precedence(self):
-        return GetAttrExpression.PRECEDENCE
 
     def nargs(self):
         return len(self._args_)
@@ -273,9 +267,6 @@ class TemplateSumExpression(ExpressionBase):
     """
     __slots__ = ('_iters', '_local_args_')
     PRECEDENCE = 1
-
-    def _precedence(self):
-        return TemplateSumExpression.PRECEDENCE
 
     def __init__(self, args, _iters):
         assert len(args) == 1

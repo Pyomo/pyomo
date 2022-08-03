@@ -5197,7 +5197,7 @@ class TestNamedExpressionDuckTyping(unittest.TestCase):
         self.assertTrue(hasattr(obj, 'args'))
         self.assertTrue(hasattr(obj, '__call__'))
         self.assertTrue(hasattr(obj, 'to_string'))
-        self.assertTrue(hasattr(obj, '_precedence'))
+        self.assertTrue(hasattr(obj, 'PRECEDENCE'))
         self.assertTrue(hasattr(obj, '_to_string'))
         self.assertTrue(hasattr(obj, 'clone'))
         self.assertTrue(hasattr(obj, 'create_node_with_local_data'))

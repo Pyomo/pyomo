@@ -113,9 +113,6 @@ would both cause this exception.""".strip() % (self,))
     def is_relational(self):
         return True
 
-    def _precedence(self):
-        return RangedExpression.PRECEDENCE
-
     def _apply_operation(self, result):
         _l, _b, _r = result
         if not self._strict[0]:
@@ -196,9 +193,6 @@ would both cause this exception.""".strip() % (self,))
 
     def is_relational(self):
         return True
-
-    def _precedence(self):
-        return InequalityExpression.PRECEDENCE
 
     def _apply_operation(self, result):
         _l, _r = result
@@ -308,9 +302,6 @@ would both cause this exception.""".strip() % (self,))
 
     def is_relational(self):
         return True
-
-    def _precedence(self):
-        return EqualityExpression.PRECEDENCE
 
     def _apply_operation(self, result):
         _l, _r = result
@@ -594,9 +585,6 @@ class NotExpression(UnaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'Logical Negation'
 
-    def _precedence(self):
-        return NotExpression.PRECEDENCE
-
     def _to_string(self, values, verbose, smap, compute_values):
         return "~%s" % values[0]
 
@@ -627,9 +615,6 @@ class EquivalenceExpression(BinaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'iff'
 
-    def _precedence(self):
-        return EquivalenceExpression.PRECEDENCE
-
     def _to_string(self, values, verbose, smap, compute_values):
         return " iff ".join(values)
 
@@ -648,9 +633,6 @@ class XorExpression(BinaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'xor'
 
-    def _precedence(self):
-        return XorExpression.PRECEDENCE
-
     def _to_string(self, values, verbose, smap, compute_values):
         return " ⊻ ".join(values)
 
@@ -668,9 +650,6 @@ class ImplicationExpression(BinaryBooleanExpression):
 
     def getname(self, *arg, **kwd):
         return 'implies'
-
-    def _precedence(self):
-        return ImplicationExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
         return " --> ".join(values)
@@ -745,9 +724,6 @@ class AndExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'and'
 
-    def _precedence(self):
-        return AndExpression.PRECEDENCE
-
     def _to_string(self, values, verbose, smap, compute_values):
         return " ∧ ".join(values)
 
@@ -773,9 +749,6 @@ class OrExpression(NaryBooleanExpression):
 
     def getname(self, *arg, **kwd):
         return 'or'
-
-    def _precedence(self):
-        return OrExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
         return " ∨ ".join(values)
@@ -809,9 +782,6 @@ class ExactlyExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'exactly'
 
-    def _precedence(self):
-        return ExactlyExpression.PRECEDENCE
-
     def _to_string(self, values, verbose, smap, compute_values):
         return "exactly(%s: [%s])" % (values[0], ", ".join(values[1:]))
 
@@ -836,9 +806,6 @@ class AtMostExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'atmost'
 
-    def _precedence(self):
-        return AtMostExpression.PRECEDENCE
-
     def _to_string(self, values, verbose, smap, compute_values):
         return "atmost(%s: [%s])" % (values[0], ", ".join(values[1:]))
 
@@ -862,9 +829,6 @@ class AtLeastExpression(NaryBooleanExpression):
 
     def getname(self, *arg, **kwd):
         return 'atleast'
-
-    def _precedence(self):
-        return AtLeastExpression.PRECEDENCE
 
     def _to_string(self, values, verbose, smap, compute_values):
         return "atleast(%s: [%s])" % (values[0], ", ".join(values[1:]))

@@ -22,6 +22,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
@@ -44,6 +45,9 @@ class _ExpressionData(NumericValue):
     """
 
     __slots__ = ()
+
+    PRECEDENCE = 0
+    ASSOCIATIVITY = EXPR.common.OperatorAssociativity.NON_ASSOCIATIVE
 
     #
     # Interface
@@ -78,12 +82,6 @@ class _ExpressionData(NumericValue):
 
     def nargs(self):
         return 1
-
-    def _precedence(self):
-        return 0
-
-    def _associativity(self):
-        return 0
 
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:

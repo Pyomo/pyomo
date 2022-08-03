@@ -1492,13 +1492,13 @@ class _ToStringVisitor(ExpressionValueVisitor):
             else:
                 parens = False
                 if not self.verbose and arg.is_expression_type():
-                    if node._precedence() < arg._precedence():
+                    if node.PRECEDENCE < arg.PRECEDENCE:
                         parens = True
-                    elif node._precedence() == arg._precedence():
+                    elif node.PRECEDENCE == arg.PRECEDENCE:
                         if i == 0:
-                            parens = node._associativity() != LEFT_TO_RIGHT
+                            parens = node.ASSOCIATIVITY != LEFT_TO_RIGHT
                         elif i == len(node._args_)-1:
-                            parens = node._associativity() != RIGHT_TO_LEFT
+                            parens = node.ASSOCIATIVITY != RIGHT_TO_LEFT
                         else:
                             parens = True
                 if parens:

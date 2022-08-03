@@ -55,7 +55,7 @@ class OperatorAssociativity(enum.IntEnum):
     LEFT_TO_RIGHT(1) if this operator is left-to-right associative or
     RIGHT_TO_LEFT(-1) if it is right-to-left associative.  Any other
     values will be interpreted as "not associative" (implying any
-    arguments that are at this operator's _precedence() will be enclosed
+    arguments that are at this operator's PRECEDENCE will be enclosed
     in parens).
 
     """
@@ -63,6 +63,7 @@ class OperatorAssociativity(enum.IntEnum):
     RIGHT_TO_LEFT = -1
     NON_ASSOCIATIVE = 0
     LEFT_TO_RIGHT = 1
+
 
 @deprecated("""The clone counter has been removed and will always return 0.
 

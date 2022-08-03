@@ -42,6 +42,8 @@ _legal_unary_functions = {
 _arc_functions = {'acos','asin','atan'}
 _dnlp_functions = {'ceil','floor','abs'}
 _zero_one = {0, 1}
+LEFT_TO_RIGHT = EXPR.common.OperatorAssociativity.LEFT_TO_RIGHT
+RIGHT_TO_LEFT = EXPR.common.OperatorAssociativity.RIGHT_TO_LEFT
 #
 # A visitor pattern that creates a string for an expression
 # that is compatible with the GAMS syntax.
@@ -68,13 +70,13 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
             elif arg.__class__ in native_types:
                 pass
             elif arg.is_expression_type():
-                if node._precedence() < arg._precedence():
+                if node.PRECEDENCE < arg.PRECEDENCE:
                     parens = True
-                elif node._precedence() == arg._precedence():
+                elif node.PRECEDENCE == arg.PRECEDENCE:
                     if i == 0:
-                        parens = node._associativity() != 1
-                    elif i == len(node._args_)-1:
-                        parens = node._associativity() != -1
+                        parens = node.ASSOCIATIVITY != LEFT_TO_RIGHT
+                    elif i == len(node._args_) - 1:
+                        parens = node.ASSOCIATIVITY != RIGHT_TO_LEFT
                     else:
                         parens = True
             if parens:

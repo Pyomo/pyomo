@@ -10,12 +10,10 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr import current as EXPR
-from pyomo.core.expr.expr_common import OperatorAssociativity
-from pyomo.core.kernel.base import \
-    (ICategorizedObject,
-     _abstract_readwrite_property)
-from pyomo.core.kernel.container_utils import \
-    define_simple_containers
+from pyomo.core.kernel.base import (
+    ICategorizedObject, _abstract_readwrite_property,
+)
+from pyomo.core.kernel.container_utils import define_simple_containers
 from pyomo.core.expr.numvalue import (NumericValue,
                                       is_fixed,
                                       is_constant,
@@ -31,6 +29,11 @@ class IIdentityExpression(NumericValue):
     override all implemented methods.
     """
     __slots__ = ()
+
+
+    PRECEDENCE = 0
+
+    ASSOCIATIVITY = EXPR.common.OperatorAssociativity.NON_ASSOCIATIVE
 
     @property
     def expr(self):
@@ -122,12 +125,6 @@ class IIdentityExpression(NumericValue):
         if self._expr is None:
             return "%s{Undefined}" % str(self)
         return values[0]
-
-    def _precedence(self):
-        return 0
-
-    def _associativity(self):
-        return OperatorAssociativity.NON_ASSOCIATIVE
 
     def _apply_operation(self, result):
         return result[0]
