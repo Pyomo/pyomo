@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr import current as EXPR
+from pyomo.core.expr.expr_common import OperatorAssociativity
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
      _abstract_readwrite_property)
@@ -126,7 +127,7 @@ class IIdentityExpression(NumericValue):
         return 0
 
     def _associativity(self):
-        return 0
+        return OperatorAssociativity.NON_ASSOCIATIVE
 
     def _apply_operation(self, result):
         return result[0]

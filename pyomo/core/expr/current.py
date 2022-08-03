@@ -136,24 +136,7 @@ if _mode == Mode.pyomo5_trees:
                                          identify_mutable_parameters,
                                          _PolynomialDegreeVisitor,
                                          _IsFixedVisitor, _ToStringVisitor)
-    # FIXME: we shouldn't need circular dependencies between modules
-    _visitor.LinearExpression = _numeric_expr.LinearExpression
-    _visitor.MonomialTermExpression = _numeric_expr.MonomialTermExpression
-    _visitor.NPV_expression_types = _numeric_expr.NPV_expression_types
-    _visitor.clone_counter = _numeric_expr.clone_counter
 
-    # Initialize numvalue functions
-    _numvalue._generate_sum_expression \
-        = _numeric_expr._generate_sum_expression
-    _numvalue._generate_mul_expression \
-        = _numeric_expr._generate_mul_expression
-    _numvalue._generate_other_expression \
-        = _numeric_expr._generate_other_expression
-    _numvalue._generate_relational_expression \
-        = _logical_expr._generate_relational_expression
-
-    # Initialize logicalvalue functions
-    _logicalvalue._generate_logical_proposition = _logical_expr._generate_logical_proposition
 else:
     raise ValueError("No other expression systems are supported in Pyomo right now.")    #pragma: no cover
 

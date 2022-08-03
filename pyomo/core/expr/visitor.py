@@ -1048,7 +1048,7 @@ def clone_expression(expr, substitute=None):
         The cloned expression.
 
     """
-    clone_counter._count += 1
+    common.clone_counter._count += 1
     memo = {'__block_scope__': {id(None): False}}
     if substitute:
         expr = replace_expressions(expr, substitute)
@@ -1466,6 +1466,9 @@ def _expression_is_fixed(node):
 #  expression_to_string
 # =====================================================
 
+LEFT_TO_RIGHT = common.OperatorAssociativity.LEFT_TO_RIGHT
+RIGHT_TO_LEFT = common.OperatorAssociativity.RIGHT_TO_LEFT
+
 class _ToStringVisitor(ExpressionValueVisitor):
 
     def __init__(self, verbose, smap, compute_values):
@@ -1493,9 +1496,9 @@ class _ToStringVisitor(ExpressionValueVisitor):
                         parens = True
                     elif node._precedence() == arg._precedence():
                         if i == 0:
-                            parens = node._associativity() != 1
+                            parens = node._associativity() != LEFT_TO_RIGHT
                         elif i == len(node._args_)-1:
-                            parens = node._associativity() != -1
+                            parens = node._associativity() != RIGHT_TO_LEFT
                         else:
                             parens = True
                 if parens:
