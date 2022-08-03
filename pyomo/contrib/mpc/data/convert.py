@@ -9,14 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.mpc.data.dynamic_data_base import (
-    _is_iterable,
-    _DynamicDataBase,
-)
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.interval_data import IntervalData
 from pyomo.contrib.mpc.data.find_nearest_index import (
-    find_nearest_index,
     find_nearest_interval_index,
 )
 
