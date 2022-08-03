@@ -26,9 +26,11 @@ from pyomo.contrib.mpc.data.dynamic_data_base import (
     _is_iterable,
     _DynamicDataBase,
 )
+from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
+    find_nearest_interval_index,
 )
 
 
@@ -115,6 +117,20 @@ class IntervalData(_DynamicDataBase):
             })
 
     # TODO: get_data_at_interval, get_data_at_time
+    def get_data_at_time(self, time, tolerance=None, prefer_left=True):
+        if not _is_iterable(time):
+            index = find_nearest_interval_index(
+                self._intervals,
+                time,
+                tolerance=tolerance,
+                prefer_left=prefer_left,
+            )
+            if index is None:
+                raise RuntimeError(
+                    "Time point %s not found in an interval within"
+                    " tolerance %s" % (time, tolerance)
+                )
+        return self.get_data_at_interval_indices(index)
 
 
 def load_inputs_into_model(model, time, input_data, time_tol=0):
