@@ -46,7 +46,7 @@ class TestIntervalData(unittest.TestCase):
 
     def test_construct(self):
         m = self._make_model()
-        intervals = [(0, 5), (5, 10)]
+        intervals = [(0.0, 0.5), (0.5, 1.0)]
         data = {
             m.var[:, "A"]: [1.0, 2.0],
             m.var[:, "B"]: [3.0, 4.0],
@@ -58,6 +58,60 @@ class TestIntervalData(unittest.TestCase):
             {pyo.ComponentUID(key): val for key, val in data.items()},
         )
         self.assertEqual(intervals, interval_data.get_intervals())
+
+    def test_eq(self):
+        m = self._make_model()
+        intervals = [(0.0, 0.5), (0.5, 1.0)]
+        data = {
+            m.var[:, "A"]: [1.0, 2.0],
+            m.var[:, "B"]: [3.0, 4.0],
+        }
+        interval_data_1 = IntervalData(data, intervals)
+
+        data = {
+            m.var[:, "A"]: [1.0, 2.0],
+            m.var[:, "B"]: [3.0, 4.0],
+        }
+        interval_data_2 = IntervalData(data, intervals)
+
+        self.assertEqual(interval_data_1, interval_data_2)
+
+        data = {
+            m.var[:, "A"]: [1.0, 3.0],
+            m.var[:, "B"]: [3.0, 4.0],
+        }
+        interval_data_3 = IntervalData(data, intervals)
+
+        self.assertNotEqual(interval_data_1, interval_data_3)
+
+    def test_get_data_at_indices_multiple(self):
+        m = self._make_model()
+        intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
+        data = {
+            m.var[:, "A"]: [1.0, 2.0, 3.0],
+            m.var[:, "B"]: [4.0, 5.0, 6.0],
+        }
+        interval_data = IntervalData(data, intervals)
+        data = interval_data.get_data_at_interval_indices([0, 2])
+
+        pred_data = IntervalData(
+            {m.var[:, "A"]: [1.0, 3.0], m.var[:, "B"]: [4.0, 6.0]},
+            [(0.0, 0.2), (0.5, 1.0)],
+        )
+        self.assertEqual(pred_data, data)
+
+    def test_get_data_at_indices_singleton(self):
+        m = self._make_model()
+        intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
+        data = {
+            m.var[:, "A"]: [1.0, 2.0, 3.0],
+            m.var[:, "B"]: [4.0, 5.0, 6.0],
+        }
+        interval_data = IntervalData(data, intervals)
+        data = interval_data.get_data_at_interval_indices(1)
+        pred_data = ScalarData({m.var[:, "A"]: 2.0, m.var[:, "B"]: 5.0})
+
+    def test_get_data_at_time(self):
 
 
 class TestAssertDisjoint(unittest.TestCase):

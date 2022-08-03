@@ -22,7 +22,10 @@
 # license information.
 #################################################################################
 
-from pyomo.contrib.mpc.data.dynamic_data_base import _DynamicDataBase
+from pyomo.contrib.mpc.data.dynamic_data_base import (
+    _is_iterable,
+    _DynamicDataBase,
+)
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
@@ -79,8 +82,39 @@ class IntervalData(_DynamicDataBase):
                 )
         super().__init__(data, time_set=time_set, context=context)
 
+    def __eq__(self, other):
+        if isinstance(other, IntervalData):
+            return (
+                self._data == other.get_data()
+                and self._intervals == other.get_intervals()
+            )
+        else:
+            raise TypeError(
+                "%s and %s are not comparable"
+                % (self.__class__, other.__class__)
+            )
+
     def get_intervals(self):
         return self._intervals
+
+    def get_data_at_interval_indices(self, indices):
+        # NOTE: Much of this code is repeated from TimeSeriesData.
+        # TODO: Find some way to consolidate.
+        if _is_iterable(indices):
+            index_list = list(sorted(indices))
+            interval_list = [self._intervals[i] for i in indices]
+            data = {
+                cuid: [values[idx] for idx in index_list]
+                for cuid, values in self._data.items()
+            }
+            time_set = self._orig_time_set
+            return IntervalData(data, interval_list, time_set=time_set)
+        else:
+            return ScalarData({
+                cuid: values[indices] for cuid, values in self._data.items()
+            })
+
+    # TODO: get_data_at_interval, get_data_at_time
 
 
 def load_inputs_into_model(model, time, input_data, time_tol=0):
