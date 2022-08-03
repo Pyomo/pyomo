@@ -37,26 +37,6 @@ _idiv = _inplace+_div
 _rpow =         -_pow
 _ipow = _inplace+_pow
 
-_old_etype_strings = {
-    'add'  :          _add,
-    'radd' :         -_add,
-    'iadd' : _inplace+_add,
-    'sub'  :          _sub,
-    'rsub' :         -_sub,
-    'isub' : _inplace+_sub,
-    'mul'  :          _mul,
-    'rmul' :         -_mul,
-    'imul' : _inplace+_mul,
-    'div'  :          _div,
-    'rdiv' :         -_div,
-    'idiv' : _inplace+_div,
-    'pow'  :          _pow,
-    'rpow' :         -_pow,
-    'ipow' : _inplace+_pow,
-    'neg'  :          _neg,
-    'abs'  :          _abs,
-    }
-
 _eq = 0
 _le = 1
 _lt = 2
