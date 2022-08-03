@@ -41,3 +41,44 @@ def find_nearest_index(array, target, tolerance=None):
         if delta > tolerance:
             return None
     return nearest_index
+
+
+def _distance_from_interval(point, interval):
+    lo, hi = interval
+    if point < lo:
+        return lo - point
+    elif lo <= point and point <= hi:
+        return 0.0
+    elif point > hi:
+        return point - hi
+
+
+def find_nearest_interval_index(interval_array, target, tolerance=None):
+    array_lo = 0
+    array_hi = len(interval_array)
+    target_tuple = (target,)
+    i = bisect.bisect_right(
+        interval_array, target_tuple, lo=array_lo, hi=array_hi
+    )
+    # Possible cases:
+    # - target is less than everything
+    # - target is within some interval (will appear to left of that interval)
+    # - target is between two intervals
+    # - target is greater than everything
+    if i == array_lo:
+        nearest_index = i
+        delta = _distance_from_interval(target, interval_array[i])
+    elif i == array_hi:
+        nearest_index = i
+        delta = _distance_from_interval(target, interval_array[i-1])
+    else:
+        delta, nearest_index = min(
+            (_distance_from_interval(target, interval_array[j]), j)
+            for j in [i-1, i]
+            #(abs(target - array[j]), j) for j in [i-1, i]
+        )
+
+    if tolerance is not None:
+        if delta > tolerance:
+            return None
+    return nearest_index
