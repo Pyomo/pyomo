@@ -16,6 +16,10 @@ from pyomo.core.base.expression import Expression
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.expr.numeric_expr import value as pyo_value
 
+from pyomo.contrib.mpc.interfaces.load_data import (
+    load_data_from_scalar,
+    load_data_from_series,
+)
 from pyomo.contrib.mpc.interfaces.copy_values import copy_values_at_time
 from pyomo.contrib.mpc.data.find_nearest_index import find_nearest_index
 from pyomo.contrib.mpc.data.get_cuid import get_time_indexed_cuid
@@ -177,22 +181,9 @@ class DynamicModelInterface(object):
         if time_points is None:
             time_points = self.time
         if isinstance(data, ScalarData):
-            data = data.get_data()
-            for cuid, val in data.items():
-                var = self.model.find_component(cuid)
-                for t in time_points:
-                    var[t].set_value(val)
+            load_data_from_scalar(data, self.model, time_points)
         elif isinstance(data, TimeSeriesData):
-            if list(time_points) != data.get_time_points():
-                raise RuntimeError(
-                    "Cannot load time series data when time sets have"
-                    " different lengths"
-                )
-            data = data.get_data()
-            for cuid, vals in data.items():
-                var = self.model.find_component(cuid)
-                for t, val in zip(time_points, vals):
-                    var[t].set_value(val)
+            load_data_from_series(data, self.model, time_points)
         else:
             # Attempt to load data by assuming it is a map from something
             # find_component-compatible to values.
