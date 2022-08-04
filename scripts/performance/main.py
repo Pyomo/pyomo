@@ -146,7 +146,7 @@ def run_tests(cython, argv):
 
 def main(argv):
     parser = argparse.ArgumentParser(
-        epilog="Remaining arguments are passed to nosetests"
+        epilog="Remaining arguments are passed to pytest"
     )
     parser.add_argument(
         '-o', '--output',
