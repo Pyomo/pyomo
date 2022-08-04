@@ -27,8 +27,12 @@ from pyomo.core.base.expression import Expression
 
 from pyomo.contrib.mpc.data.series_data import get_time_indexed_cuid
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
+from pyomo.contrib.mpc.data.interval_data import IntervalData
 from pyomo.contrib.mpc.data.interval_data import (
     time_series_from_interval_data,
+)
+from pyomo.contrib.mpc.data.convert import (
+    interval_to_series,
 )
 
 
@@ -102,11 +106,23 @@ def get_tracking_cost_from_piecewise_constant_setpoint(
     time,
     setpoint_data,
     weight_data=None,
+    tolerance=0.0,
+    prefer_left=True,
 ):
     # - Setpoint data is in the form of "interval data"
     # - Need to convert to time series data 
     # - get_tracking_cost_from_time_varying_setpoint()
-    setpoint_time_series = time_series_from_interval_data(setpoint_data, time)
+    if isinstance(setpoint_data, IntervalData):
+        setpoint_time_series = interval_to_series(
+            setpoint_data,
+            time_points=time,
+            tolerance=tolerance,
+            prefer_left=prefer_left,
+        )
+    else:
+        setpoint_time_series = time_series_from_interval_data(
+            setpoint_data, time
+        )
     tracking_cost = get_tracking_cost_from_time_varying_setpoint(
         variables, time, setpoint_time_series, weight_data=weight_data
     )
