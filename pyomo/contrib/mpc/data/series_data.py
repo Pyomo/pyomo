@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from collections import namedtuple
-
+from pyomo.core.expr.numvalue import value as pyo_value
 from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
 )
@@ -166,7 +166,10 @@ class TimeSeriesData(_DynamicDataBase):
 
         """
         time = self._time
-        data = {str(cuid): values for cuid, values in self._data.items()}
+        data = {
+            str(cuid): [pyo_value(val) for val in values]
+            for cuid, values in self._data.items()
+        }
         return TimeSeriesTuple(data, time)
 
     def concatenate(self, other, tolerance=0.0):
