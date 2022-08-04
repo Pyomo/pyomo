@@ -22,7 +22,7 @@ def _is_iterable(obj):
         # Pyomo scalar components define __iter__ and __getitem__,
         # however for our purpose we would like to consider them
         # as not iterable.
-        return not obj.is_indexed()
+        return obj.is_indexed()
     else:
         try:
             iter(obj)
