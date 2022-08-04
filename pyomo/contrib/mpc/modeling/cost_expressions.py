@@ -27,6 +27,7 @@ from pyomo.core.base.expression import Expression
 
 from pyomo.contrib.mpc.data.series_data import get_time_indexed_cuid
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
+from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.interval_data import IntervalData
 from pyomo.contrib.mpc.data.interval_data import (
     time_series_from_interval_data,
@@ -109,9 +110,32 @@ def get_tracking_cost_from_piecewise_constant_setpoint(
     tolerance=0.0,
     prefer_left=True,
 ):
-    # - Setpoint data is in the form of "interval data"
-    # - Need to convert to time series data 
-    # - get_tracking_cost_from_time_varying_setpoint()
+    """
+    Arguments
+    ---------
+    variables: List of Pyomo variables
+        Variables that participate in the cost expressions.
+    time: Iterable
+        Index used for the cost expression
+    setpoint_data: IntervalData
+        Holds the piecewise constant values that will be used as
+        setpoints
+    weight_data: ScalarData (optional)
+        Weights for variables. Default is all ones.
+    tolerance: Float (optional)
+        Tolerance used for determining whether a time point
+        is within an interval. Default is zero.
+    prefer_left: Bool (optional)
+        If a time point lies at the boundary of two intervals, whether
+        the value on the left will be chosen. Default is True.
+
+    Returns
+    -------
+    Expression
+        Pyomo Expression, indexed by time, for the total weighted
+        tracking cost with respect to the provided setpoint.
+
+    """
     if isinstance(setpoint_data, IntervalData):
         setpoint_time_series = interval_to_series(
             setpoint_data,
@@ -120,9 +144,7 @@ def get_tracking_cost_from_piecewise_constant_setpoint(
             prefer_left=prefer_left,
         )
     else:
-        setpoint_time_series = time_series_from_interval_data(
-            setpoint_data, time
-        )
+        setpoint_time_series = IntervalData(*setpoint_data)
     tracking_cost = get_tracking_cost_from_time_varying_setpoint(
         variables, time, setpoint_time_series, weight_data=weight_data
     )
@@ -135,56 +157,58 @@ def get_quadratic_tracking_cost_at_time(var, t, setpoint, weight=None):
     return weight * (var[t] - setpoint)**2
 
 
-def get_tracking_cost_expressions_from_time_varying_setpoint(
+def _get_tracking_cost_expressions_from_time_varying_setpoint(
     variables,
     time,
     setpoint_data,
     weight_data=None,
 ):
+    if weight_data is None:
+        weight_data = ScalarData(ComponentMap((var, 1.0) for var in variables))
+    if not isinstance(weight_data, ScalarData):
+        weight_data = ScalarData(weight_data)
+    if not isinstance(setpoint_data, TimeSeriesData):
+        setpoint_data = TimeSeriesData(*setpoint_data)
+
+    # Validate incoming data
+    if list(time) != setpoint_data.get_time_points():
+        raise RuntimeError(
+            "Mismatch in time points between time set and points"
+            " in the setpoint data structure"
+        )
+    for var in variables:
+        if not setpoint_data.contains_key(var):
+            raise KeyError(
+                "Setpoint data does not contain a key for variable"
+                " %s" % var 
+            )
+        if not weight_data.contains_key(var):
+            raise KeyError(
+                "Tracking weight does not contain a key for"
+                " variable %s" % var
+            )
+
+    # Get lists of weights and setpoints so we don't have to process
+    # the variables (to get CUIDs) and hash the CUIDs for every
+    # time index.
     cuids = [
         get_time_indexed_cuid(var, sets=(time,))
         for var in variables
     ]
-    # TODO: Weight data (and setpoint data) are user-provided and don't
-    # necessarily have CUIDs as keys. Should I processes the keys here
-    # with get_time_indexed_cuid?
-    if weight_data is None:
-        #weight_data = {name: 1.0 for name in variable_names}
-        weight_data = {cuid: 1.0 for cuid in cuids}
-
-    # Here, setpoint_data is a TimeSeriesData object. Need to get
-    # the actual dictionary that we can use for lookup.
-    setpoint_dict = setpoint_data.get_data()
-    # NOTE: We may eventually want to support providing more time points
-    # in the setpoint than are in the time set used as an indexing set.
-    # We would just need the indexing points to exist in the time set.
-    if list(time) != setpoint_data.get_time_points():
-        raise ValueError(
-            "Mismatch in time points between time set and points"
-            " in the setpoint data structure"
-        )
-
-    for i, cuid in enumerate(cuids):
-        if cuid not in setpoint_dict:
-            raise KeyError(
-                "Setpoint data dictionary does not contain a key for variable"
-                " %s with ComponentUID %s" % (variables[i].name, cuid)
-            )
-        if cuid not in weight_data:
-            raise KeyError(
-                "Tracking weight dictionary does not contain a key for"
-                " variable %s with ComponentUID %s"
-                % (variables[i].name, cuid)
-            )
+    weights = [
+        weight_data.get_data_from_key(var)
+        for var in variables
+    ]
+    setpoints = [
+        setpoint_data.get_data_from_key(var)
+        for var in variables
+    ]
     tracking_costs = [
         {
             t: get_quadratic_tracking_cost_at_time(
-                # NOTE: Here I am assuming that the first n_t points in the
-                # setpoint dict should be used...
-                # What is the alternative?
-                var, t, setpoint_dict[cuid][i], weight_data[cuid]
+                var, t, setpoints[j][i], weights[j]
             ) for i, t in enumerate(time)
-        } for var, cuid in zip(variables, cuids)
+        } for j, var in enumerate(variables)
     ]
     return tracking_costs
 
@@ -196,11 +220,28 @@ def get_tracking_cost_from_time_varying_setpoint(
     weight_data=None,
 ):
     """
+    Arguments
+    ---------
+    variables: List of Pyomo variables
+        Variables that participate in the cost expressions.
+    time: Iterable
+        Index used for the cost expression
+    setpoint_data: TimeSeriesData
+        Holds the trajectory values that will be used as a setpoint
+    weight_data: ScalarData (optional)
+        Weights for variables. Default is all ones.
+
+    Returns
+    -------
+    Expression
+        Pyomo Expression, indexed by time, for the total weighted
+        tracking cost with respect to the provided setpoint.
+
     """
     # This is a list of dictionaries, one for each variable and each
     # mapping each time point to the quadratic weighted tracking cost term
     # at that time point.
-    tracking_costs = get_tracking_cost_expressions_from_time_varying_setpoint(
+    tracking_costs = _get_tracking_cost_expressions_from_time_varying_setpoint(
         variables, time, setpoint_data, weight_data=weight_data
     )
 
