@@ -22,6 +22,8 @@
 # license information.
 #################################################################################
 
+from collections import namedtuple
+from pyomo.core.expr.numvalue import value as pyo_value
 from pyomo.contrib.mpc.data.dynamic_data_base import (
     _is_iterable,
     _DynamicDataBase,
@@ -32,6 +34,9 @@ from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
     find_nearest_interval_index,
 )
+
+
+IntervalDataTuple = namedtuple("IntervalTuple", ["data", "intervals"])
 
 
 def assert_disjoint_intervals(intervals):
@@ -130,4 +135,23 @@ class IntervalData(_DynamicDataBase):
                     "Time point %s not found in an interval within"
                     " tolerance %s" % (time, tolerance)
                 )
+        else:
+            raise RuntimeError(
+                "get_data_at_time is not supported with multiple time points"
+                " for IntervalData. To sample the piecewise-constant data at"
+                " particular time points, please use interval_to_series from"
+                " pyomo.contrib.mpc.data.convert"
+            )
         return self.get_data_at_interval_indices(index)
+
+    def to_serializable(self):
+        """
+        Convert to json-serializable object.
+
+        """
+        intervals = self._intervals
+        data = {
+            str(cuid): [pyo_value(val) for val in values]
+            for cuid, values in self._data.items()
+        }
+        return IntervalDataTuple(data, intervals)
