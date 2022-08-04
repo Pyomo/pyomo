@@ -29,9 +29,6 @@ from pyomo.contrib.mpc.data.series_data import get_time_indexed_cuid
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.interval_data import IntervalData
-from pyomo.contrib.mpc.data.interval_data import (
-    time_series_from_interval_data,
-)
 from pyomo.contrib.mpc.data.convert import (
     interval_to_series,
 )

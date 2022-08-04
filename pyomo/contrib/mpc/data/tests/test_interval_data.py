@@ -31,8 +31,6 @@ import pyomo.contrib.mpc as mpc
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.data.interval_data import (
     assert_disjoint_intervals,
-    load_inputs_into_model,
-    interval_data_from_time_series,
     IntervalData,
 )
 
