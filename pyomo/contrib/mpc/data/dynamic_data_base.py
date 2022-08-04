@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.core.base.set import Set
 from pyomo.contrib.mpc.data.get_cuid import (
     get_time_indexed_cuid,
 )
@@ -22,7 +23,9 @@ def _is_iterable(obj):
         # Pyomo scalar components define __iter__ and __getitem__,
         # however for our purpose we would like to consider them
         # as not iterable.
-        return obj.is_indexed()
+        #
+        # Note that sets implement is_indexed but are always iterable.
+        return obj.is_indexed() or isinstance(obj, Set)
     else:
         try:
             iter(obj)
