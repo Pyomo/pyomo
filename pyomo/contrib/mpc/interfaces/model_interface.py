@@ -19,12 +19,14 @@ from pyomo.core.expr.numeric_expr import value as pyo_value
 from pyomo.contrib.mpc.interfaces.load_data import (
     load_data_from_scalar,
     load_data_from_series,
+    load_data_from_interval,
 )
 from pyomo.contrib.mpc.interfaces.copy_values import copy_values_at_time
 from pyomo.contrib.mpc.data.find_nearest_index import find_nearest_index
 from pyomo.contrib.mpc.data.get_cuid import get_time_indexed_cuid
 from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
+from pyomo.contrib.mpc.data.interval_data import IntervalData
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.modeling.cost_expressions import (
     get_tracking_cost_from_constant_setpoint,
@@ -158,7 +160,15 @@ class DynamicModelInterface(object):
             # Return ScalarData object
             return ScalarData(data)
 
-    def load_data(self, data, time_points=None):
+    def load_data(
+        self,
+        data,
+        time_points=None,
+        tolerance=0.0,
+        prefer_left=None,
+        exclude_left_endpoint=None,
+        exclude_right_endpoint=None,
+    ):
         """Method to load data into the model.
 
         Loads data into indicated variables in the model, possibly
@@ -166,20 +176,56 @@ class DynamicModelInterface(object):
 
         Arguments
         ---------
-            data: ScalarData, TimeSeriesData, or mapping
-                If ScalarData, loads values into indicated variables at
-                all (or specified) time points. If TimeSeriesData, loads
-                lists of values into time points.
-                If mapping, checks whether each variable and value is
-                indexed or iterable and correspondingly loads data into
-                variables.
-            time_points: Iterable (optional)
-                Subset of time points into which data should be loaded.
-                Default of None corresponds to loading into all time points.
+        data: ScalarData, TimeSeriesData, or mapping
+            If ScalarData, loads values into indicated variables at
+            all (or specified) time points. If TimeSeriesData, loads
+            lists of values into time points.
+            If mapping, checks whether each variable and value is
+            indexed or iterable and correspondingly loads data into
+            variables.
+        time_points: Iterable (optional)
+            Subset of time points into which data should be loaded.
+            Default of None corresponds to loading into all time points.
 
         """
         if time_points is None:
             time_points = self.time
+        if isinstance(data, IntervalData):
+            # Set default arguments to load from interval
+            if prefer_left is None:
+                prefer_left = True
+            if exclude_left_endpoint is None:
+                exclude_left_endpoint = prefer_left
+            if exclude_right_endpoint is None:
+                exclude_right_endpoint = not prefer_left
+            load_data_from_interval(
+                data,
+                self.model,
+                time_points,
+                tolerance=tolerance,
+                prefer_left=prefer_left,
+                exclude_left_endpoint=exclude_left_endpoint,
+                exclude_right_endpoint=exclude_right_endpoint,
+            )
+            return
+
+        # Make sure these arguments are not set for non-interval data.
+        if prefer_left is not None:
+            raise RuntimeError(
+                "Invalid argument prefer_left with data type %s"
+                % IntervalData
+            )
+        if exclude_left_endpoint is not None:
+            raise RuntimeError(
+                "Invalid argument exclude_left_endpoint with data type %s"
+                % IntervalData
+            )
+        if exclude_right_endpoint is not None:
+            raise RuntimeError(
+                "Invalid argument exclude_right_endpoint with data type %s"
+                % IntervalData
+            )
+
         if isinstance(data, ScalarData):
             load_data_from_scalar(data, self.model, time_points)
         elif isinstance(data, TimeSeriesData):
