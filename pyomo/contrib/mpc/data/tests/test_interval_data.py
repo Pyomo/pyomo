@@ -27,6 +27,7 @@ import pytest
 
 import pyomo.environ as pyo
 import pyomo.dae as dae
+import pyomo.contrib.mpc as mpc
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.data.interval_data import (
     assert_disjoint_intervals,
@@ -182,23 +183,50 @@ class TestLoadInputs(unittest.TestCase):
 
     def test_load_inputs_some_time(self):
         m = self.make_model()
-        inputs = {
-            "v": {(2, 4): 1.0}
-        }
-        load_inputs_into_model(m, m.time, inputs)
+        interface = mpc.DynamicModelInterface(m, m.time)
+        inputs = mpc.IntervalData({"v": [1.0]}, [(2, 4)])
+        interface.load_data(inputs)
 
         for t in m.time:
+            # Note that by default, the left endpoint is not loaded.
             if t == 3 or t == 4:
                 self.assertEqual(m.v[t].value, 1.0)
             else:
                 self.assertEqual(m.v[t].value, 0.0)
 
-    def test_load_inputs_all_time(self):
+    def test_load_inputs_some_time_include_endpoints(self):
         m = self.make_model()
-        inputs = {
-            "v": {(0, 3): 1.0, (3, 6): 2.0},
-        }
-        load_inputs_into_model(m, m.time, inputs)
+        interface = mpc.DynamicModelInterface(m, m.time)
+        inputs = mpc.IntervalData({"v": [1.0]}, [(2, 4)])
+
+        # Default is to exclude right and include left
+        interface.load_data(inputs, exclude_left_endpoint=False)
+
+        for t in m.time:
+            if t == 2 or t == 3 or t == 4:
+                self.assertEqual(m.v[t].value, 1.0)
+            else:
+                self.assertEqual(m.v[t].value, 0.0)
+
+    def test_load_inputs_some_time_exclude_endpoints(self):
+        m = self.make_model()
+        interface = mpc.DynamicModelInterface(m, m.time)
+        inputs = mpc.IntervalData({"v": [1.0]}, [(2, 4)])
+
+        # Default is to exclude right and include left
+        interface.load_data(inputs, exclude_right_endpoint=True)
+
+        for t in m.time:
+            if t == 3:
+                self.assertEqual(m.v[t].value, 1.0)
+            else:
+                self.assertEqual(m.v[t].value, 0.0)
+
+    def test_load_inputs_all_time_default(self):
+        m = self.make_model()
+        interface = mpc.DynamicModelInterface(m, m.time)
+        inputs = mpc.IntervalData({"v": [1.0, 2.0]}, [(0, 3), (3, 6)])
+        interface.load_data(inputs)
         for t in m.time:
             if t == 0:
                 self.assertEqual(m.v[t].value, 0.0)
@@ -207,12 +235,44 @@ class TestLoadInputs(unittest.TestCase):
             else:
                 self.assertEqual(m.v[t].value, 2.0)
 
+    def test_load_inputs_all_time_prefer_right(self):
+        m = self.make_model()
+        interface = mpc.DynamicModelInterface(m, m.time)
+        inputs = mpc.IntervalData({"v": [1.0, 2.0]}, [(0, 3), (3, 6)])
+        interface.load_data(
+            inputs, prefer_left=False
+        )
+        for t in m.time:
+            if t < 3:
+                self.assertEqual(m.v[t].value, 1.0)
+            elif t == 6:
+                # By default, prefering intervals to the right of time
+                # points will exclude the right endpoints of intervals.
+                self.assertEqual(m.v[t].value, 0.0)
+            else:
+                self.assertEqual(m.v[t].value, 2.0)
+
+    def test_load_inputs_all_time_prefer_right_dont_exclude(self):
+        m = self.make_model()
+        interface = mpc.DynamicModelInterface(m, m.time)
+        inputs = mpc.IntervalData({"v": [1.0, 2.0]}, [(0, 3), (3, 6)])
+        interface.load_data(
+            inputs, prefer_left=False, exclude_right_endpoint=False
+        )
+        # Note that all time points have been set.
+        for t in m.time:
+            if t < 3:
+                self.assertEqual(m.v[t].value, 1.0)
+            else:
+                self.assertEqual(m.v[t].value, 2.0)
+
     def load_inputs_invalid_time(self):
         m = self.make_model()
-        inputs = {
-            "v": {(0, 3): 1.0, (3, 6): 2.0, (6, 9): 3.0},
-        }
-        load_inputs_into_model(m, m.time, inputs)
+        interface = mpc.DynamicModelInterface(m, m.time)
+        inputs = mpc.IntervalData(
+            {"v": [1.0, 2.0, 3.0]}, [(0, 3), (3, 6), (6, 9)]
+        )
+        interface.load_data(inputs)
         for t in m.time:
             if t == 0:
                 self.assertEqual(m.v[t].value, 0.0)
@@ -223,68 +283,52 @@ class TestLoadInputs(unittest.TestCase):
 
     def load_inputs_exception(self):
         m = self.make_model()
+        interface = mpc.DynamicModelInterface(m, m.time)
         inputs = {
             "_v": {(0, 3): 1.0, (3, 6): 2.0, (6, 9): 3.0},
         }
-        with self.assertRaisesRegex(RuntimeError, "Could not find"):
-            load_inputs_into_model(m, m.time, inputs)
+        inputs = mpc.IntervalData(
+            {"_v": [1.0, 2.0, 3.0]}, [(0, 3), (3, 6), (6, 9)]
+        )
+        with self.assertRaisesRegex(RuntimeError, "Cannot find"):
+            interface.load_data(inputs)
 
 
 class TestIntervalFromTimeSeries(unittest.TestCase):
 
     def test_singleton(self):
         name = "name"
-        series = (
-            [1.0],
-            {
-                name: [2.0],
-            },
-        )
-        interval = interval_data_from_time_series(series)
+        series = mpc.TimeSeriesData({name: [2.0]}, [1.0])
+        interval = mpc.data.convert.series_to_interval(series)
         self.assertEqual(
             interval,
-            {name: {(1.0, 1.0): 2.0}},
+            IntervalData({name: [2.0]}, [(1.0, 1.0)]),
         )
 
     def test_empty(self):
         name = "name"
-        series = ([], {name: []})
-        interval = interval_data_from_time_series(series)
-        self.assertEqual(interval, {name: {}})
+        series = mpc.TimeSeriesData({name: []}, [])
+        interval = mpc.data.convert.series_to_interval(series)
+        self.assertEqual(interval, mpc.IntervalData({name: []}, []))
 
     def test_interval_from_series(self):
         name = "name"
-        series = (
-            [1, 2, 3],
-            {
-                name: [4.0, 5.0, 6.0],
-            },
-        )
-        interval = interval_data_from_time_series(series)
+        series = mpc.TimeSeriesData({name: [4.0, 5.0, 6.0]}, [1, 2, 3])
+        interval = mpc.data.convert.series_to_interval(series)
         self.assertEqual(
             interval,
-            {
-                name: {(1, 2): 5.0, (2, 3): 6.0},
-            },
+            mpc.IntervalData({name: [5.0, 6.0]}, [(1, 2), (2, 3)]),
         )
 
     def test_use_left_endpoint(self):
         name = "name"
-        series = (
-            [1, 2, 3],
-            {
-                name: [4.0, 5.0, 6.0],
-            },
-        )
-        interval = interval_data_from_time_series(
-            series,
-            use_left_endpoint=True,
+        series = mpc.TimeSeriesData({name: [4.0, 5.0, 6.0]}, [1, 2, 3])
+        interval = mpc.data.convert.series_to_interval(
+            series, use_left_endpoints=True
         )
         self.assertEqual(
             interval,
-            {
-                name: {(1, 2): 4.0, (2, 3): 5.0},
-            },
+            mpc.IntervalData({name: [4.0, 5.0]}, [(1, 2), (2, 3)]),
         )
 
 
