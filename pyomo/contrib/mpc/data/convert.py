@@ -45,6 +45,10 @@ def interval_to_series(
         tolerance) to a boundary between two intervals, this flag
         controls which interval is used.
 
+    Returns
+    -------
+    TimeSeriesData
+
     """
     if time_points is None:
         # TODO: Should first or last data points of first or last
@@ -97,6 +101,10 @@ def series_to_interval(
         Flag indicating whether values on intervals should come
         from the values at the left or right endpoints of the
         intervals
+
+    Returns
+    -------
+    IntervalData
 
     """
     time = data.get_time_points()
