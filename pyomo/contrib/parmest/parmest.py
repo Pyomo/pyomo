@@ -160,12 +160,21 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
         raise RuntimeError (f"scenario for experiment {exp_num} has _mpisppy_node_list")
     nonant_list = [instance.find_component(vstr) for vstr in\
                    outer_cb_data["theta_names"]]
-    instance._mpisppy_node_list = [scenario_tree.ScenarioNode(
+    if use_mpisppy:
+        instance._mpisppy_node_list = [scenario_tree.ScenarioNode(
+                                                    name="ROOT",
+                                                    cond_prob=1.0,
+                                                    stage=1,
+                                                    cost_expression=instance.FirstStageCost,
+                                                    nonant_list=nonant_list,
+                                                    scen_model=instance)]
+    else:
+        instance._mpisppy_node_list = [scenario_tree.ScenarioNode(
                                                 name="ROOT",
                                                 cond_prob=1.0,
                                                 stage=1,
                                                 cost_expression=instance.FirstStageCost,
-                                                # scen_name_list=None, # Deprecated?
+                                                scen_name_list=None, # Deprecated?
                                                 nonant_list=nonant_list,
                                                 scen_model=instance)]
 
