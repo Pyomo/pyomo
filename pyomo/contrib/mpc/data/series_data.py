@@ -206,7 +206,7 @@ class TimeSeriesData(_DynamicDataBase):
 
     def extract_variables(self, variables, context=None, copy_values=False):
         """
-        Only keep variables specified by the user.
+        Only keep variables specified.
 
         """
         if copy_values:
