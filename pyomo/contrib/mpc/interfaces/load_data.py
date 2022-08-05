@@ -37,6 +37,8 @@ def load_data_from_scalar(data, model, time):
         if var is None:
             _raise_invalid_cuid(cuid, model)
         # TODO: Time points should probably use find_nearest_index
+        # This will have to happen in the calling function, as data
+        # doesn't have a list of time points to check.
         t_iter = time if _is_iterable(time) else (time,)
         for t in t_iter:
             var[t].set_value(val)
