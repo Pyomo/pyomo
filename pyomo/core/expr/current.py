@@ -80,13 +80,9 @@ if _mode == Mode.pyomo5_trees:
                                               NPV_expression_types)
     from pyomo.core.expr import logical_expr as _logical_expr
     from pyomo.core.expr.logical_expr import (native_logical_types, BooleanValue,
-                                              BooleanConstant, _lt, _le, _eq,
+                                              BooleanConstant,
                                               _and, _or, _equiv, _inv, _xor,
                                               _impl,
-                                              RangedExpression,
-                                              InequalityExpression, inequality,
-                                              EqualityExpression,
-                                              _generate_relational_expression,
                                               _generate_logical_proposition,
                                               BooleanExpressionBase, lnot,
                                               equivalent, xor, implies,
@@ -105,6 +101,11 @@ if _mode == Mode.pyomo5_trees:
                                               AtMostExpression,
                                               AtLeastExpression,
                                               special_boolean_atom_types)
+    from pyomo.core.expr.relational_expr import (
+        RelationalExpressionBase,
+        RangedExpression, InequalityExpression, EqualityExpression,
+        inequality,
+    )
     from pyomo.core.expr.template_expr import (TemplateExpressionError,
                                                _NotSpecified, GetItemExpression,
                                                GetAttrExpression,

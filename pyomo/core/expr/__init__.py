@@ -18,7 +18,8 @@
 # 
 
 from . import (
-    numvalue, visitor, numeric_expr, boolean_value, logical_expr, current,
+    numvalue, visitor, numeric_expr, boolean_value, logical_expr,
+    relational_expr, current,
 )
 
 
@@ -32,8 +33,9 @@ numvalue._generate_mul_expression \
     = numeric_expr._generate_mul_expression
 numvalue._generate_other_expression \
     = numeric_expr._generate_other_expression
+
 numvalue._generate_relational_expression \
-    = logical_expr._generate_relational_expression
+    = relational_expr._generate_relational_expression
 
 # Initialize logicalvalue functions
 boolean_value._generate_logical_proposition \
@@ -50,10 +52,9 @@ from .boolean_value import BooleanValue
 from .numeric_expr import linear_expression, nonlinear_expression
 from .logical_expr import (
     land, lnot, lor, xor, equivalent, exactly, atleast, atmost, implies,
-    inequality,
 )
-
-from pyomo.core.expr.current import (
+from .relational_expr import inequality
+from .current import (
     log, log10, sin, cos, tan, cosh, sinh, tanh,
     asin, acos, atan, exp, sqrt, asinh, acosh,
     atanh, ceil, floor,

@@ -26,10 +26,12 @@ from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
-from pyomo.core.expr import logical_expr
 from pyomo.core.expr.numvalue import (
     NumericValue, value, as_numeric, is_fixed, native_numeric_types,
     native_types,
+)
+from pyomo.core.expr.current import (
+    EqualityExpression, InequalityExpression, RangedExpression,
 )
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -422,9 +424,9 @@ class _GeneralConstraintData(_ConstraintData):
     @property
     def equality(self):
         """A boolean indicating whether this is an equality constraint."""
-        if self._expr.__class__ is logical_expr.EqualityExpression:
+        if self._expr.__class__ is EqualityExpression:
             return True
-        elif self._expr.__class__ is logical_expr.RangedExpression:
+        elif self._expr.__class__ is RangedExpression:
             # TODO: this is a very restrictive form of structural equality.
             lb = self._expr.arg(0)
             if lb is not None and lb is self._expr.arg(2):
@@ -488,19 +490,19 @@ class _GeneralConstraintData(_ConstraintData):
                         "Equality Constraints expressed as 2-tuples "
                         "cannot contain None [received %s]"
                         % (self.name, expr,))
-                self._expr = logical_expr.EqualityExpression(expr)
+                self._expr = EqualityExpression(expr)
             elif len(expr) == 3:
                 #
                 # Form (ranged) inequality expression
                 #
                 if expr[0] is None:
-                    self._expr = logical_expr.InequalityExpression(
+                    self._expr = InequalityExpression(
                         expr[1:], False)
                 elif expr[2] is None:
-                    self._expr = logical_expr.InequalityExpression(
+                    self._expr = InequalityExpression(
                         expr[:2], False)
                 else:
-                    self._expr = logical_expr.RangedExpression(expr, False)
+                    self._expr = RangedExpression(expr, False)
             else:
                 raise ValueError(
                     "Constraint '%s' does not have a proper value. "
@@ -559,7 +561,7 @@ class _GeneralConstraintData(_ConstraintData):
         # Normalize the incoming expressions, if we can
         #
         args = self._expr.args
-        if self._expr.__class__ is logical_expr.InequalityExpression:
+        if self._expr.__class__ is InequalityExpression:
             if self._expr.strict:
                 raise ValueError(
                     "Constraint '%s' encountered a strict "
@@ -578,7 +580,7 @@ class _GeneralConstraintData(_ConstraintData):
             else:
                 self._body = args[0] - args[1]
                 self._upper = 0
-        elif self._expr.__class__ is logical_expr.EqualityExpression:
+        elif self._expr.__class__ is EqualityExpression:
             if args[0] is None or args[1] is None:
                 # Error check: ensure equality does not have infinite RHS
                 raise ValueError(
@@ -604,7 +606,7 @@ class _GeneralConstraintData(_ConstraintData):
             #     raise ValueError(
             #         "Equality constraint '%s' defined with "
             #         "non-finite term." % (self.name))
-        elif self._expr.__class__ is logical_expr.RangedExpression:
+        elif self._expr.__class__ is RangedExpression:
             if any(self._expr.strict):
                 raise ValueError(
                     "Constraint '%s' encountered a strict "

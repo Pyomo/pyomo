@@ -369,7 +369,7 @@ def as_numeric(obj):
     # Ignore objects that are duck typed to work with Pyomo expressions
     #
     try:
-        if obj.is_numeric_type():
+        if obj.is_numeric_type() or obj.is_relational_type():
             return obj
         else:
             try:

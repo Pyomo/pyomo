@@ -39,13 +39,11 @@ from pyomo.core.expr.numvalue import (
 
 from pyomo.core.expr.boolean_value import BooleanValue
 
-from pyomo.core.expr.numeric_expr import linear_expression, nonlinear_expression
-
-from pyomo.core.expr.logical_expr import (land, lor, equivalent, exactly,
-                                          atleast, atmost, implies, lnot,
-                                          xor, inequality)
-
 from pyomo.core.expr.current import (
+    linear_expression, nonlinear_expression,
+    land, lor, equivalent, exactly,
+    atleast, atmost, implies, lnot,
+    xor, inequality,
     log, log10, sin, cos, tan, cosh, sinh, tanh,
     asin, acos, atan, exp, sqrt, asinh, acosh,
     atanh, ceil, floor,

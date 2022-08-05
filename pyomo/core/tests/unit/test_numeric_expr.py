@@ -49,7 +49,9 @@ from pyomo.core.expr.numeric_expr import (
     _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms,
     LinearDecompositionError, MaxExpression, MinExpression,
 )
-import pyomo.core.expr.logical_expr as logical_expr
+from pyomo.core.expr.relational_expr import (
+    RelationalExpressionBase, EqualityExpression,
+)
 from pyomo.common.errors import PyomoException
 from pyomo.core.expr.visitor import (expression_to_string, 
                                      clone_expression)
@@ -207,7 +209,7 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
         #
         # Confirm that this is a relational expression
         #
-        self.assertTrue(isinstance(exp, ExpressionBase))
+        self.assertTrue(isinstance(exp, RelationalExpressionBase))
         self.assertTrue(exp.is_relational())
         #
         # Check that the expression evaluates correctly
@@ -221,7 +223,7 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
         #
         # Check that the expression evaluates to 'val'
         #
-        if isinstance(exp, logical_expr.EqualityExpression) and exp.args[0] is exp.args[1]:
+        if isinstance(exp, EqualityExpression) and exp.args[0] is exp.args[1]:
             self.assertEqual(bool(exp), val)
         else:
             with self.assertRaises(PyomoException):

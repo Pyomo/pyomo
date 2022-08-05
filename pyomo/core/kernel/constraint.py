@@ -14,7 +14,9 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       is_potentially_variable,
                                       is_numeric_data,
                                       value)
-from pyomo.core.expr import logical_expr
+from pyomo.core.expr.relational_expr import (
+    EqualityExpression, RangedExpression, InequalityExpression
+)
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
      _abstract_readonly_property)
@@ -127,7 +129,7 @@ class IConstraint(ICategorizedObject):
                 return body_expr <= self.ub
             elif self.ub is None:
                 return self.lb <= body_expr
-            return logical_expr.RangedExpression((self.lb, body_expr, self.ub), (False, False))
+            return RangedExpression((self.lb, body_expr, self.ub), (False, False))
 
     @property
     def bounds(self):
@@ -519,7 +521,7 @@ class constraint(_MutableBoundsConstraintMixin,
         # (i.e. explicit '==', '<', and '<=')
         #
         if relational_expr:
-            if _expr_type is logical_expr.EqualityExpression:
+            if _expr_type is EqualityExpression:
                 # assigning to the rhs property
                 # will set the equality flag to True
                 if not is_potentially_variable(expr.arg(1)):
@@ -533,7 +535,7 @@ class constraint(_MutableBoundsConstraintMixin,
                     self.body = expr.arg(0)
                     self.body -= expr.arg(1)
 
-            elif _expr_type is logical_expr.InequalityExpression:
+            elif _expr_type is InequalityExpression:
                 if expr._strict:
                     raise ValueError(
                         "Constraint '%s' encountered a strict "

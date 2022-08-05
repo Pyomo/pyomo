@@ -22,9 +22,8 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import AbstractModel, ConcreteModel, Set, Var, Param, Constraint, inequality, display
-import pyomo.core.expr.logical_expr as logical_expr
 from pyomo.core.expr.numvalue import value
-from pyomo.core.expr.logical_expr import (
+from pyomo.core.expr.relational_expr import (
     InequalityExpression, EqualityExpression, RangedExpression,
 )
 
