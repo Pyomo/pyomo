@@ -120,9 +120,9 @@ class TestSeriesData(unittest.TestCase):
         data_dict = {m.var[:, "A"]: [1, 2, 3], m.var[:, "B"]: [2, 4, 6]}
         data = TimeSeriesData(data_dict, m.time)
 
-        # Test an invalid time value. The default tolerance of None gives us
+        # Test an invalid time value. A tolerance of None gives us
         # the closest index
-        new_data = data.get_data_at_time(-0.1)
+        new_data = data.get_data_at_time(-0.1, tolerance=None)
         self.assertEqual(
             ScalarData({m.var[:, "A"]: 1, m.var[:, "B"]: 2}),
             new_data,
@@ -135,9 +135,14 @@ class TestSeriesData(unittest.TestCase):
             new_data,
         )
 
+        # The default is to raise an error in the case of any discrepancy.
+        msg = "Time point.*is invalid"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            new_data = data.get_data_at_time(-0.0001)
+
         # Test a value that is invalid within tolerance
         msg = "Time point.*is invalid"
-        with self.assertRaisesRegex(ValueError, msg):
+        with self.assertRaisesRegex(RuntimeError, msg):
             new_data = data.get_data_at_time(-0.01, tolerance=1e-3)
 
     def test_to_serializable(self):
@@ -210,6 +215,29 @@ class TestSeriesData(unittest.TestCase):
         self.assertEqual(
             new_data,
             TimeSeriesData({m.var[:, "A"]: [1, 2, 3]}, m.time),
+        )
+
+    def test_shift_then_get_data(self):
+        m = self._make_model()
+        data_dict = {m.var[:, "A"]: [1, 2, 3], m.var[:, "B"]: [2, 4, 6]}
+        data = TimeSeriesData(data_dict, m.time)
+
+        offset = 0.1
+        data.shift_time_points(offset)
+        self.assertEqual(
+            data.get_time_points(),
+            [t + offset for t in m.time],
+        )
+
+        # A time point of zero is no longer valid
+        msg = "Time point.*is invalid"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            t0_data = data.get_data_at_time(0.0, tolerance=1e-3)
+
+        t1_data = data.get_data_at_time(0.1)
+        self.assertEqual(
+            t1_data,
+            ScalarData({m.var[:, "A"]: 1, m.var[:, "B"]: 2}),
         )
 
 

@@ -55,6 +55,10 @@ class TimeSeriesData(_DynamicDataBase):
         # this map to try and find the index of the time point. If this lookup
         # fails, we will use binary search-within-tolerance to attempt to find
         # a point that is close enough.
+        #
+        # WARNING: If the list of time points is updated, e.g. via
+        # shift_time_points or concatenate, then this map needs to be
+        # updated as well.
         self._time_idx_map = {t: idx for idx, t in enumerate(time)}
 
         # First make sure provided lists of variable data have the
@@ -111,7 +115,7 @@ class TimeSeriesData(_DynamicDataBase):
                 cuid: values[indices] for cuid, values in self._data.items()
             })
 
-    def get_data_at_time(self, time=None, tolerance=None):
+    def get_data_at_time(self, time=None, tolerance=0.0):
         """
         Returns the data associated with the provided time point or points.
         This function attempts to map time points to indices, then uses
@@ -125,7 +129,7 @@ class TimeSeriesData(_DynamicDataBase):
             The time point or points corresponding to returned data.
         tolerance: Float
             Tolerance within which we will search for a matching time point.
-            The default is None, which corresponds to an infinite tolerance.
+            The default is 0.0, meaning time points must be specified exactly.
 
         Returns
         -------
@@ -151,7 +155,7 @@ class TimeSeriesData(_DynamicDataBase):
             else:
                 idx = find_nearest_index(self._time, t, tolerance=tolerance)
             if idx is None:
-                raise ValueError(
+                raise RuntimeError(
                     "Time point %s is invalid within tolerance %s"
                     % (t, tolerance)
                 )
