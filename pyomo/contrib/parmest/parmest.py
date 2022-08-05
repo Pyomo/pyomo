@@ -174,7 +174,7 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
                                                 cond_prob=1.0,
                                                 stage=1,
                                                 cost_expression=instance.FirstStageCost,
-                                                scen_name_list=None, # Deprecated?
+                                                scen_name_list=None,
                                                 nonant_list=nonant_list,
                                                 scen_model=instance)]
 
@@ -996,8 +996,9 @@ class Estimator(object):
             assert isinstance(theta_values, pd.DataFrame)
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
-            assert list(theta_names) == self.theta_names, \
-            "theta names in 'theta_values' do not match 'theta_names' used to create Estimator object"
+            if initialize_parmest_model:
+                assert list(theta_names) == self.theta_names, \
+                "Theta names in 'theta_values' do not match 'theta_names' used to create Estimator object"
             all_thetas = theta_values.to_dict('records')
 
         
