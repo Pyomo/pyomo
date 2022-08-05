@@ -208,6 +208,31 @@ class TestIntervalData(unittest.TestCase):
         new_interval_data = IntervalData(data, intervals)
         self.assertEqual(interval_data, new_interval_data)
 
+    def test_extract_variables(self):
+        m = self._make_model()
+        intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
+        data = {
+            m.var[:, "A"]: [1.0, 2.0, 3.0],
+            m.var[:, "B"]: [4.0, 5.0, 6.0],
+        }
+        interval_data = IntervalData(data, intervals, time_set=m.time)
+        new_data = interval_data.extract_variables([m.var[:, "B"]])
+        value_dict = {m.var[:, "B"]: [4.0, 5.0, 6.0]}
+        pred_data = IntervalData(value_dict, intervals)
+        self.assertEqual(new_data, pred_data)
+
+    def test_extract_variables_exception(self):
+        m = self._make_model()
+        intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
+        data = {
+            m.var[:, "A"]: [1.0, 2.0, 3.0],
+            m.var[:, "B"]: [4.0, 5.0, 6.0],
+        }
+        interval_data = IntervalData(data, intervals, time_set=m.time)
+        msg = "only accepts a list or tuple"
+        with self.assertRaisesRegex(TypeError, msg):
+            new_data = interval_data.extract_variables(m.var[:, "B"])
+
 
 class TestAssertDisjoint(unittest.TestCase):
 
