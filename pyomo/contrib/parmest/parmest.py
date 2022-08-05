@@ -165,7 +165,7 @@ def _experiment_instance_creation_callback(scenario_name, node_names=None, cb_da
                                                 cond_prob=1.0,
                                                 stage=1,
                                                 cost_expression=instance.FirstStageCost,
-                                                scen_name_list=None, # Deprecated?
+                                                # scen_name_list=None, # Deprecated?
                                                 nonant_list=nonant_list,
                                                 scen_model=instance)]
 
@@ -673,9 +673,10 @@ class Estimator(object):
                     scen._mpisppy_probability = 1 / len(scen_dict)
             
             if use_mpisppy:
-                ef = sputils._create_EF_from_scen_dict(scen_dict,
+                EF_instance = sputils._create_EF_from_scen_dict(scen_dict,
                                                 EF_name = "_Q_at_theta",
-                                                suppress_warnings=True)
+                                                # suppress_warnings=True
+                                                )
             else:
                 EF_instance = local_ef._create_EF_from_scen_dict(scen_dict,
                                                         EF_name="_Q_at_theta",
