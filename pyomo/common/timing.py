@@ -79,7 +79,6 @@ class ConstructionTimer(object):
             return '(unknown)'
 
     def __str__(self):
-        total_time = self.timer
         try:
             idx = len(self.obj.index_set())
         except AttributeError:
@@ -88,19 +87,19 @@ class ConstructionTimer(object):
             _type = self.obj.ctype.__name__
         except AttributeError:
             _type = type(self.obj).__name__
-        if total_time < 0:
+        if self.timer < 0:
             return "ConstructionTimer object for %s %s; %s elapsed seconds" % (
                 _type,
                 self.name,
-                total_time + default_timer()
+                self.timer + default_timer()
             )
         else:
-            return self.fmt % ( 2 if total_time>=0.005 else 0,
+            return self.fmt % ( 2 if self.timer >= 0.005 else 0,
                                 _type,
                                 self.name,
                                 idx,
                                 'indices' if idx > 1 else 'index',
-                            ) % total_time
+                            ) % self.timer
 
 
 _transform_logger = logging.getLogger('pyomo.common.timing.transformation')
@@ -129,16 +128,17 @@ class TransformationTimer(object):
         return self.obj.__class__.__name__
 
     def __str__(self):
-        total_time = self.timer
-        try:
-            return self.fmt % ( 2 if total_time>=0.005 else 0,
+        if  self.timer < 0:
+            return "TransformationTimer object for %s%s; %s elapsed seconds" % (
+                self.name,
+                self.mode,
+                self.timer + default_timer()
+            )
+        else:
+            return self.fmt % ( 2 if self.timer >= 0.005 else 0,
                                 self.name,
                                 self.mode,
-                            ) % total_time
-        except TypeError:
-            return "TransformationTimer object for %s; %s elapsed seconds" % (
-                name,
-                self.timer.toc("") )
+                            ) % self.timer
 
 #
 # Setup the timer
@@ -273,15 +273,12 @@ class TicTocTimer(object):
         return ans
 
     def stop(self):
-        try:
-            delta = default_timer() - self._lastTime
-        except TypeError:
-            if self._lastTime is None:
-                raise RuntimeError(
-                    "Stopping a TicTocTimer that was already stopped")
-            raise
+        delta, self._lastTime = self._lastTime, None
+        if delta is None:
+            raise RuntimeError(
+                "Stopping a TicTocTimer that was already stopped")
+        delta = default_timer() - delta
         self._cumul += delta
-        self._lastTime = None
         return delta
 
     def start(self):
