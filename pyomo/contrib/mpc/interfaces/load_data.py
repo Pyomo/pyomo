@@ -42,7 +42,7 @@ def load_data_from_scalar(data, model, time):
             var[t].set_value(val)
 
 
-def load_data_from_series(data, model, time):
+def load_data_from_series(data, model, time, tolerance=0.0):
     """
     Arguments
     ---------
@@ -51,18 +51,26 @@ def load_data_from_series(data, model, time):
     time: Iterable
 
     """
-    if list(time) != data.get_time_points():
+    time_list = list(time)
+    time_indices = [
+        find_nearest_index(time_list, t, tolerance=tolerance)
+        for t in data.get_time_points()
+    ]
+    for idx, t in zip(time_indices, data.get_time_points()):
+        if idx is None:
+            raise RuntimeError("Time point %s not found time set" % t)
+    if len(time_list) != len(data.get_time_points()):
         raise RuntimeError(
-            "Cannot load time series data when time sets have"
-            " different lengths"
+            "TimeSeriesData object and model must must have same number"
+            " of time points to load data from series"
         )
     data = data.get_data()
     for cuid, vals in data.items():
         var = model.find_component(cuid)
         if var is None:
             _raise_invalid_cuid(cuid, model)
-        # TODO: Time points should probably use find_nearest_index
-        for t, val in zip(time, vals):
+        for idx, val in zip(time_indices, vals):
+            t = time_list[idx]
             var[t].set_value(val)
 
 
