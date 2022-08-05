@@ -25,7 +25,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.expression import Expression
 
-from pyomo.contrib.mpc.data.series_data import get_time_indexed_cuid
+from pyomo.contrib.mpc.data.series_data import get_indexed_cuid
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.interval_data import IntervalData
@@ -85,7 +85,7 @@ def get_tracking_cost_from_constant_setpoint(
 
     # Set up data structures so we don't have to re-process keys for each
     # time index in the rule.
-    cuids = [get_time_indexed_cuid(var) for var in variables]
+    cuids = [get_indexed_cuid(var) for var in variables]
     setpoint_data = setpoint_data.get_data()
     weight_data = weight_data.get_data()
     def tracking_rule(m, t):
@@ -189,7 +189,7 @@ def _get_tracking_cost_expressions_from_time_varying_setpoint(
     # the variables (to get CUIDs) and hash the CUIDs for every
     # time index.
     cuids = [
-        get_time_indexed_cuid(var, sets=(time,))
+        get_indexed_cuid(var, sets=(time,))
         for var in variables
     ]
     weights = [

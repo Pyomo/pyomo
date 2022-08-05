@@ -15,7 +15,7 @@ from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
 )
 from pyomo.contrib.mpc.data.get_cuid import (
-    get_time_indexed_cuid,
+    get_indexed_cuid,
 )
 from pyomo.contrib.mpc.data.dynamic_data_base import (
     _is_iterable,
@@ -217,7 +217,7 @@ class TimeSeriesData(_DynamicDataBase):
             )
         data = {}
         for var in variables:
-            cuid = get_time_indexed_cuid(
+            cuid = get_indexed_cuid(
                 var, (self._orig_time_set,), context=context
             )
             data[cuid] = self._data[cuid]

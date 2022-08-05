@@ -15,7 +15,7 @@ from pyomo.contrib.mpc.data.dynamic_data_base import (
     _DynamicDataBase,
 )
 from pyomo.contrib.mpc.data.get_cuid import (
-    get_time_indexed_cuid,
+    get_indexed_cuid,
 )
 
 

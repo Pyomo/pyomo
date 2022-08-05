@@ -11,7 +11,7 @@
 
 from pyomo.core.base.set import Set
 from pyomo.contrib.mpc.data.get_cuid import (
-    get_time_indexed_cuid,
+    get_indexed_cuid,
 )
 
 
@@ -56,7 +56,7 @@ class _DynamicDataBase(object):
         self._orig_time_set = time_set
 
         self._data = {
-            get_time_indexed_cuid(
+            get_indexed_cuid(
                 key, (self._orig_time_set,), context=context
             ): val
             for key, val in data.items()
@@ -84,7 +84,7 @@ class _DynamicDataBase(object):
         Returns the value associated with the given key.
 
         """
-        cuid = get_time_indexed_cuid(
+        cuid = get_indexed_cuid(
             key, (self._orig_time_set,), context=context
         )
         return self._data[cuid]
@@ -94,7 +94,7 @@ class _DynamicDataBase(object):
         Returns whether this object's dict contains the given key.
 
         """
-        cuid = get_time_indexed_cuid(
+        cuid = get_indexed_cuid(
             key, (self._orig_time_set,), context=context
         )
         return cuid in self._data
@@ -108,7 +108,7 @@ class _DynamicDataBase(object):
             self._data.update(other.get_data())
         else:
             other = {
-                get_time_indexed_cuid(
+                get_indexed_cuid(
                     key, (self._orig_time_set,), context=context
                 ): val
                 for key, val in other.items()
@@ -143,7 +143,7 @@ class _DynamicDataBase(object):
             )
         data = {}
         for var in variables:        
-            cuid = get_time_indexed_cuid(
+            cuid = get_indexed_cuid(
                 var, (self._orig_time_set,), context=context
             )
             data[cuid] = self._data[cuid]

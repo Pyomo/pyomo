@@ -11,7 +11,7 @@
 
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
-from pyomo.contrib.mpc.data.get_cuid import get_time_indexed_cuid
+from pyomo.contrib.mpc.data.get_cuid import get_indexed_cuid
 
 
 class TestGetCUID(unittest.TestCase):
@@ -35,23 +35,23 @@ class TestGetCUID(unittest.TestCase):
 
         pred_cuid = pyo.ComponentUID(m.var[:, "A"])
         self.assertEqual(
-            get_time_indexed_cuid(m.var[:, "A"]),
+            get_indexed_cuid(m.var[:, "A"]),
             pred_cuid,
         )
         self.assertEqual(
-            get_time_indexed_cuid(pyo.Reference(m.var[:, "A"])),
+            get_indexed_cuid(pyo.Reference(m.var[:, "A"])),
             pred_cuid,
         )
         self.assertEqual(
-            get_time_indexed_cuid("var[*,A]"),
+            get_indexed_cuid("var[*,A]"),
             pred_cuid,
         )
         self.assertEqual(
-            get_time_indexed_cuid("var[*,'A']"),
+            get_indexed_cuid("var[*,'A']"),
             pred_cuid,
         )
         self.assertEqual(
-            get_time_indexed_cuid(m.var[0, "A"], sets=(m.time,)),
+            get_indexed_cuid(m.var[0, "A"], sets=(m.time,)),
             pred_cuid,
         )
 
@@ -60,19 +60,19 @@ class TestGetCUID(unittest.TestCase):
 
         pred_cuid = pyo.ComponentUID(m.b[:, :].bvar2["A"])
         self.assertEqual(
-            get_time_indexed_cuid(m.b[:, :].bvar2["A"]),
+            get_indexed_cuid(m.b[:, :].bvar2["A"]),
             pred_cuid,
         )
         self.assertEqual(
-            get_time_indexed_cuid(pyo.Reference(m.b[:, :].bvar2["A"])),
+            get_indexed_cuid(pyo.Reference(m.b[:, :].bvar2["A"])),
             pred_cuid,
         )
         self.assertEqual(
-            get_time_indexed_cuid("b[*,*].bvar2[A]"),
+            get_indexed_cuid("b[*,*].bvar2[A]"),
             pred_cuid,
         )
         self.assertEqual(
-            get_time_indexed_cuid(m.b[0, 1].bvar2["A"], sets=(m.time, m.space)),
+            get_indexed_cuid(m.b[0, 1].bvar2["A"], sets=(m.time, m.space)),
             pred_cuid,
         )
 
@@ -85,36 +85,36 @@ class TestGetCUID(unittest.TestCase):
 
         # ref is attached to the model, so by default we don't "dereference"
         self.assertNotEqual(
-            get_time_indexed_cuid(m.ref),
+            get_indexed_cuid(m.ref),
             pred_cuid,
         )
         self.assertEqual(
-            get_time_indexed_cuid(m.ref),
+            get_indexed_cuid(m.ref),
             pyo.ComponentUID(m.ref[:]),
         )
 
         # If we use dereference=True, we do dereference and get the CUID of
         # the underlying slice.
         self.assertEqual(
-            get_time_indexed_cuid(m.ref, dereference=True),
+            get_indexed_cuid(m.ref, dereference=True),
             pred_cuid,
         )
 
         # However, we only dereference once, so a reference-to-reference
         # does not reveal the underlying slice (of the original reference)
         self.assertNotEqual(
-            get_time_indexed_cuid(m.ref2, dereference=True),
+            get_indexed_cuid(m.ref2, dereference=True),
             pred_cuid,
         )
         self.assertEqual(
-            get_time_indexed_cuid(m.ref2, dereference=True),
+            get_indexed_cuid(m.ref2, dereference=True),
             pyo.ComponentUID(m.ref[:]),
         )
 
         # But if we use dereference=2, we allow two dereferences, and get
         # the original slice
         self.assertEqual(
-            get_time_indexed_cuid(m.ref2, dereference=2),
+            get_indexed_cuid(m.ref2, dereference=2),
             pred_cuid,
         )
 
@@ -125,22 +125,22 @@ class TestGetCUID(unittest.TestCase):
 
         pred_cuid = pyo.ComponentUID(m.var[:, "A"], context=m)
         self.assertEqual(
-            get_time_indexed_cuid(m.var[:, "A"], context=m),
+            get_indexed_cuid(m.var[:, "A"], context=m),
             pred_cuid,
         )
         self.assertEqual(
-            get_time_indexed_cuid(pyo.Reference(m.var[:, "A"]), context=m),
+            get_indexed_cuid(pyo.Reference(m.var[:, "A"]), context=m),
             pred_cuid,
         )
 
         # This is what we would expect without a context arg
         full_cuid = pyo.ComponentUID(m.var[:, "A"])
         self.assertNotEqual(
-            get_time_indexed_cuid("m.var[*,A]"),
+            get_indexed_cuid("m.var[*,A]"),
             pred_cuid,
         )
         self.assertEqual(
-            get_time_indexed_cuid("m.var[*,A]"),
+            get_indexed_cuid("m.var[*,A]"),
             full_cuid,
         )
 
@@ -148,10 +148,10 @@ class TestGetCUID(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, msg):
             # Passing context with a string raises a reasonable
             # error from the CUID constructor
-            get_time_indexed_cuid("m.var[*,A]", context=m)
+            get_indexed_cuid("m.var[*,A]", context=m)
 
         self.assertEqual(
-            get_time_indexed_cuid(m.var[0, "A"], sets=(m.time,), context=m),
+            get_indexed_cuid(m.var[0, "A"], sets=(m.time,), context=m),
             pred_cuid,
         )
 

@@ -23,7 +23,7 @@ from pyomo.contrib.mpc.interfaces.load_data import (
 )
 from pyomo.contrib.mpc.interfaces.copy_values import copy_values_at_time
 from pyomo.contrib.mpc.data.find_nearest_index import find_nearest_index
-from pyomo.contrib.mpc.data.get_cuid import get_time_indexed_cuid
+from pyomo.contrib.mpc.data.get_cuid import get_indexed_cuid
 from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.interval_data import IntervalData
@@ -367,7 +367,7 @@ class DynamicModelInterface(object):
             # to get time-indexed variables on the model.
             variables = [
                 self.model.find_component(
-                    get_time_indexed_cuid(var, (self.time,))
+                    get_indexed_cuid(var, (self.time,))
                 ) for var in variables
             ]
         return get_tracking_cost_from_constant_setpoint(
@@ -378,7 +378,7 @@ class DynamicModelInterface(object):
         self, variables, sample_points, use_next=True,
     ):
         cuids = [
-            get_time_indexed_cuid(var, (self.time,))
+            get_indexed_cuid(var, (self.time,))
             for var in variables
         ]
         variables = [self.model.find_component(cuid) for cuid in cuids]

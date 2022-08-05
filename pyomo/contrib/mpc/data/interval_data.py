@@ -24,7 +24,7 @@
 
 from collections import namedtuple
 from pyomo.core.expr.numvalue import value as pyo_value
-from pyomo.contrib.mpc.data.get_cuid import get_time_indexed_cuid
+from pyomo.contrib.mpc.data.get_cuid import get_indexed_cuid
 from pyomo.contrib.mpc.data.dynamic_data_base import (
     _is_iterable,
     _DynamicDataBase,
@@ -214,7 +214,7 @@ class IntervalData(_DynamicDataBase):
                 "extract_values only accepts a list or tuple of variables"
             )
         for var in variables:
-            cuid = get_time_indexed_cuid(
+            cuid = get_indexed_cuid(
                 var, (self._orig_time_set,), context=context
             )
             data[cuid] = self._data[cuid]

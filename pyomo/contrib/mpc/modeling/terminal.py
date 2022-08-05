@@ -25,7 +25,7 @@
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.expression import Expression
 
-from pyomo.contrib.mpc.data.series_data import get_time_indexed_cuid
+from pyomo.contrib.mpc.data.series_data import get_indexed_cuid
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 
 
@@ -49,12 +49,12 @@ def get_penalty_expressions_at_time(
     target_data = target_data.get_data()
 
     cuids = [
-        get_time_indexed_cuid(var, sets=(time,))
+        get_indexed_cuid(var, sets=(time,))
         for var in variables
     ]
     # TODO: Weight data (and setpoint data) are user-provided and don't
     # necessarily have CUIDs as keys. Should I process the keys here
-    # with get_time_indexed_cuid?
+    # with get_indexed_cuid?
     if weight_data is None:
         weight_data = {cuid: 1.0 for cuid in cuids}
     for i, cuid in enumerate(cuids):

@@ -13,4 +13,4 @@ from .interfaces.model_interface import DynamicModelInterface
 from .data.series_data import TimeSeriesData
 from .data.interval_data import IntervalData
 from .data.scalar_data import ScalarData
-from .data.get_cuid import get_time_indexed_cuid
+from .data.get_cuid import get_indexed_cuid

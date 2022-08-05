@@ -15,7 +15,7 @@ from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.dae.flatten import get_slice_for_set
 
 
-def get_time_indexed_cuid(var, sets=None, dereference=None, context=None):
+def get_indexed_cuid(var, sets=None, dereference=None, context=None):
     """
     Attempts to convert the provided "var" object into a CUID with
     with wildcards.
@@ -63,7 +63,7 @@ def get_time_indexed_cuid(var, sets=None, dereference=None, context=None):
                 dereference = dereference if dereference is None else\
                         remaining_dereferences
                 # NOTE: Calling this function recursively
-                return get_time_indexed_cuid(
+                return get_indexed_cuid(
                     referent, sets, dereference=dereference
                 )
         else:
