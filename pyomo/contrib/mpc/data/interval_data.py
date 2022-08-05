@@ -24,12 +24,12 @@
 
 from collections import namedtuple
 from pyomo.core.expr.numvalue import value as pyo_value
+from pyomo.contrib.mpc.data.get_cuid import get_time_indexed_cuid
 from pyomo.contrib.mpc.data.dynamic_data_base import (
     _is_iterable,
     _DynamicDataBase,
 )
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
-from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
     find_nearest_interval_index,
@@ -159,7 +159,7 @@ class IntervalData(_DynamicDataBase):
     def concatenate(self, other, tolerance=0.0):
         """
         Extend interval list and variable data lists with the intervals
-        and variable values in the provided TimeSeriesData
+        and variable values in the provided IntervalData
 
         """
         other_intervals = other.get_intervals()
@@ -206,11 +206,18 @@ class IntervalData(_DynamicDataBase):
                 % self.__class__
             )
         data = {}
+        if not isinstance(variables, (list, tuple)):
+            # If variables is not a sequence and is instead a slice (or
+            # indexed variable), we get either a confusing error message
+            # or a lot of repeated work.
+            raise TypeError(
+                "extract_values only accepts a list or tuple of variables"
+            )
         for var in variables:
             cuid = get_time_indexed_cuid(
                 var, (self._orig_time_set,), context=context
             )
             data[cuid] = self._data[cuid]
-        return TimeSeriesData(
-            data, self._time, time_set=self._orig_time_set
+        return IntervalData(
+            data, self._intervals, time_set=self._orig_time_set
         )
