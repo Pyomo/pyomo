@@ -190,7 +190,9 @@ class IntervalData(_DynamicDataBase):
         """
         # Note that this is different from what we are doing in
         # shift_values_by_time in the helper class.
-        self._time = [t + offset for t in self._time]
+        self._intervals = [
+            (lo + offset, hi + offset) for lo, hi in self._intervals
+        ]
 
     def extract_variables(self, variables, context=None, copy_values=False):
         """
