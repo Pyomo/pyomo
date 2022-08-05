@@ -190,6 +190,24 @@ class TestIntervalData(unittest.TestCase):
         new_data = IntervalData(new_values, new_intervals)
         self.assertEqual(interval_data_1, new_data)
 
+    def test_shift_time_points(self):
+        m = self._make_model()
+        intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
+        data = {
+            m.var[:, "A"]: [1.0, 2.0, 3.0],
+            m.var[:, "B"]: [4.0, 5.0, 6.0],
+        }
+        interval_data = IntervalData(data, intervals)
+        interval_data.shift_time_points(1.0)
+
+        intervals = [(1.0, 1.2), (1.2, 1.5), (1.5, 2.0)]
+        data = {
+            m.var[:, "A"]: [1.0, 2.0, 3.0],
+            m.var[:, "B"]: [4.0, 5.0, 6.0],
+        }
+        new_interval_data = IntervalData(data, intervals)
+        self.assertEqual(interval_data, new_interval_data)
+
 
 class TestAssertDisjoint(unittest.TestCase):
 
