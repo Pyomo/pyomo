@@ -996,6 +996,8 @@ class Estimator(object):
             assert isinstance(theta_values, pd.DataFrame)
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
+            assert list(theta_names) == self.theta_names, \
+            "theta names in 'theta_values' do not match 'theta_names' used to create Estimator object"
             all_thetas = theta_values.to_dict('records')
 
         
