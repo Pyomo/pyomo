@@ -74,9 +74,9 @@ class ConstructionTimer(object):
             try:
                 return self.obj.local_name
             except RuntimeError:
-                name = '(unknown)'
+                return '(unknown)'
         except AttributeError:
-            name = '(unknown)'
+            return '(unknown)'
 
     def __str__(self):
         total_time = self.timer
@@ -88,18 +88,19 @@ class ConstructionTimer(object):
             _type = self.obj.ctype.__name__
         except AttributeError:
             _type = type(self.obj).__name__
-        try:
+        if total_time < 0:
+            return "ConstructionTimer object for %s %s; %s elapsed seconds" % (
+                _type,
+                self.name,
+                total_time + default_timer()
+            )
+        else:
             return self.fmt % ( 2 if total_time>=0.005 else 0,
                                 _type,
                                 self.name,
                                 idx,
                                 'indices' if idx > 1 else 'index',
                             ) % total_time
-        except TypeError:
-            return "ConstructionTimer object for %s %s; %s elapsed seconds" % (
-                _type,
-                name,
-                self.timer.toc("") )
 
 
 _transform_logger = logging.getLogger('pyomo.common.timing.transformation')
