@@ -155,3 +155,30 @@ class IntervalData(_DynamicDataBase):
             for cuid, values in self._data.items()
         }
         return IntervalDataTuple(data, intervals)
+
+    def concatenate(self, other, tolerance=0.0):
+        """
+        Extend interval list and variable data lists with the intervals
+        and variable values in the provided TimeSeriesData
+
+        """
+        other_intervals = other.get_intervals()
+        intervals = self._intervals
+        if len(other_intervals) == 0:
+            return
+        if other_intervals[0][0] < intervals[-1][1] + tolerance:
+            # First point of new intervals is less than (within
+            # tolerance) 
+            raise ValueError(
+                "Initial time point of target, %s, is not greater than"
+                " final time point of source, %s, within tolerance %s."
+                % (other_time[0][0], time[-1][1], tolerance)
+            )
+        self._intervals.extend(other_intervals)
+
+        data = self._data
+        other_data = other.get_data()
+        for cuid, values in data.items():
+            # We assume that other contains all the cuids in self.
+            # We make no assumption the other way around.
+            values.extend(other_data[cuid])

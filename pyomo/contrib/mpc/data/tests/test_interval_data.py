@@ -145,6 +145,51 @@ class TestIntervalData(unittest.TestCase):
         pred_data = ScalarData({m.var[:, "A"]: 3.0, m.var[:, "B"]: 6.0})
         self.assertEqual(data, pred_data)
 
+    def test_to_serializable(self):
+        m = self._make_model()
+        intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
+        data = {
+            m.var[:, "A"]: [1.0, 2.0, 3.0],
+            m.var[:, "B"]: [4.0, 5.0, 6.0],
+        }
+        interval_data = IntervalData(data, intervals)
+        json_data = interval_data.to_serializable()
+        self.assertEqual(
+            json_data,
+            (
+                {"var[*,A]": [1.0, 2.0, 3.0], "var[*,B]": [4.0, 5.0, 6.0]},
+                [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)],
+            )
+        )
+
+    def test_concatenate(self):
+        m = self._make_model()
+        intervals = [(0.0, 0.2), (0.2, 0.5), (0.5, 1.0)]
+        data = {
+            m.var[:, "A"]: [1.0, 2.0, 3.0],
+            m.var[:, "B"]: [4.0, 5.0, 6.0],
+        }
+        interval_data_1 = IntervalData(data, intervals)
+
+        intervals = [(1.0, 1.5), (2.0, 3.0)]
+        data = {
+            m.var[:, "A"]: [7.0, 8.0],
+            m.var[:, "B"]: [9.0, 10.0],
+        }
+        interval_data_2 = IntervalData(data, intervals)
+
+        interval_data_1.concatenate(interval_data_2)
+
+        new_intervals = [
+            (0.0, 0.2), (0.2, 0.5), (0.5, 1.0), (1.0, 1.5), (2.0, 3.0)
+        ]
+        new_values = {
+            m.var[:, "A"]: [1.0, 2.0, 3.0, 7.0, 8.0],
+            m.var[:, "B"]: [4.0, 5.0, 6.0, 9.0, 10.0],
+        }
+        new_data = IntervalData(new_values, new_intervals)
+        self.assertEqual(interval_data_1, new_data)
+
 
 class TestAssertDisjoint(unittest.TestCase):
 
