@@ -165,6 +165,8 @@ def _gather_disjunctions(block, gdp_tree):
             # might be a Block, in case it wouldn't get added below.)
             gdp_tree.add_node(disjunction)
             for disjunct in disjunction.disjuncts:
+                if not disjunct.active:
+                    continue
                 gdp_tree.add_edge(disjunction, disjunct)
                 to_explore.append(disjunct)
             if block.ctype is Disjunct:
@@ -181,25 +183,22 @@ def get_gdp_tree(targets, instance, knownBlocks):
             raise GDP_Error("Target '%s' is not a component on instance "
                             "'%s'!" % (t.name, instance.name))
         if t.ctype is Block or isinstance(t, _BlockData):
-            if t.is_indexed():
-                for block in t.values():
-                    gdp_tree = _gather_disjunctions(block, gdp_tree)
-            else:
-                gdp_tree = _gather_disjunctions(t, gdp_tree)
+            _blocks = t.values() if t.is_indexed() else (t,)
+            for block in _blocks:
+                if not block.active:
+                    continue
+                gdp_tree = _gather_disjunctions(block, gdp_tree)
         elif t.ctype is Disjunction:
             parent = _parent_disjunct(t)
             if parent is not None and parent in targets:
                 gdp_tree.add_edge(parent, t)
-            if t.is_indexed():
-                for disjunction in t.values():
-                    gdp_tree.add_node(disjunction)
-                    for disjunct in disjunction.disjuncts:
-                        gdp_tree.add_edge(disjunction, disjunct)
-                        gdp_tree = _gather_disjunctions(disjunct, gdp_tree)
-            else:
-                gdp_tree.add_node(t)
-                for disjunct in t.disjuncts:
-                    gdp_tree.add_edge(t, disjunct)
+            _disjunctions = t.values() if t.is_indexed() else (t,)
+            for disjunction in _disjunctions:
+                gdp_tree.add_node(disjunction)
+                for disjunct in disjunction.disjuncts:
+                    if not disjunct.active:
+                        continue
+                    gdp_tree.add_edge(disjunction, disjunct)
                     gdp_tree = _gather_disjunctions(disjunct, gdp_tree)
         else:
             # There's nothing else we care about, so we don't know how to
