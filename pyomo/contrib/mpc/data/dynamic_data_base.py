@@ -79,6 +79,14 @@ class _DynamicDataBase(object):
         """
         return self._data
 
+    def get_cuid(self, key, context=None):
+        """
+        Get the time-indexed CUID corresponding to the provided key
+        """
+        return get_indexed_cuid(
+            key, (self._orig_time_set,), context=context
+        )
+
     def get_data_from_key(self, key, context=None):
         """
         Returns the value associated with the given key.

@@ -229,7 +229,7 @@ class DynamicModelInterface(object):
         if isinstance(data, ScalarData):
             load_data_from_scalar(data, self.model, time_points)
         elif isinstance(data, TimeSeriesData):
-            load_data_from_series(data, self.model, time_points)
+            load_data_from_series(data, self.model, time_points, tolerance=tolerance)
         else:
             # Attempt to load data by assuming it is a map from something
             # find_component-compatible to values.
