@@ -175,7 +175,9 @@ class TimeSeriesData(_DynamicDataBase):
     def concatenate(self, other, tolerance=0.0):
         """
         Extend time list and variable data lists with the time points
-        and variable values in the provided TimeSeriesData
+        and variable values in the provided TimeSeriesData.
+        The new time points must be strictly greater than the old time
+        points.
 
         """
         other_time = other.get_time_points()
@@ -187,6 +189,11 @@ class TimeSeriesData(_DynamicDataBase):
                 % (other_time[0], time[-1], tolerance)
             )
         self._time.extend(other.get_time_points())
+
+        # Update _time_idx_map as we have altered the list of time points.
+        n_time = len(time)
+        for i, t in enumerate(other_time):
+            self._time_idx_map[t] = n_time + i
 
         data = self._data
         other_data = other.get_data()
@@ -203,6 +210,7 @@ class TimeSeriesData(_DynamicDataBase):
         # Note that this is different from what we are doing in
         # shift_values_by_time in the helper class.
         self._time = [t + offset for t in self._time]
+        self._time_idx_map = {t: idx for idx, t in enumerate(self._time)}
 
     def extract_variables(self, variables, context=None, copy_values=False):
         """
