@@ -180,13 +180,13 @@ class TimeSeriesData(_DynamicDataBase):
         """
         other_time = other.get_time_points()
         time = self._time
-        if other_time[0] <= time[-1] + tolerance:
+        if other_time[0] < time[-1] + tolerance:
             raise ValueError(
                 "Initial time point of target, %s, is not greater than"
                 " final time point of source, %s, within tolerance %s."
                 % (other_time[0], time[-1], tolerance)
             )
-        time = self._time.extend(other.get_time_points())
+        self._time.extend(other.get_time_points())
 
         data = self._data
         other_data = other.get_data()
