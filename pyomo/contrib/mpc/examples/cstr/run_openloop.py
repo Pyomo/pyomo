@@ -74,7 +74,7 @@ def run_cstr_openloop(
 
 def main():
     input_sequence = get_input_sequence()
-    m, sim_data = run_cstr_openloop(input_sequence, tee=True)
+    m, sim_data = run_cstr_openloop(input_sequence, tee=False)
     _plot_time_indexed_variables(
         sim_data,
         [m.conc[:, "A"], m.conc[:, "B"]],
