@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable
 from pyomo.contrib.mpc.data.find_nearest_index import (
     find_nearest_index,
     find_nearest_interval_index,
@@ -36,7 +37,8 @@ def load_data_from_scalar(data, model, time):
         if var is None:
             _raise_invalid_cuid(cuid, model)
         # TODO: Time points should probably use find_nearest_index
-        for t in time:
+        t_iter = time if _is_iterable(time) else (time,)
+        for t in t_iter:
             var[t].set_value(val)
 
 
