@@ -182,3 +182,33 @@ class IntervalData(_DynamicDataBase):
             # We assume that other contains all the cuids in self.
             # We make no assumption the other way around.
             values.extend(other_data[cuid])
+
+    def shift_time_points(self, offset):
+        """
+        Apply an offset to stored time points.
+
+        """
+        # Note that this is different from what we are doing in
+        # shift_values_by_time in the helper class.
+        self._time = [t + offset for t in self._time]
+
+    def extract_variables(self, variables, context=None, copy_values=False):
+        """
+        Only keep variables specified.
+
+        """
+        if copy_values:
+            raise NotImplementedError(
+                "extract_variables with copy_values=True has not been"
+                " implemented by %s"
+                % self.__class__
+            )
+        data = {}
+        for var in variables:
+            cuid = get_time_indexed_cuid(
+                var, (self._orig_time_set,), context=context
+            )
+            data[cuid] = self._data[cuid]
+        return TimeSeriesData(
+            data, self._time, time_set=self._orig_time_set
+        )
