@@ -375,13 +375,21 @@ class DynamicModelInterface(object):
         )
 
     def get_piecewise_constant_constraints(
-        self, variables, sample_points, use_next=True,
+        self, variables, sample_points, use_next=True, tolerance=0.0
     ):
         cuids = [
             get_indexed_cuid(var, (self.time,))
             for var in variables
         ]
         variables = [self.model.find_component(cuid) for cuid in cuids]
+        time_list = list(self.time)
+        # Make sure that sample points exist (within tolerance) in the time
+        # set.
+        sample_point_indices = [
+            find_nearest_index(time_list, t, tolerance=tolerance)
+            for t in sample_points
+        ]
+        sample_points = [time_list[i] for i in sample_point_indices]
         return get_piecewise_constant_constraints(
             variables,
             self.time,
