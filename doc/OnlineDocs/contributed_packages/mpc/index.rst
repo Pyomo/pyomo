@@ -8,3 +8,4 @@ and rolling horizon applications, e.g. model predictive control.
    :maxdepth: 1
 
    overview.rst
+   examples.rst
