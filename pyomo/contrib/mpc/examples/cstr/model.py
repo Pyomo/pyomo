@@ -12,7 +12,7 @@
 import pyomo.environ as pyo
 import pyomo.dae as dae
 from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
-import matplotlib.pyplot as plt
+from pyomo.common.dependencies.matplotlib import pyplot as plt
 
 
 def _flow_eqn_rule(m, t):
