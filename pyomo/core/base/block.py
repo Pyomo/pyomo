@@ -22,7 +22,7 @@ import textwrap
 from inspect import isclass
 from operator import itemgetter
 from io import StringIO
-from typing import overload
+from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
