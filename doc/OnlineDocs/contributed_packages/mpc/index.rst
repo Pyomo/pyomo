@@ -9,3 +9,4 @@ and rolling horizon applications, e.g. model predictive control.
 
    overview.rst
    examples.rst
+   faq.rst
