@@ -57,14 +57,15 @@ def make_model(dynamic=True, horizon=10.0):
     m.k_rxn = pyo.Param(initialize=1.0, mutable=True)
 
     m.conc = pyo.Var(m.time, m.comp)
-    m.dcdt = dae.DerivativeVar(m.conc, wrt=m.time)
+    if dynamic:
+        m.dcdt = dae.DerivativeVar(m.conc, wrt=m.time)
 
-    m.flow_in = pyo.Var(time)
-    m.flow_out = pyo.Var(time)
+    m.flow_in = pyo.Var(time, bounds=(0, None))
+    m.flow_out = pyo.Var(time, bounds=(0, None))
     m.flow_eqn = pyo.Constraint(time, rule=_flow_eqn_rule)
 
-    m.conc_in = pyo.Var(time, comp)
-    m.conc_out = pyo.Var(time, comp)
+    m.conc_in = pyo.Var(time, comp, bounds=(0, None))
+    m.conc_out = pyo.Var(time, comp, bounds=(0, None))
     m.conc_out_eqn = pyo.Constraint(time, comp, rule=_conc_out_eqn_rule)
 
     m.rate_gen = pyo.Var(time, comp)
@@ -107,11 +108,15 @@ def initialize_model(m, dynamic=True, ntfe=None):
 
 def create_instance(
     dynamic=True,
-    horizon=10.0,
-    ntfe=10,
+    horizon=None,
+    ntfe=None,
 ):
-    m = make_model(horizon=horizon)
-    initialize_model(m, ntfe=ntfe)
+    if horizon is None and dynamic:
+        horizon = 10.0
+    if ntfe is None and dynamic:
+        ntfe = 10
+    m = make_model(horizon=horizon, dynamic=dynamic)
+    initialize_model(m, ntfe=ntfe, dynamic=dynamic)
     return m
 
 
