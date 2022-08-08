@@ -11,7 +11,6 @@
 
 import pyomo.environ as pyo
 import pyomo.contrib.mpc as mpc
-import matplotlib.pyplot as plt
 from pyomo.contrib.mpc.examples.cstr.model import (
     create_instance,
     _plot_time_indexed_variables,
