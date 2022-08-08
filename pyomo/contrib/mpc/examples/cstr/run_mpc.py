@@ -141,23 +141,21 @@ def run_cstr_mpc(
 
 def main():
     init_steady_target = mpc.ScalarData({"flow_in[*]": 0.3})
-    init_data = get_steady_state_data(init_steady_target, tee=True)
+    init_data = get_steady_state_data(init_steady_target, tee=False)
     setpoint_target = mpc.ScalarData({"flow_in[*]": 1.2})
-    setpoint_data = get_steady_state_data(setpoint_target, tee=True)
+    setpoint_data = get_steady_state_data(setpoint_target, tee=False)
 
-    m, sim_data = run_cstr_mpc(init_data, setpoint_data, tee=True)
+    m, sim_data = run_cstr_mpc(init_data, setpoint_data, tee=False)
 
     _plot_time_indexed_variables(
         sim_data,
         [m.conc[:, "A"], m.conc[:, "B"]],
         show=True,
-        save=True,
     )
     _step_time_indexed_variables(
         sim_data,
         [m.flow_in[:]],
         show=True,
-        save=True,
     )
 
 

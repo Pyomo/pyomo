@@ -1394,6 +1394,75 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for DiscreteScenarioSet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for DiscreteScenarioSet")
 
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_two_stg_model_discrete_set_single_scenario(self):
+        """
+        Test two-stage model under discrete uncertainty with
+        a single scenario.
+        """
+        m = ConcreteModel()
+
+        # model params
+        m.u1 = Param(initialize=1.125, mutable=True)
+        m.u2 = Param(initialize=1, mutable=True)
+
+        # model vars
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+
+        # model constraints
+        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+
+        # uncertainty set
+        discrete_set = DiscreteScenarioSet(
+            scenarios=[(1.125, 1)],
+        )
+
+        # Instantiate PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u1, m.u2],
+            uncertainty_set=discrete_set,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            }
+        )
+
+        # check successful termination
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Did not identify robust optimal solution to problem instance."
+        )
+
+        # only one iteration required
+        self.assertEqual(
+            results.iterations,
+            1,
+            msg=(
+                "PyROS was unable to solve a singleton discrete set instance "
+                " successfully within a single iteration."
+            )
+        )
+
+
 class testFactorModelUncertaintySetClass(unittest.TestCase):
     '''
     FactorModelSet uncertainty sets. Required inputs are psi_matrix, number_of_factors, origin and beta.

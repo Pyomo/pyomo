@@ -351,6 +351,29 @@ class DynamicModelInterface(object):
     def get_tracking_cost_from_constant_setpoint(
         self, setpoint_data, time=None, variables=None, weight_data=None
     ):
+        """A method to get a quadratic tracking cost Expression
+
+        Parameters
+        ----------
+        setpoint_data: ScalarData
+            Holds setpoint values for variables
+        time: Iterable (optional)
+            Points at which to apply the tracking cost. Default will use
+            the model's time set.
+        variables: List of Pyomo VarData (optional)
+            Subset of variables supplied in setpoint_data to use in the
+            tracking cost. Default is to use all variables supplied.
+        weight_data: ScalarData
+            Holds the weights to use in the tracking cost for each
+            variable
+
+        Returns
+        -------
+        Expression
+            Expression indexed by provided time (set or points) containing
+            the weighted tracking cost at each point.
+
+        """
         if not isinstance(setpoint_data, ScalarData):
             setpoint_data = ScalarData(setpoint_data)
         if time is None:
@@ -377,6 +400,33 @@ class DynamicModelInterface(object):
     def get_piecewise_constant_constraints(
         self, variables, sample_points, use_next=True, tolerance=0.0
     ):
+        """A method to get an indexed constraint ensuring that inputs
+        are piecewise constant.
+
+        Parameters
+        ----------
+        variables: List of Pyomo Vars
+            Variables to enforce piecewise constant
+        sample_points: List of floats
+            Points marking the boundaries of intervals within which
+            variables must be constant
+        use_next: Bool (optional)
+            Whether to enforce constancy by setting each variable equal
+            to itself at the next point in time (as opposed to at the
+            previous point in time). Default is True.
+        tolerance: Float (optional)
+            Absolute tolerance used to determine whether provided sample
+            points are in the model's time set.
+
+        Returns
+        -------
+        Tuple:
+            First entry is a Set indexing the list of provided variables
+            (with integers). Second entry is a constraint indexed by this
+            set and time enforcing the piecewise constant condition via
+            equality constraints.
+
+        """
         cuids = [
             get_indexed_cuid(var, (self.time,))
             for var in variables
