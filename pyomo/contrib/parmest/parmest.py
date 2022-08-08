@@ -997,9 +997,11 @@ class Estimator(object):
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
             # check if theta_names in self.theta_names
-            assert (thta in self.theta_names for thta in list(theta_names)), (
-            "Theta names in 'theta_values' do not match 'theta_names' used to create Estimator object"
-            )
+            for thta in list(theta_names):
+                assert (thta in self.theta_names), (
+                "Theta names in 'theta_values' do not match 'theta_names' used to create Estimator object"
+                )
+            assert (len(list(theta_names)) == len(self.theta_names))
             all_thetas = theta_values.to_dict('records')
 
         
