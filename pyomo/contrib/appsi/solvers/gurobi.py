@@ -262,6 +262,16 @@ class Gurobi(PersistentBase, PersistentSolver):
             cls._available = Gurobi.Availability.LimitedLicense
         finally:
             m.dispose()
+            del m
+            gurobipy.disposeDefaultEnv()
+
+    def release_license(self):
+        del self._solver_model
+        gurobipy.disposeDefaultEnv()
+        self._model = None
+
+    def __del__(self):
+        self.release_license()
 
     def version(self):
         version = (gurobipy.GRB.VERSION_MAJOR,
