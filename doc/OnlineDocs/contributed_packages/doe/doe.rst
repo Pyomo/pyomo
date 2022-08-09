@@ -306,8 +306,6 @@ Step 2: Define the inputs for Pyomo.DOE
     >>> measure_pass = {'C':{'CA': t_measure, 'CB': t_measure, 'CC': t_measure}}
     >>> measure_variance = {'C': {'CA': 1, 'CB': 1, 'CC': 1}} # provide measurement uncertainty
     >>> measure_class =  doe.Measurements(measure_pass, variance=measure_variance)  # Use Pyomo.DoE.Measurements to achieve a measurement object
-    All measurements are flattened.
-    Flatten measurement name: ['C_index_CA', 'C_index_CB', 'C_index_CC']
 
     >>> # === Parameter dictionary ===
     >>> parameter_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
