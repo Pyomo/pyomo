@@ -1285,9 +1285,8 @@ def _process_arg(obj):
 
             raise TypeError(
                 "Attempting to use a non-numeric type (%s) in a "
-                "numeric context" % (obj,))
-
-    if obj.is_constant():
+                "numeric context." % (obj.__class__.__name__,))
+    elif obj.is_constant():
         # Resolve constants (e.g., immutable scalar Params & NumericConstants)
         return value(obj)
     return obj
