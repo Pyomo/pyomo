@@ -105,6 +105,61 @@ would both cause this exception.""".strip() % (self,))
                 ans = x
         return ans
 
+    def __eq__(self, other):
+        """
+        Equal to operator
+
+        This method is called when Python processes statements of the form::
+
+            self == other
+            other == self
+        """
+        return _generate_relational_expression(_eq, self, other)
+
+    def __lt__(self, other):
+        """
+        Less than operator
+
+        This method is called when Python processes statements of the form::
+
+            self < other
+            other > self
+        """
+        return _generate_relational_expression(_lt, self, other)
+
+    def __gt__(self, other):
+        """
+        Greater than operator
+
+        This method is called when Python processes statements of the form::
+
+            self > other
+            other < self
+        """
+        return _generate_relational_expression(_lt, other, self)
+
+    def __le__(self, other):
+        """
+        Less than or equal operator
+
+        This method is called when Python processes statements of the form::
+
+            self <= other
+            other >= self
+        """
+        return _generate_relational_expression(_le, self, other)
+
+    def __ge__(self, other):
+        """
+        Greater than or equal operator
+
+        This method is called when Python processes statements of the form::
+
+            self >= other
+            other <= self
+        """
+        return _generate_relational_expression(_le, other, self)
+
 
 class RangedExpression(RelationalExpressionBase):
     """
@@ -213,50 +268,6 @@ class InequalityExpression(RelationalExpressionBase):
     @property
     def strict(self):
         return self._strict
-
-    def __lt__(self, other):
-        """
-        Less than operator
-
-        This method is called when Python processes statements of the form::
-
-            self < other
-            other > self
-        """
-        return inequality(*self._args_, other, (self.strict, True))
-
-    def __gt__(self, other):
-        """
-        Greater than operator
-
-        This method is called when Python processes statements of the form::
-
-            self > other
-            other < self
-        """
-        return inequality(other, *self._args_, (True, self.strict))
-
-    def __le__(self, other):
-        """
-        Less than or equal operator
-
-        This method is called when Python processes statements of the form::
-
-            self <= other
-            other >= self
-        """
-        return inequality(*self._args_, other, (self.strict, False))
-
-    def __ge__(self, other):
-        """
-        Greater than or equal operator
-
-        This method is called when Python processes statements of the form::
-
-            self >= other
-            other <= self
-        """
-        return inequality(other, *self._args_, (False, self.strict))
 
 
 def inequality(lower=None, body=None, upper=None, strict=False):
