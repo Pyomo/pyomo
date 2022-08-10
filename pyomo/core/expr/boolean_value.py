@@ -52,10 +52,11 @@ def as_boolean(obj):
     # Generate errors
     #
     if obj.__class__ in native_types:
-        raise TypeError("Cannot treat the value '%s' as a logical constant" % str(obj))
+        raise TypeError(
+            f"Cannot treat the value '{obj}' as a logical constant")
     raise TypeError(
-        "Cannot treat the value '%s' as a logical constant because it has unknown "
-        "type '%s'" % (str(obj), type(obj).__name__))
+        "Cannot treat the value '%s' as a logical constant because it has "
+        "unknown type '%s'" % (str(obj), type(obj).__name__))
 
 
 class BooleanValue(PyomoObject):
