@@ -276,7 +276,7 @@ class TestTiming(unittest.TestCase):
         self.assertEqual(out.getvalue(), "")
         self.assertRegex(
             LOG.getvalue().replace('\n', ' ').strip(),
-            "DEPRECATED: 'ostream', and 'logger' should be specified "
+            r"DEPRECATED: tic\(\): 'ostream' and 'logger' should be specified "
             r"as keyword arguments( +\([^\)]+\)){2}")
 
         with LoggingIntercept() as LOG, capture_output() as out:
@@ -284,8 +284,8 @@ class TestTiming(unittest.TestCase):
         self.assertEqual(out.getvalue(), "")
         self.assertRegex(
             LOG.getvalue().replace('\n', ' ').strip(),
-            "DEPRECATED: 'delta', 'ostream', and 'logger' should be specified "
-            r"as keyword arguments( +\([^\)]+\)){2}")
+            r"DEPRECATED: toc\(\): 'delta', 'ostream', and 'logger' should be "
+            r"specified as keyword arguments( +\([^\)]+\)){2}")
 
         timer = TicTocTimer()
         with LoggingIntercept() as LOG, capture_output() as out:
