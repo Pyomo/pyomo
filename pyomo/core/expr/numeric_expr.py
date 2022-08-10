@@ -1365,10 +1365,10 @@ def _generate_sum_expression(etype, _self, _other):
             _other.__class__ is _MutableSumExpression:
             return _other.add(_self)
         elif _other.__class__ in native_numeric_types:
+            if _other == 0:
+                return _self
             if _self.__class__ in native_numeric_types:
                 return _self + _other
-            elif _other == 0:
-                return _self
             if _self.is_potentially_variable():
                 return SumExpression([_self, _other])
             return NPV_SumExpression((_self, _other))
