@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import os
-import os.path
+#import os.path
 import subprocess
 
 from pyomo.common import Executable
@@ -30,7 +30,7 @@ logger = logging.getLogger('pyomo.solvers')
 class SCIPAMPL(SystemCallSolver):
     """A generic optimizer that uses the AMPL Solver Library to interface with applications.
     """
-
+    
     # Cache default executable, so we do not need to repeatedly query the
     # versions every time.
     _known_versions = {}
@@ -63,7 +63,7 @@ class SCIPAMPL(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-
+        
         executable = Executable("scip")
 
         if executable:
@@ -73,7 +73,7 @@ class SCIPAMPL(SystemCallSolver):
             _ver = self._known_versions[executable_path]
             if _ver and _ver >= (8,):
                 return executable_path
-
+        
         # revert to scipampl for older versions
         executable = Executable("scipampl")
         if not executable:
@@ -109,7 +109,7 @@ class SCIPAMPL(SystemCallSolver):
         if self._log_file is None:
             self._log_file = TempfileManager.\
                              create_tempfile(suffix="_scipampl.log")
-
+        
         fname = problem_files[0]
         if '.' in fname:
             tmp = fname.split('.')
@@ -118,7 +118,7 @@ class SCIPAMPL(SystemCallSolver):
             else:
                 fname = tmp[0]
         self._soln_file = fname+".sol"
-
+            
         #
         # Define results file (since an external parser is used)
         #
@@ -138,7 +138,7 @@ class SCIPAMPL(SystemCallSolver):
                 env['AMPLFUNC'] += "\n" + env['PYOMO_AMPLFUNC']
             else:
                 env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
-
+                
         # Since Version 8.0.0 .nl problem file paths should be provided without the .nl
         # extension
         if executable not in self._known_versions:
@@ -148,7 +148,7 @@ class SCIPAMPL(SystemCallSolver):
             problem_file = os.path.splitext(problem_files[0])[0]
         else:
             problem_file = problem_files[0]
-
+        
         cmd = [executable, problem_file, '-AMPL']
         if self._timer:
             cmd.insert(0, self._timer)
@@ -187,7 +187,7 @@ class SCIPAMPL(SystemCallSolver):
                                "separate options file. The options "
                                "file '%s' will be ignored."
                                % (default_of_name, default_of_name))
-
+            
             options_dir = TempfileManager.create_tempdir()
             # Now write the new options file
             with open(os.path.join(options_dir, 'scip.set'), 'w') as f:
@@ -195,254 +195,13 @@ class SCIPAMPL(SystemCallSolver):
                     f.write(line+"\n")
         else:
             options_dir = None
-
-        return Bunch(cmd=cmd, log_file=self._log_file, env=env, cwd=options_dir)
-
-    def _postsolve(self):
-        # results = super(SCIPAMPL, self)._postsolve() # previous way
-        # copied super(SCIPAMPL, self)._postsolve() to access the log file
-        if self._log_file is not None:
-            OUTPUT=open(self._log_file,"w")
-            OUTPUT.write("Solver command line: "+str(self._command.cmd)+'\n')
-            OUTPUT.write("\n")
-            OUTPUT.write(self._log+'\n')
-            OUTPUT.close()
-
-        # JPW: The cleanup of the problem file probably shouldn't be here, but
-        #   rather in the base OptSolver class. That would require movement of
-        #   the keepfiles attribute and associated cleanup logic to the base
-        #   class, which I didn't feel like doing at this present time. the
-        #   base class remove_files method should clean up the problem file.
-
-        if (self._log_file is not None) and \
-           (not os.path.exists(self._log_file)):
-            msg = "File '%s' not generated while executing %s"
-            raise IOError(msg % (self._log_file, self.path))
-        results = None
-
-        if self._results_format is not None:
-            results = self.process_output(self._rc)
-            if (self._log_file is not None) and \
-               (os.path.exists(self._log_file)):
-                   
-               log_dict = self.read_scip_log(self._log_file)
             
-               results.solver.time = log_dict['solving_time']
-               results.solver.gap = log_dict['gap']
-               results.solver.primal_bound = log_dict['primal_bound']
-               results.solver.dual_bound = log_dict['dual_bound']
-               
-               # TODO: get scip to produce a statistics file and read it
-               # Why? It has all the information one can possibly need.
-                   
-            #
-            # If keepfiles is true, then we pop the
-            # TempfileManager context while telling it to
-            # _not_ remove the files.
-            #
-            if not self._keepfiles:
-                # in some cases, the solution filename is
-                # not generated via the temp-file mechanism,
-                # instead being automatically derived from
-                # the input lp/nl filename. so, we may have
-                # to clean it up manually.
-                if (not self._soln_file is None) and \
-                   os.path.exists(self._soln_file):
-                    os.remove(self._soln_file)
-
-        TempfileManager.pop(remove=not self._keepfiles)
-        
-        #**********************************************************************
-        
-        # # UNKNOWN
-        # unknown='unknown'                               # An unitialized value
-        
-        if results.solver.message == "unknown":        
-            results.solver.status = \
-                SolverStatus.unknown
-            results.solver.termination_condition = \
-                TerminationCondition.unknown
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.unknown
-                    
-        # # ABORTED
-        # userInterrupt='userInterrupt'                   # Interrupt signal generated by user
-                    
-        elif results.solver.message == "user interrupt":
-            results.solver.status = \
-                SolverStatus.aborted
-            results.solver.termination_condition = \
-                TerminationCondition.userInterrupt
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.unknown
-             
-        # # OK
-        # maxEvaluations='maxEvaluations'                 # Exceeded maximum number of problem evaluations
-                    
-        elif results.solver.message == "node limit reached":
-        
-            results.solver.status = \
-                SolverStatus.ok
-            results.solver.termination_condition = \
-                TerminationCondition.maxEvaluations
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.stoppedByLimit
-                    
-        # # OK
-        # maxEvaluations='maxEvaluations'                 # Exceeded maximum number of problem evaluations
-        
-        elif results.solver.message == "total node limit reached":
-            results.solver.status = \
-                SolverStatus.ok
-            results.solver.termination_condition = \
-                TerminationCondition.maxEvaluations
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.stoppedByLimit
-                    
-        # # OK
-        # maxEvaluations='maxEvaluations'                 # Exceeded maximum number of problem evaluations
-                    
-        elif results.solver.message == "stall node limit reached":
-            results.solver.status = \
-                SolverStatus.ok
-            results.solver.termination_condition = \
-                TerminationCondition.maxEvaluations
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.stoppedByLimit
-                    
-        # # OK
-        # maxTimeLimit='maxTimeLimit'                     # Exceeded maximum time limited allowed by user
-        #                                                 #    but having return a feasible solution
-        
-        elif results.solver.message == "time limit reached":
-            results.solver.status = \
-                SolverStatus.ok
-            results.solver.termination_condition = \
-                TerminationCondition.maxTimeLimit
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.stoppedByLimit
-                    
-        # # OK
-        # other='other'                                   # Other, uncategorized normal termination
-        
-        elif results.solver.message == "memory limit reached":
-            results.solver.status = \
-                SolverStatus.ok
-            results.solver.termination_condition = \
-                TerminationCondition.other
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.stoppedByLimit
-                    
-        # # OK
-        # other='other'                                   # Other, uncategorized normal termination
-                 
-        elif results.solver.message == "gap limit reached":
-            results.solver.status = \
-                SolverStatus.ok
-            results.solver.termination_condition = \
-                TerminationCondition.other
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.stoppedByLimit
-                    
-        # # OK
-        # other='other'                                   # Other, uncategorized normal termination
-                    
-        elif results.solver.message == "solution limit reached":
-            results.solver.status = \
-                SolverStatus.ok
-            results.solver.termination_condition = \
-                TerminationCondition.other
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.stoppedByLimit
-                    
-        # # OK
-        # other='other'                                   # Other, uncategorized normal termination
-        
-        elif results.solver.message == "solution improvement limit reached":
-            results.solver.status = \
-                SolverStatus.ok
-            results.solver.termination_condition = \
-                TerminationCondition.other
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.stoppedByLimit
-                    
-        # # OK
-        # optimal='optimal'                               # Found an optimal solution
-                            
-        elif results.solver.message == "optimal solution found":
-            results.solver.status = \
-                SolverStatus.ok
-            results.solver.termination_condition = \
-                TerminationCondition.optimal
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.optimal
-                    
-        # # WARNING
-        # infeasible='infeasible'                         # Demonstrated that the problem is infeasible
-          
-        elif results.solver.message == "infeasible":
-            results.solver.status = \
-                SolverStatus.warning
-            results.solver.termination_condition = \
-                TerminationCondition.infeasible
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.infeasible
-                    
-        # # WARNING
-        # unbounded='unbounded'                           # Demonstrated that problem is unbounded
-                    
-        elif results.solver.message == "unbounded":
-            results.solver.status = \
-                SolverStatus.warning
-            results.solver.termination_condition = \
-                TerminationCondition.unbounded
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.unbounded
-                    
-        # # WARNING
-        # infeasibleOrUnbounded='infeasibleOrUnbounded'   # Problem is either infeasible or unbounded
-                            
-        elif results.solver.message == "infeasible or unbounded":
-            results.solver.status = \
-                SolverStatus.warning
-            results.solver.termination_condition = \
-                TerminationCondition.infeasibleOrUnbounded
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.unsure
-                    
-        # # UNKNOWN
-        # unknown='unknown'                               # An unitialized value
-                 
-        else:
-            logger.warning("Unexpected SCIP solver message: %s"
-                           % (results.solver.message))
-            results.solver.status = \
-                SolverStatus.unknown
-            results.solver.termination_condition = \
-                TerminationCondition.unknown
-            if len(results.solution) > 0:
-                results.solution(0).status = \
-                    SolutionStatus.unknown
-
-        return results
+        return Bunch(cmd=cmd, log_file=self._log_file, env=env, cwd=options_dir)
     
     @staticmethod
     def read_scip_log(filename: str):
-        """Read the SCIP log file and get relevant information from it."""
+        
+        # TODO: check file exists, ensure opt has finished, etc
         
         from collections import deque
         
@@ -450,10 +209,23 @@ class SCIPAMPL(SystemCallSolver):
             
             scip_lines = list(deque(f, 7))
             scip_lines.pop()
-            
-        # get data
+        
+        expected_labels = ['SCIP Status        :',
+                           'Solving Time (sec) :',
+                           'Solving Nodes      :',
+                           'Primal Bound       :',
+                           'Dual Bound         :',
+                           'Gap                :']
         
         colon_position = 19 # or scip_lines[0].index(':')
+        
+        for i, log_file_line in enumerate(scip_lines):
+            
+            if expected_labels[i] != log_file_line[0:colon_position+1]:
+                
+                return {}
+            
+        # get data
         
         solver_status = scip_lines[0][colon_position+2:scip_lines[0].index('\n')]
         
@@ -502,3 +274,247 @@ class SCIPAMPL(SystemCallSolver):
             }
         
         return out_dict
+    
+    def _postsolve(self):
+        
+        if self.version() < (8, 0, 0, 0):
+            
+            # it may be possible to get results from older version but this was
+            # not tested, so the old way of doing things is here preserved
+        
+            results = super(SCIPAMPL, self)._postsolve()
+        
+        else:
+        
+            # repeat code from super(SCIPAMPL, self)._postsolve()
+            # in order to access the log file and get the results from there
+            
+            if self._log_file is not None:
+                OUTPUT=open(self._log_file,"w")
+                OUTPUT.write("Solver command line: "+str(self._command.cmd)+'\n')
+                OUTPUT.write("\n")
+                OUTPUT.write(self._log+'\n')
+                OUTPUT.close()
+    
+            # JPW: The cleanup of the problem file probably shouldn't be here, but
+            #   rather in the base OptSolver class. That would require movement of
+            #   the keepfiles attribute and associated cleanup logic to the base
+            #   class, which I didn't feel like doing at this present time. the
+            #   base class remove_files method should clean up the problem file.
+    
+            if (self._log_file is not None) and \
+               (not os.path.exists(self._log_file)):
+                msg = "File '%s' not generated while executing %s"
+                raise IOError(msg % (self._log_file, self.path))
+            results = None
+    
+            if self._results_format is not None:
+                results = self.process_output(self._rc)
+                
+                if (self._log_file is not None) and \
+                   (os.path.exists(self._log_file)):
+                       
+                   # read results from the log file
+                       
+                   log_dict = self.read_scip_log(self._log_file)
+                   
+                   if len(log_dict) != 0:
+                       
+                       # if any were read, store them
+                
+                       results.solver.time = log_dict['solving_time']
+                       results.solver.gap = log_dict['gap']
+                       results.solver.primal_bound = log_dict['primal_bound']
+                       results.solver.dual_bound = log_dict['dual_bound']
+                   
+                   # TODO: get scip to produce a statistics file and read it
+                   # Why? It has all the information one can possibly need.
+                   
+                # If keepfiles is true, then we pop the
+                # TempfileManager context while telling it to
+                # _not_ remove the files.
+                
+                if not self._keepfiles:
+                    # in some cases, the solution filename is
+                    # not generated via the temp-file mechanism,
+                    # instead being automatically derived from
+                    # the input lp/nl filename. so, we may have
+                    # to clean it up manually.
+                    if (not self._soln_file is None) and \
+                       os.path.exists(self._soln_file):
+                        os.remove(self._soln_file)
+    
+            TempfileManager.pop(remove=not self._keepfiles)
+        
+        #**********************************************************************
+        #**********************************************************************
+        
+        # UNKNOWN # unknown='unknown' # An unitialized value
+        
+        if results.solver.message == "unknown":        
+            results.solver.status = \
+                SolverStatus.unknown
+            results.solver.termination_condition = \
+                TerminationCondition.unknown
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.unknown
+                    
+        # ABORTED # userInterrupt='userInterrupt' # Interrupt signal generated by user
+                    
+        elif results.solver.message == "user interrupt":
+            results.solver.status = \
+                SolverStatus.aborted
+            results.solver.termination_condition = \
+                TerminationCondition.userInterrupt
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.unknown
+             
+        # OK # maxEvaluations='maxEvaluations' # Exceeded maximum number of problem evaluations
+                    
+        elif results.solver.message == "node limit reached":
+        
+            results.solver.status = \
+                SolverStatus.ok
+            results.solver.termination_condition = \
+                TerminationCondition.maxEvaluations
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+                    
+        # OK # maxEvaluations='maxEvaluations' # Exceeded maximum number of problem evaluations
+        
+        elif results.solver.message == "total node limit reached":
+            results.solver.status = \
+                SolverStatus.ok
+            results.solver.termination_condition = \
+                TerminationCondition.maxEvaluations
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+                    
+        # OK # maxEvaluations='maxEvaluations' # Exceeded maximum number of problem evaluations
+                    
+        elif results.solver.message == "stall node limit reached":
+            results.solver.status = \
+                SolverStatus.ok
+            results.solver.termination_condition = \
+                TerminationCondition.maxEvaluations
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+                    
+        # OK # maxTimeLimit='maxTimeLimit' # Exceeded maximum time limited allowed by user but having return a feasible solution
+        
+        elif results.solver.message == "time limit reached":
+            results.solver.status = \
+                SolverStatus.ok
+            results.solver.termination_condition = \
+                TerminationCondition.maxTimeLimit
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+                    
+        # OK # other='other' # Other, uncategorized normal termination
+        
+        elif results.solver.message == "memory limit reached":
+            results.solver.status = \
+                SolverStatus.ok
+            results.solver.termination_condition = \
+                TerminationCondition.other
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+                    
+        # OK # other='other' # Other, uncategorized normal termination
+                 
+        elif results.solver.message == "gap limit reached":
+            results.solver.status = \
+                SolverStatus.ok
+            results.solver.termination_condition = \
+                TerminationCondition.other
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+                    
+        # OK # other='other' # Other, uncategorized normal termination
+                    
+        elif results.solver.message == "solution limit reached":
+            results.solver.status = \
+                SolverStatus.ok
+            results.solver.termination_condition = \
+                TerminationCondition.other
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+                    
+        # OK # other='other' # Other, uncategorized normal termination
+        
+        elif results.solver.message == "solution improvement limit reached":
+            results.solver.status = \
+                SolverStatus.ok
+            results.solver.termination_condition = \
+                TerminationCondition.other
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.stoppedByLimit
+                    
+        # OK # optimal='optimal' # Found an optimal solution
+                            
+        elif results.solver.message == "optimal solution found":
+            results.solver.status = \
+                SolverStatus.ok
+            results.solver.termination_condition = \
+                TerminationCondition.optimal
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.optimal
+                    
+        # WARNING # infeasible='infeasible' # Demonstrated that the problem is infeasible
+          
+        elif results.solver.message == "infeasible":
+            results.solver.status = \
+                SolverStatus.warning
+            results.solver.termination_condition = \
+                TerminationCondition.infeasible
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.infeasible
+                    
+        # WARNING # unbounded='unbounded' # Demonstrated that problem is unbounded
+                    
+        elif results.solver.message == "unbounded":
+            results.solver.status = \
+                SolverStatus.warning
+            results.solver.termination_condition = \
+                TerminationCondition.unbounded
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.unbounded
+                    
+        # WARNING # infeasibleOrUnbounded='infeasibleOrUnbounded'   # Problem is either infeasible or unbounded
+                            
+        elif results.solver.message == "infeasible or unbounded":
+            results.solver.status = \
+                SolverStatus.warning
+            results.solver.termination_condition = \
+                TerminationCondition.infeasibleOrUnbounded
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.unsure
+                    
+        # UNKNOWN # unknown='unknown' # An unitialized value
+                 
+        else:
+            logger.warning("Unexpected SCIP solver message: %s"
+                           % (results.solver.message))
+            results.solver.status = \
+                SolverStatus.unknown
+            results.solver.termination_condition = \
+                TerminationCondition.unknown
+            if len(results.solution) > 0:
+                results.solution(0).status = \
+                    SolutionStatus.unknown
+
+        return results
