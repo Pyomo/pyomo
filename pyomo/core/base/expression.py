@@ -205,7 +205,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
-        return self._expr.is_fixed()
+        return self._expr is None or self._expr.is_fixed()
 
 class _GeneralExpressionData(_GeneralExpressionDataImpl,
                              ComponentData):
