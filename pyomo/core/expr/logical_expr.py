@@ -37,10 +37,9 @@ from .boolean_value import (
     BooleanConstant,
 )
 from .expr_common import (
-    _and, _or, _equiv, _inv, _xor, _impl,
+    _and, _or, _equiv, _inv, _xor, _impl, ExpressionType
 )
 
-from .numeric_expr import _LinearOperatorExpression, _process_arg
 import operator
 
 
@@ -82,6 +81,7 @@ class BooleanExpressionBase(ExpressionBaseMixin, BooleanValue):
     """
 
     __slots__ = ('_args_',)
+    EXPRESSION_SYSTEM = ExpressionType.LOGICAL
     PRECEDENCE = 0
 
     def __init__(self, args):

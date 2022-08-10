@@ -10,11 +10,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.deprecation import deprecated
 from pyomo.common.errors import PyomoException, DeveloperError
 
 from .base import ExpressionBaseMixin
 from .boolean_value import BooleanValue
-from .expr_common import _lt, _le, _eq
+from .expr_common import _lt, _le, _eq, ExpressionType
 from .numvalue import native_numeric_types
 from .numeric_expr import _process_arg
 from .visitor import polynomial_degree
@@ -27,6 +28,8 @@ from .visitor import polynomial_degree
 
 class RelationalExpressionBase(ExpressionBaseMixin, BooleanValue):
     __slots__ = ('_args_',)
+
+    EXPRESSION_SYSTEM = ExpressionType.RELATIONAL
 
     def __init__(self, args):
         self._args_ = args
@@ -70,8 +73,10 @@ would both cause this exception.""".strip() % (self,))
         """
         return self._args_[:self.nargs()]
 
+    @deprecated("is_relational() is deprecated in favor of "
+                "is_expression_type(ExpressionType.RELATIONAL)", version='TBD')
     def is_relational(self):
-        return True
+        return self.is_expression_type(ExpressionType.RELATIONAL)
 
     def is_constant(self):
         return all(arg is None

@@ -77,7 +77,7 @@ class IIdentityExpression(NumericValue):
         """A boolean indicating whether this in a named expression."""
         return True
 
-    def is_expression_type(self):
+    def is_expression_type(self, expression_system=None):
         """A boolean indicating whether this in an expression."""
         return True
 

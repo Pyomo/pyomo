@@ -35,6 +35,7 @@ from pyomo.environ import (
 )
 from pyomo.kernel import variable, expression, objective
 
+from pyomo.core.expr.expr_common import ExpressionType
 from pyomo.core.expr.numvalue import (
     NumericConstant, as_numeric, native_numeric_types,
     is_potentially_variable, polynomial_degree
@@ -210,7 +211,7 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
         # Confirm that this is a relational expression
         #
         self.assertTrue(isinstance(exp, RelationalExpressionBase))
-        self.assertTrue(exp.is_relational())
+        self.assertTrue(exp.is_expression_type(ExpressionType.RELATIONAL))
         #
         # Check that the expression evaluates correctly
         #

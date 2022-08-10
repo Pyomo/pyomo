@@ -18,13 +18,15 @@ import sys
 import logging
 
 from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import PyomoException
 from pyomo.core.expr.expr_common import (
     _add, _sub, _mul, _div, _pow,
     _neg, _abs, _radd,
     _rsub, _rmul, _rdiv, _rpow,
     _iadd, _isub, _imul, _idiv,
-    _ipow, _lt, _le, _eq
+    _ipow, _lt, _le, _eq,
+    ExpressionType,
 )
 # TODO: update imports of these objects to pull from numeric_types
 from pyomo.common.numeric_types import (
@@ -369,7 +371,13 @@ def as_numeric(obj):
     # Ignore objects that are duck typed to work with Pyomo expressions
     #
     try:
-        if obj.is_numeric_type() or obj.is_relational_type():
+        if obj.is_numeric_type():
+            return obj
+        elif obj.is_expression_type(ExpressionType.RELATIONAL):
+            deprecation_warning(
+                "returning a relational expression from as_numeric().  "
+                "Relational expressions are no longer numeric types.  "
+                "In this future this will raise a TypeError.")
             return obj
         else:
             try:
@@ -550,6 +558,8 @@ class NumericValue(PyomoObject):
         """Return True if variables can appear in this expression"""
         return False
 
+    @deprecated("is_relational() is deprecated in favor of "
+                "is_expression_type(ExpressionType.RELATIONAL)", version='TBD')
     def is_relational(self):
         """
         Return True if this numeric value represents a relational expression.

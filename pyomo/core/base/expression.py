@@ -46,6 +46,7 @@ class _ExpressionData(NumericValue):
 
     __slots__ = ()
 
+    EXPRESSION_SYSTEM = EXPR.common.ExpressionType.NUMERIC
     PRECEDENCE = 0
     ASSOCIATIVITY = EXPR.common.OperatorAssociativity.NON_ASSOCIATIVE
 
@@ -63,9 +64,10 @@ class _ExpressionData(NumericValue):
         """A boolean indicating whether this in a named expression."""
         return True
 
-    def is_expression_type(self):
+    def is_expression_type(self, expression_system=None):
         """A boolean indicating whether this in an expression."""
-        return True
+        return expression_system is None \
+            or expression_system == self.EXPRESSION_SYSTEM
 
     def arg(self, index):
         if index < 0 or index >= 1:

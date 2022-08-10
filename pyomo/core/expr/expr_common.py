@@ -65,6 +65,12 @@ class OperatorAssociativity(enum.IntEnum):
     LEFT_TO_RIGHT = 1
 
 
+class ExpressionType(enum.Enum):
+    NUMERIC = 0
+    RELATIONAL = 1
+    LOGICAL = 2
+
+
 @deprecated("""The clone counter has been removed and will always return 0.
 
 Beginning with Pyomo5 expressions, expression cloning (detangling) no

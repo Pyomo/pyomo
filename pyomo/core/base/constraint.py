@@ -30,6 +30,7 @@ from pyomo.core.expr.numvalue import (
     NumericValue, value, as_numeric, is_fixed, native_numeric_types,
     native_types,
 )
+from pyomo.core.expr.expr_common import ExpressionType
 from pyomo.core.expr.current import (
     EqualityExpression, InequalityExpression, RangedExpression,
 )

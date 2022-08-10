@@ -14,6 +14,7 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       is_potentially_variable,
                                       is_numeric_data,
                                       value)
+from pyomo.core.expr.expr_common import ExpressionType
 from pyomo.core.expr.relational_expr import (
     EqualityExpression, RangedExpression, InequalityExpression
 )
@@ -25,6 +26,7 @@ from pyomo.core.kernel.container_utils import \
 
 _pos_inf = float('inf')
 _neg_inf = float('-inf')
+_RELATIONAL = ExpressionType.RELATIONAL
 
 class IConstraint(ICategorizedObject):
     """The interface for constraints"""
@@ -490,7 +492,7 @@ class constraint(_MutableBoundsConstraintMixin,
             relational_expr = False
         else:
             try:
-                relational_expr = expr.is_relational()
+                relational_expr = expr.is_expression_type(_RELATIONAL)
                 if not relational_expr:
                     raise ValueError(
                         "Constraint '%s' does not have a proper "

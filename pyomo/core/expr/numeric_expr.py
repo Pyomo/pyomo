@@ -23,6 +23,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning
 
 from .expr_common import (
     OperatorAssociativity,
+    ExpressionType,
     clone_counter,
     _add, _sub, _mul, _div,
     _pow, _neg, _abs, _inplace,
@@ -112,6 +113,7 @@ class ExpressionBase(ExpressionBaseMixin, NumericValue):
     # data.  There are now accessor methods, so in most cases users
     # and developers should not directly access the _args_ data values.
     __slots__ =  ('_args_',)
+    EXPRESSION_SYSTEM = ExpressionType.NUMERIC
     PRECEDENCE = 0
 
     def __init__(self, args):
