@@ -79,10 +79,10 @@ would both cause this exception.""".strip() % (self,))
         return self.is_expression_type(ExpressionType.RELATIONAL)
 
     def is_constant(self):
-        return all(arg is None
-                   or arg.__class__ in native_numeric_types
-                   or arg.is_constant()
-                   for arg in self._args_)
+        return all(is_constant(arg) for arg in self._args_)
+
+    def is_potentially_variable(self):
+        return any(is_potentially_variable(arg) for arg in self._args_)
 
     def polynomial_degree(self):
         """
