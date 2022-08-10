@@ -77,8 +77,10 @@ class GeneralTimer(object):
 
 
 class ConstructionTimer(object):
+    __slots__ = ('obj', 'timer')
     msg = "%6.*f seconds to construct %s %s; %d %s total"
     in_progress = "ConstructionTimer object for %s %s; %0.3f elapsed seconds"
+
     def __init__(self, obj):
         self.obj = obj
         self.timer = -default_timer()
@@ -89,39 +91,44 @@ class ConstructionTimer(object):
         self.timer += default_timer()
         _construction_logger.info(self)
 
+    @property
+    def name(self):
+        try:
+            return self.obj.name
+        except RuntimeError:
+            try:
+                return self.obj.local_name
+            except RuntimeError:
+                return '(unknown)'
+        except AttributeError:
+            return '(unknown)'
+
     def __str__(self):
-        total_time = self.timer
         try:
             idx = len(self.obj.index_set())
         except AttributeError:
             idx = 1
         try:
-            name = self.obj.name
-        except RuntimeError:
-            try:
-                name = self.obj.local_name
-            except RuntimeError:
-                name = '(unknown)'
-        except AttributeError:
-            name = '(unknown)'
-        try:
             _type = self.obj.ctype.__name__
         except AttributeError:
             _type = type(self.obj).__name__
+        total_time = self.timer
         if total_time < 0:
             total_time += default_timer()
-            return self.in_progress % (_type, name, total_time)
-        return self.msg % ( 2 if total_time>=0.005 else 0,
+            return self.in_progress % (_type, self.name, total_time)
+        return self.msg % ( 2 if total_time >= 0.005 else 0,
                             total_time,
                             _type,
-                            name,
+                            self.name,
                             idx,
                             'indices' if idx > 1 else 'index' )
 
 
 class TransformationTimer(object):
+    __slots__ = ('obj', 'mode', 'timer')
     msg = "%6.*f seconds to apply Transformation %s%s"
     in_progress = "TransformationTimer object for %s%s; %0.3f elapsed seconds"
+
     def __init__(self, obj, mode=None):
         self.obj = obj
         if mode is None:
@@ -136,15 +143,18 @@ class TransformationTimer(object):
         self.timer += default_timer()
         _transform_logger.info(self)
 
+    @property
+    def name(self):
+        return self.obj.__class__.__name__
+
     def __str__(self):
         total_time = self.timer
-        name = self.obj.__class__.__name__
         if total_time < 0:
             total_time += default_timer()
-            return self.in_progress % (name, self.mode, total_time)
+            return self.in_progress % (self.name, self.mode, total_time)
         return self.msg % ( 2 if total_time>=0.005 else 0,
                             total_time,
-                            name,
+                            self.name,
                             self.mode )
 
 #
@@ -227,8 +237,8 @@ class TicTocTimer(object):
                 # so this does not hit (and get handled by) the local
                 # pyomo.common.timing logger.
                 deprecation_warning(
-                    "'ostream', and 'logger' should be specified "
-                    "as keyword arguments", version='TBD',
+                    "tic(): 'ostream' and 'logger' should be "
+                    "specified as keyword arguments", version='TBD',
                     logger=__package__)
                 ostream, *args = args
                 if args:
@@ -271,8 +281,8 @@ class TicTocTimer(object):
             # so this does not hit (and get handled by) the local
             # pyomo.common.timing logger.
             deprecation_warning(
-                "'delta', 'ostream', and 'logger' should be specified "
-                "as keyword arguments", version='TBD',
+                "toc(): 'delta', 'ostream', and 'logger' should be "
+                "specified as keyword arguments", version='TBD',
                 logger=__package__)
             delta, *args = args
             if args:
@@ -324,15 +334,12 @@ class TicTocTimer(object):
         return ans
 
     def stop(self):
-        try:
-            delta = default_timer() - self._lastTime
-        except TypeError:
-            if self._lastTime is None:
-                raise RuntimeError(
-                    "Stopping a TicTocTimer that was already stopped")
-            raise
+        delta, self._lastTime = self._lastTime, None
+        if delta is None:
+            raise RuntimeError(
+                "Stopping a TicTocTimer that was already stopped")
+        delta = default_timer() - delta
         self._cumul += delta
-        self._lastTime = None
         return delta
 
     def start(self):

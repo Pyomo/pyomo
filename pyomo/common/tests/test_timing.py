@@ -20,11 +20,15 @@ import time
 
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.timing import (
-    ConstructionTimer, report_timing, TicTocTimer, HierarchicalTimer,
-    TransformationTimer,
+    ConstructionTimer, TransformationTimer, report_timing,
+    TicTocTimer, HierarchicalTimer,
 )
 from pyomo.environ import ConcreteModel, RangeSet, Var, TransformationFactory
 from pyomo.core.base.var import _VarData
+
+class _pseudo_component(Var):
+    def getname(*args, **kwds):
+        raise RuntimeError("fail")
 
 class TestTiming(unittest.TestCase):
     def setUp(self):
@@ -56,6 +60,23 @@ class TestTiming(unittest.TestCase):
             str(a),
             r"TransformationTimer object for NoneType; "
             r"[0-9\.]+ elapsed seconds")
+
+        v = _pseudo_component()
+        a = ConstructionTimer(v)
+        self.assertIn(
+            "ConstructionTimer object for Var (unknown); ",
+            str(a))
+
+    def test_raw_transformation_timer(self):
+        a = TransformationTimer(None, 'fwd')
+        self.assertIn(
+            "TransformationTimer object for NoneType (fwd); ",
+            str(a))
+
+        a = TransformationTimer(None)
+        self.assertIn(
+            "TransformationTimer object for NoneType; ",
+            str(a))
 
     def test_report_timing(self):
         # Create a set to ensure that the global sets have already been
