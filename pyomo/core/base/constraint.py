@@ -50,6 +50,9 @@ logger = logging.getLogger('pyomo.core')
 
 _inf = float('inf')
 _nonfinite_values = {_inf, -_inf}
+_known_relational_expressions = {
+    EqualityExpression, InequalityExpression, RangedExpression,
+}
 _rule_returned_none_error = """Constraint '%s': rule returned None.
 
 Constraint rules must return either a valid expression, a 2- or 3-member
@@ -458,19 +461,9 @@ class _GeneralConstraintData(_ConstraintData):
         # Clear any previously-cached normalized constraint
         self._lower = self._upper = self._body = self._expr = None
 
-        _expr_type = expr.__class__
-        if hasattr(expr, 'is_relational'):
-            if not expr.is_relational():
-                raise ValueError(
-                    "Constraint '%s' does not have a proper "
-                    "value. Found '%s'\nExpecting a tuple or "
-                    "equation. Examples:"
-                    "\n   sum(model.costs) == model.income"
-                    "\n   (0, model.price[item], 50)"
-                    % (self.name, str(expr)))
+        if expr.__class__ in _known_relational_expressions:
             self._expr = expr
-
-        elif _expr_type is tuple: # or expr_type is list:
+        elif expr.__class__ is tuple: # or expr_type is list:
             for arg in expr:
                 if arg is None or arg.__class__ in native_numeric_types \
                    or isinstance(arg, NumericValue):
@@ -515,7 +508,7 @@ class _GeneralConstraintData(_ConstraintData):
         #
         # Ignore an 'empty' constraint
         #
-        elif _expr_type is type:
+        elif expr.__class__ is type:
             del self.parent_component()[self.index()]
             if expr is Constraint.Skip:
                 return
@@ -540,7 +533,7 @@ class _GeneralConstraintData(_ConstraintData):
         elif expr is None:
             raise ValueError(_rule_returned_none_error % (self.name,))
 
-        elif _expr_type is bool:
+        elif expr.__class__ is bool:
             raise ValueError(
                 "Invalid constraint expression. The constraint "
                 "expression resolved to a trivial Boolean (%s) "
@@ -551,13 +544,19 @@ class _GeneralConstraintData(_ConstraintData):
                    expr, self.name))
 
         else:
-            msg = ("Constraint '%s' does not have a proper "
-                   "value. Found '%s'\nExpecting a tuple or "
-                   "equation. Examples:"
-                   "\n   sum(model.costs) == model.income"
-                   "\n   (0, model.price[item], 50)"
-                   % (self.name, str(expr)))
-            raise ValueError(msg)
+            try:
+                if expr.is_expression_type(ExpressionType.RELATIONAL):
+                    self._expr = expr
+            except AttributeError:
+                pass
+            if self._expr is None:
+                msg = ("Constraint '%s' does not have a proper "
+                       "value. Found '%s'\nExpecting a tuple or "
+                       "equation. Examples:"
+                       "\n   sum(model.costs) == model.income"
+                       "\n   (0, model.price[item], 50)"
+                       % (self.name, str(expr)))
+                raise ValueError(msg)
         #
         # Normalize the incoming expressions, if we can
         #
