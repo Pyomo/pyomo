@@ -10,13 +10,18 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import operator
+
 from pyomo.common.deprecation import deprecated
 from pyomo.common.errors import PyomoException, DeveloperError
 
 from .base import ExpressionBaseMixin
 from .boolean_value import BooleanValue
 from .expr_common import _lt, _le, _eq, ExpressionType
-from .numvalue import native_numeric_types
+from .numvalue import (
+    native_numeric_types, is_potentially_variable, is_constant, value,
+    check_if_numeric_type
+)
 from .numeric_expr import _process_arg
 from .visitor import polynomial_degree
 
@@ -346,78 +351,93 @@ class EqualityExpression(RelationalExpressionBase):
         return "{0}  ==  {1}".format(values[0], values[1])
 
 
-def _generate_relational_expression(etype, lhs, rhs):
-    rhs_is_relational = False
-    lhs_is_relational = False
+_relational_op = {
+    _eq: (operator.eq, '==', None),
+    _le: (operator.le, '<=', False),
+    _lt: (operator.lt, '<', True),
+}
 
-    constant_lhs = True
-    constant_rhs = True
+def _process_nonnumeric_arg(obj):
+    if hasattr(obj, 'as_binary'):
+        # We assume non-numeric types that have an as_binary method
+        # are instances of AutoLinkedBooleanVar.  Calling as_binary
+        # will return a valid Binary Var (and issue the appropriate
+        # deprecation warning)
+        obj = obj.as_binary()
+    elif check_if_numeric_type(obj):
+        return obj
+    else:
+        # User assistance: provide a helpful exception when using an
+        # indexed object in an expression
+        if obj.is_component_type() and obj.is_indexed():
+            raise TypeError(
+                "Argument for expression is an indexed numeric "
+                "value\nspecified without an index:\n\t%s\nIs this "
+                "value defined over an index that you did not specify?"
+                % (obj.name, ) )
 
-    if lhs is not None and lhs.__class__ not in native_numeric_types:
-        lhs = _process_arg(lhs)
-        # Note: _process_arg can return a native type
-        if lhs is not None and lhs.__class__ not in native_numeric_types:
-            lhs_is_relational = lhs.is_relational()
-            constant_lhs = False
-    if rhs is not None and rhs.__class__ not in native_numeric_types:
-        rhs = _process_arg(rhs)
-        # Note: _process_arg can return a native type
-        if rhs is not None and rhs.__class__ not in native_numeric_types:
-            rhs_is_relational = rhs.is_relational()
-            constant_rhs = False
+        raise TypeError(
+            "Attempting to use a non-numeric type (%s) in a "
+            "numeric context." % (obj.__class__.__name__,))
 
-    if constant_lhs and constant_rhs:
-        if etype == _eq:
-            return lhs == rhs
-        elif etype == _le:
-            return lhs <= rhs
-        elif etype == _lt:
-            return lhs < rhs
+def _process_relational_arg(arg, n):
+    try:
+        _numeric = arg.is_numeric_type()
+    except AttributeError:
+        _numeric = False
+    if _numeric:
+        if arg.is_constant():
+            arg = value(arg)
         else:
-            raise ValueError("Unknown relational expression type '%s'" % etype)
+            _process_relational_arg.constant = False
+    else:
+        if arg.__class__ is InequalityExpression:
+            _process_relational_arg.relational += n
+            _process_relational_arg.constant = False
+        else:
+            arg = _process_nonnumeric_arg(arg)
+            if agr.__class__ not in native_numeric_types:
+                _process_relational_arg.constant = False
+    return arg
+
+def _generate_relational_expression(etype, lhs, rhs):
+    # Note that the use of "global" state flags is fast, but not
+    # thread-safe.  This should not be an issue because the GIL
+    # effectively prevents parallel model construction.  If we even need
+    # to revisit this design, we can pass in a "state" to
+    # _process_relational_arg() - at the cost of creating/destroying the
+    # state and an extra function argument.
+    _process_relational_arg.relational = 0
+    _process_relational_arg.constant = True
+    if lhs.__class__ not in native_numeric_types:
+        lhs = _process_relational_arg(lhs, 1)
+    if rhs.__class__ not in native_numeric_types:
+        rhs = _process_relational_arg(rhs, 2)
+
+    if _process_relational_arg.constant:
+        return _relational_op[etype][0](value(lhs), value(rhs))
 
     if etype == _eq:
-        if lhs_is_relational or rhs_is_relational:
+        if _process_relational_arg.relational:
             raise TypeError(
                 "Cannot create an EqualityExpression where one of the "
                 "sub-expressions is a relational expression:\n"
                 "    %s\n    {==}\n    %s" % (lhs, rhs,)
             )
         return EqualityExpression((lhs, rhs))
+    elif _process_relational_arg.relational:
+        if _process_relational_arg.relational == 1:
+            return RangedExpression(
+                lhs._args_ + (rhs,), (lhs._strict, _relational_op[etype][2]))
+        elif _process_relational_arg.relational == 2:
+            return RangedExpression(
+                (lhs,) + rhs._args_, (_relational_op[etype][2], rhs._strict))
+        else: # _process_relational_arg.relational == 3
+            raise TypeError(
+                "Cannot create an InequalityExpression where both "
+                "sub-expressions are relational expressions:\n"
+                "    %s\n    {%s}\n    %s" % (
+                    lhs, _relational_op[etype][1], rhs))
     else:
-        if etype == _le:
-            strict = False
-        elif etype == _lt:
-            strict = True
-        else:
-            raise DeveloperError(
-                "Unknown relational expression type '%s'" % (etype,))
-        if lhs_is_relational:
-            if lhs.__class__ is InequalityExpression:
-                if rhs_is_relational:
-                    raise TypeError(
-                        "Cannot create an InequalityExpression where both "
-                        "sub-expressions are relational expressions:\n"
-                        "    %s\n    {%s}\n    %s"
-                        % (lhs, "<" if strict else "<=", rhs,))
-                return RangedExpression(
-                    lhs._args_ + (rhs,), (lhs._strict, strict))
-            else:
-                raise TypeError(
-                    "Cannot create an InequalityExpression where one of the "
-                    "sub-expressions is an equality or ranged expression:\n"
-                    "    %s\n    {%s}\n    %s"
-                    % (lhs, "<" if strict else "<=", rhs,))
-        elif rhs_is_relational:
-            if rhs.__class__ is InequalityExpression:
-                return RangedExpression(
-                    (lhs,) + rhs._args_, (strict, rhs._strict))
-            else:
-                raise TypeError(
-                    "Cannot create an InequalityExpression where one of the "
-                    "sub-expressions is an equality or ranged expression:\n"
-                    "    %s\n    {%s}\n    %s"
-                    % (lhs, "<" if strict else "<=", rhs,))
-        else:
-            return InequalityExpression((lhs, rhs), strict)
+        return InequalityExpression((lhs, rhs), _relational_op[etype][2])
 
