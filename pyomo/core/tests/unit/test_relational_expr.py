@@ -63,24 +63,20 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #     =   5
         #    / \
         #   a   b
-        # Python 2.7 supports better testing of exceptions
-        if sys.hexversion >= 0x02070000:
-            self.assertRaisesRegex(TypeError, "EqualityExpression .*"
-                                   "sub-expressions is a relational",
-                                   e.__eq__, m.a)
-            self.assertRaisesRegex(TypeError, "EqualityExpression .*"
-                                   "sub-expressions is a relational",
-                                   m.a.__eq__, e)
+        with self.assertRaisesRegex(
+                TypeError, "Attempting to use a non-numeric type "
+                r"\(EqualityExpression\) in a numeric context."):
+            e == m.a
+        with self.assertRaisesRegex(
+                TypeError, "Attempting to use a non-numeric type "
+                r"\(EqualityExpression\) in a numeric context."):
+            m.a == e
 
-            # NB: cannot test the reverse here: _VarArray (correctly)
-            # does not define __eq__
-            self.assertRaisesRegex(TypeError, "Argument .*"
-                                    "is an indexed numeric value",
-                                    m.a.__eq__, m.x)
-        else:
-            self.assertRaises(TypeError, e.__eq__, m.a)
-            self.assertRaises(TypeError, m.a.__eq__, e)
-            self.assertRaises(TypeError, m.a.__eq__, m.x)
+        # NB: cannot test the reverse here: _VarArray (correctly)
+        # does not define __eq__
+        with self.assertRaisesRegex(
+                TypeError, "Argument .* is an indexed numeric value"):
+            m.a == m.x
 
         try:
             e == m.a
