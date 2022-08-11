@@ -184,7 +184,7 @@ The final lines in the outer for loop find a solution and display it:
 
    >>> results = opt.solve(instance, load_solutions=False) # doctest: +SKIP
    
-   This approach can be usefull if there is a concern that the solver
+   This approach can be useful if there is a concern that the solver
    did not terminate with an optimal solution. For example,
    
    >>> results = opt.solve(instance, load_solutions=False) # doctest: +SKIP
