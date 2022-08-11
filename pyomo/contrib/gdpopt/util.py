@@ -187,92 +187,99 @@ def fix_discrete_var(var, val, config):
         else:
             var.fix(val, skip_validation=True)
 
-@contextmanager
-def fix_principal_problem_solution_in_subproblem(
-        principal_problem_util_block, subproblem_util_block, solver, config,
-        make_subproblem_continuous=True):
-    # fix subproblem Blocks according to the principal problem solution
+class fix_principal_problem_solution_in_subproblem(object):
+    def __init__(self, discrete_prob_util_block, subproblem_util_block,
+                 solver, config, make_subproblem_continuous=True):
+        self.discrete_prob_util_block = discrete_prob_util_block
+        self.subprob_util_block = subproblem_util_block
+        self.solver = solver
+        self.config = config
+        self.make_subprob_continuous = make_subproblem_continuous
 
-    fixed = []
-    for disjunct, block in zip(principal_problem_util_block.disjunct_list,
-                               subproblem_util_block.disjunct_list):
-        if not disjunct.indicator_var.value:
-            block.deactivate()
-            block.binary_indicator_var.fix(0)
-        else:
-            block.binary_indicator_var.fix(1)
-            fixed.append(block.name)
-    config.logger.debug("Fixed the following Disjuncts to 'True': %s"
-                        % ", ".join(fixed))
+    def __enter__(self):
+        # fix subproblem Blocks according to the principal problem solution
+        fixed = []
+        for disjunct, block in zip(self.discrete_prob_util_block.disjunct_list,
+                                   self.subprob_util_block.disjunct_list):
+            if not disjunct.indicator_var.value:
+                block.deactivate()
+                block.binary_indicator_var.fix(0)
+            else:
+                block.binary_indicator_var.fix(1)
+                fixed.append(block.name)
+        self.config.logger.debug("Fixed the following Disjuncts to 'True': %s"
+                            % ", ".join(fixed))
 
-    fixed_bools = []
-    for principal_problem_bool, subprob_bool in zip(
-            principal_problem_util_block.non_indicator_boolean_variable_list,
-            subproblem_util_block.non_indicator_boolean_variable_list):
-        principal_problem_binary = principal_problem_bool.\
-                                   get_associated_binary()
-        subprob_binary = subprob_bool.get_associated_binary()
-        val = principal_problem_binary.value
-        if val is None:
-            # If it's None, it's not yet constrained in principal problem: make
-            # an arbitrary decision for now, and store it in the principal
-            # problem so the no-good cut will be right.
-            principal_problem_binary.set_value(1)
-            subprob_binary.fix(1)
-            bool_val = True
-        elif val > 0.5:
-            subprob_binary.fix(1)
-            bool_val = True
-        else:
-            subprob_binary.fix(0)
-            bool_val = False
-        fixed_bools.append("%s = %s" % (subprob_bool.name, bool_val))
-    config.logger.debug("Fixed the following Boolean variables: %s"
-                        % ", ".join(fixed_bools))
+        fixed_bools = []
+        for principal_problem_bool, subprob_bool in zip(
+                self.discrete_prob_util_block.\
+                non_indicator_boolean_variable_list,
+                self.subprob_util_block.non_indicator_boolean_variable_list):
+            principal_problem_binary = principal_problem_bool.\
+                                       get_associated_binary()
+            subprob_binary = subprob_bool.get_associated_binary()
+            val = principal_problem_binary.value
+            if val is None:
+                # If it's None, it's not yet constrained in principal problem:
+                # make an arbitrary decision for now, and store it in the
+                # principal problem so the no-good cut will be right.
+                principal_problem_binary.set_value(1)
+                subprob_binary.fix(1)
+                bool_val = True
+            elif val > 0.5:
+                subprob_binary.fix(1)
+                bool_val = True
+            else:
+                subprob_binary.fix(0)
+                bool_val = False
+            fixed_bools.append("%s = %s" % (subprob_bool.name, bool_val))
+        self.config.logger.debug("Fixed the following Boolean variables: %s"
+                            % ", ".join(fixed_bools))
 
-    # Fix subproblem discrete variables according to the principal problem
-    # solution
-    if make_subproblem_continuous:
-        fixed_discrete = []
-        for principal_problem_var, subprob_var in zip(
-                principal_problem_util_block.discrete_variable_list,
-                subproblem_util_block.discrete_variable_list):
-            # [ESJ 1/24/21]: We don't check if principal problem_var actually
-            # has a value here because we are going to have to do that error
-            # checking later. This is because the subproblem could have discrete
-            # variables that aren't in the principal problem and vice versa
-            # since principal problem is linearized, but subproblem is a
-            # specific realization of the disjuncts. All this means we don't
-            # have enough info to do it here.
-            fix_discrete_var(subprob_var, principal_problem_var.value, config)
-            fixed_discrete.append("%s = %s" % (subprob_var.name,
-                                               principal_problem_var.value))
-        config.logger.debug("Fixed the following integer variables: %s" %
-                            ", ".join(fixed_discrete))
+        # Fix subproblem discrete variables according to the principal problem
+        # solution
+        if self.make_subprob_continuous:
+            fixed_discrete = []
+            for principal_problem_var, subprob_var in zip(
+                    self.discrete_prob_util_block.discrete_variable_list,
+                    self.subprob_util_block.discrete_variable_list):
+                # [ESJ 1/24/21]: We don't check if principal problem_var
+                # actually has a value here because we are going to have to do
+                # that error checking later. This is because the subproblem
+                # could have discrete variables that aren't in the principal
+                # problem and vice versa since principal problem is linearized,
+                # but subproblem is a specific realization of the disjuncts. All
+                # this means we don't have enough info to do it here.
+                fix_discrete_var(subprob_var, principal_problem_var.value,
+                                 self.config)
+                fixed_discrete.append("%s = %s" % (subprob_var.name,
+                                                   principal_problem_var.value))
+            self.config.logger.debug("Fixed the following integer variables: "
+                                     "%s" % ", ".join(fixed_discrete))
 
-    # Call the subproblem initialization callback
-    config.subproblem_initialization_method(solver, subproblem_util_block,
-                                            principal_problem_util_block)
+        # Call the subproblem initialization callback
+        self.config.subproblem_initialization_method(
+            self.solver, self.subprob_util_block, self.discrete_prob_util_block)
 
-    yield
+    def __exit__(self, type, value, traceback):
+        # unfix all subproblem blocks
+        for block in self.subprob_util_block.disjunct_list:
+            block.activate()
+            block.binary_indicator_var.unfix()
 
-    # unfix all subproblem blocks
-    for block in subproblem_util_block.disjunct_list:
-        block.activate()
-        block.binary_indicator_var.unfix()
+        # unfix all the formerly-Boolean variables
+        for bool_var in \
+            self.subprob_util_block.non_indicator_boolean_variable_list:
+            bool_var.get_associated_binary().unfix()
 
-    # unfix all the formerly-Boolean variables
-    for bool_var in subproblem_util_block.non_indicator_boolean_variable_list:
-        bool_var.get_associated_binary().unfix()
+        # unfix all discrete variables and restore them to their original values
+        if self.make_subprob_continuous:
+            for subprob_var in self.subprob_util_block.discrete_variable_list:
+                subprob_var.fixed = False
 
-    # unfix all discrete variables and restore them to their original values
-    if make_subproblem_continuous:
-        for var in subproblem_util_block.discrete_variable_list:
-            subprob_var.fixed = False
-
-    # [ESJ 2/25/22] We don't need to reset the values of the continuous
-    # variables because we will initialize them based on the principal problem
-    # solution before we solve again.
+        # [ESJ 2/25/22] We don't need to reset the values of the continuous
+        # variables because we will initialize them based on the principal
+        # problem solution before we solve again.
 
 def is_feasible(model, config):
     """Checks to see if the algebraic model is feasible in its current state.

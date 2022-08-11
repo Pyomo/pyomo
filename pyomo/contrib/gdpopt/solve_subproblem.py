@@ -10,8 +10,6 @@
 #  ___________________________________________________________________________
 
 """Functions for solving the nonlinear subproblem."""
-from contextlib import contextmanager
-
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException, DeveloperError
 from pyomo.contrib.fbbt.fbbt import fbbt
@@ -193,89 +191,97 @@ def detect_unfixed_discrete_vars(model):
                        if not v.is_continuous())
     return var_set
 
-@contextmanager
-def preprocess_subproblem(util_block, config):
-    """Applies preprocessing transformations to the model."""
-    m = util_block.parent_block()
+class preprocess_subproblem(object):
+    def __init__(self, util_block, config):
+        self.util_block = util_block
+        self.config = config
 
-    # Save bounds so we can restore them
-    original_bounds = ComponentMap()
-    unfixed_vars = []
-    for cons in m.component_data_objects(Constraint, active=True,
-                                         descend_into=Block):
-        for v in EXPR.identify_variables(cons.expr):
-            if v not in original_bounds.keys():
-                original_bounds[v] = (v.lb, v.ub)
-                if not v.fixed:
-                    unfixed_vars.append(v)
-    # We could miss if there is a variable that only appears in the
-    # objective, but its bounds are not going to get changed anyway if
-    # that's the case.
-    constraints_modified = {}
-    constraints_deactivated = []
-    not_infeas = True
+        self.not_infeas = True
+        self.unfixed_vars = []
+        self.original_bounds = ComponentMap()
+        self.constraints_deactivated = []
+        self.constraints_modified = {}
 
-    try:
-        # First do FBBT
-        fbbt(m, integer_tol=config.integer_tolerance,
-             feasibility_tol=config.constraint_tolerance,
-             max_iter=config.max_fbbt_iterations)
-        xfrm = TransformationFactory
-        # Now that we've tightened bounds, see if any variables are fixed
-        # because their lb is equal to the ub (within tolerance)
-        xfrm('contrib.detect_fixed_vars').apply_to(
-            m, tolerance=config.variable_tolerance)
+    def __enter__(self):
+        """Applies preprocessing transformations to the model."""
+        m = self.util_block.parent_block()
 
-        # Restore the original bounds because the subproblem solver might like
-        # that better and because, if deactivate_trivial_constraints ever gets
-        # fancier, this could change what is and is not trivial.
-        if not config.tighten_nlp_var_bounds:
-            for v, (lb, ub) in original_bounds.items():
+        # Save bounds so we can restore them
+        for cons in m.component_data_objects(Constraint, active=True,
+                                             descend_into=Block):
+            for v in EXPR.identify_variables(cons.expr):
+                if v not in self.original_bounds.keys():
+                    self.original_bounds[v] = (v.lb, v.ub)
+                    if not v.fixed:
+                        self.unfixed_vars.append(v)
+        # We could miss if there is a variable that only appears in the
+        # objective, but its bounds are not going to get changed anyway if
+        # that's the case.
+
+        try:
+            # First do FBBT
+            fbbt(m, integer_tol=self.config.integer_tolerance,
+                 feasibility_tol=self.config.constraint_tolerance,
+                 max_iter=self.config.max_fbbt_iterations)
+            xfrm = TransformationFactory
+            # Now that we've tightened bounds, see if any variables are fixed
+            # because their lb is equal to the ub (within tolerance)
+            xfrm('contrib.detect_fixed_vars').apply_to(
+                m, tolerance=self.config.variable_tolerance)
+
+            # Restore the original bounds because the subproblem solver might
+            # like that better and because, if deactivate_trivial_constraints
+            # ever gets fancier, this could change what is and is not trivial.
+            if not self.config.tighten_nlp_var_bounds:
+                for v, (lb, ub) in self.original_bounds.items():
+                    v.setlb(lb)
+                    v.setub(ub)
+
+            # Now, if something got fixed to 0, we might have 0*var terms to
+            # remove
+            xfrm('contrib.remove_zero_terms').apply_to(
+                m, constraints_modified=self.constraints_modified)
+            # Last, check if any constraints are now trivial and deactivate them
+            xfrm('contrib.deactivate_trivial_constraints').apply_to(
+                m, tolerance=self.config.constraint_tolerance,
+                return_trivial=self.constraints_deactivated)
+
+        except InfeasibleConstraintException as e:
+            self.config.logger.debug(
+                "NLP subproblem determined to be infeasible "
+                "during preprocessing. Message: %s" % e)
+            self.not_infeas = False
+
+        return self.not_infeas
+
+    def __exit__(self, type, value, traceback):
+        # restore the bounds if we found the problem infeasible or if we didn't
+        # do it above
+        if not self.not_infeas or self.config.tighten_nlp_var_bounds:
+            for v, (lb, ub) in self.original_bounds.items():
                 v.setlb(lb)
                 v.setub(ub)
 
-        # Now, if something got fixed to 0, we might have 0*var terms to remove
-        xfrm('contrib.remove_zero_terms').apply_to(
-            m, constraints_modified=constraints_modified)
-        # Last, check if any constraints are now trivial and deactivate them
-        xfrm('contrib.deactivate_trivial_constraints').apply_to(
-            m, tolerance=config.constraint_tolerance,
-            return_trivial=constraints_deactivated)
+        # A bit counter-intuitively (but I assume so that it can propagate those
+        # bounds elsewhere), fbbt tightens the bounds on the fixed Boolean vars,
+        # so we restore the bounds here
+        for disj in self.util_block.disjunct_list:
+            disj.binary_indicator_var.setlb(0)
+            disj.binary_indicator_var.setub(1)
+        for bool_var in self.util_block.non_indicator_boolean_variable_list:
+            bool_var.get_associated_binary().setlb(0)
+            bool_var.get_associated_binary().setub(1)
 
-    except InfeasibleConstraintException as e:
-        config.logger.debug("NLP subproblem determined to be infeasible "
-                            "during preprocessing. Message: %s" % e)
-        not_infeas = False
+        # reactivate constraints
+        for cons in self.constraints_deactivated:
+            cons.activate()
 
-    yield not_infeas
+        for cons, (orig, modified) in self.constraints_modified.items():
+            cons.set_value(orig)
 
-    # restore the bounds if we found the problem infeasible or if we didn't do
-    # it above
-    if not not_infeas or config.tighten_nlp_var_bounds:
-        for v, (lb, ub) in original_bounds.items():
-            v.setlb(lb)
-            v.setub(ub)
-
-    # A bit counter-intuitively (but I assume so that it can propagate those
-    # bounds elsewhere), fbbt tightens the bounds on the fixed Boolean vars, so
-    # we restore the bounds here
-    for disj in util_block.disjunct_list:
-        disj.binary_indicator_var.setlb(0)
-        disj.binary_indicator_var.setub(1)
-    for bool_var in util_block.non_indicator_boolean_variable_list:
-        bool_var.get_associated_binary().setlb(0)
-        bool_var.get_associated_binary().setub(1)
-
-    # reactivate constraints
-    for cons in constraints_deactivated:
-        cons.activate()
-
-    for cons, (orig, modified) in constraints_modified.items():
-        cons.set_value(orig)
-
-    # unfix variables:
-    for v in unfixed_vars:
-        v.unfix()
+        # unfix variables:
+        for v in self.unfixed_vars:
+            v.unfix()
 
 def call_appropriate_subproblem_solver(subprob_util_block, solver, config):
     timing = solver.timing
