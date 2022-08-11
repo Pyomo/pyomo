@@ -58,7 +58,7 @@ def init_custom_disjuncts(util_block, principal_problem_util_block,
         # active at each initialization iteration
         used_disjuncts = set()
 
-        subproblem = subprob_util_block.model()
+        subproblem = subprob_util_block.parent_block()
         # fix the disjuncts in the linear GDP and solve
         config.logger.info(
             "Generating initial linear GDP approximation by "
@@ -144,7 +144,7 @@ def init_fixed_disjuncts(util_block, principal_problem_util_block,
 @contextmanager
 def use_principal_problem_for_max_binary_initialization(
         principal_problem_util_block):
-    m = principal_problem_util_block.model()
+    m = principal_problem_util_block.parent_block()
 
     # Set up binary maximization objective
     original_objective = next(m.component_data_objects(Objective, active=True,
@@ -199,7 +199,7 @@ def init_max_binaries(util_block, principal_problem_util_block,
 
 @contextmanager
 def use_principal_problem_for_set_covering(principal_problem_util_block):
-    m = principal_problem_util_block.model()
+    m = principal_problem_util_block.parent_block()
 
     original_objective = next(m.component_data_objects(Objective, active=True,
                                                        descend_into=True))
@@ -251,7 +251,7 @@ def init_set_covering(util_block, principal_problem_util_block,
             for constr in disj.component_data_objects(
                     ctype=Constraint, active=True, descend_into=True))
         for disj in util_block.disjunct_list)
-    subprob = subprob_util_block.model()
+    subprob = subprob_util_block.parent_block()
 
     # We borrow the principal problem to be the set covering MIP. This is only a
     # change of objective. The formulation may have its bounds tightened as a

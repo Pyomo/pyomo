@@ -25,7 +25,7 @@ from pyomo.util.vars_from_expressions import get_vars_from_components
 
 def _get_principal_problem_and_subproblem(solver, config):
     util_block = solver.original_util_block
-    original_model = util_block.model()
+    original_model = util_block.parent_block()
     if config.force_subproblem_nlp:
         # We'll need to fix these too
         add_discrete_variable_list(util_block)
@@ -63,7 +63,7 @@ def initialize_principal_problem(util_block, subprob_util_block, config,
     """
     config.logger.info("---Starting GDPopt initialization---")
     # clone the original model
-    principal = util_block.model().clone()
+    principal = util_block.parent_block().clone()
     principal.name = principal.name + ": principal problem"
 
     principal_problem_util_block = principal.component(util_block.name)
@@ -100,25 +100,25 @@ def add_util_block(principal):
     return block
 
 def add_disjunct_list(util_block):
-    model = util_block.model()
+    model = util_block.parent_block()
     util_block.disjunct_list = list(model.component_data_objects(
         ctype=Disjunct, active=True, descend_into=(Block, Disjunct),
         sort=SortComponents.deterministic))
 
 def add_disjunction_list(util_block):
-    model = util_block.model()
+    model = util_block.parent_block()
     util_block.disjunction_list = list(model.component_data_objects(
         ctype=Disjunction, active=True, descend_into=(Block, Disjunct),
         sort=SortComponents.deterministic))
 
 def add_constraint_list(util_block):
-    model = util_block.model()
+    model = util_block.parent_block()
     util_block.constraint_list = list(model.component_data_objects(
         ctype=Constraint, active=True, descend_into=(Block, Disjunct),
         sort=SortComponents.deterministic))
 
 def add_global_constraint_list(util_block):
-    model = util_block.model()
+    model = util_block.parent_block()
     util_block.global_constraint_list = list(model.component_data_objects(
         ctype=Constraint, active=True, descend_into=Block,
         sort=SortComponents.deterministic))
@@ -138,7 +138,7 @@ def add_algebraic_variable_list(util_block, name=None):
     onto Disjuncts, but does not collect any indicator variables that do not
     appear in algebraic constraints pre-transformation.
     """
-    model = util_block.model()
+    model = util_block.parent_block()
     if name is None:
         name = "algebraic_variable_list"
     setattr(util_block, name, list(get_vars_from_components(
@@ -160,7 +160,7 @@ def add_boolean_variable_lists(util_block):
     ind_var_set = ComponentSet(util_block.boolean_variable_list)
     # This will not necessarily include the indicator_vars if it is called
     # before the GDP is transformed to a MIP.
-    for v in get_vars_from_components(util_block.model(),
+    for v in get_vars_from_components(util_block.parent_block(),
                                       ctype=LogicalConstraint,
                                       descend_into=(Block, Disjunct),
                                       active=True,

@@ -49,7 +49,7 @@ class _OAAlgorithmMixIn(object):
     def _get_active_untransformed_constraints(self, util_block, config):
         """Yield constraints in disjuncts where the indicator value is set or
         fixed to True."""
-        model = util_block.model()
+        model = util_block.parent_block()
         # Get active global constraints
         for constr in util_block.global_constraint_list:
             yield constr

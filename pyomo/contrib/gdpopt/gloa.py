@@ -62,15 +62,6 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         DOI: 10.1016/S0098-1354(01)00732-3.
         """.strip())
 
-    def solve(self, model, **kwds):
-        """Solve the model.
-
-        Args:
-            model (Block): a Pyomo model or block to be solved
-
-        """
-        return super().solve(model, **kwds)
-
     def _solve_gdp(self, original_model, config):
         logger = config.logger
 
@@ -86,8 +77,8 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
          subproblem_util_block) = _get_principal_problem_and_subproblem(self,
                                                                         config)
 
-        principal = principal_problem_util_block.model()
-        subproblem = subproblem_util_block.model()
+        principal = principal_problem_util_block.parent_block()
+        subproblem = subproblem_util_block.parent_block()
         principal_obj = next(principal.component_data_objects(
             Objective, active=True, descend_into=True))
 
@@ -123,7 +114,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                                        principal_problem_util_block,
                                        objective_sense, config, timing):
         """Add affine cuts"""
-        m = principal_problem_util_block.model()
+        m = principal_problem_util_block.parent_block()
         if hasattr(principal_problem_util_block, "aff_utils_blocks"):
             aff_utils_blocks = principal_problem_util_block.aff_utils_blocks
         else:

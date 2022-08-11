@@ -94,7 +94,7 @@ def solve_continuous_problem(m, config):
         return results
 
 def move_nonlinear_objective_to_constraints(util_block, logger):
-    m = util_block.model()
+    m = util_block.parent_block()
     principal_obj = next(m.component_data_objects(Objective, descend_into=True,
                                                   active=True))
 

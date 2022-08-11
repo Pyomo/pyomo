@@ -68,15 +68,6 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         DOI: 10.1016/0098-1354(95)00219-7.
         """.strip())
 
-    def solve(self, model, **kwds):
-        """Solve the model.
-
-        Args:
-            model (Block): a Pyomo model or block to be solved
-
-        """
-        return super().solve(model, **kwds)
-
     def _solve_gdp(self, original_model, config):
         logger = config.logger
 
@@ -87,8 +78,8 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
          subproblem_util_block) = _get_principal_problem_and_subproblem(self,
                                                                         config)
 
-        principal = principal_problem_util_block.model()
-        subproblem = subproblem_util_block.model()
+        principal = principal_problem_util_block.parent_block()
+        subproblem = subproblem_util_block.parent_block()
 
         original_obj = self._setup_augmented_penalty_objective(
             principal_problem_util_block)
@@ -126,7 +117,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 break
 
     def _setup_augmented_penalty_objective(self, principal_problem_util_block):
-        m = principal_problem_util_block.model()
+        m = principal_problem_util_block.parent_block()
         principal_objective = next(m.component_data_objects(Objective,
                                                             active=True))
 
@@ -140,7 +131,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     def _update_augmented_penalty_objective(self, principal_problem_util_block,
                                             principal_objective,
                                             OA_penalty_factor):
-        m = principal_problem_util_block.model()
+        m = principal_problem_util_block.parent_block()
         sign_adjust = 1 if principal_objective.sense == minimize else -1
         OA_penalty_expr = sign_adjust * OA_penalty_factor * \
                           sum(v for v in m.component_data_objects(
@@ -156,8 +147,8 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                                        principal_problem_util_block,
                                        objective_sense, config, timing):
         """Add outer approximation cuts to the linear GDP model."""
-        m = principal_problem_util_block.model()
-        nlp = subproblem_util_block.model()
+        m = principal_problem_util_block.parent_block()
+        nlp = subproblem_util_block.parent_block()
         sign_adjust = -1 if objective_sense == minimize else 1
         # Dictionary mapping blocks to their child blocks we use to store OA
         # cuts. We do it this way because we don't know for sure we can have any

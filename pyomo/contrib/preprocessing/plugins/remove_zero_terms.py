@@ -19,7 +19,7 @@ from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.expr import current as EXPR
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
-from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.config import ConfigDict, ConfigValue
 
 
 @TransformationFactory.register(
@@ -34,7 +34,7 @@ class RemoveZeroTerms(IsomorphicTransformation):
     .. note:: TODO: support nonlinear expressions
 
     """
-    CONFIG = ConfigBlock("RemoveZeroTerms")
+    CONFIG = ConfigDict("RemoveZeroTerms")
     CONFIG.declare("constraints_modified", ConfigValue(
         default={},
         description="A dictionary that maps the constraints modified during "

@@ -45,7 +45,7 @@
 
 """
 from pyomo.common.config import (
-    add_docstring_list, ConfigBlock)
+    add_docstring_list, ConfigDict)
 from pyomo.contrib.gdpopt.config_options import (
     _add_common_configs, _supported_algorithms, _get_algorithm_config)
 from pyomo.opt.base import SolverFactory
@@ -63,7 +63,7 @@ def _handle_strategy_deprecation(config):
     'gdpopt',
     doc='The GDPopt decomposition-based '
     'Generalized Disjunctive Programming (GDP) solver')
-class GDPoptSolver():
+class GDPoptSolver(object):
     """Decomposition solver for Generalized Disjunctive Programming (GDP)
     problems.
 
@@ -95,7 +95,7 @@ class GDPoptSolver():
     - Logic-to-linear transformation: Romeo Valentin
 
     """
-    CONFIG = ConfigBlock("GDPopt")
+    CONFIG = ConfigDict("GDPopt")
     _add_common_configs(CONFIG)
 
     def solve(self, model, **kwds):

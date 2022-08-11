@@ -27,7 +27,7 @@ def solve_MILP_principal_problem(util_block, solver, config):
     TerminationCondition.infeasible, or TerminationCondition.unbounded.
     """
     timing = solver.timing
-    m = util_block.model()
+    m = util_block.parent_block()
 
     if config.mip_presolve:
         try:

@@ -51,23 +51,14 @@ class GDP_RIC_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
 
     algorithm = 'RIC'
 
-    def solve(self, model, **kwds):
-        """Solve the model.
-
-        Args:
-            model (Block): a Pyomo model or block to be solved
-
-        """
-        return super().solve(model, **kwds)
-
     def _solve_gdp(self, original_model, config):
         logger = config.logger
 
         (principal_problem_util_block,
          subproblem_util_block) = _get_principal_problem_and_subproblem(self,
                                                                         config)
-        principal_problem = principal_problem_util_block.model()
-        subproblem = subproblem_util_block.model()
+        principal_problem = principal_problem_util_block.parent_block()
+        subproblem = subproblem_util_block.parent_block()
         principal_problem_obj = next(principal_problem.component_data_objects(
             Objective, active=True, descend_into=True))
 

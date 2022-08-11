@@ -128,7 +128,8 @@ class _GDPoptAlgorithm():
 
     def _solve_gdp(self, original_model, config):
         # To be implemented by the algorithms
-        pass
+        raise NotImplementedError("Derived _GDPoptAlgorithms need to "
+                                  "implement the _solve_gdp method.")
 
     def _log_solver_intro_message(self, config):
         config.logger.info(
@@ -447,8 +448,7 @@ class _GDPoptAlgorithm():
         """For cleaning up after a solve--we want the original model to be
         untouched except for the solution being loaded"""
         blk = self.original_util_block
-        m = blk.model()
-        m.del_component(blk)
+        blk.parent_block().del_component(blk)
         # We just deleted the linearized objective if we had one, so restore the
         # prior one.
         if self.original_obj is not None:

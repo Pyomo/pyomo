@@ -163,7 +163,7 @@ def solve_MINLP(util_block, config, timing):
     config.logger.debug(
         "Solving MINLP subproblem for fixed logical realizations."
     )
-    model = util_block.model()
+    model = util_block.parent_block()
 
     minlp_solver = SolverFactory(config.minlp_solver)
     if not minlp_solver.available():
@@ -196,7 +196,7 @@ def detect_unfixed_discrete_vars(model):
 @contextmanager
 def preprocess_subproblem(util_block, config):
     """Applies preprocessing transformations to the model."""
-    m = util_block.model()
+    m = util_block.parent_block()
 
     # Save bounds so we can restore them
     original_bounds = ComponentMap()
@@ -279,7 +279,7 @@ def preprocess_subproblem(util_block, config):
 
 def call_appropriate_subproblem_solver(subprob_util_block, solver, config):
     timing = solver.timing
-    subprob = subprob_util_block.model()
+    subprob = subprob_util_block.parent_block()
     config.call_before_subproblem_solve(solver, subprob, subprob_util_block)
 
     # Is the subproblem linear?

@@ -67,15 +67,6 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
         DOI: 10.1016/S0098-1354(00)00581-0.
         """.strip())
 
-    def solve(self, model, **kwds):
-        """Solve the model.
-
-        Args:
-            model (Block): a Pyomo model or block to be solved
-
-        """
-        return super().solve(model, **kwds)
-
     def _solve_gdp(self, model, config):
         self.explored_nodes = 0
 

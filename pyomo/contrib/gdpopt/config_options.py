@@ -29,12 +29,12 @@ _supported_algorithms = {
 def _strategy_deprecation(strategy):
     deprecation_warning("The argument 'strategy' has been deprecated "
                         "in favor of 'algorithm.'", version="TBD")
-    return In(_supported_algorithms.keys())(strategy)
+    return In(_supported_algorithms)(strategy)
 
 def _init_strategy_deprecation(strategy):
     deprecation_warning("The argument 'init_strategy' has been deprecated "
                         "in favor of 'init_algorithm.'", version="TBD")
-    return In(valid_init_strategies.keys())(strategy)
+    return In(valid_init_strategies)(strategy)
 
 def _get_algorithm_config():
     CONFIG = ConfigBlock("GDPoptAlgorithm")
@@ -43,7 +43,7 @@ def _get_algorithm_config():
         description="DEPRECATED: Please use 'algorithm' instead."
     ))
     CONFIG.declare("algorithm", ConfigValue(
-        default=None, domain=In(_supported_algorithms.keys()),
+        default=None, domain=In(_supported_algorithms),
         description="Algorithm to use."
     ))
     return CONFIG
@@ -80,7 +80,7 @@ def _add_oa_configs(CONFIG):
         description="DEPRECATED: Please use 'init_algorithm' instead."
     ))
     CONFIG.declare("init_algorithm", ConfigValue(
-        default="set_covering", domain=In(valid_init_strategies.keys()),
+        default="set_covering", domain=In(valid_init_strategies),
         description="Initialization algorithm to use.",
         doc="""
         Selects the initialization algorithm to use when generating
@@ -140,12 +140,12 @@ def _add_oa_configs(CONFIG):
     CONFIG.declare("call_before_master_solve", ConfigValue(
         default=_DoNothing,
         description="DEPRECATED: Please use "
-        "'call_before_principal_problem_solve",
+        "'call_before_principal_problem_solve'",
     ))
     CONFIG.declare("call_after_master_solve", ConfigValue(
         default=_DoNothing,
         description="DEPRECATED: Please use "
-        "'call_after_principal_problem_solve",
+        "'call_after_principal_problem_solve'",
     ))
     CONFIG.declare("subproblem_initialization_method", ConfigValue(
         default=restore_vars_to_original_values, # Historical default
