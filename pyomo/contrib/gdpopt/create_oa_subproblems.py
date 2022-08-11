@@ -36,7 +36,7 @@ def _get_principal_problem_and_subproblem(solver, config):
     # create model to hold the subproblems: We create this first because
     # certain initialization strategies for the principal problem need it.
     subproblem = get_subproblem(original_model)
-    subproblem_util_block = subproblem.component(util_block.name)
+    subproblem_util_block = subproblem.component(util_block.local_name)
     save_initial_values(subproblem_util_block)
     add_transformed_boolean_variable_list(subproblem_util_block)
     subproblem_obj = next(subproblem.component_data_objects(
@@ -66,7 +66,7 @@ def initialize_principal_problem(util_block, subprob_util_block, config,
     principal = util_block.parent_block().clone()
     principal.name = principal.name + ": principal problem"
 
-    principal_problem_util_block = principal.component(util_block.name)
+    principal_problem_util_block = principal.component(util_block.local_name)
     principal_problem_util_block.no_good_cuts = ConstraintList()
     principal_problem_util_block.no_good_disjunctions = Disjunction(Integers)
 

@@ -228,7 +228,7 @@ class TestGDPoptUnit(unittest.TestCase):
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.infeasible)
 
-    def test_gloa_cut_generation_ignores_deactivated_constraints(self):
+    def get_GDP_on_block(self):
         m = ConcreteModel()
         m.x = Var(bounds=(-5, 5))
         m.y = Var(bounds=(-2, 6))
@@ -239,6 +239,10 @@ class TestGDPoptUnit(unittest.TestCase):
         m.disjunction = Disjunction(expr=[[m.x - m.y <= -2, m.y >= -1],
                                           [m.x == 0, m.y >= 0],
                                           [m.y**2 + m.x <= 3]])
+        return m
+
+    def test_gloa_cut_generation_ignores_deactivated_constraints(self):
+        m = self.get_GDP_on_block()
         m.b.disjunction.disjuncts[0].indicator_var.fix(True)
         m.b.disjunction.disjuncts[1].indicator_var.fix(False)
         m.b.disjunction.disjuncts[2].indicator_var.fix(False)
@@ -272,6 +276,35 @@ class TestGDPoptUnit(unittest.TestCase):
         self.assertIs(c2.body, m.y)
         self.assertEqual(c2.lower, 0)
         self.assertIsNone(c2.upper)
+
+    def test_complain_when_no_algorithm_specified(self):
+        m = self.get_GDP_on_block()
+        with self.assertRaisesRegex(
+                ValueError,
+                "No algorithm was specified to the solve method. "
+                "Please specify an algorithm or use an "
+                "algorithm-specific solver."):
+            SolverFactory('gdpopt').solve(m)
+
+    def test_solve_block(self):
+        m = ConcreteModel()
+        m.b = Block()
+        m.b.x = Var(bounds=(-5, 5))
+        m.b.y = Var(bounds=(-2, 6))
+        m.b.disjunction = Disjunction(expr=[[m.b.x + m.b.y <= 1, m.b.y >= 0.5],
+                                            [m.b.x == 2, m.b.y == 4],
+                                            [m.b.x**2 - m.b.y <= 3]])
+        m.disjunction = Disjunction(expr=[[m.b.x - m.b.y <= -2, m.b.y >= -1],
+                                          [m.b.x == 0, m.b.y >= 0],
+                                          [m.b.y**2 + m.b.x <= 3]])
+        m.b.obj = Objective(expr=m.b.x)
+
+        SolverFactory('gdpopt.ric').solve(m.b)
+
+        # There are multiple optimal solutions, so just leave it at this:
+        self.assertAlmostEqual(value(m.b.x), -5)
+        # We didn't declare any Block on m--it's still just b.
+        self.assertEqual(len(m.component_map(Block)), 1)
 
 @unittest.skipIf(not LOA_solvers_available,
                  "Required subsolvers %s are not available"
