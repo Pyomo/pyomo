@@ -50,11 +50,11 @@ def _get_algorithm_config():
 
 def _add_common_configs(CONFIG):
     CONFIG.declare("iterlim", ConfigValue(
-        default=100, domain=NonNegativeInt,
+        default=None, domain=NonNegativeInt,
         description="Iteration limit."
     ))
     CONFIG.declare("time_limit", ConfigValue(
-        default=600,
+        default=None,
         domain=PositiveInt,
         description="Time limit (seconds, default=600)",
         doc="""

@@ -85,7 +85,7 @@ class GDP_GLOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         self._log_header(logger)
 
         # main loop
-        while self.iteration < config.iterlim:
+        while not config.iterlim or self.iteration < config.iterlim:
             self.iteration += 1
 
             # solve linear principal problem

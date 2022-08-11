@@ -28,15 +28,17 @@ def configure_and_call_solver(model, solver, args, problem_type, timing,
                                                                solver))
     with SuppressInfeasibleWarning():
         solver_args = dict(args)
-        elapsed = get_main_elapsed_time(timing)
-        remaining = max(time_limit - elapsed, 1)
-        if solver == 'gams':
-            solver_args['add_options'] = solver_args.get('add_options', [])
-            solver_args['add_options'].append('option reslim=%s;' % remaining)
-        elif solver == 'multisolve':
-            solver_args['time_limit'] = min(solver_args.get('time_limit',
-                                                            float('inf')),
-                                            remaining)
+        if time_limit is not None:
+            elapsed = get_main_elapsed_time(timing)
+            remaining = max(time_limit - elapsed, 1)
+            if solver == 'gams':
+                solver_args['add_options'] = solver_args.get('add_options', [])
+                solver_args['add_options'].append('option reslim=%s;' %
+                                                  remaining)
+            elif solver == 'multisolve':
+                solver_args['time_limit'] = min(solver_args.get('time_limit',
+                                                                float('inf')),
+                                                remaining)
         try:
             results = opt.solve(model, **solver_args)
         except ValueError as err:

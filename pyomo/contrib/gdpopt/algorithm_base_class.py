@@ -338,7 +338,7 @@ class _GDPoptAlgorithm():
         return False
 
     def reached_iteration_limit(self, config):
-        if self.iteration >= config.iterlim:
+        if config.iterlim is not None and self.iteration >= config.iterlim:
             config.logger.info(
                 'GDPopt unable to converge bounds within iteration limit of '
                 '{} iterations.'.format(config.iterlim))
@@ -348,7 +348,7 @@ class _GDPoptAlgorithm():
 
     def reached_time_limit(self, config):
         elapsed = get_main_elapsed_time(self.timing)
-        if elapsed >= config.time_limit:
+        if config.time_limit is not None and elapsed >= config.time_limit:
             config.logger.info(
                 'GDPopt exiting--Did not converge bounds '
                 'before time limit of {} seconds. '.format(config.time_limit))
