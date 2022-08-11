@@ -117,7 +117,7 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                 if not disjuncts_fixed_True:
                     disjuncts_fixed_True = unfixed_disjuncts[0]
                     unfixed_disjuncts = []
-                    disjuncts_fixed_True[0].indicator_var.fix(True)
+                    disjuncts_fixed_True.indicator_var.fix(True)
             elif disjuncts_fixed_True and disjunction.xor:
                 assert len(disjuncts_fixed_True) == 1, ("XOR (only one True) "
                                                         "violated: %s" %

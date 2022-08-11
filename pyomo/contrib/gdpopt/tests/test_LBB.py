@@ -1,11 +1,14 @@
 """Tests for the Logic-based Branch and Bound solver plugin."""
 
+from io import StringIO
+import logging
 from math import fabs
 from os.path import abspath, dirname, join, normpath
 
 import pyomo.common.unittest as unittest
 
 from pyomo.common.fileutils import import_file
+from pyomo.common.log import LoggingIntercept
 import pyomo.contrib.gdpopt.tests.common_tests as ct
 from pyomo.contrib.satsolver.satsolver import z3_available
 from pyomo.environ import (SolverFactory, value, ConcreteModel, Var, Objective,
@@ -46,6 +49,50 @@ class TestGDPopt_LBB(unittest.TestCase):
         self.assertIsNone(m.x.value)
         self.assertIsNone(m.d.disjuncts[0].indicator_var.value)
         self.assertIsNone(m.d.disjuncts[1].indicator_var.value)
+
+    def test_infeasible_GDP_check_sat(self):
+        """Test for infeasible GDP with check_sat option True."""
+        m = ConcreteModel()
+        m.x = Var(bounds=(0, 2))
+        m.d = Disjunction(expr=[
+            [m.x ** 2 >= 3, m.x >= 3],
+            [m.x ** 2 <= -1, m.x <= -1]])
+        m.o = Objective(expr=m.x)
+        output = StringIO()
+        with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.INFO):
+            result = SolverFactory('gdpopt.lbb').solve(
+                m, tee=False, check_sat=True,
+                minlp_solver=minlp_solver,
+                minlp_solver_args=minlp_args)
+        self.assertIn("Root node is not satisfiable. Problem is infeasible.",
+                      output.getvalue().strip())
+
+        self.assertEqual(result.solver.termination_condition,
+                         TerminationCondition.infeasible)
+        self.assertIsNone(m.x.value)
+        self.assertIsNone(m.d.disjuncts[0].indicator_var.value)
+        self.assertIsNone(m.d.disjuncts[1].indicator_var.value)
+
+
+    # This should work--see issue #2483
+    # def test_fix_all_but_one_disjunct(self):
+    #     m = ConcreteModel()
+    #     m.x = Var(bounds=(0, 3))
+    #     m.d = Disjunction(expr=[
+    #         [m.x ** 2 >= 3, m.x >= 3],
+    #         [m.x ** 2 <= -1, m.x <= -1]])
+    #     m.o = Objective(expr=m.x)
+    #     m.d.disjuncts[1].indicator_var.fix(False)
+    #     result = SolverFactory('gdpopt.lbb').solve(
+    #         m, tee=True,
+    #         minlp_solver=minlp_solver,
+    #         minlp_solver_args=minlp_args,
+    #     )
+    #     self.assertEqual(result.solver.termination_condition,
+    #                      TerminationCondition.optimal)
+    #     self.assertAlmostEqual(value(m.x), 3)
+    #     self.assertTrue(value(m.d.disjuncts[0].indicator_var))
+    #     self.assertFalse(value(m.d.disjuncts[1].indicator_var))
 
     @unittest.skipUnless(license_available,
                          "Problem is too big for unlicensed BARON.")
