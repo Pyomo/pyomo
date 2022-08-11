@@ -431,20 +431,13 @@ class _GDPoptAlgorithm():
         for var, soln in zip(
                 self.original_util_block.boolean_variable_list,
                 self.incumbent_boolean_soln):
-            # If there is an associated binary, make sure it's in sync too
-            original_binary = var.get_associated_binary()
             if soln is None:
                 var.set_value(soln, skip_validation=True)
-                if original_binary is not None:
-                    original_binary.set_value(None, skip_validation=True)
-                continue
             elif soln > 0.5:
                 var.set_value(True)
             else:
                 var.set_value(False)
 
-            if original_binary is not None:
-                original_binary.set_value(soln)
         StaleFlagManager.mark_all_as_stale(delayed=True)
 
     def _delete_original_model_util_block(self):
