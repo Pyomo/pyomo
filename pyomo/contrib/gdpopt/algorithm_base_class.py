@@ -56,6 +56,7 @@ class _GDPoptAlgorithm():
         self.incumbent_continuous_soln = None
 
         self.original_obj = None
+        self.original_util_block = None
 
         self.log_formatter = ('{:>9}   {:>15}   {:>11.5f}   {:>11.5f}   '
                               '{:>8.2%}   {:>7.2f}  {}')
@@ -108,22 +109,22 @@ class _GDPoptAlgorithm():
         with lower_logger_level_to(config.logger, tee=config.tee):
             self._log_solver_intro_message(config)
 
-            with time_code(self.timing, 'total', is_main_timer=True):
-                results = self._gather_problem_info_and_solve_non_gdps(model,
-                                                                       config)
-                # If it wasn't disjunctive, we solved it
-                if results:
-                    return results
-                else:
-                    # main loop implemented by each algorithm
-                    self._solve_gdp(model, config)
+            try:
+                with time_code(self.timing, 'total', is_main_timer=True):
+                    results = self._gather_problem_info_and_solve_non_gdps(
+                        model, config)
+                    # If it wasn't disjunctive, we solved it
+                    if not results:
+                        # main loop implemented by each algorithm
+                        self._solve_gdp(model, config)
 
-            self._get_final_pyomo_results_object()
-            self._log_termination_message(config.logger)
-            if (self.pyomo_results.solver.termination_condition not in
-                {tc.infeasible, tc.unbounded}):
-                self._transfer_incumbent_to_original_model(config.logger)
-            self._delete_original_model_util_block()
+            finally:
+                self._get_final_pyomo_results_object()
+                self._log_termination_message(config.logger)
+                if (self.pyomo_results.solver.termination_condition not in
+                    {tc.infeasible, tc.unbounded}):
+                    self._transfer_incumbent_to_original_model(config.logger)
+                self._delete_original_model_util_block()
             return self.pyomo_results
 
     def _solve_gdp(self, original_model, config):
@@ -159,6 +160,13 @@ class _GDPoptAlgorithm():
                 'Iteration', 'Subproblem Type', 'Lower Bound', 'Upper Bound',
                 ' Gap ', 'Time(s)'))
 
+    @property
+    def objective_sense(self):
+        if hasattr(self, 'pyomo_results'):
+            return self.pyomo_results.problem.sense
+        else:
+            return None
+
     def _gather_problem_info_and_solve_non_gdps(self, model, config):
         """Solve the model.
 
@@ -169,10 +177,7 @@ class _GDPoptAlgorithm():
         # set up the logger so that we will have a pretty log printed
         logger = config.logger
 
-        self.pyomo_results = self._get_pyomo_results_object_with_problem_info(
-            model, config)
-        self.objective_sense = self.pyomo_results.problem.sense
-
+        self._create_pyomo_results_object_with_problem_info(model, config)
         # Check if this problem actually has any discrete decisions. If not,
         # just solve it.
         problem = self.pyomo_results.problem
@@ -180,10 +185,8 @@ class _GDPoptAlgorithm():
             problem.number_of_integer_variables == 0 and
             problem.number_of_disjunctions == 0):
             cont_results = solve_continuous_problem(model, config)
-            problem.lower_bound = cont_results.problem.lower_bound
-            problem.upper_bound = cont_results.problem.upper_bound
-            # Just put the info from the MIP solver
-            self.pyomo_results.solver = cont_results.solver
+            self.LB = cont_results.problem.lower_bound
+            self.UB = cont_results.problem.upper_bound
 
             return self.pyomo_results
 
@@ -358,12 +361,12 @@ class _GDPoptAlgorithm():
                 self.reached_iteration_limit(config) or
                 self.reached_time_limit(config))
 
-    def _get_pyomo_results_object_with_problem_info(self, original_model,
+    def _create_pyomo_results_object_with_problem_info(self, original_model,
                                                     config):
         """
         Initialize a results object with results.problem information
         """
-        results = SolverResults()
+        results = self.pyomo_results = SolverResults()
 
         results.solver.name = 'GDPopt %s - %s' % (self.version(),
                                                   self.algorithm)
@@ -448,7 +451,8 @@ class _GDPoptAlgorithm():
         """For cleaning up after a solve--we want the original model to be
         untouched except for the solution being loaded"""
         blk = self.original_util_block
-        blk.parent_block().del_component(blk)
+        if blk is not None:
+            blk.parent_block().del_component(blk)
         # We just deleted the linearized objective if we had one, so restore the
         # prior one.
         if self.original_obj is not None:
