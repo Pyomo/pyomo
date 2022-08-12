@@ -46,11 +46,10 @@
 """
 from pyomo.common.config import (
     add_docstring_list, ConfigDict)
+from pyomo.contrib.gdpopt import __version__
 from pyomo.contrib.gdpopt.config_options import (
     _add_common_configs, _supported_algorithms, _get_algorithm_config)
 from pyomo.opt.base import SolverFactory
-
-__version__ = (22, 5, 13)  # Note: date-based version number
 
 def _handle_strategy_deprecation(config):
     # This method won't be needed when the strategy arg is removed, but for now,

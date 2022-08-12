@@ -19,7 +19,7 @@ from pyomo.contrib.gdpopt.config_options import _add_common_configs
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_util_block, add_disjunct_list, add_boolean_variable_lists,
     add_algebraic_variable_list)
-from pyomo.contrib.gdpopt.GDPopt import __version__
+from pyomo.contrib.gdpopt import __version__
 from pyomo.contrib.gdpopt.util import (
     get_main_elapsed_time, lower_logger_level_to,
     solve_continuous_problem, time_code)
