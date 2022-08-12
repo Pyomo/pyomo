@@ -20,11 +20,11 @@ from pyomo.contrib.gdpopt.config_options import (
     _add_oa_configs, _add_mip_solver_configs, _add_nlp_solver_configs,
     _add_tolerance_configs)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
-    _get_principal_problem_and_subproblem, add_constraint_list)
+    _get_discrete_problem_and_subproblem, add_constraint_list)
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
 from pyomo.contrib.gdpopt.oa_algorithm_utils import _OAAlgorithmMixIn
-from pyomo.contrib.gdpopt.solve_principal_problem import (
-    solve_MILP_principal_problem)
+from pyomo.contrib.gdpopt.solve_discrete_problem import (
+    solve_MILP_discrete_problem)
 from pyomo.contrib.gdpopt.util import (
     time_code, _add_bigm_constraint_to_transformed_model)
 
@@ -74,15 +74,15 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         # We'll need these to get dual info after solving subproblems
         add_constraint_list(self.original_util_block)
 
-        (principal_problem_util_block,
-         subproblem_util_block) = _get_principal_problem_and_subproblem(self,
-                                                                        config)
+        (discrete_problem_util_block,
+         subproblem_util_block) = _get_discrete_problem_and_subproblem(self,
+                                                                       config)
 
-        principal = principal_problem_util_block.parent_block()
+        discrete = discrete_problem_util_block.parent_block()
         subproblem = subproblem_util_block.parent_block()
 
         original_obj = self._setup_augmented_penalty_objective(
-            principal_problem_util_block)
+            discrete_problem_util_block)
 
         self._log_header(logger)
 
@@ -90,14 +90,14 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         while not config.iterlim or self.iteration < config.iterlim:
             self.iteration += 1
 
-            # solve linear principal problem
+            # solve linear discrete problem
             with time_code(self.timing, 'mip'):
                 oa_obj = self._update_augmented_penalty_objective(
-                    principal_problem_util_block, original_obj,
+                    discrete_problem_util_block, original_obj,
                     config.OA_penalty_factor)
-                mip_feasible = solve_MILP_principal_problem(
-                    principal_problem_util_block, self, config)
-                self._update_bounds_after_principal_problem_solve(
+                mip_feasible = solve_MILP_discrete_problem(
+                    discrete_problem_util_block, self, config)
+                self._update_bounds_after_discrete_problem_solve(
                     mip_feasible, oa_obj, logger)
 
             # Check termination conditions
@@ -105,49 +105,49 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 break
 
             with time_code(self.timing, 'nlp'):
-                self._fix_principal_soln_solve_subproblem_and_add_cuts(
-                    principal_problem_util_block, subproblem_util_block, config)
+                self._fix_discrete_soln_solve_subproblem_and_add_cuts(
+                    discrete_problem_util_block, subproblem_util_block, config)
 
             # Add integer cut
             with time_code(self.timing, "integer cut generation"):
-                add_no_good_cut(principal_problem_util_block, config)
+                add_no_good_cut(discrete_problem_util_block, config)
 
             # Check termination conditions
             if self.any_termination_criterion_met(config):
                 break
 
-    def _setup_augmented_penalty_objective(self, principal_problem_util_block):
-        m = principal_problem_util_block.parent_block()
-        principal_objective = next(m.component_data_objects(Objective,
-                                                            active=True))
+    def _setup_augmented_penalty_objective(self, discrete_problem_util_block):
+        m = discrete_problem_util_block.parent_block()
+        discrete_objective = next(m.component_data_objects(Objective,
+                                                           active=True))
 
         # Set up augmented penalty objective
-        principal_objective.deactivate()
+        discrete_objective.deactivate()
         # placeholder for OA objective
-        principal_problem_util_block.oa_obj = Objective(sense=minimize)
+        discrete_problem_util_block.oa_obj = Objective(sense=minimize)
 
-        return principal_objective
+        return discrete_objective
 
-    def _update_augmented_penalty_objective(self, principal_problem_util_block,
-                                            principal_objective,
+    def _update_augmented_penalty_objective(self, discrete_problem_util_block,
+                                            discrete_objective,
                                             OA_penalty_factor):
-        m = principal_problem_util_block.parent_block()
-        sign_adjust = 1 if principal_objective.sense == minimize else -1
+        m = discrete_problem_util_block.parent_block()
+        sign_adjust = 1 if discrete_objective.sense == minimize else -1
         OA_penalty_expr = sign_adjust * OA_penalty_factor * \
                           sum(v for v in m.component_data_objects(
                               ctype=Var, descend_into=(Block, Disjunct))
                               if v.parent_component().local_name ==
                               'GDPopt_OA_slacks')
-        principal_problem_util_block.oa_obj.expr = principal_objective.expr + \
+        discrete_problem_util_block.oa_obj.expr = discrete_objective.expr + \
                                               OA_penalty_expr
 
-        return principal_problem_util_block.oa_obj.expr
+        return discrete_problem_util_block.oa_obj.expr
 
-    def _add_cuts_to_principal_problem(self, subproblem_util_block,
-                                       principal_problem_util_block,
-                                       objective_sense, config, timing):
+    def _add_cuts_to_discrete_problem(self, subproblem_util_block,
+                                      discrete_problem_util_block,
+                                      objective_sense, config, timing):
         """Add outer approximation cuts to the linear GDP model."""
-        m = principal_problem_util_block.parent_block()
+        m = discrete_problem_util_block.parent_block()
         nlp = subproblem_util_block.parent_block()
         sign_adjust = -1 if objective_sense == minimize else 1
         # Dictionary mapping blocks to their child blocks we use to store OA
@@ -155,25 +155,25 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
         # given name since we are sticking these on a clone of a user-generated
         # model. But this keeps track that we find one if we've already created
         # it, so that we can add the cuts as indexed constraints.
-        if hasattr(principal_problem_util_block, 'oa_cut_blocks'):
-            oa_cut_blocks = principal_problem_util_block.oa_cut_blocks
+        if hasattr(discrete_problem_util_block, 'oa_cut_blocks'):
+            oa_cut_blocks = discrete_problem_util_block.oa_cut_blocks
         else:
-            oa_cut_blocks = principal_problem_util_block.oa_cut_blocks = dict()
+            oa_cut_blocks = discrete_problem_util_block.oa_cut_blocks = dict()
 
-        for principal_var, subprob_var in zip(
-                principal_problem_util_block.algebraic_variable_list,
+        for discrete_var, subprob_var in zip(
+                discrete_problem_util_block.algebraic_variable_list,
                 subproblem_util_block.algebraic_variable_list):
             val = subprob_var.value
-            if val is not None and not principal_var.fixed:
-                principal_var.set_value(val, skip_validation=True)
+            if val is not None and not discrete_var.fixed:
+                discrete_var.set_value(val, skip_validation=True)
 
         config.logger.debug('Adding OA cuts.')
 
         counter = 0
-        if not hasattr(principal_problem_util_block, 'jacobians'):
-            principal_problem_util_block.jacobians = ComponentMap()
+        if not hasattr(discrete_problem_util_block, 'jacobians'):
+            discrete_problem_util_block.jacobians = ComponentMap()
         for constr, subprob_constr in zip(
-                principal_problem_util_block.constraint_list,
+                discrete_problem_util_block.constraint_list,
                 subproblem_util_block.constraint_list):
             dual_value = nlp.dual.get(subprob_constr, None)
             if (dual_value is None or
@@ -196,7 +196,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                                 (constr.name, dual_value))
 
             # Cache jacobian
-            jacobian = principal_problem_util_block.jacobians.get(constr, None)
+            jacobian = discrete_problem_util_block.jacobians.get(constr, None)
             if jacobian is None:
                 constr_vars = list(identify_variables(constr.body,
                                                       include_fixed=False))
@@ -215,7 +215,7 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                     mode = differentiate.Modes.reverse_numeric
                     jac_map = ComponentMap()
                 jacobian = JacInfo(mode=mode, vars=constr_vars, jac=jac_map)
-                principal_problem_util_block.jacobians[constr] = jacobian
+                discrete_problem_util_block.jacobians[constr] = jacobian
             # Recompute numeric derivatives
             if not jacobian.jac:
                 jac_list = differentiate(constr.body, wrt_list=jacobian.vars,
@@ -232,20 +232,20 @@ class GDP_LOA_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
                 parent_block.add_component(nm, oa_utils)
                 oa_cut_blocks[parent_block] = oa_utils
                 oa_utils.cuts = Constraint(NonNegativeIntegers)
-            principal_prob_oa_utils = principal_problem_util_block.component(
+            discrete_prob_oa_utils = discrete_problem_util_block.component(
                 'GDPopt_OA_slacks')
-            if principal_prob_oa_utils is None:
-                principal_prob_oa_utils = principal_problem_util_block.\
+            if discrete_prob_oa_utils is None:
+                discrete_prob_oa_utils = discrete_problem_util_block.\
                                   GDPopt_OA_slacks = Block(
                                       doc="Block holding outer approximation "
                                       "slacks for the whole model (so that the "
                                       "writers can find them).")
-                principal_prob_oa_utils.slacks = VarList(
+                discrete_prob_oa_utils.slacks = VarList(
                     bounds=(0, config.max_slack), domain=NonNegativeReals,
                     initialize=0)
 
             oa_cuts = oa_utils.cuts
-            slack_var = principal_prob_oa_utils.slacks.add()
+            slack_var = discrete_prob_oa_utils.slacks.add()
             rhs = value(constr.lower) if constr.has_lb() else value(
                 constr.upper)
             try:

@@ -215,8 +215,8 @@ class _GDPoptAlgorithm():
     def _update_bounds(self, primal=None, dual=None, force_update=False):
         """Update bounds correctly depending on objective sense.
 
-        primal: bound from solving subproblem with fixed principal-problem
-        solution dual: bound from solving principal problem (relaxation of
+        primal: bound from solving subproblem with fixed discrete problem
+        solution dual: bound from solving discrete problem (relaxation of
         original problem) force_update: flag so this function will set the bound
         even if it's not an improvement. (Used at termination if the bounds
         cross.)
@@ -278,13 +278,13 @@ class _GDPoptAlgorithm():
         self.incumbent_boolean_soln = [
             v.value for v in util_block.transformed_boolean_variable_list]
 
-    def _update_bounds_after_principal_problem_solve(self, mip_termination,
-                                                     obj_expr, logger):
+    def _update_bounds_after_discrete_problem_solve(self, mip_termination,
+                                                    obj_expr, logger):
         if mip_termination is tc.optimal:
-            self._update_bounds_after_solve('principal', dual=value(obj_expr),
+            self._update_bounds_after_solve('discrete', dual=value(obj_expr),
                                             logger=logger)
         elif mip_termination is tc.infeasible:
-            # Principal problem was infeasible.
+            # Discrete problem was infeasible.
             self._update_dual_bound_to_infeasible()
         elif mip_termination is tc.feasible or tc.unbounded:
             # we won't update the bound, because we didn't solve to
@@ -324,7 +324,7 @@ class _GDPoptAlgorithm():
                 self.pyomo_results.solver.termination_condition = tc.infeasible
             else:
                 # if they've crossed, then the gap is actually 0: Update the
-                # dual (principal problem) bound to be equal to the primal
+                # dual (discrete problem) bound to be equal to the primal
                 # (subproblem) bound
                 if self.LB + config.bound_tolerance > self.UB:
                     self._update_bounds(dual=self.primal_bound(),
@@ -362,7 +362,7 @@ class _GDPoptAlgorithm():
                 self.reached_time_limit(config))
 
     def _create_pyomo_results_object_with_problem_info(self, original_model,
-                                                    config):
+                                                       config):
         """
         Initialize a results object with results.problem information
         """
@@ -406,15 +406,15 @@ class _GDPoptAlgorithm():
         if number_of_objectives == 0:
             config.logger.warning(
                 'Model has no active objectives. Adding dummy objective.')
-            principal_obj = Objective(expr=1)
+            discrete_obj = Objective(expr=1)
             original_model.add_component(unique_component_name(original_model,
                                                                'dummy_obj'),
-                                         principal_obj)
+                                         discrete_obj)
         elif number_of_objectives > 1:
             raise ValueError('Model has multiple active objectives.')
         else:
-            principal_obj = active_objectives[0]
-        prob.sense = minimize if principal_obj.sense == 1 else maximize
+            discrete_obj = active_objectives[0]
+        prob.sense = minimize if discrete_obj.sense == 1 else maximize
 
         return results
 

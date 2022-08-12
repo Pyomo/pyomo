@@ -7,16 +7,16 @@ from math import fabs
 from pyomo.common.collections import ComponentMap
 
 from pyomo.contrib.gdpopt.cut_generation import add_no_good_cut
-from pyomo.contrib.gdpopt.solve_principal_problem import (
-    solve_MILP_principal_problem)
+from pyomo.contrib.gdpopt.solve_discrete_problem import (
+    solve_MILP_discrete_problem)
 from pyomo.contrib.gdpopt.util import _DoNothing
 from pyomo.core import Block, Constraint, Objective, Var, maximize, value
 from pyomo.gdp import Disjunct
 from pyomo.opt import TerminationCondition as tc
 
-def _collect_original_bounds(principal_prob_util_block):
+def _collect_original_bounds(discrete_prob_util_block):
     original_bounds = ComponentMap()
-    for v in principal_prob_util_block.all_mip_variables:
+    for v in discrete_prob_util_block.all_mip_variables:
         original_bounds[v] = (v.lb, v.ub)
     return original_bounds
 
@@ -25,33 +25,33 @@ def _restore_bounds(original_bounds):
         v.setlb(l)
         v.setub(u)
 
-# This contextmanager is for use when we solve the principal problem with some
+# This contextmanager is for use when we solve the discrete problem with some
 # variables fixed. In that case, the bounds tightening that might be done during
 # preprocessing is not valid later, and we need to restore the variable bounds.
 @contextmanager
-def preserve_principal_problem_feasible_region(principal_problem_util_block,
-                                               config, original_bounds=None):
+def preserve_discrete_problem_feasible_region(discrete_problem_util_block,
+                                              config, original_bounds=None):
     if config.mip_presolve and original_bounds is None:
-        original_bounds = _collect_original_bounds(principal_problem_util_block)
+        original_bounds = _collect_original_bounds(discrete_problem_util_block)
 
     yield
 
     if config.mip_presolve:
         _restore_bounds(original_bounds)
 
-def init_custom_disjuncts(util_block, principal_problem_util_block,
+def init_custom_disjuncts(util_block, discrete_problem_util_block,
                           subprob_util_block, config, solver):
     """Initialize by using user-specified custom disjuncts."""
     solver._log_header(config.logger)
 
     used_disjuncts = {}
 
-    # We are going to fix indicator_vars in the principal problem before we
+    # We are going to fix indicator_vars in the discrete problem before we
     # solve it, so the bounds tightening will not necessarily be valid
     # afterward. So we save these bounds and restore them in each iteration. We
     # collect them here since there's no point in doing that ever iteration.
     if config.mip_presolve:
-        original_bounds = _collect_original_bounds(principal_problem_util_block)
+        original_bounds = _collect_original_bounds(discrete_problem_util_block)
 
     for count, active_disjunct_set in enumerate(config.custom_init_disjuncts):
         # custom_init_disjuncts contains a list of sets, giving the disjuncts
@@ -63,14 +63,14 @@ def init_custom_disjuncts(util_block, principal_problem_util_block,
         config.logger.info(
             "Generating initial linear GDP approximation by "
             "solving subproblems with user-specified active disjuncts.")
-        for orig_disj, principal_problem_disj in zip(
+        for orig_disj, discrete_problem_disj in zip(
                 util_block.disjunct_list,
-                principal_problem_util_block.disjunct_list):
+                discrete_problem_util_block.disjunct_list):
             if orig_disj in active_disjunct_set:
                 used_disjuncts.add(orig_disj)
-                principal_problem_disj.indicator_var.fix(True)
+                discrete_problem_disj.indicator_var.fix(True)
             else:
-                principal_problem_disj.indicator_var.fix(False)
+                discrete_problem_disj.indicator_var.fix(False)
         unused = set(active_disjunct_set) - used_disjuncts
         if len(unused) > 0:
             config.logger.warning(
@@ -79,15 +79,15 @@ def init_custom_disjuncts(util_block, principal_problem_util_block,
                 '%s\nThey may not be Disjunct objects or '
                 'they may not be on the active subtree being '
                 'solved.' % (count, ", ".join([disj.name for disj in unused])))
-        with preserve_principal_problem_feasible_region(
-                principal_problem_util_block, config, original_bounds):
-            mip_termination = solve_MILP_principal_problem(
-                principal_problem_util_block, solver, config)
+        with preserve_discrete_problem_feasible_region(
+                discrete_problem_util_block, config, original_bounds):
+            mip_termination = solve_MILP_discrete_problem(
+                discrete_problem_util_block, solver, config)
         if mip_termination is not tc.infeasible:
-            solver._fix_principal_soln_solve_subproblem_and_add_cuts(
-                principal_problem_util_block, subprob_util_block, config)
+            solver._fix_discrete_soln_solve_subproblem_and_add_cuts(
+                discrete_problem_util_block, subprob_util_block, config)
             # remove the integer solution
-            add_no_good_cut(principal_problem_util_block, config)
+            add_no_good_cut(discrete_problem_util_block, config)
         else:
             config.logger.error(
                 'MILP relaxation infeasible for user-specified '
@@ -96,7 +96,7 @@ def init_custom_disjuncts(util_block, principal_problem_util_block,
                 % list(disj.name for disj in active_disjunct_set))
         solver.initialization_iteration += 1
 
-def init_fixed_disjuncts(util_block, principal_problem_util_block,
+def init_fixed_disjuncts(util_block, discrete_problem_util_block,
                          subprob_util_block, config, solver):
     """Initialize by solving the problem with the current disjunct values."""
 
@@ -107,11 +107,11 @@ def init_fixed_disjuncts(util_block, principal_problem_util_block,
 
     # Again, if we presolve, we are going to tighten the bounds after fixing the
     # indicator_vars, so it won't be valid afterwards and we need to restore it.
-    with preserve_principal_problem_feasible_region(
-            principal_problem_util_block, config):
-        # fix the disjuncts in the principal problem and send for solution.
+    with preserve_discrete_problem_feasible_region(discrete_problem_util_block,
+                                                   config):
+        # fix the disjuncts in the discrete problem and send for solution.
         already_fixed = set()
-        for disj in principal_problem_util_block.disjunct_list:
+        for disj in discrete_problem_util_block.disjunct_list:
             indicator = disj.indicator_var
             if indicator.fixed:
                 already_fixed.add(disj)
@@ -120,20 +120,20 @@ def init_fixed_disjuncts(util_block, principal_problem_util_block,
 
         # We copied the variables over when we cloned, and because the Booleans
         # are auto-linked to the binaries, we shouldn't have to change
-        # anything. So first we solve the principal problem in case we need
+        # anything. So first we solve the discrete problem in case we need
         # values for other discrete variables, and to make sure it's feasible.
-        mip_termination = solve_MILP_principal_problem(
-            principal_problem_util_block, solver, config)
+        mip_termination = solve_MILP_discrete_problem(
+            discrete_problem_util_block, solver, config)
 
         # restore the fixed status of the indicator_variables
-        for disj in principal_problem_util_block.disjunct_list:
+        for disj in discrete_problem_util_block.disjunct_list:
             if disj not in already_fixed:
                 disj.indicator_var.unfix()
 
     if mip_termination is not tc.infeasible:
-        solver._fix_principal_soln_solve_subproblem_and_add_cuts(
-            principal_problem_util_block, subprob_util_block, config)
-        add_no_good_cut(principal_problem_util_block, config)
+        solver._fix_discrete_soln_solve_subproblem_and_add_cuts(
+            discrete_problem_util_block, subprob_util_block, config)
+        add_no_good_cut(discrete_problem_util_block, config)
     else:
         config.logger.error(
             'MILP relaxation infeasible for initial user-specified '
@@ -142,9 +142,9 @@ def init_fixed_disjuncts(util_block, principal_problem_util_block,
     solver.initialization_iteration += 1
 
 @contextmanager
-def use_principal_problem_for_max_binary_initialization(
-        principal_problem_util_block):
-    m = principal_problem_util_block.parent_block()
+def use_discrete_problem_for_max_binary_initialization(
+        discrete_problem_util_block):
+    m = discrete_problem_util_block.parent_block()
 
     # Set up binary maximization objective
     original_objective = next(m.component_data_objects(Objective, active=True,
@@ -154,17 +154,17 @@ def use_principal_problem_for_max_binary_initialization(
     binary_vars = (v for v in m.component_data_objects(
         ctype=Var, descend_into=(Block, Disjunct))
                    if v.is_binary() and not v.fixed)
-    principal_problem_util_block.max_binary_obj = Objective(
+    discrete_problem_util_block.max_binary_obj = Objective(
         expr=sum(binary_vars), sense=maximize)
 
     yield
 
     # clean up the objective. We don't clean up the no-good cuts because we
     # still want them. We've already considered those solutions.
-    del principal_problem_util_block.max_binary_obj
+    del discrete_problem_util_block.max_binary_obj
     original_objective.activate()
 
-def init_max_binaries(util_block, principal_problem_util_block,
+def init_max_binaries(util_block, discrete_problem_util_block,
                       subprob_util_block, config, solver):
     """Initialize by maximizing binary variables and disjuncts.
 
@@ -180,42 +180,42 @@ def init_max_binaries(util_block, principal_problem_util_block,
 
     # As with set covering, this is only a change of objective. The formulation
     # may be tightened, but that is valid for the duration.
-    with use_principal_problem_for_max_binary_initialization(
-            principal_problem_util_block):
-        mip_termination = solve_MILP_principal_problem(
-            principal_problem_util_block, solver, config)
+    with use_discrete_problem_for_max_binary_initialization(
+            discrete_problem_util_block):
+        mip_termination = solve_MILP_discrete_problem(
+            discrete_problem_util_block, solver, config)
         if mip_termination is not tc.infeasible:
-            solver._fix_principal_soln_solve_subproblem_and_add_cuts(
-                principal_problem_util_block, subprob_util_block, config)
+            solver._fix_discrete_soln_solve_subproblem_and_add_cuts(
+                discrete_problem_util_block, subprob_util_block, config)
         else:
             config.logger.debug(
                 "MILP relaxation for initialization was infeasible. "
                 "Problem is infeasible.")
             solver._update_dual_bound_to_infeasible()
             return False
-        add_no_good_cut(principal_problem_util_block, config)
+        add_no_good_cut(discrete_problem_util_block, config)
 
     solver.initialization_iteration += 1
 
 @contextmanager
-def use_principal_problem_for_set_covering(principal_problem_util_block):
-    m = principal_problem_util_block.parent_block()
+def use_discrete_problem_for_set_covering(discrete_problem_util_block):
+    m = discrete_problem_util_block.parent_block()
 
     original_objective = next(m.component_data_objects(Objective, active=True,
                                                        descend_into=True))
     original_objective.deactivate()
     # placeholder for the objective
-    principal_problem_util_block.set_cover_obj = Objective(expr=0,
-                                                           sense=maximize)
+    discrete_problem_util_block.set_cover_obj = Objective(expr=0,
+                                                          sense=maximize)
 
     yield
 
     # clean up the objective. We don't clean up the no-good cuts because we
     # still want them. We've already considered those solutions.
-    del principal_problem_util_block.set_cover_obj
+    del discrete_problem_util_block.set_cover_obj
     original_objective.activate()
 
-def update_set_covering_objective(principal_problem_util_block,
+def update_set_covering_objective(discrete_problem_util_block,
                                   disj_needs_cover):
     # number of disjuncts that still need to be covered
     num_needs_cover = sum(1 for disj_bool in disj_needs_cover if disj_bool)
@@ -225,12 +225,12 @@ def update_set_covering_objective(principal_problem_util_block,
     weights = list((num_covered + 1 if disj_bool else 1)
                    for disj_bool in disj_needs_cover)
     # Update set covering objective
-    principal_problem_util_block.set_cover_obj.expr = sum(
+    discrete_problem_util_block.set_cover_obj.expr = sum(
         weight * disj.binary_indicator_var
         for (weight, disj) in zip(weights,
-                                  principal_problem_util_block.disjunct_list))
+                                  discrete_problem_util_block.disjunct_list))
 
-def init_set_covering(util_block, principal_problem_util_block,
+def init_set_covering(util_block, discrete_problem_util_block,
                       subprob_util_block, config, solver):
     """Initialize by solving problems to cover the set of all disjuncts.
 
@@ -253,12 +253,12 @@ def init_set_covering(util_block, principal_problem_util_block,
         for disj in util_block.disjunct_list)
     subprob = subprob_util_block.parent_block()
 
-    # We borrow the principal problem to be the set covering MIP. This is only a
+    # We borrow the discrete problem to be the set covering MIP. This is only a
     # change of objective. The formulation may have its bounds tightened as a
     # result of preprocessing in the MIP solves, but that is okay because the
-    # feasible region is the same as the original principal problem and any
+    # feasible region is the same as the original discrete problem and any
     # feasibility-based tightening will remain valid for the duration.
-    with use_principal_problem_for_set_covering(principal_problem_util_block):
+    with use_discrete_problem_for_set_covering(discrete_problem_util_block):
         iter_count = 1
         while (any(disjunct_needs_cover) and
                iter_count <= config.set_cover_iterlim):
@@ -267,11 +267,11 @@ def init_set_covering(util_block, principal_problem_util_block,
                 disjunct_needs_cover.count(True)
             )
             ## Solve set covering MIP
-            update_set_covering_objective(principal_problem_util_block,
+            update_set_covering_objective(discrete_problem_util_block,
                                           disjunct_needs_cover)
 
-            mip_termination = solve_MILP_principal_problem(
-                principal_problem_util_block, solver, config)
+            mip_termination = solve_MILP_discrete_problem(
+                discrete_problem_util_block, solver, config)
 
             if mip_termination is tc.infeasible:
                 config.logger.debug('Set covering problem is infeasible. '
@@ -290,21 +290,21 @@ def init_set_covering(util_block, principal_problem_util_block,
 
             ## solve local NLP
             nlp_feasible = solver.\
-                           _fix_principal_soln_solve_subproblem_and_add_cuts(
-                               principal_problem_util_block, subprob_util_block,
+                           _fix_discrete_soln_solve_subproblem_and_add_cuts(
+                               discrete_problem_util_block, subprob_util_block,
                                config)
             if nlp_feasible:
                 # if successful, update sets
                 active_disjuncts = list(
                     fabs(value(disj.binary_indicator_var) - 1) <=
                     config.integer_tolerance for disj in
-                    principal_problem_util_block.disjunct_list)
+                    discrete_problem_util_block.disjunct_list)
                 # Update the disjunct needs cover list
                 disjunct_needs_cover = list(
                     (needed_cover and not was_active) for
                     (needed_cover, was_active) in
                     zip(disjunct_needs_cover, active_disjuncts))
-            add_no_good_cut(principal_problem_util_block, config)
+            add_no_good_cut(discrete_problem_util_block, config)
             iter_count += 1
             solver.initialization_iteration += 1
 

@@ -70,7 +70,7 @@ def add_no_good_cut(target_model_util_block, config):
                                 target_model_util_block.no_good_disjunctions[
                                     idx]))
         # transform it
-        TransformationFactory(config.principal_problem_transformation).apply_to(
+        TransformationFactory(config.discrete_problem_transformation).apply_to(
             target_model_util_block,
             targets=[target_model_util_block.no_good_disjunctions[idx]])
     else:

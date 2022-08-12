@@ -16,14 +16,14 @@ from pyomo.core.base import (
 from pyomo.core.base.block import Block, TraversalStrategy
 from pyomo.common.collections import ComponentMap, ComponentSet
 from pyomo.common.modeling import unique_component_name
-from pyomo.contrib.gdpopt.principal_problem_initialize import (
+from pyomo.contrib.gdpopt.discrete_problem_initialize import (
     valid_init_strategies)
 from pyomo.contrib.gdpopt.util import (
     get_main_elapsed_time, move_nonlinear_objective_to_constraints)
 from pyomo.gdp.disjunct import Disjunct, Disjunction
 from pyomo.util.vars_from_expressions import get_vars_from_components
 
-def _get_principal_problem_and_subproblem(solver, config):
+def _get_discrete_problem_and_subproblem(solver, config):
     util_block = solver.original_util_block
     original_model = util_block.parent_block()
     if config.force_subproblem_nlp:
@@ -34,7 +34,7 @@ def _get_principal_problem_and_subproblem(solver, config):
     solver.original_obj = original_obj
 
     # create model to hold the subproblems: We create this first because
-    # certain initialization strategies for the principal problem need it.
+    # certain initialization strategies for the discrete problem need it.
     subproblem = get_subproblem(original_model)
     subproblem_util_block = subproblem.component(util_block.local_name)
     save_initial_values(subproblem_util_block)
@@ -43,59 +43,59 @@ def _get_principal_problem_and_subproblem(solver, config):
         Objective, active=True, descend_into=True))
     subproblem_util_block.obj = Expression(expr=subproblem_obj.expr)
 
-    # create principal problem--the MILP relaxation
+    # create discrete problem--the MILP relaxation
     start = get_main_elapsed_time(solver.timing)
-    principal_problem_util_block = initialize_principal_problem(
+    discrete_problem_util_block = initialize_discrete_problem(
         util_block, subproblem_util_block, config, solver)
 
-    config.logger.info('Finished principal problem initialization in {:.2f}s '
+    config.logger.info('Finished discrete problem initialization in {:.2f}s '
                        'and {} iterations \n'.format(
                            get_main_elapsed_time(solver.timing) - start,
                            solver.initialization_iteration))
 
-    return (principal_problem_util_block, subproblem_util_block)
+    return (discrete_problem_util_block, subproblem_util_block)
 
-def initialize_principal_problem(util_block, subprob_util_block, config,
-                                 solver):
+def initialize_discrete_problem(util_block, subprob_util_block, config,
+                                solver):
     """
     Calls the specified transformation (by default bigm) on the original
-    model and removes nonlinear constraints to create a MILP principal problem.
+    model and removes nonlinear constraints to create a MILP discrete problem.
     """
     config.logger.info("---Starting GDPopt initialization---")
     # clone the original model
-    principal = util_block.parent_block().clone()
-    principal.name = principal.name + ": principal problem"
+    discrete = util_block.parent_block().clone()
+    discrete.name = discrete.name + ": discrete problem"
 
-    principal_problem_util_block = principal.component(util_block.local_name)
-    principal_problem_util_block.no_good_cuts = ConstraintList()
-    principal_problem_util_block.no_good_disjunctions = Disjunction(Integers)
+    discrete_problem_util_block = discrete.component(util_block.local_name)
+    discrete_problem_util_block.no_good_cuts = ConstraintList()
+    discrete_problem_util_block.no_good_disjunctions = Disjunction(Integers)
 
     # deactivate nonlinear constraints
-    for c in principal.component_data_objects(Constraint, active=True,
-                                              descend_into=(Block, Disjunct)):
+    for c in discrete.component_data_objects(Constraint, active=True,
+                                             descend_into=(Block, Disjunct)):
         if c.body.polynomial_degree() not in (1, 0):
             c.deactivate()
 
     # Transform to a MILP
-    TransformationFactory(config.principal_problem_transformation).apply_to(
-        principal)
-    add_transformed_boolean_variable_list(principal_problem_util_block)
-    add_algebraic_variable_list(principal_problem_util_block,
+    TransformationFactory(config.discrete_problem_transformation).apply_to(
+        discrete)
+    add_transformed_boolean_variable_list(discrete_problem_util_block)
+    add_algebraic_variable_list(discrete_problem_util_block,
                                 name='all_mip_variables')
 
     # Call the specified initialization strategy. (We've already validated the
     # input in the config logic, so we know this is okay.)
     init_algorithm = valid_init_strategies.get(config.init_algorithm)
-    init_algorithm(util_block, principal_problem_util_block, subprob_util_block,
+    init_algorithm(util_block, discrete_problem_util_block, subprob_util_block,
                    config, solver)
 
-    return principal_problem_util_block
+    return discrete_problem_util_block
 
-def add_util_block(principal):
+def add_util_block(discrete):
     # create a block to store the cuts
-    name = unique_component_name(principal, '_gdpopt_cuts')
+    name = unique_component_name(discrete, '_gdpopt_cuts')
     block = Block()
-    principal.add_component(name, block)
+    discrete.add_component(name, block)
 
     return block
 
@@ -169,7 +169,7 @@ def add_boolean_variable_lists(util_block):
             util_block.boolean_variable_list.append(v)
             util_block.non_indicator_boolean_variable_list.append(v)
 
-# For the principal problem, we want the corresponding binaries for all of the
+# For the discrete problem, we want the corresponding binaries for all of the
 # BooleanVars. This must be called after logical_to_linear has been called.
 def add_transformed_boolean_variable_list(util_block):
     util_block.transformed_boolean_variable_list = [

@@ -368,7 +368,7 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
                     )
                     return float('inf'), float('inf')
                 minlp_args = dict(config.minlp_solver_args)
-                if (config.time_limit is not None and 
+                if (config.time_limit is not None and
                     config.minlp_solver == 'gams'):
                     elapsed = get_main_elapsed_time(self.timing)
                     remaining = max(config.time_limit - elapsed, 1)

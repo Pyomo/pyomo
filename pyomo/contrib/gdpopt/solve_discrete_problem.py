@@ -8,7 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
-"""Functions for solving the principal problem."""
+"""Functions for solving the discrete problem."""
 from copy import deepcopy
 
 from pyomo.common.deprecation import deprecation_warning
@@ -21,7 +21,7 @@ from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 
-def solve_MILP_principal_problem(util_block, solver, config):
+def solve_MILP_discrete_problem(util_block, solver, config):
     """Solves the linear GDP model and attempts to resolve solution issues.
     Returns one of TerminationCondition.optimal, TerminationCondition.feasible,
     TerminationCondition.infeasible, or TerminationCondition.unbounded.
@@ -56,12 +56,12 @@ def solve_MILP_principal_problem(util_block, solver, config):
         raise RuntimeError(
             "MIP solver %s is not available." % config.mip_solver)
 
-    # Callback immediately before solving MIP principal problem
-    config.call_before_principal_problem_solve(solver, m, util_block)
+    # Callback immediately before solving MIP discrete problem
+    config.call_before_discrete_problem_solve(solver, m, util_block)
     if config.call_before_master_solve is not _DoNothing:
         deprecation_warning(
             "The 'call_before_master_solve' argument is deprecated. "
-            "Please use the 'call_before_principal_problem_solve' option "
+            "Please use the 'call_before_discrete_problem_solve' option "
             "to specify the callback.", version="TBD")
 
     with SuppressInfeasibleWarning():
@@ -78,11 +78,11 @@ def solve_MILP_principal_problem(util_block, solver, config):
                                              remaining)
         results = SolverFactory(config.mip_solver).solve(m, **mip_args)
 
-    config.call_after_principal_problem_solve(solver, m, util_block)
+    config.call_after_discrete_problem_solve(solver, m, util_block)
     if config.call_after_master_solve is not _DoNothing:
         deprecation_warning(
             "The 'call_after_master_solve' argument is deprecated. "
-            "Please use the 'call_after_principal_problem_solve' option to "
+            "Please use the 'call_after_discrete_problem_solve' option to "
             "specify the callback.", version="TBD")
 
     terminate_cond = results.solver.termination_condition
@@ -95,20 +95,20 @@ def solve_MILP_principal_problem(util_block, solver, config):
     if terminate_cond is tc.unbounded:
         # Solution is unbounded. This occurs when the objective is
         # nonlinear. The nonlinear objective is moved to the constraints, and
-        # deactivated for the linear principal problem. We will generate an
+        # deactivated for the linear discrete problem. We will generate an
         # arbitrary discrete solution by bounding the objective and re-solving,
         # in hopes that the cuts we generate later bound this problem.
 
         obj_bound = 1E15
         config.logger.warning(
-            'Principal problem was unbounded. '
+            'Discrete problem was unbounded. '
             'Re-solving with arbitrary bound values of (-{0:.10g}, {0:.10g}) '
             'on the objective, in order to get a discrete solution. '
             'Check your initialization routine.'.format(obj_bound))
-        principal_objective = next(m.component_data_objects(Objective,
-                                                            active=True))
+        discrete_objective = next(m.component_data_objects(Objective,
+                                                           active=True))
         util_block.objective_bound = Constraint(
-            expr=(-obj_bound, principal_objective.expr, obj_bound))
+            expr=(-obj_bound, discrete_objective.expr, obj_bound))
         with SuppressInfeasibleWarning():
             results = SolverFactory(config.mip_solver).solve(
                 m, **config.mip_solver_args)
@@ -121,10 +121,10 @@ def solve_MILP_principal_problem(util_block, solver, config):
             return tc.unbounded
         else:
             raise RuntimeError("Unable to find a feasible solution for the "
-                               "unbounded MILP principal problem by bounding "
+                               "unbounded MILP discrete problem by bounding "
                                "the objective. Either check your "
-                               "principal problem initialization, or add a "
-                               "bound on the principal problem objective value "
+                               "discrete problem initialization, or add a "
+                               "bound on the discrete problem objective value "
                                "that admits a feasible solution.")
 
     if terminate_cond is tc.optimal:
@@ -133,18 +133,18 @@ def solve_MILP_principal_problem(util_block, solver, config):
         return tc.feasible
     elif terminate_cond is tc.infeasible:
         config.logger.info(
-            'MILP principal problem is now infeasible. GDPopt has explored or '
+            'MILP discrete problem is now infeasible. GDPopt has explored or '
             'cut off all feasible discrete configurations.')
         return tc.infeasible
     elif terminate_cond is tc.maxTimeLimit:
         if len(results.solution) > 0:
             config.logger.info(
-                'Unable to optimize MILP principal problem within time limit. '
+                'Unable to optimize MILP discrete problem within time limit. '
                 'Using current solver feasible solution.')
             return tc.feasible
         else:
             config.logger.info(
-                'Unable to optimize MILP principal problem within time limit. '
+                'Unable to optimize MILP discrete problem within time limit. '
                 'No solution found. Treating as infeasible, but there are no '
                 'guarantees.')
             return tc.infeasible
@@ -153,12 +153,12 @@ def solve_MILP_principal_problem(util_block, solver, config):
         # load the solution and suppress the warning message by setting
         # solver status to ok.
         config.logger.info(
-            'MIP solver reported feasible solution to MILP principal problem, '
+            'MIP solver reported feasible solution to MILP discrete problem, '
             'but it is not guaranteed to be optimal.')
         return tc.feasible
     else:
         raise ValueError(
-            'GDPopt unable to handle MILP principal problem '
+            'GDPopt unable to handle MILP discrete problem '
             'termination condition '
             'of %s. Solver message: %s' %
             (terminate_cond, results.solver.message))
