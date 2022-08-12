@@ -286,6 +286,9 @@ class TestGDPoptUnit(unittest.TestCase):
                 "algorithm-specific solver."):
             SolverFactory('gdpopt').solve(m)
 
+    @unittest.skipIf(not LOA_solvers_available,
+                     "Required subsolvers %s are not available"
+                     % (LOA_solvers,))
     def test_solve_block(self):
         m = ConcreteModel()
         m.b = Block()
