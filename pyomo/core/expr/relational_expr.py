@@ -396,7 +396,7 @@ def _process_relational_arg(arg, n):
             _process_relational_arg.constant = False
         else:
             arg = _process_nonnumeric_arg(arg)
-            if agr.__class__ not in native_numeric_types:
+            if arg.__class__ not in native_numeric_types:
                 _process_relational_arg.constant = False
     return arg
 
