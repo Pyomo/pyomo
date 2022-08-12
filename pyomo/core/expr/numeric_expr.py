@@ -696,16 +696,6 @@ class SumExpression(SumExpressionBase):
             state[i] = getattr(self, i)
         return state
 
-    def is_constant(self):
-        #
-        # In most normal contexts, a SumExpression is
-        # non-constant.  When Forming expressions, constant
-        # parameters are turned into numbers, which are
-        # simply added.  Mutable parameters, variables and
-        # expressions are not constant.
-        #
-        return False
-
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             tmp = [values[0]]
@@ -803,15 +793,6 @@ class Expr_ifExpression(ExpressionBase):
                 return args[1] # self._then.is_fixed()
             else:
                 return args[2] # self._else.is_fixed()
-        else:
-            return False
-
-    def is_constant(self):
-        if is_constant(self._if):
-            if value(self._if):
-                return is_constant(self._then)
-            else:
-                return is_constant(self._else)
         else:
             return False
 
@@ -1036,9 +1017,6 @@ class LinearExpression(ExpressionBase):
 
     def _compute_polynomial_degree(self, result):
         return 1 if not self.is_fixed() else 0
-
-    def is_constant(self):
-        return len(self.linear_vars) == 0
 
     def _is_fixed(self, values=None):
         return all(v.fixed for v in self.linear_vars)

@@ -83,9 +83,6 @@ would both cause this exception.""".strip() % (self,))
     def is_relational(self):
         return self.is_expression_type(ExpressionType.RELATIONAL)
 
-    def is_constant(self):
-        return all(is_constant(arg) for arg in self._args_)
-
     def is_potentially_variable(self):
         return any(is_potentially_variable(arg) for arg in self._args_)
 

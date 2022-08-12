@@ -118,7 +118,7 @@ def quicksum(args, start=0, linear=None):
                 for arg in args:
                     e += arg
             # Return the constant term if the linear expression does not contains variables
-            if e.is_constant():
+            if not e.linear_vars:
                 return e.constant
             return e
         else:

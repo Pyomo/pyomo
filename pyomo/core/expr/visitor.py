@@ -988,12 +988,16 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
 
     def enterNode(self, node):
         args = list(node.args)
-        return args, [False, args]
+        # [bool:args_have_changed, list:original_args, bool:node_is_constant]
+        return args, [False, args, True]
 
     def acceptChildResult(self, node, data, child_result, child_idx):
         if data[1][child_idx] is not child_result:
             data[1][child_idx] = child_result
             data[0] = True
+        if ( child_result.__class__ not in native_types
+             and not child_result.is_constant() ):
+            data[2] = False
         return data
 
     def exitNode(self, node, data):
@@ -1005,7 +1009,10 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
                 node.set_value(data[1][0])
                 return node
         elif data[0]:
-            return node.create_node_with_local_data(tuple(data[1]))
+            if data[2]:
+                return node._apply_operation(data[1])
+            else:
+                return node.create_node_with_local_data(tuple(data[1]))
         return node
 
     @deprecated(

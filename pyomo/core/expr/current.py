@@ -146,6 +146,8 @@ def Expr_if(IF=None, THEN=None, ELSE=None):
     """
     Function used to construct a logical conditional expression.
     """
+    if _numvalue.is_constant(IF):
+        return THEN if value(IF) else ELSE
     return Expr_ifExpression(IF_=IF, THEN_=THEN, ELSE_=ELSE)
 
 #

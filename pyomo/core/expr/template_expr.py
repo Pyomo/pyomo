@@ -18,7 +18,7 @@ import builtins
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import (
     NumericValue, native_types, nonpyomo_leaf_types,
-    as_numeric, value,
+    as_numeric, value, is_constant
 )
 from pyomo.core.expr.numeric_expr import ExpressionBase, SumExpression
 from pyomo.core.expr.visitor import (
@@ -423,12 +423,6 @@ class IndexTemplate(NumericValue):
         """
         return True
 
-    def is_constant(self):
-        """
-        Returns False because this cannot immediately be simplified.
-        """
-        return False
-
     def is_potentially_variable(self):
         """Returns False because index values cannot be variables.
 
@@ -508,7 +502,10 @@ def resolve_template(expr):
         if len(args) == node.nargs() and all(
                 a is b for a,b in zip(node.args, args)):
             return node
-        return node.create_node_with_local_data(args)
+        if all(map(is_constant, args)):
+            return node._apply_operation(args)
+        else:
+            return node.create_node_with_local_data(args)
 
     return StreamBasedExpressionVisitor(
         initializeWalker=lambda x: beforeChild(None, x, None),
