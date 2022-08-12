@@ -139,26 +139,24 @@ class ExpressionBaseMixin(object):
         Parameters
         ----------
         verbose: bool
-
             If :const:`True`, then the the string representation
             consists of nested functions.  Otherwise, the string
             representation is an algebraic (infix notation) equation.
             Defaults to :const:`False`.
 
         labeler: 
-
             An object that generates string labels for variables in the
             expression tree.  Defaults to :const:`None`.
         
         smap:
-
             If specified, this
             :class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>`
             is used to cache labels for variables.
         
-        compute_values (bool): If :const:`True`, then
-                parameters and fixed variables are evaluated before the
-                expression string is generated.  Default is :const:`False`.
+        compute_values (bool):
+            If :const:`True`, then parameters and fixed variables are
+            evaluated before the expression string is generated.
+            Default is :const:`False`.
 
         Returns:
             A string representation for the expression tree.
@@ -167,7 +165,7 @@ class ExpressionBaseMixin(object):
         return expression_to_string(self, verbose=verbose, labeler=labeler,
                                     smap=smap, compute_values=compute_values)
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         """
         Construct a string representation for this node, using the string
         representations of its children.
@@ -185,9 +183,6 @@ class ExpressionBaseMixin(object):
             smap:  If specified, this :class:`SymbolMap
                 <pyomo.core.expr.symbol_map.SymbolMap>` is
                 used to cache labels for variables.
-            compute_values (bool): If :const:`True`, then
-                parameters and fixed variables are evaluated before the
-                expression string is generated.
 
         Returns:
             A string representation for this node.

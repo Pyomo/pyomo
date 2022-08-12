@@ -115,7 +115,7 @@ class GetItemExpression(ExpressionBase):
             obj = value(obj)
         return obj
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         values = tuple(_[1:-1] if _[0]=='(' and _[-1]==')' else _
                        for _ in values)
         if verbose:
@@ -170,7 +170,7 @@ class GetAttrExpression(ExpressionBase):
             obj = value(obj)
         return obj
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         assert len(values) == 2
         if verbose:
             return "getattr(%s, %s)" % tuple(values)
@@ -322,7 +322,7 @@ class TemplateSumExpression(ExpressionBase):
     def _apply_operation(self, result):
         return sum(result)
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         ans = ''
         val = values[0]
         if val[0]=='(' and val[-1]==')' and _balanced_parens(val[1:-1]):

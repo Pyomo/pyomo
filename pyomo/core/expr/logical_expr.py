@@ -237,7 +237,7 @@ class NotExpression(UnaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'Logical Negation'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         return "~%s" % values[0]
 
     def _apply_operation(self, result):
@@ -267,7 +267,7 @@ class EquivalenceExpression(BinaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'iff'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         return " iff ".join(values)
 
     def _apply_operation(self, result):
@@ -285,7 +285,7 @@ class XorExpression(BinaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'xor'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         return " ⊻ ".join(values)
 
     def _apply_operation(self, result):
@@ -303,7 +303,7 @@ class ImplicationExpression(BinaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'implies'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         return " --> ".join(values)
 
     def _apply_operation(self, result):
@@ -376,7 +376,7 @@ class AndExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'and'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         return " ∧ ".join(values)
 
     def _apply_operation(self, result):
@@ -402,7 +402,7 @@ class OrExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'or'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         return " ∨ ".join(values)
 
     def _apply_operation(self, result):
@@ -434,7 +434,7 @@ class ExactlyExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'exactly'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         return "exactly(%s: [%s])" % (values[0], ", ".join(values[1:]))
 
     def _apply_operation(self, result):
@@ -458,7 +458,7 @@ class AtMostExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'atmost'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         return "atmost(%s: [%s])" % (values[0], ", ".join(values[1:]))
 
     def _apply_operation(self, result):
@@ -482,7 +482,7 @@ class AtLeastExpression(NaryBooleanExpression):
     def getname(self, *arg, **kwd):
         return 'atleast'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         return "atleast(%s: [%s])" % (values[0], ", ".join(values[1:]))
 
     def _apply_operation(self, result):

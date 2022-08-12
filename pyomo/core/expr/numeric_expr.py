@@ -255,16 +255,16 @@ class NegationExpression(ExpressionBase):
     def _compute_polynomial_degree(self, result):
         return result[0]
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
-            return "{0}({1})".format(self.getname(), values[0])
+            return f"{self.getname()}({values[0]})"
         tmp = values[0]
         if tmp[0] == '-':
             i = 1
             while tmp[i] == ' ':
                 i += 1
             return tmp[i:]
-        return "- "+tmp
+        return "- " + tmp
 
     def _apply_operation(self, result):
         return -result[0]
@@ -318,8 +318,8 @@ class ExternalFunctionExpression(ExpressionBase):
     def _apply_operation(self, result):
         return self._fcn.evaluate( result )
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        return "{0}({1})".format(self.getname(), ", ".join(values))
+    def _to_string(self, values, verbose, smap):
+        return f"{self.getname()}({', '.join(values)})"
 
     def get_arg_units(self):
         """ Return the units for this external functions arguments """
@@ -386,10 +386,10 @@ class PowExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'pow'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
-        return "{0}**{1}".format(values[0], values[1])
+            return f"{self.getname()}({', '.join(values)})"
+        return f"{values[0]}**{values[1]}"
 
 
 class NPV_PowExpression(NPV_Mixin, PowExpression):
@@ -405,6 +405,9 @@ class MaxExpression(ExpressionBase):
 
     __slots__ = ()
 
+    # This operator does not have an infix representation
+    PRECEDENCE = None
+
     def nargs(self):
         return len(self._args_)
 
@@ -414,12 +417,8 @@ class MaxExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'max'
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        return "%s(%s)" % (self.getname(), ', '.join(
-            arg[1:-1]
-            if (arg and arg[0] == '(' and arg[-1] == ')'
-                and _balanced_parens(arg[1:-1]))
-            else arg for arg in values))
+    def _to_string(self, values, verbose, smap):
+        return f"{self.getname()}({', '.join(values)})"
 
 
 class NPV_MaxExpression(NPV_Mixin, MaxExpression):
@@ -435,6 +434,9 @@ class MinExpression(ExpressionBase):
 
     __slots__ = ()
 
+    # This operator does not have an infix representation
+    PRECEDENCE = None
+
     def nargs(self):
         return len(self._args_)
 
@@ -444,12 +446,8 @@ class MinExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'min'
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        return "%s(%s)" % (self.getname(), ', '.join(
-            arg[1:-1]
-            if (arg and arg[0] == '(' and arg[-1] == ')'
-                and _balanced_parens(arg[1:-1]))
-            else arg for arg in values))
+    def _to_string(self, values, verbose, smap):
+        return f"{self.getname()}({', '.join(values)})"
 
 
 class NPV_MinExpression(NPV_Mixin, MinExpression):
@@ -494,14 +492,15 @@ class ProductExpression(ExpressionBase):
         _l, _r = result
         return _l * _r
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
+            return f"{self.getname()}({', '.join(values)})"
         if values[0] in self._to_string.one:
             return values[1]
         if values[0] in self._to_string.minus_one:
-            return "- {0}".format(values[1])
-        return "{0}*{1}".format(values[0],values[1])
+            return f"- {values[1]}"
+        return f"{values[0]}*{values[1]}"
+
     # Store these reference sets on the function for quick lookup
     _to_string.one = {"1", "1.0", "(1)", "(1.0)"}
     _to_string.minus_one = {"-1", "-1.0", "(-1)", "(-1.0)"}
@@ -555,10 +554,10 @@ class DivisionExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'div'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
-        return "{0}/{1}".format(values[0], values[1])
+            return f"{self.getname()}({', '.join(values)})"
+        return f"{values[0]}/{values[1]}"
 
     def _apply_operation(self, result):
         return result[0] / result[1]
@@ -625,12 +624,12 @@ class NPV_SumExpression(NPV_Mixin, SumExpressionBase):
         l_, r_ = result
         return l_ + r_
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
+            return f"{self.getname()}({', '.join(values)})"
         if values[1][0] == '-':
-            return "{0} {1}".format(values[0],values[1])
-        return "{0} + {1}".format(values[0],values[1])
+            return f"{values[0]} {values[1]}"
+        return f"{values[0]} + {values[1]}"
 
     def create_node_with_local_data(self, args, classtype=None):
         assert classtype is None
@@ -696,27 +695,20 @@ class SumExpression(SumExpressionBase):
             state[i] = getattr(self, i)
         return state
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
-            tmp = [values[0]]
-            for i in range(1,len(values)):
-                tmp.append(", ")
-                tmp.append(values[i])
-            return "{0}({1})".format(self.getname(), "".join(tmp))
+            return f"{self.getname()}({', '.join(values)})"
 
-        tmp = [values[0]]
-        for i in range(1,len(values)):
-            if values[i][0] == '-':
-                tmp.append(' - ')
-                tmp.append(values[i][1:].strip())
-            elif len(values[i]) > 3 and values[i][:2] == '(-' \
-                 and values[i][-1] == ')' and _balanced_parens(values[i][1:-1]):
-                tmp.append(' - ')
-                tmp.append(values[i][2:-1].strip())
+        for i in range(1, len(values)):
+            val = values[i]
+            if val[0] == '-':
+                values[i] = ' - ' + val[1:].strip()
+            elif len(val) > 3 and val[:2] == '(-' and val[-1] == ')' \
+                 and _balanced_parens(val[1:-1]):
+                values[i] = ' - ' + val[2:-1].strip()
             else:
-                tmp.append(' + ')
-                tmp.append(values[i])
-        return ''.join(tmp)
+                values[i] = ' + ' + val
+        return ''.join(values)
 
 
 class _MutableSumExpression(SumExpression):
@@ -757,6 +749,9 @@ class Expr_ifExpression(ExpressionBase):
         ELSE_ (expression): An expression that is used if :attr:`IF_` is false.
     """
     __slots__ = ('_if','_then','_else')
+
+    # This operator does not have an infix representation
+    PRECEDENCE = None
 
     # **NOTE**: This class evaluates the branching "_if" expression
     #           on a number of occasions. It is important that
@@ -810,9 +805,9 @@ class Expr_ifExpression(ExpressionBase):
                 pass
         return None
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        return '{0}( ( {1} ), then=( {2} ), else=( {3} ) )'.\
-            format(self.getname(), self._if, self._then, self._else)
+    def _to_string(self, values, verbose, smap):
+        return f'{self.getname()}( ( {values[0]} ), then=( {values[1]} ), ' \
+            f'else=( {values[2]} ) )'
 
     def _apply_operation(self, result):
         _if, _then, _else = result
@@ -829,6 +824,9 @@ class UnaryFunctionExpression(ExpressionBase):
         fcn: The function that is used to evaluate this expression
     """
     __slots__ = ('_fcn', '_name')
+
+    # This operator does not have an infix representation
+    PRECEDENCE = None
 
     def __init__(self, args, name=None, fcn=None):
         if type(args) is not tuple:
@@ -854,14 +852,8 @@ class UnaryFunctionExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return self._name
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        if verbose:
-            return "{0}({1})".format(self.getname(), values[0])
-        if values[0] and values[0][0] == '(' and values[0][-1] == ')' \
-           and _balanced_parens(values[0][1:-1]):
-            return '{0}{1}'.format(self._name, values[0])
-        else:
-            return '{0}({1})'.format(self._name, values[0])
+    def _to_string(self, values, verbose, smap):
+        return f"{self.getname()}({', '.join(values)})"
 
     def _compute_polynomial_degree(self, result):
         if result[0] == 0:
@@ -1024,11 +1016,11 @@ class LinearExpression(ExpressionBase):
     def is_fixed(self):
         return self._is_fixed()
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if not values:
             values = ['0']
         if verbose:
-            return "%s(%s)" % (self.getname(), ', '.join(values))
+            return f"{self.getname()}({', '.join(values)})"
 
         for i in range(1, len(values)):
             term = values[i]

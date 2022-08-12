@@ -1024,6 +1024,35 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
         return self.walk_expression(expr)
 
 
+def evaluate_fixed_subexpressions(expr, descend_into_named_expressions=True,
+                                  remove_named_expressions=True):
+    return EvaluateFixedSubexpressionVisitor(
+        descend_into_named_expressions=descend_into_named_expressions,
+        remove_named_expressions=remove_named_expressions
+    ).walk_expression(expr)
+
+
+class EvaluateFixedSubexpressionVisitor(ExpressionReplacementVisitor):
+    def __init__(self,
+                 descend_into_named_expressions=False,
+                 remove_named_expressions=False):
+        super().__init__(
+              descend_into_named_expressions=descend_into_named_expressions,
+              remove_named_expressions=remove_named_expressions
+        )
+
+    def beforeChild(self, node, child, child_idx):
+        if type(child) in native_types:
+            return False, child
+        elif not child.is_expression_type():
+            if child.is_fixed():
+                return False, child()
+            else:
+                return False, child
+        elif child.is_named_expression_type():
+            if not self.enter_named_expr:
+                return False, child
+        return True, None
 
 
 #-------------------------------------------------------
@@ -1455,8 +1484,7 @@ class _IsFixedVisitor(ExpressionValueVisitor):
 
 
 def _expression_is_fixed(node):
-    """
-    Return the polynomial degree of the expression.
+    """Return bool indicating if this expression is fixed (non-variable)
 
     Args:
         node: The root node of an expression tree.
@@ -1464,6 +1492,7 @@ def _expression_is_fixed(node):
     Returns:
         A non-negative integer that is the polynomial
         degree if the expression is polynomial, or :const:`None` otherwise.
+
     """
     visitor = _IsFixedVisitor()
     return visitor.dfs_postorder_stack(node)
@@ -1478,28 +1507,31 @@ RIGHT_TO_LEFT = common.OperatorAssociativity.RIGHT_TO_LEFT
 
 class _ToStringVisitor(ExpressionValueVisitor):
 
-    def __init__(self, verbose, smap, compute_values):
+    def __init__(self, verbose, smap):
         super(_ToStringVisitor, self).__init__()
         self.verbose = verbose
         self.smap = smap
-        self.compute_values = compute_values
 
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
-        tmp = []
+        if node.PRECEDENCE is None:
+            return node._to_string(values, self.verbose, self.smap)
+
         for i,val in enumerate(values):
             arg = node._args_[i]
 
             if arg is None:
-                tmp.append('Undefined')                 # TODO: coverage
+                values[i] = 'Undefined'  # TODO: coverage
             elif arg.__class__ in native_numeric_types:
-                tmp.append(val)
+                pass
             elif arg.__class__ in nonpyomo_leaf_types:
-                tmp.append("'{0}'".format(val))
+                values[i] = f"'{val}'"
             else:
                 parens = False
                 if not self.verbose and arg.is_expression_type():
-                    if node.PRECEDENCE < arg.PRECEDENCE:
+                    if arg.PRECEDENCE is None:
+                        pass
+                    elif node.PRECEDENCE < arg.PRECEDENCE:
                         parens = True
                     elif node.PRECEDENCE == arg.PRECEDENCE:
                         if i == 0:
@@ -1509,11 +1541,9 @@ class _ToStringVisitor(ExpressionValueVisitor):
                         else:
                             parens = True
                 if parens:
-                    tmp.append("({0})".format(val))
-                else:
-                    tmp.append(val)
+                    values[i] = f"({val})"
 
-        return node._to_string(tmp, self.verbose, self.smap, self.compute_values)
+        return node._to_string(values, self.verbose, self.smap)
 
     def visiting_potential_leaf(self, node):
         """
@@ -1534,31 +1564,43 @@ class _ToStringVisitor(ExpressionValueVisitor):
             return True, node.to_string(
                 verbose=self.verbose,
                 smap=self.smap,
-                compute_values=self.compute_values
             )
         else:
             return True, str(node)
 
 
-def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_values=False):
-    """
-    Return a string representation of an expression.
+def expression_to_string(expr, verbose=None, labeler=None, smap=None,
+                         compute_values=False):
+    """Return a string representation of an expression.
 
-    Args:
-        expr: The root node of an expression tree.
-        verbose (bool): If :const:`True`, then the output is
-            a nested functional form.  Otherwise, the output
-            is an algebraic expression.  Default is :const:`False`.
-        labeler:  If specified, this labeler is used to label
-            variables in the expression.
-        smap:  If specified, this :class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>` is
-            used to cache labels.
-        compute_values (bool): If :const:`True`, then
-            parameters and fixed variables are evaluated before the
-            expression string is generated.  Default is :const:`False`.
+    Parameters
+    ----------
+    expr: ExpressionBaseMixin
+        The root node of an expression tree.
+
+    verbose: bool
+        If :const:`True`, then the output is a nested functional form.
+        Otherwise, the output is an algebraic expression.  Default is
+        retrieved from :py:attr:`common.TO_STRING_VERBOSE`
+
+    labeler: Callable
+
+        If specified, this labeler is used to generate the string
+        representation for leaves (Var / Param objects) in the
+        expression.
+
+    smap:  SymbolMap
+        If specified, this :class:`SymbolMap
+        <pyomo.core.expr.symbol_map.SymbolMap>` is used to cache labels.
+
+    compute_values: bool
+        If :const:`True`, then parameters and fixed variables are
+        evaluated before the expression string is generated.  Default is
+        :const:`False`.
 
     Returns:
         A string representation for the expression.
+
     """
     verbose = common.TO_STRING_VERBOSE if verbose is None else verbose
     #
@@ -1569,7 +1611,12 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None, compute_va
             smap = SymbolMap()
         smap.default_labeler = labeler
     #
+    # TODO: should we deprecate the compute_values option?
+    #
+    if compute_values:
+        expr = evaluate_fixed_subexpressions(expr)
+    #
     # Create and execute the visitor pattern
     #
-    visitor = _ToStringVisitor(verbose, smap, compute_values)
+    visitor = _ToStringVisitor(verbose, smap)
     return visitor.dfs_postorder_stack(expr)

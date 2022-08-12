@@ -113,7 +113,7 @@ class IIdentityExpression(NumericValue):
         """Convert this expression into a string."""
         return EXPR.expression_to_string(self, verbose=verbose, labeler=labeler, smap=smap, compute_values=compute_values)
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
             name = self.getname()
             if name == None:

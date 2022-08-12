@@ -217,8 +217,11 @@ class RangedExpression(RelationalExpressionBase):
         else:
             return _l < _b and _b < _r
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        return "{0}  {1}  {2}  {3}  {4}".format(values[0], '<' if self._strict[0] else '<=', values[1], '<' if self._strict[1] else '<=', values[2])
+    def _to_string(self, values, verbose, smap):
+        return "%s  %s  %s  %s  %s" % (
+            values[0], "<="[:2-self._strict[0]],
+            values[1], "<="[:2-self._strict[1]],
+            values[2])
 
     @property
     def strict(self):
@@ -263,9 +266,9 @@ class InequalityExpression(RelationalExpressionBase):
             return _l < _r
         return _l <= _r
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        if len(values) == 2:
-            return "{0}  {1}  {2}".format(values[0], '<' if self._strict else '<=', values[1])
+    def _to_string(self, values, verbose, smap):
+        return "%s  %s  %s" % (
+            values[0], "<="[:2-self._strict], values[1])
 
     @property
     def strict(self):
@@ -344,8 +347,8 @@ class EqualityExpression(RelationalExpressionBase):
         _l, _r = result
         return _l == _r
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        return "{0}  ==  {1}".format(values[0], values[1])
+    def _to_string(self, values, verbose, smap):
+        return "%s  ==  %s" % (values[0], values[1])
 
 
 _relational_op = {

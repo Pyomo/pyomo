@@ -190,18 +190,17 @@ class BooleanValue(PyomoObject):
         Returns:
             A string representation for the expression tree.
         """
-        if compute_values and self.is_fixed():
+        if (compute_values and self.is_fixed()) or self.is_constant():
             try:
                 return str(self())
             except:
-                pass
-        if not self.is_constant():
-            if smap:
-                return smap.getSymbol(self, labeler)
-            elif labeler is not None:
-                return labeler(self)
-        return str(self)
-
+                pass # return str(self)
+        if smap:
+            return smap.getSymbol(self, labeler)
+        elif labeler is not None:
+            return labeler(self)
+        else:
+            return str(self)
 
 class BooleanConstant(BooleanValue):
     """An object that contains a constant Logical value.
