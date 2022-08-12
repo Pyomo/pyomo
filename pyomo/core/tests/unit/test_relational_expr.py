@@ -65,45 +65,22 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #   a   b
         with self.assertRaisesRegex(
                 TypeError, "Attempting to use a non-numeric type "
-                r"\(EqualityExpression\) in a numeric context."):
+                r"\(EqualityExpression\) in a numeric expression context."):
             e == m.a
         with self.assertRaisesRegex(
                 TypeError, "Attempting to use a non-numeric type "
-                r"\(EqualityExpression\) in a numeric context."):
+                r"\(EqualityExpression\) in a numeric expression context."):
             m.a == e
-
-        # NB: cannot test the reverse here: _VarArray (correctly)
-        # does not define __eq__
-        with self.assertRaisesRegex(
-                TypeError, "Argument .* is an indexed numeric value"):
-            m.a == m.x
-
-        try:
-            e == m.a
-            self.fail("expected nested equality expression to raise TypeError")
-        except TypeError:
-            pass
-
-        try:
-            m.a == e
-            self.fail("expected nested equality expression to raise TypeError")
-        except TypeError:
-            pass
 
         #
         # Test expression with an indexed variable
         #
-        try:
+        with self.assertRaisesRegex(
+                TypeError, "Argument .* is an indexed numeric value"):
             m.x == m.a
-            self.fail("expected use of indexed variable to raise TypeError")
-        except TypeError:
-            pass
-
-        try:
+        with self.assertRaisesRegex(
+                TypeError, "Argument .* is an indexed numeric value"):
             m.a == m.x
-            self.fail("expected use of indexed variable to raise TypeError")
-        except TypeError:
-            pass
 
     def test_simpleInequality1(self):
         #

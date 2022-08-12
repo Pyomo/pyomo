@@ -378,7 +378,7 @@ def _process_nonnumeric_arg(obj):
 
         raise TypeError(
             "Attempting to use a non-numeric type (%s) in a "
-            "numeric context." % (obj.__class__.__name__,))
+            "numeric expression context." % (obj.__class__.__name__,))
 
 def _process_relational_arg(arg, n):
     try:
