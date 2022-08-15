@@ -302,7 +302,8 @@ class TestGDPoptUnit(unittest.TestCase):
                                           [m.b.y**2 + m.b.x <= 3]])
         m.b.obj = Objective(expr=m.b.x)
 
-        SolverFactory('gdpopt.ric').solve(m.b)
+        SolverFactory('gdpopt.ric').solve(m.b, mip_solver=mip_solver,
+                                          nlp_solver=nlp_solver)
 
         # There are multiple optimal solutions, so just leave it at this:
         self.assertAlmostEqual(value(m.b.x), -5)
