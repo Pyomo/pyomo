@@ -908,9 +908,14 @@ class IndexedParam(Param):
     # need to override the normal scheme for pre-allocating
     # ComponentData objects during deepcopy.
     def _create_objects_for_deepcopy(self, memo, component_list):
-        component_list.append(self)
-        memo[id(self)] = self.__class__.__new__(self.__class__)
-        if self.mutable and self._data.__class__ is dict:
+        _id = id(self)
+        if _id not in memo:
+            component_list.append(self)
+            memo[_id] = self.__class__.__new__(self.__class__)
+        if self.mutable:
             for obj in self._data.values():
+                _id = id(obj)
+                if _id in memo:
+                    continue
                 component_list.append(obj)
                 memo[id(obj)] = obj.__class__.__new__(obj.__class__)

@@ -326,8 +326,10 @@ class IndexedComponent(Component):
         super(IndexedComponent, self).__setstate__(state)
 
     def _create_objects_for_deepcopy(self, memo, component_list):
-        component_list.append(self)
-        memo[id(self)] = self.__class__.__new__(self.__class__)
+        _id = id(self)
+        if _id not in memo:
+            component_list.append(self)
+            memo[_id] = self.__class__.__new__(self.__class__)
         # For indexed components, we need to pre-emptively clone all
         # component data objects as well (as those are teh objects that
         # will be referenced by things like expressions)
@@ -337,9 +339,12 @@ class IndexedComponent(Component):
                 # preemptively clone the data objects.
                 if obj.parent_component() is not self:
                     continue
+                _id = id(obj)
+                if _id in memo:
+                    continue
                 # But everything else should be cloned.
                 component_list.append(obj)
-                memo[id(obj)] = obj.__class__.__new__(obj.__class__)
+                memo[_id] = obj.__class__.__new__(obj.__class__)
 
     def to_dense_data(self):
         """TODO"""

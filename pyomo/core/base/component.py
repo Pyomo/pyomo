@@ -171,8 +171,10 @@ class _ComponentBase(PyomoObject):
         return memo[id(self)]
 
     def _create_objects_for_deepcopy(self, memo, component_list):
-        component_list.append(self)
-        memo[id(self)] = self.__class__.__new__(self.__class__)
+        _id = id(self)
+        if _id not in memo:
+            component_list.append(self)
+            memo[_id] = self.__class__.__new__(self.__class__)
 
     def _populate_deepcopied_object(self, memo):
         # We can't do the "obvious", since this is a (partially)
