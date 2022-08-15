@@ -3,6 +3,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     _SquareNlpSolverBase,
+    DenseSquareNlpSolver,
 )
 
 import scipy as sp
@@ -27,26 +28,35 @@ class ScipyRootSolver(object):
 
         # Transfer values back to Pyomo model
 
+        # Translate results into a Pyomo-compatible results structure
 
-class FsolveNlpSolver(_SquareNlpSolverBase):
+
+class FsolveNlpSolver(DenseSquareNlpSolver):
 
     def solve(self, x0=None):
         if x0 is None:
             x0 = self._nlp.get_primals()
-        sp.optimize.fsolve(
+        results = sp.optimize.fsolve(
             self.evaluate_function,
             x0,
             fprime=self.evaluate_jacobian,
         )
+        return results
+
+    def evaluate_jacobian(self, x0):
+        # NOTE: NLP object should handle any caching
+        self._nlp.set_primals(x0)
+        return self._nlp.evaluate_jacobian().toarray()
 
 
-class RootNlpSolver(_SquareNlpSolverBase):
+class RootNlpSolver(DenseSquareNlpSolver):
 
     def solve(self, x0=None):
         if x0 is None:
             x0 = self._nlp.get_primals()
-        sp.optimize.root(
+        results = sp.optimize.root(
             self.evaluate_function,
             x0,
             jac=self.evaluate_jacobian,
         )
+        return results

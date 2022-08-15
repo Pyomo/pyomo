@@ -51,3 +51,13 @@ class _SquareNlpSolverBase(object):
         # NOTE: NLP object should handle any caching
         self._nlp.set_primals(x0)
         return self._nlp.evaluate_jacobian()
+
+
+class DenseSquareNlpSolver(_SquareNlpSolverBase):
+    """A square NLP solver that uses a dense Jacobian
+    """
+
+    def evaluate_jacobian(self, x0):
+        sparse_jac = super().evaluate_jacobian(x0)
+        dense_jac = sparse_jac.toarray()
+        return dense_jac
