@@ -1,6 +1,9 @@
 from pyomo.core.base.objective import Objective
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
+    _SquareNlpSolverBase,
+)
 
 import scipy as sp
 
@@ -25,24 +28,25 @@ class ScipyRootSolver(object):
         # Transfer values back to Pyomo model
 
 
-class ScipySquareNlpSolver(object):
+class FsolveNlpSolver(_SquareNlpSolverBase):
 
-    def __init__(self, nlp):
-        self._nlp = nlp
-        # TODO: Make sure nlp only has equality constraints
-
-    def solve(self):
-
+    def solve(self, x0=None):
+        if x0 is None:
+            x0 = self._nlp.get_primals()
         sp.optimize.fsolve(
             self.evaluate_function,
             x0,
             fprime=self.evaluate_jacobian,
         )
 
-    def evaluate_function(self, x0):
-        self._nlp.set_primals(x0)
-        return self._nlp.evaluate_constraints_eq()
 
-    def evaluate_jacobian(self, x0):
-        self._nlp.set_primals(x0)
-        return self._nlp.evaluate_jacobian()
+class RootNlpSolver(_SquareNlpSolverBase):
+
+    def solve(self, x0=None):
+        if x0 is None:
+            x0 = self._nlp.get_primals()
+        sp.optimize.root(
+            self.evaluate_function,
+            x0,
+            jac=self.evaluate_jacobian,
+        )
