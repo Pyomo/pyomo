@@ -140,27 +140,41 @@ class _ComponentBase(PyomoObject):
                 # component is out-of-scope.  shallow copy only
                 ans = memo[id(self)] = self
                 return ans
-
         #
-        # There is a particularly subtle bug with 'uncopyable'
-        # attributes: if the exception is thrown while copying a complex
-        # data structure, we can be in a state where objects have been
-        # created and assigned to the memo in the try block, but they
-        # haven't had their state set yet.  When the exception moves us
-        # into the except block, we need to effectively "undo" those
-        # partially copied classes.  The only way is to restore the memo
-        # to the state it was in before we started.  Right now, our
-        # solution is to make a (shallow) copy of the memo before each
-        # operation and restoring it in the case of exception.
-        # Unfortunately that is a lot of usually unnecessary work.
-        # Since *most* classes are copyable, we will avoid that
-        # "paranoia" unless the naive clone generated an error - in
-        # which case Block.clone() will switch over to the more
-        # "paranoid" mode.
+        # deepcopy() is an inherently recursive operation.  This can
+        # cause problems for highly interconnected Pyomo models (for
+        # example, a time linked model where each time block has a
+        # linking constraint [in the time block] to the next / previous
+        # block).  This would effectively put the entire time hirizon on
+        # the stack.  To avoid this, we will leverage the useful
+        # knowledge that all component references point to other
+        # components / component datas, and NOT to attributes on the
+        # components/datas.  So, if we can first go through and stub in
+        # all the objects that we will need to populate,and then go
+        # through and deepcopy them, then we can unroll the vast
+        # majority of the recursion.
         #
-        paranoid = memo.get('__paranoid__', None)
+        component_list = []
+        self._create_objects_for_deepcopy(memo, component_list)
+        #
+        # Now that we have created (but not populated) all the
+        # components that we expect to need, we can go through and
+        # populate all the components.
+        #
+        if '__paranoid__' not in memo:
+            memo['__paranoid__'] = None
+        # The component_list is roughly in declaration order.  This
+        # means that it should be relatively safe to clone the contents
+        # in the same order.
+        for comp in component_list:
+            comp._populate_deepcopied_object(memo)
+        return memo[id(self)]
 
-        ans = memo[id(self)] = self.__class__.__new__(self.__class__)
+    def _create_objects_for_deepcopy(self, memo, component_list):
+        component_list.append(self)
+        memo[id(self)] = self.__class__.__new__(self.__class__)
+
+    def _populate_deepcopied_object(self, memo):
         # We can't do the "obvious", since this is a (partially)
         # slot-ized class and the __dict__ structure is
         # nonauthoritative:
@@ -180,12 +194,31 @@ class _ComponentBase(PyomoObject):
         # update the _parent refs appropriately, and since this is a
         # slot-ized class, we cannot overwrite the __deepcopy__
         # attribute to prevent infinite recursion.
+        #
         state = self.__getstate__()
+        #
+        # There is a particularly subtle bug with 'uncopyable'
+        # attributes: if the exception is thrown while copying a complex
+        # data structure, we can be in a state where objects have been
+        # created and assigned to the memo in the try block, but they
+        # haven't had their state set yet.  When the exception moves us
+        # into the except block, we need to effectively "undo" those
+        # partially copied classes.  The only way is to restore the memo
+        # to the state it was in before we started.  Right now, our
+        # solution is to make a (shallow) copy of the memo before each
+        # operation and restoring it in the case of exception.
+        # Unfortunately that is a lot of usually unnecessary work.
+        # Since *most* classes are copyable, we will avoid that
+        # "paranoia" unless the naive clone generated an error - in
+        # which case Block.clone() will switch over to the more
+        # "paranoid" mode.
+        #
         try:
-            if paranoid:
+            if memo['__paranoid__']:
                 saved_memo = dict(memo)
             new_state = deepcopy(state, memo)
         except:
+            paranoid = memo['__paranoid__']
             if paranoid:
                 # Note: memo is intentionally pass-by-reference.  We
                 # need to clear and reset the object we were handed (and
@@ -240,8 +273,8 @@ class _ComponentBase(PyomoObject):
                             "Consider changing how you initialize this "
                             "component or using a ConcreteModel."
                             % ( k, self.name ))
-        ans.__setstate__(new_state)
-        return ans
+        memo[id(self)].__setstate__(new_state)
+
 
     @deprecated("""The cname() method has been renamed to getname().
     The preferred method of obtaining a component name is to use the

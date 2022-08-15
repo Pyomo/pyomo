@@ -903,3 +903,14 @@ class IndexedParam(Param):
             raise TypeError('Cannot compute the value of an indexed Param (%s)'
                             % (self.name,) )
 
+    # Because IndexedParam can use a non-standard data store (i.e., the
+    # values in the _data dict may not be ComponentData objects), we
+    # need to override the normal scheme for pre-allocating
+    # ComponentData objects during deepcopy.
+    def _create_objects_for_deepcopy(self, memo, component_list):
+        component_list.append(self)
+        memo[id(self)] = self.__class__.__new__(self.__class__)
+        if self.mutable and self._data.__class__ is dict:
+            for obj in self._data.values():
+                component_list.append(obj)
+                memo[id(obj)] = obj.__class__.__new__(obj.__class__)

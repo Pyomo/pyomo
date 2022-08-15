@@ -325,6 +325,22 @@ class IndexedComponent(Component):
             state['_index_set'] = UnindexedComponent_set
         super(IndexedComponent, self).__setstate__(state)
 
+    def _create_objects_for_deepcopy(self, memo, component_list):
+        component_list.append(self)
+        memo[id(self)] = self.__class__.__new__(self.__class__)
+        # For indexed components, we need to pre-emptively clone all
+        # component data objects as well (as those are teh objects that
+        # will be referenced by things like expressions)
+        if self.is_indexed() and not self.is_reference():
+            for obj in self._data.values():
+                # We need to catch things like References and *not*
+                # preemptively clone the data objects.
+                if obj.parent_component() is not self:
+                    continue
+                # But everything else should be cloned.
+                component_list.append(obj)
+                memo[id(obj)] = obj.__class__.__new__(obj.__class__)
+
     def to_dense_data(self):
         """TODO"""
         for idx in self._index_set:
