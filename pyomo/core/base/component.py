@@ -145,7 +145,7 @@ class _ComponentBase(PyomoObject):
         # cause problems for highly interconnected Pyomo models (for
         # example, a time linked model where each time block has a
         # linking constraint [in the time block] to the next / previous
-        # block).  This would effectively put the entire time hirizon on
+        # block).  This would effectively put the entire time horizon on
         # the stack.  To avoid this, we will leverage the useful
         # knowledge that all component references point to other
         # components / component datas, and NOT to attributes on the

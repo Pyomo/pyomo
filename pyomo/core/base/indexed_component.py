@@ -331,7 +331,7 @@ class IndexedComponent(Component):
             component_list.append(self)
             memo[_id] = self.__class__.__new__(self.__class__)
         # For indexed components, we need to pre-emptively clone all
-        # component data objects as well (as those are teh objects that
+        # component data objects as well (as those are the objects that
         # will be referenced by things like expressions)
         if self.is_indexed() and not self.is_reference():
             for obj in self._data.values():
