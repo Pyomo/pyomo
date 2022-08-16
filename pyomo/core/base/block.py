@@ -1999,6 +1999,16 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                 str(format))
         return filename, smap_id
 
+    def _create_objects_for_deepcopy(self, memo, component_list):
+        super()._create_objects_for_deepcopy(memo, component_list)
+        # Blocks (and block-like things) need to pre-populate all
+        # Components / ComponentData objects to help prevent deepcopy()
+        # from violating the Python recursion limit.  This step is
+        # recursive; however, we do not expect "super deep" Pyomo block
+        # hierarchies, so should be okay.
+        for comp in self.component_objects(descend_into=False):
+            comp._create_objects_for_deepcopy(memo, component_list)
+
 
 @ModelComponentFactory.register("A component that contains one or more model components.")
 class Block(ActiveIndexedComponent):

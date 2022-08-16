@@ -441,7 +441,8 @@ class _PythonCallbackFunctionID(NumericConstant):
         return state
 
     def __setstate__(self, state):
-        state['value'] = state['value']._fcn_id
+        state['value'] = PythonCallbackFunction.register_instance(
+            state['value'])
         super().__setstate__(state)
 
 pyomo_constant_types.add(_PythonCallbackFunctionID)
