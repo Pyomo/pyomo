@@ -1352,6 +1352,11 @@ class LinearExpression(ExpressionBase):
     @_args_.setter
     def _args_(self, value):
         self._args_cache_ = list(value)
+        if not self._args_cache_:
+            self.constant = 0
+            self.linear_coefs = []
+            self.linear_vars = []
+            return
         if self._args_cache_[0].__class__ is not MonomialTermExpression:
             self.constant = value[0]
             first_var = 1
