@@ -49,7 +49,7 @@ def get_stack_depth():
 # Python's recursion limit (because that would be difficult to recover
 # from cleanly).  However, there is a non-trivial cost to determine the
 # current stack depth - and we don't want to hit that for every call.
-# Instead, we will will assume that the walker is always called with at
+# Instead, we will assume that the walker is always called with at
 # least RECURSION_LIMIT frames available on the stack.  When we hit the
 # end of that limit, we will actually check how much space is left on
 # the stack and run recursively until only 2*RECURSION_LIMIT frames are
