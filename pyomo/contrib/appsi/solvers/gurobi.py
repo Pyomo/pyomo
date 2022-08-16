@@ -266,9 +266,8 @@ class Gurobi(PersistentBase, PersistentSolver):
             gurobipy.disposeDefaultEnv()
 
     def release_license(self):
-        del self._solver_model
+        self._reinit()
         gurobipy.disposeDefaultEnv()
-        self._model = None
 
     def __del__(self):
         self.release_license()
@@ -424,6 +423,15 @@ class Gurobi(PersistentBase, PersistentSolver):
     def _add_params(self, params: List[_ParamData]):
         pass
 
+    def _reinit(self):
+        saved_config = self.config
+        saved_options = self.gurobi_options
+        saved_update_config = self.update_config
+        self.__init__(only_child_vars=self._only_child_vars)
+        self.config = saved_config
+        self.gurobi_options = saved_options
+        self.update_config = saved_update_config        
+
     def set_instance(self, model):
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -432,13 +440,7 @@ class Gurobi(PersistentBase, PersistentSolver):
             raise PyomoException(
                 f'Solver {c.__module__}.{c.__qualname__} is not available '
                 f'({self.available()}).')
-        saved_config = self.config
-        saved_options = self.gurobi_options
-        saved_update_config = self.update_config
-        self.__init__(only_child_vars=self._only_child_vars)
-        self.config = saved_config
-        self.gurobi_options = saved_options
-        self.update_config = saved_update_config
+        self._reinit()
         self._model = model
         if self.use_extensions and cmodel_available:
             self._expr_types = cmodel.PyomoExprTypes()
