@@ -21,6 +21,8 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.component import _ComponentBase
+import logging
+logger = logging.getLogger(__name__)
 
 def prod(terms):
     """
@@ -66,6 +68,14 @@ def quicksum(args, start=0, linear=None):
     Returns:
         The value of the sum, which may be a Pyomo expression object.
     """
+
+    # Ensure that args is an iterator (this manages things like IndexedComponent_slice objects)
+    try:
+        args = iter(args)
+    except:
+        logger.error('The argument `args` to quicksum() is not iterable!')
+        raise
+
     #
     # If we're starting with a numeric value, then 
     # create a new nonlinear sum expression but 
@@ -76,14 +86,7 @@ def quicksum(args, start=0, linear=None):
             #
             # Get the first term, which we will test for linearity
             #
-            try:
-                first = next(args, None)
-            except:
-                try:
-                    args = args.__iter__()
-                    first = next(args, None)
-                except:
-                    raise RuntimeError("The argument to quicksum() is not iterable!")
+            first = next(args, None)
             if first is None:
                 return start
             #
