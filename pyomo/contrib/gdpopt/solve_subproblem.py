@@ -12,6 +12,8 @@
 """Functions for solving the nonlinear subproblem."""
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.errors import InfeasibleConstraintException, DeveloperError
+from pyomo.contrib import appsi
+from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
                                        is_feasible, get_main_elapsed_time)
@@ -222,9 +224,20 @@ class preprocess_subproblem(object):
 
         try:
             # First do FBBT
-            fbbt(m, integer_tol=self.config.integer_tolerance,
-                 feasibility_tol=self.config.constraint_tolerance,
-                 max_iter=self.config.max_fbbt_iterations)
+            if cmodel_available:
+                # [ESJ 8/16/22] We can do this when #2491 is resolved. For now,
+                # we'll just use contrib.fbbt.
+                pass
+                # # use the appsi fbbt implementation since we can
+                # it = appsi.fbbt.IntervalTightener()
+                # it.config.integer_tol = self.config.integer_tolerance
+                # it.config.feasibility_tol = self.config.constraint_tolerance
+                # it.config.max_iter = self.config.max_fbbt_iterations
+                # it.perform_fbbt(m)
+            else:
+                fbbt(m, integer_tol=self.config.integer_tolerance,
+                     feasibility_tol=self.config.constraint_tolerance,
+                     max_iter=self.config.max_fbbt_iterations)
             xfrm = TransformationFactory
             # Now that we've tightened bounds, see if any variables are fixed
             # because their lb is equal to the ub (within tolerance)
