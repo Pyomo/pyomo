@@ -168,7 +168,7 @@ class TestTiming(unittest.TestCase):
         with capture_output() as out:
             ref = time.perf_counter()
             total = timer.toc(delta=False)
-        self.assertAlmostEqual(ref - abs_time, total, delta=RES)
+        self.assertAlmostEqual(ref - start_time, total, delta=RES)
         self.assertRegex(
             out.getvalue(),
             r'\[    [.0-9]+\] .* in test_TicTocTimer_tictoc'
