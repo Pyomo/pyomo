@@ -154,13 +154,17 @@ class TestTiming(unittest.TestCase):
             ref = time.perf_counter()
             delta = timer.toc()
         self.assertAlmostEqual(ref - start_time, delta, delta=RES)
-        # entering / leaving the context manager can take non-trivial
-        # time on some platforms (up to 0.02 on Windows)
-        self.assertAlmostEqual(0.01, timer.toc(None), delta=RES)
         self.assertRegex(
             out.getvalue(),
             r'\[\+   [.0-9]+\] .* in test_TicTocTimer_tictoc'
         )
+        with capture_output() as out:
+            # entering / leaving the context manager can take non-trivial
+            # time on some platforms (up to 0.03 on Windows / Python 3.10)
+            self.assertAlmostEqual(
+                time.perf_counter() - ref, timer.toc(None), delta=RES)
+        self.assertEqual(out.getvalue(), '')
+
         with capture_output() as out:
             ref = time.perf_counter()
             total = timer.toc(delta=False)
