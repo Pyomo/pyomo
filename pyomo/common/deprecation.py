@@ -386,40 +386,40 @@ class RenamedClass(type):
     This metaclass provides a mechanism for renaming old classes while
     still preserving isinstance / issubclass relationships.
 
-    Example
-    -------
-        >>> from pyomo.common.deprecation import RenamedClass
-        >>> class NewClass(object):
-        ...     pass
-        >>> class OldClass(metaclass=RenamedClass):
-        ...     __renamed__new_class__ = NewClass
-        ...     __renamed__version__ = '6.0'
+    Examples
+    --------
+    >>> from pyomo.common.deprecation import RenamedClass
+    >>> class NewClass(object):
+    ...     pass
+    >>> class OldClass(metaclass=RenamedClass):
+    ...     __renamed__new_class__ = NewClass
+    ...     __renamed__version__ = '6.0'
 
-        Deriving from the old class generates a warning:
+    Deriving from the old class generates a warning:
 
-        >>> class DerivedOldClass(OldClass):
-        ...     pass
-        WARNING: DEPRECATED: Declaring class 'DerivedOldClass' derived from
-            'OldClass'. The class 'OldClass' has been renamed to 'NewClass'.
-            (deprecated in 6.0) ...
+    >>> class DerivedOldClass(OldClass):
+    ...     pass
+    WARNING: DEPRECATED: Declaring class 'DerivedOldClass' derived from
+        'OldClass'. The class 'OldClass' has been renamed to 'NewClass'.
+        (deprecated in 6.0) ...
 
-        As does instantiating the old class:
+    As does instantiating the old class:
 
-        >>> old = OldClass()
-        WARNING: DEPRECATED: Instantiating class 'OldClass'.  The class
-            'OldClass' has been renamed to 'NewClass'.  (deprecated in 6.0) ...
+    >>> old = OldClass()
+    WARNING: DEPRECATED: Instantiating class 'OldClass'.  The class
+        'OldClass' has been renamed to 'NewClass'.  (deprecated in 6.0) ...
 
-        Finally, isinstance and issubclass still work, for example:
+    Finally, `isinstance` and `issubclass` still work, for example:
 
-        >>> isinstance(old, NewClass)
-        True
-        >>> class NewSubclass(NewClass):
-        ...     pass
-        >>> new = NewSubclass()
-        >>> isinstance(new, OldClass)
-        WARNING: DEPRECATED: Checking type relative to 'OldClass'.  The class
-            'OldClass' has been renamed to 'NewClass'.  (deprecated in 6.0) ...
-        True
+    >>> isinstance(old, NewClass)
+    True
+    >>> class NewSubclass(NewClass):
+    ...     pass
+    >>> new = NewSubclass()
+    >>> isinstance(new, OldClass)
+    WARNING: DEPRECATED: Checking type relative to 'OldClass'.  The class
+        'OldClass' has been renamed to 'NewClass'.  (deprecated in 6.0) ...
+    True
 
     """
     def __new__(cls, name, bases, classdict, *args, **kwargs):
