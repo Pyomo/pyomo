@@ -263,11 +263,14 @@ class Gurobi(PersistentBase, PersistentSolver):
         finally:
             m.dispose()
             del m
-            gurobipy.disposeDefaultEnv()
+            with capture_output(capture_fd=True):
+                gurobipy.disposeDefaultEnv()
 
     def release_license(self):
         self._reinit()
-        gurobipy.disposeDefaultEnv()
+        if gurobipy_available:
+            with capture_output(capture_fd=True):
+                gurobipy.disposeDefaultEnv()
 
     def __del__(self):
         self.release_license()
