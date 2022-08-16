@@ -14,7 +14,7 @@ from __future__ import division
 from math import copysign
 from pyomo.core import minimize, value
 from pyomo.core.expr import current as EXPR
-from pyomo.contrib.gdpopt.util import identify_variables, time_code
+from pyomo.contrib.gdpopt.util import time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
 
 
@@ -51,7 +51,7 @@ def add_oa_cuts(target_model, dual_values, solve_data, config,
             if constr.body.polynomial_degree() in solve_data.mip_constraint_polynomial_degree:
                 continue
 
-            constr_vars = list(identify_variables(constr.body))
+            constr_vars = list(EXPR.identify_variables(constr.body))
             jacs = solve_data.jacobians
 
             # Equality constraint (makes the problem nonconvex)
@@ -127,7 +127,7 @@ def add_ecp_cuts(target_model, solve_data, config,
     """
     with time_code(solve_data.timing, 'ECP cut generation'):
         for constr in target_model.MindtPy_utils.nonlinear_constraint_list:
-            constr_vars = list(identify_variables(constr.body))
+            constr_vars = list(EXPR.identify_variables(constr.body))
             jacs = solve_data.jacobians
 
             if constr.has_lb() and constr.has_ub():
@@ -257,7 +257,7 @@ def add_affine_cuts(solve_data, config):
 
         for constr in m.MindtPy_utils.nonlinear_constraint_list:
             vars_in_constr = list(
-                identify_variables(constr.body))
+                EXPR.identify_variables(constr.body))
             if any(var.value is None for var in vars_in_constr):
                 continue  # a variable has no values
 
