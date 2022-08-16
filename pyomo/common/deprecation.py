@@ -358,8 +358,8 @@ def relocated_module(new_name, msg=None, logger=None,
     -------
     >>> from pyomo.common.deprecation import relocated_module
     >>> relocated_module('pyomo.common.deprecation', version='1.2.3')
-    WARNING: DEPRECATED: The ... module has been moved to
-        pyomo.common.deprecation. Please update your import.
+    WARNING: DEPRECATED: The '...' module has been moved to
+        'pyomo.common.deprecation'. Please update your import.
         (deprecated in 1.2.3) ...
 
     """
