@@ -60,7 +60,7 @@ def init_custom_disjuncts(util_block, discrete_problem_util_block,
     # We are going to fix indicator_vars in the discrete problem before we
     # solve it, so the bounds tightening will not necessarily be valid
     # afterward. So we save these bounds and restore them in each iteration. We
-    # collect them here since there's no point in doing that ever iteration.
+    # collect them here since there's no point in doing that every iteration.
     if config.mip_presolve:
         original_bounds = _collect_original_bounds(discrete_problem_util_block)
 
@@ -179,7 +179,7 @@ def init_max_binaries(util_block, discrete_problem_util_block,
                       subprob_util_block, config, solver):
     """Initialize by maximizing binary variables and disjuncts.
 
-    This function activates as many binary variables and disjucts as
+    This function activates as many binary variables and disjuncts as
     feasible.
 
     """

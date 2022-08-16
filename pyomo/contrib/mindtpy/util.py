@@ -956,7 +956,7 @@ def get_primal_integral(solve_data, config):
 def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense):
     """Epigraph reformulation.
 
-    Generate the epigraph reformuation for objective expressions.
+    Generate the epigraph reformulation for objective expressions.
 
     Parameters
     ----------
@@ -967,7 +967,7 @@ def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense
     use_mcpp : Bool
         Whether to use mcpp to tighten the bound of slack variables.
     exp : Expression
-        The expression to reformualte.
+        The expression to reformulate.
     sense : objective sense
         The objective sense.
     """

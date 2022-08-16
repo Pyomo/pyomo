@@ -133,7 +133,7 @@ def move_nonlinear_objective_to_constraints(util_block, logger):
             if hasattr(util_block, 'constraint_list'):
                 util_block.constraint_list.append(util_block.objective_constr)
         # If we moved the objective, return the original in case we want to
-        # restre it later
+        # restore it later
         return discrete_obj
     # Nothing was moved
     return None

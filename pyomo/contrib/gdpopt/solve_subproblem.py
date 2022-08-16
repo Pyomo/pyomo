@@ -54,11 +54,11 @@ def configure_and_call_solver(model, solver, args, problem_type, timing,
     return results
 
 def process_nonlinear_problem_results(results, model, problem_type, config):
-    """Processes the results object returns from the nonlinear solver.
+    """Processes the results object returned from the nonlinear solver.
     Returns one of TerminationCondition.optimal (for locally optimal or
     globally optimal since people use this as a heuristic),
     TerminationCondition.feasible (we have a solution with no guarantees),
-    TerminationCondition.noSolution (we have no solution, with not guarantees
+    TerminationCondition.noSolution (we have no solution, with no guarantees
     of infeasibility), or TerminationCondition.infeasible.
     """
     logger = config.logger

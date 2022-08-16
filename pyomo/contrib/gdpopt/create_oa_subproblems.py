@@ -135,7 +135,7 @@ def add_constraints_by_disjunct(util_block):
 def add_algebraic_variable_list(util_block, name=None):
     """
     This collects variables from active Constraints and Objectives. It descends
-    onto Disjuncts, but does not collect any indicator variables that do not
+    into Disjuncts, but does not collect any indicator variables that do not
     appear in algebraic constraints pre-transformation.
     """
     model = util_block.parent_block()
@@ -188,7 +188,7 @@ def get_subproblem(original_model):
     if not hasattr(subproblem, 'dual'):
         subproblem.dual = Suffix(direction=Suffix.IMPORT)
     elif not isinstance(subproblem.dual, Suffix):
-        raise ValueError("The model containts a component called 'dual' that "
+        raise ValueError("The model contains a component called 'dual' that "
                          "is not a Suffix. It is of type %s. Please rename "
                          "this component, as GDPopt needs dual information to "
                          "create cuts." % type(subproblem.dual))

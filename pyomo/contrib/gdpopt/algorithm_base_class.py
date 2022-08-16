@@ -215,12 +215,13 @@ class _GDPoptAlgorithm():
     def _update_bounds(self, primal=None, dual=None, force_update=False):
         """Update bounds correctly depending on objective sense.
 
-        primal: bound from solving subproblem with fixed discrete problem
-        solution dual: bound from solving discrete problem (relaxation of
-        original problem) force_update: flag so this function will set the bound
-        even if it's not an improvement. (Used at termination if the bounds
-        cross.)
-
+        Args:
+            primal: bound from solving subproblem with fixed discrete problem
+            solution dual: bound from solving discrete problem (relaxation of
+                           original problem)
+            force_update: flag so this function will set the bound
+                          even if it's not an improvement. (Used at termination
+                          if the bounds cross.)
         """
         oldLB = self.LB
         oldUB = self.UB

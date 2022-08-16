@@ -51,6 +51,12 @@ BBNodeData = namedtuple('BBNodeData', [
     doc="The LBB (logic-based branch and bound) Generalized Disjunctive "
     "Programming (GDP) solver")
 class GDP_LBB_Solver(_GDPoptAlgorithm):
+    """The GDPopt (Generalized Disjunctive Programming optimizer) logic-based
+    branch and bound (LBB) solver.
+
+    Accepts models that can include nonlinear, continuous variables and
+    constraints, as well as logical conditions.
+    """
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG, default_solver='ipopt')

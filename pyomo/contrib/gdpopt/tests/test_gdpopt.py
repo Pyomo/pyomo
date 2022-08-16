@@ -409,8 +409,8 @@ class TestGDPopt(unittest.TestCase):
                          TerminationCondition.unbounded)
 
     # [ESJ 5/16/22]: Using Gurobi for this test because glpk seems to get angry
-    # on Windows when the MIP is arbitarily bounded with the large bounds. And I
-    # think I blame glpk...
+    # on Windows when the MIP is arbitrarily bounded with the large bounds. And
+    # I think I blame glpk...
     @unittest.skipUnless(SolverFactory('gurobi').available(),
                          "Gurobi solver not available")
     def test_GDP_nonlinear_objective(self):
