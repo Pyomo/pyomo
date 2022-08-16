@@ -71,6 +71,44 @@ class _GENERAL(object): pass
 
 # TODO: make a proper base class
 class NLWriterInfo(object):
+    """Return type for NLWriter.write()
+
+    Attributes
+    ----------
+    variables: List[_VarData]
+
+        The list of (unfixed) Pyomo model variables in the order written
+        to the NL file
+
+    constraints: List[_ConstraintData]
+
+        The list of (active) Pyomo model constraints in the order written
+        to the NL file
+
+    objectives: List[_ObjectiveData]
+
+        The list of (active) Pyomo model objectives in the order written
+        to the NL file
+
+    external_function_libraries: List[str]
+
+        The list of paths to external function libraries referenced by
+        the constraints / objectives written to the NL file
+
+    row_labels: List[str]
+
+        The list of string names for the constraints / objectives
+        written to the NL file in the same order as
+        :py:attr:`constraints` + :\p:attr:`objectives` and the generated
+        .row file.
+
+    column_labels: List[str]
+
+        The list of string names for the variables written to the NL
+        file in the same order as the :py:attr:`variables` and generated
+        .col file.
+
+    """
     def __init__(self, var, con, obj, extlib, row_lbl, col_lbl):
         self.variables = var
         self.constraints = con
@@ -221,6 +259,10 @@ class NLWriter(object):
 
     def write(self, model, ostream, rowstream=None, colstream=None, **options):
         """Write a model in NL format.
+
+        Returns
+        -------
+        NLWriterInfo
 
         Parameters
         ----------
