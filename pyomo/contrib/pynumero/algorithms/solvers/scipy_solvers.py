@@ -5,30 +5,14 @@ from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     _SquareNlpSolverBase,
     DenseSquareNlpSolver,
 )
+from pyomo.opt import (
+    SolverStatus,
+    SolverResults,
+    TerminationCondition,
+    ProblemSense,
+)
 
 import scipy as sp
-
-
-class ScipyRootSolver(object):
-
-    def solve(model):
-
-        active_objs = list(model.component_data_objects(Objective, active=True))
-        if len(active_objs) == 0:
-            obj_name = unique_component_name(model, "_obj")
-            obj = pyo.Objective(expr=0.0)
-            model.add_component(name, obj)
-
-        nlp = PyomoNLP(model)
-
-        if len(active_objs) == 0:
-            model.del_component(obj_name)
-        
-        # Call to solve(nlp)
-
-        # Transfer values back to Pyomo model
-
-        # Translate results into a Pyomo-compatible results structure
 
 
 class FsolveNlpSolver(DenseSquareNlpSolver):
@@ -60,4 +44,72 @@ class RootNlpSolver(DenseSquareNlpSolver):
             x0,
             jac=self.evaluate_jacobian,
         )
+        return results
+
+
+class PyomoScipySquareSolver(object):
+
+    def solve(self, model):
+
+        active_objs = list(model.component_data_objects(Objective, active=True))
+        if len(active_objs) == 0:
+            obj_name = unique_component_name(model, "_obj")
+            obj = Objective(expr=0.0)
+            model.add_component(obj_name, obj)
+
+        nlp = PyomoNLP(model)
+        self._nlp = nlp
+
+        if len(active_objs) == 0:
+            model.del_component(obj_name)
+        
+        # Call to solve(nlp)
+        nlp_solver = self.create_nlp_solver()
+        x0 = nlp.get_primals()
+        results = nlp_solver.solve(x0=x0)
+
+        # Transfer values back to Pyomo model
+        for var, val in zip(nlp.get_pyomo_variables(), nlp.get_primals()):
+            var.set_value(val)
+
+        # Translate results into a Pyomo-compatible results structure
+        pyomo_results = self.get_pyomo_results(results)
+
+        return pyomo_results
+
+    def get_nlp(self):
+        return self._nlp
+
+    def create_nlp_solver(self):
+        raise NotImplementedError(
+            "%s has not implemented the create_nlp_solver method"
+            % self.__class__
+        )
+
+    def get_pyomo_results(self):
+        raise NotImplementedError(
+            "%s has not implemented the get_results method"
+            % self.__class__
+        )
+
+
+class PyomoFsolveSolver(PyomoScipySquareSolver):
+
+    def create_nlp_solver(self):
+        nlp = self.get_nlp()
+        solver = FsolveNlpSolver(nlp)
+        return solver
+
+    def get_pyomo_results(self, results):
+        return results
+
+
+class PyomoRootSolver(PyomoScipySquareSolver):
+
+    def create_nlp_solver(self):
+        nlp = self.get_nlp()
+        solver = RootNlpSolver(nlp)
+        return solver
+
+    def get_pyomo_results(self, results):
         return results
