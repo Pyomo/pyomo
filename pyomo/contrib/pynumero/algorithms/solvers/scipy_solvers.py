@@ -36,12 +36,13 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
     def solve(self, x0=None):
         if x0 is None:
             x0 = self._nlp.get_primals()
-        results = sp.optimize.fsolve(
+        x, info, result, msg = sp.optimize.fsolve(
             self.evaluate_function,
             x0,
             fprime=self.evaluate_jacobian,
+            full_output=True,
         )
-        return results
+        return result
 
     def evaluate_jacobian(self, x0):
         # NOTE: NLP object should handle any caching

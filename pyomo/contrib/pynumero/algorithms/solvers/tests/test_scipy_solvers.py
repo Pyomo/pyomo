@@ -29,6 +29,7 @@ class TestFsolveNLP(unittest.TestCase):
         m, nlp = make_simple_model()
         solver = FsolveNlpSolver(nlp)
         results = solver.solve()
+        self.assertEqual(results, 1)
 
         variables = [m.x[1], m.x[2], m.x[3]]
         predicted_xorder = [0.92846891, -0.22610731, 0.29465397]
@@ -38,7 +39,7 @@ class TestFsolveNLP(unittest.TestCase):
             nlp_to_x_indices[j] = i
         predicted_nlporder = [predicted_xorder[i] for i in nlp_to_x_indices]
         self.assertStructuredAlmostEqual(
-            results.tolist(),
+            nlp.get_primals().tolist(),
             predicted_nlporder,
         )
 
@@ -65,4 +66,4 @@ class TestRootNLP(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    m, nlp = make_simple_model()
+    unittest.main()
