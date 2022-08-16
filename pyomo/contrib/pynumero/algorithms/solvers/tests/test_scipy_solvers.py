@@ -49,24 +49,20 @@ class TestRootNLP(unittest.TestCase):
         m, nlp = make_simple_model()
         solver = RootNlpSolver(nlp)
         results = solver.solve()
-        print(results)
+        self.assertTrue(results.success)
 
-        #variables = [m.x[1], m.x[2], m.x[3]]
-        #predicted_xorder = [0.92846891, -0.22610731, 0.29465397]
-        #indices = nlp.get_primal_indices(variables)
-        #nlp_to_x_indices = [None]*len(variables)
-        #for i, j in enumerate(indices):
-        #    nlp_to_x_indices[j] = i
-        #predicted_nlporder = [predicted_xorder[i] for i in nlp_to_x_indices]
-        #self.assertStructuredAlmostEqual(
-        #    results.tolist(),
-        #    predicted_nlporder,
-        #)
+        variables = [m.x[1], m.x[2], m.x[3]]
+        predicted_xorder = [0.92846891, -0.22610731, 0.29465397]
+        indices = nlp.get_primal_indices(variables)
+        nlp_to_x_indices = [None]*len(variables)
+        for i, j in enumerate(indices):
+            nlp_to_x_indices[j] = i
+        predicted_nlporder = [predicted_xorder[i] for i in nlp_to_x_indices]
+        self.assertStructuredAlmostEqual(
+            results.x.tolist(),
+            predicted_nlporder,
+        )
 
 
 if __name__ == "__main__":
     m, nlp = make_simple_model()
-    ipopt = pyo.SolverFactory("ipopt")
-    ipopt.solve(m, tee=True)
-    m.x.pprint()
-    unittest.main()
