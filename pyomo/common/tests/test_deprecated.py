@@ -434,7 +434,7 @@ class TestRelocated(unittest.TestCase):
             r"DEPRECATED: The 'pyomo\.common\.tests\.relo_mod' module has "
             r"been moved to 'pyomo\.common\.tests\.relo_mod_new'. Please "
             r"update your import. \(deprecated in 1\.2\) \(called from "
-            r".*/pyomo/common/tests/test_deprecated\.py")
+            r".*test_deprecated\.py")
         with LoggingIntercept() as LOG:
             # Second import: no warning
             import pyomo.common.tests.relo_mod as relo
