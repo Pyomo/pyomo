@@ -150,8 +150,8 @@ class TestTiming(unittest.TestCase):
 
         time.sleep(SLEEP)
 
-        ref = time.perf_counter()
         with capture_output() as out:
+            ref = time.perf_counter()
             delta = timer.toc()
         self.assertAlmostEqual(ref - start_time, delta, delta=RES)
         # entering / leaving the context manager can take non-trivial
@@ -161,8 +161,8 @@ class TestTiming(unittest.TestCase):
             out.getvalue(),
             r'\[\+   [.0-9]+\] .* in test_TicTocTimer_tictoc'
         )
-        ref = time.perf_counter()
         with capture_output() as out:
+            ref = time.perf_counter()
             total = timer.toc(delta=False)
         self.assertAlmostEqual(ref - abs_time, total, delta=RES)
         self.assertRegex(
