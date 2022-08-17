@@ -486,8 +486,9 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                             break
                 if _var is None and x.quadratic_vars:
                     for v in x.quadratic_vars:
-                        if id(v) == _id:
-                            _var = v
+                        v = [_v for _v in v if id(_v) == _id]
+                        if v:
+                            _var = v[0]
                             break
                 if _var is not None:
                     logger.error(
