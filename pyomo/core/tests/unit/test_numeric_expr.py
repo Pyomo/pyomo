@@ -4056,6 +4056,35 @@ class TestCloneExpression(unittest.TestCase):
             total = counter.count - start
             self.assertEqual(total, 1)
 
+    def test_LinearExpression(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([1,2])
+        e = LinearExpression()
+        f = e.clone()
+        self.assertIsNot(e, f)
+        self.assertIsNot(e.linear_coefs, f.linear_coefs)
+        self.assertIsNot(e.linear_vars, f.linear_vars)
+        self.assertEqual(e.constant, f.constant)
+        self.assertEqual(e.linear_coefs, f.linear_coefs)
+        self.assertEqual(e.linear_vars, f.linear_vars)
+        self.assertEqual(f.constant, 0)
+        self.assertEqual(f.linear_coefs, [])
+        self.assertEqual(f.linear_vars, [])
+
+        e = LinearExpression(
+            constant=5, linear_vars=[m.x, m.y[1]], linear_coefs=[10, 20])
+        f = e.clone()
+        self.assertIsNot(e, f)
+        self.assertIsNot(e.linear_coefs, f.linear_coefs)
+        self.assertIsNot(e.linear_vars, f.linear_vars)
+        self.assertEqual(e.constant, f.constant)
+        self.assertEqual(e.linear_coefs, f.linear_coefs)
+        self.assertEqual(e.linear_vars, f.linear_vars)
+        self.assertEqual(f.constant, 5)
+        self.assertEqual(f.linear_coefs, [10, 20])
+        self.assertEqual(f.linear_vars, [m.x, m.y[1]])
+
     def test_getitem(self):
         # Testing cloning of the abs() function
         with clone_counter() as counter:
