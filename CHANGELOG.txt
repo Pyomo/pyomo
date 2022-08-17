@@ -3,6 +3,67 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.4.2    17 Aug 2022
+-------------------------------------------------------------------------------
+
+- General
+  - Resolve dill incompatibility with attempt_import (#2419)
+  - Speed up book tests and improve import/logging infrastructure (#2449)
+  - Make typing overloads available at runtime (#2471)
+  - Move performance testing driver scripts to scripts/performance (#2476)
+  - Update list of known TPLs to reflect Python 3.10
+  - Add NL writer version 2 but don't activate by default (#2473)
+  - Improve common.timing test robustness (#2490)
+  - Add deprecation.relocated_module utility (#2492)
+- Core
+  - Support cython functions through Initializer (#2421)
+  - Ensure UnindexedComponent_set is correctly pickled/restored (#2416)
+  - Update as_numeric() to raise an exception on non-is_numeric_type() Pyomo
+    objects (#2444)
+  - Fix replace_expressions to support replacing variables with constants (#2410)
+  - Update component_data_objects and component_data_iterindex to not return duplicate data (#2456)
+  - Fix exception handling logic bug in quicksum (#2458)
+  - Reduce recursion in model clone/deepcopy (#2487)
+  - Resolve exception cloning empty LinearExpression objects (#2489)
+  - Resolve expression loops with inplace operators on Expression objects (#2493)
+- Documentation
+  - Fix typos and incorrect link (#2420, #2482)
+  - Fix Sphinx warnings in documentation builds (#2434)
+- Solver Interfaces
+  - Add support for SCIP 8.0 (#2409)
+  - Add explicit space to GAMS put statements to support GAMS 39+
+  - Catch exceptions in BARON interface when parsing objective bounds (#2467)
+- Testing
+  - Skip SCIP 8.0 tests on PyPy (#2424)
+  - Force conda to use conda-forge channel in GHA (#2430) 
+  - Fix GHA win/3.10 Python version inconsistency (#2433)
+  - Enable Pyomo.DAE Simulator tests on PyPy (#2443)
+  - Abort the Jenkins build if virtualenv creation fails (#2451)
+  - Remove scipy from GHA PyPy builds (#2474)
+- Contributed Packages
+  - APPSI: Improve error message in nl writer when all variables fixed (#2407)
+  - APPSI: Fix bug in Gurobi interface when modifying the objective (#2454)
+  - APPSI: Enable solution of blocks that use variables that are not on the 
+    block (#2453)
+  - APPSI: Provide method to release Gurobi license from persistent 
+    interface (#2480)
+  - community_detection: Trap exceptions from networkx (#2415)
+  - FBBT: Add tolerances to tests (#2445)
+  - GDPopt: Rewrite package to improve extensibility and maintainability (#2406)
+  - incidence_analysis: Add method for weakly connected components (#2418)
+  - MindtPy: Fix bug in copying variable values between models (#2432)
+  - MindtPy: Add support for appsi-cplex and appsi_gurobi (#2373)
+  - Parmest: Add a utils submodule and add support for converting Params 
+    to Vars (#2352)
+  - Parmest: Fix use of relocated_module_attribute (#2472)
+  - PyROS: Fixes to ellipsoidal sets (#2425)
+  - PyROS: Account for variable domains (#2426)
+  - PyROS: Fix objective validation (#2371)
+  - PyROS: Avoid master feasibility problem unit consistency checks (#2459)
+  - PyROS: Fix discrete uncertainty set separation (#2469)
+  - PyROS: Update exception handling parsing BARON lower/upper bounds (#2486)
+
+-------------------------------------------------------------------------------
 Pyomo 6.4.1    13 May 2022
 -------------------------------------------------------------------------------
 
