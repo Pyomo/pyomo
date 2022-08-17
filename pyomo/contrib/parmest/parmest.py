@@ -997,12 +997,30 @@ class Estimator(object):
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
             # check if theta_names in self.theta_names
-            if initialize_parmest_model:
+            if len(self.theta_names) > 1:
                 for thta in list(theta_names):
-                    assert (thta in self.theta_names), (
-                    "Theta names in 'theta_values' do not match 'theta_names' used to create Estimator object"
+                    theta_temp = thta.replace("'", "") # cleaning quotes from theta_names
+                    assert (theta_temp in self.theta_names), (
+                    "Theta name {} in 'theta_values' not in 'theta_names' {}".format(theta_temp,self.theta_names)
                     )
                 assert (len(list(theta_names)) == len(self.theta_names))
+            elif len(self.theta_names) == 1 and 'parmest_dummy_var' not in self.theta_names:
+                model_temp = self._create_parmest_model(self.callback_data[0])
+                var_cuid = ComponentUID(self.theta_names[0])
+                var_validate = var_cuid.find_component_on(model_temp)
+                set_cuid = ComponentUID(var_validate.index_set())
+                set_validate = set_cuid.find_component_on(model_temp)
+                for thta in list(theta_names):
+                    # theta_temp = thta.replace("'", "") # cleaning quotes from theta_names
+                    print(thta, [repr(var_validate[s]) for s in set_validate])
+                    assert (thta in [repr(var_validate[s]) for s in set_validate]), (
+                    "Theta name {} in 'theta_values' not in 'theta_names' {}".format(theta_temp,self.theta_names)
+                    )
+                # assert (len(list(theta_names)) == len(self.theta_names))
+                    
+            else:
+                pass
+                
             all_thetas = theta_values.to_dict('records')
 
         
