@@ -18,6 +18,7 @@ import random
 from filecmp import cmp
 import pyomo.common.unittest as unittest
 
+from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.environ import (
     ConcreteModel, Var, Constraint, Objective, Block, ComponentMap,
@@ -197,9 +198,15 @@ class TestCPXLP_writer(unittest.TestCase):
 
         baseline_fname, test_fname = self._get_fnames()
         self._cleanup(test_fname)
-        self.assertRaises(
-            KeyError,
-            model.write, test_fname, format='lp')
+        with LoggingIntercept() as LOG:
+            self.assertRaises(
+                KeyError,
+                model.write, test_fname, format='lp')
+        self.assertEqual(
+            LOG.getvalue().replace('\n', ' ').strip(),
+            'Model contained expression (c) that contains a variable '
+            '(a) that is not attached to an active block on the '
+            'submodel being solved')
         self._cleanup(test_fname)
 
     def test_var_on_deactivated_block(self):
