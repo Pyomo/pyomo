@@ -204,9 +204,9 @@ class TestCPXLP_writer(unittest.TestCase):
                 model.write, test_fname, format='lp')
         self.assertEqual(
             LOG.getvalue().replace('\n', ' ').strip(),
-            'Model contained expression (c) that contains a variable '
+            'Model contained an expression (c) that contains a variable '
             '(a) that is not attached to an active block on the '
-            'submodel being solved')
+            'submodel being written')
         self._cleanup(test_fname)
 
     def test_var_on_deactivated_block(self):

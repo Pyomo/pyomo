@@ -454,7 +454,10 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         object_symbol_dictionary = symbol_map.byObject
         variable_symbol_dictionary = variable_symbol_map.byObject
 
-        # cache - these are called all the time.
+        # TODO: this is a quick wrapper to map a very unintuitive
+        # exception to a more meaningful error.  Future versions of the
+        # LP writer may be more accepting in what expressions/variables
+        # they accept.
         def print_expr_canonical(
                 obj,
                 x,
@@ -486,11 +489,12 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         if id(v) == _id:
                             _var = v
                             break
-                logger.error(
-                    "Model contained expression (%s) that contains "
-                    "a variable (%s) that is not attached to an active "
-                    "block on the submodel being solved"
-                    % (obj.name, _var.name))
+                if _var is not None:
+                    logger.error(
+                        "Model contained an expression (%s) that contains "
+                        "a variable (%s) that is not attached to an active "
+                        "block on the submodel being written"
+                        % (obj.name, _var.name))
                 raise
 
         # print the model name and the source, so we know roughly where
