@@ -62,7 +62,7 @@ def solve_MILP_discrete_problem(util_block, solver, config):
         deprecation_warning(
             "The 'call_before_master_solve' argument is deprecated. "
             "Please use the 'call_before_discrete_problem_solve' option "
-            "to specify the callback.", version="TBD")
+            "to specify the callback.", version="6.4.2")
 
     with SuppressInfeasibleWarning():
         mip_args = dict(config.mip_solver_args)
@@ -83,7 +83,7 @@ def solve_MILP_discrete_problem(util_block, solver, config):
         deprecation_warning(
             "The 'call_after_master_solve' argument is deprecated. "
             "Please use the 'call_after_discrete_problem_solve' option to "
-            "specify the callback.", version="TBD")
+            "specify the callback.", version="6.4.2")
 
     terminate_cond = results.solver.termination_condition
     if terminate_cond is tc.infeasibleOrUnbounded:

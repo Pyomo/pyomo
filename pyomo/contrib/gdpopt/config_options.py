@@ -28,12 +28,12 @@ _supported_algorithms = {
 
 def _strategy_deprecation(strategy):
     deprecation_warning("The argument 'strategy' has been deprecated "
-                        "in favor of 'algorithm.'", version="TBD")
+                        "in favor of 'algorithm.'", version="6.4.2")
     return In(_supported_algorithms)(strategy)
 
 def _init_strategy_deprecation(strategy):
     deprecation_warning("The argument 'init_strategy' has been deprecated "
-                        "in favor of 'init_algorithm.'", version="TBD")
+                        "in favor of 'init_algorithm.'", version="6.4.2")
     return In(valid_init_strategies)(strategy)
 
 def _get_algorithm_config():

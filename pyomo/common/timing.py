@@ -235,7 +235,7 @@ class TicTocTimer(object):
             if args and '%' not in msg:
                 deprecation_warning(
                     "tic(): 'ostream' and 'logger' should be "
-                    "specified as keyword arguments", version='TBD')
+                    "specified as keyword arguments", version='6.4.2')
                 ostream, *args = args
                 if args:
                     logger, *args = args
@@ -275,7 +275,7 @@ class TicTocTimer(object):
         if args and msg is not None and '%' not in msg:
             deprecation_warning(
                 "toc(): 'delta', 'ostream', and 'logger' should be "
-                "specified as keyword arguments", version='TBD')
+                "specified as keyword arguments", version='6.4.2')
             delta, *args = args
             if args:
                 ostream, *args = args

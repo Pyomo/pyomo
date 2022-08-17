@@ -155,7 +155,7 @@ def copy_var_list_values(from_list, to_list, config,
     """
     if ignore_integrality:
         deprecation_warning("The 'ignore_integrality' argument no longer "
-                            "has any functionality.", version="TBD")
+                            "has any functionality.", version="6.4.2")
 
     if len(from_list) != len(to_list):
         raise ValueError('The lengths of from_list and to_list do not match.')
