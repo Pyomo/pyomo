@@ -204,7 +204,7 @@ class TestCPXLP_writer(unittest.TestCase):
                 model.write, test_fname, format='lp')
         self.assertEqual(
             LOG.getvalue().replace('\n', ' ').strip(),
-            'Model contained an expression (c) that contains a variable '
+            'Model contains an expression (c) that contains a variable '
             '(a) that is not attached to an active block on the '
             'submodel being written')
         self._cleanup(test_fname)

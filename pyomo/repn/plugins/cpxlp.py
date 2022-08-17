@@ -491,7 +491,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                             break
                 if _var is not None:
                     logger.error(
-                        "Model contained an expression (%s) that contains "
+                        "Model contains an expression (%s) that contains "
                         "a variable (%s) that is not attached to an active "
                         "block on the submodel being written"
                         % (obj.name, _var.name))
