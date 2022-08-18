@@ -1004,22 +1004,34 @@ class Estimator(object):
                     "Theta name {} in 'theta_values' not in 'theta_names' {}".format(theta_temp,self.theta_names)
                     )
                 assert (len(list(theta_names)) == len(self.theta_names))
-            elif len(self.theta_names) == 1 and 'parmest_dummy_var' not in self.theta_names:
+            if len(self.theta_names) == 1 and self.theta_names[0] == 'parmest_dummy_var':
+                pass # skip assertion if model has no fitted parameters
+            else:
                 model_temp = self._create_parmest_model(self.callback_data[0])
-                var_cuid = ComponentUID(self.theta_names[0])
-                var_validate = var_cuid.find_component_on(model_temp)
-                set_cuid = ComponentUID(var_validate.index_set())
-                set_validate = set_cuid.find_component_on(model_temp)
+                model_theta_list = [] # list to store indexed and non-indexed parameters
+                for theta_i in self.theta_names:
+                    var_cuid = ComponentUID(theta_i)
+                    var_validate = var_cuid.find_component_on(model_temp)
+                    try:
+                        set_cuid = ComponentUID(var_validate.index_set())
+                        set_validate = set_cuid.find_component_on(model_temp)
+                        for s in set_validate:
+                            self_theta_temp = repr(var_cuid)+"["+repr(s)+"]"
+                            model_theta_list.append(self_theta_temp.replace("'","")) 
+                    except:
+                        self_theta_temp = repr(var_cuid)
+                        model_theta_list.append(self_theta_temp.replace("'",""))
+                
                 for thta in list(theta_names):
-                    # theta_temp = thta.replace("'", "") # cleaning quotes from theta_names
-                    print(thta, [repr(var_validate[s]) for s in set_validate])
-                    assert (thta in [repr(var_validate[s]) for s in set_validate]), (
+                    theta_temp = thta.replace("'", "") # cleaning quotes from theta_names
+
+                    assert (theta_temp in model_theta_list), (
                     "Theta name {} in 'theta_values' not in 'theta_names' {}".format(theta_temp,self.theta_names)
                     )
-                # assert (len(list(theta_names)) == len(self.theta_names))
+                assert (len(list(theta_names)) == len(model_theta_list))
                     
-            else:
-                pass
+            # else:
+            #     pass
                 
             all_thetas = theta_values.to_dict('records')
 
