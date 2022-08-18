@@ -17,7 +17,6 @@ import sys
 from pyomo.common.pyomo_typing import overload
 from weakref import ref as weakref_ref
 
-from pyomo.common.collections import Sequence
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
