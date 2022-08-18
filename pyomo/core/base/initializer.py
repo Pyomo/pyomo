@@ -166,6 +166,19 @@ def Initializer(init,
     return ConstantInitializer(init)
 
 
+def BoundInitializer(obj, init):
+    if obj.is_indexed():
+        treat_sequences_as_mappings = not (
+            isinstance(init, Sequence)
+            and len(init) == 2
+            and not isinstance(init[0], Sequence)
+        )
+    else:
+        treat_sequences_as_mappings = False
+    return Initializer(
+        init, treat_sequences_as_mappings=treat_sequences_as_mappings)
+
+
 class InitializerBase(object):
     """Base class for all Initializer objects"""
     __slots__ = ()

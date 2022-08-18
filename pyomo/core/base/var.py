@@ -34,7 +34,8 @@ from pyomo.core.base.disable_methods import disable_methods
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set, IndexedComponent_NDArrayMixin
 )
-from pyomo.core.base.initializer import Initializer, DefaultInitializer
+from pyomo.core.base.initializer import (
+    Initializer, DefaultInitializer, BoundInitializer)
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.set import (
     Reals, Binary, Set, SetInitializer,
@@ -626,24 +627,13 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         #
         # Now that we can call is_indexed(), process bounds initializer
         #
-        if self.is_indexed():
-            treat_bounds_sequences_as_mappings = not (
-                isinstance(_bounds_arg, Sequence)
-                and len(_bounds_arg) == 2
-                and not isinstance(_bounds_arg[0], Sequence)
-            )
-        else:
-            treat_bounds_sequences_as_mappings = False
-            if not self._dense:
-                logger.warning(
-                    "ScalarVar object '%s': dense=False is not allowed "
-                    "for scalar variables; converting to dense=True"
-                    % (self.name,))
-                self._dense = True
-        self._rule_bounds = Initializer(
-            _bounds_arg,
-            treat_sequences_as_mappings=treat_bounds_sequences_as_mappings
-        )
+        if not self.is_indexed() and not self._dense:
+            logger.warning(
+                "ScalarVar object '%s': dense=False is not allowed "
+                "for scalar variables; converting to dense=True"
+                % (self.name,))
+            self._dense = True
+        self._rule_bounds = BoundInitializer(self, _bounds_arg)
 
     def flag_as_stale(self):
         """
