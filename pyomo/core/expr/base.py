@@ -17,13 +17,13 @@ from .visitor import (
     _expression_is_fixed, sizeof_expression,
 )
 
-class ExpressionBaseMixin(object):
-    """The base mixin class for all Pyomo expression systems.
+class ExpressionBase(object):
+    """The base class for all Pyomo expression systems.
 
     This class is used to define nodes in a general expression tree.
     Individual expression systems (numeric, logical, etc.) will mix this
     class in with their fundamental base data type (NumericValue,
-    BooleanValue, etc/) to form the base node of that expression system.
+    BooleanValue, etc) to form the base node of that expression system.
     """
 
     __slots__ =  ()

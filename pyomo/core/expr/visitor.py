@@ -1586,7 +1586,7 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None,
 
     Parameters
     ----------
-    expr: ExpressionBaseMixin
+    expr: ExpressionBase
         The root node of an expression tree.
 
     verbose: bool

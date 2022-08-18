@@ -40,8 +40,9 @@ from pyomo.core.expr.numvalue import (
     NumericConstant, as_numeric, native_numeric_types,
     is_potentially_variable, polynomial_degree
 )
+from pyomo.core.expr.base import ExpressionBase
 from pyomo.core.expr.numeric_expr import (
-    ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
+    NumericExpression, UnaryFunctionExpression, SumExpression, PowExpression,
     ProductExpression, NegationExpression, linear_expression,
     MonomialTermExpression, LinearExpression, DivisionExpression,
     NPV_NegationExpression, NPV_ProductExpression, 
@@ -51,7 +52,7 @@ from pyomo.core.expr.numeric_expr import (
     LinearDecompositionError, MaxExpression, MinExpression,
 )
 from pyomo.core.expr.relational_expr import (
-    RelationalExpressionBase, EqualityExpression,
+    RelationalExpression, EqualityExpression,
 )
 from pyomo.common.errors import PyomoException
 from pyomo.core.expr.visitor import (expression_to_string, 
@@ -210,7 +211,7 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
         #
         # Confirm that this is a relational expression
         #
-        self.assertTrue(isinstance(exp, RelationalExpressionBase))
+        self.assertTrue(isinstance(exp, RelationalExpression))
         self.assertTrue(exp.is_expression_type(ExpressionType.RELATIONAL))
         #
         # Check that the expression evaluates correctly

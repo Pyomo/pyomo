@@ -37,7 +37,7 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=Modes.reverse_numeric):
 
     Parameters
     ----------
-    expr: pyomo.core.expr.numeric_expr.ExpressionBase
+    expr: pyomo.core.expr.numeric_expr.NumericExpression
         The expression to differentiate
     wrt: pyomo.core.base.var._GeneralVarData
         If specified, this function will return the derivative with
@@ -77,7 +77,7 @@ def differentiate(expr, wrt=None, wrt_list=None, mode=Modes.reverse_numeric):
 
     Returns
     -------
-    res: float, :py:class:`ExpressionBase`, :py:class:`ComponentMap`, or list
+    res: float, :py:class:`NumericExpression`, :py:class:`ComponentMap`, or list
         The value or expression of the derivative(s)
 
     """

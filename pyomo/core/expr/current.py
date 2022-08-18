@@ -33,8 +33,10 @@ from pyomo.core.expr import boolean_value as _logicalvalue
 # Pyomo5
 if _mode == Mode.pyomo5_trees:
     from pyomo.core.expr import numeric_expr as _numeric_expr
+    from .base import ExpressionBase
     from pyomo.core.expr.numeric_expr import (_add, _sub, _mul, _div, _pow,
                                               _neg, _abs, _inplace, _unary,
+                                              NumericExpression,
                                               NumericValue, native_types,
                                               nonpyomo_leaf_types, 
                                               native_numeric_types,
@@ -47,7 +49,7 @@ if _mode == Mode.pyomo5_trees:
                                               _expression_is_fixed,
                                               clone_counter,
                                               nonlinear_expression,
-                                              linear_expression, ExpressionBase,
+                                              linear_expression,
                                               NegationExpression,
                                               NPV_NegationExpression,
                                               ExternalFunctionExpression,
@@ -102,7 +104,7 @@ if _mode == Mode.pyomo5_trees:
                                               AtLeastExpression,
                                               special_boolean_atom_types)
     from pyomo.core.expr.relational_expr import (
-        RelationalExpressionBase,
+        RelationalExpression,
         RangedExpression, InequalityExpression, EqualityExpression,
         inequality,
     )
