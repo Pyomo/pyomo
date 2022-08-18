@@ -525,7 +525,7 @@ class _GeneralConstraintData(_ConstraintData):
                 raise ValueError(
                     "Constraint '%s' does not have a proper "
                     "value. Found '%s'\nExpecting a tuple or "
-                    "equation. Examples:"
+                    "relational expression. Examples:"
                     "\n   sum(model.costs) == model.income"
                     "\n   (0, model.price[item], 50)"
                     % (self.name, str(expr)))
@@ -552,7 +552,7 @@ class _GeneralConstraintData(_ConstraintData):
             if self._expr is None:
                 msg = ("Constraint '%s' does not have a proper "
                        "value. Found '%s'\nExpecting a tuple or "
-                       "equation. Examples:"
+                       "relational expression. Examples:"
                        "\n   sum(model.costs) == model.income"
                        "\n   (0, model.price[item], 50)"
                        % (self.name, str(expr)))
