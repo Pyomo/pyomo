@@ -1,7 +1,8 @@
 #  ___________________________________________________________________________
 #
 #  Pyomo: Python Optimization Modeling Objects
-#  Copyright 2017 National Technology and Engineering Solutions of Sandia, LLC
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
@@ -16,7 +17,9 @@ from collections import deque
 from operator import itemgetter, attrgetter, setitem
 
 from pyomo.common.backports import nullcontext
-from pyomo.common.config import ConfigBlock, ConfigValue, InEnum
+from pyomo.common.config import (
+    ConfigBlock, ConfigValue, InEnum, add_docstring_list,
+)
 from pyomo.common.errors import DeveloperError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
@@ -68,6 +71,44 @@ class _GENERAL(object): pass
 
 # TODO: make a proper base class
 class NLWriterInfo(object):
+    """Return type for NLWriter.write()
+
+    Attributes
+    ----------
+    variables: List[_VarData]
+
+        The list of (unfixed) Pyomo model variables in the order written
+        to the NL file
+
+    constraints: List[_ConstraintData]
+
+        The list of (active) Pyomo model constraints in the order written
+        to the NL file
+
+    objectives: List[_ObjectiveData]
+
+        The list of (active) Pyomo model objectives in the order written
+        to the NL file
+
+    external_function_libraries: List[str]
+
+        The list of paths to external function libraries referenced by
+        the constraints / objectives written to the NL file
+
+    row_labels: List[str]
+
+        The list of string names for the constraints / objectives
+        written to the NL file in the same order as
+        :py:attr:`constraints` + :\p:attr:`objectives` and the generated
+        .row file.
+
+    column_labels: List[str]
+
+        The list of string names for the variables written to the NL
+        file in the same order as the :py:attr:`variables` and generated
+        .col file.
+
+    """
     def __init__(self, var, con, obj, extlib, row_lbl, col_lbl):
         self.variables = var
         self.constraints = con
@@ -217,6 +258,31 @@ class NLWriter(object):
         return filename, symbol_map
 
     def write(self, model, ostream, rowstream=None, colstream=None, **options):
+        """Write a model in NL format.
+
+        Returns
+        -------
+        NLWriterInfo
+
+        Parameters
+        ----------
+        model: ConcreteModel
+            The concrete Pyomo model to write out.
+
+        ostream: io.TextIOBase
+            The text output stream where the NL "file" will be written.
+            Could be an opened file or a io.StringIO.
+
+        rowstream: io.TextIOBase
+            A text output stream to write the ASL "row file" (list of
+            constraint / objective names).  Ignored unless
+            `symbolic_solver_labels` is True.
+
+        colstream: io.TextIOBase
+            A text output stream to write the ASL "col file" (list of
+            variable names).  Ignored unless `symbolic_solver_labels` is True.
+
+        """
         config = options.pop('config', self.config)(options)
 
         # Pause the GC, as the walker that generates the compiled NL
@@ -224,6 +290,8 @@ class NLWriter(object):
         # small objects.
         with _NLWriter_impl(ostream, rowstream, colstream, config) as impl:
             return impl.write(model)
+
+    write.__doc__ = add_docstring_list(write.__doc__, CONFIG)
 
     def _generate_symbol_map(self, info):
         # Now that the row/column ordering is resolved, create the labels
@@ -238,7 +306,6 @@ class NLWriter(object):
             (info[0], f"o{idx}") for idx, info in enumerate(info.objectives)
         )
         return symbol_map
-
 
 def _RANGE_TYPE(lb, ub):
     if lb == ub:
@@ -577,7 +644,7 @@ class _NLWriter_impl(object):
         n_lcons = 0 # We do not yet support logical constraints
 
         # We need to check the SOS constraints before finalizing the
-        # variable order because the SOS constrint *could* reference a
+        # variable order because the SOS constraint *could* reference a
         # variable not yet seen in the model.
         for block in component_map[SOSConstraint]:
             for sos in block.component_objects(
@@ -1127,7 +1194,7 @@ class _NLWriter_impl(object):
         """Categorize compiled expression vars into linear and nonlinear
 
         This routine takes an iterable of compiled component expression
-        infos and returns the sets of variables appearing lineary and
+        infos and returns the sets of variables appearing linearly and
         nonlinearly in those components.
 
         This routine has a number of side effects:
@@ -1319,7 +1386,7 @@ class _NLWriter_impl(object):
         else:
             lbl = ''
         self.var_id_to_nl[expr_id] = f"{self.next_V_line_id}{lbl}"
-        # Do NOT write out 0 coeffficients here: doing so fouls up the
+        # Do NOT write out 0 coefficients here: doing so fouls up the
         # ASL's logic for calculating derivatives, leading to 'nan' in
         # the Hessian results.
         linear = dict(item for item in info[1].linear.items() if item[1])
@@ -1442,7 +1509,7 @@ class AMPLRepn(object):
         custom callback)
 
         """
-        # Note that self.mult will always be 1 (we only call apend()
+        # Note that self.mult will always be 1 (we only call append()
         # within a sum, so there is no opportunity for self.mult to
         # change). Omitting the assertion for efficiency.
         #assert self.mult == 1

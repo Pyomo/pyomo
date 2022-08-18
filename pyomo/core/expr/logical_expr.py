@@ -10,7 +10,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
 from __future__ import division
 
 import types
@@ -22,7 +21,7 @@ import traceback
 logger = logging.getLogger('pyomo.core')
 
 from pyomo.common.errors import PyomoException, DeveloperError
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from .numvalue import (
     native_types,
     native_numeric_types,
@@ -31,7 +30,7 @@ from .numvalue import (
     value,
     is_potentially_variable,
 )
-from .base import ExpressionBaseMixin
+from .base import ExpressionBase
 from .boolean_value import (
     BooleanValue,
     BooleanConstant,
@@ -67,7 +66,7 @@ def _generate_logical_proposition(etype, lhs, rhs):
         raise ValueError("Unknown logical proposition type '%s'" % etype)  # pragma: no cover
 
 
-class BooleanExpressionBase(ExpressionBaseMixin, BooleanValue):
+class BooleanExpression(ExpressionBase, BooleanValue):
     """
     Logical expressions base expression.
 
@@ -104,10 +103,14 @@ class BooleanExpressionBase(ExpressionBaseMixin, BooleanValue):
         Returns:
             The pickled state.
         """
-        state = super(BooleanExpressionBase, self).__getstate__()
-        for i in BooleanExpressionBase.__slots__:
+        state = super().__getstate__()
+        for i in BooleanExpression.__slots__:
            state[i] = getattr(self,i)
         return state
+
+class BooleanExpressionBase(metaclass=RenamedClass):
+    __renamed__new_class__ = BooleanExpression
+    __renamed__version__ = 'TBD'
 
 
 """
@@ -217,7 +220,7 @@ def atleast(n, *args):
     return result
 
 
-class UnaryBooleanExpression(BooleanExpressionBase):
+class UnaryBooleanExpression(BooleanExpression):
     """
     Abstract class for single-argument logical expressions.
     """
@@ -244,7 +247,7 @@ class NotExpression(UnaryBooleanExpression):
         return not result[0]
 
 
-class BinaryBooleanExpression(BooleanExpressionBase):
+class BinaryBooleanExpression(BooleanExpression):
     """
     Abstract class for binary logical expressions.
     """
@@ -310,7 +313,7 @@ class ImplicationExpression(BinaryBooleanExpression):
         return (not result[0]) or result[1]
 
 
-class NaryBooleanExpression(BooleanExpressionBase):
+class NaryBooleanExpression(BooleanExpression):
     """
     The abstract class for NaryBooleanExpression.
 

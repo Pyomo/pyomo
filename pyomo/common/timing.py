@@ -228,7 +228,7 @@ class TicTocTimer(object):
             level (int): an optional logging output level.
 
         """
-        self._lastTime = default_timer()
+        self._lastTime = self._loadTime = default_timer()
         if msg is _NotSpecified:
             msg = "Resetting the tic/toc delta timer"
         if msg is not None:
@@ -238,7 +238,7 @@ class TicTocTimer(object):
                 # pyomo.common.timing logger.
                 deprecation_warning(
                     "tic(): 'ostream' and 'logger' should be "
-                    "specified as keyword arguments", version='TBD',
+                    "specified as keyword arguments", version='6.4.2',
                     logger=__package__)
                 ostream, *args = args
                 if args:
@@ -262,9 +262,9 @@ class TicTocTimer(object):
             *args (tuple): optional positional arguments used for
                 %-formatting the `msg`
             delta (bool): print out the elapsed wall clock time since
-                the last call to :meth:`tic` or :meth:`toc`
-                (``True`` (default)) or since the module was first
-                loaded (``False``).
+                the last call to :meth:`tic` (``False``) or since the
+                most recent call to either :meth:`tic` or :meth:`toc`
+                (``True`` (default)).
             ostream (FILE): an optional output stream (overrides the ostream
                 provided when the class was constructed).
             logger (Logger): an optional output stream using the python
@@ -282,7 +282,7 @@ class TicTocTimer(object):
             # pyomo.common.timing logger.
             deprecation_warning(
                 "toc(): 'delta', 'ostream', and 'logger' should be "
-                "specified as keyword arguments", version='TBD',
+                "specified as keyword arguments", version='6.4.2',
                 logger=__package__)
             delta, *args = args
             if args:
@@ -306,6 +306,9 @@ class TicTocTimer(object):
                 data = (ans, msg)
         else:
             ans = now - self._loadTime
+            # Even though we are reporting the cumulative time, we will
+            # still reset the delta timer.
+            self._lastTime = now
             if msg is not None:
                 fmt = "[%8.2f] %s"
                 data = (ans, msg)

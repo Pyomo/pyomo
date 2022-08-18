@@ -49,7 +49,7 @@ def get_stack_depth():
 # Python's recursion limit (because that would be difficult to recover
 # from cleanly).  However, there is a non-trivial cost to determine the
 # current stack depth - and we don't want to hit that for every call.
-# Instead, we will will assume that the walker is always called with at
+# Instead, we will assume that the walker is always called with at
 # least RECURSION_LIMIT frames available on the stack.  When we hit the
 # end of that limit, we will actually check how much space is left on
 # the stack and run recursively until only 2*RECURSION_LIMIT frames are
@@ -1507,6 +1507,8 @@ RIGHT_TO_LEFT = common.OperatorAssociativity.RIGHT_TO_LEFT
 
 class _ToStringVisitor(ExpressionValueVisitor):
 
+    _expression_handlers = None
+
     def __init__(self, verbose, smap):
         super(_ToStringVisitor, self).__init__()
         self.verbose = verbose
@@ -1515,6 +1517,10 @@ class _ToStringVisitor(ExpressionValueVisitor):
     def visit(self, node, values):
         """ Visit nodes that have been expanded """
         if node.PRECEDENCE is None:
+            if self._expression_handlers \
+               and node.__class__ in self._expression_handlers:
+                return self._expression_handlers[node.__class__](
+                    self, node, values)
             return node._to_string(values, self.verbose, self.smap)
 
         for i,val in enumerate(values):
@@ -1543,6 +1549,11 @@ class _ToStringVisitor(ExpressionValueVisitor):
                 if parens:
                     values[i] = f"({val})"
 
+        if self._expression_handlers \
+           and node.__class__ in self._expression_handlers:
+            return self._expression_handlers[node.__class__](
+                self, node, values)
+
         return node._to_string(values, self.verbose, self.smap)
 
     def visiting_potential_leaf(self, node):
@@ -1551,8 +1562,8 @@ class _ToStringVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node is None:
-            return True, None                           # TODO: coverage
+        if node is None:  # TODO: coverage
+            return True, None
 
         if node.__class__ in nonpyomo_leaf_types:
             return True, str(node)
@@ -1575,7 +1586,7 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None,
 
     Parameters
     ----------
-    expr: ExpressionBaseMixin
+    expr: ExpressionBase
         The root node of an expression tree.
 
     verbose: bool

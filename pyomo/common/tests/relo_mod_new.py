@@ -9,9 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-def load():
-    import pyomo.contrib.gdpopt.GDPopt
-    import pyomo.contrib.gdpopt.gloa
-    import pyomo.contrib.gdpopt.branch_and_bound
-    import pyomo.contrib.gdpopt.loa
-    import pyomo.contrib.gdpopt.ric
+RELO_ATTR = 42
+
+class ReloClass(object): pass

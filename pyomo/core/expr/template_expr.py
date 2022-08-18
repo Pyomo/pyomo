@@ -20,7 +20,7 @@ from pyomo.core.expr.numvalue import (
     NumericValue, native_types, nonpyomo_leaf_types,
     as_numeric, value, is_constant
 )
-from pyomo.core.expr.numeric_expr import ExpressionBase, SumExpression
+from pyomo.core.expr.numeric_expr import NumericExpression, SumExpression
 from pyomo.core.expr.visitor import (
     ExpressionReplacementVisitor, StreamBasedExpressionVisitor
 )
@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class _NotSpecified(object): pass
 
-class GetItemExpression(ExpressionBase):
+class GetItemExpression(NumericExpression):
     """
     Expression to call :func:`__getitem__` on the base object.
     """
@@ -126,7 +126,7 @@ class GetItemExpression(ExpressionBase):
         return args[0].__getitem__(tuple(args[1:]))
 
 
-class GetAttrExpression(ExpressionBase):
+class GetAttrExpression(NumericExpression):
     """
     Expression to call :func:`__getattr__` on the base object.
     """
@@ -261,7 +261,7 @@ class _TemplateSumExpression_argList(object):
                     iterGroup[j].set_value(v, self._lock)
 
 
-class TemplateSumExpression(ExpressionBase):
+class TemplateSumExpression(NumericExpression):
     """
     Expression to represent an unexpanded sum over one or more sets.
     """

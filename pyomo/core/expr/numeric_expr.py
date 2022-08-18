@@ -29,7 +29,7 @@ from .expr_common import (
     _pow, _neg, _abs, _inplace,
     _unary
 )
-from .base import ExpressionBaseMixin
+from .base import ExpressionBase
 from .numvalue import (
     NumericValue,
     native_types,
@@ -97,7 +97,7 @@ class linear_expression(object):
 #-------------------------------------------------------
 
 
-class ExpressionBase(ExpressionBaseMixin, NumericValue):
+class NumericExpression(ExpressionBase, NumericValue):
     """
     The base class for Pyomo expressions.
 
@@ -140,8 +140,8 @@ class ExpressionBase(ExpressionBaseMixin, NumericValue):
         Returns:
             The pickled state.
         """
-        state = super(ExpressionBase, self).__getstate__()
-        for i in ExpressionBase.__slots__:
+        state = super().__getstate__()
+        for i in NumericExpression.__slots__:
            state[i] = getattr(self,i)
         return state
 
@@ -235,7 +235,7 @@ class NPV_Mixin(object):
             return super().create_node_with_local_data(args, cls[0])
 
 
-class NegationExpression(ExpressionBase):
+class NegationExpression(NumericExpression):
     """
     Negation expressions::
 
@@ -274,7 +274,7 @@ class NPV_NegationExpression(NPV_Mixin, NegationExpression):
     __slots__ = ()
 
 
-class ExternalFunctionExpression(ExpressionBase):
+class ExternalFunctionExpression(NumericExpression):
     """
     External function expressions
 
@@ -333,7 +333,7 @@ class NPV_ExternalFunctionExpression(NPV_Mixin, ExternalFunctionExpression):
     __slots__ = ()
 
 
-class PowExpression(ExpressionBase):
+class PowExpression(NumericExpression):
     """
     Power expressions::
 
@@ -396,7 +396,7 @@ class NPV_PowExpression(NPV_Mixin, PowExpression):
     __slots__ = ()
 
 
-class MaxExpression(ExpressionBase):
+class MaxExpression(NumericExpression):
     """
     Maximum expressions::
 
@@ -425,7 +425,7 @@ class NPV_MaxExpression(NPV_Mixin, MaxExpression):
     __slots__ = ()
 
 
-class MinExpression(ExpressionBase):
+class MinExpression(NumericExpression):
     """
     Minimum expressions::
 
@@ -454,7 +454,7 @@ class NPV_MinExpression(NPV_Mixin, MinExpression):
     __slots__ = ()
 
 
-class ProductExpression(ExpressionBase):
+class ProductExpression(NumericExpression):
     """
     Product expressions::
 
@@ -534,7 +534,7 @@ class MonomialTermExpression(ProductExpression):
         return self.__class__(args)
 
 
-class DivisionExpression(ExpressionBase):
+class DivisionExpression(NumericExpression):
     """
     Division expressions::
 
@@ -567,7 +567,7 @@ class NPV_DivisionExpression(NPV_Mixin, DivisionExpression):
     __slots__ = ()
 
 
-class _LinearOperatorExpression(ExpressionBase):
+class _LinearOperatorExpression(NumericExpression):
     """
     An 'abstract' class that defines the polynomial degree for a simple
     linear operator
@@ -737,7 +737,7 @@ class _MutableSumExpression(SumExpression):
         return self
 
 
-class Expr_ifExpression(ExpressionBase):
+class Expr_ifExpression(NumericExpression):
     """
     A logical if-then-else expression::
 
@@ -814,7 +814,7 @@ class Expr_ifExpression(ExpressionBase):
         return _then if _if else _else
 
 
-class UnaryFunctionExpression(ExpressionBase):
+class UnaryFunctionExpression(NumericExpression):
     """
     An expression object used to define intrinsic functions (e.g. sin, cos, tan).
 
@@ -893,7 +893,7 @@ class NPV_AbsExpression(NPV_Mixin, AbsExpression):
     __slots__ = ()
 
 
-class LinearExpression(ExpressionBase):
+class LinearExpression(NumericExpression):
     """
     An expression object linear polynomials.
 
@@ -970,6 +970,11 @@ class LinearExpression(ExpressionBase):
     @_args_.setter
     def _args_(self, value):
         self._args_cache_ = list(value)
+        if not self._args_cache_:
+            self.constant = 0
+            self.linear_coefs = []
+            self.linear_vars = []
+            return
         if self._args_cache_[0].__class__ is not MonomialTermExpression:
             self.constant = value[0]
             first_var = 1

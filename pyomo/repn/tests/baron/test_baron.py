@@ -162,7 +162,7 @@ class Test(unittest.TestCase):
             test_fname = self._get_fnames()[1]
             self._cleanup(test_fname)
             m.write(test_fname, format="bar")
-        self._cleanup(test_fname)
+        #self._cleanup(test_fname)
 
     def test_exponential_NPV(self):
         m = ConcreteModel()

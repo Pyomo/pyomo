@@ -15,7 +15,7 @@ import operator
 from pyomo.common.deprecation import deprecated
 from pyomo.common.errors import PyomoException, DeveloperError
 
-from .base import ExpressionBaseMixin
+from .base import ExpressionBase
 from .boolean_value import BooleanValue
 from .expr_common import _lt, _le, _eq, ExpressionType
 from .numvalue import (
@@ -31,7 +31,7 @@ from .visitor import polynomial_degree
 #
 #-------------------------------------------------------
 
-class RelationalExpressionBase(ExpressionBaseMixin, BooleanValue):
+class RelationalExpression(ExpressionBase, BooleanValue):
     __slots__ = ('_args_',)
 
     EXPRESSION_SYSTEM = ExpressionType.RELATIONAL
@@ -47,7 +47,7 @@ class RelationalExpressionBase(ExpressionBaseMixin, BooleanValue):
             The pickled state.
         """
         state = super().__getstate__()
-        for i in RelationalExpressionBase.__slots__:
+        for i in RelationalExpression.__slots__:
            state[i] = getattr(self,i)
         return state
 
@@ -163,7 +163,7 @@ would both cause this exception.""".strip() % (self,))
         return _generate_relational_expression(_le, other, self)
 
 
-class RangedExpression(RelationalExpressionBase):
+class RangedExpression(RelationalExpression):
     """
     Ranged expressions, which define relations with a lower and upper bound::
 
@@ -228,7 +228,7 @@ class RangedExpression(RelationalExpressionBase):
         return self._strict
 
 
-class InequalityExpression(RelationalExpressionBase):
+class InequalityExpression(RelationalExpression):
     """
     Inequality expressions, which define less-than or
     less-than-or-equal relations::
@@ -324,7 +324,7 @@ def inequality(lower=None, body=None, upper=None, strict=False):
     return RangedExpression((lower, body, upper), strict)
 
 
-class EqualityExpression(RelationalExpressionBase):
+class EqualityExpression(RelationalExpression):
     """
     Equality expression::
 

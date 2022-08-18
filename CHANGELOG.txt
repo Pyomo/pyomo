@@ -3,6 +3,65 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.4.2    17 Aug 2022
+-------------------------------------------------------------------------------
+
+- General
+  - Resolve dill incompatibility with attempt_import (#2419)
+  - Speed up book tests and improve import/logging infrastructure (#2449)
+  - Make typing overloads available at runtime (#2471)
+  - Update list of known TPLs to reflect Python 3.10 (#2478)
+  - Add NL writer version 2 but don't activate by default (#2473)
+  - Add deprecation.relocated_module utility (#2492)
+- Core
+  - Support cython functions through Initializer (#2421)
+  - Ensure UnindexedComponent_set is correctly pickled/restored (#2416)
+  - Update as_numeric() to raise an exception on non-is_numeric_type() Pyomo
+    objects (#2444)
+  - replace_expressions: support replacing variables with constants (#2410)
+  - Update component_data_objects and component_data_iterindex to not
+    return duplicate data (#2456)
+  - Fix exception handling logic bug in quicksum (#2458)
+  - Reduce recursion in model clone/deepcopy (#2487)
+  - Resolve exception cloning empty LinearExpression objects (#2489)
+  - Resolve errors from inplace operators on Expression objects (#2493)
+- Documentation
+  - Fix typos and incorrect link (#2420, #2482)
+  - Fix Sphinx warnings in documentation builds (#2434)
+- Solver Interfaces
+  - Add support for SCIP 8.0 (#2409)
+  - Add explicit space to GAMS put statements to support GAMS 39+ (#2450)
+  - Catch exceptions in BARON interface when parsing objective bounds (#2467)
+- Testing
+  - Skip SCIP 8.0 tests on PyPy (#2424)
+  - Force conda to use conda-forge channel in GHA (#2430)
+  - Fix GHA win/3.10 Python version inconsistency (#2433)
+  - Enable Pyomo.DAE Simulator tests on PyPy (#2443)
+  - Abort the Jenkins build if virtualenv creation fails (#2451)
+  - Remove scipy from GHA PyPy builds (#2474)
+  - Move performance testing driver scripts to scripts/performance (#2476)
+  - Improve common.timing test robustness (#2490)
+- Contributed Packages
+  - APPSI: Improve error message in nl writer when all variables fixed (#2407)
+  - APPSI: Fix bug in Gurobi interface when modifying the objective (#2454)
+  - APPSI: Solve blocks that use variables that are not on the block (#2453)
+  - APPSI: Method to release Gurobi license from persistent interface (#2480)
+  - community_detection: Trap exceptions from networkx (#2415)
+  - FBBT: Add tolerances to tests (#2445)
+  - GDPopt: Refactor to improve extensibility and maintainability (#2406)
+  - incidence_analysis: Add method for weakly connected components (#2418)
+  - MindtPy: Fix bug in copying variable values between models (#2432)
+  - MindtPy: Add support for appsi_cplex and appsi_gurobi (#2373)
+  - Parmest: Add utils submodule and support to convert Params to Vars (#2352)
+  - Parmest: Fix use of relocated_module_attribute (#2472)
+  - PyROS: Fixes to ellipsoidal sets (#2425)
+  - PyROS: Account for variable domains (#2426)
+  - PyROS: Fix objective validation (#2371)
+  - PyROS: Avoid master feasibility problem unit consistency checks (#2459)
+  - PyROS: Fix discrete uncertainty set separation (#2469)
+  - PyROS: Update exception handling parsing BARON lower/upper bounds (#2486)
+
+-------------------------------------------------------------------------------
 Pyomo 6.4.1    13 May 2022
 -------------------------------------------------------------------------------
 
@@ -31,7 +90,7 @@ Pyomo 6.4.1    13 May 2022
 - Contributed Packages
   - APPSI: Minor improvements and generalizations (#2383, #2386, #2389,
     #2391, #2388, #2392)
-  - incidence_analysis: Add option to ignore inequality constraints in 
+  - incidence_analysis: Add option to ignore inequality constraints in
     IncidenceGraphInterface (#2350)
   - MC++: Update interface tests (#2400)
   - MindtPy: Add quadratic_strategy option to pass quadratic constraints
@@ -157,7 +216,7 @@ Pyomo 6.2    17 Nov 2021
   - Remove deprecated calls to warnings.warning (#2106)
   - Add Bool and Integer domain validators (#2110)
   - Overhaul of Pyomo TempfileManager (#2109)
-  - Allow passing tuples and expressions to 
+  - Allow passing tuples and expressions to
     calculate_variable_from_constraint() (#2133)
   - Add external functions to block in create_subsystem_block (#2142)
   - Track changes in pint 0.18 and Xpress 8.13.0 (#2168)
@@ -165,7 +224,7 @@ Pyomo 6.2    17 Nov 2021
   - Add Linux aarch64 wheel build support (#2076)
   - Update wheel creation GitHub Actions version (#2192)
   - Remove optional_packages from pyomo.environ (#2195)
-  - Ignore bounds/domain when updating variable value in 
+  - Ignore bounds/domain when updating variable value in
     calculate_variable_from_constraint() (#2177)
 - Core
   - Fix Expression.getitem when initialized with Skip (#2136)
@@ -174,7 +233,7 @@ Pyomo 6.2    17 Nov 2021
   - Fix bug in differentiate module related to reused subexpressions (#2148)
   - Rework expression replacement and LinearExpression object (#2143)
   - Add support for custom pint registries (#2153)
-  - Add support for solving blocks and targets in logical_to_linear 
+  - Add support for solving blocks and targets in logical_to_linear
     transformation (#2147)
   - Add support for finding components with a ComponentUID (#2178)
   - Fix bugs with open NumericRanges (#2170, #2179)
@@ -206,16 +265,16 @@ Pyomo 6.2    17 Nov 2021
 - Contributed Packages
   - APPSI: Add support for external functions in NL writer (#2111)
   - APPSI: Improved handling of immutable parameters (#2112)
-  - PyNumero: Pass AMPLFUNC directly to pynumero_ASL and not through 
+  - PyNumero: Pass AMPLFUNC directly to pynumero_ASL and not through
     environment (#2114, #2129)
   - PyNumero: ExternalPyomoModel performance improvements (#2155)
   - PyNumero: Remove exception when variable bounds are equal (#2121)
   - Parmest: Add support for indexed variables (#2108)
-  - incidence_analysis: Simplify extraction of diagonal blocks from a block 
+  - incidence_analysis: Simplify extraction of diagonal blocks from a block
     triangularization (#2128)
   - GDPopt: Make line endings PEP8 compliant (#2173)
   - MindtPy: Add support for MIP solver solution pools (#2164)
-  - MindtPy: Skip specific tests due to failure with Gurobi 9.5.0 on 
+  - MindtPy: Skip specific tests due to failure with Gurobi 9.5.0 on
     Windows (#2183)
   - MindtPy: Fix feasibility pump and fixed variable detection (#2185, #2187)
   - PyROS: Add uncertain variable bounds detection (#2159)
