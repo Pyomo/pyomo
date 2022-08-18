@@ -267,8 +267,8 @@ class Gurobi(PersistentBase, PersistentSolver):
                 gurobipy.disposeDefaultEnv()
 
     def release_license(self):
-         self._reinit()
-         if gurobipy_available:
+        self._reinit()
+        if gurobipy_available:
             with capture_output(capture_fd=True):
                 gurobipy.disposeDefaultEnv()
 
