@@ -1005,44 +1005,46 @@ class Estimator(object):
             Objective value for each theta (infeasible solutions are
             omitted).
         """
+        if len(self.theta_names) == 1 and self.theta_names[0] == 'parmest_dummy_var':
+            pass # skip assertion if model has no fitted parameters
+        else:
+            model_temp = self._create_parmest_model(self.callback_data[0])
+            model_theta_list = [] # list to store indexed and non-indexed parameters
+            for theta_i in self.theta_names:
+                var_cuid = ComponentUID(theta_i)
+                var_validate = var_cuid.find_component_on(model_temp)
+                try:
+                    set_cuid = ComponentUID(var_validate.index_set())
+                    set_validate = set_cuid.find_component_on(model_temp)
+                    for s in set_validate:
+                        self_theta_temp = repr(var_cuid)+"["+repr(s)+"]"
+                        model_theta_list.append(self_theta_temp)
+                except:
+                    self_theta_temp = repr(var_cuid)
+                    model_theta_list.append(self_theta_temp)
+            if self.theta_names != model_theta_list:
+                self.theta_names_updated = model_theta_list
+        
         if theta_values is None:    
             all_thetas = {} # dictionary to store fitted variables
-            theta_names = self.theta_names
+            if hasattr(self,'theta_names_updated'):
+                theta_names = self.theta_names_updated
+            else:
+                theta_names = self.theta_names
         else:
             assert isinstance(theta_values, pd.DataFrame)
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
             # # check if theta_names in self.theta_names
-            if len(self.theta_names) == 1 and self.theta_names[0] == 'parmest_dummy_var':
-                pass # skip assertion if model has no fitted parameters
-            else:
-                model_temp = self._create_parmest_model(self.callback_data[0])
-                model_theta_list = [] # list to store indexed and non-indexed parameters
-                for theta_i in self.theta_names:
-                    var_cuid = ComponentUID(theta_i)
-                    var_validate = var_cuid.find_component_on(model_temp)
-                    try:
-                        set_cuid = ComponentUID(var_validate.index_set())
-                        set_validate = set_cuid.find_component_on(model_temp)
-                        for s in set_validate:
-                            self_theta_temp = repr(var_cuid)+"["+repr(s)+"]"
-                            model_theta_list.append(self_theta_temp)
-                    except:
-                        self_theta_temp = repr(var_cuid)
-                        model_theta_list.append(self_theta_temp)
-                if self.theta_names != model_theta_list:
-                    self.theta_names_updated = model_theta_list
+            for thta in list(theta_names):
+                theta_temp = thta.replace("'", "") # cleaning quotes from theta_names
 
-                for thta in list(theta_names):
-                    theta_temp = thta.replace("'", "") # cleaning quotes from theta_names
-
-                    assert (theta_temp in [t.replace("'","") for t in model_theta_list]), (
-                    "Theta name {} in 'theta_values' not in 'theta_names' {}".format(theta_temp,model_theta_list)
-                    )
-                assert (len(list(theta_names)) == len(model_theta_list))
+                assert (theta_temp in [t.replace("'","") for t in model_theta_list]), (
+                "Theta name {} in 'theta_values' not in 'theta_names' {}".format(theta_temp,model_theta_list)
+                )
+            assert (len(list(theta_names)) == len(model_theta_list))
 
             all_thetas = theta_values.to_dict('records')
-
         
         if all_thetas:
             task_mgr = utils.ParallelTaskManager(len(all_thetas))
