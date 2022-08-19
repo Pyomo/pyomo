@@ -15,15 +15,18 @@ def write_iis(pyomo_model, iis_file_name, solver=None):
 
     Arguments
     ---------
-        pyomo_model : A Pyomo Block or ConcreateModel
-        iis_file_name : A file name to write the IIS to (e.g., model.ilp)
-        solver (optional) : Specify the solver to use, one of
-            "cplex", "gurobi", or "xpress". If none are specified,
-            the tool will use the first solver available.
+        pyomo_model:
+            A Pyomo Block or ConcreteModel
+        iis_file_name:str
+            A file name to write the IIS to, e.g., infeasible_model.ilp
+        solver:str
+            Specify the solver to use, one of "cplex", "gurobi", or "xpress".
+            If None, the tool will use the first solver available.
 
     Returns
     -------
-        iis_file_name : The file containing the IIS.
+        iis_file_name:str
+            The file containing the IIS.
     """
 
     available_solvers = [
