@@ -625,9 +625,7 @@ class Estimator(object):
                     theta_ref = self.theta_names_updated
                 else:
                     theta_ref = self.theta_names
-                print(theta_ref)
                 for i, theta in enumerate(theta_ref):
-                    print(theta,i)
                     # Use parser in ComponentUID to locate the component
                     var_cuid = ComponentUID(theta)
                     var_validate = var_cuid.find_component_on(instance)
@@ -677,6 +675,13 @@ class Estimator(object):
                     for theta in theta_init_vals:
                         theta.unfix()
                     scen_dict[sname] = instance
+            else:
+                if initialize_parmest_model:
+                    # unfix parameters after initialization
+                    for theta in theta_init_vals:
+                        theta.unfix()
+                    scen_dict[sname] = instance
+
             objobject = getattr(instance, self._second_stage_cost_exp)
             objval = pyo.value(objobject)
             totobj += objval
@@ -1007,14 +1012,7 @@ class Estimator(object):
             assert isinstance(theta_values, pd.DataFrame)
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
-            # check if theta_names in self.theta_names
-            if len(self.theta_names) > 1:
-                for thta in list(theta_names):
-                    theta_temp = thta.replace("'", "") # cleaning quotes from theta_names
-                    assert (theta_temp in self.theta_names), (
-                    "Theta name {} in 'theta_values' not in 'theta_names' {}".format(theta_temp,self.theta_names)
-                    )
-                assert (len(list(theta_names)) == len(self.theta_names))
+            # # check if theta_names in self.theta_names
             if len(self.theta_names) == 1 and self.theta_names[0] == 'parmest_dummy_var':
                 pass # skip assertion if model has no fitted parameters
             else:
