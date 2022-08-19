@@ -289,7 +289,8 @@ class RepnWrapper(object):
         self.nonlinear_vars = nonlinear
 
 
-@WriterFactory.register('nl', 'Generate the corresponding AMPL NL file.')
+@WriterFactory.register(
+    'nl_v1', 'Generate the corresponding AMPL NL file (version 1).')
 class ProblemWriter_nl(AbstractProblemWriter):
 
 
@@ -359,6 +360,10 @@ class ProblemWriter_nl(AbstractProblemWriter):
         # nl-file
         export_nonlinear_variables = \
             io_options.pop("export_nonlinear_variables", False)
+
+        # column_order is a new option supported by the nl writer v2
+        _column_order = io_options.pop("column_order", True)
+        assert _column_order in {True,}
 
         if len(io_options):
             raise ValueError(

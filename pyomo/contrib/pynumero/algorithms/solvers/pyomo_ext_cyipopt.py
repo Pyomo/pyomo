@@ -83,7 +83,7 @@ class ExternalInputOutputModel(object, metaclass=abc.ABCMeta):
 
 class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
     def __init__(self, pyomo_model, ex_input_output_model, inputs, outputs,
-                 outputs_eqn_scaling=None):
+                 outputs_eqn_scaling=None, nl_file_options=None):
         """
         Create an instance of this class to pass as a problem to CyIpopt.
 
@@ -156,7 +156,7 @@ class PyomoExternalCyIpoptProblem(CyIpoptProblemInterface):
         dummy_var.value = dummy_var_value
 
         # make an nlp interface from the pyomo model
-        self._pyomo_nlp = PyomoNLP(self._pyomo_model)
+        self._pyomo_nlp = PyomoNLP(self._pyomo_model, nl_file_options)
         
         # create initial value vectors for primals and duals
         init_primals = self._pyomo_nlp.init_primals()
