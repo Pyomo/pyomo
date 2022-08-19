@@ -578,7 +578,7 @@ class Estimator(object):
         """
 
         optimizer = pyo.SolverFactory('ipopt')
-
+        
         if len(thetavals) > 0:
             dummy_cb = {"callback": self._instance_creation_callback,
                         "ThetaVals": thetavals,
@@ -621,14 +621,20 @@ class Estimator(object):
                 # list to store fitted parameter names that will be unfixed
                 # after initialization
                 theta_init_vals = []
-                for i, theta in enumerate(self.theta_names):
+                if hasattr(self,'theta_names_updated'):
+                    theta_ref = self.theta_names_updated
+                else:
+                    theta_ref = self.theta_names
+                print(theta_ref)
+                for i, theta in enumerate(theta_ref):
+                    print(theta,i)
                     # Use parser in ComponentUID to locate the component
                     var_cuid = ComponentUID(theta)
                     var_validate = var_cuid.find_component_on(instance)
                     if var_validate is None:
                         logger.warning(
-                            "theta_name[%s] (%s) was not found on the model",
-                            (i, theta))
+                            "theta_name %s was not found on the model",
+                            (theta))
                     else:
                         try:
                             if len(thetavals) == 0:
@@ -637,8 +643,9 @@ class Estimator(object):
                                 var_validate.fix(thetavals[theta])
                             theta_init_vals.append(var_validate)
                         except:
-                            logger.warning('Unable to fix model parameter value for %s (%s not a Pyomo model Var)', 
-                            (theta, i))
+                            logger.warning('Unable to fix model parameter value for %s (not a Pyomo model Var)', 
+                            (theta))
+                
             if active_constraints:
                 if self.diagnostic_mode:
                     print('      Experiment = ',snum)
@@ -675,7 +682,7 @@ class Estimator(object):
             totobj += objval
             
         retval = totobj / len(senario_numbers) # -1??
-        if initialize_parmest_model:
+        if initialize_parmest_model and not hasattr(self,'ef_instance'):
             # create extensive form of the model using scenario dictionary
             if len(scen_dict) > 0:
                 for scen in scen_dict.values():
@@ -698,9 +705,13 @@ class Estimator(object):
 
             # return initialized theta values
             if len(thetavals) == 0:
-                for i, theta in enumerate(self.theta_names):
+                if hasattr(self,'theta_names_updated'):
+                    theta_ref = self.theta_names_updated
+                else:
+                    theta_ref = self.theta_names
+                for i, theta in enumerate(theta_ref):
                     thetavals[theta] = theta_init_vals[i]()
-
+        
         return retval, thetavals, WorstStatus
 
     def _get_sample_list(self, samplesize, num_samples, replacement=True):
@@ -1017,22 +1028,21 @@ class Estimator(object):
                         set_validate = set_cuid.find_component_on(model_temp)
                         for s in set_validate:
                             self_theta_temp = repr(var_cuid)+"["+repr(s)+"]"
-                            model_theta_list.append(self_theta_temp.replace("'","")) 
+                            model_theta_list.append(self_theta_temp)
                     except:
                         self_theta_temp = repr(var_cuid)
-                        model_theta_list.append(self_theta_temp.replace("'",""))
-                
+                        model_theta_list.append(self_theta_temp)
+                if self.theta_names != model_theta_list:
+                    self.theta_names_updated = model_theta_list
+
                 for thta in list(theta_names):
                     theta_temp = thta.replace("'", "") # cleaning quotes from theta_names
 
-                    assert (theta_temp in model_theta_list), (
-                    "Theta name {} in 'theta_values' not in 'theta_names' {}".format(theta_temp,self.theta_names)
+                    assert (theta_temp in [t.replace("'","") for t in model_theta_list]), (
+                    "Theta name {} in 'theta_values' not in 'theta_names' {}".format(theta_temp,model_theta_list)
                     )
                 assert (len(list(theta_names)) == len(model_theta_list))
-                    
-            # else:
-            #     pass
-                
+
             all_thetas = theta_values.to_dict('records')
 
         
@@ -1052,7 +1062,6 @@ class Estimator(object):
                 # DLW, Aug2018: should we also store the worst solver status?
         else:
             obj, thetvals, worststatus = self._Q_at_theta(thetavals={}, initialize_parmest_model=initialize_parmest_model)
-            print(obj,thetvals)
             if worststatus != pyo.TerminationCondition.infeasible:
                 all_obj.append(list(thetvals.values()) + [obj])
 

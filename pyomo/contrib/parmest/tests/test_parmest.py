@@ -408,7 +408,7 @@ class TestModelVariants(unittest.TestCase):
             self.assertAlmostEqual(cov.iloc[1,0], -0.4395341, places=2) # -0.4322 from paper
             self.assertAlmostEqual(cov.iloc[1,1], 0.04193591, places=2) # 0.04124 from paper
             
-            obj_at_theta = pest.objective_at_theta(parmest_input['theta_vals'])
+            obj_at_theta = pest.objective_at_theta(parmest_input['theta_vals'], initialize_parmest_model=True)
             self.assertAlmostEqual(obj_at_theta['obj'][0], 16.531953, places=2)
 
 
