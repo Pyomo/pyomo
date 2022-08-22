@@ -129,3 +129,22 @@ class TestIndexedIntervalVar(unittest.TestCase):
             self.assertFalse(m.act[i].optional)
             self.assertTrue(m.act[i].is_present.fixed)
             self.assertEqual(value(m.act[i].is_present), True)
+
+    def test_optional(self):
+        m = ConcreteModel()
+        m.act = IntervalVar([1, 2], end=[0, 10], optional=True)
+
+        for i in [1, 2]:
+            self.assertTrue(m.act[i].optional)
+            self.assertFalse(m.act[i].is_present.fixed)
+
+            self.assertEqual(m.act[i].end_time.lower, 0)
+            self.assertEqual(m.act[i].end_time.upper, 10)
+
+    def test_optional_rule(self):
+        m = ConcreteModel()
+        m.idx = Set(initialize=[(4, 2), (5, 2)], dimen=2)
+        def optional_rule(m, i, j):
+            return i % j == 0
+        m.act = IntervalVar(m.idx, optional=optional_rule)
+        # TODO
