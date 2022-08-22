@@ -1,10 +1,18 @@
+from collections import namedtuple
+from pyomo.common.timing import HierarchicalTimer
+
+
+TimeBins = namedtuple("TimeBins", ["set_primals", "constraints", "jacobian"])
+timebins = TimeBins("set_primals", "constraints", "jacobian")
+
+
 class _SquareNlpSolverBase(object):
     """A base class for NLP solvers that act on a square system
     of equality constraints.
 
     """
 
-    def __init__(self, nlp):
+    def __init__(self, nlp, timer=None):
         """
         Arguments
         ---------
@@ -14,6 +22,9 @@ class _SquareNlpSolverBase(object):
             numbers of primal variables and equality constraints.
 
         """
+        if timer is None:
+            timer = HierarchicalTimer()
+        self._timer = timer
         self._nlp = nlp
 
         if self._nlp.n_eq_constraints() != self._nlp.n_primals():
@@ -44,13 +55,27 @@ class _SquareNlpSolverBase(object):
 
     def evaluate_function(self, x0):
         # NOTE: NLP object should handle any caching
+        self._timer.start(timebins.set_primals)
         self._nlp.set_primals(x0)
-        return self._nlp.evaluate_constraints()
+        self._timer.stop(timebins.set_primals)
+
+        self._timer.start(timebins.constraints)
+        values = self._nlp.evaluate_eq_constraints()
+        self._timer.stop(timebins.constraints)
+
+        return values
 
     def evaluate_jacobian(self, x0):
         # NOTE: NLP object should handle any caching
+        self._timer.start(timebins.set_primals)
         self._nlp.set_primals(x0)
-        return self._nlp.evaluate_jacobian()
+        self._timer.stop(timebins.set_primals)
+
+        self._timer.start(timebins.jacobian)
+        jac = self._nlp.evaluate_jacobian_eq()
+        self._timer.stop(timebins.jacobian)
+
+        return jac
 
 
 class DenseSquareNlpSolver(_SquareNlpSolverBase):
@@ -59,5 +84,10 @@ class DenseSquareNlpSolver(_SquareNlpSolverBase):
 
     def evaluate_jacobian(self, x0):
         sparse_jac = super().evaluate_jacobian(x0)
+
+        # Should sparse->dense be timed separately?
+        self._timer.start(timebins.jacobian)
         dense_jac = sparse_jac.toarray()
+        self._timer.stop(timebins.jacobian)
+
         return dense_jac

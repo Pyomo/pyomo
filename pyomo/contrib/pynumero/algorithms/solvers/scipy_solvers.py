@@ -1,4 +1,7 @@
+from collections import namedtuple
+
 from pyomo.core.base.objective import Objective
+from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.modeling import unique_component_name
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
@@ -15,35 +18,44 @@ from pyomo.opt import (
 import scipy as sp
 
 
+TimeBins = namedtuple("TimeBins", ["get_primals", "solve"])
+timebins = TimeBins("get_primals", "solve")
+
+
 class FsolveNlpSolver(DenseSquareNlpSolver):
 
     def solve(self, x0=None):
         if x0 is None:
+            self._timer.start(timebins.get_primals)
             x0 = self._nlp.get_primals()
+            self._timer.stop(timebins.get_primals)
+
+        self._timer.start(timebins.solve)
         x, info, result, msg = sp.optimize.fsolve(
             self.evaluate_function,
             x0,
             fprime=self.evaluate_jacobian,
             full_output=True,
         )
+        self._timer.stop(timebins.solve)
         return result
-
-    def evaluate_jacobian(self, x0):
-        # NOTE: NLP object should handle any caching
-        self._nlp.set_primals(x0)
-        return self._nlp.evaluate_jacobian().toarray()
 
 
 class RootNlpSolver(DenseSquareNlpSolver):
 
     def solve(self, x0=None):
         if x0 is None:
+            self._timer.start(timebins.get_primals)
             x0 = self._nlp.get_primals()
+            self._timer.stop(timebins.get_primals)
+
+        self._timer.start(timebins.solve)
         results = sp.optimize.root(
             self.evaluate_function,
             x0,
             jac=self.evaluate_jacobian,
         )
+        self._timer.stop(timebins.solve)
         return results
 
 
