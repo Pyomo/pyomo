@@ -117,44 +117,6 @@ class IntervalVar(Block):
 
         return obj
 
-    # def construct(self, data=None):
-    #     """
-    #     Construct the _IntervalVarDatas for this IntervalVar
-    #     """
-    #     if self._constructed:
-    #         return
-    #     self._constructed=True
-
-    #     timer = ConstructionTimer(self)
-    #     if is_debug_set(logger):
-    #         logger.debug("Constructing IntervalVar %s" % (self.name))
-
-    #     start_rule = self._start_bounds
-    #     end_rule = self._end_bounds
-    #     length_rule = self._length_bounds
-    #     try:
-    #         index = None
-    #         assert data is None
-
-    #         if not self.is_indexed():
-    #             self._getitem_when_not_present(index)
-    #         else:
-    #             for idx in self.index_set():
-    #                 if idx not in self._data:
-    #                     self._getitem_when_not_present(idx)
-    #     except Exception:
-    #         err = sys.exc_info()[1]
-    #         logger.error(
-    #             "Rule failed when initializing IntervalVar "
-    #             "%s with index %s:\n%s: %s"
-    #             % (self.name,
-    #                str(index),
-    #                type(err).__name__,
-    #                err))
-    #         raise
-    #     finally:
-    #         timer.report()
-
 class ScalarIntervalVar(_IntervalVarData, IntervalVar):
     def __init__(self, *args, **kwds):
         self._suppress_ctypes = set()
