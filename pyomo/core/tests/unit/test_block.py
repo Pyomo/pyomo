@@ -2070,6 +2070,18 @@ class TestBlock(unittest.TestCase):
         self.assertIs(m.c.parent_component(), m.c)
         self.assertIs(m.c.parent_block(), m)
 
+        m.c1 = Block()
+        m.c1.transfer_attributes_from(m.blk[3].clone())
+
+        self.assertEqual([1, 2, 3], list(m.c1.IDX))
+        self.assertEqual(list(m.blk[3].IDX), list(m.c1.IDX))
+        self.assertIsNot(m.blk[3].IDX, m.c1.IDX)
+        self.assertIsNot(m.blk[3].x, m.c1.x)
+        self.assertIsNot(m.blk[3].IDX, m.c1.x.index_set())
+        self.assertIs(m.c1.IDX, m.c1.x.index_set())
+        self.assertIs(m.c1.parent_component(), m.c1)
+        self.assertIs(m.c1.parent_block(), m)
+
         @m.Block([1,2,3])
         def d(b, i):
             return b.model().blk[i].clone()
