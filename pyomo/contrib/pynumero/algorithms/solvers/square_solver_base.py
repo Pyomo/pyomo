@@ -26,6 +26,8 @@ class _SquareNlpSolverBase(object):
             timer = HierarchicalTimer()
         self._timer = timer
         self._nlp = nlp
+        self._function_values = None
+        self._jacobian = None
 
         if self._nlp.n_eq_constraints() != self._nlp.n_primals():
             raise RuntimeError(
@@ -72,10 +74,10 @@ class _SquareNlpSolverBase(object):
         self._timer.stop(timebins.set_primals)
 
         self._timer.start(timebins.jacobian)
-        jac = self._nlp.evaluate_jacobian_eq()
+        self._jacobian = self._nlp.evaluate_jacobian_eq(out=self._jacobian)
         self._timer.stop(timebins.jacobian)
 
-        return jac
+        return self._jacobian
 
 
 class DenseSquareNlpSolver(_SquareNlpSolverBase):
