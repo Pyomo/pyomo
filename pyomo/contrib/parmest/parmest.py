@@ -332,6 +332,16 @@ class Estimator(object):
         # boolean to indicate if model is initialized using a square solve
         self.model_initialized = False
 
+    def _return_theta_names(self):
+        """
+        Return list of fitted model parameter names
+        """
+        # if fitted model parameter names differ from theta_names created when Estimator object is created
+        if hasattr(self, 'theta_names_updated'):
+            return self.theta_names_updated
+            
+        else:
+            return self.theta_names # default theta_names, created when Estimator object is created
 
     def _create_parmest_model(self, data):
         """
@@ -622,10 +632,8 @@ class Estimator(object):
                 # after initialization
                 theta_init_vals = []
                 # use appropriate theta_names member
-                if hasattr(self,'theta_names_updated'):
-                    theta_ref = self.theta_names_updated
-                else:
-                    theta_ref = self.theta_names
+                theta_ref = self._return_theta_names()
+                
                 for i, theta in enumerate(theta_ref):
                     # Use parser in ComponentUID to locate the component
                     var_cuid = ComponentUID(theta)
@@ -712,10 +720,7 @@ class Estimator(object):
             # return initialized theta values
             if len(thetavals) == 0:
                 # use appropriate theta_names member
-                if hasattr(self,'theta_names_updated'):
-                    theta_ref = self.theta_names_updated
-                else:
-                    theta_ref = self.theta_names
+                theta_ref = self._return_theta_names()
                 for i, theta in enumerate(theta_ref):
                     thetavals[theta] = theta_init_vals[i]()
         
@@ -1034,10 +1039,7 @@ class Estimator(object):
         if theta_values is None:    
             all_thetas = {} # dictionary to store fitted variables
             # use appropriate theta names member
-            if hasattr(self,'theta_names_updated'):
-                theta_names = self.theta_names_updated
-            else:
-                theta_names = self.theta_names
+            theta_names = self._return_theta_names()
         else:
             assert isinstance(theta_values, pd.DataFrame)
             # for parallel code we need to use lists and dicts in the loop
