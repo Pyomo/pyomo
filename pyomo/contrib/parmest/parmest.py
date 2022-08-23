@@ -592,11 +592,11 @@ class Estimator(object):
         if len(thetavals) > 0:
             dummy_cb = {"callback": self._instance_creation_callback,
                         "ThetaVals": thetavals,
-                        "theta_names": self.theta_names,
+                        "theta_names": self._return_theta_names(),
                         "cb_data": self.callback_data}
         else:
             dummy_cb = {"callback": self._instance_creation_callback,
-                        "theta_names": self.theta_names,
+                        "theta_names": self._return_theta_names(),
                         "cb_data": self.callback_data}
 
 
@@ -741,7 +741,7 @@ class Estimator(object):
                 attempts = 0
                 unique_samples = 0 # check for duplicates in each sample
                 duplicate = False # check for duplicates between samples
-                while (unique_samples <= len(self.theta_names)) and (not duplicate):
+                while (unique_samples <= len(self._return_theta_names())) and (not duplicate):
                     sample = np.random.choice(senario_numbers,
                                                 samplesize,
                                                 replace=replacement)
@@ -792,7 +792,7 @@ class Estimator(object):
         assert isinstance(calc_cov, bool)
         if calc_cov:
             assert isinstance(cov_n, int), "The number of datapoints that are used in the objective function is required to calculate the covariance matrix"
-            assert cov_n > len(self.theta_names), "The number of datapoints must be greater than the number of parameters to estimate"
+            assert cov_n > len(self._return_theta_names()), "The number of datapoints must be greater than the number of parameters to estimate"
 
         return self._Q_opt(solver=solver, return_values=return_values,
                            bootlist=None, calc_cov=calc_cov, cov_n=cov_n)
@@ -1015,6 +1015,7 @@ class Estimator(object):
         if len(self.theta_names) == 1 and self.theta_names[0] == 'parmest_dummy_var':
             pass # skip assertion if model has no fitted parameters
         else:
+            # create a local instance of the pyomo model to access model variables and parameters
             model_temp = self._create_parmest_model(self.callback_data[0])
             model_theta_list = [] # list to store indexed and non-indexed parameters
             # iterate over original theta_names
@@ -1023,17 +1024,26 @@ class Estimator(object):
                 var_validate = var_cuid.find_component_on(model_temp)
                 # check if theta in theta_names are indexed
                 try:
+                    # get component UID of Set over which theta is defined
                     set_cuid = ComponentUID(var_validate.index_set())
+                    # access and iterate over the Set to generate theta names as they appear
+                    # in the pyomo model
                     set_validate = set_cuid.find_component_on(model_temp)
                     for s in set_validate:
                         self_theta_temp = repr(var_cuid)+"["+repr(s)+"]"
+                        # generate list of theta names
                         model_theta_list.append(self_theta_temp)
-                except:
+                # if theta is not indexed, copy theta name to list as-is
+                except AttributeError:
                     self_theta_temp = repr(var_cuid)
                     model_theta_list.append(self_theta_temp)
+                except:
+                    raise
             # if self.theta_names is not the same as temp model_theta_list,
             # create self.theta_names_updated
-            if self.theta_names != model_theta_list:
+            if set(self.theta_names) == set(model_theta_list) and len(self.theta_names) == set(model_theta_list):
+                pass
+            else:
                 self.theta_names_updated = model_theta_list
         
         if theta_values is None:    
