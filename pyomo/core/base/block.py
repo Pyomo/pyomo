@@ -1329,7 +1329,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # NonNegativeReals, etc) that are not "owned" by any blocks and
         # should be preserved as singletons.
         #
-        save_parent, self._parent = self._parent, None
         try:
             new_block = copy.deepcopy(
                 self, {
@@ -1342,8 +1341,13 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
                     '__block_scope__': {id(self): True, id(None): False},
                     '__paranoid__': True,
                     })
-        finally:
-            self._parent = save_parent
+
+        # We need to "detangle" the new block from the original block
+        # hierarchy
+        if self.parent_component() is self:
+            new_block._parent = None
+        else:
+            new_block._component = None
 
         return new_block
 

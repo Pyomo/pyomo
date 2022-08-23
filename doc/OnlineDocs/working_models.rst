@@ -340,7 +340,6 @@ of the objective function object. Here is a simple example:
    >>> print ("------------- extend obj --------------") # doctest: +SKIP
    >>> model.obj.expr += 10 * model.y
 
-   >>> opt = SolverFactory('cplex') # doctest: +SKIP
    >>> opt.solve(model) # doctest: +SKIP
    >>> model.pprint() # doctest: +SKIP
 
