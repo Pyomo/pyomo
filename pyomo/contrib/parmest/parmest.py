@@ -621,6 +621,7 @@ class Estimator(object):
                 # list to store fitted parameter names that will be unfixed
                 # after initialization
                 theta_init_vals = []
+                # use appropriate theta_names member
                 if hasattr(self,'theta_names_updated'):
                     theta_ref = self.theta_names_updated
                 else:
@@ -710,6 +711,7 @@ class Estimator(object):
 
             # return initialized theta values
             if len(thetavals) == 0:
+                # use appropriate theta_names member
                 if hasattr(self,'theta_names_updated'):
                     theta_ref = self.theta_names_updated
                 else:
@@ -1010,9 +1012,11 @@ class Estimator(object):
         else:
             model_temp = self._create_parmest_model(self.callback_data[0])
             model_theta_list = [] # list to store indexed and non-indexed parameters
+            # iterate over original theta_names
             for theta_i in self.theta_names:
                 var_cuid = ComponentUID(theta_i)
                 var_validate = var_cuid.find_component_on(model_temp)
+                # check if theta in theta_names are indexed
                 try:
                     set_cuid = ComponentUID(var_validate.index_set())
                     set_validate = set_cuid.find_component_on(model_temp)
@@ -1022,11 +1026,14 @@ class Estimator(object):
                 except:
                     self_theta_temp = repr(var_cuid)
                     model_theta_list.append(self_theta_temp)
+            # if self.theta_names is not the same as temp model_theta_list,
+            # create self.theta_names_updated
             if self.theta_names != model_theta_list:
                 self.theta_names_updated = model_theta_list
         
         if theta_values is None:    
             all_thetas = {} # dictionary to store fitted variables
+            # use appropriate theta names member
             if hasattr(self,'theta_names_updated'):
                 theta_names = self.theta_names_updated
             else:
@@ -1035,7 +1042,7 @@ class Estimator(object):
             assert isinstance(theta_values, pd.DataFrame)
             # for parallel code we need to use lists and dicts in the loop
             theta_names = theta_values.columns
-            # # check if theta_names in self.theta_names
+            # # check if theta_names are in model
             for thta in list(theta_names):
                 theta_temp = thta.replace("'", "") # cleaning quotes from theta_names
 
