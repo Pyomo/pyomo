@@ -51,6 +51,7 @@
 - Add support for cplex_persistent solver.
 - Fix bug in OA cut expression in cut_generation.py.
 
+TODO: mindtpy rewrite
 """
 from __future__ import division
 import logging
