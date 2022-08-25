@@ -16,8 +16,11 @@ from pyomo.common.collections import (
 )
 from pyomo.core.base.set import SetOf, OrderedSetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
+from pyomo.core.base.global_set import (
+    UnindexedComponent_set, UnindexedComponent_index,
+)
 from pyomo.core.base.indexed_component import (
-    IndexedComponent, UnindexedComponent_set, normalize_index
+    IndexedComponent, normalize_index,
 )
 from pyomo.core.base.indexed_component_slice import (
     IndexedComponent_slice, _IndexedComponent_slice_iter
@@ -134,6 +137,8 @@ class _fill_in_known_wildcards(object):
             # that is contained by the component.
             _slice.last_index = idx
             return _slice.component[idx[0]]
+        elif not idx:
+            return _slice.component
         elif self.look_in_index:
             # At this point we know our component is sparse and we did
             # not find the component data.  Since `look_in_index` is
@@ -155,9 +160,13 @@ class _fill_in_known_wildcards(object):
             % (idx, _slice.component.name, self.base_key))
 
     def check_complete(self):
-        if self.key:
-            raise KeyError("Extra (unused) values for slice index %s"
-                           % ( self.base_key, ))
+        if not self.key:
+            return
+        if (self.key == [UnindexedComponent_index] and
+            self.base_key == (UnindexedComponent_index,)):
+            return
+        raise KeyError("Extra (unused) values for slice index %s"
+                       % ( self.base_key, ))
 
 
 class SliceEllipsisLookupError(LookupError):
@@ -458,8 +467,11 @@ def _identify_wildcard_sets(iter_stack, index):
                 # `wildcard_count` is the number of coordinates of this
                 # set (which may be multi-dimensional) that have been
                 # sliced.
-                wildcard_count = sum( 1 for k in range(s.dimen)
-                            if k+offset not in level.fixed )
+                if level.fixed is None:
+                    wildcard_count = s.dimen
+                else:
+                    wildcard_count = sum( 1 for k in range(s.dimen)
+                                          if k+offset not in level.fixed )
                 # `k+offset` is a position in the "total" (flattened)
                 # index tuple.  All the _slice_generator's information
                 # is in terms of this total index tuple.
@@ -637,28 +649,12 @@ def Reference(reference, ctype=_NotSpecified):
         slice_idx = []
         index = None
     elif isinstance(reference, ComponentData):
-        # Create a dummy IndexedComponent container with a "normal"
-        # Scalar interface.  This relies on the assumption that the
-        # Component uses a standard storage model.
-        _idx = next(iter(UnindexedComponent_set))
-        _parent = reference.parent_component()
-        comp = _parent.__class__(SetOf(UnindexedComponent_set))
-        comp.construct()
-        comp._data[_idx] = reference
-        #
-        # HACK: Set the _parent to match the ComponentData's container's
-        # parent so that block.clone() infers the correct block scope
-        # for this "hidden" component
-        #
-        # TODO: When Block supports proper "hidden" / "anonymous"
-        # components, switch this HACK over to that API
-        comp._parent = _parent._parent
-        #
-        reference = comp[...]
+        reference = IndexedComponent_slice(reference.parent_component())[
+            reference.index()]
         _data = _ReferenceDict(reference)
         _iter = iter(reference)
         slice_idx = []
-        index = None
+        index = SetOf(UnindexedComponent_set)
     elif isinstance(reference, Mapping):
         _data = _ReferenceDict_mapping(dict(reference))
         _iter = _data.values()
