@@ -196,7 +196,7 @@ class SymbolicDerivatives(unittest.TestCase):
         if s(e) == s((-1.+m.x**2.)**-.5):
             pass
         else:
-            self.assertEqual(s(e), s((1.+m.x)**-.5)*(-1.+m.x)**-.5))
+            self.assertEqual(s(e), s((1.+m.x)**-.5*(-1.+m.x)**-.5))
 
         e = differentiate(atanh(m.x), wrt=m.x)
         self.assertTrue(e.is_expression_type())
