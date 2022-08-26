@@ -17,7 +17,6 @@
 #  ___________________________________________________________________________
 
 import os
-import threading
 import time
 import tempfile
 import logging
@@ -25,7 +24,7 @@ import shutil
 import weakref
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import TempfileContextError
-from pyomo.common.multithread import MultiThreadWrapper
+from pyomo.common.multithread import MultiThreadWrapperWithMain
 try:
     from pyutilib.component.config.tempfiles import (
         TempfileManager as pyutilib_mngr
@@ -472,16 +471,5 @@ class TempfileContext:
             ignore_errors=not deletion_errors_are_fatal)
 
 
-class MultiThreadTempfileManager(MultiThreadWrapper):
-    def __init__(self):
-        super().__init__(TempfileManagerClass)
-        self.main = TempfileManagerClass()
-
-    def __getattr__(self, attr):
-        if threading.current_thread() is threading.main_thread():
-            return getattr(self.main, attr)
-        return super().__getattr__(attr)
-
-
 # The global Pyomo TempfileManager instance
-TempfileManager = MultiThreadTempfileManager()
+TempfileManager = MultiThreadWrapperWithMain(TempfileManagerClass)
