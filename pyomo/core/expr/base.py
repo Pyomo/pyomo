@@ -48,7 +48,7 @@ class ExpressionBase(object):
 
         Individual expression nodes may use different internal storage
         schemes, so it is imperative that developers use this method and
-        not assume the existance of a particular attribute!
+        not assume the existence of a particular attribute!
 
         Returns
         -------
@@ -89,7 +89,7 @@ class ExpressionBase(object):
             Sequence containing only the child nodes of this node.  The
             return type depends on the node storage model.  Users are
             not permitted to change the returned data (even for the case
-            of data returned as a list), as that breaks the promist of
+            of data returned as a list), as that breaks the promise of
             tree immutability.
 
         """
@@ -367,7 +367,7 @@ class ExpressionBase(object):
             operator to the arguments.  It does *not* evaluate
             the arguments in the process, but assumes that they
             have been previously evaluated.  But noted that if
-            this class contains auxilliary data (e.g. like the
+            this class contains auxiliary data (e.g. like the
             numeric coefficients in the :class:`LinearExpression
             <pyomo.core.expr.current.LinearExpression>` class, then
             those values *must* be evaluated as part of this

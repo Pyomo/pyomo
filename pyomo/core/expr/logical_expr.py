@@ -68,7 +68,7 @@ def _generate_logical_proposition(etype, lhs, rhs):
 
 class BooleanExpression(ExpressionBase, BooleanValue):
     """
-    Logical expressions base expression.
+    Logical expression base class.
 
     This class is used to define nodes in an expression
     tree.

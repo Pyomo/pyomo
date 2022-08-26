@@ -148,7 +148,7 @@ class NumericExpression(ExpressionBase, NumericValue):
     @deprecated('The implicit recasting of a "not potentially variable" '
                 'expression node to a potentially variable one is no '
                 'longer supported (this violates that immutability '
-                'promise for Pyyomo5 expression trees).', version='TBD')
+                'promise for Pyomo5 expression trees).', version='TBD')
     def create_potentially_variable_object(self):
         """
         Create a potentially variable version of this object.

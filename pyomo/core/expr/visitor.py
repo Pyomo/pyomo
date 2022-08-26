@@ -1489,9 +1489,7 @@ def _expression_is_fixed(node):
     Args:
         node: The root node of an expression tree.
 
-    Returns:
-        A non-negative integer that is the polynomial
-        degree if the expression is polynomial, or :const:`None` otherwise.
+    Returns: bool
 
     """
     visitor = _IsFixedVisitor()
@@ -1527,7 +1525,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
             arg = node._args_[i]
 
             if arg is None:
-                values[i] = 'Undefined'  # TODO: coverage
+                values[i] = 'Undefined'
             elif arg.__class__ in native_numeric_types:
                 pass
             elif arg.__class__ in nonpyomo_leaf_types:
@@ -1562,7 +1560,7 @@ class _ToStringVisitor(ExpressionValueVisitor):
 
         Return True if the node is not expanded.
         """
-        if node is None:  # TODO: coverage
+        if node is None:
             return True, None
 
         if node.__class__ in nonpyomo_leaf_types:

@@ -375,7 +375,7 @@ def as_numeric(obj):
             deprecation_warning(
                 "returning a relational expression from as_numeric().  "
                 "Relational expressions are no longer numeric types.  "
-                "In this future this will raise a TypeError.")
+                "In this future this will raise a TypeError.", version='TBD')
             return obj
         else:
             try:
