@@ -472,4 +472,4 @@ class TempfileContext:
 
 
 # The global Pyomo TempfileManager instance
-TempfileManager = MultiThreadWrapperWithMain(TempfileManagerClass)
+TempfileManager: TempfileManagerClass = MultiThreadWrapperWithMain(TempfileManagerClass)
