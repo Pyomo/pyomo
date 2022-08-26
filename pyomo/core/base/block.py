@@ -338,7 +338,7 @@ class PseudoMap(AutoSlots.Mixin):
 
     # If a writer cached a repn on this block, remove it when cloning
     #  TODO: remove repn caching from the model
-    __autoslot_mappers = {'_repn': AutoSlots.remove_field}
+    __autoslot_mappers = {'_repn': AutoSlots.encode_as_none}
 
     def __init__(self, block, ctype, active=None, sort=False):
         """

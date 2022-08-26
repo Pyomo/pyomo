@@ -322,8 +322,8 @@ class AMPLExternalFunction(ExternalFunction):
     __autoslot_mappers__ = {
         # Remove reference to loaded library (they are not copyable or
         # picklable)
-        '_so': AutoSlots.remove_field,
-        '_known_functions': AutoSlots.remove_field,
+        '_so': AutoSlots.encode_as_none,
+        '_known_functions': AutoSlots.encode_as_none,
     }
 
     def __init__(self, *args, **kwargs):

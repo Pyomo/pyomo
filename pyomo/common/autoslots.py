@@ -98,9 +98,13 @@ class AutoSlots(type):
             return val.__class__(_weakref_ref(v) for v in val)
 
     @staticmethod
-    def remove_field(encode, val):
-        if val is None:
-            return val
+    def encode_as_none(encode, val):
+        """__autoslot_mappers__ mapper that will replace fields with None
+
+        This mapper will encode the field as None (regardless of the
+        current field value).  No mapping occurs when restoring a state.
+
+        """
         if encode:
             return None
         else:
