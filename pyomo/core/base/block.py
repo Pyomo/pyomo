@@ -25,7 +25,7 @@ from io import StringIO
 from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.autoslots import AutoSlots
-from pyomo.common.collections import Mapping, OrderedDict
+from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
 from pyomo.common.formatting import StreamIndenter
 from pyomo.common.gc_manager import PauseGC
@@ -1322,18 +1322,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             # the "fast" version first, and if we hit any issues, we
             # will go back and re-try with the slower OrderedDict /
             # paranoid mode.
-            try:
-                new_block = copy.deepcopy(
-                    self, dict(
-                        __block_scope__={id(self): True, id(None): False},
-                        __paranoid__=False,
-                    ))
-            except:
-                new_block = copy.deepcopy(
-                    self, OrderedDict(
-                        __block_scope__={id(self): True, id(None): False},
-                        __paranoid__=True,
-                    ))
+            new_block = copy.deepcopy(
+                self, dict(
+                    __block_scope__={id(self): True, id(None): False},
+                ))
 
         # We need to "detangle" the new block from the original block
         # hierarchy

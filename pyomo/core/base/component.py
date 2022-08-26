@@ -18,6 +18,7 @@ from weakref import ref as weakref_ref
 import pyomo.common
 from pyomo.common import DeveloperError
 from pyomo.common.autoslots import AutoSlots
+from pyomo.common.collections import OrderedDict
 from pyomo.common.deprecation import (
     deprecated, deprecation_warning, relocated_module_attribute)
 from pyomo.common.factory import Factory
@@ -105,13 +106,7 @@ class _ComponentBase(PyomoObject):
         # expressions can refer to container (non-Simple) components, so
         # we need to override __deepcopy__ for both Component and
         # ComponentData.
-
-        #try:
-        #    print("Component: %s" % (self.name,))
-        #except:
-        #    print("DANGLING ComponentData: %s on %s" % (
-        #        type(self),self.parent_component()))
-
+        #
         # Note: there is an edge case when cloning a block: the initial
         # call to deepcopy (on the target block) has __block_scope__
         # defined, however, the parent block of self is either None, or
@@ -142,6 +137,28 @@ class _ComponentBase(PyomoObject):
                 memo[id(self)] = self
                 return self
         #
+        # At this point we know we need to deepcopy this component (and
+        # everything under it).  We can't do the "obvious", since this
+        # is a (partially) slot-ized class and the __dict__ structure is
+        # nonauthoritative:
+        #
+        # for key, val in self.__dict__.iteritems():
+        #     object.__setattr__(ans, key, deepcopy(val, memo))
+        #
+        # Further, __slots__ is also nonauthoritative (this may be a
+        # singleton component -- in which case it also has a __dict__).
+        # Plus, this may be a derived class with several layers of
+        # slots.  So, we will piggyback on the __getstate__/__setstate__
+        # logic amd resort to partially "pickling" the object,
+        # deepcopying the state, and then restoring the copy into
+        # the new instance.
+        #
+        # [JDS 7/7/14] I worry about the efficiency of using both
+        # getstate/setstate *and* deepcopy, but we need deepcopy to
+        # update the _parent refs appropriately, and since this is a
+        # slot-ized class, we cannot overwrite the __deepcopy__
+        # attribute to prevent infinite recursion.
+        #
         # deepcopy() is an inherently recursive operation.  This can
         # cause problems for highly interconnected Pyomo models (for
         # example, a time linked model where each time block has a
@@ -151,7 +168,7 @@ class _ComponentBase(PyomoObject):
         # knowledge that all component references point to other
         # components / component datas, and NOT to attributes on the
         # components/datas.  So, if we can first go through and stub in
-        # all the objects that we will need to populate,and then go
+        # all the objects that we will need to populate, and then go
         # through and deepcopy them, then we can unroll the vast
         # majority of the recursion.
         #
@@ -162,43 +179,9 @@ class _ComponentBase(PyomoObject):
         # components that we expect to need, we can go through and
         # populate all the components.
         #
-        if '__paranoid__' not in memo:
-            memo['__paranoid__'] = None
         # The component_list is roughly in declaration order.  This
         # means that it should be relatively safe to clone the contents
         # in the same order.
-        for comp in component_list:
-            comp._populate_deepcopied_object(memo)
-        return memo[id(self)]
-
-    def _create_objects_for_deepcopy(self, memo, component_list):
-        _id = id(self)
-        if _id not in memo:
-            component_list.append(self)
-            memo[_id] = self.__class__.__new__(self.__class__)
-
-    def _populate_deepcopied_object(self, memo):
-        # We can't do the "obvious", since this is a (partially)
-        # slot-ized class and the __dict__ structure is
-        # nonauthoritative:
-        #
-        # for key, val in self.__dict__.iteritems():
-        #     object.__setattr__(ans, key, deepcopy(val, memo))
-        #
-        # Further, __slots__ is also nonauthoritative (this may be a
-        # singleton component -- in which case it also has a __dict__).
-        # Plus, as this may be a derived class with several layers of
-        # slots.  So, we will resort to partially "pickling" the object,
-        # deepcopying the state dict, and then restoring the copy into
-        # the new instance.
-        #
-        # [JDS 7/7/14] I worry about the efficiency of using both
-        # getstate/setstate *and* deepcopy, but we need deepcopy to
-        # update the _parent refs appropriately, and since this is a
-        # slot-ized class, we cannot overwrite the __deepcopy__
-        # attribute to prevent infinite recursion.
-        #
-        state = self.__getstate__()
         #
         # There is a particularly subtle bug with 'uncopyable'
         # attributes: if the exception is thrown while copying a complex
@@ -207,64 +190,89 @@ class _ComponentBase(PyomoObject):
         # haven't had their state set yet.  When the exception moves us
         # into the except block, we need to effectively "undo" those
         # partially copied classes.  The only way is to restore the memo
-        # to the state it was in before we started.  Right now, our
-        # solution is to make a (shallow) copy of the memo before each
-        # operation and restoring it in the case of exception.
-        # Unfortunately that is a lot of usually unnecessary work.
-        # Since *most* classes are copyable, we will avoid that
-        # "paranoia" unless the naive clone generated an error - in
-        # which case Block.clone() will switch over to the more
-        # "paranoid" mode.
+        # to the state it was in before we started.  We will make use of
+        # the knowledge that 1) memo entries are never reassigned during
+        # a deepcopy(), and 2) dict are ordered by insertion order in
+        # Python >= 3.7.  As a result, we do not need to preserve the
+        # whole memo before calling __getstate__/__setstate__, and can
+        # get away with only remembering the number of items in the
+        # memo.
         #
-        saved_memo = len(memo)
+        # Note that entering/leaving try-except contexts has a
+        # not-insignificant overhead.  On the hope that the user wrote a
+        # sane (deepcopy-able) model, we will try to do everything in
+        # one try-except block.
+        #
         try:
-            memo[id(self)].__setstate__(
-                [deepcopy(field, memo) for field in state]
-            )
-            return
+            for i, comp in enumerate(component_list):
+                saved_memo = len(memo)
+                memo[id(comp)].__setstate__([
+                    deepcopy(field, memo) for field in comp.__getstate__()
+                ])
+            return memo[id(self)]
         except:
             pass
+        #
+        # We hit an error deepcopying a component.  Attempt to reset
+        # things and try again, but in a more cautious manner (after
+        # all, if one component was not deepcopyable, it stands to
+        # reason that several others will not be either).
+        #
+        # We want to remove any new entries added to the memo during the
+        # failed try above.  Unfortunately, this is expensive to do with
+        # dict.  We will convert the dict to an OrderedDict (where is it
+        # inexpensive to iterate over the newest N entries).
+        #
+        ordered_memo = OrderedDict(memo)
+        _iter = reversed(ordered_memo.keys())
+        new_keys = [next(_iter) for _ in range(len(ordered_memo) - saved_memo)]
+        map(ordered_memo.pop, new_keys)
+        #
+        # Now we are going to continue on, but in a more cautious
+        # manner: we will clone entries field at a time so that we can
+        # get the most "complete" copy possible.
+        for comp in component_list[i:]:
+            state = comp.__getstate__()
+            # Note: if has_dict, then __auto_slots__.slots will be 1
+            # shorter than the state (the last element is the __dict__).
+            # Zip will ignore it.
+            _deepcopy_field = comp._deepcopy_field
+            new_state = [
+                _deepcopy_field(ordered_memo, slot, value)
+                for slot, value in zip(comp.__auto_slots__.slots, state)
+            ]
+            if comp.__auto_slots__.has_dict:
+                new_state.append({
+                    slot: _deepcopy_field(ordered_memo, slot, value)
+                    for slot, value in state[-1].items()
+                })
+            ordered_memo[id(comp)].__setstate__(new_state)
+        # Note that memo is (intentionally) pass-by-reference.  We need
+        # to reset it to the local (currently authoritative)
+        # ordered_memo before returning.
+        memo.clear()
+        memo.update(ordered_memo)
+        return memo[id(self)]
 
-        # We hit an error deepcopying this component.  Attempt to reset
-        # things and try field at a time
-        if memo['__paranoid__']:
-            # Note: memo is intentionally pass-by-reference.  We
-            # need to clear and reset the object we were handed (and
-            # not overwrite it)
-            _iter = reversed(memo.keys())
-            new_keys = [next(_iter) for _ in range(len(memo) - saved_memo)]
-            map(memo.pop, new_keys)
-        elif memo['__paranoid__'] is not None:
-            raise PickleError()
-
-        # Note: if has_dict, then __auto_slots__.slots will be 1 shorter
-        # than the state (the last element is the __dict__).  Zip will
-        # ignore it.
-        _deepcopy_field = self._deepcopy_field
-        new_state = [
-            _deepcopy_field(memo, slot, value)
-            for slot, value in zip(self.__auto_slots__.slots, state)
-        ]
-        if self.__auto_slots__.has_dict:
-            new_state.append({
-                slot: _deepcopy_field(memo, slot, value)
-                for slot, value in state[-1].items()
-            })
-        memo[id(self)].__setstate__(new_state)
+    def _create_objects_for_deepcopy(self, memo, component_list):
+        _id = id(self)
+        if _id not in memo:
+            component_list.append(self)
+            memo[_id] = self.__class__.__new__(self.__class__)
 
     def _deepcopy_field(self, memo, slot_name, value):
-        paranoid = memo['__paranoid__']
+        saved_memo = len(memo)
         try:
-            saved_memo = len(memo)
             return deepcopy(value, memo)
         except CloneError:
             raise
         except:
-            if paranoid:
-                _iter = reversed(memo.keys())
-                new_keys = [next(_iter) for _ in range(len(memo) - saved_memo)]
-                map(memo.pop, new_keys)
-            elif paranoid is None:
+            # remove entries added to teh memo
+            _iter = reversed(memo.keys())
+            new_keys = [next(_iter) for _ in range(len(memo) - saved_memo)]
+            map(memo.pop, new_keys)
+            # warn the user
+            if '__block_scope__' not in memo:
                 logger.warning("""
                     Uncopyable field encountered when deep
                     copying outside the scope of Block.clone().
