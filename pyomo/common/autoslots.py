@@ -15,16 +15,16 @@ from weakref import ref as _weakref_ref
 
 _autoslot_info = namedtuple(
     '_autoslot_info',
-    ['has_dict', 'slots', 'slot_mappers', 'field_mappers', 'cls']
+    ['has_dict', 'slots', 'slot_mappers', 'field_mappers']
 )
 
 class AutoSlots(type):
     """Metaclass to automatically collect __slots__ forgeneric pickling
 
     This metaclass will add a __auto_slots__ class attribute to the
-    class (and all derived classes.  This attribute is a 5-tuple:
+    class (and all derived classes).  This attribute is a 4-tuple:
 
-       (has_dict, slots, slot_mappers, field_mappers, cls)
+       (has_dict, slots, slot_mappers, field_mappers)
 
     has_dict: bool
         True if this class has a __dict__ attribute (that would need to
@@ -43,11 +43,6 @@ class AutoSlots(type):
         Dict mapping field name in __dict__ to a function with sugnature
         `mapper(encode: bool, val: Any)` that can be used to encode or
         decode that field value.
-
-    cls: type
-        The class that the __auto_slots__ tuple was actually attached to
-        (used to detect when self.__auto_slots__ is actually reporting
-        the attribute from a base class)
 
     """
     _ignore_slots = {'__weakref__', '__dict__'}
@@ -82,7 +77,7 @@ class AutoSlots(type):
                     dict_mappers[slot] = mapper
 
         cls.__auto_slots__ = _autoslot_info(
-            has_dict, slots, slot_mappers, dict_mappers, cls)
+            has_dict, slots, slot_mappers, dict_mappers)
 
     @staticmethod
     def weakref_mapper(encode, val):
@@ -114,14 +109,23 @@ class AutoSlots(type):
     class Mixin(object):
         __slots__ = ()
 
+        def __init_subclass__(cls, **kwds):
+            """Automatically define __auto_slots__ on derived subclasses
+
+            This accomplishes the same thing as the AutoSlots metaclass
+            without incurring the overhead / runtime penalty of using a
+            metaclass.
+
+            """
+            super().__init_subclass__(**kwds)
+            AutoSlots.collect_autoslots(cls)
+
         def __deepcopy__(self, memo):
             memo[id(self)] = ans = self.__class__.__new__(self.__class__)
             ans.__setstate__(deepcopy(self.__getstate__(), memo))
             return ans
 
         def __getstate__(self):
-            if self.__auto_slots__.cls is not self.__class__:
-                AutoSlots.collect_autoslots(self.__class__)
             slots = [getattr(self, attr) for attr in self.__auto_slots__.slots]
             for idx, mapper in self.__auto_slots__.slot_mappers.items():
                 slots[idx] = mapper(True, slots[idx])
@@ -134,9 +138,7 @@ class AutoSlots(type):
             return slots
 
         def __setstate__(self, state):
-            if self.__auto_slots__.cls is not self.__class__:
-                AutoSlots.collect_autoslots(self.__class__)
-            # Map the slot values
+            # Map (decode) the slot values
             for idx, mapper in self.__auto_slots__.slot_mappers.items():
                 state[idx] = mapper(False, state[idx])
             #
@@ -158,9 +160,3 @@ class AutoSlots(type):
                 self.__dict__.clear()
                 self.__dict__.update(fields)
     
-# Trigger the definition of the __auto_slots__ on AutoSlots.Mixin.  All
-# other derived classes will be triggered on first entry into
-# __getstate__ or __setstate__
-AutoSlots.collect_autoslots(AutoSlots.Mixin)
-
-AutoSlotsMixin = AutoSlots.Mixin
