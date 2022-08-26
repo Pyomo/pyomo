@@ -13,7 +13,7 @@
 import pyomo.common.unittest as unittest
 from pyomo.core.base.interval_var import IntervalVar
 from pyomo.environ import (
-    ConcreteModel, BooleanVar, Integers, Var, value)
+    ConcreteModel, BooleanVar, Integers, Set, Var, value)
 
 class TestScalarIntervalVar(unittest.TestCase):
     def test_initialize_with_no_data(self):
@@ -141,10 +141,27 @@ class TestIndexedIntervalVar(unittest.TestCase):
             self.assertEqual(m.act[i].end_time.lower, 0)
             self.assertEqual(m.act[i].end_time.upper, 10)
 
+        # None doesn't make sense for this:
+        with self.assertRaisesRegex(ValueError,
+                                    "Cannot set 'optional' to None: Must be "
+                                    "True or False."):
+            m.act[1].optional = None
+
+        # We can change it, and that has the correct effect on is_present
+        m.act[1].optional = False
+        self.assertFalse(m.act[1].optional)
+        self.assertTrue(m.act[1].is_present.fixed)
+
+        m.act[1].optional = True
+        self.assertTrue(m.act[1].optional)
+        self.assertFalse(m.act[1].is_present.fixed)
+
     def test_optional_rule(self):
         m = ConcreteModel()
         m.idx = Set(initialize=[(4, 2), (5, 2)], dimen=2)
         def optional_rule(m, i, j):
+            print(i % j == 0)
             return i % j == 0
         m.act = IntervalVar(m.idx, optional=optional_rule)
-        # TODO
+        self.assertTrue(m.act[4,2].optional)
+        self.assertFalse(m.act[5,2].optional)

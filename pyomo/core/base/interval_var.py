@@ -19,14 +19,12 @@ from pyomo.common.timing import ConstructionTimer
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
-from pyomo.core.base.initializer import BoundInitializer
+from pyomo.core.base.initializer import BoundInitializer, Initializer
 from pyomo.core.base import Var, BooleanVar
 from pyomo.core import Integers
 
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set)
-
-import sys
 
 logger = logging.getLogger('pyomo.core')
 
@@ -47,6 +45,16 @@ class _IntervalVarData(_BlockData):
         # to have to check if the BooleanVar is fixed, so this way you can ask
         # the IntervalVar directly.
         return not self.is_present.fixed
+
+    @optional.setter
+    def optional(self, val):
+        if type(val) is not bool:
+            raise ValueError(
+                "Cannot set 'optional' to %s: Must be True or False." % val)
+        if val:
+            self.is_present.fixed = False
+        else:
+            self.is_present.fix(True)
 
 @ModelComponentFactory.register("Interval variables for scheduling.")
 class IntervalVar(Block):
@@ -80,7 +88,7 @@ class IntervalVar(Block):
         _start_arg = kwargs.pop('start', None)
         _end_arg = kwargs.pop('end', None)
         _length_arg = kwargs.pop('length', None)
-        self._optional = kwargs.pop('optional', False)
+        _optional_arg = kwargs.pop('optional', False)
 
         kwargs.setdefault('ctype', IntervalVar)
         Block.__init__(self, *args, **kwargs)
@@ -88,6 +96,7 @@ class IntervalVar(Block):
         self._start_bounds = BoundInitializer(self, _start_arg)
         self._end_bounds = BoundInitializer(self, _end_arg)
         self._length_bounds = BoundInitializer(self, _length_arg)
+        self._optional = Initializer(_optional_arg)
 
     def _getitem_when_not_present(self, index):
         if index is None and not self.is_indexed():
@@ -114,6 +123,9 @@ class IntervalVar(Block):
             if not isinstance(length_bounds, Sequence):
                 length_bounds = (length_bounds, length_bounds)
             obj.length.lower, obj.length.upper = length_bounds
+        if self._optional is not None:
+            # hit the setter so I get error checking
+            obj.optional = self._optional(parent, index)
 
         return obj
 
