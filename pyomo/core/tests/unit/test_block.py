@@ -2123,7 +2123,9 @@ class TestBlock(unittest.TestCase):
                       OUTPUT.getvalue())
         self.assertIn("'__paranoid__'", OUTPUT.getvalue())
         self.assertTrue(hasattr(m.b, 'bad2'))
-        self.assertFalse(hasattr(nb, 'bad2'))
+        self.assertIsNotNone(m.b.bad2)
+        self.assertTrue(hasattr(nb, 'bad2'))
+        self.assertIsNone(nb.bad2)
 
         # Simple tests for the subblock
         OUTPUT = StringIO()
@@ -2135,7 +2137,9 @@ class TestBlock(unittest.TestCase):
                       OUTPUT.getvalue())
         self.assertNotIn("'__paranoid__'", OUTPUT.getvalue())
         self.assertTrue(hasattr(m.b, 'bad2'))
-        self.assertFalse(hasattr(nb, 'bad2'))
+        self.assertIsNotNone(m.b.bad2)
+        self.assertTrue(hasattr(nb, 'bad2'))
+        self.assertIsNone(nb.bad2)
 
         # more involved tests for the model
         OUTPUT = StringIO()
@@ -2147,9 +2151,13 @@ class TestBlock(unittest.TestCase):
                       OUTPUT.getvalue())
         self.assertNotIn("'__paranoid__'", OUTPUT.getvalue())
         self.assertTrue(hasattr(m, 'bad1'))
-        self.assertFalse(hasattr(n, 'bad1'))
+        self.assertIsNotNone(m.bad1)
+        self.assertTrue(hasattr(n, 'bad1'))
+        self.assertIsNone(n.bad1)
         self.assertTrue(hasattr(m.b, 'bad2'))
-        self.assertFalse(hasattr(n.b, 'bad2'))
+        self.assertIsNotNone(m.b.bad2)
+        self.assertTrue(hasattr(n.b, 'bad2'))
+        self.assertIsNone(n.b.bad2)
 
         self.assertNotEqual(id(m), id(n))
 
