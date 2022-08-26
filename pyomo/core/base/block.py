@@ -20,13 +20,17 @@ import weakref
 import textwrap
 
 from inspect import isclass
-from operator import itemgetter
+from itertools import filterfalse
+from operator import itemgetter, attrgetter
 from io import StringIO
 from pyomo.common.pyomo_typing import overload
 
-from pyomo.common.collections import Mapping
-from pyomo.common.deprecation import deprecated, deprecation_warning, RenamedClass
+from pyomo.common.collections import Mapping, OrderedDict
+from pyomo.common.deprecation import (
+    deprecated, deprecation_warning, RenamedClass,
+)
 from pyomo.common.formatting import StreamIndenter
+from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
 from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
@@ -35,7 +39,7 @@ from pyomo.core.base.component import (
 )
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.componentuid import ComponentUID
-from pyomo.core.base.set import GlobalSetBase, _SetDataBase
+from pyomo.core.base.set import Any, GlobalSetBase, _SetDataBase
 from pyomo.core.base.var import Var
 from pyomo.core.base.initializer import Initializer
 from pyomo.core.base.indexed_component import (
@@ -119,6 +123,9 @@ class SubclassOf(object):
 
     def __getitem__(self, item):
         return self
+
+    def __iter__(self):
+        return iter((self,))
 
 
 class _DeduplicateInfo(object):
@@ -313,6 +320,10 @@ def _levelWalker(list_of_generators):
         yield from gen
 
 
+def _isNotNone(val):
+    return val is not None
+
+
 class _BlockConstruction(object):
     """
     This class holds a "global" dict used when constructing
@@ -340,9 +351,13 @@ class PseudoMap(object):
         """
         self._block = block
         if isclass(ctype):
-            self._ctypes = (ctype,)
-        else:
+            self._ctypes = {ctype,}
+        elif ctype is None:
+            self._ctypes = Any
+        elif ctype.__class__ is SubclassOf:
             self._ctypes = ctype
+        else:
+            self._ctypes = set(ctype)
         self._active = active
         self._sorted = SortComponents.sort_names(sort)
 
@@ -358,15 +373,15 @@ class PseudoMap(object):
         """
         if key in self._block._decl:
             x = self._block._decl_order[self._block._decl[key]]
-            if self._ctypes is None or x[0].ctype in self._ctypes:
+            if x[0].ctype in self._ctypes:
                 if self._active is None or x[0].active == self._active:
                     return x[0]
         msg = ""
         if self._active is not None:
             msg += self._active and "active " or "inactive "
-        if self._ctypes is not None:
+        if self._ctypes is not Any:
             if len(self._ctypes) == 1:
-                msg += self._ctypes[0].__name__ + " "
+                msg += next(iter(self._ctypes)).__name__ + " "
             else:
                 types = sorted(x.__name__ for x in self._ctypes)
                 msg += '%s or %s ' % (', '.join(types[:-1]), types[-1])
@@ -403,10 +418,12 @@ class PseudoMap(object):
         # been added.
         #
         if self._active is None:
-            if self._ctypes is None:
+            if self._ctypes is Any:
                 return sum(x[2] for x in self._block._ctypes.values())
             else:
-                return sum(self._block._ctypes.get(x, (0, 0, 0))[2]
+                # Note that because of SubclassOf, we cannot iterate
+                # over self._ctypes.
+                return sum(self._block._ctypes[x][2]
                            for x in self._block._ctypes
                            if x in self._ctypes)
         #
@@ -427,7 +444,7 @@ class PseudoMap(object):
         # component matches those flags
         if key in self._block._decl:
             x = self._block._decl_order[self._block._decl[key]]
-            if self._ctypes is None or x[0].ctype in self._ctypes:
+            if x[0].ctype in self._ctypes:
                 return self._active is None or x[0].active == self._active
         return False
 
@@ -439,18 +456,30 @@ class PseudoMap(object):
         # efficient, we will reverse-sort so the next ctype index is
         # at the end of the list.
         _decl_order = self._block._decl_order
-        _idx_list = sorted((self._block._ctypes[x][0]
-                            for x in self._block._ctypes
-                            if x in self._ctypes),
-                           reverse=True)
+        # Note that because of SubclassOf, we cannot iterate over
+        # self._ctypes. But this gets called a lot with a single type as
+        # the ctypes set, so we will special case the set intersection.
+        if self._ctypes.__class__ is set:
+            _idx_list = [
+                self._block._ctypes[x][0]
+                for x in self._ctypes if x in self._block._ctypes
+            ]
+        else:
+            _idx_list = [
+                self._block._ctypes[x][0]
+                for x in self._block._ctypes if x in self._ctypes
+            ]
+        _idx_list.sort(reverse=True)
         while _idx_list:
             _idx = _idx_list.pop()
-            while _idx is not None:
-                _obj, _next = _decl_order[_idx]
+            _next_ctype = _idx_list[-1] if _idx_list else None
+            while 1:
+                _obj, _idx = _decl_order[_idx]
                 if _obj is not None:
                     yield _obj
-                _idx = _next
-                if _idx is not None and _idx_list and _idx > _idx_list[-1]:
+                if _idx is None:
+                    break
+                if _next_ctype is not None and _idx > _next_ctype:
                     _idx_list.append(_idx)
                     _idx_list.sort(reverse=True)
                     break
@@ -465,8 +494,7 @@ class PseudoMap(object):
         # Ironically, the values are the fundamental thing that we
         # can (efficiently) iterate over in decl_order.  keys()
         # just wraps values().
-        for obj in self.values():
-            yield obj._name
+        return map(attrgetter('_name'), self.values())
 
     def values(self):
         """
@@ -474,32 +502,29 @@ class PseudoMap(object):
         """
         # Iterate over the PseudoMap values (the component objects) in
         # declaration order
-        _active = self._active
-        if self._ctypes is None:
+        if self._ctypes is Any:
             # If there is no ctype, then we will just iterate over
             # all components and return them all
-            if _active is None:
-                walker = (obj for obj, idx in self._block._decl_order
-                          if obj is not None)
-            else:
-                walker = (obj for obj, idx in self._block._decl_order
-                          if obj is not None and obj.active == _active)
+            walker = filter(
+                _isNotNone, map(itemgetter(0), self._block._decl_order))
         else:
             # The user specified a desired ctype; we will leverage
             # the _ctypewalker generator to walk the underlying linked
             # list and just return the desired objects (again, in
             # decl order)
-            if _active is None:
-                walker = (obj for obj in self._ctypewalker())
-            else:
-                walker = (obj for obj in self._ctypewalker()
-                          if obj.active == _active)
+            walker = self._ctypewalker()
+
+        if self._active:
+            walker = filter(attrgetter('active'), walker)
+        elif self._active is not None:
+            walker = filterfalse(attrgetter('active'), walker)
+
         # If the user wants this sorted by name, then there is
         # nothing we can do to save memory: we must create the whole
         # list (so we can sort it) and then iterate over the sorted
         # temporary list
         if self._sorted:
-            return (obj for obj in sorted(walker, key=lambda _x: _x.local_name))
+            return iter(sorted(walker, key=attrgetter('_name')))
         else:
             return walker
 
@@ -1319,7 +1344,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # deepcopying and then restore them on the original and cloned
         # model.  It turns out that this was completely unnecessary and
         # wasteful.
-
         #
         # Note: Setting __block_scope__ determines which components are
         # deepcopied (anything beneath this block) and which are simply
@@ -1460,8 +1484,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             Deduplicator to prevent returning the same _ComponentData twice
         """
         _sort_indices = SortComponents.sort_indices(sort)
-        _subcomp = PseudoMap(self, ctype, active, sort)
-        for name, comp in _subcomp.items():
+        for name, comp in PseudoMap(self, ctype, active, sort).items():
             # NOTE: Suffix has a dict interface (something other derived
             #   non-indexed Components may do as well), so we don't want
             #   to test the existence of iteritems as a check for
@@ -1520,8 +1543,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             )
             return
 
-        _subcomp = PseudoMap(self, ctype, active, sort)
-        for comp in _subcomp.values():
+        for comp in PseudoMap(self, ctype, active, sort).values():
             # NOTE: Suffix has a dict interface (something other derived
             #   non-indexed Components may do as well), so we don't want
             #   to test the existence of iteritems as a check for
