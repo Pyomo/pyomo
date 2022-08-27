@@ -1980,6 +1980,7 @@ class RegressionTest(unittest.TestCase):
         config.global_solver = SolverFactory('baron')
         config.uncertain_params = m.working_model.util.uncertain_params
         config.tee = False
+        config.solve_master_globally = True
 
         add_decision_rule_variables(model_data=m, config=config)
         add_decision_rule_constraints(model_data=m, config=config)

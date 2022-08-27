@@ -227,9 +227,21 @@ def solve_master_feasibility_problem(model_data, config):
 
 def minimize_dr_vars(model_data, config):
     """
-    Decision rule polishing: For a given optimal design (x) determined in separation,
-    and the optimal value for control vars (z), choose min magnitude decision_rule_var
-    values.
+    Polish the PyROS decision rule determined for the most
+    recently solved master problem by minimizing the collective
+    L1 norm of the vector of all decision rule variables.
+
+    Parameters
+    ----------
+    model_data : MasterProblemData
+        Master problem data.
+    config : ConfigDict
+        PyROS solver settings.
+
+    Returns
+    -------
+    results : SolverResults
+        Subordinate solver results for the polishing problem.
     """
     #config.progress_logger.info("Executing decision rule variable polishing solve.")
     model = model_data.master_model
@@ -339,34 +351,60 @@ def minimize_dr_vars(model_data, config):
             for d in block.util.decision_rule_vars:
                 d.unfix()
 
-    # === Solve the polishing model
-    polish_soln = MasterResult()
-    solver = config.global_solver
+    if config.solve_master_globally:
+        solver = config.global_solver
+    else:
+        solver = config.local_solver
 
-    if not solver.available():
-        raise RuntimeError("NLP solver %s is not available." %
-                           config.solver)
+    # === Solve the polishing model
     try:
-        results = solver.solve(polishing_model, tee=config.tee)
-        polish_soln.termination_condition = results.solver.termination_condition
-    except ValueError as err:
-        polish_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
-        polish_soln.termination_condition = tc.error
+        results = solver.solve(
+            polishing_model,
+            tee=config.tee,
+            load_solutions=False,
+        )
+    except ApplicationError:
+        config.progress_logger.error(
+            f"Optimizer {repr(solver)} encountered an exception "
+            "attempting to solve decision rule polishing problem "
+            f"in iteration {model_data.iteration}"
+        )
         raise
 
-    polish_soln.fsv_values = list(v.value for v in polishing_model.scenarios[0, 0].util.first_stage_variables)
-    polish_soln.ssv_values = list(v.value for v in polishing_model.scenarios[0, 0].util.second_stage_variables)
-    polish_soln.first_stage_objective = value(nom_block.first_stage_objective)
-    polish_soln.second_stage_objective = value(nom_block.second_stage_objective)
-
     # === Process solution by termination condition
-    acceptable = [tc.optimal, tc.locallyOptimal, tc.feasible]
-    if polish_soln.termination_condition not in acceptable:
+    acceptable = {
+        tc.globallyOptimal, tc.optimal, tc.locallyOptimal, tc.feasible,
+    }
+    if results.solver.termination_condition not in acceptable:
+        # continue with "unpolished" master model solution
         return results
 
-    for i, d in enumerate(model_data.master_model.scenarios[0, 0].util.decision_rule_vars):
-        for index in d:
-            d[index].set_value(polishing_model.scenarios[0, 0].util.decision_rule_vars[i][index].value, skip_validation=True)
+    # update master model second-stage, state, and decision rule
+    # variables to polishing model solution
+    polishing_model.solutions.load_from(results)
+    for idx, blk in model_data.master_model.scenarios.items():
+        ssv_zip = zip(
+            blk.util.second_stage_variables,
+            polishing_model.scenarios[idx].util.second_stage_variables,
+        )
+        sv_zip = zip(
+            get_state_vars(model_data.master_model, [idx[0]])[idx[0]],
+            get_state_vars(polishing_model, [idx[0]])[idx[0]],
+        )
+
+        for master_ssv, polish_ssv in ssv_zip:
+            master_ssv.set_value(value(polish_ssv))
+        for master_sv, polish_sv in sv_zip:
+            master_sv.set_value(value(polish_sv))
+
+        # update master problem decision rule variables
+        dr_var_zip = zip(
+            blk.util.decision_rule_vars,
+            polishing_model.scenarios[idx].util.decision_rule_vars,
+        )
+        for master_dr, polish_dr in dr_var_zip:
+            for mvar, pvar in zip(master_dr.values(), polish_dr.values()):
+                mvar.set_value(value(pvar))
 
     return results
 
