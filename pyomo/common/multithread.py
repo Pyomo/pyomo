@@ -9,6 +9,13 @@ class MultiThreadWrapper():
     def __getattr__(self, attr):
         id = get_ident()
         return getattr(self.__mtdict[id], attr)
+    
+    def __setattr__(self, attr, value):
+        if attr == '_MultiThreadWrapper__mtdict':
+            object.__setattr__(self, attr, value)
+        else:
+            id = get_ident()
+            setattr(self.__mtdict[id], attr, value)
 
 
 class MultiThreadWrapperWithMain(MultiThreadWrapper):
@@ -20,3 +27,13 @@ class MultiThreadWrapperWithMain(MultiThreadWrapper):
         if current_thread() is main_thread():
             return getattr(self.main, attr)
         return super().__getattr__(attr)
+    
+    def __setattr__(self, attr, value):
+        if attr == '_MultiThreadWrapper__mtdict':
+            super().__setattr__(attr, value)
+        elif attr == 'main':
+            object.__setattr__(self, attr, value)
+        elif current_thread() is main_thread():
+            setattr(self.main, attr, value)
+        else:
+            super().__setattr__(attr, value)
