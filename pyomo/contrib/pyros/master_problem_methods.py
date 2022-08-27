@@ -512,7 +512,7 @@ def solver_call_master(model_data, config, solver, solve_data):
 
     higher_order_decision_rule_efficiency(config, model_data)
 
-    for idx, opt in enumerate(backup_solvers):
+    for opt in backup_solvers:
         try:
             results = opt.solve(
                 nlp_model,
