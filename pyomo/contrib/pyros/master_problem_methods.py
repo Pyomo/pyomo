@@ -23,6 +23,8 @@ from pyomo.core import TransformationFactory
 import itertools as it
 import os
 from copy import deepcopy
+from pyomo.common.errors import ApplicationError
+
 
 
 def initial_construct_master(model_data):
@@ -437,15 +439,29 @@ def higher_order_decision_rule_efficiency(config, model_data):
 
 
 def solver_call_master(model_data, config, solver, solve_data):
-    '''
-    Function interfacing with optimization solver
-    :param model_data:
-    :param config:
-    :param solver:
-    :param solve_data:
-    :param is_global:
-    :return:
-    '''
+    """
+    Invoke subsolver(s) on PyROS master problem.
+
+    Parameters
+    ----------
+    model_data : MasterProblemData
+        Container for current master problem and related data.
+    config : ConfigDict
+        PyROS solver settings.
+    solver : solver type
+        Primary subordinate optimizer with which to solve
+        the master problem. This may be a local or global
+        NLP solver.
+    solve_data : MasterResult
+        Master problem results object. May be empty or contain
+        master feasibility problem results.
+
+    Returns
+    -------
+    master_soln : MasterResult
+        Master problem results object, containing master
+        model and subsolver results.
+    """
     nlp_model = model_data.master_model
     master_soln = solve_data
     solver_term_cond_dict = {}
@@ -456,54 +472,114 @@ def solver_call_master(model_data, config, solver, solve_data):
         backup_solvers = deepcopy(config.backup_local_solvers)
     backup_solvers.insert(0, solver)
 
-    if not solver.available():
-        raise RuntimeError("NLP solver %s is not available." %
-                           config.solver)
-
     higher_order_decision_rule_efficiency(config, model_data)
 
-    while len(backup_solvers) > 0:
-        solver = backup_solvers.pop(0)
+    for idx, opt in enumerate(backup_solvers):
         try:
-            results = solver.solve(nlp_model, tee=config.tee)
-        except ValueError as err:
-            if 'Cannot load a SolverResults object with bad status: error' in str(err):
-                results.solver.termination_condition = tc.error
-                results.solver.message = str(err)
-                master_soln.results = results
-                master_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
-                return master_soln, ()
-            else:
-                raise
-        solver_term_cond_dict[str(solver)] = str(results.solver.termination_condition)
-        master_soln.termination_condition = results.solver.termination_condition
-        master_soln.pyros_termination_condition = None  # determined later in the algorithm
-        master_soln.fsv_vals = list(v.value for v in nlp_model.scenarios[0, 0].util.first_stage_variables)
+            results = opt.solve(
+                nlp_model,
+                tee=config.tee,
+                load_solutions=False,
+                symbolic_solver_labels=True,
+            )
+        except ApplicationError:
+            # account for possible external subsolver errors
+            # (such as segmentation faults, function evaluation
+            # errors, etc.)
+            config.progress_logger.error(
+                f"Solver {repr(opt)} encountered exception attempting to "
+                f"optimize master problem in iteration {model_data.iteration}"
+            )
+            raise
 
-        if config.objective_focus is ObjectiveType.nominal:
-            master_soln.ssv_vals = list(v.value for v in nlp_model.scenarios[0, 0].util.second_stage_variables)
-            master_soln.second_stage_objective = value(nlp_model.scenarios[0, 0].second_stage_objective)
-        else:
-            idx =  max(nlp_model.scenarios.keys())[0]
-            master_soln.ssv_vals = list(v.value for v in nlp_model.scenarios[idx, 0].util.second_stage_variables)
-            master_soln.second_stage_objective = value(nlp_model.scenarios[idx, 0].second_stage_objective)
-        master_soln.first_stage_objective = value(nlp_model.scenarios[0, 0].first_stage_objective)
+        optimal_termination = check_optimal_termination(results)
+        infeasible = results.solver.termination_condition == tc.infeasible
+
+        if optimal_termination:
+            nlp_model.solutions.load_from(results)
+
+        # record master problem termination conditions
+        # for this particular subsolver
+        # pyros termination condition is determined later in the
+        # algorithm
+        solver_term_cond_dict[str(opt)] = str(results.solver.termination_condition)
+        master_soln.termination_condition = results.solver.termination_condition
+        master_soln.pyros_termination_condition = None
+        try_backup, _ = master_soln.master_subsolver_results = (
+            process_termination_condition_master_problem(
+                config=config,
+                results=results,
+            )
+        )
 
         master_soln.nominal_block = nlp_model.scenarios[0, 0]
         master_soln.results = results
         master_soln.master_model = nlp_model
 
-        master_soln.master_subsolver_results = process_termination_condition_master_problem(config=config, results=results)
+        # if model was solved successfully, update/record the results
+        # (nominal block DOF variable and objective values)
+        if not try_backup and not infeasible:
+            master_soln.fsv_vals = list(
+                v.value
+                for v in nlp_model.scenarios[0, 0].util.first_stage_variables
+            )
 
-        if master_soln.master_subsolver_results[0] == False:
+            if config.objective_focus is ObjectiveType.nominal:
+                master_soln.ssv_vals = list(
+                    v.value
+                    for v
+                    in nlp_model.scenarios[0, 0].util.second_stage_variables
+                )
+                master_soln.second_stage_objective = value(
+                    nlp_model.scenarios[0, 0].second_stage_objective
+                )
+            else:
+                idx = max(nlp_model.scenarios.keys())[0]
+                master_soln.ssv_vals = list(
+                    v.value
+                    for v
+                    in nlp_model.scenarios[idx, 0].util.second_stage_variables
+                )
+                master_soln.second_stage_objective = value(
+                    nlp_model.scenarios[idx, 0].second_stage_objective
+                )
+            master_soln.first_stage_objective = value(
+                nlp_model.scenarios[0, 0].first_stage_objective
+            )
+
+            master_soln.nominal_block = nlp_model.scenarios[0, 0]
+            master_soln.results = results
+            master_soln.master_model = nlp_model
+
+        if not try_backup:
             return master_soln
 
-    # === At this point, all sub-solvers have been tried and none returned an acceptable status or return code
+    # all solvers have failed to return an acceptable status.
+    # we will terminate PyROS with subsolver error status.
+    # at this point, export subproblem to file, if desired.
+    # NOTE: subproblem is written with variables set to their
+    #       initial values (not the final subsolver iterate)
     save_dir = config.subproblem_file_directory
     if save_dir and config.keepfiles:
-        name = os.path.join(save_dir,  config.uncertainty_set.type + "_" + model_data.original.name + "_master_" + str(model_data.iteration) + ".bar")
-        nlp_model.write(name, io_options={'symbolic_solver_labels':True})
-        output_logger(config=config, master_error=True, status_dict=solver_term_cond_dict, filename=name, iteration=model_data.iteration)
+        name = os.path.join(
+            save_dir,
+            (
+                config.uncertainty_set.type
+                + "_"
+                + model_data.original.name
+                + "_master_"
+                + str(model_data.iteration)
+                + ".bar"
+            )
+        )
+        nlp_model.write(name, io_options={'symbolic_solver_labels': True})
+        output_logger(
+            config=config,
+            master_error=True,
+            status_dict=solver_term_cond_dict,
+            filename=name,
+            iteration=model_data.iteration,
+        )
     master_soln.pyros_termination_condition = pyrosTerminationCondition.subsolver_error
     return master_soln
 
