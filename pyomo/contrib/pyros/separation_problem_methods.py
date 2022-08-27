@@ -18,6 +18,7 @@ from pyomo.core.expr.current import (replace_expressions,
                                      identify_variables)
 from pyomo.contrib.pyros.util import get_main_elapsed_time, is_certain_parameter
 from pyomo.contrib.pyros.uncertainty_sets import Geometry
+from pyomo.common.errors import ApplicationError
 import os
 from copy import deepcopy
 
@@ -423,64 +424,120 @@ def initialize_separation(model_data, config):
 
     return
 
+
 locally_acceptable = {tc.optimal, tc.locallyOptimal, tc.globallyOptimal}
 globally_acceptable = {tc.optimal, tc.globallyOptimal}
 
+
 def solver_call_separation(model_data, config, solver, solve_data, is_global):
     """
-    Solve the separation problem.
-    """
-    save_dir = config.subproblem_file_directory
+    Invoke subordinate solver(s) on separation problem.
 
+    Parameters
+    ----------
+    model_data : SeparationProblemData
+        Separation problem data.
+    config : ConfigDict
+        PyROS solver settings.
+    solver : solver type
+        Primary subordinate optimizer with which to solve
+        the model.
+    solve_data : SeparationResult
+        Container for separation problem result.
+    is_global : bool
+        Is separation problem to be solved globally.
+
+    Returns
+    -------
+    : bool
+        True if separation problem was not solved to an appropriate
+        optimality status, False otherwise.
+    """
     if is_global:
         backup_solvers = deepcopy(config.backup_global_solvers)
     else:
         backup_solvers = deepcopy(config.backup_local_solvers)
     backup_solvers.insert(0, solver)
+
     solver_status_dict = {}
-    while len(backup_solvers) > 0:
-        solver = backup_solvers.pop(0)
-        nlp_model = model_data.separation_model
+    nlp_model = model_data.separation_model
 
-        # === Fix to Master solution
-        initialize_separation(model_data, config)
+    # === Initialize separation problem; fix first-stage variables
+    initialize_separation(model_data, config)
 
-        if not solver.available():
-            raise RuntimeError("Solver %s is not available." %
-                               solver)
+    for opt in backup_solvers:
         try:
-            results = solver.solve(nlp_model, tee=config.tee)
-        except ValueError as err:
-            if 'Cannot load a SolverResults object with bad status: error' in str(err):
-                solve_data.termination_condition = tc.error
-                return True
-            else:
-                raise
-        solver_status_dict[str(solver)] = results.solver.termination_condition
+            results = opt.solve(
+                nlp_model,
+                tee=config.tee,
+                load_solutions=False,
+                symbolic_solver_labels=True,
+            )
+        except ApplicationError:
+            # account for possible external subsolver errors
+            # (such as segmentation faults, function evaluation
+            # errors, etc.)
+            config.progress_logger.error(
+                f"Solver {repr(opt)} encountered exception attempting to "
+                f"optimize master problem in iteration {model_data.iteration}"
+            )
+            raise
+
+        # record termination condition for this particular solver
+        solver_status_dict[str(opt)] = results.solver.termination_condition
         solve_data.termination_condition = results.solver.termination_condition
         solve_data.results = results
-        # === Process result
-        is_violation(model_data, config, solve_data)
 
-        if solve_data.termination_condition in globally_acceptable or \
-                (not is_global and solve_data.termination_condition in locally_acceptable):
+        # if separation problem solved to optimality, record results
+        # and exit
+        optimal_termination = (
+            solve_data.termination_condition in globally_acceptable
+            or (
+                not is_global and solve_data.termination_condition in
+                locally_acceptable
+            )
+        )
+        if optimal_termination:
+            nlp_model.solutions.load_from(results)
+            con_violated = is_violation(model_data, config, solve_data)
             return False
 
-        # Else: continue with backup solvers unless we have hit time limit or not found any acceptable solutions
+        # Else: continue with backup solvers unless we have hit
+        # time limit or not found any acceptable solutions
         elapsed = get_main_elapsed_time(model_data.timing)
         if config.time_limit:
             if elapsed >= config.time_limit:
                 return True
 
-    # === Write this instance to file for user to debug because this separation instance did not return an optimal solution
-    if save_dir and config.keepfiles:
-        objective = str(list(nlp_model.component_data_objects(Objective, active=True))[0].name)
-        name = os.path.join(save_dir,
-                            config.uncertainty_set.type + "_" + nlp_model.name + "_separation_" +
-                            str(model_data.iteration) + "_obj_" + objective + ".bar")
+    # All subordinate solvers failed to optimize model to appropriate
+    # termination condition. PyROS will terminate with subsolver
+    # error. At this point, export model if desired
+    if (save_dir := config.subproblem_file_directory) and config.keepfiles:
+        objective = str(
+            list(nlp_model.component_data_objects(Objective, active=True))[0].name
+        )
+        name = os.path.join(
+            save_dir,
+            (
+                config.uncertainty_set.type
+                + "_"
+                + nlp_model.name
+                + "_separation_"
+                + str(model_data.iteration)
+                + "_obj_"
+                + objective
+                + ".bar"
+            ),
+        )
         nlp_model.write(name, io_options={'symbolic_solver_labels':True})
-        output_logger(config=config, separation_error=True, filename=name, iteration=model_data.iteration, objective=objective,
-                      status_dict=solver_status_dict)
+        output_logger(
+            config=config,
+            separation_error=True,
+            filename=name,
+            iteration=model_data.iteration,
+            objective=objective,
+            status_dict=solver_status_dict,
+        )
     return True
 
 
