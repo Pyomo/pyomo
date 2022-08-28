@@ -510,7 +510,8 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
     -------
     : bool
         True if separation problem was not solved to an appropriate
-        optimality status, False otherwise.
+        optimality status and the time limit is not exceeded,
+        False otherwise.
     """
     if is_global:
         backup_solvers = deepcopy(config.backup_global_solvers)
@@ -547,26 +548,24 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
         solve_data.termination_condition = results.solver.termination_condition
         solve_data.results = results
 
+        # has PyROS time limit been reached?
+        elapsed = get_main_elapsed_time(model_data.timing)
+        if config.time_limit:
+            if elapsed >= config.time_limit:
+                return True
+
         # if separation problem solved to optimality, record results
         # and exit
+        acceptable_conditions = (
+            globally_acceptable if is_global else locally_acceptable
+        )
         optimal_termination = (
-            solve_data.termination_condition in globally_acceptable
-            or (
-                not is_global and solve_data.termination_condition in
-                locally_acceptable
-            )
+            solve_data.termination_condition in acceptable_conditions
         )
         if optimal_termination:
             nlp_model.solutions.load_from(results)
             con_violated = is_violation(model_data, config, solve_data)
             return False
-
-        # Else: continue with backup solvers unless we have hit
-        # time limit or not found any acceptable solutions
-        elapsed = get_main_elapsed_time(model_data.timing)
-        if config.time_limit:
-            if elapsed >= config.time_limit:
-                return True
 
     # All subordinate solvers failed to optimize model to appropriate
     # termination condition. PyROS will terminate with subsolver
