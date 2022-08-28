@@ -16,6 +16,14 @@ class MultiThreadWrapper():
         else:
             id = get_ident()
             setattr(self.__mtdict[id], attr, value)
+    
+    def __enter__(self):
+        id = get_ident()
+        return self.__mtdict[id].__enter__()
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        id = get_ident()
+        return self.__mtdict[id].__exit__(exc_type, exc_value, traceback)
 
 
 class MultiThreadWrapperWithMain(MultiThreadWrapper):
@@ -37,3 +45,13 @@ class MultiThreadWrapperWithMain(MultiThreadWrapper):
             setattr(self.main, attr, value)
         else:
             super().__setattr__(attr, value)
+    
+    def __enter__(self):
+        if current_thread() is main_thread():
+            return self.main.__enter__()
+        return super().__enter__()
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        if current_thread() is main_thread():
+            return self.main.__exit__(exc_type, exc_value, traceback)
+        return super().__exit__(exc_type, exc_value, traceback)
