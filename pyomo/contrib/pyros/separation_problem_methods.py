@@ -394,20 +394,71 @@ def is_violation(model_data, config, solve_data):
 
 def initialize_separation(model_data, config):
     """
-    Fix the separation problem variables to the optimal master problem solution
-    In the case of the static_approx decision rule, control vars are treated
-    as design vars are therefore fixed to the optimum from the master.
+    Initialize separation problem variables, and fix all first-stage
+    variables to their corresponding values from most recent
+    master problem solution.
+
+    Parameters
+    ----------
+    model_data : SeparationProblemData
+        Separation problem data.
+    config : ConfigDict
+        PyROS solver settings.
+
+    Note
+    ----
+    If a static DR policy is used, then all second-stage variables
+    are fixed and the decision rule equations are deactivated.
+
+    The point to which the separation model is initialized should,
+    in general, be feasible, provided the set does not have a
+    discrete geometry (as there is no master model block corresponding
+    to any of the remaining discrete scenarios against which we
+    separate).
     """
+    block_num = model_data.iteration
+    master_blk = model_data.master_model.scenarios[block_num, 0]
+    master_blks = list(model_data.master_model.scenarios.values())
+    fsv_set = ComponentSet(master_blk.util.first_stage_variables)
+    sep_model = model_data.separation_model
+
+    def get_parent_master_blk(var):
+        """
+        Determine the master model scenario block of which
+        a given variable is a child component.
+        """
+        parent = var.parent_block()
+        while parent not in master_blks:
+            parent = parent.parent_block()
+        return parent
+
+    for master_var in master_blk.component_data_objects(Var, active=True):
+        # determine corresponding variable in separation problem.
+        # initialize separation problem variable to master problem
+        # value (from block corresponding to most recently added
+        # uncertain param realization)
+        parent_master_blk = get_parent_master_blk(master_var)
+        sep_var_name = master_var.getname(
+            relative_to=parent_master_blk,
+            fully_qualified=True,
+        )
+        sep_var = sep_model.find_component(sep_var_name)
+        sep_var.set_value(value(master_var, exception=False))
+
+        # fix first-stage variables (including decision rule vars)
+        if master_var in fsv_set:
+            sep_var.fix()
+
+    # initialize uncertain parameter variables to most recent
+    # point added to master
     if config.uncertainty_set.geometry != Geometry.DISCRETE_SCENARIOS:
-        for idx, p in list(model_data.separation_model.util.uncertain_param_vars.items()):
-            p.set_value(config.nominal_uncertain_param_vals[idx],
-                        skip_validation=True)
-    for idx, v in enumerate(model_data.separation_model.util.first_stage_variables):
-        v.fix(model_data.opt_fsv_vals[idx])
+        param_vars = sep_model.util.uncertain_param_vars
+        latest_param_values = model_data.points_added_to_master[block_num]
+        for param_var, val in zip(param_vars.values(), latest_param_values):
+            param_var.set_value(val)
 
-    for idx, c in enumerate(model_data.separation_model.util.second_stage_variables):
-        c.set_value(model_data.opt_ssv_vals[idx], skip_validation=True)
-
+    # if static approximation, fix second-stage variables
+    # and deactivate the decision rule equations
     for c in model_data.separation_model.util.second_stage_variables:
         if config.decision_rule_order != 0:
             c.unfix()
@@ -420,9 +471,17 @@ def initialize_separation(model_data, config):
             v.fix()
 
     if any(c.active for c in model_data.separation_model.util.h_x_q_constraints):
-        raise AttributeError("All h(x,q) type constraints must be deactivated in separation.")
+        raise AttributeError(
+            "All h(x,q) type constraints must be deactivated in separation."
+        )
 
-    return
+    # check: initial point feasible?
+    for con in sep_model.component_data_objects(Constraint, active=True):
+        lb, val, ub = value(con.lb), value(con.body), value(con.ub)
+        lb_viol = val < lb - 1e-5 if lb is not None else False
+        ub_viol = val > ub + 1e-5 if ub is not None else False
+        if lb_viol or ub_viol:
+            config.progress_logger.debug(con.name, lb, val, ub)
 
 
 locally_acceptable = {tc.optimal, tc.locallyOptimal, tc.globallyOptimal}
