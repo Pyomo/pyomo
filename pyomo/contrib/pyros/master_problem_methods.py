@@ -234,7 +234,10 @@ def solve_master_feasibility_problem(model_data, config):
         )
         raise
 
-    if check_optimal_termination(results):
+    feasible_terminations = {
+        tc.optimal, tc.locallyOptimal, tc.globallyOptimal, tc.feasible
+    }
+    if results.solver.termination_condition in feasible_terminations:
         model.solutions.load_from(results)
 
     # load master feasibility point to master model
