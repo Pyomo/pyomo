@@ -17,7 +17,7 @@ from weakref import ref as weakref_ref
 
 import pyomo.common
 from pyomo.common import DeveloperError
-from pyomo.common.autoslots import AutoSlots
+from pyomo.common.autoslots import AutoSlots, fast_deepcopy
 from pyomo.common.collections import OrderedDict
 from pyomo.common.deprecation import (
     deprecated, deprecation_warning, relocated_module_attribute)
@@ -206,8 +206,11 @@ class _ComponentBase(PyomoObject):
         try:
             for i, comp in enumerate(component_list):
                 saved_memo = len(memo)
+                # Note: this implementation avoids deepcopying the
+                # temporary 'state' list, significantly speeding things
+                # up.
                 memo[id(comp)].__setstate__([
-                    deepcopy(field, memo) for field in comp.__getstate__()
+                    fast_deepcopy(field, memo) for field in comp.__getstate__()
                 ])
             return memo[id(self)]
         except:

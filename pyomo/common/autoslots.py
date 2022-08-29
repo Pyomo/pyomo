@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import types
 from collections import namedtuple
 from copy import deepcopy
 from weakref import ref as _weakref_ref
@@ -17,6 +18,46 @@ _autoslot_info = namedtuple(
     '_autoslot_info',
     ['has_dict', 'slots', 'slot_mappers', 'field_mappers']
 )
+
+_atomic_types = {int, float, bool, complex, bytes, str, type, range,
+                 type(None), types.BuiltinFunctionType, types.FunctionType}
+_unchanged = [None]
+
+def fast_deepcopy(obj, memo):
+    """A faster implementation of copy.deepcopy()
+
+    Python's default implementation of deepcopy has several fetures that
+    are slower than they need to be.  This is an implementation of
+    deepcopy that provides special handling to circumvent some of the
+    slowest parts of deepcopy().
+
+    """
+    if obj.__class__ in _atomic_types:
+        return obj
+    _id = id(obj)
+    if _id in memo:
+        ans = memo[_id]
+        if ans is not obj:
+            _unchanged[-1] = False
+        return ans
+    if obj.__class__ is tuple:
+        _unchanged.append(True)
+        ans = tuple(fast_deepcopy(x, memo) for x in obj)
+        if _unchanged.pop():
+            memo[_id] = obj
+            return obj
+        memo[_id] = ans
+    elif obj.__class__ is list:
+        memo[_id] = ans = []
+        ans.extend(fast_deepcopy(x, memo) for x in obj)
+    else:
+        ans = deepcopy(obj, memo)
+        if ans is obj:
+            return obj
+        memo[_id] = ans
+    _unchanged[-1] = False
+    return ans
+
 
 class AutoSlots(type):
     """Metaclass to automatically collect __slots__ for generic pickling
@@ -190,7 +231,7 @@ class AutoSlots(type):
             # 'state' list, significantly speeding things up.
             memo[id(self)] = ans = self.__class__.__new__(self.__class__)
             ans.__setstate__([
-                deepcopy(field, memo) for field in self.__getstate__()
+                fast_deepcopy(field, memo) for field in self.__getstate__()
             ])
             return ans
 
