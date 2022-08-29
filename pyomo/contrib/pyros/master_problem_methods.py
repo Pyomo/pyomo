@@ -197,7 +197,22 @@ def construct_master_feasibility_problem(model_data, config):
 
 def solve_master_feasibility_problem(model_data, config):
     """
-    Solve a slack variable based feasibility model for the master problem
+    Solve a slack variable-based feasibility model derived
+    from the master problem. Initialize the master problem
+    to the  solution found by the optimizer if solved successfully,
+    or to the initial point provided to the solver otherwise.
+
+    Parameters
+    ----------
+    model_data : MasterProblemData
+        Master problem data.
+    config : ConfigDict
+        PyROS solver settings.
+
+    Returns
+    -------
+    results : SolverResults
+        Solver results.
     """
     model = construct_master_feasibility_problem(model_data, config)
 
@@ -206,24 +221,28 @@ def solve_master_feasibility_problem(model_data, config):
     else:
         solver = config.local_solver
 
-    if not solver.available():
-        raise RuntimeError("NLP solver %s is not available." %
-                           config.solver)
-
-    results = solver.solve(model, tee=config.tee, load_solutions=False)
+    try:
+        results = solver.solve(model, tee=config.tee, load_solutions=False)
+    except ApplicationError:
+        # account for possible external subsolver errors
+        # (such as segmentation faults, function evaluation
+        # errors, etc.)
+        config.progress_logger.error(
+            f"Solver {repr(solver)} encountered exception attempting to "
+            "optimize master feasibility problem in iteration "
+            f"{model_data.iteration}"
+        )
+        raise
 
     if check_optimal_termination(results):
         model.solutions.load_from(results)
 
-        # load solution to master model
-        for v in model.component_data_objects(Var):
-            master_v = model_data.master_model.find_component(v)
-            if master_v is not None:
-                master_v.set_value(v.value, skip_validation=True)
-    else:
-        results.solver.termination_condition = tc.error
-        results.solver.message = ("Cannot load a SolverResults object with "
-                                  "bad status: error")
+    # load master feasibility point to master model
+    for v in model.component_data_objects(Var):
+        master_v = model_data.master_model.find_component(v)
+        if master_v is not None:
+            master_v.set_value(v.value, skip_validation=True)
+
     return results
 
 
