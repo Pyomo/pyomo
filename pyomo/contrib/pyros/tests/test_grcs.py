@@ -24,6 +24,8 @@ from pyomo.contrib.pyros.solve_data import MasterProblemData
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
 from pyomo.environ import maximize as pyo_max
+from pyomo.common.errors import ApplicationError
+
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest('PyROS unit tests require numpy and scipy')
@@ -2126,6 +2128,88 @@ class RegressionTest(unittest.TestCase):
 
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.time_out,
                          msg="Returned termination condition is not return time_out.")
+
+    def test_terminate_with_application_error(self):
+        """
+        Check that PyROS correctly raises ApplicationError
+        in event of abnormal IPOPT termination.
+        """
+        m = ConcreteModel()
+        m.p = Param(mutable=True, initialize=1.5)
+        m.x1 = Var(initialize=-1)
+        m.obj = Objective(expr=log(m.x1) * m.p)
+        m.con = Constraint(expr=m.x1 * m.p >= -2)
+
+        solver = SolverFactory("ipopt")
+        solver.options["halt_on_ampl_error"] = "yes"
+        baron = SolverFactory("baron")
+
+        box_set = BoxSet(bounds=[(1, 2)])
+        pyros_solver = SolverFactory("pyros")
+        with self.assertRaisesRegex(
+                ApplicationError,
+                r"Solver \(ipopt\) did not exit normally",
+                ):
+            pyros_solver.solve(
+                m,
+                [m.x1],
+                [],
+                [m.p],
+                box_set,
+                solver,
+                baron,
+                objective_focus=ObjectiveType.nominal,
+            )
+
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_nominal_focus_robust_feasible(self):
+        """
+        Test problem under nominal objective focus terminates
+        successfully.
+        """
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # singleton set, guaranteed robust feasibility
+        discrete_scenarios = DiscreteScenarioSet(scenarios=[[1.125]])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u],
+            uncertainty_set=discrete_scenarios,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            solve_master_globally=False,
+            bypass_local_separation=True,
+            options={
+                "objective_focus": ObjectiveType.nominal,
+                "solve_master_globally": True
+            },
+        )
+        # check for robust feasible termination
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg="Returned termination condition is not return robust_optimal.",
+        )
 
     @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
                          "Global NLP solver is not available and licensed.")
