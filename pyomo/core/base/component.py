@@ -246,10 +246,11 @@ class _ComponentBase(PyomoObject):
         return memo[id(self)]
 
     def _create_objects_for_deepcopy(self, memo, component_list):
-        _id = id(self)
-        if _id not in memo:
+        _new = self.__class__.__new__(self.__class__)
+        _ans = memo.setdefault(id(self), _new)
+        if _ans is _new:
             component_list.append(self)
-            memo[_id] = self.__class__.__new__(self.__class__)
+        return _ans
 
     def _deepcopy_field(self, memo, slot_name, value):
         saved_memo = len(memo)
