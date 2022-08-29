@@ -11,7 +11,7 @@
 
 
 import pyomo.common.unittest as unittest
-from pyomo.core.base.interval_var import IntervalVar
+from pyomo.contrib.cp.interval_var import IntervalVar
 from pyomo.environ import (
     ConcreteModel, BooleanVar, Integers, Set, Var, value)
 
