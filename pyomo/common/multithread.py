@@ -3,6 +3,16 @@ from threading import get_ident, current_thread, main_thread
 
 
 class MultiThreadWrapper():
+    """A python object proxy that wraps different instances for each thread.
+
+    This is useful for handling thread-safe access to singleton objects without
+    having to refactor the code that depends on them.
+
+    Note that instances of the wrapped object are reused if two threads share the same
+    identifier, because identifiers could be reused and are unique only for any given moment.
+    See [get_ident()](https://docs.python.org/3/library/threading.html#threading.get_ident) for more information.
+    """
+
     def __init__(self, base):
         self.__mtdict = defaultdict(base)
 
@@ -27,6 +37,13 @@ class MultiThreadWrapper():
 
 
 class MultiThreadWrapperWithMain(MultiThreadWrapper):
+    """An extension of `MultiThreadWrapper` that exposes the wrapped instance
+    corresponding to the [main_thread()](https://docs.python.org/3/library/threading.html#threading.main_thread)
+    under the `.main_thread` field.
+
+    This is useful for a falling back to a main instance when needed, but results
+    in race conditions if used improperly.
+    """
     def __init__(self, base):
         super().__init__(base)
         self.main_thread = base()
