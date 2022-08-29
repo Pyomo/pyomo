@@ -7,6 +7,7 @@ from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
 from pyomo.common.tee import capture_output
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.config import ConfigValue
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
@@ -267,13 +268,14 @@ class Gurobi(PersistentBase, PersistentSolver):
                 gurobipy.disposeDefaultEnv()
 
     def release_license(self):
-         self._reinit()
-         if gurobipy_available:
+        self._reinit()
+        if gurobipy_available:
             with capture_output(capture_fd=True):
                 gurobipy.disposeDefaultEnv()
 
     def __del__(self):
-        self.release_license()
+        if not python_is_shutting_down():
+            self.release_license()
 
     def version(self):
         version = (gurobipy.GRB.VERSION_MAJOR,

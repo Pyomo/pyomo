@@ -454,8 +454,49 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
         object_symbol_dictionary = symbol_map.byObject
         variable_symbol_dictionary = variable_symbol_map.byObject
 
-        # cache - these are called all the time.
-        print_expr_canonical = self._print_expr_canonical
+        # TODO: this is a quick wrapper to map a very unintuitive
+        # exception to a more meaningful error.  Future versions of the
+        # LP writer may be more accepting in what expressions/variables
+        # they accept.
+        def print_expr_canonical(
+                obj,
+                x,
+                output,
+                object_symbol_dictionary,
+                variable_symbol_dictionary,
+                is_objective,
+                column_order,
+                force_objective_constant=False):
+            try:
+                return self._print_expr_canonical(
+                    x=x,
+                    output=output,
+                    object_symbol_dictionary=object_symbol_dictionary,
+                    variable_symbol_dictionary=variable_symbol_dictionary,
+                    is_objective=is_objective,
+                    column_order=column_order,
+                    force_objective_constant=force_objective_constant)
+            except KeyError as e:
+                _id = e.args[0]
+                _var = None
+                if x.linear_vars:
+                    for v in x.linear_vars:
+                        if id(v) == _id:
+                            _var = v
+                            break
+                if _var is None and x.quadratic_vars:
+                    for v in x.quadratic_vars:
+                        v = [_v for _v in v if id(_v) == _id]
+                        if v:
+                            _var = v[0]
+                            break
+                if _var is not None:
+                    logger.error(
+                        "Model contains an expression (%s) that contains "
+                        "a variable (%s) that is not attached to an active "
+                        "block on the submodel being written"
+                        % (obj.name, _var.name))
+                raise
 
         # print the model name and the source, so we know roughly where
         # it came from.
@@ -538,6 +579,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     object_symbol_dictionary[id(objective_data)]+':\n')
 
                 offset = print_expr_canonical(
+                    objective_data,
                     repn,
                     output,
                     object_symbol_dictionary,
@@ -648,12 +690,15 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 alias_symbol_func(symbol_map, constraint_data, label)
                 output.append(label)
                 output.append(':\n')
-                offset = print_expr_canonical(repn,
-                                              output,
-                                              object_symbol_dictionary,
-                                              variable_symbol_dictionary,
-                                              False,
-                                              column_order)
+                offset = print_expr_canonical(
+                    constraint_data,
+                    repn,
+                    output,
+                    object_symbol_dictionary,
+                    variable_symbol_dictionary,
+                    False,
+                    column_order
+                )
                 bound = constraint_data.lower
                 bound = _get_bound(bound) - offset
                 output.append(eq_string_template
@@ -668,12 +713,15 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     alias_symbol_func(symbol_map, constraint_data, label)
                     output.append(label)
                     output.append(':\n')
-                    offset = print_expr_canonical(repn,
-                                                  output,
-                                                  object_symbol_dictionary,
-                                                  variable_symbol_dictionary,
-                                                  False,
-                                                  column_order)
+                    offset = print_expr_canonical(
+                        constraint_data,
+                        repn,
+                        output,
+                        object_symbol_dictionary,
+                        variable_symbol_dictionary,
+                        False,
+                        column_order
+                    )
                     bound = constraint_data.lower
                     bound = _get_bound(bound) - offset
                     output.append(geq_string_template
@@ -689,12 +737,15 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     alias_symbol_func(symbol_map, constraint_data, label)
                     output.append(label)
                     output.append(':\n')
-                    offset = print_expr_canonical(repn,
-                                                  output,
-                                                  object_symbol_dictionary,
-                                                  variable_symbol_dictionary,
-                                                  False,
-                                                  column_order)
+                    offset = print_expr_canonical(
+                        constraint_data,
+                        repn,
+                        output,
+                        object_symbol_dictionary,
+                        variable_symbol_dictionary,
+                        False,
+                        column_order
+                    )
                     bound = constraint_data.upper
                     bound = _get_bound(bound) - offset
                     output.append(leq_string_template

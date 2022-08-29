@@ -310,41 +310,23 @@ class IndexedComponent(Component):
             self._implicit_subsets = tmp
             self._index_set = tmp[0].cross(*tmp[1:])
 
-    def __getstate__(self):
-        # Special processing of getstate so that we never copy the
-        # UnindexedComponent_set set
-        state = super(IndexedComponent, self).__getstate__()
-        if not self.is_indexed():
-            state['_index_set'] = None
-        return state
-
-    def __setstate__(self, state):
-        # Special processing of setstate so that we never copy the
-        # UnindexedComponent_set set
-        if state['_index_set'] is None:
-            state['_index_set'] = UnindexedComponent_set
-        super(IndexedComponent, self).__setstate__(state)
-
     def _create_objects_for_deepcopy(self, memo, component_list):
         _id = id(self)
-        if _id not in memo:
-            component_list.append(self)
-            memo[_id] = self.__class__.__new__(self.__class__)
-        # For indexed components, we need to pre-emptively clone all
+        if _id in memo:
+            return
+        component_list.append(self)
+        memo[_id] = self.__class__.__new__(self.__class__)
+        # For indexed components, we will pre-emptively clone all
         # component data objects as well (as those are the objects that
-        # will be referenced by things like expressions)
+        # will be referenced by things like expressions).  It is
+        # important to only clone "normal" ComponentData obects: so we
+        # will want to skip this for all scalar components (where the
+        # _data points back to self) and references (where the data may
+        # be stored outside this block tree and therefore may not be
+        # cloned)
         if self.is_indexed() and not self.is_reference():
             for obj in self._data.values():
-                # We need to catch things like References and *not*
-                # preemptively clone the data objects.
-                if obj.parent_component() is not self:
-                    continue
-                _id = id(obj)
-                if _id in memo:
-                    continue
-                # But everything else should be cloned.
-                component_list.append(obj)
-                memo[_id] = obj.__class__.__new__(obj.__class__)
+                obj._create_objects_for_deepcopy(memo, component_list)
 
     def to_dense_data(self):
         """TODO"""

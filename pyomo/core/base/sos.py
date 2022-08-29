@@ -17,6 +17,7 @@ import logging
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.timing import ConstructionTimer
+
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -53,18 +54,6 @@ class _SOSConstraintData(ActiveComponentData):
         self._variables = []
         self._weights = []
         ActiveComponentData.__init__(self, owner)
-
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        result = super(_SOSConstraintData, self).__getstate__()
-        for i in _SOSConstraintData.__slots__:
-            result[i] = getattr(self, i)
-        return result
-
-    # Since this class requires no special processing of the state
-    # dictionary, it does not need to implement __setstate__()
 
     def num_variables(self):
         return len(self._variables)
@@ -345,13 +334,6 @@ class SOSConstraint(ActiveIndexedComponent):
             for var, weight in self._data[val].get_items():
                 ostream.write("\t\t"+str(weight)+' : '+var.name+'\n')
 
-
-# Since this class derives from Component and Component.__getstate__
-# just packs up the entire __dict__ into the state dict, there s
-# nothing special that we need to do here.  We will just defer to the
-# super() get/set state.  Since all of our get/set state methods
-# rely on super() to traverse the MRO, this will automatically pick
-# up both the Component and Data base classes.
 
 class ScalarSOSConstraint(SOSConstraint, _SOSConstraintData):
 

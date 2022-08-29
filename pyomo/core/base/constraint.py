@@ -26,6 +26,7 @@ from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
+
 from pyomo.core.expr.numvalue import (
     NumericValue, value, as_numeric, is_fixed, native_numeric_types,
     native_types,
@@ -304,18 +305,6 @@ class _GeneralConstraintData(_ConstraintData):
         if expr is not None:
             self.set_value(expr)
 
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        result = super(_GeneralConstraintData, self).__getstate__()
-        for i in _GeneralConstraintData.__slots__:
-            result[i] = getattr(self, i)
-        return result
-
-    # Since this class requires no special processing of the state
-    # dictionary, it does not need to implement __setstate__()
-
     #
     # Abstract Interface
     #
@@ -525,7 +514,7 @@ class _GeneralConstraintData(_ConstraintData):
                 raise ValueError(
                     "Constraint '%s' does not have a proper "
                     "value. Found '%s'\nExpecting a tuple or "
-                    "equation. Examples:"
+                    "relational expression. Examples:"
                     "\n   sum(model.costs) == model.income"
                     "\n   (0, model.price[item], 50)"
                     % (self.name, str(expr)))
@@ -552,7 +541,7 @@ class _GeneralConstraintData(_ConstraintData):
             if self._expr is None:
                 msg = ("Constraint '%s' does not have a proper "
                        "value. Found '%s'\nExpecting a tuple or "
-                       "equation. Examples:"
+                       "relational expression. Examples:"
                        "\n   sum(model.costs) == model.income"
                        "\n   (0, model.price[item], 50)"
                        % (self.name, str(expr)))
@@ -847,17 +836,6 @@ class ScalarConstraint(_GeneralConstraintData, Constraint):
         _GeneralConstraintData.__init__(self, component=self, expr=None)
         Constraint.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
-
-    #
-    # Since this class derives from Component and
-    # Component.__getstate__ just packs up the entire __dict__ into
-    # the state dict, we do not need to define the __getstate__ or
-    # __setstate__ methods.  We just defer to the super() get/set
-    # state.  Since all of our get/set state methods rely on super()
-    # to traverse the MRO, this will automatically pick up both the
-    # Component and Data base classes.
-    #
-
     #
     # Singleton constraints are strange in that we want them to be
     # both be constructed but have len() == 0 when not initialized with

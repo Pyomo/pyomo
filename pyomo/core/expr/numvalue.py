@@ -70,14 +70,6 @@ class NonNumericValue(object):
     def __str__(self):
         return str(self.value)
 
-    def __getstate__(self):
-        state = {}
-        state['value'] = getattr(self,'value')
-        return state
-
-    def __setstate__(self, state):
-        setattr(self, 'value', state['value'])
-
 nonpyomo_leaf_types.add(NonNumericValue)
 
 
@@ -466,54 +458,6 @@ class NumericValue(PyomoObject):
 
     # This is required because we define __eq__
     __hash__ = None
-
-    def __getstate__(self):
-        """
-        Prepare a picklable state of this instance for pickling.
-
-        Nominally, __getstate__() should execute the following::
-
-            state = super(Class, self).__getstate__()
-            for i in Class.__slots__:
-                state[i] = getattr(self,i)
-            return state
-
-        However, in this case, the (nominal) parent class is 'object',
-        and object does not implement __getstate__.  So, we will
-        check to make sure that there is a base __getstate__() to
-        call.  You might think that there is nothing to check, but
-        multiple inheritance could mean that another class got stuck
-        between this class and "object" in the MRO.
-
-        Further, since there are actually no slots defined here, the
-        real question is to either return an empty dict or the
-        parent's dict.
-        """
-        _base = super(NumericValue, self)
-        if hasattr(_base, '__getstate__'):
-            return _base.__getstate__()
-        else:
-            return {}
-
-    def __setstate__(self, state):
-        """
-        Restore a pickled state into this instance
-
-        Our model for setstate is for derived classes to modify
-        the state dictionary as control passes up the inheritance
-        hierarchy (using super() calls).  All assignment of state ->
-        object attributes is handled at the last class before 'object',
-        which may -- or may not (thanks to MRO) -- be here.
-        """
-        _base = super(NumericValue, self)
-        if hasattr(_base, '__setstate__'):
-            return _base.__setstate__(state)
-        else:
-            for key, val in state.items():
-                # Note: per the Python data model docs, we explicitly
-                # set the attribute using object.__setattr__() instead
-                # of setting self.__dict__[key] = val.
-                object.__setattr__(self, key, val)
 
     def getname(self, fully_qualified=False, name_buffer=None):
         """
@@ -968,12 +912,6 @@ class NumericConstant(NumericValue):
 
     def __init__(self, value):
         self.value = value
-
-    def __getstate__(self):
-        state = super(NumericConstant, self).__getstate__()
-        for i in NumericConstant.__slots__:
-            state[i] = getattr(self,i)
-        return state
 
     def is_constant(self):
         return True
