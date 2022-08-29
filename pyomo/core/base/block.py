@@ -1338,13 +1338,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # should be preserved as singletons.
         #
         with PauseGC():
-            # Note: dict() is faster than OrderedDict, however, it does
-            # not support reverse iteration over the keys (even though
-            # starting in Python 3.7, dict() is ordered), so we can not
-            # "roll back" the memo after an exception.  So we will try
-            # the "fast" version first, and if we hit any issues, we
-            # will go back and re-try with the slower OrderedDict /
-            # paranoid mode.
             new_block = copy.deepcopy(
                 self, dict(
                     __block_scope__={id(self): True, id(None): False},
