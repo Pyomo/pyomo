@@ -253,7 +253,7 @@ class AutoSlots(type):
                 for name, mapper in self.__auto_slots__.field_mappers.items():
                     if name in fields:
                         fields[name] = mapper(False, fields[name])
-                # Note that it appears to be aster to clear()/update()
+                # Note that it appears to be faster to clear()/update()
                 # than to simplify assign to __dict__.
                 self.__dict__.clear()
                 self.__dict__.update(fields)
