@@ -144,7 +144,9 @@ def construct_master_feasibility_problem(model_data, config):
             if con not in dr_eqs])
 
     # retain original constraint exprs (for slack initialization and scaling)
-    pre_slack_con_exprs = ComponentMap([(con, con.body) for con in targets])
+    pre_slack_con_exprs = ComponentMap(
+        [(con, con.body - con.upper) for con in targets]
+    )
 
     # add slack variables and objective
     # inequalities g(v) <= b become g(v) -- s^-<= b
