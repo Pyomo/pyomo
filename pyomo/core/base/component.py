@@ -219,14 +219,10 @@ class _ComponentBase(PyomoObject):
         # reason that several others will not be either).
         #
         # We want to remove any new entries added to the memo during the
-        # failed try above.  Unfortunately, this is expensive to do with
-        # dict.  We will convert the dict to an OrderedDict (where is it
-        # inexpensive to iterate over the newest N entries).
+        # failed try above.
         #
-        ordered_memo = OrderedDict(memo)
-        _iter = reversed(ordered_memo.keys())
-        new_keys = [next(_iter) for _ in range(len(ordered_memo) - saved_memo)]
-        map(ordered_memo.pop, new_keys)
+        for _ in range(len(memo) - saved_memo):
+            memo.popitem()
         #
         # Now we are going to continue on, but in a more cautious
         # manner: we will clone entries field at a time so that we can
@@ -238,20 +234,15 @@ class _ComponentBase(PyomoObject):
             # Zip will ignore it.
             _deepcopy_field = comp._deepcopy_field
             new_state = [
-                _deepcopy_field(ordered_memo, slot, value)
+                _deepcopy_field(memo, slot, value)
                 for slot, value in zip(comp.__auto_slots__.slots, state)
             ]
             if comp.__auto_slots__.has_dict:
                 new_state.append({
-                    slot: _deepcopy_field(ordered_memo, slot, value)
+                    slot: _deepcopy_field(memo, slot, value)
                     for slot, value in state[-1].items()
                 })
-            ordered_memo[id(comp)].__setstate__(new_state)
-        # Note that memo is (intentionally) pass-by-reference.  We need
-        # to reset it to the local (currently authoritative)
-        # ordered_memo before returning.
-        memo.clear()
-        memo.update(ordered_memo)
+            memo[id(comp)].__setstate__(new_state)
         return memo[id(self)]
 
     def _create_objects_for_deepcopy(self, memo, component_list):
@@ -267,10 +258,9 @@ class _ComponentBase(PyomoObject):
         except CloneError:
             raise
         except:
-            # remove entries added to teh memo
-            _iter = reversed(memo.keys())
-            new_keys = [next(_iter) for _ in range(len(memo) - saved_memo)]
-            map(memo.pop, new_keys)
+            # remove entries added to the memo
+            for _ in range(len(memo) - saved_memo):
+                memo.popitem()
             # warn the user
             if '__block_scope__' not in memo:
                 logger.warning("""
