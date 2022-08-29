@@ -416,7 +416,13 @@ def initialize_separation(model_data, config):
     to any of the remaining discrete scenarios against which we
     separate).
     """
-    block_num = model_data.iteration
+    # initialize to values from nominal block if nominal objective.
+    # else, initialize to values from latest block added to master
+    if config.objective_focus == ObjectiveType.nominal:
+        block_num = 0
+    else:
+        block_num = model_data.iteration
+
     master_blk = model_data.master_model.scenarios[block_num, 0]
     master_blks = list(model_data.master_model.scenarios.values())
     fsv_set = ComponentSet(master_blk.util.first_stage_variables)
@@ -425,7 +431,7 @@ def initialize_separation(model_data, config):
     def get_parent_master_blk(var):
         """
         Determine the master model scenario block of which
-        a given variable is a child component.
+        a given variable is a child component (or descendant).
         """
         parent = var.parent_block()
         while parent not in master_blks:
@@ -433,15 +439,16 @@ def initialize_separation(model_data, config):
         return parent
 
     for master_var in master_blk.component_data_objects(Var, active=True):
-        # determine corresponding variable in separation problem.
-        # initialize separation problem variable to master problem
-        # value (from block corresponding to most recently added
-        # uncertain param realization)
+        # parent block of the variable need not be `master_blk`
+        # (e.g. for first stage and decision rule variables, it
+        # may be the nominal block)
         parent_master_blk = get_parent_master_blk(master_var)
         sep_var_name = master_var.getname(
             relative_to=parent_master_blk,
             fully_qualified=True,
         )
+
+        # initialize separation problem var to value from master block
         sep_var = sep_model.find_component(sep_var_name)
         sep_var.set_value(value(master_var, exception=False))
 
