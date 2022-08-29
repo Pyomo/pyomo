@@ -429,7 +429,7 @@ class TempfileContext:
             return self.tempdir
         elif self.manager().tempdir is not None:
             return self.manager().tempdir
-        elif TempfileManager is not None and TempfileManager.main.tempdir is not None:
+        elif TempfileManager.main.tempdir is not None:
             return TempfileManager.main.tempdir
         elif pyutilib_mngr is not None and pyutilib_mngr.tempdir is not None:
             deprecation_warning(
