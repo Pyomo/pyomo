@@ -577,7 +577,8 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
     # All subordinate solvers failed to optimize model to appropriate
     # termination condition. PyROS will terminate with subsolver
     # error. At this point, export model if desired
-    if (save_dir := config.subproblem_file_directory) and config.keepfiles:
+    save_dir = config.subproblem_file_directory
+    if save_dir and config.keepfiles:
         objective = str(
             list(nlp_model.component_data_objects(Objective, active=True))[0].name
         )
