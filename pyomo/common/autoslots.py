@@ -186,8 +186,12 @@ class AutoSlots(type):
             operations.
 
             """
+            # Note: this implementation avoids deepcopying the temporary
+            # 'state' list, significantly speeding things up.
             memo[id(self)] = ans = self.__class__.__new__(self.__class__)
-            ans.__setstate__(deepcopy(self.__getstate__(), memo))
+            ans.__setstate__([
+                deepcopy(field, memo) for field in self.__getstate__()
+            ])
             return ans
 
         def __getstate__(self):
