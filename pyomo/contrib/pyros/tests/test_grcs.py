@@ -2129,6 +2129,8 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.time_out,
                          msg="Returned termination condition is not return time_out.")
 
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_terminate_with_application_error(self):
         """
         Check that PyROS correctly raises ApplicationError
