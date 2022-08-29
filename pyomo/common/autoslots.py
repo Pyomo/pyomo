@@ -37,24 +37,27 @@ def fast_deepcopy(obj, memo):
     _id = id(obj)
     if _id in memo:
         ans = memo[_id]
-        if ans is not obj:
-            _unchanged[-1] = False
-        return ans
-    if obj.__class__ is tuple:
+        if ans is obj:
+            return obj
+    elif obj.__class__ is tuple:
         _unchanged.append(True)
         ans = tuple(fast_deepcopy(x, memo) for x in obj)
         if _unchanged.pop():
-            memo[_id] = obj
+            # It appears to be faster *not* to cache the fact that this
+            # particular tuple was unchanged by the deepcopy
+            #   memo[_id] = obj
             return obj
         memo[_id] = ans
     elif obj.__class__ is list:
+        # Two steps here because a list can include itself
         memo[_id] = ans = []
         ans.extend(fast_deepcopy(x, memo) for x in obj)
     else:
         ans = deepcopy(obj, memo)
         if ans is obj:
             return obj
-        memo[_id] = ans
+        # deepcopy() should have added this to the memo
+        # memo[_id] = ans
     _unchanged[-1] = False
     return ans
 
