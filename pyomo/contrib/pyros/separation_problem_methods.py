@@ -517,8 +517,8 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
     -------
     : bool
         True if separation problem was not solved to an appropriate
-        optimality status and the time limit is not exceeded,
-        False otherwise.
+        optimality status by any of the solvers available or the
+        PyROS elapsed time limit is exceeded, False otherwise.
     """
     if is_global:
         backup_solvers = deepcopy(config.backup_global_solvers)
