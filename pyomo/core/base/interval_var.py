@@ -9,6 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+
+# pulse
+# always_in: (sum of pulses).within(Set) and use get_interval() on the set for error checking. (returns (start, end, step_length)). within will be defined on the root node of the expression tree that is the sum of pulses (they should support + and -)
+
+# element
+
 import logging
 
 from pyomo.common.collections import Sequence
@@ -28,7 +34,7 @@ from pyomo.core.base.indexed_component import (
 
 logger = logging.getLogger('pyomo.core')
 
-class _IntervalVarData(_BlockData):
+class IntervalVarData(_BlockData):
     """This class defines the abstract interface for a single interval variable.
     """
     def __init__(self, component=None):
@@ -36,6 +42,7 @@ class _IntervalVarData(_BlockData):
 
         self.is_present = BooleanVar()
         self.start_time = Var(domain=Integers)
+        # TODO: make these NotVars, with before, after, and at
         self.end_time = Var(domain=Integers)
         self.length = Var(domain=Integers)
 
@@ -52,13 +59,13 @@ class _IntervalVarData(_BlockData):
             raise ValueError(
                 "Cannot set 'optional' to %s: Must be True or False." % val)
         if val:
-            self.is_present.fixed = False
+            self.is_present.unfix()
         else:
             self.is_present.fix(True)
 
 @ModelComponentFactory.register("Interval variables for scheduling.")
 class IntervalVar(Block):
-    """And interval variable, which may be defined over an index.
+    """An interval variable, which may be defined over an index.
 
     Args:
         start (tuple of two integers): Feasible range for the 
@@ -74,7 +81,7 @@ class IntervalVar(Block):
         doc (str, optional): Text describing this component.
     """
 
-    _ComponentDataClass = _IntervalVarData
+    _ComponentDataClass = IntervalVarData
 
     def __new__(cls, *args, **kwds):
         if cls != IntervalVar:
@@ -108,32 +115,21 @@ class IntervalVar(Block):
         if not self._optional:
             obj.is_present.fix(True)
 
-        if self._start_bounds is not None:
-            start_bounds = self._start_bounds(parent, index)
-            if not isinstance(start_bounds, Sequence):
-                start_bounds = (start_bounds, start_bounds)
-            obj.start_time.lower, obj.start_time.upper = start_bounds
-        if self._end_bounds is not None:
-            end_bounds = self._end_bounds(parent, index)
-            if not isinstance(end_bounds, Sequence):
-                end_bounds = (end_bounds, end_bounds)
-            obj.end_time.lower, obj.end_time.upper = end_bounds
-        if self._length_bounds is not None:
-            length_bounds = self._length_bounds(parent, index)
-            if not isinstance(length_bounds, Sequence):
-                length_bounds = (length_bounds, length_bounds)
-            obj.length.lower, obj.length.upper = length_bounds
-        if self._optional is not None:
-            # hit the setter so I get error checking
-            obj.optional = self._optional(parent, index)
+        obj.start_time.bounds = self._start_bounds(parent, index)
+        obj.end_time.bounds = self._end_bounds(parent, index)
+        obj.length.bounds = self._length_bounds(parent, index)
+        # hit the setter so I get error checking
+        obj.optional = self._optional(parent, index)
 
         return obj
 
-class ScalarIntervalVar(_IntervalVarData, IntervalVar):
+class ScalarIntervalVar(IntervalVarData, IntervalVar):
     def __init__(self, *args, **kwds):
+        # TODO: John, it really does fail without this, in _BlockData's
+        # implementation of __getattr__
         self._suppress_ctypes = set()
 
-        _IntervalVarData.__init__(self, self)
+        IntervalVarData.__init__(self, self)
         IntervalVar.__init__(self, *args, **kwds)
         self._data[None] = self
         self._index = UnindexedComponent_index
