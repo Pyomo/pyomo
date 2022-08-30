@@ -19,8 +19,42 @@ _autoslot_info = namedtuple(
     ['has_dict', 'slots', 'slot_mappers', 'field_mappers']
 )
 
+def _deepcopy_tuple(obj, memo, _id):
+    _unchanged.append(True)
+    ans = tuple(fast_deepcopy(x, memo) for x in obj)
+    if _unchanged.pop():
+        # It appears to be faster *not* to cache the fact that this
+        # particular tuple was unchanged by the deepcopy
+        #   memo[_id] = obj
+        return obj
+    memo[_id] = ans
+    return ans
+
+def _deepcopy_list(obj, memo, _id):
+    # Two steps here because a list can include itself
+    memo[_id] = ans = []
+    ans.extend(fast_deepcopy(x, memo) for x in obj)
+    return ans
+
+def _deepcopy_dict(obj, memo, _id):
+    # Two steps here because a dict can include itself
+    memo[_id] = ans = {}
+    for key, val in obj.items():
+        ans[fast_deepcopy(key, memo)] = fast_deepcopy(val, memo)
+    return ans
+
+def _deepcopier(obj, memo, _id):
+    return deepcopy(obj, memo)
+
 _atomic_types = {int, float, bool, complex, bytes, str, type, range,
                  type(None), types.BuiltinFunctionType, types.FunctionType}
+
+_deepcopy_mapper = {
+    tuple: _deepcopy_tuple,
+    list: _deepcopy_list,
+    dict: _deepcopy_dict,
+}
+
 _unchanged = [None]
 
 def fast_deepcopy(obj, memo):
@@ -37,28 +71,10 @@ def fast_deepcopy(obj, memo):
     _id = id(obj)
     if _id in memo:
         ans = memo[_id]
-        if ans is obj:
-            return obj
-    elif obj.__class__ is tuple:
-        _unchanged.append(True)
-        ans = tuple(fast_deepcopy(x, memo) for x in obj)
-        if _unchanged.pop():
-            # It appears to be faster *not* to cache the fact that this
-            # particular tuple was unchanged by the deepcopy
-            #   memo[_id] = obj
-            return obj
-        memo[_id] = ans
-    elif obj.__class__ is list:
-        # Two steps here because a list can include itself
-        memo[_id] = ans = []
-        ans.extend(fast_deepcopy(x, memo) for x in obj)
     else:
-        ans = deepcopy(obj, memo)
-        if ans is obj:
-            return obj
-        # deepcopy() should have added this to the memo
-        # memo[_id] = ans
-    _unchanged[-1] = False
+        ans = _deepcopy_mapper.get(obj.__class__, _deepcopier)(obj, memo, _id)
+    if ans is not obj:
+        _unchanged[-1] = False
     return ans
 
 
