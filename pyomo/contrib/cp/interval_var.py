@@ -17,22 +17,72 @@
 
 import logging
 
-from pyomo.common.collections import Sequence
-from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import NOTSET
-from pyomo.common.timing import ConstructionTimer
+from pyomo.common.collections import ComponentSet
 
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.initializer import BoundInitializer, Initializer
-from pyomo.core.base import Var, BooleanVar
+from pyomo.core.base import ScalarVar, ScalarBooleanVar
 from pyomo.core import Integers
 
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set)
 
-logger = logging.getLogger('pyomo.core')
+logger = logging.getLogger('pyomo.contrib.cp')
+
+class IntervalVarTimePoint(ScalarVar):
+    """This class defines the abstract interface for a single variable
+    denoting a start or end time point of an IntervalVar"""
+
+    __slots__ = ('_before', '_after', '_at')
+
+    def __init__(self, component=None):
+        super().__init__(domain=Integers, ctype=IntervalVarTimePoint)
+
+        # TODO: If we do decide it makes sense to store these this way, it would
+        # be nice to be able to pprint them.
+        self._before = ComponentSet()
+        self._after = ComponentSet()
+        self._at = ComponentSet()
+
+    def before(self, time, delay=0):
+        # These return logical constraint expressions. A node in a logical
+        # expression tree.
+        self._before.add(time)
+
+    def after(self, time, delay=0):
+        self._after.add(time)
+
+    def at(self, time, delay=0):
+        self._at.add(time)
+
+    @property
+    def timepoints_before(self):
+        return self._after
+
+    @property
+    def timepoints_after(self):
+        return self._before
+
+    @property
+    def timepoints_at(self):
+        return self._at
+
+class IntervalVarLength(ScalarVar):
+    """This class defines the abstract interface for a single variable
+    denoting a start or end time point of an IntervalVar"""
+
+    __slots__ = ('_before', '_after', '_at')
+
+    def __init__(self, component=None):
+        super().__init__(domain=Integers, ctype=IntervalVarLength)
+
+class IntervalVarPresence(ScalarBooleanVar):
+    """This class defines the abstract interface for a single variable
+    denoting a start or end time point of an IntervalVar"""
+    def __init__(self, component=None):
+        super().__init__(ctype = IntervalVarPresence)
 
 class IntervalVarData(_BlockData):
     """This class defines the abstract interface for a single interval variable.
@@ -40,11 +90,10 @@ class IntervalVarData(_BlockData):
     def __init__(self, component=None):
         _BlockData.__init__(self, component)
 
-        self.is_present = BooleanVar()
-        self.start_time = Var(domain=Integers)
-        # TODO: make these NotVars, with before, after, and at
-        self.end_time = Var(domain=Integers)
-        self.length = Var(domain=Integers)
+        self.is_present = IntervalVarPresence()
+        self.start_time = IntervalVarTimePoint()
+        self.end_time = IntervalVarTimePoint()
+        self.length = IntervalVarLength()
 
     @property
     def optional(self):
@@ -68,14 +117,14 @@ class IntervalVar(Block):
     """An interval variable, which may be defined over an index.
 
     Args:
-        start (tuple of two integers): Feasible range for the 
+        start (tuple of two integers): Feasible range for the
             interval variable's start time
         end (tuple of two integers, optional): Feasible range for the
             interval variables end time
         length (integer or tuple of two integers, optional): Feasible
             range for the length of the interval variable
         optional (boolean, optional) : If False, the interval variable must
-            be scheduled. Otherwise the interval variable is optionally 
+            be scheduled. Otherwise the interval variable is optionally
             present. Default behavior is 'False'
         name (str, optional): Name for this component.
         doc (str, optional): Text describing this component.

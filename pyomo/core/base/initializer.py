@@ -484,4 +484,4 @@ class BoundInitializer(InitializerBase):
             return self._initializer.indices()
         else:
             # raise an error
-            InitializerBase.indices()
+            InitializerBase.indices(self)
