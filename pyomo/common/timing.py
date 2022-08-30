@@ -105,15 +105,23 @@ class ConstructionTimer(object):
 
     def __str__(self):
         try:
-            idx = len(self.obj.index_set())
-            idx_label = f'{idx} indices' if idx != 1 else '1 index'
+            if self.obj.is_indexed():
+                # indexed component
+                if self.obj.index_set().isfinite():
+                    idx = len(self.obj.index_set())
+                else:
+                    idx = len(self.obj)
+                idx_label = f'{idx} indices' if idx != 1 else '1 index'
+            elif hasattr(self.obj, 'index_set'):
+                # scalar indexed components
+                idx = len(self.obj.index_set())
+                idx_label = f'{idx} indices' if idx != 1 else '1 index'
+            else:
+                # other non-indexed component (e.g., Suffix)
+                idx_label = ''
         except AttributeError:
-            # Unindexed component
+            # unknown component
             idx_label = ''
-        except TypeError:
-            # Component indexed by non-finite set
-            idx = len(self.obj)
-            idx_label = f'{idx} indices' if idx != 1 else '1 index'
         if idx_label:
             idx_label = f'; {idx_label} total'
         try:
