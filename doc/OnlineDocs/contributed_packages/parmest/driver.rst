@@ -157,9 +157,9 @@ function can be used to customize data points and weights that are used
 in parameter estimation.
 
 Suggested initialization procedure for parameter estimation problems
-------------------
+--------------------------------------------------------------------
 
-To check the quality of initial guess values provided for fitted parameter, we suggest solving a 
+To check the quality of initial guess values provided for the fitted parameters, we suggest solving a 
 square instance of the problem prior to solving the parameter estimation problem using the following steps:
 
 1. Create :class:`~pyomo.contrib.parmest.parmest.Estimator` object
