@@ -19,8 +19,8 @@ class OrderedSet(MutableSet):
     def __init__(self, iterable=None):
         # TODO: Starting in Python 3.7, dict is ordered (and is faster
         # than OrderedDict).  dict began supporting reversed() in 3.8.
-        # We should consider changing the underlying data type here fro
-        # mOrderedDict to dict.
+        # We should consider changing the underlying data type here from
+        # OrderedDict to dict.
         self._dict = OrderedDict()
         if iterable is not None:
             if iterable.__class__ is OrderedSet:
