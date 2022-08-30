@@ -23,7 +23,7 @@ from pyomo.common.timing import (
     ConstructionTimer, TransformationTimer, report_timing,
     TicTocTimer, HierarchicalTimer,
 )
-from pyomo.environ import ConcreteModel, RangeSet, Var, TransformationFactory
+from pyomo.environ import ConcreteModel, RangeSet, Var, Any, TransformationFactory
 from pyomo.core.base.var import _VarData
 
 class _pseudo_component(Var):
@@ -79,18 +79,12 @@ class TestTiming(unittest.TestCase):
             str(a))
 
     def test_report_timing(self):
-        # Create a set to ensure that the global sets have already been
-        # constructed (this is an issue until the new set system is
-        # merged in and the GlobalSet objects are not automatically
-        # created by pyomo.core
-        m = ConcreteModel()
-        m.x = Var([1,2])
-
         ref = r"""
            (0(\.\d+)?) seconds to construct Block ConcreteModel; 1 index total
            (0(\.\d+)?) seconds to construct RangeSet FiniteScalarRangeSet; 1 index total
            (0(\.\d+)?) seconds to construct Var x; 2 indices total
-           (0(\.\d+)?) seconds to construct Suffix Suffix; 1 index total
+           (0(\.\d+)?) seconds to construct Var y; 0 indices total
+           (0(\.\d+)?) seconds to construct Suffix Suffix
            (0(\.\d+)?) seconds to apply Transformation RelaxIntegerVars \(in-place\)
            """.strip()
 
@@ -102,6 +96,7 @@ class TestTiming(unittest.TestCase):
                 m = ConcreteModel()
                 m.r = RangeSet(2)
                 m.x = Var(m.r)
+                m.y = Var(Any, dense=False)
                 xfrm.apply_to(m)
             result = out.getvalue().strip()
             self.maxDiff = None
@@ -116,6 +111,7 @@ class TestTiming(unittest.TestCase):
             m = ConcreteModel()
             m.r = RangeSet(2)
             m.x = Var(m.r)
+            m.y = Var(Any, dense=False)
             xfrm.apply_to(m)
             result = os.getvalue().strip()
             self.maxDiff = None
@@ -128,6 +124,7 @@ class TestTiming(unittest.TestCase):
             m = ConcreteModel()
             m.r = RangeSet(2)
             m.x = Var(m.r)
+            m.y = Var(Any, dense=False)
             xfrm.apply_to(m)
             result = os.getvalue().strip()
             self.maxDiff = None

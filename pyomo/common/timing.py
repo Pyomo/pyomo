@@ -78,7 +78,7 @@ class GeneralTimer(object):
 
 class ConstructionTimer(object):
     __slots__ = ('obj', 'timer')
-    msg = "%6.*f seconds to construct %s %s; %d %s total"
+    msg = "%6.*f seconds to construct %s %s%s"
     in_progress = "ConstructionTimer object for %s %s; %0.3f elapsed seconds"
 
     def __init__(self, obj):
@@ -106,8 +106,16 @@ class ConstructionTimer(object):
     def __str__(self):
         try:
             idx = len(self.obj.index_set())
+            idx_label = f'{idx} indices' if idx != 1 else '1 index'
         except AttributeError:
-            idx = 1
+            # Unindexed component
+            idx_label = ''
+        except TypeError:
+            # Component indexed by non-finite set
+            idx = len(self.obj)
+            idx_label = f'{idx} indices' if idx != 1 else '1 index'
+        if idx_label:
+            idx_label = f'; {idx_label} total'
         try:
             _type = self.obj.ctype.__name__
         except AttributeError:
@@ -120,8 +128,7 @@ class ConstructionTimer(object):
                             total_time,
                             _type,
                             self.name,
-                            idx,
-                            'indices' if idx > 1 else 'index' )
+                            idx_label )
 
 
 class TransformationTimer(object):
