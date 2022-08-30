@@ -14,22 +14,19 @@ class MultiThreadWrapper():
     """
 
     def __init__(self, base):
-        self.__mtdict = defaultdict(base)
+        object.__setattr__(self, 'mtdict', defaultdict(base))
 
     def __getattr__(self, attr):
-        return getattr(self.__mtdict[get_ident()], attr)
+        return getattr(self.mtdict[get_ident()], attr)
     
     def __setattr__(self, attr, value):
-        if attr == '_MultiThreadWrapper__mtdict':
-            object.__setattr__(self, attr, value)
-        else:
-            setattr(self.__mtdict[get_ident()], attr, value)
+        setattr(self.mtdict[get_ident()], attr, value)
     
     def __enter__(self):
-        return self.__mtdict[get_ident()].__enter__()
+        return self.mtdict[get_ident()].__enter__()
     
     def __exit__(self, exc_type, exc_value, traceback):
-        return self.__mtdict[get_ident()].__exit__(exc_type, exc_value, traceback)
+        return self.mtdict[get_ident()].__exit__(exc_type, exc_value, traceback)
 
 
 class MultiThreadWrapperWithMain(MultiThreadWrapper):
@@ -44,10 +41,8 @@ class MultiThreadWrapperWithMain(MultiThreadWrapper):
         super().__init__(base)
 
     def __getattr__(self, attr):
-        if attr == '_MultiThreadWrapperWithMain__mtdict':
-            return object.__getattribute__(self, '_MultiThreadWrapper__mtdict')
-        elif attr == 'main_thread':
-            return self.__mtdict[main_thread().ident]
+        if attr == 'main_thread':
+            return self.mtdict[main_thread().ident]
         return super().__getattr__(attr)
 
     def __setattr__(self, attr, value):
