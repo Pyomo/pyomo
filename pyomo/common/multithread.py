@@ -13,6 +13,8 @@ class MultiThreadWrapper():
     See [get_ident()](https://docs.python.org/3/library/threading.html#threading.get_ident) for more information.
     """
 
+    __slots__ = 'mtdict'
+
     def __init__(self, base):
         object.__setattr__(self, 'mtdict', defaultdict(base))
 
@@ -22,11 +24,21 @@ class MultiThreadWrapper():
     def __setattr__(self, attr, value):
         setattr(self.mtdict[get_ident()], attr, value)
     
+    def __delattr__(self, attr):
+        delattr(self.mtdict[get_ident()], attr)
+    
     def __enter__(self):
         return self.mtdict[get_ident()].__enter__()
     
     def __exit__(self, exc_type, exc_value, traceback):
         return self.mtdict[get_ident()].__exit__(exc_type, exc_value, traceback)
+    
+    def __dir__(self):
+        return list(object.__dir__(self)) + list(self.mtdict[get_ident()].__dir__())
+    
+    def __str__(self):
+        return self.mtdict[get_ident()].__str__()
+
 
 
 class MultiThreadWrapperWithMain(MultiThreadWrapper):
@@ -50,3 +62,6 @@ class MultiThreadWrapperWithMain(MultiThreadWrapper):
             raise ValueError('Setting `main_thread` attribute is not allowed')
         else:
             super().__setattr__(attr, value)
+    
+    def __dir__(self):
+        return super().__dir__() + ['main_thread']
