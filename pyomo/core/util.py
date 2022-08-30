@@ -118,7 +118,7 @@ def quicksum(args, start=0, linear=None):
                 for arg in args:
                     e += arg
             # Return the constant term if the linear expression does not
-            # contains variables
+            # contain variables
             #
             # getattr() because the linear expression may not have ended
             # up being linear (and e could be a SumExpression)
