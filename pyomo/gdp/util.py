@@ -139,6 +139,8 @@ class GDPTree:
         return self._topological_sort()
 
     def in_degree(self, u):
+        if u not in self._in_degrees:
+            return 0
         return self._in_degrees[u]
 
 def _parent_disjunct(obj):
