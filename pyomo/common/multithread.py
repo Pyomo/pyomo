@@ -17,23 +17,19 @@ class MultiThreadWrapper():
         self.__mtdict = defaultdict(base)
 
     def __getattr__(self, attr):
-        id = get_ident()
-        return getattr(self.__mtdict[id], attr)
+        return getattr(self.__mtdict[get_ident()], attr)
     
     def __setattr__(self, attr, value):
         if attr == '_MultiThreadWrapper__mtdict':
             object.__setattr__(self, attr, value)
         else:
-            id = get_ident()
-            setattr(self.__mtdict[id], attr, value)
+            setattr(self.__mtdict[get_ident()], attr, value)
     
     def __enter__(self):
-        id = get_ident()
-        return self.__mtdict[id].__enter__()
+        return self.__mtdict[get_ident()].__enter__()
     
     def __exit__(self, exc_type, exc_value, traceback):
-        id = get_ident()
-        return self.__mtdict[id].__exit__(exc_type, exc_value, traceback)
+        return self.__mtdict[get_ident()].__exit__(exc_type, exc_value, traceback)
 
 
 class MultiThreadWrapperWithMain(MultiThreadWrapper):
