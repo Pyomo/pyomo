@@ -1342,6 +1342,8 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
     def checkMs(self, m, disj1c1lb, disj1c1ub, disj1c2lb, disj1c2ub, disj2c1ub,
                 disj2c2ub):
         bigm = TransformationFactory('gdp.bigm')
+        m_values = bigm.get_all_M_values_by_constraint(m)
+
         c = bigm.get_transformed_constraints(m.b.simpledisj1.c[1])
         self.assertEqual(len(c), 2)
         lb = c[0]
@@ -1356,6 +1358,10 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         self.assertEqual(repn.constant, -disj1c1ub)
         ct.check_linear_coef(
             self, repn, m.b.simpledisj1.indicator_var, disj1c1ub)
+        self.assertIn(m.b.simpledisj1.c[1], m_values.keys())
+        self.assertEqual(m_values[m.b.simpledisj1.c[1]][0], disj1c1lb)
+        self.assertEqual(m_values[m.b.simpledisj1.c[1]][1], disj1c1ub)
+
         c = bigm.get_transformed_constraints(m.b.simpledisj1.c[2])
         self.assertEqual(len(c), 2)
         lb = c[0]
@@ -1370,6 +1376,9 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         self.assertEqual(repn.constant, -disj1c2ub)
         ct.check_linear_coef(
             self, repn, m.b.simpledisj1.indicator_var, disj1c2ub)
+        self.assertIn(m.b.simpledisj1.c[2], m_values.keys())
+        self.assertEqual(m_values[m.b.simpledisj1.c[2]][0], disj1c2lb)
+        self.assertEqual(m_values[m.b.simpledisj1.c[2]][1], disj1c2ub)
 
         c = bigm.get_transformed_constraints(m.b.simpledisj2.c[1])
         self.assertEqual(len(c), 1)
@@ -1379,6 +1388,10 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         self.assertEqual(repn.constant, -disj2c1ub)
         ct.check_linear_coef(
             self, repn, m.b.simpledisj2.indicator_var, disj2c1ub)
+        self.assertIn(m.b.simpledisj2.c[1], m_values.keys())
+        self.assertEqual(m_values[m.b.simpledisj2.c[1]][1], disj2c1ub)
+        self.assertIsNone(m_values[m.b.simpledisj2.c[1]][0])
+
         c = bigm.get_transformed_constraints(m.b.simpledisj2.c[2])
         self.assertEqual(len(c), 1)
         ub = c[0]
@@ -1387,6 +1400,12 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
         self.assertEqual(repn.constant, -disj2c2ub)
         ct.check_linear_coef(
             self, repn, m.b.simpledisj2.indicator_var, disj2c2ub)
+        self.assertIn(m.b.simpledisj2.c[2], m_values.keys())
+        self.assertEqual(m_values[m.b.simpledisj2.c[2]][1], disj2c2ub)
+        self.assertIsNone(m_values[m.b.simpledisj2.c[2]][0])
+
+        # verify that we don't have anything extra in this dictionary either.
+        self.assertEqual(len(m_values), 4)
 
     def test_suffix_M_constraintData_on_block(self):
         m = models.makeTwoTermDisj_IndexedConstraints()
