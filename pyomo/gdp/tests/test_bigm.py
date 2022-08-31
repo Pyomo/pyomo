@@ -1284,6 +1284,15 @@ class DisjOnBlock(unittest.TestCase, CommonTests):
         self.assertIs(src, bigms)
         self.assertIs(key, m.b.disjunct[1])
 
+    def test_largest_M_value(self):
+        m = models.makeTwoTermDisjOnBlock()
+        m = models.add_disj_not_on_block(m)
+        bigm = TransformationFactory('gdp.bigm')
+        bigms = {m.b: 100, m.b.disjunct[1]: 13}
+        bigm.apply_to(m, bigM=bigms)
+
+        self.assertEqual(bigm.get_largest_M_value(m), 100)
+
     def test_block_targets_inactive(self):
         ct.check_block_targets_inactive(self, 'bigm')
 

@@ -1004,3 +1004,33 @@ class BigM_Transformation(Transformation):
         # fails... (That is, it's a bug in the mapping.)
         lower, upper = transBlock.bigm_src[constraint]
         return (lower[0], upper[0])
+
+    def get_all_M_values_by_constraint(self, model):
+        """Returns a dictionary mapping each constraint to a tuple:
+        (lower_M_value, upper_M_value), where either can be None if the
+        constraint does not have a lower or upper bound (respectively).
+
+        Parameters
+        ----------
+        model: A GDP model that has been transformed with BigM
+        """
+        m_values = {}
+        for disj in model.component_data_objects(
+                Disjunct,
+                active=None,
+                descend_into=(Block, Disjunct)):
+            if disj.transformation_block is not None:
+                transBlock = disj.transformation_block()
+                for cons, (lower, upper) in transBlock.bigm_src.items():
+                    m_values[cons] = self.get_M_value(cons)
+        return m_values
+
+    def get_largest_M_value(self, model):
+        """Returns the largest M value for any constraint on the model.
+
+        Parameters
+        ----------
+        model: A GDP model that has been transformed with BigM
+        """
+        return max(max(abs(m) for m in m_values if m is not None) for m_values
+                   in self.get_all_M_values_by_constraint(model).values())
