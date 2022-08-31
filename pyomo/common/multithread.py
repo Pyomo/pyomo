@@ -39,6 +39,8 @@ class MultiThreadWrapper():
     def __str__(self):
         return self.mtdict[get_ident()].__str__()
 
+    def __new__(cls, wrapped):
+        return super().__new__(type('MultiThreadMeta' + wrapped.__name__, (cls,), {'__doc__': wrapped.__doc__}))
 
 
 class MultiThreadWrapperWithMain(MultiThreadWrapper):
@@ -49,6 +51,7 @@ class MultiThreadWrapperWithMain(MultiThreadWrapper):
     This is useful for a falling back to a main instance when needed, but results
     in race conditions if used improperly.
     """
+
     def __init__(self, base):
         super().__init__(base)
 
