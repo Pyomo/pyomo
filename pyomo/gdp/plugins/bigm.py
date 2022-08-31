@@ -30,7 +30,7 @@ from pyomo.core.base import Transformation, TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
-    is_child_of, get_src_disjunction, get_src_constraint,
+    is_child_of, get_src_disjunction, get_src_constraint, get_root_blocks,
     get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
     _warn_for_active_disjunction, _warn_for_active_disjunct, preprocess_targets,
     _to_dict)
@@ -252,9 +252,17 @@ class BigM_Transformation(Transformation):
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
         # the list.
-        targets = preprocess_targets(targets, instance, knownBlocks)
+        preprocessed_targets = preprocess_targets(targets, instance,
+                                                  knownBlocks)
 
-        for t in targets:
+        # transform any logical constraints that might be anywhere on the stuff
+        # we're about to transform.
+        TransformationFactory('core.logical_to_linear').apply_to(
+            instance,
+            targets=get_root_blocks(targets, instance) +
+            [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
+
+        for t in preprocessed_targets:
             if t.ctype is Disjunction:
                 if t.is_indexed():
                     self._transform_disjunction(t, bigM)
@@ -282,10 +290,6 @@ class BigM_Transformation(Transformation):
                         warning_msg += "\t%s\n" % component
                 logger.warning(warning_msg)
 
-        # at the end, transform any logical constraints that might be on
-        # instance
-        TransformationFactory('core.logical_to_linear').apply_to(instance)
-
     def _add_transformation_block(self, instance):
         # make a transformation block on instance to put transformed disjuncts
         # on
@@ -312,8 +316,6 @@ class BigM_Transformation(Transformation):
                 descend_into=(Block, Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transform_disjunction(disjunction, bigM)
-        # transform any logical constraints
-        TransformationFactory('core.logical_to_linear').apply_to(obj)
 
     def _add_xor_constraint(self, disjunction, transBlock):
         # Put the disjunction constraint on the transformation block and
@@ -503,10 +505,6 @@ class BigM_Transformation(Transformation):
             self._transfer_transBlock_data(transBlock, destinationBlock)
             # we leave the transformation block because it still has the XOR
             # constraints, which we want to be on the parent disjunct.
-
-        # Transform any logical constraints here. We need to do this before we
-        # create the variable references!
-        TransformationFactory('core.logical_to_linear').apply_to(block)
 
         # We don't know where all the BooleanVars are used, so if there are any
         # that the above transformation didn't transform, we need to do it now,
