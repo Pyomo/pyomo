@@ -18,6 +18,7 @@
 import logging
 
 from pyomo.common.collections import ComponentSet
+from pyomo.contrib.cp.scheduling_expr import BeforeExpression, AtExpression
 
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
@@ -35,39 +36,22 @@ class IntervalVarTimePoint(ScalarVar):
     """This class defines the abstract interface for a single variable
     denoting a start or end time point of an IntervalVar"""
 
-    __slots__ = ('_before', '_after', '_at')
+    __slots__ = ()
 
     def __init__(self, component=None):
         super().__init__(domain=Integers, ctype=IntervalVarTimePoint)
 
-        # TODO: If we do decide it makes sense to store these this way, it would
-        # be nice to be able to pprint them.
-        self._before = ComponentSet()
-        self._after = ComponentSet()
-        self._at = ComponentSet()
-
     def before(self, time, delay=0):
         # These return logical constraint expressions. A node in a logical
         # expression tree.
-        self._before.add(time)
+        return BeforeExpression(self, time, delay)
 
     def after(self, time, delay=0):
-        self._after.add(time)
+        return BeforeExpression(time, self, -delay)
 
     def at(self, time, delay=0):
-        self._at.add(time)
+        return AtExpression(self, time, delay)
 
-    @property
-    def timepoints_before(self):
-        return self._after
-
-    @property
-    def timepoints_after(self):
-        return self._before
-
-    @property
-    def timepoints_at(self):
-        return self._at
 
 class IntervalVarLength(ScalarVar):
     """This class defines the abstract interface for a single variable
@@ -78,11 +62,13 @@ class IntervalVarLength(ScalarVar):
     def __init__(self, component=None):
         super().__init__(domain=Integers, ctype=IntervalVarLength)
 
+
 class IntervalVarPresence(ScalarBooleanVar):
     """This class defines the abstract interface for a single variable
     denoting a start or end time point of an IntervalVar"""
     def __init__(self, component=None):
         super().__init__(ctype = IntervalVarPresence)
+
 
 class IntervalVarData(_BlockData):
     """This class defines the abstract interface for a single interval variable.
@@ -111,6 +97,7 @@ class IntervalVarData(_BlockData):
             self.is_present.unfix()
         else:
             self.is_present.fix(True)
+
 
 @ModelComponentFactory.register("Interval variables for scheduling.")
 class IntervalVar(Block):
@@ -172,6 +159,7 @@ class IntervalVar(Block):
 
         return obj
 
+
 class ScalarIntervalVar(IntervalVarData, IntervalVar):
     def __init__(self, *args, **kwds):
         # TODO: John, it really does fail without this, in _BlockData's
@@ -182,6 +170,7 @@ class ScalarIntervalVar(IntervalVarData, IntervalVar):
         IntervalVar.__init__(self, *args, **kwds)
         self._data[None] = self
         self._index = UnindexedComponent_index
+
 
 class IndexedIntervalVar(IntervalVar):
     pass

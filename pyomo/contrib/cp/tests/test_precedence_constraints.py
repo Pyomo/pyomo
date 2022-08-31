@@ -1,0 +1,118 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
+import pyomo.common.unittest as unittest
+from pyomo.contrib.cp import IntervalVar
+from pyomo.contrib.cp.scheduling_expr import BeforeExpression, AtExpression
+from pyomo.environ import ConcreteModel, LogicalConstraint
+
+class TestPrecedenceRelationships(unittest.TestCase):
+    def get_model(self):
+        m = ConcreteModel()
+        m.a = IntervalVar()
+        m.b = IntervalVar()
+
+        return m
+
+    def test_start_before_start(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.a.start_time.before(m.b.start_time))
+
+        self.assertIsInstance(m.c.expr, BeforeExpression)
+        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertIs(m.c.expr.args[0], m.a.start_time)
+        self.assertIs(m.c.expr.args[1], m.b.start_time)
+        self.assertEqual(m.c.expr.delay, 0)
+
+    def test_start_after_start(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.a.start_time.after(m.b.start_time))
+
+        self.assertIsInstance(m.c.expr, BeforeExpression)
+        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertIs(m.c.expr.args[0], m.b.start_time)
+        self.assertIs(m.c.expr.args[1], m.a.start_time)
+        self.assertEqual(m.c.expr.delay, 0)
+
+    def test_start_at_start(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.a.start_time.at(m.b.start_time))
+
+        self.assertIsInstance(m.c.expr, AtExpression)
+        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertIs(m.c.expr.args[0], m.a.start_time)
+        self.assertIs(m.c.expr.args[1], m.b.start_time)
+        self.assertEqual(m.c.expr.delay, 0)
+
+    def test_end_before_start(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.a.end_time.before(m.b.start_time,
+                                                         delay=3))
+
+        self.assertIsInstance(m.c.expr, BeforeExpression)
+        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertIs(m.c.expr.args[0], m.a.end_time)
+        self.assertIs(m.c.expr.args[1], m.b.start_time)
+        self.assertEqual(m.c.expr.delay, 3)
+
+    def test_end_at_start(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.a.end_time.at(m.b.start_time,
+                                                     delay=4))
+
+        self.assertIsInstance(m.c.expr, AtExpression)
+        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertIs(m.c.expr.args[0], m.a.end_time)
+        self.assertIs(m.c.expr.args[1], m.b.start_time)
+        self.assertEqual(m.c.expr.delay, 4)
+
+    def test_end_after_start(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.a.end_time.after(m.b.start_time,
+                                                        delay=-2))
+
+        self.assertIsInstance(m.c.expr, BeforeExpression)
+        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertIs(m.c.expr.args[0], m.b.start_time)
+        self.assertIs(m.c.expr.args[1], m.a.end_time)
+        self.assertEqual(m.c.expr.delay, 2)
+
+
+    def test_end_before_end(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.a.end_time.before(m.b.end_time,
+                                                         delay=-5))
+
+        self.assertIsInstance(m.c.expr, BeforeExpression)
+        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertIs(m.c.expr.args[0], m.a.end_time)
+        self.assertIs(m.c.expr.args[1], m.b.end_time)
+        self.assertEqual(m.c.expr.delay, -5)
+
+    def test_end_at_end(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.a.end_time.at(m.b.end_time))
+
+        self.assertIsInstance(m.c.expr, AtExpression)
+        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertIs(m.c.expr.args[0], m.a.end_time)
+        self.assertIs(m.c.expr.args[1], m.b.end_time)
+        self.assertEqual(m.c.expr.delay, 0)
+
+    def test_end_after_end(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.a.end_time.after(m.b.end_time))
+
+        self.assertIsInstance(m.c.expr, BeforeExpression)
+        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertIs(m.c.expr.args[0], m.b.end_time)
+        self.assertIs(m.c.expr.args[1], m.a.end_time)
+        self.assertEqual(m.c.expr.delay, 0)
