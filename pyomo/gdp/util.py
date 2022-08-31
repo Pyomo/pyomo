@@ -17,7 +17,7 @@ from pyomo.core.base.component import _ComponentBase
 from pyomo.core import (
     Block, TraversalStrategy, SortComponents, LogicalConstraint)
 from pyomo.core.base.block import _BlockData
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
 from pyomo.opt import TerminationCondition, SolverStatus
 
 from weakref import ref as weakref_ref
@@ -85,34 +85,34 @@ def clone_without_expression_components(expr, substitute=None):
                                                 remove_named_expressions=True)
     return visitor.walk_expression(expr)
 
+
 class GDPTree:
     def __init__(self):
         self._adjacency_list = {}
-        self._in_degrees = defaultdict(lambda: 0)
+        self._in_degrees = {}
         # This needs to be ordered so that topological sort is deterministic
-        self._vertices = []
+        self._vertices = OrderedSet()
 
     @property
     def vertices(self):
         return self._vertices
 
     def add_node(self, u):
-        if u not in self._vertices:
-            self._vertices.append(u)
+        self._vertices.add(u)
 
     def _update_in_degree(self, v):
-        self._in_degrees[v] += 1
+        if v not in self._in_degrees:
+            self._in_degrees[v] = 1
+        else:
+            self._in_degrees[v] += 1
 
     def add_edge(self, u, v):
-        if u in self._adjacency_list:
-            self._adjacency_list[u].append(v)
-        else:
-            self._adjacency_list[u] = [v]
+        if u not in self._adjacency_list:
+            self._adjacency_list[u] = OrderedSet()
+        self._adjacency_list[u].add(v)
         self._update_in_degree(v)
-        if u not in self._vertices:
-            self._vertices.append(u)
-        if v not in self._vertices:
-            self._vertices.append(v)
+        self._vertices.add(u)
+        self._vertices.add(v)
 
     def _visit_vertex(self, u, leaf_to_root):
         if u in self._adjacency_list:
@@ -120,12 +120,12 @@ class GDPTree:
                 if v not in leaf_to_root:
                     self._visit_vertex(v, leaf_to_root)
         # we're done--we've been to all its children
-        leaf_to_root.append(u)
+        leaf_to_root.add(u)
 
     def _topological_sort(self):
         # this is reverse of the list we should return (but happens to be what
         # we want for hull and bigm)
-        leaf_to_root = []
+        leaf_to_root = OrderedSet()
         for u in self.vertices:
             if u not in leaf_to_root:
                 self._visit_vertex(u, leaf_to_root)
@@ -139,6 +139,8 @@ class GDPTree:
         return self._topological_sort()
 
     def in_degree(self, u):
+        if u not in self._in_degrees:
+            return 0
         return self._in_degrees[u]
 
 def _parent_disjunct(obj):

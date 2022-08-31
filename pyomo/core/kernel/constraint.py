@@ -35,11 +35,15 @@ class IConstraint(ICategorizedObject):
     #
 
     body = _abstract_readonly_property(
-        doc="The body of the constraint")
+        doc="The expression for the body of the constraint")
+    lower = _abstract_readonly_property(
+        doc="The expression for the lower bound of the constraint")
+    upper = _abstract_readonly_property(
+        doc="The expression for the upper bound of the constraint")
     lb = _abstract_readonly_property(
-        doc="The lower bound of the constraint")
+        doc="The value of the lower bound of the constraint")
     ub = _abstract_readonly_property(
-        doc="The upper bound of the constraint")
+        doc="The value of the upper bound of the constraint")
     rhs = _abstract_readonly_property(
         doc="The right-hand side of the constraint")
     equality = _abstract_readonly_property(
@@ -51,14 +55,6 @@ class IConstraint(ICategorizedObject):
              "instance provides the properties that "
              "define the linear canonical form of a "
              "constraint"))
-
-    # temporary (for backwards compatibility)
-    @property
-    def lower(self):
-        return self.lb
-    @property
-    def upper(self):
-        return self.ub
 
     #
     # Interface
@@ -168,14 +164,14 @@ class _MutableBoundsConstraintMixin(object):
     #
 
     @property
-    def lb(self):
-        """The lower bound of the constraint"""
+    def lower(self):
+        """The expression for the lower bound of the constraint"""
         return self._lb
-    @lb.setter
-    def lb(self, lb):
+    @lower.setter
+    def lower(self, lb):
         if self.equality:
             raise ValueError(
-                "The lb property can not be set "
+                "The lower property can not be set "
                 "when the equality property is True.")
         if (lb is not None) and \
            (not is_numeric_data(lb)):
@@ -185,14 +181,14 @@ class _MutableBoundsConstraintMixin(object):
         self._lb = lb
 
     @property
-    def ub(self):
-        """The upper bound of the constraint"""
+    def upper(self):
+        """The expression for the upper bound of the constraint"""
         return self._ub
-    @ub.setter
-    def ub(self, ub):
+    @upper.setter
+    def upper(self, ub):
         if self.equality:
             raise ValueError(
-                "The ub property can not be set "
+                "The upper property can not be set "
                 "when the equality property is True.")
         if (ub is not None) and \
            (not is_numeric_data(ub)):
@@ -200,6 +196,22 @@ class _MutableBoundsConstraintMixin(object):
                     "Constraint upper bounds must be "
                     "expressions restricted to numeric data.")
         self._ub = ub
+
+    @property
+    def lb(self):
+        """The value of the lower bound of the constraint"""
+        return value(self._lb)
+    @lb.setter
+    def lb(self, lb):
+        self.lower = lb
+
+    @property
+    def ub(self):
+        """The value of the upper bound of the constraint"""
+        return value(self._ub)
+    @ub.setter
+    def ub(self, ub):
+        self.upper = ub
 
     @property
     def rhs(self):
@@ -579,8 +591,8 @@ class constraint(_MutableBoundsConstraintMixin,
         # Error check, to ensure that we don't have an equality
         # constraint with 'infinite' RHS
         #
-        assert not (self.equality and (self.lb is None))
-        assert (not self.equality) or (self.lb is self.ub)
+        assert not (self.equality and (self.lower is None))
+        assert (not self.equality) or (self.lower is self.upper)
 
 #
 # Note: This class is experimental. The implementation may

@@ -13,6 +13,7 @@ from __future__ import division
 
 import inspect
 import logging
+import sys
 from copy import deepcopy
 from collections import deque
 
@@ -29,6 +30,36 @@ from pyomo.core.expr.numvalue import (
     native_numeric_types,
     value,)
 
+try:
+    # sys._getframe is slightly faster than inspect's currentframe, but
+    # is not guaranteed to exist everywhere
+    currentframe = sys._getframe
+except AttributeError:
+    currentframe = inspect.currentframe
+
+def get_stack_depth():
+    n = -1 # skip *this* frame in the count
+    f = currentframe()
+    while f is not None:
+        n += 1
+        f = f.f_back
+    return n
+
+# For efficiency, we want to run recursively, but don't want to hit
+# Python's recursion limit (because that would be difficult to recover
+# from cleanly).  However, there is a non-trivial cost to determine the
+# current stack depth - and we don't want to hit that for every call.
+# Instead, we will assume that the walker is always called with at
+# least RECURSION_LIMIT frames available on the stack.  When we hit the
+# end of that limit, we will actually check how much space is left on
+# the stack and run recursively until only 2*RECURSION_LIMIT frames are
+# left.  For the vast majority of well-formed expressions this approach
+# avoids a somewhat costly call to get_stack_depth, but still catches
+# the vast majority of cases that could generate a recursion error.
+RECURSION_LIMIT = 50
+
+class RevertToNonrecursive(Exception):
+    pass
 
 # NOTE: This module also has dependencies on numeric_expr; however, to
 # avoid circular dependencies, we will NOT import them here.  Instead,
@@ -146,9 +177,24 @@ class StreamBasedExpressionVisitor(object):
 
     # The list of event methods that can either be implemented by
     # derived classes or specified as callback functions to the class
-    # constructor:
-    client_methods = ('enterNode','exitNode','beforeChild','afterChild',
-                      'acceptChildResult','initializeWalker','finalizeResult')
+    # constructor.
+    #
+    # This is a dict mapping the callback name to a single character
+    # that we can use to classify the set of callbacks used by a
+    # particular Visitor (we define special-purpose node processors for
+    # certain common combinations).  For example, a 'bex' visitor is one
+    # that supports beforeChild, enterNode, and exitNode, but NOT
+    # afterChild or acceptChildResult.
+    client_methods = {
+        'enterNode': 'e',
+        'exitNode': 'x',
+        'beforeChild': 'b',
+        'afterChild': 'a',
+        'acceptChildResult': 'c',
+        'initializeWalker': '',
+        'finalizeResult': '',
+    }
+
     def __init__(self, **kwds):
         # This is slightly tricky: We want derived classes to be able to
         # override the "None" defaults here, and for keyword arguments
@@ -183,8 +229,262 @@ class StreamBasedExpressionVisitor(object):
                     return wrapper
                 setattr(self, name, wrap(fcn, nargs))
 
+        self.recursion_stack = None
+
+        # Set up the custom recursive node handler function (customized
+        # for the specific set of callbacks that are defined for this
+        # class instance).
+        recursive_node_handler = '_process_node_' + ''.join(sorted(
+            '' if getattr(self, f[0]) is None else f[1]
+            for f in self.client_methods.items()))
+        self._process_node = getattr(
+            self, recursive_node_handler, self._process_node_general)
 
     def walk_expression(self, expr):
+        """Walk an expression, calling registered callbacks.
+        """
+        if self.initializeWalker is not None:
+            walk, root = self.initializeWalker(expr)
+            if not walk:
+                return root
+            elif root is None:
+                root = expr
+        else:
+            root = expr
+
+        try:
+            result = self._process_node(root, RECURSION_LIMIT)
+        except RevertToNonrecursive:
+            ptr = (None,) + self.recursion_stack.pop()
+            while self.recursion_stack:
+                ptr = (ptr,) + self.recursion_stack.pop()
+            self.recursion_stack = None
+            result = self._nonrecursive_walker_loop(ptr)
+        except RecursionError:
+            logger.warning(
+                'Unexpected RecursionError walking an expression tree.',
+                extra={'id': 'W1003'})
+            return self.walk_expression_nonrecursive(expr)
+
+        if self.finalizeResult is not None:
+            return self.finalizeResult(result)
+        else:
+            return result
+
+    def _compute_actual_recursion_limit(self):
+        recursion_limit \
+            = sys.getrecursionlimit() - get_stack_depth() - 2*RECURSION_LIMIT
+        if recursion_limit <= RECURSION_LIMIT:
+            self.recursion_stack = []
+            raise RevertToNonrecursive()
+        return recursion_limit
+
+    def _process_node_general(self, node, recursion_limit):
+        """Recursive routine for processing nodes with general callbacks
+
+        This is the "general" implementation of the
+        StreamBasedExpressionVisitor node processor that can handle any
+        combination of registered callback functions.
+
+        """
+        if not recursion_limit:
+            recursion_limit = self._compute_actual_recursion_limit()
+        else:
+            recursion_limit -= 1
+
+        if self.enterNode is not None:
+            tmp = self.enterNode(node)
+            if tmp is None:
+                args = data = None
+            else:
+                args, data = tmp
+        else:
+            args = None
+            data = []
+        if args is None:
+            if type(node) in nonpyomo_leaf_types \
+                    or not node.is_expression_type():
+                args = ()
+            else:
+                args = node.args
+
+        # Because we do not require the args to be a context manager, we
+        # will mock up the "with args" using a try-finally.
+        context_manager = hasattr(args, '__enter__')
+        if context_manager:
+            args.__enter__()
+
+        try:
+            descend = True
+            child_idx = -1
+            # Note: this relies on iter(iterator) returning the
+            # iterator.  This seems to hold for all common iterators
+            # (list, tuple, generator, etc)
+            arg_iter = iter(args)
+            for child in arg_iter:
+                child_idx += 1
+                if self.beforeChild is not None:
+                    tmp = self.beforeChild(node, child, child_idx)
+                    if tmp is None:
+                        descend = True
+                    else:
+                        descend, child_result = tmp
+
+                if descend:
+                    child_result = self._process_node(child, recursion_limit)
+
+                if self.acceptChildResult is not None:
+                    data = self.acceptChildResult(
+                        node, data, child_result, child_idx)
+                elif data is not None:
+                    data.append(child_result)
+
+                if self.afterChild is not None:
+                    self.afterChild(node, child, child_idx)
+        except RevertToNonrecursive:
+            self._recursive_frame_to_nonrecursive_stack(locals())
+            context_manager = False
+            raise
+        finally:
+            if context_manager:
+                args.__exit__(None, None, None)
+
+        # We are done with this node.  Call exitNode to compute
+        # any result
+        if self.exitNode is not None:
+            return self.exitNode(node, data)
+        else:
+            return data
+
+    def _process_node_bex(self, node, recursion_limit):
+        """Recursive routine for processing nodes with only 'bex' callbacks
+
+        This is a special-case implementation of the "general"
+        StreamBasedExpressionVisitor node processor for the case that
+        only beforeChild, enterNode, and exitNode are defined (see
+        also the definition of the client_methods dict).
+
+        """
+        if not recursion_limit:
+            recursion_limit = self._compute_actual_recursion_limit()
+        else:
+            recursion_limit -= 1
+
+        tmp = self.enterNode(node)
+        if tmp is None:
+            args = data = None
+        else:
+            args, data = tmp
+        if args is None:
+            if type(node) in nonpyomo_leaf_types \
+                    or not node.is_expression_type():
+                args = ()
+            else:
+                args = node.args
+
+        # Because we do not require the args to be a context manager, we
+        # will mock up the "with args" using a try-finally.
+        context_manager = hasattr(args, '__enter__')
+        if context_manager:
+            args.__enter__()
+
+        try:
+            child_idx = -1
+            # Note: this relies on iter(iterator) returning the
+            # iterator.  This seems to hold for all common iterators
+            # (list, tuple, generator, etc)
+            arg_iter = iter(args)
+            for child in arg_iter:
+                child_idx += 1
+                tmp = self.beforeChild(node, child, child_idx)
+                if tmp is None:
+                    descend = True
+                else:
+                    descend, child_result = tmp
+
+                if descend:
+                    data.append(self._process_node(child, recursion_limit))
+                else:
+                    data.append(child_result)
+        except RevertToNonrecursive:
+            self._recursive_frame_to_nonrecursive_stack(locals())
+            context_manager = False
+            raise
+        finally:
+            if context_manager:
+                args.__exit__(None, None, None)
+
+        # We are done with this node.  Call exitNode to compute
+        # any result
+        return self.exitNode(node, data)
+
+    def _process_node_bx(self, node, recursion_limit):
+        """Recursive routine for processing nodes with only 'bx' callbacks
+
+        This is a special-case implementation of the "general"
+        StreamBasedExpressionVisitor node processor for the case that
+        only beforeChild and exitNode are defined (see also the
+        definition of the client_methods dict).
+
+        """
+        if not recursion_limit:
+            recursion_limit = self._compute_actual_recursion_limit()
+        else:
+            recursion_limit -= 1
+
+        if type(node) in nonpyomo_leaf_types or not node.is_expression_type():
+            args = ()
+        else:
+            args = node.args
+        data = []
+
+        try:
+            child_idx = -1
+            # Note: this relies on iter(iterator) returning the
+            # iterator.  This seems to hold for all common iterators
+            # (list, tuple, generator, etc)
+            arg_iter = iter(args)
+            for child in arg_iter:
+                child_idx += 1
+                tmp = self.beforeChild(node, child, child_idx)
+                if tmp is None:
+                    descend = True
+                else:
+                    descend, child_result = tmp
+                if descend:
+                    data.append(self._process_node(child, recursion_limit))
+                else:
+                    data.append(child_result)
+        except RevertToNonrecursive:
+            self._recursive_frame_to_nonrecursive_stack(locals())
+            raise
+        finally:
+            pass
+
+        # We are done with this node.  Call exitNode to compute
+        # any result
+        return self.exitNode(node, data)
+
+    def _recursive_frame_to_nonrecursive_stack(self, local):
+        child_idx = local['child_idx']
+        _arg_list = [None] * child_idx
+        _arg_list.append(local['child'])
+        _arg_list.extend(local['arg_iter'])
+        if not self.recursion_stack:
+            # For the deepest stack frame, the recursion limit hit
+            # as we started to enter the child.  As we haven't
+            # started processing it yet, we need to decrement
+            # child_idx so that it is revisited
+            child_idx -= 1
+        self.recursion_stack.append((
+            local['node'],
+            _arg_list,
+            len(_arg_list)-1,
+            local['data'],
+            child_idx,
+        ))
+
+    def walk_expression_nonrecursive(self, expr):
         """Walk an expression, calling registered callbacks.
         """
         #
@@ -206,6 +506,8 @@ class StreamBasedExpressionVisitor(object):
             walk, result = self.initializeWalker(expr)
             if not walk:
                 return result
+            elif result is not None:
+                expr = result
         if self.enterNode is not None:
             tmp = self.enterNode(expr)
             if tmp is None:
@@ -227,9 +529,11 @@ class StreamBasedExpressionVisitor(object):
         # Note that because we increment child_idx just before fetching
         # the child node, it must be initialized to -1, and ptr[3] must
         # always be *one less than* the number of arguments
-        child_idx = -1
-        ptr = (None, node, args, len(args)-1, data, child_idx)
+        return self._nonrecursive_walker_loop(
+            (None, node, args, len(args)-1, data, -1))
 
+    def _nonrecursive_walker_loop(self, ptr):
+        _, node, args, _, data, child_idx = ptr
         try:
             while 1:
                 if child_idx < ptr[3]:
@@ -345,6 +649,7 @@ class StreamBasedExpressionVisitor(object):
                 if hasattr(ptr[2], '__exit__'):
                         ptr[2].__exit__(None, None, None)
                 ptr = ptr[0]
+
 
 class SimpleExpressionVisitor(object):
 
@@ -885,13 +1190,20 @@ def evaluate_expression(exp, exception=True, constant=False):
         and is caught.
 
     """
+    clear_active = False
     if constant:
         visitor = _EvaluateConstantExpressionVisitor()
     else:
-        visitor = _EvaluationVisitor(exception=exception)
+        if evaluate_expression.visitor_active:
+            visitor = _EvaluationVisitor(exception=exception)
+        else:
+            visitor = evaluate_expression.visitor_cache
+            visitor.exception = exception
+            evaluate_expression.visitor_active = True
+            clear_active = True
+
     try:
         return visitor.dfs_postorder_stack(exp)
-
     except ( TemplateExpressionError, ValueError, TypeError,
              NonConstantExpressionError, FixedExpressionError ):
         # Errors that we want to be able to suppress:
@@ -907,7 +1219,12 @@ def evaluate_expression(exp, exception=True, constant=False):
         if exception:
             raise
         return None
+    finally:
+        if clear_active:
+           evaluate_expression.visitor_active = False
 
+evaluate_expression.visitor_cache = _EvaluationVisitor(True)
+evaluate_expression.visitor_active = False
 
 # =====================================================
 #  identify_components
