@@ -1,18 +1,20 @@
 from collections import namedtuple
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.config import ConfigBlock
 
 
 TimeBins = namedtuple("TimeBins", ["set_primals", "constraints", "jacobian"])
 timebins = TimeBins("set_primals", "constraints", "jacobian")
 
 
-class _SquareNlpSolverBase(object):
+class SquareNlpSolverBase(object):
     """A base class for NLP solvers that act on a square system
     of equality constraints.
 
     """
+    OPTIONS = ConfigBlock()
 
-    def __init__(self, nlp, timer=None):
+    def __init__(self, nlp, timer=None, options=None):
         """
         Arguments
         ---------
@@ -24,6 +26,10 @@ class _SquareNlpSolverBase(object):
         """
         if timer is None:
             timer = HierarchicalTimer()
+        if options is None:
+            options = {}
+        self.options = self.OPTIONS(options)
+
         self._timer = timer
         self._nlp = nlp
         self._function_values = None
@@ -80,7 +86,7 @@ class _SquareNlpSolverBase(object):
         return self._jacobian
 
 
-class DenseSquareNlpSolver(_SquareNlpSolverBase):
+class DenseSquareNlpSolver(SquareNlpSolverBase):
     """A square NLP solver that uses a dense Jacobian
     """
 
