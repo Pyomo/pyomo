@@ -30,7 +30,7 @@ from pyomo.core.base import Transformation, TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
-    is_child_of, get_src_disjunction, get_src_constraint, get_root_blocks,
+    is_child_of, get_src_disjunction, get_src_constraint,
     get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
     _warn_for_active_disjunction, _warn_for_active_disjunct, preprocess_targets,
     _to_dict)
@@ -259,7 +259,7 @@ class BigM_Transformation(Transformation):
         # we're about to transform.
         TransformationFactory('core.logical_to_linear').apply_to(
             instance,
-            targets=get_root_blocks(targets, instance) +
+            targets=[blk for blk in targets if blk.ctype is Block] +
             [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
 
         for t in preprocessed_targets:

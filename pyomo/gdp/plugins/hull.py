@@ -28,7 +28,7 @@ from pyomo.core.base.boolean_var import (
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
     clone_without_expression_components, is_child_of, get_src_disjunction,
-    get_src_constraint, get_root_blocks, get_transformed_constraints,
+    get_src_constraint, get_transformed_constraints,
     get_src_disjunct, _warn_for_active_disjunction, _warn_for_active_disjunct,
     preprocess_targets)
 from pyomo.core.util import target_list
@@ -269,7 +269,7 @@ class Hull_Reformulation(Transformation):
         # we're about to transform.
         TransformationFactory('core.logical_to_linear').apply_to(
             instance,
-            targets=get_root_blocks(targets, instance) +
+            targets=[blk for blk in targets if blk.ctype is Block] +
             [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
 
         for t in preprocessed_targets:

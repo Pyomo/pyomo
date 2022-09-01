@@ -211,46 +211,11 @@ def get_gdp_tree(targets, instance, knownBlocks):
                 % (t.name, type(t)) )
     return gdp_tree
 
-def _gather_blocks(block, tree):
-    to_explore = [block]
-    while to_explore:
-        parent = to_explore.pop()
-        for child in parent.component_data_objects(
-                (Block, Disjunct),
-                active=True,
-                sort=SortComponents.deterministic,
-                descend_into=False):
-            tree.add_edge(block, child)
-            to_explore.append(child)
-    return tree
-
-def get_block_tree(targets, instance):
-    tree = GDPTree()
-    for t in targets:
-        if t.ctype in (Block, Disjunct) or isinstance(t, _BlockData):
-            _blocks = t.values() if t.is_indexed() else (t,)
-            for block in _blocks:
-                if not block.active:
-                    continue
-                tree.add_node(block)
-                tree = _gather_blocks(block, tree)
-    return tree
-
 def preprocess_targets(targets, instance, knownBlocks):
     gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
     # this is for bigm and hull: We need to transform from the leaves up, so we
     # want a reverse of a topological sort: no parent can come before its child.
     return gdp_tree.reverse_topological_sort()
-
-def get_root_blocks(targets, instance):
-    tree = get_block_tree(targets, instance)
-    # when we call logical_to_linear as part of the GDP transformations, we need
-    # to transform all the logical constraints first. We will use the
-    # preprocessed targets to find the Disjuncts we need to transform, and this
-    # finds the block(s) at the root(s) of the component tree being
-    # transformed. It would be more efficient to build this tree simultaneously,
-    # but I'm not sure it's worth the chaos?
-    return [blk for blk in tree.topological_sort() if tree.in_degree(blk) == 0]
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
 #  putting it here for now so that all the gdp transformations can use it.
