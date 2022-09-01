@@ -2153,13 +2153,13 @@ class RegressionTest(unittest.TestCase):
                 r"Solver \(ipopt\) did not exit normally",
                 ):
             pyros_solver.solve(
-                m,
-                [m.x1],
-                [],
-                [m.p],
-                box_set,
-                solver,
-                baron,
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[],
+                uncertain_params=[m.p],
+                uncertainty_set=box_set,
+                local_solver=solver,
+                global_solver=baron,
                 objective_focus=ObjectiveType.nominal,
             )
 
