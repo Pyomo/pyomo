@@ -1019,10 +1019,13 @@ class BigM_Transformation(Transformation):
                 Disjunct,
                 active=None,
                 descend_into=(Block, Disjunct)):
+            # First check if it was transformed at all.
             if disj.transformation_block is not None:
                 transBlock = disj.transformation_block()
-                for cons, (lower, upper) in transBlock.bigm_src.items():
-                    m_values[cons] = self.get_M_value(cons)
+                # If it was transformed with BigM, we get the M values.
+                if hasattr(transBlock, 'bigm_src'):
+                    for cons, (lower, upper) in transBlock.bigm_src.items():
+                        m_values[cons] = self.get_M_value(cons)
         return m_values
 
     def get_largest_M_value(self, model):
