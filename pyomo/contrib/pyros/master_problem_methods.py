@@ -145,7 +145,7 @@ def construct_master_feasibility_problem(model_data, config):
 
     # retain original constraint exprs (for slack initialization and scaling)
     pre_slack_con_exprs = ComponentMap(
-        [(con, con.body - con.upper) for con in targets]
+        (con, con.body - con.upper) for con in targets
     )
 
     # add slack variables and objective
