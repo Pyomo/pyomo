@@ -24,7 +24,7 @@ import itertools as it
 import os
 from copy import deepcopy
 from pyomo.common.errors import ApplicationError
-
+from pyomo.common.modeling import unique_component_name
 
 
 def initial_construct_master(model_data):
@@ -102,6 +102,23 @@ def construct_master_feasibility_problem(model_data, config):
     """
 
     model = model_data.master_model.clone()
+
+    # obtain mapping from master problem to master feasibility
+    # problem variables
+    varmap_name = unique_component_name(
+        model_data.master_model,
+        'pyros_var_map',
+    )
+    setattr(model_data.master_model, varmap_name,
+            list(model_data.master_model.component_data_objects(Var)))
+    model = model_data.master_model.clone()
+    model_data.feasibility_problem_varmap = list(zip(
+        getattr(model_data.master_model, varmap_name),
+        getattr(model, varmap_name)
+    ))
+    delattr(model_data.master_model, varmap_name)
+    delattr(model, varmap_name)
+
     for obj in model.component_data_objects(Objective):
         obj.deactivate()
     iteration = model_data.iteration
@@ -241,10 +258,8 @@ def solve_master_feasibility_problem(model_data, config):
         model.solutions.load_from(results)
 
     # load master feasibility point to master model
-    for v in model.component_data_objects(Var):
-        master_v = model_data.master_model.find_component(v)
-        if master_v is not None:
-            master_v.set_value(v.value, skip_validation=True)
+    for master_var, feas_var in model_data.feasibility_problem_varmap:
+        master_var.set_value(feas_var.value, skip_validation=True)
 
     return results
 
