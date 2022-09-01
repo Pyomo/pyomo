@@ -1,11 +1,10 @@
 from collections import namedtuple
-
 from pyomo.core.base.objective import Objective
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.modeling import unique_component_name
+from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
-    _SquareNlpSolverBase,
     DenseSquareNlpSolver,
 )
 from pyomo.opt import (
@@ -14,7 +13,7 @@ from pyomo.opt import (
     TerminationCondition,
     ProblemSense,
 )
-
+import numpy as np
 import scipy as sp
 
 
@@ -24,6 +23,25 @@ timebins = TimeBins("get_primals", "solve")
 
 class FsolveNlpSolver(DenseSquareNlpSolver):
 
+    OPTIONS = ConfigBlock(
+        description="Options for SciPy fsolve wrapper",
+    )
+    OPTIONS.declare("xtol", ConfigValue(
+        default=1e-8,
+        domain=float,
+        description="Tolerance for convergence of variable vector",
+    ))
+    OPTIONS.declare("maxiter", ConfigValue(
+        default=100,
+        domain=int,
+        description="Maximum number of function evaluations per solve",
+    ))
+    OPTIONS.declare("tol", ConfigValue(
+        default=None,
+        domain=float,
+        description="Tolerance for convergence of function residual",
+    ))
+
     def solve(self, x0=None):
         if x0 is None:
             self._timer.start(timebins.get_primals)
@@ -31,14 +49,33 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
             self._timer.stop(timebins.get_primals)
 
         self._timer.start(timebins.solve)
-        x, info, result, msg = sp.optimize.fsolve(
+        x, info, ier, msg = sp.optimize.fsolve(
             self.evaluate_function,
             x0,
             fprime=self.evaluate_jacobian,
             full_output=True,
+            xtol=self.options.xtol,
+            maxfev=self.options.maxiter,
         )
         self._timer.stop(timebins.solve)
-        return result
+
+        #
+        # fsolve converges with a tolerance specified on the variable
+        # vector x. We may also want to enforce a tolerance on function
+        # value, which we check here.
+        #
+        if self.options.tol is not None:
+            fcn_val = self.evaluate_function(x)
+            if not np.all(np.abs(fcn_val) <= self.options.tol):
+                raise RuntimeError(
+                    "fsolve converged to a solution that does not satisfy the"
+                    " function tolerance 'tol' of %s."
+                    " You may need to relax the 'tol' option or tighten the"
+                    " 'xtol' option (currently 'xtol' is %s)."
+                    % (self.options.tol, self.options.xtol)
+                )
+
+        return x, info, ier, msg
 
 
 class RootNlpSolver(DenseSquareNlpSolver):
