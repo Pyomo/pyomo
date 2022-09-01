@@ -1024,7 +1024,7 @@ class BigM_Transformation(Transformation):
                 transBlock = disj.transformation_block()
                 # If it was transformed with BigM, we get the M values.
                 if hasattr(transBlock, 'bigm_src'):
-                    for cons, (lower, upper) in transBlock.bigm_src.items():
+                    for cons in transBlock.bigm_src:
                         m_values[cons] = self.get_M_value(cons)
         return m_values
 
