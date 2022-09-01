@@ -95,6 +95,17 @@ class TestFsolveNLP(unittest.TestCase):
             x, info, ier, msg = solver.solve()
 
 
+class TestFsolvePyomo(unittest.TestCase):
+
+    def test_solve_simple_nlp(self):
+        m, _ = make_simple_model()
+        solver = pyo.SolverFactory("fsolve")
+        results = solver.solve(m)
+        solution = [m.x[1].value, m.x[2].value, m.x[3].value]
+        predicted = [0.92846891, -0.22610731, 0.29465397]
+        self.assertStructuredAlmostEqual(solution, predicted)
+
+
 class TestRootNLP(unittest.TestCase):
 
     def test_solve_simple_nlp(self):
