@@ -13,6 +13,7 @@ from pyomo.common.extensions import ExtensionBuilderFactory
 from pyomo.opt import SolverFactory
 from .build import PyNumeroBuilder
 from .algorithms.solvers.cyipopt_solver import PyomoCyIpoptSolver
+from .algorithms.solvers.scipy_solvers import PyomoFsolveSolver
 
 def load():
     ExtensionBuilderFactory.register('pynumero')(PyNumeroBuilder)
@@ -20,3 +21,10 @@ def load():
         'cyipopt',
         doc='Cyipopt: direct python bindings to the Ipopt NLP solver'
     )(PyomoCyIpoptSolver)
+    SolverFactory.register(
+        "fsolve",
+        doc=(
+            "fsolve: A SciPy wrapper around MINPACK's hybrd and"
+            " hybrj algorithms"
+        ),
+    )(PyomoFsolveSolver)
