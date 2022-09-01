@@ -13,8 +13,10 @@ from pyomo.opt import (
     TerminationCondition,
     ProblemSense,
 )
-import numpy as np
-import scipy as sp
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available,
+    scipy as sp, scipy_available,
+)
 
 
 TimeBins = namedtuple("TimeBins", ["get_primals", "solve"])
@@ -96,7 +98,21 @@ class RootNlpSolver(DenseSquareNlpSolver):
         return results
 
 
-class PyomoScipySquareSolver(object):
+class PyomoScipySolver(object):
+
+    def __init__(self, options=None):
+        if options is None:
+            options = {}
+        self.options = options
+
+    def available(self, exception_flag=False):
+        return bool(numpy_available and scipy_available)
+
+    def license_is_valid(self):
+        return True
+
+    def version(self):
+        return tuple(int(_) for _ in sp.__version__.split('.'))
 
     def solve(self, model):
 
@@ -111,7 +127,7 @@ class PyomoScipySquareSolver(object):
 
         if len(active_objs) == 0:
             model.del_component(obj_name)
-        
+
         # Call to solve(nlp)
         nlp_solver = self.create_nlp_solver()
         x0 = nlp.get_primals()
@@ -142,7 +158,7 @@ class PyomoScipySquareSolver(object):
         )
 
 
-class PyomoFsolveSolver(PyomoScipySquareSolver):
+class PyomoFsolveSolver(PyomoScipySolver):
 
     def create_nlp_solver(self):
         nlp = self.get_nlp()
@@ -153,7 +169,7 @@ class PyomoFsolveSolver(PyomoScipySquareSolver):
         return results
 
 
-class PyomoRootSolver(PyomoScipySquareSolver):
+class PyomoRootSolver(PyomoScipySolver):
 
     def create_nlp_solver(self):
         nlp = self.get_nlp()
