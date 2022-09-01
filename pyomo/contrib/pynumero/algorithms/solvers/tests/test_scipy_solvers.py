@@ -1,6 +1,9 @@
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
+from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
+    SquareNlpSolverBase,
+)
 from pyomo.contrib.pynumero.algorithms.solvers.scipy_solvers import (
     FsolveNlpSolver,
     RootNlpSolver,
@@ -20,16 +23,43 @@ def make_simple_model():
 
 
 class TestSquareSolverBase(unittest.TestCase):
-    pass
+
+    def test_not_implemented_solve(self):
+        m, nlp = make_simple_model()
+        solver = SquareNlpSolverBase(nlp)
+        msg = "has not implemented the solve method"
+        with self.assertRaisesRegex(NotImplementedError, msg):
+            solver.solve()
+
+    def test_not_square(self):
+        m, _ = make_simple_model()
+        m.con4 = pyo.Constraint(expr=m.x[1] == m.x[2])
+        nlp = PyomoNLP(m)
+        msg = "same numbers of variables as equality constraints"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            solver = SquareNlpSolverBase(nlp)
+
+    def test_bounds_and_ineq_okay(self):
+        m, _ = make_simple_model()
+        m.x[1].setlb(0.0)
+        m.x[1].setub(1.0)
+        m.con4 = pyo.Constraint(expr=m.x[1] <= m.x[2])
+        nlp = PyomoNLP(m)
+        # Just construct the solver and get no error
+        solver = SquareNlpSolverBase(nlp)
 
 
 class TestFsolveNLP(unittest.TestCase):
 
     def test_solve_simple_nlp(self):
         m, nlp = make_simple_model()
-        solver = FsolveNlpSolver(nlp)
-        results = solver.solve()
-        self.assertEqual(results, 1)
+        solver = FsolveNlpSolver(nlp, options=dict(
+            xtol=1e-9,
+            maxiter=20,
+            tol=1e-8,
+        ))
+        x, info, ier, msg = solver.solve()
+        self.assertEqual(ier, 1)
 
         variables = [m.x[1], m.x[2], m.x[3]]
         predicted_xorder = [0.92846891, -0.22610731, 0.29465397]
@@ -42,6 +72,27 @@ class TestFsolveNLP(unittest.TestCase):
             nlp.get_primals().tolist(),
             predicted_nlporder,
         )
+
+    def test_solve_max_iter(self):
+        m, nlp = make_simple_model()
+        solver = FsolveNlpSolver(nlp, options=dict(
+            xtol=1e-9,
+            maxiter=10,
+        ))
+        x, info, ier, msg = solver.solve()
+        self.assertNotEqual(ier, 1)
+        self.assertIn("has reached maxfev", msg)
+
+    def test_solve_too_tight_tol(self):
+        m, nlp = make_simple_model()
+        solver = FsolveNlpSolver(nlp, options=dict(
+            xtol=1e-3,
+            maxiter=20,
+            tol=1e-8,
+        ))
+        msg = "does not satisfy the function tolerance"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            x, info, ier, msg = solver.solve()
 
 
 class TestRootNLP(unittest.TestCase):
