@@ -120,12 +120,12 @@ class TestBlockVector(unittest.TestCase):
     def test_astype(self):
         v = self.ones
         with self.assertRaises(NotImplementedError) as ctx:
-            vv = v.astype(np.int, copy=False)
+            vv = v.astype(np.int64, copy=False)
 
-        vv = v.astype(np.int)
+        vv = v.astype(np.int64)
         self.assertEqual(vv.nblocks, v.nblocks)
         for blk in vv:
-            self.assertEqual(blk.dtype, np.int)
+            self.assertEqual(blk.dtype, np.int64)
 
     def test_byteswap(self):
         v = self.ones
