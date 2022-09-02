@@ -1,4 +1,5 @@
 import pyomo.common.unittest as unittest
+from pyomo.common.dependencies import scipy, scipy_available
 import pyomo.environ as pyo
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
@@ -7,6 +8,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
 from pyomo.contrib.pynumero.algorithms.solvers.scipy_solvers import (
     FsolveNlpSolver,
     RootNlpSolver,
+    PyomoScipySolver,
 )
 
 
@@ -22,6 +24,7 @@ def make_simple_model():
     return m, nlp
 
 
+@unittest.skipUnless(scipy_available, "SciPy is not available")
 class TestSquareSolverBase(unittest.TestCase):
 
     def test_not_implemented_solve(self):
@@ -49,6 +52,7 @@ class TestSquareSolverBase(unittest.TestCase):
         solver = SquareNlpSolverBase(nlp)
 
 
+@unittest.skipUnless(scipy_available, "SciPy is not available")
 class TestFsolveNLP(unittest.TestCase):
 
     def test_solve_simple_nlp(self):
@@ -95,7 +99,32 @@ class TestFsolveNLP(unittest.TestCase):
             x, info, ier, msg = solver.solve()
 
 
+@unittest.skipUnless(scipy_available, "SciPy is not available")
+class TestPyomoScipySolver(unittest.TestCase):
+
+    def test_available_and_version(self):
+        solver = PyomoScipySolver()
+        self.assertTrue(solver.available())
+        self.assertTrue(solver.license_is_valid())
+
+        sp_version = tuple(
+            int(num) for num in scipy.__version__.split('.')
+        )
+        self.assertEqual(sp_version, solver.version())
+
+
+@unittest.skipUnless(scipy_available, "SciPy is not available")
 class TestFsolvePyomo(unittest.TestCase):
+
+    def test_available_and_version(self):
+        solver = pyo.SolverFactory("fsolve")
+        self.assertTrue(solver.available())
+        self.assertTrue(solver.license_is_valid())
+
+        sp_version = tuple(
+            int(num) for num in scipy.__version__.split('.')
+        )
+        self.assertEqual(sp_version, solver.version())
 
     def test_solve_simple_nlp(self):
         m, _ = make_simple_model()
@@ -105,7 +134,28 @@ class TestFsolvePyomo(unittest.TestCase):
         predicted = [0.92846891, -0.22610731, 0.29465397]
         self.assertStructuredAlmostEqual(solution, predicted)
 
+    def test_solve_max_iter(self):
+        m, _ = make_simple_model()
+        solver = pyo.SolverFactory("fsolve")
+        solver.set_options(dict(xtol=1e-9, maxiter=10))
+        res = solver.solve(m)
+        x, info, ier, msg = res
+        self.assertNotEqual(ier, 1)
+        self.assertIn("has reached maxfev", msg)
 
+    def test_solve_too_tight_tol(self):
+        m, _ = make_simple_model()
+        solver = pyo.SolverFactory("fsolve", options=dict(
+            xtol=1e-3,
+            maxiter=20,
+            tol=1e-8,
+        ))
+        msg = "does not satisfy the function tolerance"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            x, info, ier, msg = solver.solve(m)
+
+
+@unittest.skipUnless(scipy_available, "SciPy is not available")
 class TestRootNLP(unittest.TestCase):
 
     def test_solve_simple_nlp(self):
