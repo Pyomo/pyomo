@@ -59,7 +59,7 @@ class TestFsolveNLP(unittest.TestCase):
         m, nlp = make_simple_model()
         solver = FsolveNlpSolver(nlp, options=dict(
             xtol=1e-9,
-            maxiter=20,
+            maxfev=20,
             tol=1e-8,
         ))
         x, info, ier, msg = solver.solve()
@@ -81,7 +81,7 @@ class TestFsolveNLP(unittest.TestCase):
         m, nlp = make_simple_model()
         solver = FsolveNlpSolver(nlp, options=dict(
             xtol=1e-9,
-            maxiter=10,
+            maxfev=10,
         ))
         x, info, ier, msg = solver.solve()
         self.assertNotEqual(ier, 1)
@@ -91,7 +91,7 @@ class TestFsolveNLP(unittest.TestCase):
         m, nlp = make_simple_model()
         solver = FsolveNlpSolver(nlp, options=dict(
             xtol=1e-3,
-            maxiter=20,
+            maxfev=20,
             tol=1e-8,
         ))
         msg = "does not satisfy the function tolerance"
@@ -129,30 +129,57 @@ class TestFsolvePyomo(unittest.TestCase):
     def test_solve_simple_nlp(self):
         m, _ = make_simple_model()
         solver = pyo.SolverFactory("fsolve")
+
+        # Just want to make sure this option works
+        solver.set_options(dict(full_output=False))
+
         results = solver.solve(m)
         solution = [m.x[1].value, m.x[2].value, m.x[3].value]
         predicted = [0.92846891, -0.22610731, 0.29465397]
         self.assertStructuredAlmostEqual(solution, predicted)
 
+    def test_solve_results_obj(self):
+        m, _ = make_simple_model()
+        solver = pyo.SolverFactory("fsolve")
+        results = solver.solve(m)
+        solution = [m.x[1].value, m.x[2].value, m.x[3].value]
+        predicted = [0.92846891, -0.22610731, 0.29465397]
+        self.assertStructuredAlmostEqual(solution, predicted)
+
+        self.assertEqual(results.problem.number_of_constraints, 3)
+        self.assertEqual(results.problem.number_of_variables, 3)
+
+        # Note that the solver returns termination condition feasible
+        # rather than optimal...
+        self.assertEqual(
+            results.solver.termination_condition,
+            pyo.TerminationCondition.feasible,
+        )
+        msg = "Solver failed to return an optimal solution"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            pyo.assert_optimal_termination(results)
+        self.assertEqual(
+            results.solver.status, pyo.SolverStatus.ok
+        )
+
     def test_solve_max_iter(self):
         m, _ = make_simple_model()
         solver = pyo.SolverFactory("fsolve")
-        solver.set_options(dict(xtol=1e-9, maxiter=10))
+        solver.set_options(dict(xtol=1e-9, maxfev=10))
         res = solver.solve(m)
-        x, info, ier, msg = res
-        self.assertNotEqual(ier, 1)
-        self.assertIn("has reached maxfev", msg)
+        self.assertNotEqual(res.solver.return_code, 1)
+        self.assertIn("has reached maxfev", res.solver.message)
 
     def test_solve_too_tight_tol(self):
         m, _ = make_simple_model()
         solver = pyo.SolverFactory("fsolve", options=dict(
             xtol=1e-3,
-            maxiter=20,
+            maxfev=20,
             tol=1e-8,
         ))
         msg = "does not satisfy the function tolerance"
         with self.assertRaisesRegex(RuntimeError, msg):
-            x, info, ier, msg = solver.solve(m)
+            res = solver.solve(m)
 
 
 @unittest.skipUnless(scipy_available, "SciPy is not available")
