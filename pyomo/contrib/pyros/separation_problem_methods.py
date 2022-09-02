@@ -364,32 +364,54 @@ def get_absolute_tol(model_data, config):
     return denom * tol, nom_value
 
 
-def is_violation(model_data, config, solve_data):
+def update_solve_data_violations(model_data, config, solve_data):
+    """
+    Evaluate the inequality constraint function violations
+    of the current separation model solution, and store the
+    results in a given `SeparationResult` object.
+    Also, determine whether the separation solution violates
+    the inequality constraint whose body is the model's
+    active objective.
+
+    Parameters
+    ----------
+    model_data : SeparationProblemData
+        Object containing the separation model.
+    config : ConfigDict
+        PyROS solver settings.
+    solve_data : SeparationResult
+        Result for most recent separation problem.
+
+    Returns
+    -------
+    : bool
+        True if constraint is violated, False otherwise.
+    """
 
     nom_value = model_data.master_nominal_scenario_value
     denom = float(max(1, abs(nom_value)))
     tol = config.robust_feasibility_tolerance
-    active_objective = next(model_data.separation_model.component_data_objects(Objective, active=True))
-
-    if value(active_objective)/denom > tol:
-
-        violating_param_realization = list(
-            p.value for p in list(model_data.separation_model.util.uncertain_param_vars.values())
+    active_objective = next(
+        model_data.separation_model.component_data_objects(
+            Objective,
+            active=True
         )
-        list_of_violations = get_all_sep_objective_values(model_data=model_data, config=config)
-        solve_data.violating_param_realization = violating_param_realization
-        solve_data.list_of_scaled_violations = [l/denom for l in list_of_violations]
-        solve_data.found_violation = True
-        return True
-    else:
-        violating_param_realization = list(
-            p.value for p in list(model_data.separation_model.util.uncertain_param_vars.values())
-        )
-        list_of_violations = get_all_sep_objective_values(model_data=model_data, config=config)
-        solve_data.violating_param_realization = violating_param_realization
-        solve_data.list_of_scaled_violations = [l/denom for l in list_of_violations]
-        solve_data.found_violation = False
-        return False
+    )
+
+    # update solve data attributes
+    solve_data.violating_param_realization = list(
+        p.value for p in
+        model_data.separation_model.util.uncertain_param_vars.values()
+    )
+    list_of_violations = get_all_sep_objective_values(
+        model_data=model_data,
+        config=config,
+    )
+    solve_data.list_of_scaled_violations = [
+        l/denom for l in list_of_violations
+    ]
+
+    return value(active_objective) / denom > tol
 
 
 def initialize_separation(model_data, config):
@@ -571,8 +593,15 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
         )
         if optimal_termination:
             nlp_model.solutions.load_from(results)
-            con_violated = is_violation(model_data, config, solve_data)
+            solve_data.found_violation = update_solve_data_violations(
+                model_data,
+                config,
+                solve_data,
+            )
             return False
+
+    # problem not solved successfully, so no violation found
+    solve_data.found_violation = False
 
     # All subordinate solvers failed to optimize model to appropriate
     # termination condition. PyROS will terminate with subsolver
