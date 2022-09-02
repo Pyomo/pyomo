@@ -15,8 +15,6 @@
 
 # element
 
-import logging
-
 from pyomo.common.collections import ComponentSet
 from pyomo.contrib.cp.scheduling_expr import BeforeExpression, AtExpression
 
@@ -29,8 +27,6 @@ from pyomo.core import Integers
 
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set)
-
-logger = logging.getLogger('pyomo.contrib.cp')
 
 class IntervalVarTimePoint(ScalarVar):
     """This class defines the abstract interface for a single variable

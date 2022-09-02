@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
 import pyomo.common.unittest as unittest
 from pyomo.contrib.cp import (
     IntervalVar, IntervalVarTimePoint, IntervalVarLength, IntervalVarPresence)

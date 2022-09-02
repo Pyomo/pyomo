@@ -9,11 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import logging
 from pyomo.core.expr.base import ExpressionBase
 from pyomo.core.expr.boolean_value import BooleanValue
-
-logger = logging.getLogger('pyomo.contrib.cp')
 
 class BeforeExpression(ExpressionBase, BooleanValue):
     """
