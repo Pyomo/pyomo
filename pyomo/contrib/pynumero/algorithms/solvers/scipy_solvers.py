@@ -103,6 +103,7 @@ class PyomoScipySolver(object):
     def __init__(self, options=None):
         if options is None:
             options = {}
+        self._nlp = None
         self.options = options
 
     def available(self, exception_flag=False):
@@ -113,6 +114,9 @@ class PyomoScipySolver(object):
 
     def version(self):
         return tuple(int(_) for _ in sp.__version__.split('.'))
+
+    def set_options(self, options):
+        self.options = options
 
     def solve(self, model):
 
@@ -129,7 +133,7 @@ class PyomoScipySolver(object):
             model.del_component(obj_name)
 
         # Call to solve(nlp)
-        nlp_solver = self.create_nlp_solver()
+        nlp_solver = self.create_nlp_solver(options=self.options)
         x0 = nlp.get_primals()
         results = nlp_solver.solve(x0=x0)
 
@@ -145,7 +149,7 @@ class PyomoScipySolver(object):
     def get_nlp(self):
         return self._nlp
 
-    def create_nlp_solver(self):
+    def create_nlp_solver(self, **kwds):
         raise NotImplementedError(
             "%s has not implemented the create_nlp_solver method"
             % self.__class__
@@ -160,9 +164,9 @@ class PyomoScipySolver(object):
 
 class PyomoFsolveSolver(PyomoScipySolver):
 
-    def create_nlp_solver(self):
+    def create_nlp_solver(self, **kwds):
         nlp = self.get_nlp()
-        solver = FsolveNlpSolver(nlp)
+        solver = FsolveNlpSolver(nlp, **kwds)
         return solver
 
     def get_pyomo_results(self, results):
