@@ -33,7 +33,7 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
         domain=float,
         description="Tolerance for convergence of variable vector",
     ))
-    OPTIONS.declare("maxiter", ConfigValue(
+    OPTIONS.declare("maxfev", ConfigValue(
         default=100,
         domain=int,
         description="Maximum number of function evaluations per solve",
@@ -43,6 +43,10 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
         domain=float,
         description="Tolerance for convergence of function residual",
     ))
+    OPTIONS.declare("full_output", ConfigValue(
+        default=True,
+        domain=bool
+    ))
 
     def solve(self, x0=None):
         if x0 is None:
@@ -51,15 +55,19 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
             self._timer.stop(timebins.get_primals)
 
         self._timer.start(timebins.solve)
-        x, info, ier, msg = sp.optimize.fsolve(
+        res = sp.optimize.fsolve(
             self.evaluate_function,
             x0,
             fprime=self.evaluate_jacobian,
-            full_output=True,
+            full_output=self.options.full_output,
             xtol=self.options.xtol,
-            maxfev=self.options.maxiter,
+            maxfev=self.options.maxfev,
         )
         self._timer.stop(timebins.solve)
+        if self.options.full_output:
+            x, info, ier, msg = res
+        else:
+            x, ier, msg = res
 
         #
         # fsolve converges with a tolerance specified on the variable
@@ -67,7 +75,10 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
         # value, which we check here.
         #
         if self.options.tol is not None:
-            fcn_val = self.evaluate_function(x)
+            if self.options.full_output:
+                fcn_val = info["fvec"]
+            else:
+                fcn_val = self.evaluate_function(x)
             if not np.all(np.abs(fcn_val) <= self.options.tol):
                 raise RuntimeError(
                     "fsolve converged to a solution that does not satisfy the"
@@ -77,7 +88,7 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
                     % (self.options.tol, self.options.xtol)
                 )
 
-        return x, info, ier, msg
+        return res
 
 
 class RootNlpSolver(DenseSquareNlpSolver):
@@ -104,6 +115,7 @@ class PyomoScipySolver(object):
         if options is None:
             options = {}
         self._nlp = None
+        self._full_output = None
         self.options = options
 
     def available(self, exception_flag=False):
@@ -118,8 +130,11 @@ class PyomoScipySolver(object):
     def set_options(self, options):
         self.options = options
 
-    def solve(self, model):
-
+    def solve(self, model, timer=None):
+        if timer is None:
+            timer = HierarchicalTimer()
+        self._timer = timer
+        self._timer.start("solve")
         active_objs = list(model.component_data_objects(Objective, active=True))
         if len(active_objs) == 0:
             obj_name = unique_component_name(model, "_obj")
@@ -133,16 +148,18 @@ class PyomoScipySolver(object):
             model.del_component(obj_name)
 
         # Call to solve(nlp)
-        nlp_solver = self.create_nlp_solver(options=self.options)
+        self._nlp_solver = self.create_nlp_solver(options=self.options)
         x0 = nlp.get_primals()
-        results = nlp_solver.solve(x0=x0)
+        results = self._nlp_solver.solve(x0=x0)
 
         # Transfer values back to Pyomo model
         for var, val in zip(nlp.get_pyomo_variables(), nlp.get_primals()):
             var.set_value(val)
 
+        self._timer.stop("solve")
+
         # Translate results into a Pyomo-compatible results structure
-        pyomo_results = self.get_pyomo_results(results)
+        pyomo_results = self.get_pyomo_results(model, results)
 
         return pyomo_results
 
@@ -155,7 +172,7 @@ class PyomoScipySolver(object):
             % self.__class__
         )
 
-    def get_pyomo_results(self):
+    def get_pyomo_results(self, model, scipy_results):
         raise NotImplementedError(
             "%s has not implemented the get_results method"
             % self.__class__
@@ -164,16 +181,45 @@ class PyomoScipySolver(object):
 
 class PyomoFsolveSolver(PyomoScipySolver):
 
+    _term_cond = {
+        1: TerminationCondition.feasible,
+    }
+
     def create_nlp_solver(self, **kwds):
         nlp = self.get_nlp()
         solver = FsolveNlpSolver(nlp, **kwds)
         return solver
 
-    def get_pyomo_results(self, results):
-        x, info, ier, msg = results
-        pyomo_results = SolverResults()
-        pyomo_results.solver.name = "fsolve"
-        # TODO: Try to standardize solver output
+    def get_pyomo_results(self, model, scipy_results):
+        nlp = self.get_nlp()
+        if self._nlp_solver.options.full_output:
+            x, info, ier, msg = scipy_results
+        else:
+            x, ier, msg = scipy_results
+        results = SolverResults()
+
+        # Record problem data
+        results.problem.name = model.name
+        results.problem.number_of_constraints = nlp.n_eq_constraints()
+        results.problem.number_of_variables = nlp.n_primals()
+        results.problem.number_of_binary_variables = 0
+        results.problem.number_of_integer_variables = 0
+        results.problem.number_of_continuous_variables = nlp.n_primals()
+
+        # Record solver data
+        results.solver.name = "fsolve"
+        results.solver.return_code = ier
+        results.solver.message = msg
+        results.solver.wallclock_time = self._timer.timers["solve"].total_time
+        results.solver.termination_condition = self._term_cond.get(
+            ier, TerminationCondition.error
+        )
+        results.solver.status = TerminationCondition.to_solver_status(
+            results.solver.termination_condition
+        )
+        if self._nlp_solver.options.full_output:
+            results.solver.number_of_function_evaluations = info["nfev"]
+            results.solver.number_of_gradient_evaluations = info["njev"]
         return results
 
 
