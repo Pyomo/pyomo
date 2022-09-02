@@ -2165,6 +2165,97 @@ class RegressionTest(unittest.TestCase):
 
     @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
                          "Global NLP solver is not available and licensed.")
+    def test_master_subsolver_error(self):
+        """
+        Test PyROS on a two-stage problem with a subsolver error
+        termination in the initial master problem.
+        """
+        m = ConcreteModel()
+
+        m.q = Param(initialize=1, mutable=True)
+
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+
+        # source of subsolver error: can't converge to log(0)
+        # in separation problem (make x2 second-stage var)
+        m.x2 = Var(initialize=2, bounds=(0, m.q))
+
+        m.obj = Objective(expr=log(m.x1) + m.x2)
+
+        box_set = BoxSet(bounds=[(0, 1)])
+
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.q],
+            uncertainty_set=box_set,
+            local_solver=local_solver,
+            global_solver=global_solver,
+            decision_rule_order=1,
+            tee=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.subsolver_error,
+            msg=(
+                f"Returned termination condition for separation error"
+                "test is not {pyrosTerminationCondition.subsolver_error}.",
+            )
+        )
+
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_separation_subsolver_error(self):
+        """
+        Test PyROS on a two-stage problem with a subsolver error
+        termination in separation.
+        """
+        m = ConcreteModel()
+
+        m.q = Param(initialize=1, mutable=True)
+
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+
+        # source of subsolver error: can't converge to log(0)
+        # in separation problem (make x2 second-stage var)
+        m.x2 = Var(initialize=2, bounds=(0, log(m.q)))
+
+        m.obj = Objective(expr=m.x1 + m.x2)
+
+        box_set = BoxSet(bounds=[(0, 1)])
+        d_set = DiscreteScenarioSet(scenarios=[(1,), (0,)])
+
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.q],
+            uncertainty_set=box_set,
+            local_solver=local_solver,
+            global_solver=global_solver,
+            decision_rule_order=1,
+            tee=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.subsolver_error,
+            msg=(
+                f"Returned termination condition for separation error"
+                "test is not {pyrosTerminationCondition.subsolver_error}.",
+            )
+        )
+
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
     def test_nominal_focus_robust_feasible(self):
         """
         Test problem under nominal objective focus terminates
