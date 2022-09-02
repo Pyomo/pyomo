@@ -170,6 +170,10 @@ class PyomoFsolveSolver(PyomoScipySolver):
         return solver
 
     def get_pyomo_results(self, results):
+        x, info, ier, msg = results
+        pyomo_results = SolverResults()
+        pyomo_results.solver.name = "fsolve"
+        # TODO: Try to standardize solver output
         return results
 
 
