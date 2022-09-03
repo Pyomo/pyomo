@@ -5,10 +5,14 @@ Gurobi, or Xpress.
 """
 
 import abc
+import logging
 from pyomo.environ import SolverFactory
 
+logger = logging.getLogger("pyomo.contrib.iis")
+logger.setLevel(logging.INFO)
 
-def write_iis(pyomo_model, iis_file_name, solver=None):
+
+def write_iis(pyomo_model, iis_file_name, solver=None, logger=logger):
     """
     Write an irreducible infeasible set for a Pyomo MILP or LP
     using the specified commerical solver.
@@ -22,6 +26,8 @@ def write_iis(pyomo_model, iis_file_name, solver=None):
         solver:str
             Specify the solver to use, one of "cplex", "gurobi", or "xpress".
             If None, the tool will use the first solver available.
+        logger:logging.Logger
+            A logger for messages. Uses pyomo.contrib.iis logger by default.
 
     Returns
     -------
@@ -37,9 +43,11 @@ def write_iis(pyomo_model, iis_file_name, solver=None):
 
     if solver is None:
         if len(available_solvers) == 0:
-            raise RuntimeError("Could not find a solver to use")
-        solver = _available_solvers[0]
-        print(f"Using solver {solver}")
+            raise RuntimeError(
+                f"Could not find a solver to use, supported solvers are {_supported_solvers}"
+            )
+        solver = available_solvers[0]
+        logger.info(f"Using solver {solver}")
     else:
         # validate
         solver = solver.lower()
@@ -57,12 +65,12 @@ def write_iis(pyomo_model, iis_file_name, solver=None):
     iis = IISFactory(solver)
     iis.compute()
     iis_file_name = iis.write(iis_file_name)
-    print(f"IIS written to {iis_file_name}")
+    logger.info(f"IIS written to {iis_file_name}")
     return iis_file_name
 
 
 def _remove_suffix(string, suffix):
-    if suffix in string:
+    if string.endswith(suffix):
         return string[: -len(suffix)]
     else:
         return string
