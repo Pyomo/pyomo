@@ -115,6 +115,7 @@ class PyomoScipySolver(object):
         if options is None:
             options = {}
         self._nlp = None
+        self._nlp_solver = None
         self._full_output = None
         self.options = options
 
