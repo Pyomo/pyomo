@@ -197,6 +197,15 @@ class PyomoScipySolver(object):
             % self.__class__
         )
 
+    #
+    # Support "with" statements.
+    #
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+
 
 class PyomoFsolveSolver(PyomoScipySolver):
 
