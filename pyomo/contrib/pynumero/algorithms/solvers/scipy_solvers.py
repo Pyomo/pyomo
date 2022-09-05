@@ -30,10 +30,6 @@ from pyomo.common.dependencies import (
 )
 
 
-TimeBins = namedtuple("TimeBins", ["get_primals", "solve"])
-timebins = TimeBins("get_primals", "solve")
-
-
 class FsolveNlpSolver(DenseSquareNlpSolver):
 
     OPTIONS = ConfigBlock(
@@ -61,11 +57,8 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
 
     def solve(self, x0=None):
         if x0 is None:
-            self._timer.start(timebins.get_primals)
             x0 = self._nlp.get_primals()
-            self._timer.stop(timebins.get_primals)
 
-        self._timer.start(timebins.solve)
         res = sp.optimize.fsolve(
             self.evaluate_function,
             x0,
@@ -74,7 +67,6 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
             xtol=self.options.xtol,
             maxfev=self.options.maxfev,
         )
-        self._timer.stop(timebins.solve)
         if self.options.full_output:
             x, info, ier, msg = res
         else:
@@ -122,17 +114,13 @@ class RootNlpSolver(DenseSquareNlpSolver):
 
     def solve(self, x0=None):
         if x0 is None:
-            self._timer.start(timebins.get_primals)
             x0 = self._nlp.get_primals()
-            self._timer.stop(timebins.get_primals)
 
-        self._timer.start(timebins.solve)
         results = sp.optimize.root(
             self.evaluate_function,
             x0,
             jac=self.evaluate_jacobian,
         )
-        self._timer.stop(timebins.solve)
         return results
 
 

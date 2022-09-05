@@ -14,10 +14,6 @@ from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.config import ConfigBlock
 
 
-TimeBins = namedtuple("TimeBins", ["set_primals", "constraints", "jacobian"])
-timebins = TimeBins("set_primals", "constraints", "jacobian")
-
-
 class SquareNlpSolverBase(object):
     """A base class for NLP solvers that act on a square system
     of equality constraints.
@@ -74,26 +70,14 @@ class SquareNlpSolverBase(object):
 
     def evaluate_function(self, x0):
         # NOTE: NLP object should handle any caching
-        self._timer.start(timebins.set_primals)
         self._nlp.set_primals(x0)
-        self._timer.stop(timebins.set_primals)
-
-        self._timer.start(timebins.constraints)
         values = self._nlp.evaluate_eq_constraints()
-        self._timer.stop(timebins.constraints)
-
         return values
 
     def evaluate_jacobian(self, x0):
         # NOTE: NLP object should handle any caching
-        self._timer.start(timebins.set_primals)
         self._nlp.set_primals(x0)
-        self._timer.stop(timebins.set_primals)
-
-        self._timer.start(timebins.jacobian)
         self._jacobian = self._nlp.evaluate_jacobian_eq(out=self._jacobian)
-        self._timer.stop(timebins.jacobian)
-
         return self._jacobian
 
 
@@ -103,10 +87,5 @@ class DenseSquareNlpSolver(SquareNlpSolverBase):
 
     def evaluate_jacobian(self, x0):
         sparse_jac = super().evaluate_jacobian(x0)
-
-        # Should sparse->dense be timed separately?
-        self._timer.start(timebins.jacobian)
         dense_jac = sparse_jac.toarray()
-        self._timer.stop(timebins.jacobian)
-
         return dense_jac
