@@ -14,7 +14,6 @@ from pyomo.core.base.objective import Objective
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.config import ConfigBlock, ConfigValue, In
-from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     DenseSquareNlpSolver,
 )
@@ -25,9 +24,13 @@ from pyomo.opt import (
     ProblemSense,
 )
 from pyomo.common.dependencies import (
+    attempt_import,
     numpy as np, numpy_available,
     scipy as sp, scipy_available,
 )
+# Use attempt_import here so that we can register the solver even if SciPy is
+# not available.
+pyomo_nlp, _ = attempt_import("pyomo.contrib.pynumero.interfaces.pyomo_nlp")
 
 
 class FsolveNlpSolver(DenseSquareNlpSolver):
@@ -157,7 +160,7 @@ class PyomoScipySolver(object):
             obj = Objective(expr=0.0)
             model.add_component(obj_name, obj)
 
-        nlp = PyomoNLP(model)
+        nlp = pyomo_nlp.PyomoNLP(model)
         self._nlp = nlp
 
         if len(active_objs) == 0:
