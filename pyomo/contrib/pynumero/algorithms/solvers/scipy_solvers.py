@@ -2,7 +2,7 @@ from collections import namedtuple
 from pyomo.core.base.objective import Objective
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.modeling import unique_component_name
-from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.config import ConfigBlock, ConfigValue, In
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     DenseSquareNlpSolver,
@@ -92,6 +92,22 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
 
 
 class RootNlpSolver(DenseSquareNlpSolver):
+
+    OPTIONS = ConfigBlock(
+        description="Options for SciPy fsolve wrapper",
+    )
+    OPTIONS.declare("tol", ConfigValue(
+        default=1e-8,
+        domain=float,
+        description="Convergence tolerance",
+    ))
+    OPTIONS.declare("method", ConfigValue(
+        default="hybr",
+        # NOTE: Only supporting Powell hybrid method and Levenberg-Marquardt
+        # methods (both from MINPACK) for now.
+        domain=In({"hybr", "lm"}),
+        description="Method used to solve for the function root",
+    ))
 
     def solve(self, x0=None):
         if x0 is None:
@@ -226,10 +242,42 @@ class PyomoFsolveSolver(PyomoScipySolver):
 
 class PyomoRootSolver(PyomoScipySolver):
 
-    def create_nlp_solver(self):
+    _term_cond = {
+        1: TerminationCondition.feasible,
+    }
+
+    def create_nlp_solver(self, **kwds):
         nlp = self.get_nlp()
-        solver = RootNlpSolver(nlp)
+        solver = RootNlpSolver(nlp, **kwds)
         return solver
 
-    def get_pyomo_results(self, results):
+    def get_pyomo_results(self, model, scipy_results):
+        nlp = self.get_nlp()
+        results = SolverResults()
+
+        # Record problem data
+        results.problem.name = model.name
+        results.problem.number_of_constraints = nlp.n_eq_constraints()
+        results.problem.number_of_variables = nlp.n_primals()
+        results.problem.number_of_binary_variables = 0
+        results.problem.number_of_integer_variables = 0
+        results.problem.number_of_continuous_variables = nlp.n_primals()
+
+        # Record solver data
+        results.solver.name = "root"
+        results.solver.return_code = scipy_results.status
+        results.solver.message = scipy_results.message
+        results.solver.wallclock_time = self._timer.timers["solve"].total_time
+        results.solver.termination_condition = self._term_cond.get(
+            scipy_results.status, TerminationCondition.error
+        )
+        results.solver.status = TerminationCondition.to_solver_status(
+            results.solver.termination_condition
+        )
+        # This attribute is in the SciPy documentation but appears not to
+        # be implemented for "hybr" or "lm" solvers...
+        #results.solver.number_of_iterations = scipy_results.nit
+        results.solver.number_of_function_evaluations = scipy_results.nfev
+        results.solver.number_of_gradient_evaluations = scipy_results.njev
+
         return results
