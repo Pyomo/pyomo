@@ -12,6 +12,10 @@
 import pyomo.common.unittest as unittest
 from pyomo.common.dependencies import scipy, scipy_available
 import pyomo.environ as pyo
+
+if not scipy_available:
+    raise unittest.SkipTest("SciPy is needed to test the SciPy solvers")
+
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     SquareNlpSolverBase,
