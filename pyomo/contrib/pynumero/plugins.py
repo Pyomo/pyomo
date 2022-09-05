@@ -13,7 +13,10 @@ from pyomo.common.extensions import ExtensionBuilderFactory
 from pyomo.opt import SolverFactory
 from .build import PyNumeroBuilder
 from .algorithms.solvers.cyipopt_solver import PyomoCyIpoptSolver
-from .algorithms.solvers.scipy_solvers import PyomoFsolveSolver
+from .algorithms.solvers.scipy_solvers import (
+    PyomoFsolveSolver,
+    PyomoRootSolver,
+)
 
 def load():
     ExtensionBuilderFactory.register('pynumero')(PyNumeroBuilder)
@@ -28,3 +31,9 @@ def load():
             " hybrj algorithms"
         ),
     )(PyomoFsolveSolver)
+    SolverFactory.register(
+        "root",
+        doc=(
+            "root: Find the root of a vector function"
+        ),
+    )(PyomoRootSolver)
