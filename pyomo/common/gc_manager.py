@@ -21,7 +21,6 @@ from pyomo.common.multithread import MultiThreadWrapper
 
 class __PauseGCCompanion(object):
     def __init__(self):
-        self.__slots__ = ("reenable_gc", "stack_pointer")
         self._stack_depth = 0
 
 PauseGCCompanion: __PauseGCCompanion = MultiThreadWrapper(__PauseGCCompanion)
@@ -40,6 +39,7 @@ PauseGCCompanion: __PauseGCCompanion = MultiThreadWrapper(__PauseGCCompanion)
 # safe to nest instances of PauseGC That is, you don't have to worry
 # if an outer function/method has its own instance of PauseGC.
 class PauseGC(object):
+    __slots__ = ("reenable_gc", "stack_pointer")
     def __init__(self):
         self.stack_pointer = None
         self.reenable_gc = None
