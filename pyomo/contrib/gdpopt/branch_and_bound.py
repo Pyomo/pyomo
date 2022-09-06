@@ -65,12 +65,6 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
 
     algorithm = 'LBB'
 
-    def __init__(self, **kwds):
-        super().__init__(**kwds)
-        self.config.logger.warning(
-            "09/06/22: The GDPopt LBB algorithm currently has known issues. "
-            "Please use caution, and report any bugs!")
-
     def _log_citation(self, config):
         config.logger.info("\n" + """- LBB algorithm:
         Lee, S; Grossmann, IE.
