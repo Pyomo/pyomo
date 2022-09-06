@@ -19,6 +19,7 @@ from pyomo.core.expr.current import (replace_expressions,
 from pyomo.contrib.pyros.util import get_main_elapsed_time, is_certain_parameter
 from pyomo.contrib.pyros.uncertainty_sets import Geometry
 from pyomo.common.errors import ApplicationError
+from pyomo.contrib.pyros.util import ABS_CON_CHECK_FEAS_TOL
 import os
 from copy import deepcopy
 
@@ -507,8 +508,12 @@ def initialize_separation(model_data, config):
     # check: initial point feasible?
     for con in sep_model.component_data_objects(Constraint, active=True):
         lb, val, ub = value(con.lb), value(con.body), value(con.ub)
-        lb_viol = val < lb - 1e-5 if lb is not None else False
-        ub_viol = val > ub + 1e-5 if ub is not None else False
+        lb_viol = (
+            val < lb - ABS_CON_CHECK_FEAS_TOL if lb is not None else False
+        )
+        ub_viol = (
+            val > ub + ABS_CON_CHECK_FEAS_TOL if ub is not None else False
+        )
         if lb_viol or ub_viol:
             config.progress_logger.debug(con.name, lb, val, ub)
 
