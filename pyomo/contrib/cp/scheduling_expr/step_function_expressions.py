@@ -12,27 +12,45 @@
 from pyomo.core.expr.logical_expr import BooleanExpression
 
 def _generate_sum_expression(_self, _other):
-    if isinstance(_other, StepFunction):
+    # We check both because we call this function for the reverse operation as
+    # well.
+    if isinstance(_other, StepFunction) and isinstance(_self, StepFunction):
         if _self.nargs() == len(_self._args_):
             _self._args_.extend(_other.args)
             return CumulativeFunction(_self._args_, nargs=len(_self._args_))
         else:
             # we have to clone the list of _args_
-            return CumulativeFunction(_self._args_ + _other.args)
+            return CumulativeFunction(_self.args + _other.args)
     else:
-        raise TypeError("Cannot add object of class %s to a "
-                        "StepFunction" % _other.__class__)
+        raise TypeError("Cannot add object of class %s to object of class "
+                        "%s" % (_other.__class__, _self.__class__))
+
+def _generate_difference_expression(_self, _other):
+    # We check both because we call this function for the reverse operation as
+    # well.
+    if isinstance(_other, StepFunction) and isinstance(_self, StepFunction):
+        if _self.nargs() == len(_self._args_):
+            _self._args_.extend([NegatedStepFunction(a) for a in _other.args])
+            return CumulativeFunction(_self._args_, nargs=len(_self._args_))
+        else:
+            # we have to clone the list of _args_
+            return CumulativeFunction(_self.args + [NegatedStepFunction(a) for a
+                                                    in _other.args])
+    else:
+        raise TypeError("Cannot subtract object of class %s from object of "
+                        "class %s" % (_other.__class__, _self.__class__))
 
 class StepFunction(object):
     """
     The base class for the step function expression system.
     """
     __slots__ = ()
-    #_summable_types = (PulseExpression, StepAtExpression)
 
     def __add__(self, other):
         return _generate_sum_expression(self, other)
 
+    # TODO: Do I really need to implement this, because everyone they could be
+    # added to implements add.
     def __radd__(self, other):
         return _generate_sum_expression(other, self)
 
@@ -52,13 +70,27 @@ class StepFunction(object):
         return self
 
     def __sub__(self, other):
-        pass
+        return _generate_difference_expression(self, other)
 
+    # TODO: same question as above, everyone that could subtract them implements
+    # subtract.
     def __rsub__(self, other):
-        pass
+        return _generate_difference_expression(other, self)
 
     def __isub__(self, other):
-        pass
+        if isinstance(other, StepFunction):
+            if self.nargs() == len(self._args_):
+                self._args_.extend([NegatedStepFunction(a) for a in other.args])
+                self._nargs = len(self._args_)
+            else:
+                # have to clone and then tack on the extra stuff on the end.
+                self._args_ = self.args + \
+                              [NegatedStepFunction(a) for a in other.args] + \
+                              self._args_[self.nargs():]
+                self._nargs += other.nargs()
+        else:
+            raise TypeError("Cannot subtract object of class %s from a "
+                            "StepFunction" % other.__class__)
 
     def within(self, cumul_func, bounds, times):
         return AlwaysIn(cumul_func, bounds, times)
@@ -86,6 +118,11 @@ class Pulse(StepFunction):
         # We can't really do this in place because we have to change type.
         return CumulativeFunction([self] + other.args)
 
+    def __isub__(self, other):
+        # Have to change type
+        return CumulativeFunction([self] + [NegatedStepFunction(a) for a in
+                                            other.args])
+
     def nargs(self):
         return 1
 
@@ -104,6 +141,11 @@ class Step(StepFunction):
     def __iadd__(self, other):
         # We can't really do this in place because we have to change type.
         return CumulativeFunction([self] + other.args)
+
+    def __isub__(self, other):
+        # Have to change type
+        return CumulativeFunction([self] + [NegatedStepFunction(a) for a in
+                                            other.args])
 
     def nargs(self):
         return 1
@@ -128,18 +170,14 @@ class CumulativeFunction(StepFunction):
 
 
 class NegatedStepFunction(StepFunction):
-    def __init__(self, args, nargs=None):
-        self._args_ = args
-        if nargs is None:
-            self._nargs = len(args)
-        else:
-            self._nargs = nargs
+    def __init__(self, arg):
+        self._args_ = [arg]
 
     def nargs(self):
-        return self._nargs
+        return 1
         
     def __str__(self):
-        return " - ".join([str(arg) for arg in self.args])
+        return "- %s" % str(self._arg_[0])
 
 
 class AlwaysIn(BooleanExpression):
