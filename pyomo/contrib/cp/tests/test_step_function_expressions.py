@@ -64,8 +64,47 @@ class TestSumStepFunctions(CommonTests):
         self.assertIsInstance(expr3.args[1], Pulse)
         self.assertIsInstance(expr3.args[2], Pulse)
 
+    def test_args_clone_correctly_in_place(self):
+        m = self.get_model()
+        s1 = Step(m.a.start_time, height=1)
+        s2 = Step(m.b.end_time, height=1)
+        s3 = Step(m.b.start_time, height=2)
+        p = Pulse(m.b, height=3)
+
+        e1 = s1 + s2
+        e2 = e1 + s3
+        e3 = e1
+        e3 += p
+
+        self.assertIsInstance(e1, CumulativeFunction)
+        self.assertEqual(e1.nargs(), 2)
+        self.assertIs(e1.args[0], s1)
+        self.assertIs(e1.args[1], s2)
+
+        self.assertIsInstance(e2, CumulativeFunction)
+        self.assertEqual(e2.nargs(), 3)
+        self.assertIs(e2.args[0], s1)
+        self.assertIs(e2.args[1], s2)
+        self.assertIs(e2.args[2], s3)
+
+        self.assertIsInstance(e3, CumulativeFunction)
+        self.assertEqual(e3.nargs(), 3)
+        self.assertIs(e3.args[0], s1)
+        self.assertIs(e3.args[1], s2)
+        self.assertIs(e3.args[2], p)
+
     def test_sum_two_pulses(self):
-        pass
+        m = self.get_model()
+        m.p1 = Pulse(m.a, height=3)
+        m.p2 = Pulse(m.b, height=-2)
+
+        expr = m.p1 + m.p2
+
+        self.assertIsInstance(expr, CumulativeFunction)
+        self.assertEqual(len(expr.args), 2)
+        self.assertEqual(expr.nargs(), 2)
+        self.assertIs(expr.args[0], m.p1)
+        self.assertIs(expr.args[1], m.p2)
 
     def test_sum_in_place(self):
         m = self.get_model()
@@ -199,6 +238,54 @@ class TestSubtractStepFunctions(CommonTests):
         self.assertIsInstance(expr.args[2], NegatedStepFunction)
         self.assertIs(expr.args[2].args[0], p)
 
+    def test_args_clone_correctly(self):
+        m = self.get_model()
+        m.p1 = Pulse(m.a, height=3)
+        m.p2 = Pulse(m.b, height=4)
+        m.s = Step(m.a.start_time, height=-1)
+
+        expr1 = m.p1 - m.p2
+        self.assertIsInstance(expr1, CumulativeFunction)
+        self.assertEqual(expr1.nargs(), 2)
+        self.assertIs(expr1.args[0], m.p1)
+        self.assertIsInstance(expr1.args[1], NegatedStepFunction)
+        self.assertIs(expr1.args[1].args[0], m.p2)
+
+        expr2 = m.p1 - m.s
+        self.assertIsInstance(expr2, CumulativeFunction)
+        self.assertEqual(expr2.nargs(), 2)
+        self.assertIs(expr2.args[0], m.p1)
+        self.assertIsInstance(expr2.args[1], NegatedStepFunction)
+        self.assertIs(expr2.args[1].args[0], m.s)
+
+    def test_args_clone_correctly_in_place(self):
+        m = self.get_model()
+        m.p1 = Pulse(m.a, height=3)
+        m.p2 = Pulse(m.b, height=4)
+        m.s = Step(m.a.start_time, height=-1)
+
+        expr1 = m.p1 - m.p2
+        # This will append p1 to expr1's args
+        expr = expr1 + m.p1
+        # Now we have to clone in place
+        expr1 -= m.s
+        
+        self.assertIsInstance(expr1, CumulativeFunction)
+        self.assertEqual(expr1.nargs(), 3)
+        self.assertIs(expr1.args[0], m.p1)
+        self.assertIsInstance(expr1.args[1], NegatedStepFunction)
+        self.assertIs(expr1.args[1].args[0], m.p2)
+        self.assertIsInstance(expr1.args[2], NegatedStepFunction)
+        self.assertIs(expr1.args[2].args[0], m.s)
+
+        # and expr is what we expect too
+        self.assertIsInstance(expr, CumulativeFunction)
+        self.assertEqual(expr.nargs(), 3)
+        self.assertIs(expr.args[0], m.p1)
+        self.assertIsInstance(expr.args[1], NegatedStepFunction)
+        self.assertIs(expr.args[1].args[0], m.p2)
+        self.assertIs(expr.args[2], m.p1)
+
     def test_subtract_pulses_in_place(self):
         m = self.get_model()
         p1 = Pulse(m.a, height = 1)
@@ -216,8 +303,8 @@ class TestSubtractStepFunctions(CommonTests):
 
     def test_subtract_steps_in_place(self):
         m = self.get_model()
-        s1 = Pulse(m.a.start_time, height = 1)
-        s2 = Pulse(m.b.end_time, height = 3)
+        s1 = Step(m.a.start_time, height = 1)
+        s2 = Step(m.b.end_time, height = 3)
 
         expr = s1
         expr -= s2
@@ -228,6 +315,25 @@ class TestSubtractStepFunctions(CommonTests):
         self.assertIs(expr.args[0], s1)
         self.assertIsInstance(expr.args[1], NegatedStepFunction)
         self.assertIs(expr.args[1].args[0], s2)
+
+    def test_subtract_from_cumul_func_in_place(self):
+        m = self.get_model()
+        m.p1 = Pulse(m.a, height=5)
+        m.p2 = Pulse(m.b, height=-3)
+        m.s = Step(m.b.end_time, height=5)
+
+        expr = m.p1 + m.s
+        expr -= m.p2
+
+        self.assertIsInstance(expr, CumulativeFunction)
+        self.assertEqual(expr.nargs(), 3)
+        self.assertIs(expr.args[0], m.p1)
+        self.assertIs(expr.args[1], m.s)
+        self.assertIsInstance(expr.args[2], NegatedStepFunction)
+        self.assertIs(expr.args[2].args[0], m.p2)
+
+        self.assertEqual(str(expr), "Pulse(a, height=5) + "
+                         "Step(b.end_time, height=5) - Pulse(b, height=-3)")
 
     def test_cannot_subtract_constant(self):
         m = self.get_model()

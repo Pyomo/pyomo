@@ -55,19 +55,20 @@ class StepFunction(object):
         return _generate_sum_expression(other, self)
 
     def __iadd__(self, other):
-        if isinstance(other, StepFunction):
-            if self.nargs() == len(self._args_):
-                self._args_.extend(other.args)
-                self._nargs = len(self._args_)
-            else:
-                # have to clone, and then tack on the extra stuff on the end.
-                self._args_ = self.args + other.args + \
-                              self._args_[self.nargs():]
-                self._nargs += other.nargs()
-        else:
-            raise TypeError("Cannot add object of class %s to a "
-                            "StepFunction" % other.__class__)
-        return self
+        return _generate_sum_expression(self, other)
+        # if isinstance(other, StepFunction):
+        #     if self.nargs() == len(self._args_):
+        #         self._args_.extend(other.args)
+        #         self._nargs = len(self._args_)
+        #     else:
+        #         # have to clone, and then tack on the extra stuff on the end.
+        #         self._args_ = self.args + other.args + \
+        #                       self._args_[self.nargs():]
+        #         self._nargs += other.nargs()
+        # else:
+        #     raise TypeError("Cannot add object of class %s to a "
+        #                     "StepFunction" % other.__class__)
+        # return self
 
     def __sub__(self, other):
         return _generate_difference_expression(self, other)
@@ -78,19 +79,21 @@ class StepFunction(object):
         return _generate_difference_expression(other, self)
 
     def __isub__(self, other):
-        if isinstance(other, StepFunction):
-            if self.nargs() == len(self._args_):
-                self._args_.extend([NegatedStepFunction(a) for a in other.args])
-                self._nargs = len(self._args_)
-            else:
-                # have to clone and then tack on the extra stuff on the end.
-                self._args_ = self.args + \
-                              [NegatedStepFunction(a) for a in other.args] + \
-                              self._args_[self.nargs():]
-                self._nargs += other.nargs()
-        else:
-            raise TypeError("Cannot subtract object of class %s from a "
-                            "StepFunction" % other.__class__)
+        return _generate_difference_expression(self, other)
+        # if isinstance(other, StepFunction):
+        #     if self.nargs() == len(self._args_):
+        #         self._args_.extend([NegatedStepFunction(a) for a in other.args])
+        #         self._nargs = len(self._args_)
+        #     else:
+        #         # have to clone and then tack on the extra stuff on the end.
+        #         self._args_ = self.args + \
+        #                       [NegatedStepFunction(a) for a in other.args] + \
+        #                       self._args_[self.nargs():]
+        #         self._nargs += other.nargs()
+        # else:
+        #     raise TypeError("Cannot subtract object of class %s from a "
+        #                     "StepFunction" % other.__class__)
+        # return self
 
     def within(self, cumul_func, bounds, times):
         return AlwaysIn(cumul_func, bounds, times)
@@ -166,8 +169,13 @@ class CumulativeFunction(StepFunction):
         return self._nargs
         
     def __str__(self):
-        return " + ".join([str(arg) for arg in self.args])
-
+        s = ""
+        for i, arg in enumerate(self.args):
+            if isinstance(arg, NegatedStepFunction):
+                s += str(arg) + " "
+            else:
+                s += "+ %s "[2*(i == 0):] % str(arg)
+        return s[:-1]
 
 class NegatedStepFunction(StepFunction):
     def __init__(self, arg):
@@ -177,7 +185,7 @@ class NegatedStepFunction(StepFunction):
         return 1
         
     def __str__(self):
-        return "- %s" % str(self._arg_[0])
+        return "- %s" % str(self._args_[0])
 
 
 class AlwaysIn(BooleanExpression):
