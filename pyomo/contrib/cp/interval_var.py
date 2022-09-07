@@ -16,7 +16,8 @@
 # element
 
 from pyomo.common.collections import ComponentSet
-from pyomo.contrib.cp.scheduling_expr import BeforeExpression, AtExpression
+from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
+    BeforeExpression, AtExpression)
 
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory

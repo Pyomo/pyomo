@@ -47,7 +47,8 @@ class TestCumulativeFunctionExpression(unittest.TestCase):
     def test_scalar_cumul_function_expr(self):
         m = self.get_model()
 
-        m.resource1 = CumulativeFunctionExpression(expr=Step(m.a, height=4) +
+        m.resource1 = CumulativeFunctionExpression(expr=Step(m.a.start_time, 
+                                                             height=4) +
                                                    Pulse(m.b, height=-1))
         self.assertIs(m.resource1.ctype, CumulativeFunctionExpression)
         self.assertIsInstance(m.resource1.expr, CumulativeFunctionExpression)
@@ -70,7 +71,8 @@ class TestAlwaysIn(unittest.TestCase):
         m.a = IntervalVar()
         m.b = IntervalVar()
 
-        m.resource1 = CumulativeFunctionExpression(expr=Step(m.a, height=4) +
+        m.resource1 = CumulativeFunctionExpression(expr=Step(m.a.start_time,
+                                                             height=4) +
                                                    Pulse(m.b, height=-1) +
                                                    Step(0,1))
         return m
@@ -89,7 +91,7 @@ class TestAlwaysIn(unittest.TestCase):
     def test_always_in_logical_constraint_variable_step_func(self):
         m = self.get_model()
 
-        m.c = LogicalConstraint(expr=AlwaysIn([Step(m.a, height=4),
+        m.c = LogicalConstraint(expr=AlwaysIn([Step(m.a.start_time, height=4),
                                                Pulse(m.b, height=-1),
                                                Step(0,1)],
                                                times=range(0, 24),

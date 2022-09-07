@@ -146,7 +146,7 @@ class TestSumStepFunctions(CommonTests):
         self.assertEqual(len(expr.args), 1)
         self.assertEqual(expr.nargs(), 1)
 
-        s2 = Pulse(m.b.end_time, height=3)
+        s2 = Step(m.b.end_time, height=3)
         expr += s2
 
         self.assertIsInstance(expr, CumulativeFunction)
@@ -195,7 +195,7 @@ class TestSubtractStepFunctions(CommonTests):
     def test_subtract_two_steps(self):
         m = self.get_model()
 
-        s = Step(m.a, height=2) - Step(m.b, height=5)
+        s = Step(m.a.start_time, height=2) - Step(m.b.start_time, height=5)
 
         self.assertIsInstance(s, CumulativeFunction)
         self.assertEqual(len(s.args), 2)
@@ -210,7 +210,7 @@ class TestSubtractStepFunctions(CommonTests):
         m = self.get_model()
         s1 = Step(m.a.end_time, height=2)
         s2 = Step(m.b.start_time, height=5)
-        p = Pulse(m.a.end_time, height=3)
+        p = Pulse(m.a, height=3)
 
         expr = s1 - s2 - p
 

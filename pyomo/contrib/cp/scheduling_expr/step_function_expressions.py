@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.contrib.cp.interval_var import IntervalVar, IntervalVarTimePoint
 from pyomo.core.expr.logical_expr import BooleanExpression
 
 def _generate_sum_expression(_self, _other):
@@ -114,6 +115,11 @@ class Pulse(StepFunction):
     def __init__(self, interval_var, height):
         self._args_ = [self]
 
+        if not isinstance(interval_var, IntervalVar):
+            raise TypeError("The 'interval_var' argument for a 'Pulse' must "
+                            "be an 'IntervalVar'.\n"
+                            "Recieved: %s" % type(interval_var))
+
         self._interval_var = interval_var
         self._height = height
 
@@ -137,6 +143,13 @@ class Step(StepFunction):
     __slots__ = ('_args_', '_time', '_height')
     def __init__(self, time, height):
         self._args_ = [self]
+
+        if not isinstance(time, (int, IntervalVarTimePoint)):
+            raise TypeError("The 'time' argument for a 'Step' must be either "
+                            "an 'IntervalVarTimePoint' (for example, the "
+                            "'start_time' or 'end_time' of an IntervalVar) or "
+                            "an integer time point in the time horizon.\n"
+                            "Recieved: %s" % type(time))
 
         self._time = time
         self._height = height
