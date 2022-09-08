@@ -443,7 +443,7 @@ def minimize_dr_vars(model_data, config):
         )
         for master_dr, polish_dr in dr_var_zip:
             for mvar, pvar in zip(master_dr.values(), polish_dr.values()):
-                mvar.set_value(value(pvar))
+                mvar.set_value(value(pvar), skip_validation=True)
 
     return results
 
