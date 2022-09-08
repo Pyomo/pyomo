@@ -586,6 +586,7 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
         elapsed = get_main_elapsed_time(model_data.timing)
         if config.time_limit:
             if elapsed >= config.time_limit:
+                solve_data.found_violation = False
                 return True
 
         # if separation problem solved to optimality, record results
