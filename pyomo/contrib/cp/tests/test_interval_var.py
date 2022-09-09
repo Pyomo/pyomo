@@ -158,7 +158,6 @@ class TestIndexedIntervalVar(unittest.TestCase):
         m = ConcreteModel()
         m.idx = Set(initialize=[(4, 2), (5, 2)], dimen=2)
         def optional_rule(m, i, j):
-            print(i % j == 0)
             return i % j == 0
         m.act = IntervalVar(m.idx, optional=optional_rule)
         self.assertTrue(m.act[4,2].optional)

@@ -30,9 +30,10 @@ class CumulativeFunctionExpressionData(ComponentData):
     Public Class Attributes
         expr: The expression
     """
+    __slots__ = ('_expr',)
+
     def __init__(self, expr=None, component=None):
         ComponentData.__init__(self, component)
-        print(expr)
         self._expr = expr
 
     @property
@@ -68,8 +69,8 @@ class CumulativeFunctionExpression(IndexedComponent):
     IntervalVars are scheduled. It may be defined over an index.
 
     Constructor arguments:
-        expr: The expression (some of step functions)
-        rule: A rule function used to initialize this object
+        expr: The expression (sum of step functions) or a rule function that
+              returns a sum of step functions
         name: A name for this component
         doc: Text describing this component.
     """
@@ -86,16 +87,30 @@ class CumulativeFunctionExpression(IndexedComponent):
                 IndexedCumulativeFunctionExpression)
 
     @overload
-    def __init__(self, *indices, rule=None, expr=None, name=None,
-                 doc=None): ...
+    def __init__(self, *indices, expr=None, name=None, doc=None): ...
 
     def __init__(self, *args, **kwds):
-        _init = self._pop_from_kwargs('CumulativeFunctionExpression', kwds,
-                                      ('rule', 'expr'), None)
-        self._rule = Initializer(_init, arg_not_specified=NOTSET)
+        _init = kwds.pop('expr', None)
 
         kwds.setdefault('ctype', CumulativeFunctionExpression)
         IndexedComponent.__init__(self, *args, **kwds)
+
+        self._init = Initializer(_init, arg_not_specified=NOTSET)
+
+    def _getitem_when_not_present(self, idx):
+        if idx is None and self.is_indexed():
+            obj = self._data[index] = self
+        else:
+            obj = self._data[idx] = self._ComponentDataClass(component=self)
+        parent = self.parent_block()
+        obj._index = idx
+
+        if self._init is None:
+            raise KeyError("Key %s is not in the index set of "
+                           "CumulativeFunctionExpression %s" % (idx, self.name))
+        obj._expr = self._init(parent, idx)
+
+        return obj
 
 
 class ScalarCumulativeFunctionExpression(CumulativeFunctionExpressionData,

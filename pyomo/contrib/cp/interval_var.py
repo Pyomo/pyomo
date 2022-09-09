@@ -16,6 +16,7 @@
 # element
 
 from pyomo.common.collections import ComponentSet
+from pyomo.common.pyomo_typing import overload
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     BeforeExpression, AtExpression)
 
@@ -123,6 +124,10 @@ class IntervalVar(Block):
             return ScalarIntervalVar.__new__(ScalarIntervalVar)
         else:
             return IndexedIntervalVar.__new__(IndexedIntervalVar)
+
+    @overload
+    def __init__(self, *indices, start=None, end=None, length=None,
+                 optional=False, name=None, doc=None): ...
 
     def __init__(self, *args, **kwargs):
         _start_arg = kwargs.pop('start', None)
