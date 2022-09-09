@@ -791,14 +791,14 @@ class Gurobi(PersistentBase, PersistentSolver):
         else:
             results.termination_condition = TerminationCondition.unknown
 
-        if self._objective is None:
-            results.best_feasible_objective = None
-            results.best_objective_bound = None
-        else:
-            try:
-                results.best_feasible_objective = gprob.ObjVal
-            except (gurobipy.GurobiError, AttributeError):
-                results.best_feasible_objective = None
+        results.best_feasible_objective = None
+        results.best_objective_bound = None
+        if self._objective is not None:
+            if gprob.SolCount > 0:
+                try:
+                    results.best_feasible_objective = gprob.ObjVal
+                except (gurobipy.GurobiError, AttributeError):
+                    results.best_feasible_objective = None
             try:
                 if gprob.NumBinVars + gprob.NumIntVars == 0:
                     results.best_objective_bound = gprob.ObjVal
