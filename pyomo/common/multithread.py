@@ -13,31 +13,31 @@ class MultiThreadWrapper():
     See [get_ident()](https://docs.python.org/3/library/threading.html#threading.get_ident) for more information.
     """
 
-    __slots__ = 'mtdict'
+    __slots__ = '_mtdict'
 
     def __init__(self, base):
-        object.__setattr__(self, 'mtdict', defaultdict(base))
+        object.__setattr__(self, '_mtdict', defaultdict(base))
 
     def __getattr__(self, attr):
-        return getattr(self.mtdict[get_ident()], attr)
+        return getattr(self._mtdict[get_ident()], attr)
     
     def __setattr__(self, attr, value):
-        setattr(self.mtdict[get_ident()], attr, value)
+        setattr(self._mtdict[get_ident()], attr, value)
     
     def __delattr__(self, attr):
-        delattr(self.mtdict[get_ident()], attr)
+        delattr(self._mtdict[get_ident()], attr)
     
     def __enter__(self):
-        return self.mtdict[get_ident()].__enter__()
+        return self._mtdict[get_ident()].__enter__()
     
     def __exit__(self, exc_type, exc_value, traceback):
-        return self.mtdict[get_ident()].__exit__(exc_type, exc_value, traceback)
+        return self._mtdict[get_ident()].__exit__(exc_type, exc_value, traceback)
     
     def __dir__(self):
-        return list(object.__dir__(self)) + list(self.mtdict[get_ident()].__dir__())
+        return list(object.__dir__(self)) + list(self._mtdict[get_ident()].__dir__())
     
     def __str__(self):
-        return self.mtdict[get_ident()].__str__()
+        return self._mtdict[get_ident()].__str__()
 
     def __new__(cls, wrapped):
         return super().__new__(type('MultiThreadMeta' + wrapped.__name__, (cls,), {'__doc__': wrapped.__doc__}))
@@ -57,7 +57,7 @@ class MultiThreadWrapperWithMain(MultiThreadWrapper):
 
     def __getattr__(self, attr):
         if attr == 'main_thread':
-            return self.mtdict[main_thread().ident]
+            return self._mtdict[main_thread().ident]
         return super().__getattr__(attr)
 
     def __setattr__(self, attr, value):
