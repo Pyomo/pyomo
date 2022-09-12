@@ -2,6 +2,7 @@ import threading
 import pyomo.common.unittest as unittest
 from pyomo.common.multithread import *
 from threading import Thread
+from pyomo.opt.base.solvers import check_available_solvers
 
 class Dummy():
     """asdfg"""
@@ -66,6 +67,8 @@ class TestMultithreading(unittest.TestCase):
         t.start()
         t.join()
         self.assertEqual(sut.number, 5)
+    
+    @unittest.skipIf(len(check_available_solvers('glpk')) < 1, "glpk solver not available")
     def test_solve(self):
         # Based on the minimal example in https://github.com/Pyomo/pyomo/issues/2475
         import pyomo.environ as pyo
