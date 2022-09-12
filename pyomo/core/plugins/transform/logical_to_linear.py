@@ -120,21 +120,24 @@ class LogicalToLinear(IsomorphicTransformation):
         constraint.deactivate()
 
     def _transform_block(self, target_block, model, new_varlists, transBlocks):
-        for logical_constraint in target_block.component_objects(
-                ctype=LogicalConstraint, active=True, descend_into=Block):
-            self._transform_constraint(logical_constraint, new_varlists,
-                                       transBlocks)
+        _blocks = target_block.values() if target_block.is_indexed() else \
+                  (target_block,)
+        for block in _blocks:
+            for logical_constraint in block.component_objects(
+                    ctype=LogicalConstraint, active=True, descend_into=Block):
+                self._transform_constraint(logical_constraint, new_varlists,
+                                           transBlocks)
 
-        # This can go away when we deprecate this transformation transforming
-        # BooleanVars. This just marks the BooleanVars as "seen" so that if
-        # someone asks for their binary var later, we can create it on the fly
-        # and complain.
-        for bool_vardata in target_block.component_data_objects(
-                BooleanVar, descend_into=Block):
-            if bool_vardata._associated_binary is None:
-                bool_vardata._associated_binary = \
-                        _DeprecatedImplicitAssociatedBinaryVariable(
-                            bool_vardata)
+            # This can go away when we deprecate this transformation
+            # transforming BooleanVars. This just marks the BooleanVars as
+            # "seen" so that if someone asks for their binary var later, we can
+            # create it on the fly and complain.
+            for bool_vardata in block.component_data_objects(
+                    BooleanVar, descend_into=Block):
+                if bool_vardata._associated_binary is None:
+                    bool_vardata._associated_binary = \
+                                _DeprecatedImplicitAssociatedBinaryVariable(
+                                    bool_vardata)
 
     def _transform_constraintData(self, logical_constraint, new_varlists,
                                   transBlocks):

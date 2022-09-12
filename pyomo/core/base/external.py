@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 import logging
-import os
 import types
 import weakref
 from pyomo.common.pyomo_typing import overload
@@ -22,7 +21,7 @@ from ctypes import (
 from pyomo.common.fileutils import find_library
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, pyomo_constant_types,
-    NonNumericValue, NumericConstant,
+    NonNumericValue, NumericConstant, value
 )
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import Component

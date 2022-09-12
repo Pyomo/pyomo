@@ -101,7 +101,7 @@ class MPIBlockMatrix(BaseBlockMatrix):
         self._block_matrix = BlockMatrix(nbrows, nbcols)
         self._mpiw = mpi_comm
         rank = self._mpiw.Get_rank()
-        self._rank_owner = np.asarray(rank_ownership, dtype=np.int)
+        self._rank_owner = np.asarray(rank_ownership, dtype=np.int64)
         self._owned_mask = np.bitwise_or(self._rank_owner == rank, self._rank_owner < 0)
         self._unique_owned_mask = self._rank_owner == rank
 

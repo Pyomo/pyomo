@@ -22,14 +22,15 @@ from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, Any, RangeSet, Reals, value,
-    NonNegativeIntegers, LogicalConstraint, Binary )
+    NonNegativeIntegers, Binary )
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
     clone_without_expression_components, is_child_of, get_src_disjunction,
-    get_src_constraint, get_transformed_constraints, get_src_disjunct,
-    _warn_for_active_disjunction, _warn_for_active_disjunct, preprocess_targets)
+    get_src_constraint, get_transformed_constraints,
+    get_src_disjunct, _warn_for_active_disjunction, _warn_for_active_disjunct,
+    preprocess_targets)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from functools import wraps
@@ -262,8 +263,16 @@ class Hull_Reformulation(Transformation):
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
         # the list.
-        targets = preprocess_targets(targets, instance, knownBlocks)
-        for t in targets:
+        preprocessed_targets = preprocess_targets(targets, instance,
+                                                  knownBlocks)
+        # transform any logical constraints that might be anywhere on the stuff
+        # we're about to transform.
+        TransformationFactory('core.logical_to_linear').apply_to(
+            instance,
+            targets=[blk for blk in targets if blk.ctype is Block] +
+            [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
+
+        for t in preprocessed_targets:
             if t.ctype is Disjunction:
                 if t.is_indexed():
                     self._transform_disjunction(t)
@@ -274,10 +283,6 @@ class Hull_Reformulation(Transformation):
                     self._transform_block(t)
                 else:
                     self._transform_blockData(t)
-
-        # at the end, transform any logical constraints that might be on
-        # instance
-        TransformationFactory('core.logical_to_linear').apply_to(instance)
 
     def _add_transformation_block(self, instance):
         # make a transformation block on instance where we will store
@@ -328,8 +333,6 @@ class Hull_Reformulation(Transformation):
                 descend_into=(Block,Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transform_disjunction(disjunction)
-        # transform any logical constraints
-        TransformationFactory('core.logical_to_linear').apply_to(obj)
 
     def _add_xor_constraint(self, disjunction, transBlock):
         # Put XOR constraint on the transformation block
@@ -725,10 +728,6 @@ class Hull_Reformulation(Transformation):
             transBlock = obj.algebraic_constraint().parent_block()
 
             self._transfer_var_references(transBlock, destinationBlock)
-
-        # Transform any logical constraints here. We need to do this before we
-        # create the variable references!
-        TransformationFactory('core.logical_to_linear').apply_to(block)
 
         # We don't know where all the BooleanVars are used, so if there are any
         # that the above transformation didn't transform, we need to do it now,
