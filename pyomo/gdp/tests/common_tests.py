@@ -1406,6 +1406,8 @@ def check_deactivated_disjunct_leaves_nested_disjunct_active(self,
     self.assertFalse(m.d1.d4.indicator_var.fixed)
 
 def check_mappings_between_disjunctions_and_xors(self, transformation):
+    # ESJ: This test is unique between hull and bigm now because bigm creates
+    # extra transformation blocks for the inner disjunctions.
     m = models.makeNestedDisjunctions()
     transform = TransformationFactory('gdp.%s' % transformation)
     transform.apply_to(m)
@@ -1541,14 +1543,19 @@ def check_all_components_transformed(self, m):
 def check_transformation_blocks_nestedDisjunctions(self, m, transformation):
     disjunctionTransBlock = m.disj.algebraic_constraint().parent_block()
     transBlocks = disjunctionTransBlock.relaxedDisjuncts
-    self.assertTrue(len(transBlocks), 4)
-    self.assertIs(transBlocks[0], m.d1.transformation_block())
-    self.assertIs(transBlocks[3], m.d2.transformation_block())
     if transformation == 'bigm':
-        # we moved the blocks up
-        self.assertIs(transBlocks[1], m.d1.d3.transformation_block())
-        self.assertIs(transBlocks[2], m.d1.d4.transformation_block())
+        self.assertEqual(len(transBlocks), 2)
+        self.assertIs(transBlocks[0], m.d1.transformation_block())
+        self.assertIs(transBlocks[1], m.d2.transformation_block())
+        innerTransBlock = m.d1.disj2.algebraic_constraint().parent_block()
+        transBlocks = innerTransBlock.relaxedDisjuncts
+        self.assertEqual(len(transBlocks), 2)
+        self.assertIs(transBlocks[0], m.d1.d3.transformation_block())
+        self.assertIs(transBlocks[1], m.d1.d4.transformation_block())
     if transformation == 'hull':
+        self.assertEqual(len(transBlocks), 4)
+        self.assertIs(transBlocks[0], m.d1.transformation_block())
+        self.assertIs(transBlocks[3], m.d2.transformation_block())
         # we only moved the references up, these still point to the inner
         # transformation blocks
         inner = m.d1.disj2.algebraic_constraint().parent_block().\

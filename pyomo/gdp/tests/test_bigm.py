@@ -31,6 +31,8 @@ import random
 
 from io import StringIO
 
+from pytest import set_trace
+
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
         ct.diff_apply_to_and_create_using(self, model, 'gdp.bigm')
@@ -1719,11 +1721,8 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         ct.check_deactivated_disjunct_leaves_nested_disjunct_active(self, 
                                                                     'bigm')
 
-    def test_transformation_block_structure(self):
-        m = models.makeNestedDisjunctions()
-        TransformationFactory('gdp.bigm').apply_to(m)
-
-        transBlock = m._pyomo_gdp_bigm_reformulation
+    def check_disjunction_transformation_block_structure(self, transBlock,
+                                                         pairs):
         self.assertIsInstance(transBlock, Block)
 
         # check that we have the lbub set on the transformation block
@@ -1732,26 +1731,11 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertEqual(len(lbub), 2)
         self.assertEqual(lbub, ['lb', 'ub'])
 
-        # we have the XOR constraint
-        self.assertIsInstance(transBlock.component("disjunction_xor"),
-                              Constraint)
-
         disjBlock = transBlock.relaxedDisjuncts
         self.assertIsInstance(disjBlock, Block)
-        # All the outer and inner disjuncts should be on Block:
-        self.assertEqual(len(disjBlock), 7)
-        pairs = [
-            (0, ["simpledisjunct._pyomo_gdp_bigm_reformulation.'simpledisjunct."
-                 "innerdisjunction_xor'"]),
-            (1, ["simpledisjunct.innerdisjunct0.c"]),
-            (2, ["simpledisjunct.innerdisjunct1.c"]),
-            (3, ["disjunct[0].c"]),
-            (4, ["disjunct[1]._pyomo_gdp_bigm_reformulation.'disjunct[1]."
-                 "innerdisjunction_xor'",
-                 "disjunct[1].c"]),
-            (5, ["disjunct[1].innerdisjunct[0].c"]),
-            (6, ["disjunct[1].innerdisjunct[1].c"]),
-        ]
+        # All the transformed outer disjuncts should be on Block:
+        self.assertEqual(len(disjBlock), len(pairs))
+        
         # This test will also rely on the disjunctions being relaxed in the same
         # order every time (and moved up to the new transformation block in the
         # same order)
@@ -1761,19 +1745,72 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
                     disjBlock[i].component(nm),
                     Constraint)
 
-    def test_transformation_block_on_disjunct_empty(self):
+    def test_transformation_block_structure(self):
         m = models.makeNestedDisjunctions()
         TransformationFactory('gdp.bigm').apply_to(m)
-        self.assertEqual(len(m.disjunct[1]._pyomo_gdp_bigm_reformulation.\
-                             component("relaxedDisjuncts")), 0)
-        self.assertEqual(len(m.simpledisjunct._pyomo_gdp_bigm_reformulation.\
-                             component("relaxedDisjuncts")), 0)
+
+        # This is the transformation block for the outer disjunction
+        transBlock = m.disjunction.algebraic_constraint().parent_block()
+        pairs = [
+            (0, []),# No constraints, just a reference to simpledisjunct's
+                    # indicator_var
+            (1, ["disjunct[0].c"]),
+            (2, []),# Again no constraints, just indicator var ref
+        ]
+        self.check_disjunction_transformation_block_structure(transBlock, pairs)
+        # we have the XOR constraints for both the outer and inner disjunctions
+        self.assertIsInstance(transBlock.component("disjunction_xor"),
+                              Constraint)
+
+        transBlock = m.disjunct[1].innerdisjunction[0].algebraic_constraint().\
+                     parent_block()
+        pairs = [
+            (0, ["disjunct[1].innerdisjunct[0].c"]),
+            (1, ["disjunct[1].innerdisjunct[1].c"]),
+        ]
+        self.check_disjunction_transformation_block_structure(transBlock, pairs)
+        self.assertIsInstance(
+            transBlock.component("disjunct[1].innerdisjunction_xor"),
+            Constraint)
+
+        transBlock = m.simpledisjunct.innerdisjunction.algebraic_constraint().\
+                     parent_block()
+        pairs = [
+            (0, ["simpledisjunct.innerdisjunct0.c"]),
+            (1, ["simpledisjunct.innerdisjunct1.c"])
+        ]
+        self.check_disjunction_transformation_block_structure(transBlock, pairs)
+        self.assertIsInstance(
+            transBlock.component("simpledisjunct.innerdisjunction_xor"),
+            Constraint)
+
+    def test_transformation_block_on_inner_disjunct_empty(self):
+        m = models.makeNestedDisjunctions()
+        TransformationFactory('gdp.bigm').apply_to(m)
+        self.assertIsNone(m.disjunct[1].component(
+            "_pyomo_gdp_bigm_reformulation"))
 
     def test_mappings_between_disjunctions_and_xors(self):
-        # Note this test actually checks that the inner disjunction maps to its
-        # original xor (which will be transformed again by the outer
-        # disjunction.)
-        ct.check_mappings_between_disjunctions_and_xors(self, 'bigm')
+        m = models.makeNestedDisjunctions()
+        transform = TransformationFactory('gdp.bigm')
+        transform.apply_to(m)
+
+        transBlock1 = m.component("_pyomo_gdp_bigm_reformulation")
+        transBlock2 = m.component("_pyomo_gdp_bigm_reformulation_4")
+        transBlock3 = m.component("_pyomo_gdp_bigm_reformulation_9")
+        
+        disjunctionPairs = [
+            (m.disjunction, transBlock3.disjunction_xor),
+            (m.disjunct[1].innerdisjunction[0],
+             transBlock2.component("disjunct[1].innerdisjunction_xor")[0]),
+            (m.simpledisjunct.innerdisjunction,
+             transBlock1.component("simpledisjunct.innerdisjunction_xor"))
+        ]
+
+        # check disjunction mappings
+        for disjunction, xor in disjunctionPairs:
+            self.assertIs(disjunction.algebraic_constraint(), xor)
+            self.assertIs(transform.get_src_disjunction(xor), disjunction)
 
     def test_disjunct_mappings(self):
         m = models.makeNestedDisjunctions()
@@ -1881,22 +1918,19 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         ct.check_linear_coef(self, repn, variable, 1)
         ct.check_linear_coef(self, repn, indicator_var, M)
 
-    def check_xor_relaxation(self, cons, indvar1, indvar2, indvar3, lb):
+    def check_inner_xor_constraint(self, inner_disjunction, outer_disjunct,
+                                   inner_disjuncts):
+        self.assertIsNotNone(inner_disjunction.algebraic_constraint)
+        cons = inner_disjunction.algebraic_constraint()
+        self.assertEqual(cons.lower, 0)
+        self.assertEqual(cons.upper, 0)
         repn = generate_standard_repn(cons.body)
         self.assertTrue(repn.is_linear())
-        self.assertEqual(len(repn.linear_vars), 3)
-        ct.check_linear_coef(self, repn, indvar1, 1)
-        ct.check_linear_coef(self, repn, indvar2, 1)
-        if not lb:
-            self.assertEqual(cons.upper, 1)
-            self.assertIsNone(cons.lower)
-            self.assertEqual(repn.constant, -1)
-            ct.check_linear_coef(self, repn, indvar3, 1)
-        else:
-            self.assertEqual(cons.lower, 1)
-            self.assertIsNone(cons.upper)
-            self.assertEqual(repn.constant, 1)
-            ct.check_linear_coef(self, repn, indvar3, -1)
+        self.assertEqual(repn.constant, 0)
+        for disj in inner_disjuncts:
+            ct.check_linear_coef( self, repn, disj.binary_indicator_var, 1)
+        ct.check_linear_coef(self, repn, outer_disjunct.binary_indicator_var,
+                             -1)
 
     def test_transformed_constraints(self):
         # We'll check all the transformed constraints to make sure
@@ -1944,23 +1978,25 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
 
         # Here we check that the xor constraint from
         # simpledisjunct.innerdisjunction is transformed.
-        cons5 = m.simpledisjunct.transformation_block().component(
-            "simpledisjunct._pyomo_gdp_bigm_reformulation.'simpledisjunct."
-            "innerdisjunction_xor'")
-        cons5lb = cons5['lb']
-        self.check_xor_relaxation(
-            cons5lb,
-            m.simpledisjunct.innerdisjunct0.indicator_var,
-            m.simpledisjunct.innerdisjunct1.indicator_var,
-            m.simpledisjunct.indicator_var,
-            lb=True)
-        cons5ub = cons5['ub']
-        self.check_xor_relaxation(
-            cons5ub,
-            m.simpledisjunct.innerdisjunct0.indicator_var,
-            m.simpledisjunct.innerdisjunct1.indicator_var,
-            m.simpledisjunct.indicator_var,
-            lb=False)
+        cons5 = m.simpledisjunct.innerdisjunction.algebraic_constraint
+        self.assertIsNotNone(cons5)
+        cons5 = cons5()
+        self.check_inner_xor_constraint(m.simpledisjunct.innerdisjunction,
+                                        m.simpledisjunct,
+                                        [m.simpledisjunct.innerdisjunct0,
+                                         m.simpledisjunct.innerdisjunct1]) 
+        self.assertIsInstance(cons5, Constraint)
+        self.assertEqual(cons5.lower, 0)
+        self.assertEqual(cons5.upper, 0)
+        repn = generate_standard_repn(cons5.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        ct.check_linear_coef(
+            self, repn, m.simpledisjunct.innerdisjunct0.binary_indicator_var, 1)
+        ct.check_linear_coef(
+            self, repn, m.simpledisjunct.innerdisjunct1.binary_indicator_var, 1)
+        ct.check_linear_coef(self, repn, m.simpledisjunct.binary_indicator_var,
+                             -1)
 
         cons6 = m.disjunct[0].transformation_block().component("disjunct[0].c")
         cons6lb = cons6['lb']
@@ -1973,26 +2009,12 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         self.assertEqual(cons6ub.upper, 2)
         self.check_bigM_constraint(cons6ub, m.x, 7, m.disjunct[0].indicator_var)
 
-        # now we check that the xor constraint from
-        # disjunct[1].innerdisjunction gets transformed alongside the
-        # other constraint in disjunct[1].
-        cons7 = m.disjunct[1].transformation_block().component(
-            "disjunct[1]._pyomo_gdp_bigm_reformulation.'disjunct[1]."
-            "innerdisjunction_xor'")
-        cons7lb = cons7[0,'lb']
-        self.check_xor_relaxation(
-            cons7lb,
-            m.disjunct[1].innerdisjunct[0].indicator_var,
-            m.disjunct[1].innerdisjunct[1].indicator_var,
-            m.disjunct[1].indicator_var,
-            lb=True)
-        cons7ub = cons7[0,'ub']
-        self.check_xor_relaxation(
-            cons7ub,
-            m.disjunct[1].innerdisjunct[0].indicator_var,
-            m.disjunct[1].innerdisjunct[1].indicator_var,
-            m.disjunct[1].indicator_var,
-            lb=False)
+        # now we check that the xor constraint from disjunct[1].innerdisjunction
+        # is correct.
+        self.check_inner_xor_constraint(m.disjunct[1].innerdisjunction[0],
+                                        m.disjunct[1],
+                                        [m.disjunct[1].innerdisjunct[0],
+                                         m.disjunct[1].innerdisjunct[1]])
 
         cons8 = m.disjunct[1].transformation_block().component(
             "disjunct[1].c")['ub']
