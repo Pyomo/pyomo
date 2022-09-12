@@ -87,7 +87,7 @@ class TestMultithreading(unittest.TestCase):
             opt.solve(model) 
 
             # Iterate, adding a cut to exclude the previously found solution
-            for i in range(5):
+            for _ in range(5):
                 expr = 0
                 for j in model.x:
                     if pyo.value(model.x[j]) < 0.5:
@@ -96,7 +96,7 @@ class TestMultithreading(unittest.TestCase):
                         expr += (1 - model.x[j])
                 model.cuts.add( expr >= 1 )
                 results = opt.solve(model)
-                return results
+            return results
 
         tp = ThreadPool(4)
         results = tp.map(test, [model.clone() for i in range(4)])
