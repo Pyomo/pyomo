@@ -9,16 +9,21 @@ class Dummy():
     def __init__(self):
         self.number = 1
         self.rnd = threading.get_ident()
+
     def __str__(self):
         return 'asd'
 
+
 class TestMultithreading(unittest.TestCase):
+
     def test_wrapper_docs(self):
         sut = MultiThreadWrapper(Dummy)
         self.assertEqual(sut.__class__.__doc__, Dummy.__doc__)
+
     def test_wrapper_field(self):
         sut = MultiThreadWrapper(Dummy)
         self.assertEqual(sut.number, 1)
+
     def test_independent_writes(self):
         sut = MultiThreadWrapper(Dummy)
         sut.number = 2
@@ -27,6 +32,7 @@ class TestMultithreading(unittest.TestCase):
         t = Thread(target=thread_func)
         t.start()
         t.join()
+
     def test_independent_writes2(self):
         sut = MultiThreadWrapper(Dummy)
         def thread_func():
@@ -35,6 +41,7 @@ class TestMultithreading(unittest.TestCase):
         t.start()
         t.join()
         self.assertEqual(sut.number, 1)
+
     def test_independent_del(self):
         sut = MultiThreadWrapper(Dummy)
         del sut.number
@@ -43,6 +50,7 @@ class TestMultithreading(unittest.TestCase):
         t = Thread(target=thread_func)
         t.start()
         t.join()
+
     def test_independent_del2(self):
         sut = MultiThreadWrapper(Dummy)
         def thread_func():
@@ -51,10 +59,12 @@ class TestMultithreading(unittest.TestCase):
         t.start()
         t.join()
         self.assertEqual(sut.number, 1)
+
     def test_special_methods(self):
         sut = MultiThreadWrapper(Dummy)
         self.assertTrue(set(Dummy().__dir__()).issubset(set(sut.__dir__())))
         self.assertEqual(str(sut), str(Dummy()))
+
     def test_main(self):
         sut = MultiThreadWrapperWithMain(Dummy)
         self.assertIs(sut.main_thread.rnd, sut.rnd)
@@ -96,10 +106,13 @@ class TestMultithreading(unittest.TestCase):
                         expr += (1 - model.x[j])
                 model.cuts.add( expr >= 1 )
                 results = opt.solve(model)
-            return results
+            return results, [v for v in model.x]
 
         tp = ThreadPool(4)
         results = tp.map(test, [model.clone() for i in range(4)])
         tp.close()
-        for result in results:
+        for result, _ in results:
             self.assertEqual(result.solver.termination_condition, pyo.TerminationCondition.optimal)
+        results = list(results)
+        for _, values in results[1:]:
+            self.assertEqual(values, results[0][1])
