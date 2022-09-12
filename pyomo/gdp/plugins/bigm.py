@@ -30,7 +30,7 @@ from pyomo.core.base import Transformation, TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
-    is_child_of, get_src_disjunction, get_src_constraint,
+    is_child_of, get_src_disjunction, get_src_constraint, get_gdp_tree,
     get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
     _warn_for_active_disjunction, _warn_for_active_disjunct, preprocess_targets,
     _to_dict)
@@ -87,7 +87,7 @@ class BigM_Transformation(Transformation):
 
     All transformed Disjuncts will have a pointer to the block their transformed
     constraints are on, and all transformed Disjunctions will have a
-    pointer to the corresponding OR or XOR constraint.
+    pointer to the corresponding 'Or' or 'ExactlyOne' constraint.
 
     """
 
@@ -252,8 +252,10 @@ class BigM_Transformation(Transformation):
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
         # the list.
+        gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
         preprocessed_targets = preprocess_targets(targets, instance,
-                                                  knownBlocks)
+                                                  knownBlocks,
+                                                  gdp_tree=gdp_tree)
 
         # transform any logical constraints that might be anywhere on the stuff
         # we're about to transform.
@@ -265,9 +267,11 @@ class BigM_Transformation(Transformation):
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
                 if t.is_indexed():
-                    self._transform_disjunction(t, bigM)
+                    self._transform_disjunction(
+                        t, bigM, parent_disjunct=gdp_tree.parent(t))
                 else:
-                    self._transform_disjunctionData( t, bigM, t.index())
+                    self._transform_disjunctionData(
+                        t, bigM, t.index(), parent_disjunct=gdp_tree.parent(t))
             else:# We know t.ctype in (Block, Disjunct) after preprocessing
                 if t.is_indexed():
                     self._transform_block(t, bigM)
@@ -347,7 +351,7 @@ class BigM_Transformation(Transformation):
 
         return orC
 
-    def _transform_disjunction(self, obj, bigM):
+    def _transform_disjunction(self, obj, bigM, parent_disjunct=None):
         if not obj.active:
             return
 
@@ -361,12 +365,14 @@ class BigM_Transformation(Transformation):
 
         # relax each of the disjunctionDatas
         for i in sorted(obj.keys()):
-            self._transform_disjunctionData(obj[i], bigM, i, transBlock)
+            self._transform_disjunctionData(obj[i], bigM, i, transBlock,
+                                            parent_disjunct)
 
         # deactivate so the writers don't scream
         obj.deactivate()
 
-    def _transform_disjunctionData(self, obj, bigM, index, transBlock=None):
+    def _transform_disjunctionData(self, obj, bigM, index, transBlock=None,
+                                   parent_disjunct=None):
         if not obj.active:
             return  # Do not process a deactivated disjunction
         # We won't have these arguments if this got called straight from
@@ -382,7 +388,15 @@ class BigM_Transformation(Transformation):
                 transBlock = obj.parent_component()._algebraic_constraint().\
                              parent_block()
             else:
-                transBlock = self._add_transformation_block(obj.parent_block())
+                if parent_disjunct is not None:
+                # We want to put all the transformed things on the parent
+                # Disjunct's transformation block so that they do not get
+                # re-transformed
+                    transBlock = self._add_transformation_block(
+                        parent_disjunct.parent_block())
+                else:
+                    transBlock = self._add_transformation_block(
+                        obj.parent_block())
         # create or fetch the xor constraint
         xorConstraint = self._add_xor_constraint(obj.parent_component(),
                                                  transBlock)
@@ -407,10 +421,12 @@ class BigM_Transformation(Transformation):
                                      suffix_list)
 
         # add or (or xor) constraint
+        rhs = 1 if parent_disjunct is None else \
+              parent_disjunct.binary_indicator_var
         if xor:
-            xorConstraint[index] = or_expr == 1
+            xorConstraint[index] = or_expr == rhs
         else:
-            xorConstraint[index] = or_expr >= 1
+            xorConstraint[index] = or_expr >= rhs
         # Mark the DisjunctionData as transformed by mapping it to its XOR
         # constraint.
         obj._algebraic_constraint = weakref_ref(xorConstraint[index])
@@ -489,22 +505,24 @@ class BigM_Transformation(Transformation):
         # duplicate references to indicator variables and local variables on
         # nested disjuncts.
         disjunctBlock = disjunct._transformation_block()
-        destinationBlock = disjunctBlock.parent_block()
-        for obj in block.component_data_objects(
-                Disjunction,
-                sort=SortComponents.deterministic,
-                descend_into=(Block)):
-            if obj.algebraic_constraint is None:
-                # This could be bad if it's active since that means its
-                # untransformed, but we'll wait to yell until the next loop
-                continue
-            # get this disjunction's relaxation block.
-            transBlock = obj.algebraic_constraint().parent_block()
+        # destinationBlock = disjunctBlock.parent_block()
+        # for obj in block.component_data_objects(
+        #         Disjunction,
+        #         sort=SortComponents.deterministic,
+        #         descend_into=(Block)):
+        #     if obj.algebraic_constraint is None:
+        #         # This could be bad if it's active since that means its
+        #         # untransformed, but we'll wait to yell until the next loop
+        #         continue
+        #     # get this disjunction's relaxation block.
+        #     transBlock = obj.algebraic_constraint().parent_block()
 
-            # move transBlock up to parent component
-            self._transfer_transBlock_data(transBlock, destinationBlock)
-            # we leave the transformation block because it still has the XOR
-            # constraints, which we want to be on the parent disjunct.
+        #     # move transBlock up to parent component
+        #     self._transfer_transBlock_data(transBlock, destinationBlock,
+        #                                    obj.algebraic_constraint())
+        #     # TODO: This is no longer true
+        #     # we leave the transformation block because it still has the XOR
+        #     # constraints, which we want to be on the parent disjunct.
 
         # We don't know where all the BooleanVars are used, so if there are any
         # that the above transformation didn't transform, we need to do it now,
@@ -553,12 +571,17 @@ class BigM_Transformation(Transformation):
             # variables down the line.
             handler(obj, disjunct, bigM, arg_list, suffix_list)
 
-    def _transfer_transBlock_data(self, fromBlock, toBlock):
+    def _transfer_transBlock_data(self, fromBlock, toBlock, xor):
         # We know that we have a list of transformed disjuncts on both. We need
         # to move those over. We know the XOR constraints are on the block, and
         # we need to leave those on the disjunct.
         disjunctList = toBlock.relaxedDisjuncts
-        to_delete = []
+        nested_xor = Constraint(expr=xor.expr)
+        toBlock.add_component(unique_component_name(toBlock, xor.name),
+                              nested_xor)
+        #del xor
+        
+        #to_delete = []          
         for idx, disjunctBlock in fromBlock.relaxedDisjuncts.items():
             newblock = disjunctList[len(disjunctList)]
             newblock.transfer_attributes_from(disjunctBlock)
@@ -569,11 +592,14 @@ class BigM_Transformation(Transformation):
             newblock._srcDisjunct = weakref_ref(original)
 
             # save index of what we just moved so that we can delete it
-            to_delete.append(idx)
+            #to_delete.append(idx)
+
+        fromBlock.parent_block().del_component(fromBlock)
+        del fromBlock
 
         # delete everything we moved.
-        for idx in to_delete:
-            del fromBlock.relaxedDisjuncts[idx]
+        # for idx in to_delete:
+        #     del fromBlock.relaxedDisjuncts[idx]
 
         # Note that we could handle other components here if we ever needed
         # to, but we control what is on the transformation block and

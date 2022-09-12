@@ -90,6 +90,7 @@ class GDPTree:
     def __init__(self):
         self._adjacency_list = {}
         self._in_degrees = {}
+        self._parent = {} # Every node has exactly one or 0 parents.
         # This needs to be ordered so that topological sort is deterministic
         self._vertices = OrderedSet()
 
@@ -100,17 +101,20 @@ class GDPTree:
     def add_node(self, u):
         self._vertices.add(u)
 
-    def _update_in_degree(self, v):
-        if v not in self._in_degrees:
-            self._in_degrees[v] = 1
+    def parent(self, u):
+        if u not in self._vertices:
+            raise ValueError("'%s' is not a vertex in the GDP tree. Cannot "
+                             "retrieve its parent." % u)
+        if u in self._parent:
+            return self._parent[u]
         else:
-            self._in_degrees[v] += 1
+            return None
 
     def add_edge(self, u, v):
         if u not in self._adjacency_list:
             self._adjacency_list[u] = OrderedSet()
         self._adjacency_list[u].add(v)
-        self._update_in_degree(v)
+        self._parent[v] = u
         self._vertices.add(u)
         self._vertices.add(v)
 
@@ -139,9 +143,10 @@ class GDPTree:
         return self._topological_sort()
 
     def in_degree(self, u):
-        if u not in self._in_degrees:
+        if u not in self._parent:
             return 0
-        return self._in_degrees[u]
+        return 1
+        
 
 def _parent_disjunct(obj):
     parent = obj.parent_block()
@@ -211,8 +216,9 @@ def get_gdp_tree(targets, instance, knownBlocks):
                 % (t.name, type(t)) )
     return gdp_tree
 
-def preprocess_targets(targets, instance, knownBlocks):
-    gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
+def preprocess_targets(targets, instance, knownBlocks, gdp_tree=None):
+    if gdp_tree is None:
+        gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
     # this is for bigm and hull: We need to transform from the leaves up, so we
     # want a reverse of a topological sort: no parent can come before its child.
     return gdp_tree.reverse_topological_sort()
