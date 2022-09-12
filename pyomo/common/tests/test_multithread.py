@@ -1,4 +1,4 @@
-from random import random
+import threading
 import pyomo.common.unittest as unittest
 from pyomo.common.multithread import *
 from threading import Thread
@@ -6,8 +6,8 @@ from threading import Thread
 class Dummy():
     """asdfg"""
     def __init__(self):
-        self.id = 1
-        self.rnd = random()
+        self.number = 1
+        self.rnd = threading.get_ident()
     def __str__(self):
         return 'asd'
 
@@ -17,39 +17,39 @@ class TestMultithreading(unittest.TestCase):
         self.assertEqual(sut.__class__.__doc__, Dummy.__doc__)
     def test_wrapper_field(self):
         sut = MultiThreadWrapper(Dummy)
-        self.assertEqual(sut.id, 1)
+        self.assertEqual(sut.number, 1)
     def test_independent_writes(self):
         sut = MultiThreadWrapper(Dummy)
-        sut.id = 2
+        sut.number = 2
         def thread_func():
-            self.assertEqual(sut.id, 1)
+            self.assertEqual(sut.number, 1)
         t = Thread(target=thread_func)
         t.start()
         t.join()
     def test_independent_writes2(self):
         sut = MultiThreadWrapper(Dummy)
         def thread_func():
-            sut.id = 2
+            sut.number = 2
         t = Thread(target=thread_func)
         t.start()
         t.join()
-        self.assertEqual(sut.id, 1)
+        self.assertEqual(sut.number, 1)
     def test_independent_del(self):
         sut = MultiThreadWrapper(Dummy)
-        del sut.id
+        del sut.number
         def thread_func():
-            self.assertEqual(sut.id, 1)
+            self.assertEqual(sut.number, 1)
         t = Thread(target=thread_func)
         t.start()
         t.join()
     def test_independent_del2(self):
         sut = MultiThreadWrapper(Dummy)
         def thread_func():
-            del sut.id
+            del sut.number
         t = Thread(target=thread_func)
         t.start()
         t.join()
-        self.assertEqual(sut.id, 1)
+        self.assertEqual(sut.number, 1)
     def test_special_methods(self):
         sut = MultiThreadWrapper(Dummy)
         self.assertTrue(set(Dummy().__dir__()).issubset(set(sut.__dir__())))
@@ -57,11 +57,15 @@ class TestMultithreading(unittest.TestCase):
     def test_main(self):
         sut = MultiThreadWrapperWithMain(Dummy)
         self.assertIs(sut.main_thread.rnd, sut.rnd)
+        sut.number = 5
         def thread_func():
+            self.assertEqual(sut.number, 1)
             self.assertIsNot(sut.main_thread.rnd, sut.rnd)
+            del sut.number
         t = Thread(target=thread_func)
         t.start()
         t.join()
+        self.assertEqual(sut.number, 5)
     def test_solve(self):
         # Based on the minimal example in https://github.com/Pyomo/pyomo/issues/2475
         import pyomo.environ as pyo
