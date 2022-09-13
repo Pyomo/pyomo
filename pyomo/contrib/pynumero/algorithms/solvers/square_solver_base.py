@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from collections import namedtuple
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.config import ConfigBlock
 

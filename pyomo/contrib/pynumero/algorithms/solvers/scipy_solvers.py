@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from collections import namedtuple
 from pyomo.core.base.objective import Objective
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.modeling import unique_component_name
@@ -18,10 +17,8 @@ from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     DenseSquareNlpSolver,
 )
 from pyomo.opt import (
-    SolverStatus,
     SolverResults,
     TerminationCondition,
-    ProblemSense,
 )
 from pyomo.common.dependencies import (
     attempt_import,
