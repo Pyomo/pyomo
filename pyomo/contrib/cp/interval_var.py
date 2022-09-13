@@ -150,8 +150,6 @@ class IntervalVar(Block):
             obj = self._data[index] = self._ComponentDataClass(component=self)
         parent = obj.parent_block()
         obj._index = index
-        if not self._optional:
-            obj.is_present.fix(True)
 
         obj.start_time.bounds = self._start_bounds(parent, index)
         obj.end_time.bounds = self._end_bounds(parent, index)

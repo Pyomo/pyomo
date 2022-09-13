@@ -32,18 +32,21 @@ class BeforeExpression(ExpressionBase, BooleanValue):
     def nargs(self):
         return 2
 
+    # ESJ TODO: I don't really know what this is or what calls it
     def _apply_operation(self, result):
         before, after = result
         return before + delay <= after
 
-    def _to_string(self, values, verbose, smap):
-        if self.delay == 0:
-            first = values[0]
-        elif self.delay > 0:
-            first = "%s + %s" % (values[0], delay)
+    def __str__(self):
+        delay = self.delay
+        arg1 = self._args[0]
+        if delay == 0:
+            first = arg1
+        elif delay > 0:
+            first = "%s + %s" % (arg1, delay)
         else:
-            first = "%s - %s" % (values[0], abs(delay))
-        return "%s %s %s" % (first, "<=", values[1])
+            first = "%s - %s" % (arg1, abs(delay))
+        return "%s %s %s" % (first, "<=", self._args[1])
 
     @property
     def delay(self):
@@ -81,14 +84,16 @@ class AtExpression(ExpressionBase, BooleanValue):
         before, after = result
         return before + delay == after
 
-    def _to_string(self, values, verbose, smap):
-        if self.delay == 0:
-            first = values[0]
-        elif self.delay > 0:
-            first = "%s + %s" % (values[0], delay)
+    def __str__(self):
+        delay = self.delay
+        arg1 = self._args[0]
+        if delay == 0:
+            first = arg1
+        elif delay > 0:
+            first = "%s + %s" % (arg1, delay)
         else:
-            first = "%s - %s" % (values[0], abs(delay))
-        return "%s %s %s" % (first, "==", values[1])
+            first = "%s - %s" % (arg1, abs(delay))
+        return "%s %s %s" % (first, "==", self._args[1])
 
     @property
     def delay(self):

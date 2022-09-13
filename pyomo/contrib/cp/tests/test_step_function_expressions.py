@@ -13,9 +13,9 @@ import pyomo.common.unittest as unittest
 from pyomo.contrib.cp import IntervalVar
 from pyomo.contrib.cp.scheduling_expr import Step, Pulse
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
-    CumulativeFunction, NegatedStepFunction)
+    AlwaysIn, CumulativeFunction, NegatedStepFunction)
 
-from pyomo.environ import ConcreteModel
+from pyomo.environ import ConcreteModel, LogicalConstraint
 
 from pytest import set_trace
 
@@ -26,6 +26,28 @@ class CommonTests(unittest.TestCase):
         m.b = IntervalVar()
 
         return m
+
+class TestPulse(unittest.TestCase):
+    def test_bad_interval_var(self):
+        with self.assertRaisesRegex(
+                TypeError,
+                "The 'interval_var' argument for a 'Pulse' must "
+                "be an 'IntervalVar'.\n"
+                "Received: <class 'float'>"):
+            thing = Pulse(1.2, height=4)
+
+class TestStep(CommonTests):
+    def test_bad_time_point(self):
+        m = self.get_model()
+        with self.assertRaisesRegex(
+                TypeError,
+                "The 'time' argument for a 'Step' must be either "
+                "an 'IntervalVarTimePoint' \(for example, the "
+                "'start_time' or 'end_time' of an IntervalVar\) or "
+                "an integer time point in the time horizon.\n"
+                "Received: "
+                "<class 'pyomo.contrib.cp.interval_var.ScalarIntervalVar'>"):
+            thing = Step(m.a, height=2)
 
 class TestSumStepFunctions(CommonTests):
     def test_sum_step_and_pulse(self):
@@ -119,23 +141,6 @@ class TestSumStepFunctions(CommonTests):
 
         self.assertEqual(str(expr), "Step(a.start_time, height=4) + "
                          "Pulse(b, height=-1) + Step(0, height=1)")
-
-    def test_sum_pulses_in_place(self):
-        m = self.get_model()
-        p1 = Pulse(m.a, height=2)
-        expr = p1
-
-        self.assertEqual(len(expr.args), 1)
-        self.assertEqual(expr.nargs(), 1)
-
-        p2 = Pulse(m.b, height=3)
-        expr += p2
-
-        self.assertIsInstance(expr, CumulativeFunction)
-        self.assertEqual(len(expr.args), 2)
-        self.assertEqual(expr.nargs(), 2)
-        self.assertIs(expr.args[0], p1)
-        self.assertIs(expr.args[1], p2)
 
     def test_sum_steps_in_place(self):
         m = self.get_model()
@@ -269,7 +274,7 @@ class TestSubtractStepFunctions(CommonTests):
         expr = expr1 + m.p1
         # Now we have to clone in place
         expr1 -= m.s
-        
+
         self.assertIsInstance(expr1, CumulativeFunction)
         self.assertEqual(expr1.nargs(), 3)
         self.assertIs(expr1.args[0], m.p1)
@@ -352,3 +357,24 @@ class TestSubtractStepFunctions(CommonTests):
                 "scheduling_expr.step_function_expressions.Step'> from object "
                 "of class <class 'int'>"):
             expr = 3 - Step(m.a.start_time, height=6)
+
+class TestAlwaysIn(CommonTests):
+    def test_always_in(self):
+        m = self.get_model()
+        f = Pulse(m.a, height=3) + Step(m.b.start_time, height=2) - \
+            Step(m.a.end_time, height=-1)
+
+        m.c = LogicalConstraint(expr=f.within((0, 3), (0, 10)))
+        self.assertIsInstance(m.c.expr, AlwaysIn)
+
+        self.assertEqual(m.c.expr.nargs(), 3)
+        self.assertEqual(len(m.c.expr.args), 3)
+        self.assertIs(m.c.expr.args[0], f)
+        self.assertEqual(m.c.expr.args[1], (0, 3))
+        self.assertEqual(m.c.expr.args[2], (0, 10))
+
+        self.assertEqual(
+            str(m.c.expr),
+            "(Pulse(a, height=3) + Step(b.start_time, height=2) - "
+            "Step(a.end_time, height=-1)).within(bounds=(0, 3), "
+            "times=(0, 10))")
