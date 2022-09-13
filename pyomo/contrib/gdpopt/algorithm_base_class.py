@@ -121,6 +121,11 @@ class _GDPoptAlgorithm():
             finally:
                 self._get_final_pyomo_results_object()
                 self._log_termination_message(config.logger)
+                if self.algorithm == "LBB":
+                    config.logger.warning(
+                        "09/06/22: The GDPopt LBB algorithm currently has "
+                        "known issues. Please use the results with caution "
+                        "and report any bugs!")
                 if (self.pyomo_results.solver.termination_condition not in
                     {tc.infeasible, tc.unbounded}):
                     self._transfer_incumbent_to_original_model(config.logger)
