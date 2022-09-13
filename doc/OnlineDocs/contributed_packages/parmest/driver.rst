@@ -166,4 +166,4 @@ square instance of the problem prior to solving the parameter estimation problem
 
 2. Call :class:`~pyomo.contrib.parmest.parmest.Estimator.objective_at_theta` with optional argument ``(initialize_parmest_model=True)``. Different initial guess values for the fitted parameters can be provided using optional argument `theta_values` (**Pandas Dataframe**)
 
-4. Solve parameter estimation problem by calling :class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est`
+3. Solve parameter estimation problem by calling :class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est`
