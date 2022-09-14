@@ -17,7 +17,7 @@ from pyomo.core.base.component import _ComponentBase
 from pyomo.core import (
     Block, TraversalStrategy, SortComponents, LogicalConstraint)
 from pyomo.core.base.block import _BlockData
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
 from pyomo.opt import TerminationCondition, SolverStatus
 
 from weakref import ref as weakref_ref
@@ -85,34 +85,34 @@ def clone_without_expression_components(expr, substitute=None):
                                                 remove_named_expressions=True)
     return visitor.walk_expression(expr)
 
+
 class GDPTree:
     def __init__(self):
         self._adjacency_list = {}
-        self._in_degrees = defaultdict(lambda: 0)
+        self._in_degrees = {}
         # This needs to be ordered so that topological sort is deterministic
-        self._vertices = []
+        self._vertices = OrderedSet()
 
     @property
     def vertices(self):
         return self._vertices
 
     def add_node(self, u):
-        if u not in self._vertices:
-            self._vertices.append(u)
+        self._vertices.add(u)
 
     def _update_in_degree(self, v):
-        self._in_degrees[v] += 1
+        if v not in self._in_degrees:
+            self._in_degrees[v] = 1
+        else:
+            self._in_degrees[v] += 1
 
     def add_edge(self, u, v):
-        if u in self._adjacency_list:
-            self._adjacency_list[u].append(v)
-        else:
-            self._adjacency_list[u] = [v]
+        if u not in self._adjacency_list:
+            self._adjacency_list[u] = OrderedSet()
+        self._adjacency_list[u].add(v)
         self._update_in_degree(v)
-        if u not in self._vertices:
-            self._vertices.append(u)
-        if v not in self._vertices:
-            self._vertices.append(v)
+        self._vertices.add(u)
+        self._vertices.add(v)
 
     def _visit_vertex(self, u, leaf_to_root):
         if u in self._adjacency_list:
@@ -120,12 +120,12 @@ class GDPTree:
                 if v not in leaf_to_root:
                     self._visit_vertex(v, leaf_to_root)
         # we're done--we've been to all its children
-        leaf_to_root.append(u)
+        leaf_to_root.add(u)
 
     def _topological_sort(self):
         # this is reverse of the list we should return (but happens to be what
         # we want for hull and bigm)
-        leaf_to_root = []
+        leaf_to_root = OrderedSet()
         for u in self.vertices:
             if u not in leaf_to_root:
                 self._visit_vertex(u, leaf_to_root)
@@ -139,6 +139,8 @@ class GDPTree:
         return self._topological_sort()
 
     def in_degree(self, u):
+        if u not in self._in_degrees:
+            return 0
         return self._in_degrees[u]
 
 def _parent_disjunct(obj):
@@ -165,6 +167,8 @@ def _gather_disjunctions(block, gdp_tree):
             # might be a Block, in case it wouldn't get added below.)
             gdp_tree.add_node(disjunction)
             for disjunct in disjunction.disjuncts:
+                if not disjunct.active:
+                    continue
                 gdp_tree.add_edge(disjunction, disjunct)
                 to_explore.append(disjunct)
             if block.ctype is Disjunct:
@@ -181,25 +185,22 @@ def get_gdp_tree(targets, instance, knownBlocks):
             raise GDP_Error("Target '%s' is not a component on instance "
                             "'%s'!" % (t.name, instance.name))
         if t.ctype is Block or isinstance(t, _BlockData):
-            if t.is_indexed():
-                for block in t.values():
-                    gdp_tree = _gather_disjunctions(block, gdp_tree)
-            else:
-                gdp_tree = _gather_disjunctions(t, gdp_tree)
+            _blocks = t.values() if t.is_indexed() else (t,)
+            for block in _blocks:
+                if not block.active:
+                    continue
+                gdp_tree = _gather_disjunctions(block, gdp_tree)
         elif t.ctype is Disjunction:
             parent = _parent_disjunct(t)
             if parent is not None and parent in targets:
                 gdp_tree.add_edge(parent, t)
-            if t.is_indexed():
-                for disjunction in t.values():
-                    gdp_tree.add_node(disjunction)
-                    for disjunct in disjunction.disjuncts:
-                        gdp_tree.add_edge(disjunction, disjunct)
-                        gdp_tree = _gather_disjunctions(disjunct, gdp_tree)
-            else:
-                gdp_tree.add_node(t)
-                for disjunct in t.disjuncts:
-                    gdp_tree.add_edge(t, disjunct)
+            _disjunctions = t.values() if t.is_indexed() else (t,)
+            for disjunction in _disjunctions:
+                gdp_tree.add_node(disjunction)
+                for disjunct in disjunction.disjuncts:
+                    if not disjunct.active:
+                        continue
+                    gdp_tree.add_edge(disjunction, disjunct)
                     gdp_tree = _gather_disjunctions(disjunct, gdp_tree)
         else:
             # There's nothing else we care about, so we don't know how to

@@ -219,6 +219,38 @@ class TestMindtPy(unittest.TestCase):
                 self.assertAlmostEqual(
                     value(model.objective.expr), model.optimal_value, places=1)
                 self.check_optimal_solution(model)
+    
+    @unittest.skipUnless(SolverFactory('appsi_cplex').available(exception_flag=False), 
+                         "APPSI_CPLEX not available.")
+    def test_OA_APPSI_solver(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver='appsi_cplex',
+                                    nlp_solver=required_solvers[0]
+                                    )
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
+
+    @unittest.skipUnless(SolverFactory('appsi_ipopt').available(exception_flag=False), 
+                         "APPSI_IPOPT not available.")
+    def test_OA_APPSI_ipopt(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            for model in model_list:
+                results = opt.solve(model, strategy='OA',
+                                    mip_solver=required_solvers[1],
+                                    nlp_solver='appsi_ipopt'
+                                    )
+
+                self.assertIn(results.solver.termination_condition,
+                              [TerminationCondition.optimal, TerminationCondition.feasible])
+                self.assertAlmostEqual(
+                    value(model.objective.expr), model.optimal_value, places=1)
 
     def test_OA_integer_to_binary(self):
         """Test the outer approximation decomposition algorithm."""

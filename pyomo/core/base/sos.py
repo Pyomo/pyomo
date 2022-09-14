@@ -69,6 +69,9 @@ class _SOSConstraintData(ActiveComponentData):
     def num_variables(self):
         return len(self._variables)
 
+    def items(self):
+        return zip(self._variables, self._weights)
+
     @property
     def level(self):
         """
@@ -82,6 +85,13 @@ class _SOSConstraintData(ActiveComponentData):
             raise ValueError("SOS Constraint level must "
                              "be a positive integer")
         self._level = level
+
+    @property
+    def variables(self):
+        """
+        Return the variable list for the SOS constraint
+        """
+        return self._variables
 
     def get_variables(self):
         for val in self._variables:

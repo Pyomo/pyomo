@@ -27,11 +27,14 @@ import logging
 from pprint import pprint
 import math
 
+
 # Tolerances used in the code
 PARAM_IS_CERTAIN_REL_TOL = 1e-4
 PARAM_IS_CERTAIN_ABS_TOL = 0
 COEFF_MATCH_REL_TOL = 1e-6
 COEFF_MATCH_ABS_TOL = 0
+ABS_CON_CHECK_FEAS_TOL = 1e-5
+
 
 '''Code borrowed from gdpopt: time_code, get_main_ellapsed_time, a_logger.'''
 @contextmanager
