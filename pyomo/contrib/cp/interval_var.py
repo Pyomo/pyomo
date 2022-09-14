@@ -20,12 +20,12 @@ from pyomo.common.pyomo_typing import overload
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     BeforeExpression, AtExpression)
 
+from pyomo.core import Integers
+from pyomo.core.base import Any, ScalarVar, ScalarBooleanVar
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.initializer import BoundInitializer, Initializer
-from pyomo.core.base import ScalarVar, ScalarBooleanVar
-from pyomo.core import Integers
 
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set)
@@ -71,6 +71,8 @@ class IntervalVarPresence(ScalarBooleanVar):
 class IntervalVarData(_BlockData):
     """This class defines the abstract interface for a single interval variable.
     """
+    _Block_reserved_words = set()
+
     def __init__(self, component=None):
         _BlockData.__init__(self, component)
 
@@ -174,3 +176,5 @@ class ScalarIntervalVar(IntervalVarData, IntervalVar):
 
 class IndexedIntervalVar(IntervalVar):
     pass
+
+#IntervalVarData._Block_reserved_words = Any - set(dir(IntervalVar()))

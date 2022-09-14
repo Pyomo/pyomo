@@ -36,6 +36,13 @@ class TestScalarIntervalVar(unittest.TestCase):
 
         self.assertIsInstance(m.i.is_present, IntervalVarPresence)
 
+    # ESJ: TODO
+    # def test_add_components_that_dont_belong(self):
+    #     m = ConcreteModel()
+    #     m.i = IntervalVar
+
+    #     m.i.new_thing = IntervalVar()
+
     def test_start_and_end_bounds(self):
         m = ConcreteModel()
         m.i = IntervalVar(start=(0,5))
