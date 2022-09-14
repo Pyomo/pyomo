@@ -11,6 +11,7 @@
 
 from pyomo.contrib.cp.interval_var import IntervalVar, IntervalVarTimePoint
 from pyomo.core.expr.logical_expr import BooleanExpression
+from pyomo.core.pyomoobject import PyomoObject
 
 def _generate_sum_expression(_self, _other):
     # We check both because we call this function for the reverse operation as
@@ -41,7 +42,7 @@ def _generate_difference_expression(_self, _other):
         raise TypeError("Cannot subtract object of class %s from object of "
                         "class %s" % (_other.__class__, _self.__class__))
 
-class StepFunction(object):
+class StepFunction(PyomoObject):
     """
     The base class for the step function expression system.
     """
