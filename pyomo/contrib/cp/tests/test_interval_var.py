@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.cp import (
+from pyomo.contrib.cp.interval_var import (
     IntervalVar, IntervalVarTimePoint, IntervalVarLength, IntervalVarPresence)
 from pyomo.environ import ConcreteModel, Integers, Set, value
 

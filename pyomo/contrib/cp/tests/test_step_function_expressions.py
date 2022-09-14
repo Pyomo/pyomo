@@ -10,14 +10,11 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.cp import IntervalVar
-from pyomo.contrib.cp.scheduling_expr import Step, Pulse
+from pyomo.contrib.cp import IntervalVar, Step, Pulse
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
     AlwaysIn, CumulativeFunction, NegatedStepFunction)
 
 from pyomo.environ import ConcreteModel, LogicalConstraint
-
-from pytest import set_trace
 
 class CommonTests(unittest.TestCase):
     def get_model(self):

@@ -11,7 +11,8 @@
 
 import pyomo.common.unittest as unittest
 from pyomo.contrib.cp import IntervalVar
-from pyomo.contrib.cp.scheduling_expr import BeforeExpression, AtExpression
+from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
+    BeforeExpression, AtExpression)
 from pyomo.environ import ConcreteModel, LogicalConstraint
 
 class TestPrecedenceRelationships(unittest.TestCase):
