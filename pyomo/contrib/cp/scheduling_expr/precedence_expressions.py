@@ -26,7 +26,7 @@ class BeforeExpression(ExpressionBase, BooleanValue):
     """
 
     def __init__(self, before, after, delay):
-        self._args = (before, after)
+        self._args_ = (before, after)
         self._delay = delay
 
     def nargs(self):
@@ -37,16 +37,16 @@ class BeforeExpression(ExpressionBase, BooleanValue):
         before, after = result
         return before + delay <= after
 
-    def __str__(self):
+    def _to_string(self, values, verbose, smap):
         delay = self.delay
-        arg1 = self._args[0]
+        arg1 = values[0]
         if delay == 0:
             first = arg1
         elif delay > 0:
             first = "%s + %s" % (arg1, delay)
         else:
             first = "%s - %s" % (arg1, abs(delay))
-        return "%s %s %s" % (first, "<=", self._args[1])
+        return "%s %s %s" % (first, "<=", values[1])
 
     @property
     def delay(self):
@@ -59,7 +59,7 @@ class BeforeExpression(ExpressionBase, BooleanValue):
 
         Returns: Tuple containing the child nodes of this node
         """
-        return self._args
+        return self._args_
 
 class AtExpression(ExpressionBase, BooleanValue):
     """
@@ -74,7 +74,7 @@ class AtExpression(ExpressionBase, BooleanValue):
                second argument's value
     """
     def __init__(self, first, second, delay):
-        self._args = (first, second)
+        self._args_ = (first, second)
         self._delay = delay
 
     def nargs(self):
@@ -84,16 +84,16 @@ class AtExpression(ExpressionBase, BooleanValue):
         before, after = result
         return before + delay == after
 
-    def __str__(self):
+    def _to_string(self, values, verbose, smap):
         delay = self.delay
-        arg1 = self._args[0]
+        arg1 = values[0]
         if delay == 0:
             first = arg1
         elif delay > 0:
             first = "%s + %s" % (arg1, delay)
         else:
             first = "%s - %s" % (arg1, abs(delay))
-        return "%s %s %s" % (first, "==", self._args[1])
+        return "%s %s %s" % (first, "==", values[1])
 
     @property
     def delay(self):
@@ -106,4 +106,4 @@ class AtExpression(ExpressionBase, BooleanValue):
 
         Returns: Tuple containing the child nodes of this node
         """
-        return self._args
+        return self._args_
