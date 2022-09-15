@@ -177,7 +177,7 @@ class TestSumStepFunctions(CommonTests):
 
     def test_cannot_add_constant(self):
         m = self.get_model()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError,
                 "Cannot add object of class <class 'int'> to object of class "
                 "<class 'pyomo.contrib.cp.scheduling_expr."
@@ -186,7 +186,7 @@ class TestSumStepFunctions(CommonTests):
 
     def test_cannot_add_to_constant(self):
         m = self.get_model()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError,
                 "Cannot add object of class <class 'pyomo.contrib.cp."
                 "scheduling_expr.step_function_expressions.Step'> to object "
@@ -339,7 +339,7 @@ class TestSubtractStepFunctions(CommonTests):
 
     def test_cannot_subtract_constant(self):
         m = self.get_model()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError,
                 "Cannot subtract object of class <class 'int'> from object of "
                 "class <class 'pyomo.contrib.cp."
@@ -348,7 +348,7 @@ class TestSubtractStepFunctions(CommonTests):
 
     def test_cannot_subtract_from_constant(self):
         m = self.get_model()
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
                 TypeError,
                 "Cannot subtract object of class <class 'pyomo.contrib.cp."
                 "scheduling_expr.step_function_expressions.Step'> from object "
