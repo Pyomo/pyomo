@@ -411,7 +411,7 @@ class _slice_generator(object):
         from .indexed_component import normalize_index
 
         if self.component_iter is _NotIterable:
-            # Special case handling for "slices" rooted a concrete
+            # Special case handling for "slices" rooted at concrete
             # components.  We will replace the iterator with an "empty"
             # iterator so that the next call will raise StopIteration
             self.component_iter = iter(())
