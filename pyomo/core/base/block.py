@@ -1046,6 +1046,8 @@ class _BlockData(ActiveComponentData):
 
     @contextmanager
     def _declare_reserved_components(self):
+        # Temporarily mask the class reserved words like with a local
+        # instance attribute
         self._Block_reserved_words = ()
         yield
         del self._Block_reserved_words
