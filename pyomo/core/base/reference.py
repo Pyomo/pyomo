@@ -14,7 +14,10 @@ from pyomo.common.collections import (
     UserDict, OrderedDict, Mapping, MutableMapping,
     Set as collections_Set, Sequence,
 )
-from pyomo.core.base.set import SetOf, OrderedSetOf, _SetDataBase
+from pyomo.common.modeling import NOTSET
+from pyomo.core.base.set import (
+    SetOf, OrderedSetOf, _SetDataBase,
+)
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.global_set import (
     UnindexedComponent_set,
@@ -27,8 +30,6 @@ from pyomo.core.base.indexed_component_slice import (
 )
 from pyomo.core.base.util import flatten_tuple
 from pyomo.common.deprecation import deprecated
-
-_NotSpecified = object()
 
 _UnindexedComponent_key = list(UnindexedComponent_set)
 _UnindexedComponent_base_key = tuple(UnindexedComponent_set)
@@ -539,7 +540,7 @@ def _identify_wildcard_sets(iter_stack, index):
         #     Reference(m.c[:].v)
     return index
 
-def Reference(reference, ctype=_NotSpecified):
+def Reference(reference, ctype=NOTSET):
     """Creates a component that references other components
 
     ``Reference`` generates a *reference component*; that is, an indexed
@@ -673,7 +674,7 @@ def Reference(reference, ctype=_NotSpecified):
             "component, component slice, Sequence, or Mapping (received %s)"
             % (type(reference).__name__,))
 
-    if ctype is _NotSpecified:
+    if ctype is NOTSET:
         ctypes = set()
     else:
         # If the caller specified a ctype, then we will prepopulate the
@@ -724,7 +725,7 @@ def Reference(reference, ctype=_NotSpecified):
                 index = index * idx
             # index is now either a single Set, or a SetProduct of the
             # wildcard sets.
-    if ctype is _NotSpecified:
+    if ctype is NOTSET:
         if len(ctypes) == 1:
             ctype = ctypes.pop()
         else:
