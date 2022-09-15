@@ -17,7 +17,7 @@ from pyomo.common.collections import (
 from pyomo.core.base.set import SetOf, OrderedSetOf, _SetDataBase
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.global_set import (
-    UnindexedComponent_set, UnindexedComponent_index,
+    UnindexedComponent_set,
 )
 from pyomo.core.base.indexed_component import (
     IndexedComponent, normalize_index,
@@ -30,8 +30,8 @@ from pyomo.common.deprecation import deprecated
 
 _NotSpecified = object()
 
-_UnindexedComponent_key = [UnindexedComponent_index]
-_UnindexedComponent_base_key = (UnindexedComponent_index,)
+_UnindexedComponent_key = list(UnindexedComponent_set)
+_UnindexedComponent_base_key = tuple(UnindexedComponent_set)
 
 class _fill_in_known_wildcards(object):
     """Variant of "six.advance_iterator" that substitutes wildcard values
