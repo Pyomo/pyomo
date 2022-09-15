@@ -87,6 +87,20 @@ class StepFunction(PyomoObject):
     # TODO: do we need clone?
 
 class Pulse(StepFunction):
+    """
+    A step function specified by an IntervalVar and an integer height that
+    has value 0 before the IntervalVar's start_time and after the
+    IntervalVar's end time and that takes the value specified by the 'height'
+    during the IntervalVar. (These are often used to model resource
+    constraints.)
+
+    Args:
+        interval_var (IntervalVar): the interval variable over which the
+            pulse function is non-zero
+        height (int): The value of the pulse function during the time
+            interval_var is scheduled
+    """
+
     __slots__ = ('_args_', '_interval_var', '_height')
     def __init__(self, interval_var, height):
         self._args_ = [self]
@@ -117,6 +131,17 @@ class Pulse(StepFunction):
 
 
 class Step(StepFunction):
+    """
+    A step function specified by a time point and an integer height that
+    has value 0 before the time point and takes the value specified by the
+    'height' after the time point.
+
+    Args:
+        time (IntervalVarTimePoint or int): the time point at which the step
+            function becomes non-zero
+        height (int): The value of the step function after the time point
+    """
+
     __slots__ = ('_args_', '_time', '_height')
     def __init__(self, time, height):
         self._args_ = [self]
@@ -148,6 +173,13 @@ class Step(StepFunction):
 
 
 class CumulativeFunction(StepFunction):
+    """
+    A sum of elementary step functions (Pulse and Step), defining a step
+    function over time. (Often used to model resource constraints.)
+
+    Args:
+        args (list or tuple): Child elementary step functions of this node
+    """
     def __init__(self, args, nargs=None):
         self._args_ = args
         if nargs is None:
@@ -157,7 +189,7 @@ class CumulativeFunction(StepFunction):
 
     def nargs(self):
         return self._nargs
-        
+
     def __str__(self):
         s = ""
         for i, arg in enumerate(self.args):
@@ -167,18 +199,40 @@ class CumulativeFunction(StepFunction):
                 s += "+ %s "[2*(i == 0):] % str(arg)
         return s[:-1]
 
+
 class NegatedStepFunction(StepFunction):
+    """
+    The negated form of an elementary step function: That is, it represents
+    subtracting the elementary function's (nonnegative) height rather than
+    adding it.
+
+    Args:
+       arg (Step or Pulse): Child elementary step function of this node
+    """
     def __init__(self, arg):
         self._args_ = [arg]
 
     def nargs(self):
         return 1
-        
+
     def __str__(self):
         return "- %s" % str(self._args_[0])
 
 
 class AlwaysIn(BooleanExpression):
+    """
+    An expression representing the constraint that a cumulative function is
+    required to take values within a tuple of bounds over a specified time
+    interval. (Often used to enforce limits on resource availability.)
+
+    Args:
+        cumul_func (CumulativeFunction): Step function being constrained
+        bounds (tuple of two integers): Lower and upper bounds to enforce on
+            the cumulative function
+        times (tuple of two integers): The time interval (start, end) over
+            which to enforce the bounds on the values of the cumulative
+            function.
+    """
     def __init__(self, cumul_func, bounds, times):
         self._args_ = (cumul_func, bounds, times)
 

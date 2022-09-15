@@ -47,7 +47,7 @@ class IntervalVarTimePoint(ScalarVar):
 
 class IntervalVarLength(ScalarVar):
     """This class defines the abstract interface for a single variable
-    denoting a start or end time point of an IntervalVar"""
+    denoting the length of an IntervalVar"""
 
     __slots__ = ('_before', '_after', '_at')
 
@@ -56,8 +56,8 @@ class IntervalVarLength(ScalarVar):
 
 
 class IntervalVarPresence(ScalarBooleanVar):
-    """This class defines the abstract interface for a single variable
-    denoting a start or end time point of an IntervalVar"""
+    """This class defines the abstract interface for a single Boolean variable
+    denoting whether or not an IntervalVar is scheduled"""
     def __init__(self, component=None):
         super().__init__(ctype = IntervalVarPresence)
 
