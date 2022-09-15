@@ -321,8 +321,9 @@ class _DisjunctData(_BlockData):
 
     def __init__(self, component):
         _BlockData.__init__(self, component)
-        self.indicator_var = AutoLinkedBooleanVar()
-        self.binary_indicator_var = AutoLinkedBinaryVar(self.indicator_var)
+        with self._declare_reserved_components():
+            self.indicator_var = AutoLinkedBooleanVar()
+            self.binary_indicator_var = AutoLinkedBinaryVar(self.indicator_var)
         self.indicator_var.associate_binary_var(self.binary_indicator_var)
         # pointer to transformation block if this disjunct has been
         # transformed. None indicates it hasn't been transformed.
