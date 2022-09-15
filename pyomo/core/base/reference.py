@@ -30,6 +30,8 @@ from pyomo.common.deprecation import deprecated
 
 _NotSpecified = object()
 
+_UnindexedComponent_key = [UnindexedComponent_index]
+_UnindexedComponent_base_key = (UnindexedComponent_index,)
 
 class _fill_in_known_wildcards(object):
     """Variant of "six.advance_iterator" that substitutes wildcard values
@@ -162,8 +164,8 @@ class _fill_in_known_wildcards(object):
     def check_complete(self):
         if not self.key:
             return
-        if (self.key == [UnindexedComponent_index] and
-            self.base_key == (UnindexedComponent_index,)):
+        if (self.key == _UnindexedComponent_key and
+            self.base_key == _UnindexedComponent_base_key):
             return
         raise KeyError("Extra (unused) values for slice index %s"
                        % ( self.base_key, ))
