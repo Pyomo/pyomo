@@ -53,9 +53,11 @@ class StepFunction(PyomoObject):
     def __add__(self, other):
         return _generate_sum_expression(self, other)
 
-    # TODO: Do I really need to implement this, because everyone they could be
-    # added to implements add.
     def __radd__(self, other):
+        # Mathematically this doesn't make a whole lot of sense, but we'll call
+        # 0 a function and be happy so that sum() works as expected.
+        if other == 0:
+            return self
         return _generate_sum_expression(other, self)
 
     def __iadd__(self, other):
@@ -64,8 +66,6 @@ class StepFunction(PyomoObject):
     def __sub__(self, other):
         return _generate_difference_expression(self, other)
 
-    # TODO: same question as above, everyone that could subtract them implements
-    # subtract.
     def __rsub__(self, other):
         return _generate_difference_expression(other, self)
 

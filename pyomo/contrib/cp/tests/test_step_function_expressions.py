@@ -207,6 +207,17 @@ class TestSumStepFunctions(CommonTests):
                 "of class <class 'int'>"):
             expr = 4 + Step(m.a.start_time, height=6)
 
+    def test_python_sum_funct(self):
+        # We allow adding to 0 so that sum() works as expected
+        m = self.get_model()
+        expr = sum(Pulse(m.c[i], height=1) for i in [1,2])
+
+        self.assertIsInstance(expr, CumulativeFunction)
+        self.assertEqual(len(expr.args), 2)
+        self.assertEqual(expr.nargs(), 2)
+        self.assertIsInstance(expr.args[0], Pulse)
+        self.assertIsInstance(expr.args[1], Pulse)
+
 class TestSubtractStepFunctions(CommonTests):
     def test_subtract_two_steps(self):
         m = self.get_model()
