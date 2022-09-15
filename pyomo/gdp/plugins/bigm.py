@@ -22,7 +22,7 @@ from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, value, RangeSet,
-    NonNegativeIntegers, LogicalConstraint, Binary, )
+    NonNegativeIntegers, Binary, )
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.core.base.external import ExternalFunction
@@ -252,9 +252,17 @@ class BigM_Transformation(Transformation):
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
         # the list.
-        targets = preprocess_targets(targets, instance, knownBlocks)
+        preprocessed_targets = preprocess_targets(targets, instance,
+                                                  knownBlocks)
 
-        for t in targets:
+        # transform any logical constraints that might be anywhere on the stuff
+        # we're about to transform.
+        TransformationFactory('core.logical_to_linear').apply_to(
+            instance,
+            targets=[blk for blk in targets if blk.ctype is Block] +
+            [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
+
+        for t in preprocessed_targets:
             if t.ctype is Disjunction:
                 if t.is_indexed():
                     self._transform_disjunction(t, bigM)
@@ -282,10 +290,6 @@ class BigM_Transformation(Transformation):
                         warning_msg += "\t%s\n" % component
                 logger.warning(warning_msg)
 
-        # at the end, transform any logical constraints that might be on
-        # instance
-        TransformationFactory('core.logical_to_linear').apply_to(instance)
-
     def _add_transformation_block(self, instance):
         # make a transformation block on instance to put transformed disjuncts
         # on
@@ -312,8 +316,6 @@ class BigM_Transformation(Transformation):
                 descend_into=(Block, Disjunct),
                 descent_order=TraversalStrategy.PostfixDFS):
             self._transform_disjunction(disjunction, bigM)
-        # transform any logical constraints
-        TransformationFactory('core.logical_to_linear').apply_to(obj)
 
     def _add_xor_constraint(self, disjunction, transBlock):
         # Put the disjunction constraint on the transformation block and
@@ -503,10 +505,6 @@ class BigM_Transformation(Transformation):
             self._transfer_transBlock_data(transBlock, destinationBlock)
             # we leave the transformation block because it still has the XOR
             # constraints, which we want to be on the parent disjunct.
-
-        # Transform any logical constraints here. We need to do this before we
-        # create the variable references!
-        TransformationFactory('core.logical_to_linear').apply_to(block)
 
         # We don't know where all the BooleanVars are used, so if there are any
         # that the above transformation didn't transform, we need to do it now,
@@ -1004,3 +1002,36 @@ class BigM_Transformation(Transformation):
         # fails... (That is, it's a bug in the mapping.)
         lower, upper = transBlock.bigm_src[constraint]
         return (lower[0], upper[0])
+
+    def get_all_M_values_by_constraint(self, model):
+        """Returns a dictionary mapping each constraint to a tuple:
+        (lower_M_value, upper_M_value), where either can be None if the
+        constraint does not have a lower or upper bound (respectively).
+
+        Parameters
+        ----------
+        model: A GDP model that has been transformed with BigM
+        """
+        m_values = {}
+        for disj in model.component_data_objects(
+                Disjunct,
+                active=None,
+                descend_into=(Block, Disjunct)):
+            # First check if it was transformed at all.
+            if disj.transformation_block is not None:
+                transBlock = disj.transformation_block()
+                # If it was transformed with BigM, we get the M values.
+                if hasattr(transBlock, 'bigm_src'):
+                    for cons in transBlock.bigm_src:
+                        m_values[cons] = self.get_M_value(cons)
+        return m_values
+
+    def get_largest_M_value(self, model):
+        """Returns the largest M value for any constraint on the model.
+
+        Parameters
+        ----------
+        model: A GDP model that has been transformed with BigM
+        """
+        return max(max(abs(m) for m in m_values if m is not None) for m_values
+                   in self.get_all_M_values_by_constraint(model).values())
