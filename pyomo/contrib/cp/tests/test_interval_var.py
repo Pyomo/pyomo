@@ -36,12 +36,15 @@ class TestScalarIntervalVar(unittest.TestCase):
 
         self.assertIsInstance(m.i.is_present, IntervalVarPresence)
 
-    # ESJ: TODO
-    # def test_add_components_that_dont_belong(self):
-    #     m = ConcreteModel()
-    #     m.i = IntervalVar
+    def test_add_components_that_do_not_belong(self):
+        m = ConcreteModel()
+        m.i = IntervalVar()
 
-    #     m.i.new_thing = IntervalVar()
+        with self.assertRaisesRegex(
+                ValueError,
+                "Attempting to declare a block component using the name of a "
+                "reserved attribute:\n\tnew_thing"):
+            m.i.new_thing = IntervalVar()
 
     def test_start_and_end_bounds(self):
         m = ConcreteModel()

@@ -9,12 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
-# pulse
-# always_in: (sum of pulses).within(Set) and use get_interval() on the set for error checking. (returns (start, end, step_length)). within will be defined on the root node of the expression tree that is the sum of pulses (they should support + and -)
-
-# element
-
 from pyomo.common.collections import ComponentSet
 from pyomo.common.pyomo_typing import overload
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
@@ -71,15 +65,17 @@ class IntervalVarPresence(ScalarBooleanVar):
 class IntervalVarData(_BlockData):
     """This class defines the abstract interface for a single interval variable.
     """
-    _Block_reserved_words = set()
+    # We will put our four variables on this, and everything else is off limits.
+    _Block_reserved_words = Any
 
     def __init__(self, component=None):
         _BlockData.__init__(self, component)
 
-        self.is_present = IntervalVarPresence()
-        self.start_time = IntervalVarTimePoint()
-        self.end_time = IntervalVarTimePoint()
-        self.length = IntervalVarLength()
+        with self._declare_reserved_components():
+            self.is_present = IntervalVarPresence()
+            self.start_time = IntervalVarTimePoint()
+            self.end_time = IntervalVarTimePoint()
+            self.length = IntervalVarLength()
 
     @property
     def optional(self):
@@ -177,4 +173,3 @@ class ScalarIntervalVar(IntervalVarData, IntervalVar):
 class IndexedIntervalVar(IntervalVar):
     pass
 
-#IntervalVarData._Block_reserved_words = Any - set(dir(IntervalVar()))
