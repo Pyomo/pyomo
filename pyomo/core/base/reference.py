@@ -16,7 +16,7 @@ from pyomo.common.collections import (
 )
 from pyomo.common.modeling import NOTSET
 from pyomo.core.base.set import (
-    SetOf, OrderedSetOf, _SetDataBase,
+    DeclareGlobalSet, Set, SetOf, OrderedSetOf, _SetDataBase,
 )
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.global_set import (
@@ -33,6 +33,14 @@ from pyomo.common.deprecation import deprecated
 
 _UnindexedComponent_key = list(UnindexedComponent_set)
 _UnindexedComponent_base_key = tuple(UnindexedComponent_set)
+
+DeclareGlobalSet(Set(
+    initialize=UnindexedComponent_set,
+    name='UnindexedComponent_ReferenceSet',
+    doc='An indexing set used by references to unindexed (scalar) '
+    'components that is equivalent to but NOT the UnindexedComponent_set',
+), globals())
+
 
 class _fill_in_known_wildcards(object):
     """Variant of "six.advance_iterator" that substitutes wildcard values
@@ -641,32 +649,41 @@ def Reference(reference, ctype=NOTSET):
     """
     referent = reference
     if isinstance(reference, IndexedComponent_slice):
-        _data = _ReferenceDict(reference)
-        _iter = iter(reference)
         slice_idx = []
         index = None
+        _data = _ReferenceDict(reference)
+        _iter = iter(reference)
     elif isinstance(reference, Component):
+        slice_idx = None
+        if reference.is_indexed():
+            index = reference.index_set()
+        else:
+            index = UnindexedComponent_ReferenceSet
+        if ctype is NOTSET:
+            ctype = reference.ctype
         reference = reference[...]
         _data = _ReferenceDict(reference)
-        _iter = iter(reference)
-        slice_idx = []
-        index = None
+        # index and ctype are now set; no need to iterate over the slice
+        _iter = ()
     elif isinstance(reference, ComponentData):
+        slice_idx = None
+        index = UnindexedComponent_ReferenceSet
+        if ctype is NOTSET:
+            ctype = reference.ctype
         reference = IndexedComponent_slice(reference.parent_component())[
             reference.index()]
         _data = _ReferenceDict(reference)
-        _iter = iter(reference)
-        slice_idx = []
-        index = SetOf(UnindexedComponent_set)
+        # index and ctype are now set; no need to iterate over the slice
+        _iter = ()
     elif isinstance(reference, Mapping):
+        slice_idx = None
         _data = _ReferenceDict_mapping(dict(reference))
         _iter = _data.values()
-        slice_idx = None
         index = SetOf(_data)
     elif isinstance(reference, Sequence):
+        slice_idx = None
         _data = _ReferenceDict_mapping(OrderedDict(enumerate(reference)))
         _iter = _data.values()
-        slice_idx = None
         index = OrderedSetOf(_data)
     else:
         raise TypeError(
@@ -677,12 +694,17 @@ def Reference(reference, ctype=NOTSET):
     if ctype is NOTSET:
         ctypes = set()
     else:
-        # If the caller specified a ctype, then we will prepopulate the
-        # list to improve our chances of avoiding a scan of the entire
-        # Reference (by simulating multiple ctypes having been found, we
-        # can break out as soon as we know that there are not common
-        # subsets).
-        ctypes = set((1,2))
+        if slice_idx is None:
+            # We know the ctype and that there cannot be common subsets.
+            # We don't need to iterate over the slice at all:
+            _iter = ()
+        else:
+            # If the caller specified a ctype, then we will prepopulate
+            # the list to improve our chances of avoiding a scan of the
+            # entire Reference (by simulating multiple ctypes having
+            # been found, we can break out as soon as we know that there
+            # are not common subsets).
+            ctypes = set((1,2))
 
     for obj in _iter:
         ctypes.add(obj.ctype)
