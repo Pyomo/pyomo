@@ -21,10 +21,11 @@ class CommonTests(unittest.TestCase):
         m = ConcreteModel()
         m.a = IntervalVar()
         m.b = IntervalVar()
+        m.c = IntervalVar([1,2])
 
         return m
 
-class TestPulse(unittest.TestCase):
+class TestPulse(CommonTests):
     def test_bad_interval_var(self):
         with self.assertRaisesRegex(
                 TypeError,
@@ -32,6 +33,19 @@ class TestPulse(unittest.TestCase):
                 "be an 'IntervalVar'.\n"
                 "Received: <class 'float'>"):
             thing = Pulse(1.2, height=4)
+
+    def test_create_pulse_with_scalar_interval_var(self):
+        m = self.get_model()
+        p = Pulse(m.a, 1)
+
+        self.assertIsInstance(p, Pulse)
+        self.assertEqual(str(p), "Pulse(a, height=1)")
+
+    def test_create_pulse_with_interval_var_data(self):
+        m = self.get_model()
+        p = Pulse(m.c[2], 2)
+        self.assertIsInstance(p, Pulse)
+        self.assertEqual(str(p), "Pulse(c[2], height=2)")
 
 class TestStep(CommonTests):
     def test_bad_time_point(self):

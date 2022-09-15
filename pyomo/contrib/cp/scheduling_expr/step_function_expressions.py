@@ -9,7 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.contrib.cp.interval_var import IntervalVar, IntervalVarTimePoint
+from pyomo.contrib.cp.interval_var import (
+    IntervalVar, IntervalVarData, IntervalVarTimePoint)
+from pyomo.core.base.component import Component
 from pyomo.core.expr.logical_expr import BooleanExpression
 from pyomo.core.pyomoobject import PyomoObject
 
@@ -89,7 +91,8 @@ class Pulse(StepFunction):
     def __init__(self, interval_var, height):
         self._args_ = [self]
 
-        if not isinstance(interval_var, IntervalVar):
+        if not isinstance(interval_var, IntervalVarData) or \
+           interval_var.ctype is not IntervalVar:
             raise TypeError("The 'interval_var' argument for a 'Pulse' must "
                             "be an 'IntervalVar'.\n"
                             "Received: %s" % type(interval_var))
