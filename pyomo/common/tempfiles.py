@@ -24,6 +24,7 @@ import shutil
 import weakref
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.common.errors import TempfileContextError
+from pyomo.common.multithread import MultiThreadWrapperWithMain
 try:
     from pyutilib.component.config.tempfiles import (
         TempfileManager as pyutilib_mngr
@@ -428,6 +429,8 @@ class TempfileContext:
             return self.tempdir
         elif self.manager().tempdir is not None:
             return self.manager().tempdir
+        elif TempfileManager.main_thread.tempdir is not None:
+            return TempfileManager.main_thread.tempdir
         elif pyutilib_mngr is not None and pyutilib_mngr.tempdir is not None:
             deprecation_warning(
                 "The use of the PyUtilib TempfileManager.tempdir "
@@ -467,5 +470,6 @@ class TempfileContext:
             name,
             ignore_errors=not deletion_errors_are_fatal)
 
+
 # The global Pyomo TempfileManager instance
-TempfileManager = TempfileManagerClass()
+TempfileManager: TempfileManagerClass = MultiThreadWrapperWithMain(TempfileManagerClass)
