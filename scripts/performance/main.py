@@ -251,6 +251,7 @@ def main(argv):
         if close_ostream:
             ostream.close()
     print("Performance run complete.")
+    return results
 
 if __name__ == '__main__':
-    main(sys.argv)
+    results = main(sys.argv)
