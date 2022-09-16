@@ -18,6 +18,7 @@ import logging
 import sys
 import weakref
 import textwrap
+from contextlib import contextmanager
 
 from inspect import isclass
 from itertools import filterfalse
@@ -882,30 +883,45 @@ class _BlockData(ActiveComponentData):
                 p_block = p_block.parent_block()
             # record the components and the non-component objects added
             # to the block
-            src_comp_map = src.component_map()
-            src_raw_dict = {k:v for k,v in src.__dict__.items()
-                            if k not in src_comp_map}
+            src_comp_map = dict(src.component_map().items())
+            src_raw_dict = src.__dict__
+            del_src_comp = src.del_component
         elif isinstance(src, Mapping):
-            src_comp_map = {}
+            src_comp_map = {k: v for k, v in src.items()
+                            if isinstance(v, Component)}
             src_raw_dict = src
+            del_src_comp = lambda x: None
         else:
             raise ValueError(
                 "_BlockData.transfer_attributes_from(): expected a "
                 "Block or dict; received %s" % (type(src).__name__,))
 
+        if src_comp_map:
+            # Filter out any components from src
+            src_raw_dict = {k: v for k, v in src_raw_dict.items()
+                            if k not in src_comp_map}
+
         # Use component_map for the components to preserve decl_order
-        for k,v in src_comp_map.items():
-            if k in self._decl:
-                self.del_component(k)
-            src.del_component(k)
-            self.add_component(k,v)
+        # Note that we will move any reserved components over as well as
+        # any user-defined components.  There is a bit of trust here
+        # that the user knows what they are doing.
+        with self._declare_reserved_components():
+            for k,v in src_comp_map.items():
+                if k in self._decl:
+                    self.del_component(k)
+                del_src_comp(k)
+                self.add_component(k,v)
         # Because Blocks are not slotized and we allow the
         # assignment of arbitrary data to Blocks, we will move over
         # any other unrecognized entries in the object's __dict__:
-        for k in sorted(src_raw_dict.keys()):
-            if k not in self._Block_reserved_words or not hasattr(self, k) \
-               or k in self._decl:
-                setattr(self, k, src_raw_dict[k])
+        for k, v in src_raw_dict.items():
+            if ( k not in self._Block_reserved_words # user-defined
+                 or not hasattr(self, k) # reserved, but not present
+                 or k in self._decl # reserved, but a component and the
+                                    # incoming thing is data (attempt to
+                                    # set the value)
+            ):
+                setattr(self, k, v)
 
     def _add_implicit_sets(self, val):
         """TODO: This method has known issues (see tickets) and needs to be
@@ -1028,6 +1044,14 @@ class _BlockData(ActiveComponentData):
             cuid = ComponentUID(label_or_component)
         return cuid.find_component_on(self)
 
+    @contextmanager
+    def _declare_reserved_components(self):
+        # Temporarily mask the class reserved words like with a local
+        # instance attribute
+        self._Block_reserved_words = ()
+        yield
+        del self._Block_reserved_words
+
     def add_component(self, name, val):
         """
         Add a component 'name' to the block.
@@ -1040,7 +1064,7 @@ class _BlockData(ActiveComponentData):
         if not val.valid_model_component():
             raise RuntimeError(
                 "Cannot add '%s' as a component to a block" % str(type(val)))
-        if name in self._Block_reserved_words and hasattr(self, name):
+        if name in self._Block_reserved_words:
             raise ValueError("Attempting to declare a block component using "
                              "the name of a reserved attribute:\n\t%s"
                              % (name,))
@@ -1240,6 +1264,10 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         #    return
 
         name = obj.local_name
+        if name in self._Block_reserved_words:
+            raise ValueError(
+                "Attempting to delete a reserved block component:\n\t%s"
+                % (obj.name,))
 
         # Replace the component in the master list with a None placeholder
         idx = self._decl[name]
@@ -2303,7 +2331,7 @@ def components_data(block, ctype,
 
 #
 # Create a Block and record all the default attributes, methods, etc.
-# These will be assumes to be the set of illegal component names.
+# These will be assumed to be the set of illegal component names.
 #
 _BlockData._Block_reserved_words = set(dir(Block()))
 
