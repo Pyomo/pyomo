@@ -625,7 +625,7 @@ class _SetData(_SetDataBase):
                 start, end, c = ranges[0].normalize_bounds()
             except AttributeError:
                 # Catching Any, NonNumericRange, etc...
-                return (None, None, None,)
+                return self.bounds() + (None,)
             return (
                 None if start == -_inf else start,
                 None if end == _inf else end,
