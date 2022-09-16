@@ -212,12 +212,14 @@ def main(argv):
     )
 
     options, argv = parser.parse_known_args(argv)
-    if not options.projects:
+    if options.projects:
+        # Pytest really, really wants the initial script to belong to the
+        # "main" project being tested.  Just re-assign it to the main
+        # project module (which seems to be enough for pytest)
+        argv[0] = options.projects[0]
+    else:
         options.projects.append('pyomo')
-    # Pytest really, really wants the initial script to belong to the
-    # "main" project being tested.  Just re-assign it to the main
-    # project module (which seems to be enough for pytest)
-    argv[0] = options.projects[0]
+
     argv.append('-W ignore::Warning')
 
     results = tuple(run_tests(options, argv) for i in range(options.replicates))
