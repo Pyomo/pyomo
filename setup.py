@@ -209,6 +209,7 @@ setup_kwargs = dict(
     ],
     extras_require = {
         'tests': [
+            #'codecov', # useful for testing infrastructures, but not required
             'coverage',
             'pytest',
             'pytest-parallel',

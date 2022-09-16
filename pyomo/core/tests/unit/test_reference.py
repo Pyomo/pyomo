@@ -460,6 +460,7 @@ class TestReference(unittest.TestCase):
         self.assertIs(m.y.index_set(), m.y_index)
         self.assertIs(type(m.r.index_set()), OrderedSetOf)
         self.assertEqual(len(m.r), 1)
+        self.assertTrue(m.r.is_reference())
         self.assertTrue(m.r.is_indexed())
         self.assertIn(None, m.r)
         self.assertNotIn(1, m.r)
@@ -472,16 +473,25 @@ class TestReference(unittest.TestCase):
         m.b = Block()
         m.b.x = Var([1,2])
         m.c = Block()
-        m.c.r = Reference(m.b.x[2])
+        m.c.r1 = Reference(m.b.x[2])
+        m.c.r2 = Reference(m.b.x)
 
-        self.assertIs(m.c.r[None], m.b.x[2])
+        self.assertIs(m.c.r1[None], m.b.x[2])
         m.d = m.c.clone()
-        self.assertIs(m.d.r[None], m.b.x[2])
+        self.assertIs(m.d.r1[None], m.b.x[2])
+        self.assertIs(m.d.r2[1], m.b.x[1])
+        self.assertIs(m.d.r2[2], m.b.x[2])
 
         i = m.clone()
-        self.assertIs(i.c.r[None], i.b.x[2])
-        self.assertIsNot(i.c.r[None], m.b.x[2])
-        self.assertIs(i.d.r[None], i.b.x[2])
+        self.assertIs(i.c.r1[None], i.b.x[2])
+        self.assertIs(i.c.r2[1], i.b.x[1])
+        self.assertIs(i.c.r2[2], i.b.x[2])
+        self.assertIsNot(i.c.r1[None], m.b.x[2])
+        self.assertIsNot(i.c.r2[1], m.b.x[1])
+        self.assertIsNot(i.c.r2[2], m.b.x[2])
+        self.assertIs(i.d.r1[None], i.b.x[2])
+        self.assertIs(i.d.r2[1], i.b.x[1])
+        self.assertIs(i.d.r2[2], i.b.x[2])
 
 
     def test_reference_var_pprint(self):
@@ -910,12 +920,15 @@ class TestReference(unittest.TestCase):
 
         m.ref0 = Reference(m.v0)
         m.ref1 = Reference(m.v1)
+        m.ref2 = Reference(m.v1[2])
 
         self.assertFalse(m.v0.is_reference())
         self.assertFalse(m.v1.is_reference())
+        self.assertFalse(m.v1[2].is_reference())
 
         self.assertTrue(m.ref0.is_reference())
         self.assertTrue(m.ref1.is_reference())
+        self.assertTrue(m.ref2.is_reference())
 
         unique_vars = list(
                 v for v in m.component_objects(Var) if not v.is_reference())

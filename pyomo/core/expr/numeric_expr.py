@@ -1053,14 +1053,6 @@ class SumExpression(SumExpressionBase):
         #
         return False
 
-    def is_potentially_variable(self):
-        for v in islice(self._args_, self._nargs):
-            if v.__class__ in nonpyomo_leaf_types:
-                continue
-            if v.is_variable_type() or v.is_potentially_variable():
-                return True
-        return False
-
     def _to_string(self, values, verbose, smap, compute_values):
         if verbose:
             tmp = [values[0]]
@@ -1352,6 +1344,11 @@ class LinearExpression(ExpressionBase):
     @_args_.setter
     def _args_(self, value):
         self._args_cache_ = list(value)
+        if not self._args_cache_:
+            self.constant = 0
+            self.linear_coefs = []
+            self.linear_vars = []
+            return
         if self._args_cache_[0].__class__ is not MonomialTermExpression:
             self.constant = value[0]
             first_var = 1

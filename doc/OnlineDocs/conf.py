@@ -245,6 +245,14 @@ class IgnoreResultOutputChecker(doctest.OutputChecker):
 doctest.OutputChecker = IgnoreResultOutputChecker
 
 doctest_global_setup = '''
+import os, platform, sys
+on_github_actions = bool(os.environ.get('GITHUB_ACTIONS', ''))
+system_info = (
+    sys.platform,
+    platform.machine(),
+    platform.python_implementation()
+)
+
 from pyomo.common.dependencies import (
     attempt_import, numpy_available, scipy_available, pandas_available,
     yaml_available, networkx_available, matplotlib_available,
@@ -253,26 +261,30 @@ from pyomo.common.dependencies import (
 pint_available = attempt_import('pint', defer_check=False)[1]
 from pyomo.contrib.parmest.parmest import parmest_available
 
-import pyomo.opt
+import pyomo.environ as _pe # (trigger all plugin registrations)
+import pyomo.opt as _opt
+
 # Not using SolverFactory to check solver availability because
 # as of June 2020 there is no way to supress warnings when 
 # solvers are not available
-ipopt_available = bool(pyomo.opt.check_available_solvers('ipopt'))
-sipopt_available = bool(pyomo.opt.check_available_solvers('ipopt_sens'))
-k_aug_available = bool(pyomo.opt.check_available_solvers('k_aug'))
-dot_sens_available = bool(pyomo.opt.check_available_solvers('dot_sens'))
-baron_available = bool(pyomo.opt.check_available_solvers('baron'))
-glpk_available = bool(pyomo.opt.check_available_solvers('glpk'))
-baron = pyomo.opt.SolverFactory('baron')
-gurobipy_available = bool(pyomo.opt.check_available_solvers('gurobi_direct'))
+ipopt_available = bool(_opt.check_available_solvers('ipopt'))
+sipopt_available = bool(_opt.check_available_solvers('ipopt_sens'))
+k_aug_available = bool(_opt.check_available_solvers('k_aug'))
+dot_sens_available = bool(_opt.check_available_solvers('dot_sens'))
+baron_available = bool(_opt.check_available_solvers('baron'))
+glpk_available = bool(_opt.check_available_solvers('glpk'))
+gurobipy_available = bool(_opt.check_available_solvers('gurobi_direct'))
+
+baron = _opt.SolverFactory('baron')
+
 if numpy_available and scipy_available:
-    from pyomo.contrib.pynumero.asl import AmplInterface
-    asl_available = AmplInterface.available()
+    import pyomo.contrib.pynumero.asl as _asl
+    asl_available = _asl.AmplInterface.available()
+    import pyomo.contrib.pynumero.linalg.ma27 as _ma27
+    ma27_available = _ma27.MA27Interface.available()
     from pyomo.contrib.pynumero.linalg.mumps_interface import mumps_available
-    from pyomo.contrib.pynumero.linalg.ma27 import MA27Interface
-    ma27_available = MA27Interface.available()
 else:
     asl_available = False
-    mumps_available = False
     ma27_available = False
+    mumps_available = False
 '''
