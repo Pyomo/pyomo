@@ -648,6 +648,13 @@ def Reference(reference, ctype=NOTSET):
 
     """
     referent = reference
+    #
+    # Before constructing the reference object that we will return,
+    # we need to know its index set, its ctype, and its _data
+    # dict. The following if statement sets the _data dict
+    # for all possible input types and sets up data structures
+    # necessary to determine the index set and ctype.
+    #
     if isinstance(reference, IndexedComponent_slice):
         slice_idx = []
         index = None
@@ -695,18 +702,28 @@ def Reference(reference, ctype=NOTSET):
         ctypes = set()
     else:
         if slice_idx is None:
-            # We know the ctype and that there cannot be common subsets.
-            # We don't need to iterate over the slice at all:
+            # A slice was not provided. We know the ctype and that there
+            # cannot be common subsets (because a slice was not provided).
+            # We don't need to iterate over the data objects at all.
+            # Note that this is redundant for Component and ComponentData
+            # inputs, as _iter was already empty.
             _iter = ()
         else:
             # If the caller specified a ctype, then we will prepopulate
             # the list to improve our chances of avoiding a scan of the
             # entire Reference (by simulating multiple ctypes having
             # been found, we can break out as soon as we know that there
-            # are not common subsets).
+            # are not common subsets by forcing the len(ctypes) > 1 check
+            # to return True).
             ctypes = set((1,2))
 
     for obj in _iter:
+        #
+        # We were provided a collection of ComponentData, either via
+        # a slice, sequence, or mapping. Now we iterate over these
+        # objects to attempt to infer both the ctype and, if a slice
+        # was provided, the index_set (determined by slice_index).
+        #
         ctypes.add(obj.ctype)
         if not isinstance(obj, ComponentData):
             # This object is not a ComponentData (likely it is a pure
@@ -730,6 +747,12 @@ def Reference(reference, ctype=NOTSET):
             break
 
     if index is None:
+        #
+        # index is None, i.e. a slice was provided. If a slice index
+        # has been identified (by all slice members having the same
+        # "wildcard sets"), use this to construct an indexing set.
+        # Otherwise, use a _ReferenceSet.
+        #
         if not slice_idx:
             index = SetOf(_ReferenceSet(reference))
         else:
@@ -749,6 +772,8 @@ def Reference(reference, ctype=NOTSET):
             # wildcard sets.
     if ctype is NOTSET:
         if len(ctypes) == 1:
+            # If ctype is not set and only one ctype was identified above,
+            # use this ctype.
             ctype = ctypes.pop()
         else:
             ctype = IndexedComponent
