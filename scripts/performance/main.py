@@ -62,7 +62,7 @@ class TimingHandler(logging.Handler):
             name = record.msg.name
             val = record.msg.timer
         except AttributeError:
-            name = None
+            name = ''
             val = str(record.msg)
         if name in cat_data:
             try:
