@@ -160,6 +160,7 @@ class BigM_Transformation(Transformation):
                                 # the network.expand_arcs transformation
         }
         self._generate_debug_messages = False
+        self._transformation_blocks = {}
 
     def _get_bigm_suffix_list(self, block, stopping_block=None):
         # Note that you can only specify suffixes on BlockData objects or
@@ -268,15 +269,19 @@ class BigM_Transformation(Transformation):
             if t.ctype is Disjunction:
                 if t.is_indexed():
                     self._transform_disjunction(
-                        t, bigM, parent_disjunct=gdp_tree.parent(t))
+                        t, parent_disjunct=gdp_tree.parent(t),
+                        root_disjunct=gdp_tree.root_disjunct(t))
                 else:
                     self._transform_disjunctionData(
-                        t, bigM, t.index(), parent_disjunct=gdp_tree.parent(t))
-            else:# We know t.ctype in (Block, Disjunct) after preprocessing
-                if t.is_indexed():
-                    self._transform_block(t, bigM)
-                else:
-                    self._transform_blockData(t, bigM)
+                        t, t.index(), parent_disjunct=gdp_tree.parent(t),
+                        root_disjunct=gdp_tree.root_disjunct(t))
+            else:# We know t is a Disjunct after preprocessing
+                # if t.is_indexed():
+                #     self._transform_disjunct(t, bigM)
+                # else:
+                assert not t.is_indexed()
+                self._transform_disjunct(
+                    t, bigM, root_disjunct=gdp_tree.root_disjunct(t))
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use
@@ -295,31 +300,34 @@ class BigM_Transformation(Transformation):
                 logger.warning(warning_msg)
 
     def _add_transformation_block(self, instance):
+        if instance in self._transformation_blocks:
+            return self._transformation_blocks[instance]
+
         # make a transformation block on instance to put transformed disjuncts
         # on
         transBlockName = unique_component_name(
             instance,
             '_pyomo_gdp_bigm_reformulation')
-        transBlock = Block()
+        self._transformation_blocks[instance] = transBlock = Block()
         instance.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = Block(NonNegativeIntegers)
         transBlock.lbub = Set(initialize=['lb', 'ub'])
 
         return transBlock
 
-    def _transform_block(self, obj, bigM):
-        for i in sorted(obj.keys()):
-            self._transform_blockData(obj[i], bigM)
+    # def _transform_block(self, obj, bigM):
+    #     for i in sorted(obj.keys()):
+    #         self._transform_blockData(obj[i], bigM)
 
-    def _transform_blockData(self, obj, bigM):
-        # Transform every (active) disjunction in the block
-        for disjunction in obj.component_objects(
-                Disjunction,
-                active=True,
-                sort=SortComponents.deterministic,
-                descend_into=(Block, Disjunct),
-                descent_order=TraversalStrategy.PostfixDFS):
-            self._transform_disjunction(disjunction, bigM)
+    # def _transform_blockData(self, obj, bigM):
+    #     # Transform every (active) disjunction in the block
+    #     for disjunction in obj.component_objects(
+    #             Disjunction,
+    #             active=True,
+    #             sort=SortComponents.deterministic,
+    #             descend_into=(Block, Disjunct),
+    #             descent_order=TraversalStrategy.PostfixDFS):
+    #         self._transform_disjunction(disjunction, bigM)
 
     def _add_xor_constraint(self, disjunction, transBlock):
         # Put the disjunction constraint on the transformation block and
@@ -351,7 +359,7 @@ class BigM_Transformation(Transformation):
 
         return orC
 
-    def _transform_disjunction(self, obj, bigM, parent_disjunct=None):
+    def _transform_disjunction(self, obj, parent_disjunct=None):
         if not obj.active:
             return
 
@@ -365,14 +373,14 @@ class BigM_Transformation(Transformation):
 
         # relax each of the disjunctionDatas
         for i in sorted(obj.keys()):
-            self._transform_disjunctionData(obj[i], bigM, i, transBlock,
+            self._transform_disjunctionData(obj[i], i, transBlock,
                                             parent_disjunct)
 
         # deactivate so the writers don't scream
         obj.deactivate()
 
-    def _transform_disjunctionData(self, obj, bigM, index, transBlock=None,
-                                   parent_disjunct=None):
+    def _transform_disjunctionData(self, obj, index, transBlock=None,
+                                   parent_disjunct=None, root_disjunct=None):
         if not obj.active:
             return  # Do not process a deactivated disjunction
         # We won't have these arguments if this got called straight from
@@ -388,12 +396,12 @@ class BigM_Transformation(Transformation):
                 transBlock = obj.parent_component()._algebraic_constraint().\
                              parent_block()
             else:
-                if parent_disjunct is not None:
+                if root_disjunct is not None:
                 # We want to put all the transformed things on the parent
                 # Disjunct's transformation block so that they do not get
                 # re-transformed
                     transBlock = self._add_transformation_block(
-                        parent_disjunct.parent_block())
+                        root_disjunct.parent_block())
                 else:
                     transBlock = self._add_transformation_block(
                         obj.parent_block())
@@ -409,16 +417,16 @@ class BigM_Transformation(Transformation):
                             "likely indicative of a modeling error."  %
                             obj.getname(fully_qualified=True))
         for disjunct in obj.disjuncts:
-            or_expr += disjunct.binary_indicator_var
-            # make suffix list. (We don't need it until we are
-            # transforming constraints, but it gets created at the
-            # disjunct level, so more efficient to make it here and
-            # pass it down.)
-            suffix_list = self._get_bigm_suffix_list(disjunct)
-            arg_list = self._get_bigm_arg_list(bigM, disjunct)
-            # relax the disjunct
-            self._transform_disjunct(disjunct, transBlock, bigM, arg_list,
-                                     suffix_list)
+             or_expr += disjunct.binary_indicator_var
+        #     # make suffix list. (We don't need it until we are
+        #     # transforming constraints, but it gets created at the
+        #     # disjunct level, so more efficient to make it here and
+        #     # pass it down.)
+        #     suffix_list = self._get_bigm_suffix_list(disjunct)
+        #     arg_list = self._get_bigm_arg_list(bigM, disjunct)
+        #     # relax the disjunct
+        #     self._transform_disjunct(disjunct, transBlock, bigM, arg_list,
+        #                              suffix_list)
 
         # add or (or xor) constraint
         rhs = 1 if parent_disjunct is None else \
@@ -434,7 +442,7 @@ class BigM_Transformation(Transformation):
         # and deactivate for the writers
         obj.deactivate()
 
-    def _transform_disjunct(self, obj, transBlock, bigM, arg_list, suffix_list):
+    def _transform_disjunct(self, obj, bigM, root_disjunct):
         # deactivated -> either we've already transformed or user deactivated
         if not obj.active:
             if obj.indicator_var.is_fixed():
@@ -451,7 +459,7 @@ class BigM_Transformation(Transformation):
                 raise GDP_Error(
                     "The disjunct '%s' is deactivated, but the "
                     "indicator_var is not fixed and the disjunct does not "
-                    "appear to have been relaxed. This makes no sense. "
+                    "appear to have been transformed. This makes no sense. "
                     "(If the intent is to deactivate the disjunct, fix its "
                     "indicator_var to False.)"
                     % ( obj.name, ))
@@ -463,6 +471,12 @@ class BigM_Transformation(Transformation):
                     "The disjunct '%s' has been transformed, but a disjunction "
                     "it appears in has not. Putting the same disjunct in "
                     "multiple disjunctions is not supported." % obj.name)
+
+        root = root_disjunct.parent_block() if root_disjunct is not None else \
+               obj.parent_block()
+        transBlock = self._add_transformation_block(root)
+        suffix_list = self._get_bigm_suffix_list(obj)
+        arg_list = self._get_bigm_arg_list(bigM, obj)
 
         # add reference to original disjunct on transformation block
         relaxedDisjuncts = transBlock.relaxedDisjuncts
@@ -571,39 +585,39 @@ class BigM_Transformation(Transformation):
             # variables down the line.
             handler(obj, disjunct, bigM, arg_list, suffix_list)
 
-    def _transfer_transBlock_data(self, fromBlock, toBlock, xor):
-        # We know that we have a list of transformed disjuncts on both. We need
-        # to move those over. We know the XOR constraints are on the block, and
-        # we need to leave those on the disjunct.
-        disjunctList = toBlock.relaxedDisjuncts
-        nested_xor = Constraint(expr=xor.expr)
-        toBlock.add_component(unique_component_name(toBlock, xor.name),
-                              nested_xor)
-        #del xor
+    # def _transfer_transBlock_data(self, fromBlock, toBlock, xor):
+    #     # We know that we have a list of transformed disjuncts on both. We need
+    #     # to move those over. We know the XOR constraints are on the block, and
+    #     # we need to leave those on the disjunct.
+    #     disjunctList = toBlock.relaxedDisjuncts
+    #     nested_xor = Constraint(expr=xor.expr)
+    #     toBlock.add_component(unique_component_name(toBlock, xor.name),
+    #                           nested_xor)
+    #     #del xor
         
-        #to_delete = []          
-        for idx, disjunctBlock in fromBlock.relaxedDisjuncts.items():
-            newblock = disjunctList[len(disjunctList)]
-            newblock.transfer_attributes_from(disjunctBlock)
+    #     #to_delete = []          
+    #     for idx, disjunctBlock in fromBlock.relaxedDisjuncts.items():
+    #         newblock = disjunctList[len(disjunctList)]
+    #         newblock.transfer_attributes_from(disjunctBlock)
 
-            # update the mappings
-            original = disjunctBlock._srcDisjunct()
-            original._transformation_block = weakref_ref(newblock)
-            newblock._srcDisjunct = weakref_ref(original)
+    #         # update the mappings
+    #         original = disjunctBlock._srcDisjunct()
+    #         original._transformation_block = weakref_ref(newblock)
+    #         newblock._srcDisjunct = weakref_ref(original)
 
-            # save index of what we just moved so that we can delete it
-            #to_delete.append(idx)
+    #         # save index of what we just moved so that we can delete it
+    #         #to_delete.append(idx)
 
-        fromBlock.parent_block().del_component(fromBlock)
-        del fromBlock
+    #     fromBlock.parent_block().del_component(fromBlock)
+    #     del fromBlock
 
-        # delete everything we moved.
-        # for idx in to_delete:
-        #     del fromBlock.relaxedDisjuncts[idx]
+    #     # delete everything we moved.
+    #     # for idx in to_delete:
+    #     #     del fromBlock.relaxedDisjuncts[idx]
 
-        # Note that we could handle other components here if we ever needed
-        # to, but we control what is on the transformation block and
-        # currently everything is on the blocks that we just moved...
+    #     # Note that we could handle other components here if we ever needed
+    #     # to, but we control what is on the transformation block and
+    #     # currently everything is on the blocks that we just moved...
 
     def _warn_for_active_disjunction(self, disjunction, disjunct, bigMargs,
                                      arg_list, suffix_list):

@@ -90,7 +90,10 @@ class GDPTree:
     def __init__(self):
         self._adjacency_list = {}
         self._in_degrees = {}
-        self._parent = {} # Every node has exactly one or 0 parents.
+        # Every node has exactly one or 0 parents.
+        self._parent = {} 
+        
+        self._root_disjunct = {} 
         # This needs to be ordered so that topological sort is deterministic
         self._vertices = OrderedSet()
 
@@ -102,6 +105,11 @@ class GDPTree:
         self._vertices.add(u)
 
     def parent(self, u):
+        """Returns the parent node of u, or None if u is a root.
+
+        Arg:
+            u : A node in the tree
+        """
         if u not in self._vertices:
             raise ValueError("'%s' is not a vertex in the GDP tree. Cannot "
                              "retrieve its parent." % u)
@@ -109,6 +117,22 @@ class GDPTree:
             return self._parent[u]
         else:
             return None
+
+    def root_disjunct(self, u):
+        """ Returns the highest parent Disjunct in the hierarchy, or None if 
+        the component is not nested.
+
+        Arg:
+            u : A node in the tree
+        """
+        rootmost_disjunct = None
+        parent = self.parent(u)
+        while True:
+            if parent is None:
+                return rootmost_disjunct
+            if isinstance(parent, _DisjunctData) or parent.ctype is Disjunct:
+                rootmost_disjunct = parent
+            parent = self.parent(parent)
 
     def add_edge(self, u, v):
         if u not in self._adjacency_list:
