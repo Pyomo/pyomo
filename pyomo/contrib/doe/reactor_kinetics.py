@@ -190,11 +190,6 @@ def create_model(scena, const=False, control_time=None, control_val=None,
         """
         return m.C[z,'CA',t] + m.C[z,'CB',t] + m.C[z,'CC', t] == m.CA0[0]
     
-    def obj_rule(m):
-        return 0
-    
-    #m.Obj = Objective(rule=obj_rule, sense=maximize)
-        
         
     # Control time
     m.T_rule = pyo.Constraint(m.t, rule=T_control)

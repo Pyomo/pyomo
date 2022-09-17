@@ -482,7 +482,7 @@ class DesignOfExperiments:
 
         if self.optimize:
 
-            m = self.__add_objective(m, deactive_obj=True)
+            m = self.__add_objective(m)
 
             # solve problem with DOF then
             if self.verbose:
@@ -1396,15 +1396,6 @@ class DesignOfExperiments:
         else:
             m.FIM = pyo.Var(m.para_set, m.para_set, initialize=identity_matrix)
 
-        if self.objective_option=='trace':
-            # Trace of FIM
-            m.trace = pyo.Var(initialize=1, within=pyo.NonNegativeReals)
-        elif self.objective_option=='det':
-            # Determinant of FIM
-            m.det = pyo.Var(initialize=0.5, within=pyo.NonNegativeReals)
-        elif (self.objective_option != 'zero'):
-            raise ValueError('Undefined objective function type. Available options are "trace" and "det".')
-
         # move the L matrix initial point to a dictionary
         if self.L_initial is not None:
             dict_cho={}
@@ -1479,85 +1470,17 @@ class DesignOfExperiments:
             else:
                 return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
 
-        def trace_calc(m):
-            """
-            Calculate FIM elements. Can scale each element with 1000 for performance
-            """
-            sum_x = 0  
-            #for j in m.para_set:
-            #    for d in m.para_set:
-            #        if d==j:
-            #            sum_x += m.FIM[j,d]
-            return m.trace == sum(m.FIM[j,j] for j in m.para_set)
-
-        def det_general(m):
-            """Calculate determinant. Can be applied to FIM of any size.
-            det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
-            Use permutation() to get permutations, sgn() to get signature
-            """
-            r_list = list(range(len(m.para_set)))
-            # get all permutations 
-            object_p = itertools.permutations(r_list)
-            list_p = list(object_p)
-
-            # generate a name_order to iterate \sigma_i
-            det_perm = 0
-            for i in range(len(list_p)):
-                name_order = []
-                x_order = list_p[i]
-                # sigma_i is the value in the i-th position after the reordering \sigma
-                for x in range(len(x_order)):
-                    for y, element in enumerate(m.para_set):
-                        if x_order[x] == y:
-                            name_order.append(element)
-
-            # det(A) = sum_{\sigma \in \S_n} (sgn(\sigma) * \Prod_{i=1}^n a_{i,\sigma_i})
-            det_perm = sum( self.__sgn(list_p[d])*sum(m.FIM[each, name_order[b]] for b, each in enumerate(m.para_set)) for d in range(len(list_p)))
-            return m.det == det_perm
-
-
-        def cholesky_imp(m,c,d):
-            """
-            Calculate Cholesky L matrix using algebraic constraints
-            """
-            # If it is the left bottom half of L
-            if (param_name.index(c)>=param_name.index(d)):
-                return m.FIM[c,d] ==  sum(m.L_ele[c, param_name[k]]*m.L_ele[d, param_name[k]] for k in range(param_name.index(d)+1))  
-            else:
-                # This is the empty half of L above the diagonal
-                return pyo.Constraint.Skip
-
 
         ### Constraints and Objective function
         m.dC_value = pyo.Constraint(m.y_set, m.para_set, m.tmea_set, rule=jac_numerical)
         m.ele_rule = pyo.Constraint(m.para_set, m.para_set, rule=calc_FIM)
 
-        # Only giving the objective function when there's Degree of freedom. Make OBJ=0 when it's a square problem, which helps converge.
-        if no_obj:
-            m.Obj = pyo.Objective(expr=0)
-        else:
-            if self.optimize:
-                # if cholesky, calculating L and evaluate the OBJ with Cholesky decomposition
-                if self.Cholesky_option:
-                    m.cholesky_cons = pyo.Constraint(m.para_set, m.para_set, rule=cholesky_imp)
-                    m.Obj = pyo.Objective(expr=2*sum(log(m.L_ele[j,j]) for j in m.para_set), sense=pyo.maximize)
-                # if not cholesky but determinant, calculating det and evaluate the OBJ with det
-                elif (self.objective_option=='det'):
-                    m.det_rule =  pyo.Constraint(rule=det_general)
-                    m.Obj = pyo.Objective(expr=log(m.det), sense=pyo.maximize)
-                # if not determinant or cholesky, calculating the OBJ with trace
-                elif (self.objective_option=='trace'):
-                    m.trace_rule = pyo.Constraint(rule=trace_calc)
-                    m.Obj = pyo.Objective(expr=log(m.trace), sense=pyo.maximize)
-                elif (self.objective_option=='zero'):
-                    m.Obj = pyo.Objective(expr=0)
-
         return m
 
-    def __add_objective(self, m, deactive_obj= True):
+    def __add_objective(self, m):
 
-        if deactive_obj:
-            m.Obj.deactivate()
+        #if deactive_obj:
+        #    m.Obj.deactivate()
 
         def cholesky_imp(m, c, d):
             """
@@ -1571,6 +1494,12 @@ class DesignOfExperiments:
         # This is the empty half of L above the diagonal
                 return pyo.Constraint.Skip
 
+        def trace_calc(m):
+            """
+            Calculate FIM elements. Can scale each element with 1000 for performance
+            """
+            sum_x = 0  
+            return m.trace == sum(m.FIM[j,j] for j in m.para_set)
 
         def det_general(m):
             """Calculate determinant. Can be applied to FIM of any size.
