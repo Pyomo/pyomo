@@ -103,7 +103,7 @@ def model_is_valid(solve_data, config):
     return True
 
 
-def calc_jacobians(solve_data, config):
+def calc_jacobians(mip_model, config):
     """Generates a map of jacobians for the variables in the model.
 
     This function generates a map of jacobians corresponding to the variables in the
@@ -118,18 +118,19 @@ def calc_jacobians(solve_data, config):
     """
     # Map nonlinear_constraint --> Map(
     #     variable --> jacobian of constraint wrt. variable)
-    solve_data.jacobians = ComponentMap()
+    jacobians = ComponentMap()
     if config.differentiate_mode == 'reverse_symbolic':
         mode = differentiate.Modes.reverse_symbolic
     elif config.differentiate_mode == 'sympy':
         mode = differentiate.Modes.sympy
-    for c in solve_data.mip.MindtPy_utils.nonlinear_constraint_list:
+    for c in mip_model.MindtPy_utils.nonlinear_constraint_list:
         vars_in_constr = list(EXPR.identify_variables(c.body))
         jac_list = differentiate(
             c.body, wrt_list=vars_in_constr, mode=mode)
-        solve_data.jacobians[c] = ComponentMap(
+        jacobians[c] = ComponentMap(
             (var, jac_wrt_var)
             for var, jac_wrt_var in zip(vars_in_constr, jac_list))
+    return jacobians
 
 
 def add_feas_slacks(m, config):

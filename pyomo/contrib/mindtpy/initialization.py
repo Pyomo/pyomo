@@ -57,10 +57,10 @@ def MindtPy_initialize_main(solve_data, config):
             solve_data.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
                 doc='Orthogonality cuts in feasibility pump')
     if config.strategy == 'OA' or config.init_strategy == 'FP':
-        calc_jacobians(solve_data, config)  # preload jacobians
+        solve_data.jacobians = calc_jacobians(solve_data.mip, config)  # preload jacobians
         MindtPy.cuts.oa_cuts = ConstraintList(doc='Outer approximation cuts')
     elif config.strategy == 'ECP':
-        calc_jacobians(solve_data, config)  # preload jacobians
+        solve_data.jacobians = calc_jacobians(solve_data.mip, config)  # preload jacobians
         MindtPy.cuts.ecp_cuts = ConstraintList(doc='Extended Cutting Planes')
     elif config.strategy == 'GOA':
         MindtPy.cuts.aff_cuts = ConstraintList(doc='Affine cuts')
