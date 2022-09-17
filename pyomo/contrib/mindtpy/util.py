@@ -73,7 +73,7 @@ def model_is_valid(solve_data, config):
                 'Your model is a NLP (nonlinear program). '
                 'Using NLP solver %s to solve.' % config.nlp_solver)
             nlpopt = SolverFactory(config.nlp_solver)
-            set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
+            set_solver_options(nlpopt, solve_data.timing, config, solver_type='nlp')
             nlpopt.solve(solve_data.original_model,
                          tee=config.nlp_solver_tee, **config.nlp_solver_args)
             return False
@@ -84,7 +84,7 @@ def model_is_valid(solve_data, config):
             mainopt = SolverFactory(config.mip_solver)
             if isinstance(mainopt, PersistentSolver):
                 mainopt.set_instance(solve_data.original_model)
-            set_solver_options(mainopt, solve_data,
+            set_solver_options(mainopt, solve_data.timing,
                                config, solver_type='mip')
             results = mainopt.solve(solve_data.original_model,
                                     tee=config.mip_solver_tee,
@@ -449,15 +449,15 @@ def generate_norm1_norm_constraint(model, setpoint_model, config, discrete_only=
         expr=sum(norm_constraint_blk.L1_slack_var[idx] for idx in norm_constraint_blk.L1_slack_idx) <= rhs)
 
 
-def set_solver_options(opt, solve_data, config, solver_type, regularization=False):
+def set_solver_options(opt, timing, config, solver_type, regularization=False):
     """Set options for MIP/NLP solvers.
 
     Parameters
     ----------
     opt : SolverFactory
         The MIP/NLP solver.
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    timing : Timing
+        Timing.
     config : ConfigBlock
         The specific configurations for MindtPy.
     solver_type : str
@@ -467,7 +467,7 @@ def set_solver_options(opt, solve_data, config, solver_type, regularization=Fals
     """
     # TODO: integrate nlp_args here
     # nlp_args = dict(config.nlp_solver_args)
-    elapsed = get_main_elapsed_time(solve_data.timing)
+    elapsed = get_main_elapsed_time(timing)
     remaining = int(max(config.time_limit - elapsed, 1))
     if solver_type == 'mip':
         if regularization:

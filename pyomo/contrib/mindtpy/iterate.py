@@ -449,7 +449,7 @@ def fix_dual_bound(solve_data, config, last_iter_cuts):
             mainopt._solver_model.set_log_stream(None)
             mainopt._solver_model.set_error_stream(None)
         mip_args = dict(config.mip_solver_args)
-        set_solver_options(mainopt, solve_data, config, solver_type='mip')
+        set_solver_options(mainopt, solve_data.timing, config, solver_type='mip')
         main_mip_results = mainopt.solve(solve_data.mip, 
                                          tee=config.mip_solver_tee, 
                                          load_solutions=False,

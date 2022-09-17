@@ -100,7 +100,7 @@ def solve_fp_subproblem(solve_data, config):
     # Solve the NLP
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
-    set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
+    set_solver_options(nlpopt, solve_data.timing, config, solver_type='nlp')
     with SuppressInfeasibleWarning():
         with time_code(solve_data.timing, 'fp subproblem'):
             results = nlpopt.solve(fp_nlp,

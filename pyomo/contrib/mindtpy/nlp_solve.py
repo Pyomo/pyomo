@@ -99,7 +99,7 @@ def solve_subproblem(solve_data, config):
     nlp_args = dict(config.nlp_solver_args)
     # TODO: Can we move set_solver_options outside of this function?
     # if not, we can define this function as a method
-    set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
+    set_solver_options(nlpopt, solve_data.timing, config, solver_type='nlp')
     with SuppressInfeasibleWarning():
         with time_code(solve_data.timing, 'fixed subproblem'):
             results = nlpopt.solve(fixed_nlp,
@@ -384,7 +384,7 @@ def solve_feasibility_subproblem(solve_data, config):
     TransformationFactory('core.fix_integer_vars').apply_to(feas_subproblem)
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
-    set_solver_options(nlpopt, solve_data, config, solver_type='nlp')
+    set_solver_options(nlpopt, solve_data.timing, config, solver_type='nlp')
     with SuppressInfeasibleWarning():
         try:
             with time_code(solve_data.timing, 'feasibility subproblem'):

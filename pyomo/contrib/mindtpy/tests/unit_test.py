@@ -270,35 +270,35 @@ class TestMindtPy(unittest.TestCase):
             config.mip_solver = 'gams'
             config.threads = 1
             opt = SolverFactory(config.mip_solver)
-            set_solver_options(opt, solve_data, config,
+            set_solver_options(opt, solve_data.timing, config,
                                'mip', regularization=False)
 
             config.mip_solver = 'gurobi'
             config.mip_regularization_solver = 'gurobi'
             config.regularization_mip_threads = 1
             opt = SolverFactory(config.mip_solver)
-            set_solver_options(opt, solve_data, config,
+            set_solver_options(opt, solve_data.timing, config,
                                'mip', regularization=True)
 
             config.nlp_solver = 'gams'
             config.nlp_solver_args['solver'] = 'ipopt'
-            set_solver_options(opt, solve_data, config,
+            set_solver_options(opt, solve_data.timing, config,
                                'nlp', regularization=False)
 
             config.nlp_solver_args['solver'] = 'ipopth'
-            set_solver_options(opt, solve_data, config,
+            set_solver_options(opt, solve_data.timing, config,
                                'nlp', regularization=False)
 
             config.nlp_solver_args['solver'] = 'conopt'
-            set_solver_options(opt, solve_data, config,
+            set_solver_options(opt, solve_data.timing, config,
                                'nlp', regularization=False)
 
             config.nlp_solver_args['solver'] = 'msnlp'
-            set_solver_options(opt, solve_data, config,
+            set_solver_options(opt, solve_data.timing, config,
                                'nlp', regularization=False)
 
             config.nlp_solver_args['solver'] = 'baron'
-            set_solver_options(opt, solve_data, config,
+            set_solver_options(opt, solve_data.timing, config,
                                'nlp', regularization=False)
 
             # test algorithm_should_terminate

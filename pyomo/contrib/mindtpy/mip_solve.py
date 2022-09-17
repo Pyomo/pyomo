@@ -60,7 +60,7 @@ def solve_main(solve_data, config, fp=False, regularization_problem=False):
     mip_args = dict(config.mip_solver_args)
     if config.mip_solver in {'cplex', 'cplex_persistent', 'gurobi', 'gurobi_persistent'}:
         mip_args['warmstart'] = True
-    set_solver_options(mainopt, solve_data, config,
+    set_solver_options(mainopt, solve_data.timing, config,
                        solver_type='mip', regularization=regularization_problem)
     try:
         with time_code(solve_data.timing, 'regularization main' if regularization_problem else ('fp main' if fp else 'main')):
@@ -374,7 +374,7 @@ def handle_main_unbounded(main_mip, solve_data, config):
     mainopt = SolverFactory(config.mip_solver)
     if isinstance(mainopt, PersistentSolver):
         mainopt.set_instance(main_mip)
-    set_solver_options(mainopt, solve_data, config, solver_type='mip')
+    set_solver_options(mainopt, solve_data.timing, config, solver_type='mip')
     with SuppressInfeasibleWarning():
         main_mip_results = mainopt.solve(main_mip,
                                          tee=config.mip_solver_tee,
