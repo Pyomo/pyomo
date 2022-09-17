@@ -166,7 +166,7 @@ def add_feas_slacks(m, config):
                     >= -MindtPy.feas_opt.slack_var)
 
 
-def add_var_bound(solve_data, config):
+def add_var_bound(model, config):
     """This function will add bounds for variables in nonlinear constraints if they are not bounded.
 
     This is to avoid an unbounded main problem in the LP/NLP algorithm. Thus, the model will be 
@@ -174,13 +174,12 @@ def add_var_bound(solve_data, config):
 
     Parameters
     ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    model : PyomoModel
+        Target model to add bound for its variables.
     config : ConfigBlock
         The specific configurations for MindtPy.
     """
-    m = solve_data.working_model
-    MindtPy = m.MindtPy_utils
+    MindtPy = model.MindtPy_utils
     for c in MindtPy.nonlinear_constraint_list:
         for var in EXPR.identify_variables(c.body):
             if var.has_lb() and var.has_ub():

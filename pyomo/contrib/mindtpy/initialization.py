@@ -40,7 +40,7 @@ def MindtPy_initialize_main(solve_data, config):
     """
     # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded main problem.
     if config.single_tree:
-        add_var_bound(solve_data, config)
+        add_var_bound(solve_data.working_model, config)
 
     m = solve_data.mip = solve_data.working_model.clone()
     next(solve_data.mip.component_data_objects(
