@@ -188,7 +188,7 @@ class Measurements:
                     measurement_names.append(measurement_name)
         self.model_measure_name = measurement_names
 
-    def __SP_measure_name(self, j, t,scenario_all=None, p=None, mode='sequential_finite', legal_t=True):
+    def SP_measure_name(self, j, t,scenario_all=None, p=None, mode='sequential_finite', legal_t=True):
         """Return pyomo string name for different modes
         Arguments
         ---------
@@ -660,7 +660,7 @@ class DesignOfExperiments:
 
                     for j in self.flatten_measure_name:
                         for t in self.flatten_measure_timeset[j]:
-                            measure_string_name = self.measure.__SP_measure_name(j,t,mode='sequential_finite')
+                            measure_string_name = self.measure.SP_measure_name(j,t,mode='sequential_finite')
                             C_value = pyo.value(eval(measure_string_name))
                             output_iter.append(C_value)
 
@@ -892,7 +892,7 @@ class DesignOfExperiments:
                 t_all.append(t)
 
             # add objective function
-            mod.Obj = Objective(expr=0, sense=minimize)
+            mod.Obj = pyo.Objective(expr=0, sense=pyo.minimize)
 
             # Check if measurement time points are in this time set
             # Also correct the measurement time points
@@ -1245,11 +1245,11 @@ class DesignOfExperiments:
             # call compute_FIM to get FIM
             try:
                 result_iter = self.compute_FIM(design_iter, mode=mode,
-                                               tee_opt=tee_option,
-                                               scale_nominal_param_value=scale_nominal_param_value,
-                                               scale_constant_value = scale_constant_value,
-                                               store_output=store_output_name, read_output=read_input_name,
-                                               formula=formula, step=step)
+                                                tee_opt=tee_option,
+                                                scale_nominal_param_value=scale_nominal_param_value,
+                                                scale_constant_value = scale_constant_value,
+                                                store_output=store_output_name, read_output=read_input_name,
+                                                formula=formula, step=step)
                 if read_input_name is None:
                     build_time_store.append(result_iter.build_time)
                     solve_time_store.append(result_iter.solve_time)
@@ -1446,7 +1446,7 @@ class DesignOfExperiments:
             # A better way to do this: 
             # https://github.com/IDAES/idaes-pse/blob/274e58bef55f2f969f0df97cbb1fb7d99342388e/idaes/apps/uncertainty_propagation/sens.py#L296
             # check if j is a measurement with extra index by checking if there is '_index_' in its name
-            up_C_name, lo_C_name, legal_t_option = self.measure.__SP_measure_name(j,t,scenario_all=scenario_all, mode='simultaneous_finite', p=p)
+            up_C_name, lo_C_name, legal_t_option = self.measure.SP_measure_name(j,t,scenario_all=scenario_all, mode='simultaneous_finite', p=p)
             if legal_t_option:
                 up_C = eval(up_C_name)
                 lo_C = eval(lo_C_name)
@@ -2518,11 +2518,11 @@ class Grid_Search_Result:
             y_range_ME = self.figure_result_data['ME'].values.tolist()
 
         # Draw A-optimality
-        fig = plt.figure()
-        plt.rc('axes', titlesize=font_axes)
-        plt.rc('axes', labelsize=font_axes)
-        plt.rc('xtick', labelsize=font_tick)
-        plt.rc('ytick', labelsize=font_tick)
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc('axes', titlesize=font_axes)
+        plt.pyplot.rc('axes', labelsize=font_axes)
+        plt.pyplot.rc('xtick', labelsize=font_tick)
+        plt.pyplot.rc('ytick', labelsize=font_tick)
         ax = fig.add_subplot(111)
         params = {'mathtext.default': 'regular'}
         #plt.rcParams.update(params)
@@ -2530,15 +2530,15 @@ class Grid_Search_Result:
         ax.scatter(x_range, y_range_A)
         ax.set_ylabel('$log_{10}$ Trace')
         ax.set_xlabel(xlabel_text)
-        plt.title(title_text + ' - A optimality')
-        plt.show()
+        plt.pyplot.title(title_text + ' - A optimality')
+        plt.pyplot.show()
 
         # Draw D-optimality
-        fig = plt.figure()
-        plt.rc('axes', titlesize=font_axes)
-        plt.rc('axes', labelsize=font_axes)
-        plt.rc('xtick', labelsize=font_tick)
-        plt.rc('ytick', labelsize=font_tick)
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc('axes', titlesize=font_axes)
+        plt.pyplot.rc('axes', labelsize=font_axes)
+        plt.pyplot.rc('xtick', labelsize=font_tick)
+        plt.pyplot.rc('ytick', labelsize=font_tick)
         ax = fig.add_subplot(111)
         params = {'mathtext.default': 'regular'}
         # plt.rcParams.update(params)
@@ -2546,15 +2546,15 @@ class Grid_Search_Result:
         ax.scatter(x_range, y_range_D)
         ax.set_ylabel('$log_{10}$ Determinant')
         ax.set_xlabel(xlabel_text)
-        plt.title(title_text + ' - D optimality')
-        plt.show()
+        plt.pyplot.title(title_text + ' - D optimality')
+        plt.pyplot.show()
 
         # Draw E-optimality
-        fig = plt.figure()
-        plt.rc('axes', titlesize=font_axes)
-        plt.rc('axes', labelsize=font_axes)
-        plt.rc('xtick', labelsize=font_tick)
-        plt.rc('ytick', labelsize=font_tick)
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc('axes', titlesize=font_axes)
+        plt.pyplot.rc('axes', labelsize=font_axes)
+        plt.pyplot.rc('xtick', labelsize=font_tick)
+        plt.pyplot.rc('ytick', labelsize=font_tick)
         ax = fig.add_subplot(111)
         params = {'mathtext.default': 'regular'}
         # plt.rcParams.update(params)
@@ -2562,15 +2562,15 @@ class Grid_Search_Result:
         ax.scatter(x_range, y_range_E)
         ax.set_ylabel('$log_{10}$ Minimal eigenvalue')
         ax.set_xlabel(xlabel_text)
-        plt.title(title_text + ' - E optimality')
-        plt.show()
+        plt.pyplot.title(title_text + ' - E optimality')
+        plt.pyplot.show()
 
         # Draw Modified E-optimality
-        fig = plt.figure()
-        plt.rc('axes', titlesize=font_axes)
-        plt.rc('axes', labelsize=font_axes)
-        plt.rc('xtick', labelsize=font_tick)
-        plt.rc('ytick', labelsize=font_tick)
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc('axes', titlesize=font_axes)
+        plt.pyplot.rc('axes', labelsize=font_axes)
+        plt.pyplot.rc('xtick', labelsize=font_tick)
+        plt.pyplot.rc('ytick', labelsize=font_tick)
         ax = fig.add_subplot(111)
         params = {'mathtext.default': 'regular'}
         # plt.rcParams.update(params)
@@ -2578,8 +2578,8 @@ class Grid_Search_Result:
         ax.scatter(x_range, y_range_ME)
         ax.set_ylabel('$log_{10}$ Condition number')
         ax.set_xlabel(xlabel_text)
-        plt.title(title_text + ' - Modified E optimality')
-        plt.show()
+        plt.pyplot.title(title_text + ' - Modified E optimality')
+        plt.pyplot.show()
 
     def __heatmap(self, title_text, xlabel_text, ylabel_text, font_axes=16, font_tick=14, log_scale=True):
         """
@@ -2646,88 +2646,88 @@ class Grid_Search_Result:
         yLabel = y_range
 
         # A-optimality
-        fig = plt.figure()
-        plt.rc('axes', titlesize=font_axes)
-        plt.rc('axes', labelsize=font_axes)
-        plt.rc('xtick', labelsize=font_tick)
-        plt.rc('ytick', labelsize=font_tick)
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc('axes', titlesize=font_axes)
+        plt.pyplot.rc('axes', labelsize=font_axes)
+        plt.pyplot.rc('xtick', labelsize=font_tick)
+        plt.pyplot.rc('ytick', labelsize=font_tick)
         ax = fig.add_subplot(111)
         params = {'mathtext.default': 'regular'}
-        plt.rcParams.update(params)
+        plt.pyplot.rcParams.update(params)
         ax.set_yticks(range(len(yLabel)))
         ax.set_yticklabels(yLabel)
         ax.set_ylabel(ylabel_text)
         ax.set_xticks(range(len(xLabel)))
         ax.set_xticklabels(xLabel)
         ax.set_xlabel(xlabel_text)
-        im = ax.imshow(hes_a.T, cmap=plt.cm.hot_r)
-        ba = plt.colorbar(im)
+        im = ax.imshow(hes_a.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
         ba.set_label('log10(trace(FIM))')
-        plt.title(title_text + ' - A optimality')
-        plt.show()
+        plt.pyplot.title(title_text + ' - A optimality')
+        plt.pyplot.show()
 
         # D-optimality
-        fig = plt.figure()
-        plt.rc('axes', titlesize=font_axes)
-        plt.rc('axes', labelsize=font_axes)
-        plt.rc('xtick', labelsize=font_tick)
-        plt.rc('ytick', labelsize=font_tick)
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc('axes', titlesize=font_axes)
+        plt.pyplot.rc('axes', labelsize=font_axes)
+        plt.pyplot.rc('xtick', labelsize=font_tick)
+        plt.pyplot.rc('ytick', labelsize=font_tick)
         ax = fig.add_subplot(111)
         params = {'mathtext.default': 'regular'}
-        plt.rcParams.update(params)
+        plt.pyplot.rcParams.update(params)
         ax.set_yticks(range(len(yLabel)))
         ax.set_yticklabels(yLabel)
         ax.set_ylabel(ylabel_text)
         ax.set_xticks(range(len(xLabel)))
         ax.set_xticklabels(xLabel)
         ax.set_xlabel(xlabel_text)
-        im = ax.imshow(hes_d.T, cmap=plt.cm.hot_r)
-        ba = plt.colorbar(im)
+        im = ax.imshow(hes_d.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
         ba.set_label('log10(det(FIM))')
-        plt.title(title_text + ' - D optimality')
-        plt.show()
+        plt.pyplot.title(title_text + ' - D optimality')
+        plt.pyplot.show()
 
         # E-optimality
-        fig = plt.figure()
-        plt.rc('axes', titlesize=font_axes)
-        plt.rc('axes', labelsize=font_axes)
-        plt.rc('xtick', labelsize=font_tick)
-        plt.rc('ytick', labelsize=font_tick)
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc('axes', titlesize=font_axes)
+        plt.pyplot.rc('axes', labelsize=font_axes)
+        plt.pyplot.rc('xtick', labelsize=font_tick)
+        plt.pyplot.rc('ytick', labelsize=font_tick)
         ax = fig.add_subplot(111)
         params = {'mathtext.default': 'regular'}
-        plt.rcParams.update(params)
+        plt.pyplot.rcParams.update(params)
         ax.set_yticks(range(len(yLabel)))
         ax.set_yticklabels(yLabel)
         ax.set_ylabel(ylabel_text)
         ax.set_xticks(range(len(xLabel)))
         ax.set_xticklabels(xLabel)
         ax.set_xlabel(xlabel_text)
-        im = ax.imshow(hes_e.T, cmap=plt.cm.hot_r)
-        ba = plt.colorbar(im)
+        im = ax.imshow(hes_e.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
         ba.set_label('log10(minimal eig(FIM))')
-        plt.title(title_text + ' - E optimality')
-        plt.show()
+        plt.pyplot.title(title_text + ' - E optimality')
+        plt.pyplot.show()
 
         # modified E-optimality
-        fig = plt.figure()
-        plt.rc('axes', titlesize=font_axes)
-        plt.rc('axes', labelsize=font_axes)
-        plt.rc('xtick', labelsize=font_tick)
-        plt.rc('ytick', labelsize=font_tick)
+        fig = plt.pyplot.figure()
+        plt.pyplot.rc('axes', titlesize=font_axes)
+        plt.pyplot.rc('axes', labelsize=font_axes)
+        plt.pyplot.rc('xtick', labelsize=font_tick)
+        plt.pyplot.rc('ytick', labelsize=font_tick)
         ax = fig.add_subplot(111)
         params = {'mathtext.default': 'regular'}
-        plt.rcParams.update(params)
+        plt.pyplot.rcParams.update(params)
         ax.set_yticks(range(len(yLabel)))
         ax.set_yticklabels(yLabel)
         ax.set_ylabel(ylabel_text)
         ax.set_xticks(range(len(xLabel)))
         ax.set_xticklabels(xLabel)
         ax.set_xlabel(xlabel_text)
-        im = ax.imshow(hes_e2.T, cmap=plt.cm.hot_r)
-        ba = plt.colorbar(im)
+        im = ax.imshow(hes_e2.T, cmap=plt.pyplot.cm.hot_r)
+        ba = plt.pyplot.colorbar(im)
         ba.set_label('log10(cond(FIM))')
-        plt.title(title_text + ' - Modified E-optimality')
-        plt.show()
+        plt.pyplot.title(title_text + ' - Modified E-optimality')
+        plt.pyplot.show()
 
 
 
