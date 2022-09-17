@@ -1,17 +1,14 @@
 import unittest
-from unittest.mock import MagicMock
-from pyomo.solvers.plugins.solvers.GUROBI_RUN import gurobi_run
 from unittest.mock import patch, MagicMock
 
 try:
+    from pyomo.solvers.plugins.solvers.GUROBI_RUN import gurobi_run
     from gurobipy import GRB
     gurobipy_available = True
 except:
     gurobipy_available = False
 
 class GurobiTest(unittest.TestCase):
-
-
 
     @unittest.skipIf(not gurobipy_available,
                      "gurobipy is not available")
@@ -39,7 +36,7 @@ class GurobiTest(unittest.TestCase):
             return None
         model.getAttr = getAttr
         gurobi_run(None, None, None, None, {}, [])
-        self.assertEqual(file.write.call_args.args[0], 'termination_message: Optimization terminated because the work expended exceeded the value specified in the WorkLimit parameter.\n')
+        self.assertTrue("WorkLimit" in file.write.call_args.args[0])
 
 
 if __name__ == '__main__':
