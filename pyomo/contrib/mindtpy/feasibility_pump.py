@@ -20,7 +20,7 @@ from pyomo.contrib.mindtpy.mip_solve import solve_main
 from pyomo.contrib.mindtpy.util import generate_norm1_norm_constraint
 
 
-def fp_converged(solve_data, config, discrete_only=True):
+def fp_converged(working_model, mip_model, config, discrete_only=True):
     """Calculates the euclidean norm between the discrete variables in the MIP and NLP models.
 
     Parameters
@@ -39,8 +39,8 @@ def fp_converged(solve_data, config, discrete_only=True):
     """
     distance = (max((nlp_var.value - milp_var.value)**2
                     for (nlp_var, milp_var) in
-                    zip(solve_data.working_model.MindtPy_utils.variable_list,
-                        solve_data.mip.MindtPy_utils.variable_list)
+                    zip(working_model.MindtPy_utils.variable_list,
+                        mip_model.MindtPy_utils.variable_list)
                     if (not discrete_only) or milp_var.is_integer()))
     return distance <= config.fp_projzerotol
 
@@ -81,7 +81,7 @@ def solve_fp_subproblem(solve_data, config):
     # Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP'   https://doi.org/10.1007/s10107-012-0608-x
     # the norm type is consistant with the norm obj of the FP-main problem.
     if config.fp_norm_constraint:
-        generate_norm_constraint(fp_nlp, solve_data, config)
+        generate_norm_constraint(fp_nlp, solve_data.mip, config)
 
     MindtPy.fp_nlp_obj = generate_norm2sq_objective_function(
         fp_nlp, solve_data.mip, discrete_only=config.fp_discrete_only)
@@ -130,11 +130,11 @@ def handle_fp_subproblem_optimal(fp_nlp, solve_data, config):
         solve_data.working_model.MindtPy_utils.variable_list,
         config,
         ignore_integrality=True)
-    add_orthogonality_cuts(solve_data, config)
+    add_orthogonality_cuts(solve_data.working_model, solve_data.mip, config)
 
     # if OA-like or fp converged, update Upper bound,
     # add no_good cuts and increasing objective cuts (fp)
-    if fp_converged(solve_data, config, discrete_only=config.fp_discrete_only):
+    if fp_converged(solve_data.working_model, solve_data.mip, config, discrete_only=config.fp_discrete_only):
         copy_var_list_values(solve_data.mip.MindtPy_utils.variable_list,
                              solve_data.working_model.MindtPy_utils.variable_list,
                              config)
@@ -228,55 +228,57 @@ def fp_loop(solve_data, config):
             'fp_orthogonality_cuts')
 
 
-def add_orthogonality_cuts(solve_data, config):
+def add_orthogonality_cuts(working_model, mip_model, config):
     """Add orthogonality cuts.
 
     This function adds orthogonality cuts to avoid cycling when the independence constraint qualification is not satisfied.
 
     Parameters
     ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    working_model : Pyomo model
+        The working model(original model).
+    mip_model : Pyomo model
+        The mip model.
     config : ConfigBlock
         The specific configurations for MindtPy.
     """
-    mip_integer_vars = solve_data.mip.MindtPy_utils.discrete_variable_list
-    nlp_integer_vars = solve_data.working_model.MindtPy_utils.discrete_variable_list
+    mip_integer_vars = mip_model.MindtPy_utils.discrete_variable_list
+    nlp_integer_vars = working_model.MindtPy_utils.discrete_variable_list
     orthogonality_cut = sum((nlp_v.value-mip_v.value)*(mip_v-nlp_v.value)
                             for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
-    solve_data.mip.MindtPy_utils.cuts.fp_orthogonality_cuts.add(
+    mip_model.MindtPy_utils.cuts.fp_orthogonality_cuts.add(
         orthogonality_cut)
     if config.fp_projcuts:
         orthogonality_cut = sum((nlp_v.value-mip_v.value)*(nlp_v-nlp_v.value)
                                 for mip_v, nlp_v in zip(mip_integer_vars, nlp_integer_vars)) >= 0
-        solve_data.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts.add(
+        working_model.MindtPy_utils.cuts.fp_orthogonality_cuts.add(
             orthogonality_cut)
 
 
-def generate_norm_constraint(fp_nlp, solve_data, config):
+def generate_norm_constraint(fp_nlp, mip, config):
     """Generate the norm constraint for the FP-NLP subproblem.
 
     Parameters
     ----------
     fp_nlp : Pyomo model
         The feasibility pump NLP subproblem.
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    mip : Pyomo model
+        The mip model.
     config : ConfigBlock
         The specific configurations for MindtPy.
     """
     if config.fp_main_norm == 'L1':
         # TODO: check if we can access the block defined in FP-main problem
         generate_norm1_norm_constraint(
-            fp_nlp, solve_data.mip, config, discrete_only=True)
+            fp_nlp, mip, config, discrete_only=True)
     elif config.fp_main_norm == 'L2':
         fp_nlp.norm_constraint = Constraint(expr=sum((nlp_var - mip_var.value)**2 - config.fp_norm_constraint_coef*(nlp_var.value - mip_var.value)**2
-                                                     for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list)) <= 0)
+                                                     for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, mip.MindtPy_utils.discrete_variable_list)) <= 0)
     elif config.fp_main_norm == 'L_infinity':
         fp_nlp.norm_constraint = ConstraintList()
         rhs = config.fp_norm_constraint_coef * max(nlp_var.value - mip_var.value for nlp_var, mip_var in zip(
-            fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list))
-        for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, solve_data.mip.MindtPy_utils.discrete_variable_list):
+            fp_nlp.MindtPy_utils.discrete_variable_list, mip.MindtPy_utils.discrete_variable_list))
+        for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, mip.MindtPy_utils.discrete_variable_list):
             fp_nlp.norm_constraint.add(nlp_var - mip_var.value <= rhs)
 
 

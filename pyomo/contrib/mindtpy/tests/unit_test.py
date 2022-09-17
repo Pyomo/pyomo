@@ -253,17 +253,17 @@ class TestMindtPy(unittest.TestCase):
             # test generate_norm_constraint
             fp_nlp = solve_data.working_model.clone()
             config.fp_main_norm = 'L1'
-            generate_norm_constraint(fp_nlp, solve_data, config)
+            generate_norm_constraint(fp_nlp, solve_data.mip, config)
             self.assertIsNotNone(fp_nlp.MindtPy_utils.find_component(
                 'L1_norm_constraint'))
 
             config.fp_main_norm = 'L2'
-            generate_norm_constraint(fp_nlp, solve_data, config)
+            generate_norm_constraint(fp_nlp, solve_data.mip, config)
             self.assertIsNotNone(fp_nlp.find_component('norm_constraint'))
 
             fp_nlp.del_component('norm_constraint')
             config.fp_main_norm = 'L_infinity'
-            generate_norm_constraint(fp_nlp, solve_data, config)
+            generate_norm_constraint(fp_nlp, solve_data.mip, config)
             self.assertIsNotNone(fp_nlp.find_component('norm_constraint'))
 
             # test set_solver_options

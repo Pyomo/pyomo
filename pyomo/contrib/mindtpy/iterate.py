@@ -174,7 +174,7 @@ def MindtPy_iteration_loop(solve_data, config):
                         break
 
         if config.strategy == 'ECP':
-            add_ecp_cuts(solve_data.mip, solve_data, config)
+            add_ecp_cuts(solve_data.mip, solve_data.jacobians, config, solve_data.timing)
 
         # if config.strategy == 'PSC':
         #     # If the hybrid algorithm is not making progress, switch to OA.

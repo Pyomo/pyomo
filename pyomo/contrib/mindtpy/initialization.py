@@ -106,6 +106,7 @@ def MindtPy_initialize_main(solve_data, config):
 
 
 def init_rNLP(solve_data, config):
+    # TODO: this can be redefined as methods
     """Initialize the problem by solving the relaxed NLP and then store the optimal variable
     values obtained from solving the rNLP.
 
@@ -160,9 +161,16 @@ def init_rNLP(solve_data, config):
                                      solve_data.working_model.MindtPy_utils.variable_list,
                                      config, ignore_integrality=True)
             if config.strategy in {'OA', 'FP'}:
-                add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+                add_oa_cuts(solve_data.mip, 
+                dual_values,
+                solve_data.jacobians,
+                solve_data.objective_sense,
+                solve_data.mip_constraint_polynomial_degree,
+                solve_data.mip_iter,
+                config,
+                solve_data.timing)
             elif config.strategy == 'GOA':
-                add_affine_cuts(solve_data, config)
+                add_affine_cuts(solve_data.mip, config, solve_data.timing)
             for var in solve_data.mip.MindtPy_utils.discrete_variable_list:
                 # We don't want to trigger the reset of the global stale
                 # indicator, so we will set this variable to be "stale",
@@ -190,6 +198,7 @@ def init_rNLP(solve_data, config):
 
 
 def init_max_binaries(solve_data, config):
+    # TODO: this can be redefined as methods
     """Modifies model by maximizing the number of activated binary variables.
 
     Note - The user would usually want to call solve_subproblem after an invocation 

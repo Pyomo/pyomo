@@ -401,7 +401,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             self.add_lazy_oa_cuts(
                 solve_data.mip, dual_values, solve_data, config, opt)
             if config.add_regularization is not None:
-                add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+                add_oa_cuts(solve_data.mip, dual_values, solve_data.jacobians, solve_data.objective_sense,
+                            solve_data.mip_constraint_polynomial_degree, solve_data.mip_iter, config, solve_data.timing)
         elif config.strategy == 'GOA':
             self.add_lazy_affine_cuts(solve_data, config, opt)
         if config.add_no_good_cuts:
@@ -451,7 +452,8 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
             self.add_lazy_oa_cuts(
                 solve_data.mip, dual_values, solve_data, config, opt)
             if config.add_regularization is not None:
-                add_oa_cuts(solve_data.mip, dual_values, solve_data, config)
+                add_oa_cuts(solve_data.mip, dual_values, solve_data.jacobians, solve_data.objective_sense,
+                            solve_data.mip_constraint_polynomial_degree, solve_data.mip_iter, config, solve_data.timing)
         elif config.strategy == 'GOA':
             self.add_lazy_affine_cuts(solve_data, config, opt)
         if config.add_no_good_cuts:
@@ -697,7 +699,9 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
 
         if config.add_cuts_at_incumbent:
             if config.strategy == 'OA':
-                add_oa_cuts(solve_data.mip, None, solve_data, config, cb_opt)
+                add_oa_cuts(solve_data.mip, None, solve_data.jacobians, solve_data.objective_sense,
+                            solve_data.mip_constraint_polynomial_degree, solve_data.mip_iter, config,
+                            solve_data.timing, cb_opt=cb_opt)
 
         # Regularization is activated after the first feasible solution is found.
         if config.add_regularization is not None and solve_data.best_solution_found is not None:
@@ -734,7 +738,7 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
                 if config.add_no_good_cuts:
                     var_values = list(
                         v.value for v in solve_data.working_model.MindtPy_utils.variable_list)
-                    add_no_good_cuts(var_values, solve_data, config)
+                    add_no_good_cuts(solve_data.mip, var_values, config, solve_data.timing)
                 return
             elif config.strategy == 'OA':
                 return
