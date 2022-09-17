@@ -318,7 +318,7 @@ def generate_norm_inf_objective_function(model, setpoint_model, discrete_only=Fa
     return Objective(expr=obj_blk.L_infinity_obj_var)
 
 
-def generate_lag_objective_function(model, setpoint_model, config, solve_data, discrete_only=False):
+def generate_lag_objective_function(model, setpoint_model, config, timing, discrete_only=False):
     """The function generates the second-order Taylor approximation of the Lagrangean.
 
     Parameters
@@ -329,8 +329,8 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
         The model that provides the base point for us to calculate the distance.
     config : ConfigBlock
         The specific configurations for MindtPy.
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    timing : Timing
+        Timing
     discrete_only : bool, optional
         Whether to only optimize on distance between the discrete variables, by default False.
 
@@ -352,7 +352,7 @@ def generate_lag_objective_function(model, setpoint_model, config, solve_data, d
 
     # Implementation 1
     # First calculate Jacobian and Hessian without assigning variable and constraint sequence, then use get_primal_indices to get the indices.
-    with time_code(solve_data.timing, 'PyomoNLP'):
+    with time_code(timing, 'PyomoNLP'):
         nlp = pyomo_nlp.PyomoNLP(temp_model)
         lam = [-temp_model.dual[constr] if abs(temp_model.dual[constr]) > config.zero_tolerance else 0
                for constr in nlp.get_pyomo_constraints()]

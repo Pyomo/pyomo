@@ -513,7 +513,7 @@ def setup_main(solve_data, config, fp, regularization_problem):
             MindtPy.loa_proj_mip_obj = generate_lag_objective_function(solve_data.mip,
                                                                        solve_data.best_solution_found,
                                                                        config,
-                                                                       solve_data,
+                                                                       solve_data.timing,
                                                                        discrete_only=False)
         if solve_data.objective_sense == minimize:
             MindtPy.cuts.obj_reg_estimate = Constraint(
