@@ -146,7 +146,7 @@ class MindtPySolver(object):
                 'For more information, please visit https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html')
 
             MindtPy = solve_data.working_model.MindtPy_utils
-            setup_results_object(solve_data, config)
+            setup_results_object(solve_data.results, solve_data.original_model, config)
             # In the process_objective function, as long as the objective function is nonlinear, it will be reformulated and the variable/constraint/objective lists will be updated.
             # For OA/GOA/LP-NLP algorithm, if the objective funtion is linear, it will not be reformulated as epigraph constraint.
             # If the objective function is linear, it will be reformulated as epigraph constraint only if the Feasibility Pump or ROA/RLP-NLP algorithm is activated. (move_objective = True)

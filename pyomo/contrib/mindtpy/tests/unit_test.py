@@ -67,7 +67,7 @@ class TestMindtPy(unittest.TestCase):
             MindtPy = solve_data.working_model.MindtPy_utils
 
             MindtPy = solve_data.working_model.MindtPy_utils
-            setup_results_object(solve_data, config)
+            setup_results_object(solve_data.results, solve_data.original_model, config)
             process_objective(solve_data, config,
                               move_objective=(config.init_strategy == 'FP'
                                                      or config.add_regularization is not None),

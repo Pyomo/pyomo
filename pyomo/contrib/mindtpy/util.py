@@ -1067,12 +1067,12 @@ def build_ordered_component_lists(model, solve_data):
         if v in var_set and v.is_continuous())
     setattr(util_blk, 'continuous_variable_list', continuous_variable_list)
 
-def setup_results_object(solve_data, config):
+def setup_results_object(results, model, config):
     """Record problem statistics for original model."""
     # Create the solver results object
-    res = solve_data.results
+    res = results
     prob = res.problem
-    res.problem.name = solve_data.original_model.name
+    res.problem.name = model.name
     res.problem.number_of_nonzeros = None  # TODO
     # TODO work on termination condition and message
     res.solver.termination_condition = None
@@ -1082,7 +1082,7 @@ def setup_results_object(solve_data, config):
     res.solver.wallclock_time = None
     res.solver.termination_message = None
 
-    num_of = build_model_size_report(solve_data.original_model)
+    num_of = build_model_size_report(model)
 
     # Get count of constraints and variables
     prob.number_of_constraints = num_of.activated.constraints
