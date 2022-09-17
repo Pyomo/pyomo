@@ -762,9 +762,9 @@ class DesignOfExperiments:
                     list_original = []
                     list_perturb = []
                     for ele in self.param_name:
-                        list_original.append(eval('mod.'+ele+'[0]'))
+                        list_original.append(getattr(mod, ele)[0])
                     for elem in self.perturb_names:
-                        list_perturb.append(eval('mod.'+elem+'[0]'))
+                        list_perturb.append(getattr(mod, elem)[0])
 
                     # solve model
                     if self.mode =='sequential_sipopt':
@@ -794,16 +794,14 @@ class DesignOfExperiments:
                                 else:
                                     # if it is not fixed, record its perturbed value
                                     if self.mode =='sequential_sipopt':
-                                        perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + measure_name + '[0,'+str(measure_index_doublequotes)+',' + str(t) + ']]')
+                                        perturb_value = getattr(m_sipopt.sens_sol_state_1)[getattr(m_sipopt, measure_name)[0, measure_index_doublequotes,t]]
                                     else:
-                                        perturb_value = eval('m_sipopt.' + measure_name + '[0,' +str(measure_index_doublequotes)+',' + str(t) + ']()')
-
+                                        perturb_value = getattr(m_sipopt, measure_name)[0, measure_index_doublequotes, t]
                                 # base case values
                                 if self.mode == 'sequential_sipopt':
-                                    base_value = eval('m_sipopt.' + measure_name + '[0,'+str(measure_index_doublequotes)+',' + str(t) + '].value')
+                                    base_value = getattr(m_sipopt, measure_name)[0, measure_index_doublequotes, t]
                                 else:
-                                    base_value = value(eval('mod.' + measure_name + '[0,' +str(measure_index_doublequotes)+','+ str(t) + ']'))
-
+                                    base_value = getattr(mod, measure_name)[0, measure_index_doublequotes, t]
                                 perturb_mea.append(perturb_value)
                                 base_mea.append(base_value)
 
@@ -816,15 +814,15 @@ class DesignOfExperiments:
                                 else:
                                     # if it is not fixed, record its perturbed value
                                     if self.mode == 'sequential_sipopt':
-                                        perturb_value = eval('m_sipopt.sens_sol_state_1[m_sipopt.' + j + '[0,' + str(t) + ']]')
+                                        perturb_value = getattr(m_sipopt.sens_sol_state_1)[getattr(m_sipopt, j)[0,t]]
                                     else:
-                                        perturb_value = eval('m_sipopt.' + j + '[0,' + str(t) + ']()')
+                                        perturb_value = getattr(m_sipopt, j)[0,t]
 
                                 # base case values
                                 if self.mode == 'sequential_sipopt':
-                                    base_value = eval('m_sipopt.' + j + '[0,'+ str(t) + '].value')
+                                    base_value = pyo.value(getattr(m_sipopt, j)[0,t])
                                 else:
-                                    base_value = value(eval('mod.' + j + '[0,'+ str(t) + ']'))
+                                    base_value = pyo.value(getattr(mod,j)[0,t])
 
                                 perturb_mea.append(perturb_value)
                                 base_mea.append(base_value)
@@ -910,7 +908,6 @@ class DesignOfExperiments:
 
             # set ub and lb to parameters
             for par in self.param_name:
-                #component = eval('mod.'+par+'[0]')
                 component = getattr(mod, par)[0]
                 component.setlb(self.param_init[par])
                 component.setub(self.param_init[par])
@@ -1562,7 +1559,6 @@ class DesignOfExperiments:
             # if design variables are indexed by time
             if self.design_time[d] is not None:
                 for t, time in enumerate(self.design_time[d]):
-                    #newvar = eval('m.' + dname + '[' + str(time) + ']')
                     newvar = getattr(m, dname)[time]
                     fix_v = design_val[dname][time]
 
@@ -1575,7 +1571,6 @@ class DesignOfExperiments:
                             if optimize_option[dname]:
                                 newvar.unfix()
             else:
-                #newvar = eval('m.' + dname)
                 newvar = getattr(m, dname)
                 fix_v = design_val[dname][0]
 
@@ -1647,7 +1642,7 @@ class DesignOfExperiments:
         for change in range(len(self.perturb_names)):
             setattr(m, self.perturb_names[change], Param(m.scena, initialize=param_backward[change]))
             if self.verbose:
-                print(self.perturb_names[change], ': ', value(eval('m.'+self.perturb_names[change]+'[0]')))
+                print(self.perturb_names[change], ': ', getattr(m, self.perturb_names[change])[0])
         return m
 
     def __sgn(self,p):
@@ -2209,10 +2204,10 @@ class FIM_result:
             sol = []
             if dv_times[d] is not None:
                 for t, time in enumerate(dv_times[d]):
-                    newvar = eval('m.' + dname + '[' + str(time) + ']')
+                    newvar = getattr(m, dname)[time]
                     sol.append(value(newvar))
             else:
-                newvar = eval('m.' + dname)
+                newvar = getattr(m, dname)
                 sol.append(value(newvar))
 
             solution[dname] = sol
