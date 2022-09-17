@@ -1,53 +1,14 @@
-#################################################################################################################
-# Copyright (c) 2022
-# *** Copyright Notice ***
-# Pyomo.DOE was produced under the DOE Carbon Capture Simulation Initiative (CCSI), and is
-# copyright (c) 2022 by the software owners: TRIAD, LLNS, BERKELEY LAB, PNNL, UT-Battelle, LLC, NOTRE
-# DAME, PITT, UT Austin, TOLEDO, WVU, et al. All rights reserved.
-# 
-# NOTICE. This Software was developed under funding from the U.S. Department of Energy and the U.S.
-# Government consequently retains certain rights. As such, the U.S. Government has been granted for itself
-# and others acting on its behalf a paid-up, nonexclusive, irrevocable, worldwide license in the Software to
-# reproduce, distribute copies to the public, prepare derivative works, and perform publicly and display
-# publicly, and to permit other to do so.
-# 
-# *** License Agreement ***
-# 
-# Pyomo.DOE Copyright (c) 2022, by the software owners: TRIAD, LLNS, BERKELEY LAB, PNNL, UT-
-# Battelle, LLC, NOTRE DAME, PITT, UT Austin, TOLEDO, WVU, et al. All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without modification, are permitted provided
-# that the following conditions are met:
-# (1) Redistributions of source code must retain the above copyright notice, this list of conditions and the
-# following disclaimer.
-# (2) Redistributions in binary form must reproduce the above copyright notice, this list of conditions and
-# the following disclaimer in the documentation and/or other materials provided with the distribution.
-# (3) Neither the name of the Carbon Capture Simulation for Industry Impact, TRIAD, LLNS, BERKELEY LAB,
-# PNNL, UT-Battelle, LLC, ORNL, NOTRE DAME, PITT, UT Austin, TOLEDO, WVU, U.S. Dept. of Energy nor
-# the names of its contributors may be used to endorse or promote products derived from this software
-# without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
-# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-# MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
-# THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
-# THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-# 
-# You are under no obligation whatsoever to provide any bug fixes, patches, or upgrades to the features,
-# functionality or performance of the source code ("Enhancements") to anyone; however, if you choose to
-# make your Enhancements available either publicly, or directly to Lawrence Berkeley National Laboratory,
-# without imposing a separate written license agreement for such Enhancements, then you hereby grant
-# the following license: a non-exclusive, royalty-free perpetual license to install, use, modify, prepare
-# derivative works, incorporate into other computer software, distribute, and sublicense such
-# enhancements or derivative works thereof, in binary and source code form.
+#  ___________________________________________________________________________
 #
-# Lead Developers: Jialu Wang and Alexander Dowling, University of Notre Dame
-#
-#################################################################################################################
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 
 from pyomo.common.dependencies import (
     numpy as np, numpy_available,
@@ -82,6 +43,8 @@ class Measurements:
         ind_string:
             a ''string'', used to flatten the name of variables and extra index. Default is '_index_'.
             For e.g., for {'C':{'CA': 10, 'CB': 1, 'CC': 2}}, the reformulated name is 'C_index_CA'.
+        verbose:
+            if True, print statements. 
         """
         self.measurement_all_info = measurement_index_time
         self.ind_string = ind_string
@@ -121,12 +84,12 @@ class Measurements:
         # a list of measurement extra indexes
         measurement_extra_index = []
         # a list of measurement names with extra indexes
-        extra_measure_name = []
+        #extra_measure_name = []
         # check if the measurement has extra indexes
         for i in measurement_name:
             if type(all_info[i]) is dict:
                 index_list = list(all_info[i].keys())
-                extra_measure_name.append(i)
+                #extra_measure_name.append(i)
                 measurement_extra_index.append(index_list)
             elif type(all_info[i]) is list:
                 measurement_extra_index.append(None)
@@ -144,7 +107,7 @@ class Measurements:
         jac_involved_name: a list of flattened measurement names
         """
         flatten_names = []
-        for j in list(measure_name_and_index.keys()):
+        for j in measure_name_and_index.keys():
             if measure_name_and_index[j] is not None: # if it has extra index
                 for ind in measure_name_and_index[j]:
                     flatten_name = j + self.ind_string + str(ind)
@@ -160,10 +123,13 @@ class Measurements:
         ----------
         flatten_measure_name: flattened measurement names. For e.g., flattenning {'C':{'CA': 10, 'CB': 1, 'CC': 2}} will be 'C_index_CA', ..., 'C_index_CC'.
         variance:
-            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index,
-            values are its variance (a scalar number), values are its variance if there is no extra index for this measurement.
+            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index name,
+            values are its variance as a scalar number.
             For e.g., for the kinetics illustrative example, it should be {'C':{'CA': 10, 'CB': 1, 'CC': 2}}.
             If given None, the default is {'C':{'CA': 1, 'CB': 1, 'CC': 1}}.
+            If there is no extra index, it is a dict, keys are measurement variable names, values are its variance as a scalar number.
+        name_and_index:
+            a dictionary, keys are measurement names, values are a list of extra indexes.
         """
         flatten_variance = {}
         for i in flatten_measure_name:
@@ -222,7 +188,7 @@ class Measurements:
                     measurement_names.append(measurement_name)
         self.model_measure_name = measurement_names
 
-    def SP_measure_name(self, j, t,scenario_all=None, p=None, mode=None, legal_t=True):
+    def __SP_measure_name(self, j, t,scenario_all=None, p=None, mode='sequential_finite', legal_t=True):
         """Return pyomo string name for different modes
         Arguments
         ---------
@@ -295,20 +261,22 @@ class Measurements:
                     if t not in self.flatten_measure_timeset[i]:
                         valid_subset = False
                         if throw_error:
-                            raise ValueError('The time of ', t, ' is not included as measurements before.')
+                            raise ValueError('The time of {} is not included as measurements before.'.format(t))
         return valid_subset
 
 class DesignOfExperiments:
     def __init__(self, param_init, design_variable_timepoints, measurement_object, create_model, solver=None,
                  prior_FIM=None, discretize_model=None, verbose=True, args=None):
-        """This package enables model-based design of experiments analysis with Pyomo. Both direct optimization and enumeration modes are supported.
+        """This package enables model-based design of experiments analysis with Pyomo. 
+        Both direct optimization and enumeration modes are supported.
         NLP sensitivity tools, e.g.,  sipopt and k_aug, are supported to accelerate analysis via enumeration.
         It can be applied to dynamic models, where design variables are controlled throughout the experiment.
 
         Parameters
         ----------
         param_init:
-            A  ``dictionary`` of parameter names and values. If they are an indexed variable, put the variable name and index, such as 'theta["A1"]'.
+            A  ``dictionary`` of parameter names and values. 
+            If they defined as indexed Pyomo variable, put the variable name and index, such as 'theta["A1"]'.
             Note: if sIPOPT is used, parameter shouldn't be indexed.
         design_variable_timepoints:
             A ``dictionary`` where keys are design variable names, values are its control time points.
@@ -318,15 +286,16 @@ class DesignOfExperiments:
         create_model:
             A  ``function`` that returns the model
         solver:
-            A ``solver`` object that User specified, default=None. If not specified, default solver is IPOPT MA57.
+            A ``solver`` object that User specified, default=None. 
+            If not specified, default solver is IPOPT MA57.
         prior_FIM:
-            The list of ``param`` represents for Fisher information matrix (FIM) for prior experiments, default=None
+            A ``list`` of lists containing Fisher information matrix (FIM) for prior experiments.
         discretize_model:
             A user-specified ``function`` that discretizes the model. Only use with Pyomo.DAE, default=None
         verbose:
-            A ``var`` if print statements are made
+            A ``bool`` if print statements are made
         args:
-            Other arguments as ``var`` of the create_model function, in a list
+            Additional arguments for the create_model function.
         """
         
         # parameters
@@ -374,10 +343,10 @@ class DesignOfExperiments:
         check_mode: check FIM calculation mode
         """
         if self.objective_option not in ['det', 'trace', 'zero']:
-            raise ValueError('Error: Objective function should be chosen from "det", "zero" and "trace"')
+            raise ValueError('Objective function should be chosen from "det", "zero" and "trace" while receiving {}'.format(self.objective_option))
 
         if self.formula not in ['central', 'forward', 'backward', None]:
-            raise ValueError('Error: Finite difference scheme should be chosen from "central", "forward", "backward" and None.')
+            raise ValueError('Finite difference scheme should be chosen from "central", "forward", "backward" and None while receiving {}.'.formate(self.formula))
 
         if self.prior_FIM is not None:
             if not (np.shape(self.prior_FIM)[0] == np.shape(self.prior_FIM)[1]):
@@ -402,7 +371,7 @@ class DesignOfExperiments:
                      formula='central', step=0.001, check=True):
         """Optimize DOE problem with design variables being the decisions.
         The DOE model is formed invasively and all scenarios are computed simultaneously.
-        The function will first fun a square problem with design variable being fixed at
+        The function will first run a square problem with design variable being fixed at
         the given initial points (Objective function being 0), then a square problem with
         design variables being fixed at the given initial points (Objective function being Design optimality),
         and then unfix the design variable and do the optimization.
@@ -427,7 +396,9 @@ class DesignOfExperiments:
         if_Cholesky:
             if True, Cholesky decomposition is used for Objective function for D-optimality.
         L_LB:
-            if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
+            L is the Cholesky decomposition matrix for FIM, i.e. FIM = L*L.T. 
+            L_LB is the lower bound for every element in L.
+            if FIM is positive definite, the diagonal element should be positive, so we can set a LB like 1E-10
         L_initial:
             initialize the L
         jac_initial:
@@ -462,7 +433,7 @@ class DesignOfExperiments:
         self.fim_initial = fim_initial
         self.formula = formula
         self.step = step
-        self.tee_opt = True
+        self.tee_opt = self.verbose
 
         # calculate how much the FIM element is scaled by a constant number
         # FIM = Jacobian.T@Jacobian, the FIM is scaled by squared value the Jacobian is scaled
@@ -563,15 +534,19 @@ class DesignOfExperiments:
                     objective_option='det'):
         """This function solves a square Pyomo model with fixed design variables to compute the FIM.
         It calculates FIM with sensitivity information from four modes:
-            1.  sequential_finite: Calculates a one scenario model multiple times for multiple scenarios. Sensitivity info estimated by finite difference
+            1.  sequential_finite: Calculates a one scenario model multiple times for multiple scenarios. 
+            Sensitivity info estimated by finite difference
             2.  sequential_sipopt: calculate sensitivity by sIPOPT [Experimental]
             3.  sequential_kaug: calculate sensitivity by k_aug [Experimental]
             4.  direct_kaug: calculate sensitivity by k_aug with direct sensitivity
 
+        "Simultaneous_finite" mode is not included in this function.
+
         Parameters
         -----------
         design_values:
-            a ``dict`` where keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
+            a ``dict`` where keys are design variable names, 
+            values are a dict whose keys are time point and values are the design variable value at that time point
         mode:
             use mode='sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug'
         FIM_store_name:
@@ -584,10 +559,19 @@ class DesignOfExperiments:
             if True, the parameters are scaled by its own nominal value in param_init
         scale_constant_value:
             scale all elements in Jacobian matrix, default is 1.
+        store_output:
+            if storing the output (value stored in Var 'output_record') as a pickle file, give the file name here as a string.
+        read_output:
+            if reading the output (value for Var 'output_record') as a pickle file, give the file name here as a string.
+        extract_single_model:
+            if True, the solved model outputs for each scenario are all recorded as a .csv file. 
         formula:
             choose from 'central', 'forward', 'backward', None. This option is only used for 'sequential_finite' mode.
         step:
             Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
+        objective_option: 
+            choose from 'det' or 'trace' or 'zero'. Optimization problem maximizes determinant or trace or using 0 as objective function.
+
 
         Return
         ------
@@ -676,7 +660,7 @@ class DesignOfExperiments:
 
                     for j in self.flatten_measure_name:
                         for t in self.flatten_measure_timeset[j]:
-                            measure_string_name = self.measure.SP_measure_name(j,t,mode='sequential_finite')
+                            measure_string_name = self.measure.__SP_measure_name(j,t,mode='sequential_finite')
                             C_value = pyo.value(eval(measure_string_name))
                             output_iter.append(C_value)
 
@@ -848,8 +832,9 @@ class DesignOfExperiments:
                     # store extracted measurements
                     all_perturb_measure.append(perturb_mea)
                     all_base_measure.append(base_mea)
-                    print(all_perturb_measure)
-                    print(all_base_measure)
+                    if self.verbose:
+                        print(all_perturb_measure)
+                        print(all_base_measure)
 
                 # After collecting outputs from all scenarios, calculate sensitivity
                 for count, para in enumerate(self.param_name):
@@ -925,7 +910,8 @@ class DesignOfExperiments:
 
             # set ub and lb to parameters
             for par in self.param_name:
-                component = eval('mod.'+par+'[0]')
+                #component = eval('mod.'+par+'[0]')
+                component = getattr(mod, par)[0]
                 component.setlb(self.param_init[par])
                 component.setub(self.param_init[par])
 
@@ -1017,7 +1003,7 @@ class DesignOfExperiments:
 
 
         else:
-            raise ValueError('This is not a valid mode. Choose from "sequential_finite", "simultaneous_finite", "sequential_sipopt", "sequential_kaug"')
+            raise ValueError('This is not a valid mode. Choose from "sequential_finite" and "direct_kaug".')
 
     def __finite_calculation(self, output_record, scena_gen):
         """
@@ -1025,8 +1011,8 @@ class DesignOfExperiments:
 
         Parameters
         ----------
-        output_record: output record
-        scena_gen: scena_gen generated
+        output_record: a dict of outputs, keys are scenario names, values are a list of measurements values
+        scena_gen: an object generated by Scenario_creator class
 
         Returns
         --------
@@ -1086,10 +1072,10 @@ class DesignOfExperiments:
         Parameters:
         -----------
         design_values_set: a list of experiments, each element is one design_values dictionary
-        mode: use mode='sequential_finite', 'simultaneous_finite', 'sequential_sipopt', 'sequential_kaug'
-        tee_option: if IPOPT console output is printed
+        mode: use mode='sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug'.
+        tee_option: if solver console output is printed
         scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
-        scale_constant_value: how many order of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
+        scale_constant_value: how many orders of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
         formula: choose from 'central', 'forward', 'backward', None
         step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
 
@@ -1147,13 +1133,15 @@ class DesignOfExperiments:
 
         return result_object_list, fim_list
 
-    def run_grid_search(self, design_values, design_ranges, design_dimension_names, design_control_time, mode='sequential_finite',
-                        tee_option=False, scale_nominal_param_value=False, scale_constant_value=1, store_name= None, read_name=None,
+    def run_grid_search(self, design_values, design_ranges, design_dimension_names, 
+                    design_control_time, mode='sequential_finite', tee_option=False, 
+                    scale_nominal_param_value=False, scale_constant_value=1, store_name= None, read_name=None,
                         filename=None, formula='central', step=0.001):
         """Enumerate through full grid search for any number of design variables;
         solve square problems sequentially to compute FIMs.
         It calculates FIM with sensitivity information from four modes:
-            1.  sequential_finite: Calculates a one scenario model multiple times for multiple scenarios. Sensitivity info estimated by finite difference
+            1.  sequential_finite: Calculates a one scenario model multiple times for multiple scenarios. 
+            Sensitivity info estimated by finite difference
             2.  sequential_sipopt: calculate sensitivity by sIPOPT [Experimental]
             3.  sequential_kaug: calculate sensitivity by k_aug [Experimental]
             4.  direct_kaug: calculate sensitivity by k_aug with direct sensitivity
@@ -1171,11 +1159,18 @@ class DesignOfExperiments:
         mode:
             use mode='sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug'
         tee_option:
-            if IPOPT console output is made
+            if solver console output is made
         scale_nominal_param_value:
             if True, the parameters are scaled by its own nominal value in param_init
         scale_constant_value:
             scale all elements in Jacobian matrix, default is 1.
+        store_name:
+            a string of file name. If not None, store results with this name.
+            Since there are maultiple experiments, results are numbered with a scalar number, 
+            and the result for one grid is 'store_name(count).csv' (count is the number of count).
+        read_name: 
+            a string of file name. If not None, read result files. 
+            Since there are multiple experiments, this string should be the common part of all files.
         filename:
             if True, grid search results stored with this file name
         formula:
@@ -1221,7 +1216,7 @@ class DesignOfExperiments:
         build_time_store=[]
         solve_time_store=[]
 
-        # loop over deign value combinations
+        # loop over design value combinations
         for design_set_iter in search_design_set:
             # generate the design variable dictionary needed for running compute_FIM
             # first copy value from design_Values
@@ -1304,15 +1299,16 @@ class DesignOfExperiments:
         Parameters:
         -----------
         no_obj: if True, objective function is 0.
-        self.design_values: a dict of dictionaries, keys are the name of design variables, values are a dict where keys are the time points, values are the design variable value at that time point
-
+        self.design_values: a dict of dictionaries, keys are the name of design variables, 
+        values are a dict where keys are the time points, values are the design variable value at that time point
         self.optimize: if True, solve the problem unfixing the design variables. if False, solve the problem as a
         square problem
         self.objective_option: choose from 'det' or 'trace'. Optimization problem maximizes determinant or trace.
         self.scale_nominal_param_value: if True, scale FIM but not scale Jacobian. This toggle can be opened for better performance when the
         problem is poorly scaled.
         self.tee_opt: if True, print IPOPT console output
-        self.Cholesky_option: if true, cholesky decomposition is used for Objective function (to optimize determinant). If true, determinant will not be calculated.
+        self.Cholesky_option: if true, cholesky decomposition is used for Objective function (to optimize determinant). 
+            If true, determinant will not be calculated.
             self.L_LB: if FIM is P.D., the diagonal element should be positive, so we can set a LB like 1E-10
             self.L_initial: initialize the L
         self.formula: choose from 'central', 'forward', 'backward', None
@@ -1354,14 +1350,14 @@ class DesignOfExperiments:
         for j in m.y_set:
             for t in m.tmea_set:
                 if not (t in m.t):
-                    raise ValueError('Warning: Measure timepoints should be in the time list.')
+                    raise ValueError('Measure timepoints should be in the time list.')
 
         # check if control time points are in the time set
         for d in range(len(self.design_name)):
             if self.design_time[d] is not None:
                 for t in self.design_time[d]:
                     if not (t in m.t):
-                        raise ValueError('Warning: Control timepoints should be in the time list.')
+                        raise ValueError('Control timepoints should be in the time list.')
 
         ### Define variables
         # Elements in Jacobian matrix
@@ -1450,7 +1446,7 @@ class DesignOfExperiments:
             # A better way to do this: 
             # https://github.com/IDAES/idaes-pse/blob/274e58bef55f2f969f0df97cbb1fb7d99342388e/idaes/apps/uncertainty_propagation/sens.py#L296
             # check if j is a measurement with extra index by checking if there is '_index_' in its name
-            up_C_name, lo_C_name, legal_t_option = self.measure.SP_measure_name(j,t,scenario_all=scenario_all, mode='simultaneous_finite', p=p)
+            up_C_name, lo_C_name, legal_t_option = self.measure.__SP_measure_name(j,t,scenario_all=scenario_all, mode='simultaneous_finite', p=p)
             if legal_t_option:
                 up_C = eval(up_C_name)
                 lo_C = eval(lo_C_name)
@@ -1488,11 +1484,11 @@ class DesignOfExperiments:
             Calculate FIM elements. Can scale each element with 1000 for performance
             """
             sum_x = 0  
-            for j in m.para_set:
-                for d in m.para_set:
-                    if d==j:
-                        sum_x += m.FIM[j,d]
-            return m.trace == sum_x 
+            #for j in m.para_set:
+            #    for d in m.para_set:
+            #        if d==j:
+            #            sum_x += m.FIM[j,d]
+            return m.trace == sum(m.FIM[j,j] for j in m.para_set)
 
         def det_general(m):
             """Calculate determinant. Can be applied to FIM of any size.
@@ -1637,7 +1633,8 @@ class DesignOfExperiments:
             # if design variables are indexed by time
             if self.design_time[d] is not None:
                 for t, time in enumerate(self.design_time[d]):
-                    newvar = eval('m.' + dname + '[' + str(time) + ']')
+                    #newvar = eval('m.' + dname + '[' + str(time) + ']')
+                    newvar = getattr(m, dname)[time]
                     fix_v = design_val[dname][time]
 
                     if fix_opt:
@@ -1649,7 +1646,8 @@ class DesignOfExperiments:
                             if optimize_option[dname]:
                                 newvar.unfix()
             else:
-                newvar = eval('m.' + dname)
+                #newvar = eval('m.' + dname)
+                newvar = getattr(m, dname)
                 fix_v = design_val[dname][0]
 
                 if fix_opt:
@@ -1676,6 +1674,10 @@ class DesignOfExperiments:
         -----------
         m:model
         fix: if true, solve two times (square first). Else, just solve the square problem
+        opt_option: a dictionary, keys are design variable name, values are True or False, 
+            deciding if this design variable is optimized as DOF this time.
+            If None, all design variables are optimized as DOF this time.
+
 
         Return:
         -------
@@ -1696,7 +1698,6 @@ class DesignOfExperiments:
         Parameters:
         -----------
         m: model name
-        self.param_names: perturbation parameter names
         perturb: which parameter to perturb
         """
         # model parameters perturbation, backward disturb
@@ -1735,7 +1736,7 @@ class DesignOfExperiments:
         """
 
         if len(p) == 1:
-            return True
+            return 1
 
         trans = 0
 
@@ -1761,7 +1762,8 @@ class Scenario_generator:
         Parameters
         -----------
         para_dict:
-            a ``dict`` of parameter, keys are names of ''string'', values are their nominal value of ''float''. for e.g., {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
+            a ``dict`` of parameter, keys are names of ''string'', values are their nominal value of ''float''.
+            for e.g., {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
         formula:
             choose from 'central', 'forward', 'backward', None.
         step:
@@ -1771,7 +1773,7 @@ class Scenario_generator:
         """
 
         if formula not in ['central', 'forward', 'backward', None]:
-            raise ValueError('Error: undefined formula. Available formulas: central, forward, backward, none.')
+            raise ValueError('Undefined formula. Available formulas: central, forward, backward, none.')
 
         # get info from parameter dictionary
         self.para_dict = para_dict
@@ -1781,9 +1783,10 @@ class Scenario_generator:
         self.step = step
         self.store = store
         # This is the parameter nominal values
-        self.scenario_nominal = []
-        for d in self.para_names:
-            self.scenario_nominal.append(para_dict[d])
+        #self.scenario_nominal = []
+        #for d in self.para_names:
+        #    self.scenario_nominal.append(para_dict[d])
+        self.scenario_nominal = [para_dict[d] for d in self.para_names]
 
     def simultaneous_scenario(self):
         """
@@ -1807,17 +1810,18 @@ class Scenario_generator:
         self.scena_keys = scena_keys
         self.scena = scena
 
-        # call scneario class and method
+        # call scenario class and method
         scenario_object = Scenario_data(self.para_dict, self.scena_keys, self.scena, self.formula, self.step)
         scenario_overall = scenario_object.create_scenario()
 
         # store scenario
         if self.store:
-            f = open('scenario_simultaneous', 'wb')
-            pickle.dump(scenario_overall, f)
-            f.close()
+            with open('scenario_simultaneous.pickle', 'wb') as f:
+                pickle.dump(scenario_overall, f)
+            #f.close()
 
         return scenario_overall
+
 
     def next_sequential_scenario(self, count):
         """
@@ -1862,7 +1866,7 @@ class Scenario_generator:
             if self.formula == 'central':
                 scenario_para[para] = [p, p + self.no_para]
             elif self.formula == None:
-                raise ValueError('Error: finite difference scheme should be chosen.')
+                raise ValueError('Finite difference scheme should be chosen.')
             else:
                 scenario_para[para] = [p, self.no_para]
 
@@ -1946,18 +1950,6 @@ class Scenario_data:
         form: choose from 'central', 'forward', 'backward', 'none'.
         step: stepsize of a fraction, such as 0.01
 
-        Returns:
-        --------
-        scena_dict: a dictionary containing scenarios dictionaries.
-        scena_dict[name of parameter]: a dict, keys are the scenario name(numeric integer starting from 0), values are parameter value in this scenario
-        scena_dict['jac-index']: keys are parameter name, values are the scenario names perturbing this parameter.
-        scena_dict['eps-abs']: keys are parameter name, values are the step it is perturbed
-        scena_dict['scena-name']: a list of scenario names
-
-        For e.g., if a dict {'P':100, 'D':20} is given, step=0.1, formula='central', it will return:
-        scena_dict = {'P': {0: 101.0, 1: 100, 2: 99.0, 3: 100}, 'D': {0: 20, 1: 20.2, 2: 20, 3: 19.8}, 'jac-index': {'P': [0, 2], 'D': [1, 3]}, 'eps-abs': {'P': 2.0, 'D': 0.4}, 'scena-name': [0, 1, 2, 3]}
-        if formula ='forward', it will return:
-        scena_dict = {'P':{'0':110, '1':100, '2':100}, 'D':{'0':20, '1':22, '2':20}, 'jac-index':{'P':[0,2], 'D':[1,2]}, 'eps-abs':{'P':10,'D':2}, 'scena-name': [0,1,2]}
         """
         # get info from parameter dictionary
         self.para_dict = parameter_dict
@@ -1965,8 +1957,6 @@ class Scenario_data:
 
         self.scena = scena
         self.scena_keys = scena_keys
-        # print('scena:', scena)
-        # print('scena keys:', scena_keys)
         self.no_para = len(self.para_names)
         self.formula = form
         self.step = step
@@ -1977,11 +1967,28 @@ class Scenario_data:
             self.scenario_nominal.append(parameter_dict[d])
 
     def create_scenario(self):
+        """
+        Returns:
+        --------
+        scena_dict: a dictionary containing scenarios dictionaries.
+            scena_dict[name of parameter]: a dict, keys are the scenario name(numeric integer starting from 0), 
+            values are parameter value in this scenario
+            scena_dict['jac-index']: keys are parameter name, values are the scenario names perturbing this parameter.
+            scena_dict['eps-abs']: keys are parameter name, values are the step it is perturbed
+            scena_dict['scena-name']: a list of scenario names
+
+            For e.g., if a dict {'P':100, 'D':20} is given, step=0.1, formula='central', it will return:
+            scena_dict = {'P': {0: 101.0, 1: 100, 2: 99.0, 3: 100}, 'D': {0: 20, 1: 20.2, 2: 20, 3: 19.8}, 
+            'jac-index': {'P': [0, 2], 'D': [1, 3]}, 'eps-abs': {'P': 2.0, 'D': 0.4}, 'scena-name': [0, 1, 2, 3]}
+            if formula ='forward', it will return:
+            scena_dict = {'P':{'0':110, '1':100, '2':100}, 'D':{'0':20, '1':22, '2':20}, 
+            'jac-index':{'P':[0,2], 'D':[1,2]}, 'eps-abs':{'P':10,'D':2}, 'scena-name': [0,1,2]}
+        """
         # overall dict to return
         scenario_dict = {}
         # dict for scenario position
         jac_index = {}
-        # dict for parameter perturbaion step size
+        # dict for parameter perturbation step size
         eps_abs = {}
 
         # loop over parameter name
@@ -2017,7 +2024,8 @@ class Scenario_data:
 
 
 class FIM_result:
-    def __init__(self, para_name, measure_object, jacobian_info=None, all_jacobian_info=None, prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
+    def __init__(self, para_name, measure_object, jacobian_info=None, all_jacobian_info=None, 
+                prior_FIM=None, store_FIM=None, scale_constant_value=1, max_condition_number=1.0E12,
                  verbose=True):
         """Analyze the FIM result for a single run
 
@@ -2070,12 +2078,6 @@ class FIM_result:
             a ``dict`` where keys are design variable names, values are a dict whose keys are time point and values are the design variable value at that time point
         result:
             solver status returned by IPOPT
-
-
-        Return
-        ------
-        fim_info: a FIM dictionary
-        solver_info: a solver information dictionary
         """
         self.result = result
         self.doe_result = None
@@ -2089,11 +2091,7 @@ class FIM_result:
         fim = np.zeros((no_param, no_param))
 
         for i in range(len(Q_response_list)):
-            #print(1/variance_list[i])
-            #print(np.shape(Q_response_list[i]))
-            #print(np.shape(Q_response_list[i]@Q_response_list[i].T))
             fim += ((1/variance_list[i])*(Q_response_list[i]@Q_response_list[i].T))
-        #print('shape of fim:', np.shape(fim))
 
         # add prior information
         if (self.prior_FIM is not None):
@@ -2141,7 +2139,7 @@ class FIM_result:
         """
         Split jacobian
         Args:
-            measure_subclass: the class of the measurement subsets
+            measure_subset: the object of the measurement subsets
 
         Returns:
             jaco_info: splitted Jacobian
@@ -2741,6 +2739,7 @@ def simulate_discretize_model(m,NFE,collo=True,initialize=True):
     Args:
         m: Pyomo model
         NFE: number of finite elements to consider (integer)
+        collo: if True, use collocation. If not True, use finite difference scheme.
         initialize: if True, initialize the discretized model with the
          integrator solution (boolean)
 
