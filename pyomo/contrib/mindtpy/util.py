@@ -103,7 +103,7 @@ def model_is_valid(solve_data, config):
     return True
 
 
-def calc_jacobians(mip_model, config):
+def calc_jacobians(model, config):
     """Generates a map of jacobians for the variables in the model.
 
     This function generates a map of jacobians corresponding to the variables in the
@@ -111,8 +111,8 @@ def calc_jacobians(mip_model, config):
 
     Parameters
     ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    model : Pyomo model
+        Target model to calculate jacobian.
     config : ConfigBlock
         The specific configurations for MindtPy.
     """
@@ -123,7 +123,7 @@ def calc_jacobians(mip_model, config):
         mode = differentiate.Modes.reverse_symbolic
     elif config.differentiate_mode == 'sympy':
         mode = differentiate.Modes.sympy
-    for c in mip_model.MindtPy_utils.nonlinear_constraint_list:
+    for c in model.MindtPy_utils.nonlinear_constraint_list:
         vars_in_constr = list(EXPR.identify_variables(c.body))
         jac_list = differentiate(
             c.body, wrt_list=vars_in_constr, mode=mode)
