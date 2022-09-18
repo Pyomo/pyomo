@@ -10,4 +10,5 @@
 #  ___________________________________________________________________________
 
 def load():
-    import pyomo.contrib.mindtpy.MindtPy
+    # import pyomo.contrib.mindtpy.MindtPy
+    import pyomo.contrib.mindtpy.outer_approximation
