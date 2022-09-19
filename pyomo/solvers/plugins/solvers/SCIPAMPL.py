@@ -30,7 +30,7 @@ logger = logging.getLogger('pyomo.solvers')
 class SCIPAMPL(SystemCallSolver):
     """A generic optimizer that uses the AMPL Solver Library to interface with applications.
     """
-    
+
     # Cache default executable, so we do not need to repeatedly query the
     # versions every time.
     _known_versions = {}
@@ -63,7 +63,7 @@ class SCIPAMPL(SystemCallSolver):
         return ResultsFormat.sol
 
     def _default_executable(self):
-        
+
         executable = Executable("scip")
 
         if executable:
@@ -73,7 +73,7 @@ class SCIPAMPL(SystemCallSolver):
             _ver = self._known_versions[executable_path]
             if _ver and _ver >= (8,):
                 return executable_path
-        
+
         # revert to scipampl for older versions
         executable = Executable("scipampl")
         if not executable:
@@ -109,7 +109,7 @@ class SCIPAMPL(SystemCallSolver):
         if self._log_file is None:
             self._log_file = TempfileManager.\
                              create_tempfile(suffix="_scipampl.log")
-        
+
         fname = problem_files[0]
         if '.' in fname:
             tmp = fname.split('.')
@@ -118,7 +118,7 @@ class SCIPAMPL(SystemCallSolver):
             else:
                 fname = tmp[0]
         self._soln_file = fname+".sol"
-            
+
         #
         # Define results file (since an external parser is used)
         #
@@ -138,7 +138,7 @@ class SCIPAMPL(SystemCallSolver):
                 env['AMPLFUNC'] += "\n" + env['PYOMO_AMPLFUNC']
             else:
                 env['AMPLFUNC'] = env['PYOMO_AMPLFUNC']
-                
+
         # Since Version 8.0.0 .nl problem file paths should be provided without the .nl
         # extension
         if executable not in self._known_versions:
@@ -148,7 +148,7 @@ class SCIPAMPL(SystemCallSolver):
             problem_file = os.path.splitext(problem_files[0])[0]
         else:
             problem_file = problem_files[0]
-        
+
         cmd = [executable, problem_file, '-AMPL']
         if self._timer:
             cmd.insert(0, self._timer)
@@ -187,7 +187,7 @@ class SCIPAMPL(SystemCallSolver):
                                "separate options file. The options "
                                "file '%s' will be ignored."
                                % (default_of_name, default_of_name))
-            
+
             options_dir = TempfileManager.create_tempdir()
             # Now write the new options file
             with open(os.path.join(options_dir, 'scip.set'), 'w') as f:
@@ -195,89 +195,18 @@ class SCIPAMPL(SystemCallSolver):
                     f.write(line+"\n")
         else:
             options_dir = None
-            
+
         return Bunch(cmd=cmd, log_file=self._log_file, env=env, cwd=options_dir)
-    
-    @staticmethod
-    def read_scip_log(filename: str):
-        
-        # TODO: check file exists, ensure opt has finished, etc
-        
-        from collections import deque
-        
-        with open(filename) as f:
-            
-            scip_lines = list(deque(f, 7))
-            scip_lines.pop()
-        
-        expected_labels = ['SCIP Status        :',
-                           'Solving Time (sec) :',
-                           'Solving Nodes      :',
-                           'Primal Bound       :',
-                           'Dual Bound         :',
-                           'Gap                :']
-        
-        colon_position = 19 # or scip_lines[0].index(':')
-        
-        for i, log_file_line in enumerate(scip_lines):
-            
-            if expected_labels[i] != log_file_line[0:colon_position+1]:
-                
-                return {}
-            
-        # get data
-        
-        solver_status = scip_lines[0][colon_position+2:scip_lines[0].index('\n')]
-        
-        solving_time = float(
-            scip_lines[1][colon_position+2:scip_lines[1].index('\n')]
-            )
-        
-        try:
-            solving_nodes = int(
-                scip_lines[2][colon_position+2:scip_lines[2].index('(')]
-                )
-        except ValueError:
-        
-            solving_nodes = int(
-                scip_lines[2][colon_position+2:scip_lines[2].index('\n')]
-                )
-        
-        primal_bound = float(
-            scip_lines[3][colon_position+2:scip_lines[3].index('(')]
-            )
-        
-        dual_bound = float(
-            scip_lines[4][colon_position+2:scip_lines[4].index('\n')]
-            ) 
-        
-        
-        try:
-            gap = float(
-                scip_lines[5][colon_position+2:scip_lines[5].index('%')]
-                ) 
-        except ValueError:
-            
-            gap = scip_lines[5][colon_position+2:scip_lines[5].index('\n')]
-            
-            if gap == 'infinite':
-                
-                gap = float('inf')
-        
-        out_dict = {
-            'solver_status': solver_status,
-            'solving_time': solving_time,
-            'solving_nodes': solving_nodes,
-            'primal_bound': primal_bound,
-            'dual_bound': dual_bound,
-            'gap': gap,
-            }
-        
-        return out_dict
-    
+
     def _postsolve(self):
         
-        if self.version() < (8, 0, 0, 0):
+        # find SCIP version (calling version() and _get_version() mess things)
+        
+        executable = self._command.cmd[0]
+        
+        version = self._known_versions[executable]
+        
+        if version < (8, 0, 0, 0):
             
             # it may be possible to get results from older version but this was
             # not tested, so the old way of doing things is here preserved
@@ -285,10 +214,10 @@ class SCIPAMPL(SystemCallSolver):
             results = super(SCIPAMPL, self)._postsolve()
         
         else:
-        
+            
             # repeat code from super(SCIPAMPL, self)._postsolve()
             # in order to access the log file and get the results from there
-            
+
             if self._log_file is not None:
                 OUTPUT=open(self._log_file,"w")
                 OUTPUT.write("Solver command line: "+str(self._command.cmd)+'\n')
@@ -301,39 +230,36 @@ class SCIPAMPL(SystemCallSolver):
             #   the keepfiles attribute and associated cleanup logic to the base
             #   class, which I didn't feel like doing at this present time. the
             #   base class remove_files method should clean up the problem file.
-    
+
             if (self._log_file is not None) and \
-               (not os.path.exists(self._log_file)):
+                (not os.path.exists(self._log_file)):
                 msg = "File '%s' not generated while executing %s"
                 raise IOError(msg % (self._log_file, self.path))
             results = None
-    
+
             if self._results_format is not None:
                 results = self.process_output(self._rc)
+                       
+                # read results from the log file
+                    
+                log_dict = self.read_scip_log(self._log_file)
                 
-                if (self._log_file is not None) and \
-                   (os.path.exists(self._log_file)):
-                       
-                   # read results from the log file
-                       
-                   log_dict = self.read_scip_log(self._log_file)
+                if len(log_dict) != 0:
+                    
+                    # if any were read, store them
+             
+                    results.solver.time = log_dict['solving_time']
+                    results.solver.gap = log_dict['gap']
+                    results.solver.primal_bound = log_dict['primal_bound']
+                    results.solver.dual_bound = log_dict['dual_bound']
                    
-                   if len(log_dict) != 0:
-                       
-                       # if any were read, store them
-                
-                       results.solver.time = log_dict['solving_time']
-                       results.solver.gap = log_dict['gap']
-                       results.solver.primal_bound = log_dict['primal_bound']
-                       results.solver.dual_bound = log_dict['dual_bound']
-                   
-                   # TODO: get scip to produce a statistics file and read it
-                   # Why? It has all the information one can possibly need.
-                   
+                # TODO: get scip to produce a statistics file and read it
+                # Why? It has all the information one can possibly need.
+                #
                 # If keepfiles is true, then we pop the
                 # TempfileManager context while telling it to
                 # _not_ remove the files.
-                
+                #
                 if not self._keepfiles:
                     # in some cases, the solution filename is
                     # not generated via the temp-file mechanism,
@@ -341,9 +267,9 @@ class SCIPAMPL(SystemCallSolver):
                     # the input lp/nl filename. so, we may have
                     # to clean it up manually.
                     if (not self._soln_file is None) and \
-                       os.path.exists(self._soln_file):
+                        os.path.exists(self._soln_file):
                         os.remove(self._soln_file)
-    
+
             TempfileManager.pop(remove=not self._keepfiles)
         
         #**********************************************************************
@@ -516,5 +442,82 @@ class SCIPAMPL(SystemCallSolver):
             if len(results.solution) > 0:
                 results.solution(0).status = \
                     SolutionStatus.unknown
-
+    
         return results
+    
+    @staticmethod
+    def read_scip_log(filename: str):
+        
+        # TODO: check file exists, ensure opt has finished, etc
+        
+        from collections import deque
+        
+        with open(filename) as f:
+            
+            scip_lines = list(deque(f, 7))
+            scip_lines.pop()
+        
+        expected_labels = ['SCIP Status        :',
+                            'Solving Time (sec) :',
+                            'Solving Nodes      :',
+                            'Primal Bound       :',
+                            'Dual Bound         :',
+                            'Gap                :']
+        
+        colon_position = 19 # or scip_lines[0].index(':')
+        
+        for i, log_file_line in enumerate(scip_lines):
+            
+            if expected_labels[i] != log_file_line[0:colon_position+1]:
+                
+                return {}
+            
+        # get data
+        
+        solver_status = scip_lines[0][colon_position+2:scip_lines[0].index('\n')]
+        
+        solving_time = float(
+            scip_lines[1][colon_position+2:scip_lines[1].index('\n')]
+            )
+        
+        try:
+            solving_nodes = int(
+                scip_lines[2][colon_position+2:scip_lines[2].index('(')]
+                )
+        except ValueError:
+        
+            solving_nodes = int(
+                scip_lines[2][colon_position+2:scip_lines[2].index('\n')]
+                )
+        
+        primal_bound = float(
+            scip_lines[3][colon_position+2:scip_lines[3].index('(')]
+            )
+        
+        dual_bound = float(
+            scip_lines[4][colon_position+2:scip_lines[4].index('\n')]
+            ) 
+        
+        
+        try:
+            gap = float(
+                scip_lines[5][colon_position+2:scip_lines[5].index('%')]
+                ) 
+        except ValueError:
+            
+            gap = scip_lines[5][colon_position+2:scip_lines[5].index('\n')]
+            
+            if gap == 'infinite':
+                
+                gap = float('inf')
+        
+        out_dict = {
+            'solver_status': solver_status,
+            'solving_time': solving_time,
+            'solving_nodes': solving_nodes,
+            'primal_bound': primal_bound,
+            'dual_bound': dual_bound,
+            'gap': gap,
+            }
+        
+        return out_dict
