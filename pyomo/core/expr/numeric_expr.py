@@ -557,10 +557,14 @@ class NPV_Mixin(object):
         if npv_args:
             return super().create_node_with_local_data(args, None)
         else:
-            cls = list(self.__class__.__bases__)
-            cls.remove(NPV_Mixin)
-            assert len(cls) == 1
-            return super().create_node_with_local_data(args, cls[0])
+            return super().create_node_with_local_data(
+                args, self.potentially_variable_base_class())
+
+    def potentially_variable_base_class(self):
+        cls = list(self.__class__.__bases__)
+        cls.remove(NPV_Mixin)
+        assert len(cls) == 1
+        return cls[0]
 
 
 class NegationExpression(ExpressionBase):
