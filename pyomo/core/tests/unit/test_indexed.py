@@ -200,6 +200,26 @@ class TestIndexedComponent(unittest.TestCase):
         self.assertIs(thing.args[0], m.p)
         self.assertIs(thing.args[1], idx_expr)
 
+    def test_index_var_by_tuple_with_variables(self):
+        m = ConcreteModel()
+        m.x = Var([(1, 1), (2, 1), (1, 2), (2, 2)])
+        m.i = Var([1, 2, 3], domain=Integers)
+
+        thing = m.x[1, m.i[1]]
+        self.assertIsInstance(thing, GetItemExpression)
+        self.assertEqual(len(thing.args), 3)
+        self.assertIs(thing.args[0], m.x)
+        self.assertEqual(thing.args[1], 1)
+        self.assertIs(thing.args[2], m.i[1])
+
+        idx_expr = m.i[1] + m.i[2]*m.i[3]
+        thing = m.x[1, idx_expr]
+        self.assertIsInstance(thing, GetItemExpression)
+        self.assertEqual(len(thing.args), 3)
+        self.assertIs(thing.args[0], m.x)
+        self.assertEqual(thing.args[1], 1)
+        self.assertIs(thing.args[2], idx_expr)
+
     def test_index_by_unhashable_type(self):
         m = ConcreteModel()
         m.x = Var([1,2,3], initialize=lambda m,x: 2*x)
