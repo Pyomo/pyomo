@@ -83,13 +83,10 @@ class Measurements:
         measurement_name = list(all_info.keys())
         # a list of measurement extra indexes
         measurement_extra_index = []
-        # a list of measurement names with extra indexes
-        #extra_measure_name = []
         # check if the measurement has extra indexes
         for i in measurement_name:
             if type(all_info[i]) is dict:
                 index_list = list(all_info[i].keys())
-                #extra_measure_name.append(i)
                 measurement_extra_index.append(index_list)
             elif type(all_info[i]) is list:
                 measurement_extra_index.append(None)

@@ -1,7 +1,19 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar
 import numpy as np
+
+ 
 
 def disc_for_measure(m, NFE=32):
     """Pyomo.DAE discretization
@@ -207,3 +219,19 @@ def create_model(scena, const=False, control_time=None, control_val=None,
         m.C[z,'CC',0.0].fix(0.0)
     
     return m 
+
+def main():
+    # set up scenario
+    param_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
+    scenario_gene = Scenario_generator(param_dict, formula='central', step=0.1)
+    parameter_set = scenario_gene.simultaneous_scenario()
+
+    model = create_model(scenario_set) 
+    
+    solver = pyo.SolverFactory('ipopt')
+    solver.solve(model)
+    
+    
+    
+if __name__ == '__main__':
+    main()
