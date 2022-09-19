@@ -1459,7 +1459,8 @@ class AMPLRepn(object):
                 prefix += template.multiplier % self.mult
         if self.nl is not None:
             nl, nl_args = self.nl
-            visitor._mark_named_expression_as_used(nl_args)
+            if nl_args:
+                visitor._mark_named_expression_as_used(nl_args)
             if prefix:
                 nl = prefix + nl
             if args is not None and args is not nl_args:
