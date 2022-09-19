@@ -23,6 +23,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
 
 from pyomo.core.staleflag import StaleFlagManager
+from pyomo.core.expr.current import GetItemExpression
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
     NumericValue, value, is_potentially_variable, native_numeric_types,
@@ -911,6 +912,18 @@ class IndexedVar(Var):
         domain = SetInitializer(domain)(None, None)
         for vardata in self.values():
             vardata.domain = domain
+
+    # Because Emma wants crazy things... (Where crazy things are the ability to
+    # index Vars by other (integer) Vars and integer-valued expressions--a thing
+    # you can do in Constraint Programming.)
+    def __getitem__(self, args):
+        tmp = args if args.__class__ is tuple else (args,)
+        if any(hasattr(arg, 'is_potentially_variable')
+               and arg.is_potentially_variable()
+               for arg in tmp
+        ):
+            return GetItemExpression((self,) + tmp)
+        return super().__getitem__(args)
 
 
 @ModelComponentFactory.register("List of decision variables.")
