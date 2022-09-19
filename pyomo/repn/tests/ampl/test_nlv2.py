@@ -207,6 +207,8 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         self.assertEqual(repn.nonlinear, None)
 
     def test_errors_divide_by_0_mult_by_0(self):
+        # Note: we may elect to deprecate this functionality in the future
+        #
         m = ConcreteModel()
         m.p = Param(mutable=True, initialize=0)
         m.x = Var()
