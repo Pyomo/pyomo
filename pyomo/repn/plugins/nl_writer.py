@@ -102,7 +102,7 @@ class NLWriterInfo(object):
 
         The list of string names for the constraints / objectives
         written to the NL file in the same order as
-        :py:attr:`constraints` + :\p:attr:`objectives` and the generated
+        :py:attr:`constraints` + :py:attr:`objectives` and the generated
         .row file.
 
     column_labels: List[str]
@@ -411,7 +411,7 @@ class _NLWriter_impl(object):
             self.external_functions,
             self.var_map,
             self.used_named_expressions,
-            config.symbolic_solver_labels,
+            self.symbolic_solver_labels,
         )
         self.next_V_line_id = 0
         self.pause_gc = None
