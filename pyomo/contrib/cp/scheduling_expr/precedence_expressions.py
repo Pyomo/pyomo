@@ -32,11 +32,6 @@ class BeforeExpression(ExpressionBase, BooleanValue):
     def nargs(self):
         return 2
 
-    # ESJ TODO: I don't really know what this is or what calls it
-    def _apply_operation(self, result):
-        before, after = result
-        return before + delay <= after
-
     def _to_string(self, values, verbose, smap):
         delay = self.delay
         arg1 = values[0]
@@ -79,10 +74,6 @@ class AtExpression(ExpressionBase, BooleanValue):
 
     def nargs(self):
         return 2
-
-    def _apply_operation(self, result):
-        before, after = result
-        return before + delay == after
 
     def _to_string(self, values, verbose, smap):
         delay = self.delay
