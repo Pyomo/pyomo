@@ -1,4 +1,4 @@
-import unittest
+import pyomo.common.unittest as unittest
 from unittest.mock import patch, MagicMock
 
 try:
