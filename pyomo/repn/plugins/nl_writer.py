@@ -64,6 +64,9 @@ logger=logging.getLogger(__name__)
 # Feasibility tolerance for trivial (fixed) constraints
 TOL = 1e-8
 inf = float('inf')
+nan = float('nan')
+
+HALT_ON_EVALUATION_ERROR = False
 
 class _CONSTANT(object): pass
 class _MONOMIAL(object): pass
@@ -130,6 +133,24 @@ def _activate_nl_writer_version(n):
     doc = WriterFactory.doc('nl')
     WriterFactory.unregister('nl')
     WriterFactory.register('nl', doc)(WriterFactory.get_class(f'nl_v{n}'))
+
+
+def _apply_node_op(node, args):
+    try:
+        return (_CONSTANT, node._apply_operation(args))
+    except:
+        logger.warning(
+            "Exception encountered evaluating expression "
+            "'%s(%s)'\n\tmessage: %s\n\texpression: %s" % (
+                node.name,
+                ", ".join(map(str, args)),
+                str(sys.exc_info()[1]),
+                node
+            ))
+        if HALT_ON_EVALUATION_ERROR:
+            raise
+        return (_CONSTANT, nan)
+
 
 def categorize_valid_components(
         model, active=True, sort=None, valid=set(), targets=set()):
@@ -1671,17 +1692,29 @@ def handle_product_node(visitor, node, arg1, arg2):
         mult = arg1[1]
         if not mult:
             # simplify multiplication by 0 (if arg2 is zero, the
-            # simplification happens implicitly when we evaluate the
-            # constant below)
+            # simplification happens when we evaluate the constant
+            # below).  Note that this is not IEEE-754 compliant, and
+            # will map 0*inf and 0*nan to 0 (and not to nan).  We are
+            # including this for backwards compatibility with the NLv1
+            # writer, but arguably we should deprecate/remove this
+            # "feature" in the future.
             return arg1
         if mult == 1:
             return arg2
         elif arg2[0] is _MONOMIAL:
+            if mult != mult:
+                return arg1
             return (_MONOMIAL, arg2[1], mult*arg2[2])
         elif arg2[0] is _GENERAL:
+            if mult != mult:
+                return arg1
             arg2[1].mult *= mult
             return arg2
         elif arg2[0] is _CONSTANT:
+            if not arg2[1]:
+                # Simplify multiplication by 0; see note above about
+                # IEEE-754 incompatibility.
+                return arg2
             return (_CONSTANT, mult*arg2[1])
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.product)
@@ -1694,34 +1727,51 @@ def handle_division_node(visitor, node, arg1, arg2):
         if div == 1:
             return arg1
         if arg1[0] is _MONOMIAL:
-            return (_MONOMIAL, arg1[1], arg1[2]/div)
+            tmp = _apply_node_op(node, (arg1[2], div))
+            if tmp[1] != tmp[1]:
+                return tmp
+            return (_MONOMIAL, arg1[1], tmp[1])
         elif arg1[0] is _GENERAL:
-            arg1[1].mult /= div
+            tmp = _apply_node_op(node, (arg1[1].mult, div))
+            if tmp[1] != tmp[1]:
+                return tmp
+            arg1[1].mult = tmp[1]
             return arg1
         elif arg1[0] is _CONSTANT:
-            return (_CONSTANT, arg1[1]/div)
+            return _apply_node_op(node, (arg1[1], div))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.division)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_pow_node(visitor, node, arg1, arg2):
+    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
+        return _apply_node_op(node, (arg1[1], arg2[1]))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.pow)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_abs_node(visitor, node, arg1):
+    if arg1[0] is _CONSTANT:
+        return (_CONSTANT, abs(arg1[1]))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.abs)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_unary_node(visitor, node, arg1):
+    if arg1[0] is _CONSTANT:
+        return _apply_node_op(node, (arg1[1],))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.unary[node.name])
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_exprif_node(visitor, node, arg1, arg2, arg3):
+    if arg1[0] is _CONSTANT:
+        if arg1[1]:
+            return arg2
+        else:
+            return arg3
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.exprif)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
@@ -1729,18 +1779,24 @@ def handle_exprif_node(visitor, node, arg1, arg2, arg3):
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_equality_node(visitor, node, arg1, arg2):
+    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
+        return (_CONSTANT, arg1[1] == arg2[1])
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.equality)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_inequality_node(visitor, node, arg1, arg2):
+    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
+        return (_CONSTANT, node._apply_operation((arg1[1], arg2[1])))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.strict_inequality_map[node.strict])
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
+    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT and arg3[0] is _CONSTANT:
+        return (_CONSTANT, node._apply_operation((arg1[1], arg2[1], arg3[1])))
     op = visitor.template.strict_inequality_map[node.strict]
     nl, args = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.and_expr + op[0])
@@ -1876,7 +1932,7 @@ def handle_external_function_node(visitor, node, *args):
            for arg in args):
         arg_list = [arg[1] if arg[0] is _CONSTANT else arg[1].const
                     for arg in args]
-        return (_CONSTANT, node._apply_operation(arg_list))
+        return _apply_node_op(node, arg_list)
     if func in visitor.external_functions:
         if node._fcn._library != visitor.external_functions[func][1]._library:
             raise RuntimeError(
@@ -1926,7 +1982,11 @@ _operator_handles = {
     # These are handled explicitly in beforeChild():
     # LinearExpression: handle_linear_expression,
     # SumExpression: handle_sum_expression,
-    # MonomialTermExpression: handle_monomial_term,
+    #
+    # Note: MonomialTermExpression is only hit when processing NPV
+    # subexpressions that raise errors (e.g., log(0) * m.x), so no
+    # special processing is needed [it is just a product expression]
+    MonomialTermExpression: handle_product_node,
 }
 
 
@@ -1957,7 +2017,13 @@ def _before_npv(visitor, child):
     # else:
     #     child = visitor.value_cache[_id] = child()
     # return False, (_CONSTANT, child)
-    return False, (_CONSTANT, child())
+    try:
+        return False, (_CONSTANT, child())
+    except:
+        # If there was an exception evaluating the subexpression, then
+        # we need to decend into it (in case there is something like 0 *
+        # nan that we need to map to 0)
+        return True, None
 
 def _before_monomial(visitor, child):
     #
@@ -1975,8 +2041,16 @@ def _before_monomial(visitor, child):
         #     arg1 = visitor.value_cache[_id]
         # else:
         #     arg1 = visitor.value_cache[_id] = arg1()
-        arg1 = arg1()
-    # Trap multiplication by 0
+        try:
+            arg1 = arg1()
+        except:
+            # If there was an exception evaluating the subexpression,
+            # then we need to decend into it (in case there is something
+            # like 0 * nan that we need to map to 0)
+            return True, None
+
+    # Trap multiplication by 0.  See note in handle_product_node
+    # regarding IEEE 754 combatability.
     if not arg1:
         return False, (_CONSTANT, 0)
     _id = id(arg2)
@@ -2099,12 +2173,11 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         # General expressions...
         #
-        if all(arg[0] is _CONSTANT for arg in data):
-            return (
-                _CONSTANT, node._apply_operation(list(map(
-                    itemgetter(1), data)))
-            )
-        return self._operator_handles[node.__class__](self, node, *data)
+        if node.is_potentially_variable():
+            cls = node.__class__
+        else:
+            cls = node.potentially_variable_base_class()
+        return self._operator_handles[cls](self, node, *data)
 
     def finalizeResult(self, result):
         ans = node_result_to_amplrepn(result)
