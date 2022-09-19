@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Created on Tue May  3 09:33:42 2022
-
 @author: pmlpm
 """
 
@@ -19,7 +18,7 @@ def optimise(problem: pyo.ConcreteModel,
              solver_timelimit,
              solver_rel_mip_gap,
              solver_abs_mip_gap,
-             print_solver_output: bool = True):
+             print_solver_output: bool = False):
     
     # config
     
@@ -44,7 +43,7 @@ def optimise(problem: pyo.ConcreteModel,
     
     # return
     
-    return results
+    return results, opt
 
 #******************************************************************************
 #******************************************************************************
@@ -133,7 +132,7 @@ def problem_milp_feasible():
     
     # a knapsack-type problem
     
-    number_binary_variables = 100
+    number_binary_variables = 40 # may need to be tweaked depending on specs
     
     model.Y = pyo.RangeSet(number_binary_variables)
     
@@ -168,53 +167,92 @@ def problem_milp_feasible():
 #******************************************************************************
 #******************************************************************************
 
-# list of problems
-
-list_concrete_models = [
-    problem_lp_unbounded(),
-    problem_lp_infeasible(),
-    problem_lp_optimal(),
-    problem_milp_unbounded(),
-    problem_milp_infeasible(),
-    problem_milp_optimal(),
-    problem_milp_feasible()
-    ]
-
-#******************************************************************************
-#******************************************************************************
-
-# solver settings
-
-solver_timelimit = 12
-
-solver_abs_mip_gap = 0
-
-solver_rel_mip_gap = 1e-6
-
-#******************************************************************************
-#******************************************************************************
-
-list_problem_results = []
-
-for problem in list_concrete_models:
+def test_scip_some_more():
     
-    print('******************************')
-    print('******************************')
+    # list of problems
     
-    print(problem.name)
+    list_concrete_models = [
+        problem_lp_unbounded(),
+        problem_lp_infeasible(),
+        problem_lp_optimal(),
+        problem_milp_unbounded(),
+        problem_milp_infeasible(),
+        problem_milp_optimal(),
+        problem_milp_feasible() # may reach optimality depending on the budget
+        ]
+    
+    list_extra_data_expected = [
+        (), # problem_lp_unbounded(),
+        (), # problem_lp_infeasible(),
+        ('Time',
+         'Gap',
+         'Primal bound',
+         'Dual bound'), # problem_lp_optimal(),
+        (), # problem_milp_unbounded(),
+        (), # problem_milp_infeasible(),
+        ('Time',
+         'Gap',
+         'Primal bound',
+         'Dual bound'), # problem_milp_optimal(),
+        ('Time',
+         'Gap',
+         'Primal bound',
+         'Dual bound') # problem_milp_feasible()
+        ]
+    
+    #**************************************************************************
+    #**************************************************************************
+    
+    # solver settings
+    
+    solver_timelimit = 1
+    
+    solver_abs_mip_gap = 0
+    
+    solver_rel_mip_gap = 1e-6
+    
+    #**************************************************************************
+    #**************************************************************************
+    
+    for problem_index, problem in enumerate(list_concrete_models):
         
-    print('******************************')
-    print('******************************')
-    
-    results = optimise(problem, 
-                       solver_timelimit,
-                       solver_rel_mip_gap,
-                       solver_abs_mip_gap,
-                       print_solver_output=True)
-    
-    print(results)
-    
-    list_problem_results.append(results)
+        print('******************************')
+        print('******************************')
+        
+        print(problem.name)
+            
+        print('******************************')
+        print('******************************')
+        
+        results, opt = optimise(problem, 
+                                solver_timelimit,
+                                solver_rel_mip_gap,
+                                solver_abs_mip_gap,
+                                print_solver_output=True)
+        
+        print(results)
+        
+        # check the version
+        
+        executable = opt._command.cmd[0]
+        
+        version = opt._known_versions[executable]
+        
+        if version < (8,0,0,0):
+            
+            # if older and untested, skip tests
+            
+            continue
+        
+        # for each new attribute expected
+        
+        for log_file_attr in list_extra_data_expected[problem_index]:
+        
+            # check that it is part of the results object
+            
+            assert log_file_attr in results['Solver'][0]
 
 #******************************************************************************
 #******************************************************************************
+
+# test_scip_some_more() # uncomment to run individually
