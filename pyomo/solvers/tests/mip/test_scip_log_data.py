@@ -6,6 +6,10 @@ Created on Tue May  3 09:33:42 2022
 """
 
 import pyomo.environ as pyo
+import pyomo.common.unittest as unittest
+from pyomo.opt import check_available_solvers
+
+scip_available = bool(check_available_solvers('scip'))
 
 import random
 
@@ -167,6 +171,7 @@ def problem_milp_feasible():
 #******************************************************************************
 #******************************************************************************
 
+@unittest.skipIf(not scip_available, "SCIP solver is not available.")
 def test_scip_some_more():
     
     # list of problems
