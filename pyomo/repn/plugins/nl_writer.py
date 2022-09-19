@@ -2251,8 +2251,10 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 handlers[child_type] = _before_npv
         elif not child.is_potentially_variable():
             handlers[child_type] = _before_npv
-        elif id(child) in self.subexpression_cache:
+        elif ( id(child) in self.subexpression_cache or
+               issubclass(child_type, _GeneralExpressionData) ):
             handlers[child_type] = _before_named_expression
+            _operator_handles[child_type] = handle_named_expression_node
         else:
             handlers[child_type] = _before_general_expression
 
