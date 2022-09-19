@@ -2028,7 +2028,7 @@ def _before_npv(visitor, child):
         return tmp
     except:
         # If there was an exception evaluating the subexpression, then
-        # we need to decend into it (in case there is something like 0 *
+        # we need to descend into it (in case there is something like 0 *
         # nan that we need to map to 0)
         return True, None
 
@@ -2052,7 +2052,7 @@ def _before_monomial(visitor, child):
             arg1 = arg1()
         except:
             # If there was an exception evaluating the subexpression,
-            # then we need to decend into it (in case there is something
+            # then we need to descend into it (in case there is something
             # like 0 * nan that we need to map to 0)
             return True, None
 
