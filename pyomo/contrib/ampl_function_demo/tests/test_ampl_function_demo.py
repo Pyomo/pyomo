@@ -34,6 +34,21 @@ class TestAMPLExternalFunction(unittest.TestCase):
             reltol=1e-5
         )
 
+    @unittest.skipIf(is_pypy, 'Cannot evaluate external functions under pypy')
+    def test_eval_function_fgh(self):
+        m = pyo.ConcreteModel()
+        m.tf = pyo.ExternalFunction(library=flib, function="demo_function")
+
+        f, g, h = m.tf.evaluate_fgh(("sum", 1, 2, 3))
+        self.assertEqual(f, 6)
+        self.assertEqual(g, [0, 1, 1, 1])
+        self.assertEqual(h, [0]*10)
+
+        f, g, h = m.tf.evaluate_fgh(("inv", 1, 2, 3))
+        self.assertAlmostEqual(f, 1.8333333, 4)
+        self.assertStructuredAlmostEqual(g, [0, -1, -1/4, -1/9])
+        self.assertStructuredAlmostEqual(h, [0, 0, 2, 0, 0, 1/4, 0, 0, 0, 2/27])
+
     @unittest.skipUnless(check_available_solvers('ipopt'),
                          "The 'ipopt' solver is not available")
     def test_solve_function(self):
