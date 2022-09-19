@@ -137,7 +137,10 @@ def _activate_nl_writer_version(n):
 
 def _apply_node_op(node, args):
     try:
-        return (_CONSTANT, node._apply_operation(args))
+        tmp = (_CONSTANT, node._apply_operation(args))
+        if tmp[1].__class__ is complex:
+            raise ValueError('Pyomo does not support complex numbers')
+        return tmp
     except:
         logger.warning(
             "Exception encountered evaluating expression "
@@ -2019,7 +2022,10 @@ def _before_npv(visitor, child):
     #     child = visitor.value_cache[_id] = child()
     # return False, (_CONSTANT, child)
     try:
-        return False, (_CONSTANT, child())
+        tmp = False, (_CONSTANT, child())
+        if tmp[1][1].__class__ is complex:
+            return True, None
+        return tmp
     except:
         # If there was an exception evaluating the subexpression, then
         # we need to decend into it (in case there is something like 0 *
