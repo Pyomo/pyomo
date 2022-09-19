@@ -9,17 +9,24 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import pyomo.common.unittest as unittest
-from pyomo.opt import SolverFactory
 
+from pyomo.common.dependencies import (
+    numpy as np, numpy_available,
+    pandas as pd, pandas_available,
+)
+
+import pyomo.common.unittest as unittest
+import pyomo.contrib.doe.fim_doe as doe
+
+from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()
 
 class TestReactorExample(unittest.TestCase):
     
-    @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
-    def test_reactor_kinetics(self):
-        from pyomo.contrib.doe.example import reactor_kinetics
-        reactor_kinetics.main()
+    #@unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    #def test_reactor_kinetics(self):
+        #from pyomo.contrib.doe.example import reactor_kinetics
+        #reactor_kinetics.main()
     
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def test_reactor_compute_FIM(self):

@@ -9,11 +9,10 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import fim_doe as doe
+import pyomo.contrib.doe.fim_doe as doe
 import numpy as np
 import pyomo.common.unittest as unittest
-from reactor_kinetics import create_model, disc_for_measure
-
+from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
 
 def main():
     # Create model function
@@ -79,6 +78,7 @@ def main():
 
     result = doe_object.compute_FIM(exp1, mode=sensi_opt, FIM_store_name = 'dynamic.csv', 
                                     store_output = 'store_output', read_output=None,
+                                    scale_nominal_param_value=True, 
                                     formula='central')
 
 

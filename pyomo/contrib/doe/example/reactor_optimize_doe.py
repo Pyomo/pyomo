@@ -9,10 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import fim_doe as doe
+import pyomo.contrib.doe.fim_doe as doe
 import numpy as np
 import pyomo.common.unittest as unittest
-from reactor_kinetics import create_model, disc_for_measure
+from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
+
 
 
 def main():

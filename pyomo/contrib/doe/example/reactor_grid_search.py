@@ -9,10 +9,12 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import fim_doe as doe
+import pyomo.contrib.doe.fim_doe as doe
 import numpy as np
+import pandas as pd
 import pyomo.common.unittest as unittest
-from reactor_kinetics import create_model, disc_for_measure
+from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
+
 
 
 def main():
@@ -53,11 +55,6 @@ def main():
         dv_dict_overall = {'CA0': {0: CA0},'T': T_con_initial}
         return dv_dict_overall
     
-    # empty prior
-    prior_all = np.zeros((4,4))
-    prior_pass=np.asarray(prior_all)
-
-
     # Design variable ranges as lists 
     design_ranges = [list(np.linspace(1,5,5)), list(np.linspace(300,700,5))]
 
@@ -81,9 +78,7 @@ def main():
         args_ = [True]
         
     # add prior information
-    prior_5_300 = pd.read_csv('fim_5_300_scale.csv')
-
-    prior_all = prior_5_300
+    prior_all = np.zeros((4,4))
 
     prior_pass=np.asarray(prior_all)
     
@@ -96,14 +91,6 @@ def main():
     
     test = all_fim.extract_criteria()
 
-    ## draw 1D sensitivity curve 
-
-    fixed = {"'CA0'": 5.0}
-
-    all_fim.figure_drawing(fixed, ['T'], 'Reactor case','T [K]','$C_{A0}$ [M]' )
-    
-    fixed = {}
-    all_fim.figure_drawing(fixed, ['CA0','T'], 'Reactor case','$C_{A0}$ [M]', 'T [K]' )
 
     ### 3 design variable example
     # Define design ranges
@@ -135,17 +122,6 @@ def main():
                                      mode=sensi_opt)
     
     test = all_fim.extract_criteria()
-    
-    ## draw 1D sensitivity curve 
-
-    fixed = {"'CA0'": 1.0, "'T2'": 300}
-
-    all_fim.figure_drawing(fixed, ['T'], 'Reactor case','T [K]','$C_{A0}$ [M]' )
-    
-    fixed = {"'T2'": 300}
-
-    all_fim.figure_drawing(fixed, ['CA0','T'], 'Reactor case','$C_{A0}$ [M]', 'T [K]' )
-
     
     
 if __name__ == "__main__":

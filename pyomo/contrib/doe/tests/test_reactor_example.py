@@ -27,7 +27,7 @@ class doe_object_Tester(unittest.TestCase):
     """
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
     def setUP(self):
-        import reactor_kinetics as reactor
+        from pyomo.contrib.doe.example import reactor_kinetics as reactor
         
         # define create model function 
         createmod = reactor.create_model
