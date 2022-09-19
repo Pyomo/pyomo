@@ -180,6 +180,26 @@ class TestIndexedComponent(unittest.TestCase):
         self.assertIs(thing.args[0], m.x)
         self.assertIs(thing.args[1], idx_expr)
 
+    def test_index_param_by_variable(self):
+        m = ConcreteModel()
+        m.i = Var(initialize=2, domain=Integers)
+        m.p = Param([1,2,3], initialize=lambda m,x: 2*x)
+
+        # Test we can index by a variable
+        thing = m.p[m.i]
+        self.assertIsInstance(thing, GetItemExpression)
+        self.assertEqual(len(thing.args), 2)
+        self.assertIs(thing.args[0], m.p)
+        self.assertIs(thing.args[1], m.i)
+
+        # Test we can index by an integer-valued expression
+        idx_expr = 2**m.i + 1
+        thing = m.p[idx_expr]
+        self.assertIsInstance(thing, GetItemExpression)
+        self.assertEqual(len(thing.args), 2)
+        self.assertIs(thing.args[0], m.p)
+        self.assertIs(thing.args[1], idx_expr)
+
     def test_index_by_unhashable_type(self):
         m = ConcreteModel()
         m.x = Var([1,2,3], initialize=lambda m,x: 2*x)

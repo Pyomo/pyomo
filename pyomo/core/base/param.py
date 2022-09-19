@@ -35,6 +35,7 @@ from pyomo.core.base.numvalue import (
 )
 from pyomo.core.base.set import Reals, _AnySet
 from pyomo.core.base.units_container import units
+from pyomo.core.expr.current import GetItemExpression
 
 logger = logging.getLogger('pyomo.core')
 
@@ -903,3 +904,15 @@ class IndexedParam(Param):
         if _id not in memo:
             component_list.append(self)
             memo[_id] = self.__class__.__new__(self.__class__)
+
+    # Because Emma wants crazy things... (Where crazy things are the ability to
+    # index Params by other (integer) Vars and integer-valued expressions--a
+    # thing you can do in Constraint Programming.)
+    def __getitem__(self, args):
+        tmp = args if args.__class__ is tuple else (args,)
+        if any(hasattr(arg, 'is_potentially_variable')
+               and arg.is_potentially_variable()
+               for arg in tmp
+        ):
+            return GetItemExpression((self,) + tmp)
+        return super().__getitem__(args)
