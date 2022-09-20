@@ -5,15 +5,16 @@ try:
     from pyomo.solvers.plugins.solvers.GUROBI_RUN import gurobi_run
     from gurobipy import GRB
     gurobipy_available = True
+    has_worklimit = hasattr(GRB, "WORK_LIMIT")
 except:
     gurobipy_available = False
-
+    has_worklimit = False
 @unittest.skipIf(not gurobipy_available,
                      "gurobipy is not available")
 class GurobiTest(unittest.TestCase):
 
 
-    @unittest.skipIf(not hasattr(GRB, "WORK_LIMIT"),
+    @unittest.skipIf(not has_worklimit,
                      "gurobi < 9.5")
     @patch("builtins.open")
     @patch("pyomo.solvers.plugins.solvers.GUROBI_RUN.read")
@@ -37,7 +38,7 @@ class GurobiTest(unittest.TestCase):
             return None
         model.getAttr = getAttr
         gurobi_run(None, None, None, None, {}, [])
-        self.assertTrue("WorkLimit" in file.write.call_args.args[0])
+        self.assertTrue("WorkLimit" in file.write.call_args[0][0])
 
 
 if __name__ == '__main__':
