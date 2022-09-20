@@ -910,14 +910,14 @@ class svec_psdcone(_ConicBase):
     """A domain consisting of vectorizations of the lower-triangular 
     part of a positive semidefinite matrx, with the non-diagonal 
     elements additionally rescaled. In other words, if a vector 'x'
-    of length n = d*(d+1)/2 is confined to this cone, then the matrix:
+    of length n = d*(d+1)/2 belongs to this cone, then the matrix:
 
-    sMat(x) = [[x[1], x[2]/sqrt(2), ..., x[d]/sqrt(2)],
-               [x[2]/sqrt(2), x[d+1], ..., x[2d-1]/sqrt(2)],
-                ...     ...     ...     ...
-               [x[d]/sqrt(2), x[2d-1]/sqrt(2), ..., x[d*(d+1)/2]/sqrt(2)]]
+    sMat(x) = [[        x[1],    x[2]/sqrt(2),  ...,         x[d]/sqrt(2)],
+               [x[2]/sqrt(2),          x[d+1],  ...,      x[2d-1]/sqrt(2)],
+                                        ...
+               [x[d]/sqrt(2), x[2d-1]/sqrt(2),  ..., x[d*(d+1)/2]/sqrt(2)]]
 
-    is restricted to be a positive semidefinite matrix.
+    will be restricted to be a positive-semidefinite matrix.
 
     Parameters
     ----------
