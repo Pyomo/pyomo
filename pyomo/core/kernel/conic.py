@@ -952,11 +952,11 @@ class svec_psdcone(_ConicBase):
             (block.r, block.x) linked to the input arguments 
             through auxiliary constraints (block.c)."""
         b = block()
-        b.x = variable_tuple([variable(lb=0) for i in range(len(x))])
+        b.x = variable_tuple([variable() for i in range(len(x))])
         b.c = _build_linking_constraints(list(x), list(b.x))
         b.q = cls(x=b.x)
         return b
     
     @property
     def x(self):
-        return self.x
+        return self._x
