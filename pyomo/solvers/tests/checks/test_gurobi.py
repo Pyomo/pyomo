@@ -8,10 +8,11 @@ try:
 except:
     gurobipy_available = False
 
+@unittest.skipIf(not gurobipy_available,
+                     "gurobipy is not available")
 class GurobiTest(unittest.TestCase):
 
-    @unittest.skipIf(not gurobipy_available,
-                     "gurobipy is not available")
+
     @unittest.skipIf(not hasattr(GRB, "WORK_LIMIT"),
                      "gurobi < 9.5")
     @patch("builtins.open")
