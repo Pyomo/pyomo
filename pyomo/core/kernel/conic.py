@@ -569,6 +569,7 @@ class primal_power(_ConicBase):
             (self.r2.has_lb() and value(self.r2.lb) >= 0) and \
             ((alpha is not None) and (0 < alpha < 1))
 
+
 class primal_geomean(_ConicBase):
     """A primal geometric mean conic constraint of the form:
         (r[0]*...*r[n-2])^(1/(n-1)) >= |x[n-1]| 
@@ -616,14 +617,15 @@ class primal_geomean(_ConicBase):
         b.c = _build_linking_constraints(list(r) + [x], list(b.r) + [x])
         b.q = cls(r=b.r, x=b.x)
         return b
-    
+
     @property
     def r(self):
         return self._r
-    
+
     @property
     def x(self):
         return self._x
+
 
 class dual_exponential(_ConicBase):
     """A dual exponential conic constraint of the form:
@@ -725,6 +727,7 @@ class dual_exponential(_ConicBase):
                  self.r.is_continuous())) and \
             (self.x2.has_ub() and value(self.x2.ub) <= 0) and \
             (self.r.has_lb() and value(self.r.lb) >= 0)
+
 
 class dual_power(_ConicBase):
     """A dual power conic constraint of the form:
@@ -850,6 +853,7 @@ class dual_power(_ConicBase):
             (self.r2.has_lb() and value(self.r2.lb) >= 0) and \
             ((alpha is not None) and (0 < alpha < 1))
 
+
 class dual_geomean(_ConicBase):
     """A dual geometric mean conic constraint of the form:
         (n-1)*(r[0]*...*r[n-2])^(1/(n-1)) >= |x[n-1]| 
@@ -901,10 +905,11 @@ class dual_geomean(_ConicBase):
     @property
     def r(self):
         return self._r
-    
+
     @property
     def x(self):
         return self._x
+
 
 class svec_psdcone(_ConicBase):
     """A domain consisting of vectorizations of the lower-triangular 
@@ -923,7 +928,7 @@ class svec_psdcone(_ConicBase):
     ----------
     x : :class:`variable`
         A variable vector of length d*(d+1)/2.
-    
+
     """
     __slots__ = ("_parent",
                  "_storage_key",
@@ -956,7 +961,7 @@ class svec_psdcone(_ConicBase):
         b.c = _build_linking_constraints(list(x), list(b.x))
         b.q = cls(x=b.x)
         return b
-    
+
     @property
     def x(self):
         return self._x
