@@ -213,49 +213,49 @@ class MOSEKDirect(DirectSolver):
                 cone_type = self._mosek.conetype.dpow
                 cone_param = value(con.alpha)
                 cone_members = [con.r1, con.r2] + list(con.x)
-        return(cone_type, cone_param, ComponentSet(cone_members))
+        return (cone_type, cone_param, ComponentSet(cone_members))
 
     def _get_acc_domain(self, cone):
         domidx, domdim, members = None, 0, None
         if isinstance(cone, quadratic):
             domdim = 1 + len(cone.x)
             domidx = self._solver_model.appendquadraticconedomain(domdim)
-            members= [cone.r] + list(cone.x)
+            members = [cone.r] + list(cone.x)
         elif isinstance(cone, rotated_quadratic):
             domdim = 2 + len(cone.x)
             domidx = self._solver_model.appendrquadraticconedomain(domdim)
-            members= [cone.r1, cone.r2] + list(cone.x)
+            members = [cone.r1, cone.r2] + list(cone.x)
         elif isinstance(cone, primal_exponential):
             domdim = 3
             domidx = self._solver_model.appendprimalexpconedomain()
-            members= [cone.r, cone.x1, cone.x2]
+            members = [cone.r, cone.x1, cone.x2]
         elif isinstance(cone, dual_exponential):
             domdim = 3
             domidx = self._solver_model.appenddualexpconedomain()
-            members= [cone.r, cone.x1, cone.x2]
+            members = [cone.r, cone.x1, cone.x2]
         elif isinstance(cone, primal_power):
             domdim = 2 + len(cone.x)
             domidx = self._solver_model.appendprimalpowerconedomain(
                 domdim, [value(cone.alpha), 1-value(cone.alpha)])
-            members= [cone.r1, cone.r2] + list(cone.x)
+            members = [cone.r1, cone.r2] + list(cone.x)
         elif isinstance(cone, dual_power):
             domdim = 2 + len(cone.x)
             domidx = self._solver_model.appenddualpowerconedomain(
                 domdim, [value(cone.alpha), 1-value(cone.alpha)])
-            members= [cone.r1, cone.r2] + list(cone.x)
+            members = [cone.r1, cone.r2] + list(cone.x)
         elif isinstance(cone, primal_geomean):
-          domdim = len(cone.r) + 1
-          domidx = self._solver_model.appendprimalgeomeanconedomain(domdim)
-          members= list(cone.r) + [cone.x]
+            domdim = len(cone.r) + 1
+            domidx = self._solver_model.appendprimalgeomeanconedomain(domdim)
+            members = list(cone.r) + [cone.x]
         elif isinstance(cone, dual_geomean):
-          domdim = len(cone.r) + 1
-          domidx = self._solver_model.appenddualgeomeanconedomain(domdim)
-          members= list(cone.r) + [cone.x]
+            domdim = len(cone.r) + 1
+            domidx = self._solver_model.appenddualgeomeanconedomain(domdim)
+            members = list(cone.r) + [cone.x]
         elif isinstance(cone, svec_psdcone):
-          domdim = len(cone.x)
-          domidx = self._solver_model.appendsvecpsdconedomain(domdim)
-          members= list(cone.x)
-        return(domdim, domidx, members)
+            domdim = len(cone.x)
+            domidx = self._solver_model.appendsvecpsdconedomain(domdim)
+            members = list(cone.x)
+        return (domdim, domidx, members)
 
     def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
         degree = repn.polynomial_degree()
@@ -388,8 +388,10 @@ class MOSEKDirect(DirectSolver):
             acc_indices = tuple(range(numacc, numacc + num_cones))
 
             self._solver_model.appendafes(total_dim)
-            self._solver_model.putafefentrylist(afe_indices, members, [1]*total_dim)
-            self._solver_model.appendaccsseq(domain_indices, total_dim, afe_indices[0], None)
+            self._solver_model.putafefentrylist(
+                afe_indices, members, [1]*total_dim)
+            self._solver_model.appendaccsseq(
+                domain_indices, total_dim, afe_indices[0], None)
 
             for name in cone_names:
                 self._solver_model.putaccname(numacc, name)
