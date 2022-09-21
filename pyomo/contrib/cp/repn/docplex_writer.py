@@ -9,14 +9,32 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+# TODO: How do we defer so this doesn't mess up everything?
+import docplex.cp.model as cp
+
 import itertools
 
-import pyomo.core.expr.current as EXPR
+from pyomo.contrib.cp import IntervalVar
+from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
+    AtExpression, BeforeExpression
+)
+from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
+    AlwaysIn
+)
 
+import pyomo.core.expr.current as EXPR
+from pyomo.core.expr.logical_expr import (
+    AndExpression, OrExpression, XorExpression, NotExpression,
+    EquivalenceExpression, ImplicationExpression, ExactlyExpression,
+    AtMostExpression, AtLeastExpression
+)
+from pyomo.core.expr.numeric_expr import MinExpression, MaxExpression
 from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor, identify_variables
 )
 from pyomo.core.base.set import SetProduct
+
+from pdb import set_trace
 
 def _check_var_domain(visitor, node, var):
     if not var.domain.isdiscrete():
@@ -117,13 +135,163 @@ def _handle_getitem(visitor, node, data):
             elements.append(None)
     return (elements, expr) 
 
+def _before_var(visitor, child):
+    _id = id(child)
+    if _id not in visitor.var_map:
+        if child.fixed:
+            return False, child.value
+        if child.domain in (Integers, PositiveIntegers, NonPositiveIntegers,
+                            NegativeIntegers, NonNegativeIntegers):
+            cpx_var = cp.integer_var(min=child.bounds[0], max=child.bounds[1])
+        elif child.domain in (Binary, Boolean):
+            # Sorry, universe, but docplex doesn't know the difference between
+            # Boolean and Binary...
+            cpx_var = cp.binary_var()
+        else:
+            raise ValueError("The LogicalToDoCplex writer can only support "
+                             "integer- or Boolean-valued variables. Cannot "
+                             "write Var %s with domain %s" % (child.name, 
+                                                              child.domain))
+        visitor.cpx.add(cpx_var)
+        visitor.var_map[_id] = cpx_var
+    return False, visitor.var_map[_id]
+    
+
+
+##
+# Algebraic expressions
+##
+
+def _handle_monomial_expr(visitor, node, arg1, arg2):
+    return cp.times(arg1, arg2)
+
+def _handle_sum_node(visitor, node, *args):
+    return sum(args[1:], start=args[0])
+
+def _handle_negation_node(visitor, node, arg1):
+    return cp.times(-1, arg1)
+
+def _handle_product_node(visitor, node, arg1, arg2):
+    return cp.times(arg1, arg2)
+
+def _handle_division_node(visitor, node, arg1, arg2):
+    return cp.float_div(arg1, arg2)
+
+def _handle_integer_division_node(visitor, node, arg1, arg2):
+    return cp.int_div(arg1, arg2)
+
+def _handle_pow_node(visitor, node, arg1, arg2):
+    return cp.power(arg1, arg2)
+
+def _handle_abs_node(visitor, node, arg1):
+    return cp.abs(arg1)
+
+def _handle_min_node(visitor, node, *args):
+    return cp.min(args)
+
+def _handle_max_node(visitor, node, *args):
+    return cp.max(args)
+
+##
+# Logical expressions
+##
+
+def _handle_and_node(visitor, node, *args):
+    return cp.logical_and(args)
+
+def _handle_or_node(visitor, node, *args):
+    return cp.logical_or(args)
+
+def _handle_xor_node(visitor, node, arg1, arg2):
+    return cp.equal(cp.count([arg1, arg2], True), 1)
+
+def _handle_not_node(visitor, node, arg):
+    return cp.logical_not(arg)
+
+def _handle_equality_node(visitor, node, arg1, arg2):
+    return cp.equal(arg1, arg2)
+
+def _handle_equivalence_node(visitor, node, arg1, arg2):
+    return cp.equal(arg1, arg2)
+
+def _handle_inequality_node(visitor, node, arg1, arg2):
+    return cp.less_or_equal(arg1, arg2)
+
+def _handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
+    return (cp.less_or_equal(arg1, arg2), cp.less_or_equal(arg2, arg3))
+
+def _handle_not_equal_node(visitor, node, arg1, arg2):
+    return cp.diff(arg1, arg2)
+
+def _handle_implication_node(visitor, node, arg1, arg2):
+    return cp.if_then(arg1, arg2)
+
+def _handle_exactly_node(visitor, node, *args):
+    # TODO: if args[0] isn't a constant, then this is more complicated
+    return cp.equal(cp.count(args[1:], True), args[0])
+
+def _handle_at_most_node(visitor, node, *args):
+    # TODO: if args[0] isn't a constant, then this is more complicated
+    return cp.less_or_equal(cp.count(args[1:], True), args[0])
+
+def _handle_at_least_node(visitor, node, *args):
+    # TODO: if args[0] isn't a constant, then this is more complicated
+    return cp.greater_or_equal(cp.count(args[1:], True), args[0])
+
+##
+# Scheduling
+##
+
+def _handle_before_expression_node(visitor, node, before, after):
+    pass
+
+def _handle_at_expression_node(visitor, node, arg1, arg2):
+    pass
+
+def _handle_always_in_node(visitor, cumul_func, bounds, times):
+    pass
+
 class LogicalToDoCplex(StreamBasedExpressionVisitor):
     _operator_handles = {
         EXPR.GetItemExpression: _handle_getitem,
+        EXPR.NegationExpression: _handle_negation_node,
+        EXPR.ProductExpression: _handle_product_node,
+        EXPR.DivisionExpression: _handle_division_node,
+        EXPR.PowExpression: _handle_pow_node,
+        EXPR.AbsExpression: _handle_abs_node,
+        EXPR.MonomialTermExpression: _handle_monomial_expr,
+        EXPR.SumExpression: _handle_sum_node,
+        MinExpression: _handle_min_node,
+        MaxExpression: _handle_max_node,
+        NotExpression: _handle_not_node,
+        EquivalenceExpression: _handle_equivalence_node,
+        ImplicationExpression: _handle_implication_node,
+        AndExpression: _handle_and_node,
+        OrExpression: _handle_or_node,
+        XorExpression: _handle_xor_node,
+        ExactlyExpression: _handle_exactly_node,
+        AtMostExpression: _handle_at_most_node,
+        AtLeastExpression: _handle_at_least_node,
+        EXPR.EqualityExpression: _handle_equality_node,
+        EXPR.InequalityExpression: _handle_inequality_node,
+        EXPR.RangedExpression: _handle_ranged_inequality_node,
+        AtExpression: _handle_at_expression_node,
+        BeforeExpression: _handle_before_expression_node,
+        AlwaysIn: _handle_always_in_node,
     }
 
     def __init__(self, cpx_model):
         self.cpx = cpx_model
+        self._process_node = self._process_node_bx
+
+        self.var_map = {}
+
+    def initializeWalker(self, expr):
+        expr, src, src_idx = expr
+        walk, result = self.beforeChild(None, expr, 0)
+        if not walk:
+            return False, self.finalizeResult(result)
+        return True, expr
 
     def beforeChild(self, node, child, child_idx):
         # Return native types
@@ -132,11 +300,25 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
 
         # Convert Vars Logical vars to docplex equivalents
         # TODO
+        if not child.is_expression_type():
+            if child.is_potentially_variable():
+                return _before_var(self, child)
+            else:
+                raise NotImplementedError()
 
         return True, None
 
     def exitNode(self, node, data):
-        return self._operator_handles[node.__class__](self, node, data)
+        print("EXIT\n\tnode: %s\n\tdata: %s" % (node, data))
+        return self._operator_handles[node.__class__](self, node, *data)
+
+    finalizeResult = None
+
+    def _declare_docplex_algebraic_var(self, var):
+        pass
+
+    def _declare_docplex_interval_var(self, var):
+        pass
 
 
 if __name__ == '__main__':
@@ -180,3 +362,9 @@ if __name__ == '__main__':
     print("\n", e)
     print(tostr(ans))
 
+    docplex_model= cp.CpoModel()
+    visitor = LogicalToDoCplex(docplex_model)
+
+    m.c = Constraint(expr=m.x**2 + 4 + 2*6*m.x/(4*m.x) <= 3)
+    expr = visitor.walk_expression((m.c.body, m.c, 0))
+    print(expr)
