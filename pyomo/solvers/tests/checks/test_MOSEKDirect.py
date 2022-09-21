@@ -22,7 +22,8 @@ diff_tol = 1e-3
 
 mosek_available = check_available_solvers('mosek_direct')
 
-@unittest.skipIf(not mosek_available ,
+
+@unittest.skipIf(not mosek_available,
                  "MOSEK's python bindings are not available")
 class MOSEKDirectTests(unittest.TestCase):
 
@@ -221,6 +222,31 @@ class MOSEKDirectTests(unittest.TestCase):
                                        alpha=0.4)
             model.o.expr += b.r1 + b.r2
             model.c.body += b.r1 + b.r2
+
+        if mosek.Env().getversion() >= (10, 0, 0):
+            b = model.primal_geomean = pmo.block()
+            b.r = pmo.variable_tuple((pmo.variable(), pmo.variable()))
+            b.x = pmo.variable()
+            b.c = pmo.conic.primal_geomean(r=b.r, x=b.x)
+            model.o.expr += b.r[0] + b.r[1]
+            model.c.body += b.r[0] + b.r[1]
+            del b
+
+            b = model.dual_geomean = pmo.block()
+            b.r = pmo.variable_tuple((pmo.variable(), pmo.variable()))
+            b.x = pmo.variable()
+            b.c = pmo.conic.dual_geomean(r=b.r, x=b.x)
+            model.o.expr += b.r[0] + b.r[1]
+            model.c.body += b.r[0] + b.r[1]
+            del b
+
+            b = model.svec_psdcone = pmo.block()
+            b.x = pmo.variable_tuple((
+                pmo.variable(), pmo.variable(), pmo.variable()))
+            b.c = pmo.conic.svec_psdcone(x=b.x)
+            model.o.expr += b.x[0] + 2*b.x[1] + b.x[2]
+            model.c.body += b.x[0] + 2*b.x[1] + b.x[2]
+            del b
 
         opt = pmo.SolverFactory("mosek_direct")
         results = opt.solve(model)

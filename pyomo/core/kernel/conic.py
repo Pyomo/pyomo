@@ -577,7 +577,7 @@ class primal_geomean(_ConicBase):
     Parameters
     ----------
     r : :class:`variable`
-        A variable vector.
+        An iterable of variables.
     x : :class:`variable`
         A scalar variable.
 
@@ -861,7 +861,7 @@ class dual_geomean(_ConicBase):
     Parameters
     ----------
     r : :class:`variable`
-        A variable vector.
+        An iterable of variables.
     x : :class:`variable`
         A scalar variable.
 
@@ -927,7 +927,7 @@ class svec_psdcone(_ConicBase):
     Parameters
     ----------
     x : :class:`variable`
-        A variable vector of length d*(d+1)/2.
+        An iterable of variables with length d*(d+1)/2.
 
     """
     __slots__ = ("_parent",
