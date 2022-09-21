@@ -41,6 +41,10 @@ class DegreeError(ValueError):
     pass
 
 
+class UnsupportedDomainError(TypeError):
+    pass
+
+
 def _is_numeric(x):
     try:
         float(x)
@@ -198,7 +202,7 @@ class MOSEKDirect(DirectSolver):
         elif isinstance(con, rotated_quadratic):
             cone_type = self._mosek.conetype.rquad
             cone_members = [con.r1, con.r2] + list(con.x)
-        elif self._version[0] >= 9:
+        elif self._version[0] == 9:
             if isinstance(con, primal_exponential):
                 cone_type = self._mosek.conetype.pexp
                 cone_members = [con.r, con.x1, con.x2]
@@ -213,6 +217,11 @@ class MOSEKDirect(DirectSolver):
                 cone_type = self._mosek.conetype.dpow
                 cone_param = value(con.alpha)
                 cone_members = [con.r1, con.r2] + list(con.x)
+            else:
+                raise UnsupportedDomainError("MOSEK version 9 does not support {}.".format(type(con)))
+        else:
+            raise UnsupportedDomainError(
+                "MOSEK version {} does not support {}".format(self._version[0], type(con)))
         return (cone_type, cone_param, ComponentSet(cone_members))
 
     def _get_acc_domain(self, cone):
@@ -348,14 +357,13 @@ class MOSEKDirect(DirectSolver):
         self._referenced_variables.update(zip(var_seq, [0]*len(var_seq)))
 
     def _add_cones(self, cones, num_cones):
-        cone_num = self._solver_model.getnumcone()
-        cone_indices = range(cone_num,
-                             cone_num + num_cones)
         cone_names = tuple(self._symbol_map.getSymbol(
             c, self._labeler) for c in cones)
 
         # MOSEK v<10 : use "cones"
         if self._version[0] < 10:
+            cone_num = self._solver_model.getnumcone()
+            cone_indices = range(cone_num, cone_num + num_cones)
             cone_type, cone_param, cone_members = zip(*map(
                 self._get_cone_data, cones))
             for i in range(num_cones):
