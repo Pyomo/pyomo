@@ -15,6 +15,9 @@ import docplex.cp.model as cp
 import itertools
 
 from pyomo.contrib.cp import IntervalVar
+from pyomo.contrib.cp.interval_var import (
+    IntervalVarTimePoint, IntervalVarPresence, IntervalVarLength
+)
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     AtExpression, BeforeExpression
 )
@@ -22,6 +25,7 @@ from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
     AlwaysIn
 )
 
+from pyomo.core.base.var import ScalarVar
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.logical_expr import (
     AndExpression, OrExpression, XorExpression, NotExpression,
@@ -35,6 +39,10 @@ from pyomo.core.expr.visitor import (
 from pyomo.core.base.set import SetProduct
 
 from pdb import set_trace
+
+class _START_TIME(object): pass
+class _END_TIME(object): pass
+class _GENERAL(object): pass
 
 def _check_var_domain(visitor, node, var):
     if not var.domain.isdiscrete():
@@ -133,7 +141,7 @@ def _handle_getitem(visitor, node, data):
             # TODO: fill in bogus variable and add a constraint
             # disallowing it from being selected
             elements.append(None)
-    return (elements, expr) 
+    return (elements, expr)
 
 def _before_var(visitor, child):
     _id = id(child)
@@ -154,9 +162,109 @@ def _before_var(visitor, child):
                                                               child.domain))
         visitor.cpx.add(cpx_var)
         visitor.var_map[_id] = cpx_var
-    return False, visitor.var_map[_id]
-    
+    return False, (_GENERAL, visitor.var_map[_id])
 
+def _create_docplex_interval_var(interval_var):
+    # Create a new docplex interval var and then figure out all the info that
+    # gets stored on it
+    cpx_interval_var = cp.interval_var()
+
+    # Figure out if it exists
+    if interval_var.is_present.fixed and not interval_var.is_present.value:
+        # Someone has fixed that this will not get scheduled.
+        cpx_interval_var.set_absent()
+    elif interval_var.optional:
+        cpx_interval_var.set_optional()
+    else:
+        cpx_interval_var.set_present()
+
+    # Figure out constraints on its length
+    length = interval_var.length.value if interval_var.length.fixed else \
+             None
+    if length is not None:
+        cpx_interval_var.set_length(length)
+    else:
+        length = interval_var.length
+        if length.lb is not None:
+            cpx_interval_var.set_length_min(length.lb)
+        if length.ub is not None:
+            cpx_interval_var.set_length_max(length.ub)
+
+    # Figure out constraints on start time
+    start_time = interval_var.start_time
+    start = start_time.value if start_time.fixed else None
+    if start is not None:
+        cpx_interval_var.set_start(start)
+    else:
+        if start_time.lb is not None:
+            cpx_interval_var.set_start_min(start.lb)
+        if start_time.ub is not None:
+            cpx_interval_var.set_start_max(start.ub)
+
+    # Figure out constraints on end time
+    end_time = interval_var.end_time
+    end = end_time.value if end_time.fixed else None
+    if end is not None:
+        cpx_interval_var.set_end(end)
+    else:
+        if end_time.lb is not None:
+            cpx_interval_var.set_end_min(end.lb)
+        if end_time.ub is not None:
+            cpx_interval_var.set_end_max(end.ub)
+
+    return cpx_interval_var
+
+def _get_docplex_interval_var(interval_var):
+    # We might already have the interval_var but be looking for a 
+    # start_time or an end_time that we haven't looked for yet:
+    if id(interval_var) in visitor.var_map:
+        cpx_interval_var = visitor.var_map[id(interval_var)]
+    else:
+        cpx_interval_var = _create_docplex_interval_var(interval_var)
+        visitor.cpx.add(cpx_interval_var)
+    return cpx_interval_var
+        
+def _before_interval_var_time_point(visitor, child):
+    _id = id(child)
+    interval_var = child.get_associated_interval_var()
+    if _id not in visitor.var_map:
+        cpx_interval_var = _get_docplex_interval_var(interval_var)
+
+        # Map the child to the right docplex expression
+        if child.local_name == 'start_time':
+            visitor.var_map[_id] = cp.start_of(cpx_interval_var)
+            time_point = _START_TIME
+        elif child.local_name == 'end_time':
+            visitor.var_map[_id] = cp.end_of(cpx_interval_var)
+            time_point = _END_TIME
+
+    # We return the time point, the expression to get to it directly, and the
+    # 'parent' interval var, because depending on the expression, we may want
+    # the parent or the expression for the time point.
+    return False, (time_point, (visitor.var_map[_id],
+                                visitor.var_map[id(interval_var)]))
+
+def _before_interval_var_length(visitor, child):
+    _id = id(child)
+    if _id not in visitor.var_map:
+        interval_var = child.get_associated_interval_var()
+        cpx_interval_var = _get_docplex_interval_var(interval_var)
+        
+        visitor.var_map[_id] = cp.length_of(cpx_interval_var)
+    # There aren't any special types of constraints involving the length, so we
+    # just treat this expression as if it's a normal variable.
+    return False, (_GENERAL, visitor.var_map[_id])
+
+def _before_interval_var_presence(visitor, child):
+    _id = id(child)
+    if _id not in visitor.var_map:
+        interval_var = child.get_associated_interval_var()
+        cpx_interval_var = _get_docplex_interval_var(interval_var)
+        
+        visitor.var_map[_id] = cp.presence_of(cpx_interval_var)
+    # There aren't any special types of constraints involving the presence, so
+    # we just treat this expression as if it's a normal variable.
+    return False, visitor.var_map[_id]
 
 ##
 # Algebraic expressions
@@ -242,10 +350,20 @@ def _handle_at_least_node(visitor, node, *args):
 # Scheduling
 ##
 
-def _handle_before_expression_node(visitor, node, before, after):
-    pass
 
-def _handle_at_expression_node(visitor, node, arg1, arg2):
+_precedence_exprs = {
+    (_START_TIME, _START_TIME): cp.start_before_start,
+    (_START_TIME, _END_TIME): cp.start_before_end,
+    (_END_TIME, _START_TIME): cp.end_before_start,
+    (_END_TIME, _END_TIME): cp.end_before_end,
+}
+def _handle_before_expression_node(visitor, node, before, after, delay):
+    (first_interval, first_time_point) = before
+    (second_interval, second_time_point) = after
+    return _precedence_exprs[(first_time_point, second_time_point)](
+        first_interval, second_interval)
+
+def _handle_at_expression_node(visitor, node, arg1, arg2, delay):
     pass
 
 def _handle_always_in_node(visitor, cumul_func, bounds, times):
@@ -279,6 +397,12 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         BeforeExpression: _handle_before_expression_node,
         AlwaysIn: _handle_always_in_node,
     }
+    _var_handles = {
+        IntervalVarTimePoint: _before_interval_var_time_point,
+        IntervalVarLength: _before_interval_var_length,
+        IntervalVarPresence: _before_interval_var_presence,
+        ScalarVar: _before_var
+    }
 
     def __init__(self, cpx_model):
         self.cpx = cpx_model
@@ -302,7 +426,8 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         # TODO
         if not child.is_expression_type():
             if child.is_potentially_variable():
-                return _before_var(self, child)
+                return self._var_handles[child.__class__](self, child)
+                #return _before_var(self, child)
             else:
                 raise NotImplementedError()
 
@@ -366,5 +491,11 @@ if __name__ == '__main__':
     visitor = LogicalToDoCplex(docplex_model)
 
     m.c = Constraint(expr=m.x**2 + 4 + 2*6*m.x/(4*m.x) <= 3)
+    expr = visitor.walk_expression((m.c.body, m.c, 0))
+    print(expr)
+
+    m.i = IntervalVar(optional=True)
+    m.i2 = IntervalVar([1, 2], optional=False)
+    m.c = LogicalConstraint(expr=m.i.start_time.before(m.i2[1].end_time))
     expr = visitor.walk_expression((m.c.body, m.c, 0))
     print(expr)
