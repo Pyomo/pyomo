@@ -26,11 +26,10 @@ class BeforeExpression(ExpressionBase, BooleanValue):
     """
 
     def __init__(self, before, after, delay):
-        self._args_ = (before, after)
-        self._delay = delay
+        self._args_ = (before, after, delay)
 
     def nargs(self):
-        return 2
+        return 3
 
     def _to_string(self, values, verbose, smap):
         delay = self.delay
@@ -45,7 +44,7 @@ class BeforeExpression(ExpressionBase, BooleanValue):
 
     @property
     def delay(self):
-        return self._delay
+        return self._args_[2]
 
     @property
     def args(self):
@@ -69,11 +68,10 @@ class AtExpression(ExpressionBase, BooleanValue):
                second argument's value
     """
     def __init__(self, first, second, delay):
-        self._args_ = (first, second)
-        self._delay = delay
+        self._args_ = (first, second, delay)
 
     def nargs(self):
-        return 2
+        return 3
 
     def _to_string(self, values, verbose, smap):
         delay = self.delay
@@ -88,7 +86,7 @@ class AtExpression(ExpressionBase, BooleanValue):
 
     @property
     def delay(self):
-        return self._delay
+        return self._args_[2]
 
     @property
     def args(self):

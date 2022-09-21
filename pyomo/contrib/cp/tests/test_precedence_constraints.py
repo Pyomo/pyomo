@@ -28,8 +28,8 @@ class TestPrecedenceRelationships(unittest.TestCase):
         m.c = LogicalConstraint(expr=m.a.start_time.before(m.b.start_time))
 
         self.assertIsInstance(m.c.expr, BeforeExpression)
-        self.assertEqual(len(m.c.expr.args), 2)
-        self.assertEqual(m.c.expr.nargs(), 2)
+        self.assertEqual(len(m.c.expr.args), 3)
+        self.assertEqual(m.c.expr.nargs(), 3)
         self.assertIs(m.c.expr.args[0], m.a.start_time)
         self.assertIs(m.c.expr.args[1], m.b.start_time)
         self.assertEqual(m.c.expr.delay, 0)
@@ -41,7 +41,7 @@ class TestPrecedenceRelationships(unittest.TestCase):
         m.c = LogicalConstraint(expr=m.a.start_time.after(m.b.start_time))
 
         self.assertIsInstance(m.c.expr, BeforeExpression)
-        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertEqual(len(m.c.expr.args), 3)
         self.assertIs(m.c.expr.args[0], m.b.start_time)
         self.assertIs(m.c.expr.args[1], m.a.start_time)
         self.assertEqual(m.c.expr.delay, 0)
@@ -53,8 +53,8 @@ class TestPrecedenceRelationships(unittest.TestCase):
         m.c = LogicalConstraint(expr=m.a.start_time.at(m.b.start_time))
 
         self.assertIsInstance(m.c.expr, AtExpression)
-        self.assertEqual(len(m.c.expr.args), 2)
-        self.assertEqual(m.c.expr.nargs(), 2)
+        self.assertEqual(len(m.c.expr.args), 3)
+        self.assertEqual(m.c.expr.nargs(), 3)
         self.assertIs(m.c.expr.args[0], m.a.start_time)
         self.assertIs(m.c.expr.args[1], m.b.start_time)
         self.assertEqual(m.c.expr.delay, 0)
@@ -67,7 +67,7 @@ class TestPrecedenceRelationships(unittest.TestCase):
                                                          delay=3))
 
         self.assertIsInstance(m.c.expr, BeforeExpression)
-        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertEqual(len(m.c.expr.args), 3)
         self.assertIs(m.c.expr.args[0], m.a.end_time)
         self.assertIs(m.c.expr.args[1], m.b.start_time)
         self.assertEqual(m.c.expr.delay, 3)
@@ -80,7 +80,7 @@ class TestPrecedenceRelationships(unittest.TestCase):
                                                      delay=4))
 
         self.assertIsInstance(m.c.expr, AtExpression)
-        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertEqual(len(m.c.expr.args), 3)
         self.assertIs(m.c.expr.args[0], m.a.end_time)
         self.assertIs(m.c.expr.args[1], m.b.start_time)
         self.assertEqual(m.c.expr.delay, 4)
@@ -93,7 +93,7 @@ class TestPrecedenceRelationships(unittest.TestCase):
                                                         delay=-2))
 
         self.assertIsInstance(m.c.expr, BeforeExpression)
-        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertEqual(len(m.c.expr.args), 3)
         self.assertIs(m.c.expr.args[0], m.b.start_time)
         self.assertIs(m.c.expr.args[1], m.a.end_time)
         self.assertEqual(m.c.expr.delay, 2)
@@ -106,7 +106,7 @@ class TestPrecedenceRelationships(unittest.TestCase):
                                                          delay=-5))
 
         self.assertIsInstance(m.c.expr, BeforeExpression)
-        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertEqual(len(m.c.expr.args), 3)
         self.assertIs(m.c.expr.args[0], m.a.end_time)
         self.assertIs(m.c.expr.args[1], m.b.end_time)
         self.assertEqual(m.c.expr.delay, -5)
@@ -118,7 +118,7 @@ class TestPrecedenceRelationships(unittest.TestCase):
         m.c = LogicalConstraint(expr=m.a.end_time.at(m.b.end_time, delay=-3))
 
         self.assertIsInstance(m.c.expr, AtExpression)
-        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertEqual(len(m.c.expr.args), 3)
         self.assertIs(m.c.expr.args[0], m.a.end_time)
         self.assertIs(m.c.expr.args[1], m.b.end_time)
         self.assertEqual(m.c.expr.delay, -3)
@@ -130,7 +130,7 @@ class TestPrecedenceRelationships(unittest.TestCase):
         m.c = LogicalConstraint(expr=m.a.end_time.after(m.b.end_time))
 
         self.assertIsInstance(m.c.expr, BeforeExpression)
-        self.assertEqual(len(m.c.expr.args), 2)
+        self.assertEqual(len(m.c.expr.args), 3)
         self.assertIs(m.c.expr.args[0], m.b.end_time)
         self.assertIs(m.c.expr.args[1], m.a.end_time)
         self.assertEqual(m.c.expr.delay, 0)
