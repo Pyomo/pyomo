@@ -12,7 +12,9 @@
 from pyomo.common.collections import ComponentSet
 from pyomo.common.pyomo_typing import overload
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
-    BeforeExpression, AtExpression)
+    StartBeforeStartExpression, StartBeforeEndExpression,
+    EndBeforeStartExpression, EndBeforeEndExpression, StartAtStartExpression,
+    StartAtEndExpression, EndAtStartExpression, EndAtEndExpression)
 
 from pyomo.core import Integers
 from pyomo.core.base import Any, ScalarVar, ScalarBooleanVar
@@ -30,36 +32,144 @@ class IntervalVarTimePoint(ScalarVar):
 
     __slots__ = ()
 
+    def get_associated_interval_var(self):
+        return self.parent_block()
+
+
+class IntervalVarStartTime(IntervalVarTimePoint):
+    """This class defines a single variable denoting a start time point
+    of an IntervalVar"""
     def __init__(self, component=None):
-        super().__init__(domain=Integers, ctype=IntervalVarTimePoint)
+        super().__init__(domain=Integers, ctype=IntervalVarStartTime)
 
     def before(self, time, delay=0):
-        # These return logical constraint expressions. A node in a logical
-        # expression tree.
-        return BeforeExpression(self, time, delay)
+        if time.ctype is IntervalVarStartTime:
+            return StartBeforeStartExpression(
+                self.get_associated_interval_var(),
+                time.get_associated_interval_var(),
+                delay)
+        elif time.ctype is IntervalVarEndTime:
+            return StartBeforeEndExpression(
+                self.get_associated_interval_var(),
+                time.get_associated_interval_var(),
+                delay)
+        else:
+            raise RuntimeError("Unrecognized ctype for 'time' argument to "
+                               "'before'. Expected 'IntervalVarStartTime' or "
+                               "IntervalVarEndTime'\nRecieved: %s" % time.ctype)
 
     def after(self, time, delay=0):
-        return BeforeExpression(time, self, -delay)
+        if time.ctype is IntervalVarStartTime:
+            return StartBeforeStartExpression(
+                time.get_associated_interval_var(),
+                self.get_associated_interval_var(),
+                -delay)
+        elif time.ctype is IntervalVarEndTime:
+            return EndBeforeStartExpression(
+                time.get_associated_interval_var(),
+                self.get_associated_interval_var(),
+                delay)
+        else:
+            raise RuntimeError("Unrecognized ctype for 'time' argument to "
+                               "'after'. Expected 'IntervalVarStartTime' or "
+                               "IntervalVarEndTime'\nRecieved: %s" % time.ctype)
 
     def at(self, time, delay=0):
-        return AtExpression(self, time, delay)
+        if time.ctype is IntervalVarStartTime:
+            return StartAtStartExpression(
+                self.get_associated_interval_var(),
+                time.get_associated_interval_var(),
+                delay)
+        elif time.ctype is IntervalVarEndTime:
+            return StartAtEndExpression(
+                self.get_associated_interval_var(),
+                time.get_associated_interval_var(),
+                delay)
+        else:
+            raise RuntimeError("Unrecognized ctype for 'time' argument to "
+                               "'at'. Expected 'IntervalVarStartTime' or "
+                               "IntervalVarEndTime'\nRecieved: %s" % time.ctype)
+
+
+class IntervalVarEndTime(IntervalVarTimePoint):
+    """This class defines a single variable denoting an end time point
+    of an IntervalVar"""
+    def __init__(self, component=None):
+        super().__init__(domain=Integers, ctype=IntervalVarEndTime)
+
+    def before(self, time, delay=0):
+        if time.ctype is IntervalVarStartTime:
+            return EndBeforeStartExpression(
+                self.get_associated_interval_var(),
+                time.get_associated_interval_var(),
+                delay)
+        elif time.ctype is IntervalVarEndTime:
+            return EndBeforeEndExpression(
+                self.get_associated_interval_var(),
+                time.get_associated_interval_var(),
+                delay)
+        else:
+            raise RuntimeError("Unrecognized ctype for 'time' argument to "
+                               "'before'. Expected 'IntervalVarStartTime' or "
+                               "IntervalVarEndTime'\nRecieved: %s" % time.ctype)
+
+    def after(self, time, delay=0):
+        if time.ctype is IntervalVarStartTime:
+            return StartBeforeEndExpression(
+                time.get_associated_interval_var(),
+                self.get_associated_interval_var(),
+                -delay)
+        elif time.ctype is IntervalVarEndTime:
+            return EndBeforeEndExpression(
+                time.get_associated_interval_var(),
+                self.get_associated_interval_var(),
+                -delay)
+        else:
+            raise RuntimeError("Unrecognized ctype for 'time' argument to "
+                               "'after'. Expected 'IntervalVarStartTime' or "
+                               "IntervalVarEndTime'\nRecieved: %s" % time.ctype)
+
+    def at(self, time, delay=0):
+        if time.ctype is IntervalVarStartTime:
+            return EndAtStartExpression(
+                self.get_associated_interval_var(),
+                time.get_associated_interval_var(),
+                delay)
+        elif time.ctype is IntervalVarEndTime:
+            return EndAtEndExpression(
+                self.get_associated_interval_var(),
+                time.get_associated_interval_var(),
+                delay)
+        else:
+            raise RuntimeError("Unrecognized ctype for 'time' argument to "
+                               "'at'. Expected 'IntervalVarStartTime' or "
+                               "IntervalVarEndTime'\nRecieved: %s" % time.ctype)
 
 
 class IntervalVarLength(ScalarVar):
     """This class defines the abstract interface for a single variable
     denoting the length of an IntervalVar"""
 
-    __slots__ = ('_before', '_after', '_at')
+    __slots__ = ()
 
     def __init__(self, component=None):
         super().__init__(domain=Integers, ctype=IntervalVarLength)
+
+    def get_associated_interval_var(self):
+        return self.parent_block()
 
 
 class IntervalVarPresence(ScalarBooleanVar):
     """This class defines the abstract interface for a single Boolean variable
     denoting whether or not an IntervalVar is scheduled"""
+
+    __slots__ = ()
+
     def __init__(self, component=None):
         super().__init__(ctype = IntervalVarPresence)
+
+    def get_associated_interval_var(self):
+        return self.parent_block()
 
 
 class IntervalVarData(_BlockData):
@@ -73,8 +183,8 @@ class IntervalVarData(_BlockData):
 
         with self._declare_reserved_components():
             self.is_present = IntervalVarPresence()
-            self.start_time = IntervalVarTimePoint()
-            self.end_time = IntervalVarTimePoint()
+            self.start_time = IntervalVarStartTime()
+            self.end_time = IntervalVarEndTime()
             self.length = IntervalVarLength()
 
     @property
