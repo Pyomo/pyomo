@@ -12,7 +12,8 @@
 import pyomo.common.unittest as unittest
 from pyomo.contrib.cp import IntervalVar, Step, Pulse
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
-    AlwaysIn, CumulativeFunction, NegatedStepFunction)
+    AlwaysIn, CumulativeFunction, NegatedStepFunction, StepAtStart,
+    StepAtEnd, StepAt)
 
 from pyomo.environ import ConcreteModel, LogicalConstraint
 
@@ -68,7 +69,7 @@ class TestSumStepFunctions(CommonTests):
         self.assertIsInstance(expr, CumulativeFunction)
         self.assertEqual(len(expr.args), 2)
         self.assertEqual(expr.nargs(), 2)
-        self.assertIsInstance(expr.args[0], Step)
+        self.assertIsInstance(expr.args[0], StepAtStart)
         self.assertIsInstance(expr.args[1], Pulse)
 
         self.assertEqual(str(expr), "Step(a.start_time, height=4) + "
@@ -82,9 +83,9 @@ class TestSumStepFunctions(CommonTests):
         self.assertIsInstance(expr2, CumulativeFunction)
         self.assertEqual(len(expr2.args), 3)
         self.assertEqual(expr2.nargs(), 3)
-        self.assertIsInstance(expr2.args[0], Step)
+        self.assertIsInstance(expr2.args[0], StepAtStart)
         self.assertIsInstance(expr2.args[1], Pulse)
-        self.assertIsInstance(expr2.args[2], Step)
+        self.assertIsInstance(expr2.args[2], StepAtEnd)
 
         # This will force expr to clone its arguments because it did the
         # appending trick to make expr2.
@@ -93,7 +94,7 @@ class TestSumStepFunctions(CommonTests):
         self.assertIsInstance(expr3, CumulativeFunction)
         self.assertEqual(len(expr3.args), 3)
         self.assertEqual(expr3.nargs(), 3)
-        self.assertIsInstance(expr3.args[0], Step)
+        self.assertIsInstance(expr3.args[0], StepAtStart)
         self.assertIsInstance(expr3.args[1], Pulse)
         self.assertIsInstance(expr3.args[2], Pulse)
 
@@ -146,9 +147,9 @@ class TestSumStepFunctions(CommonTests):
 
         self.assertEqual(len(expr.args), 3)
         self.assertEqual(expr.nargs(), 3)
-        self.assertIsInstance(expr.args[0], Step)
+        self.assertIsInstance(expr.args[0], StepAtStart)
         self.assertIsInstance(expr.args[1], Pulse)
-        self.assertIsInstance(expr.args[2], Step)
+        self.assertIsInstance(expr.args[2], StepAt)
 
         self.assertEqual(str(expr), "Step(a.start_time, height=4) + "
                          "Pulse(b, height=-1) + Step(0, height=1)")
@@ -158,7 +159,7 @@ class TestSumStepFunctions(CommonTests):
         s1 = Step(m.a.end_time, height=2)
         expr = s1
 
-        self.assertIsInstance(expr, Step)
+        self.assertIsInstance(expr, StepAtEnd)
         self.assertEqual(len(expr.args), 1)
         self.assertEqual(expr.nargs(), 1)
 
@@ -195,7 +196,7 @@ class TestSumStepFunctions(CommonTests):
                 TypeError,
                 "Cannot add object of class <class 'int'> to object of class "
                 "<class 'pyomo.contrib.cp.scheduling_expr."
-                "step_function_expressions.Step'>"):
+                "step_function_expressions.StepAtStart'>"):
             expr = Step(m.a.start_time, height=6) + 3
 
     def test_cannot_add_to_constant(self):
@@ -203,8 +204,8 @@ class TestSumStepFunctions(CommonTests):
         with self.assertRaisesRegex(
                 TypeError,
                 "Cannot add object of class <class 'pyomo.contrib.cp."
-                "scheduling_expr.step_function_expressions.Step'> to object "
-                "of class <class 'int'>"):
+                "scheduling_expr.step_function_expressions.StepAtStart'> to "
+                "object of class <class 'int'>"):
             expr = 4 + Step(m.a.start_time, height=6)
 
     def test_python_sum_funct(self):
@@ -227,11 +228,11 @@ class TestSubtractStepFunctions(CommonTests):
         self.assertIsInstance(s, CumulativeFunction)
         self.assertEqual(len(s.args), 2)
         self.assertEqual(s.nargs(), 2)
-        self.assertIsInstance(s.args[0], Step)
+        self.assertIsInstance(s.args[0], StepAtStart)
         self.assertIsInstance(s.args[1], NegatedStepFunction)
         self.assertEqual(len(s.args[1].args), 1)
         self.assertEqual(s.args[1].nargs(), 1)
-        self.assertIsInstance(s.args[1].args[0], Step)
+        self.assertIsInstance(s.args[1].args[0], StepAtStart)
 
     def test_subtract_step_and_pulse(self):
         m = self.get_model()
@@ -368,7 +369,7 @@ class TestSubtractStepFunctions(CommonTests):
                 TypeError,
                 "Cannot subtract object of class <class 'int'> from object of "
                 "class <class 'pyomo.contrib.cp."
-                "scheduling_expr.step_function_expressions.Step'>"):
+                "scheduling_expr.step_function_expressions.StepAtStart'>"):
             expr = Step(m.a.start_time, height=6) - 3
 
     def test_cannot_subtract_from_constant(self):
@@ -376,8 +377,8 @@ class TestSubtractStepFunctions(CommonTests):
         with self.assertRaisesRegex(
                 TypeError,
                 "Cannot subtract object of class <class 'pyomo.contrib.cp."
-                "scheduling_expr.step_function_expressions.Step'> from object "
-                "of class <class 'int'>"):
+                "scheduling_expr.step_function_expressions.StepAtStart'> from "
+                "object of class <class 'int'>"):
             expr = 3 - Step(m.a.start_time, height=6)
 
 class TestAlwaysIn(CommonTests):

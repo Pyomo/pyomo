@@ -10,7 +10,7 @@
 #  ___________________________________________________________________________
 
 from pyomo.contrib.cp.interval_var import (
-    IntervalVar, IntervalVarData, IntervalVarTimePoint)
+    IntervalVar, IntervalVarData, IntervalVarStartTime, IntervalVarEndTime)
 from pyomo.core.base.component import Component
 from pyomo.core.expr.logical_expr import BooleanExpression
 from pyomo.core.pyomoobject import PyomoObject
@@ -101,9 +101,9 @@ class Pulse(StepFunction):
             interval_var is scheduled
     """
 
-    __slots__ = ('_args_', '_interval_var', '_height')
+    __slots__ = ('_args_')
     def __init__(self, interval_var, height):
-        self._args_ = [self]
+        self._args_ = [self, interval_var, height]
 
         if not isinstance(interval_var, IntervalVarData) or \
            interval_var.ctype is not IntervalVar:
@@ -111,8 +111,13 @@ class Pulse(StepFunction):
                             "be an 'IntervalVar'.\n"
                             "Received: %s" % type(interval_var))
 
-        self._interval_var = interval_var
-        self._height = height
+    @property
+    def _interval_var(self):
+        return self._args_[1]
+
+    @property
+    def _height(self):
+        return self._args_[2]
 
     def __iadd__(self, other):
         # We can't really do this in place because we have to change type.
@@ -142,19 +147,33 @@ class Step(StepFunction):
         height (int): The value of the step function after the time point
     """
 
-    __slots__ = ('_args_', '_time', '_height')
-    def __init__(self, time, height):
-        self._args_ = [self]
+    __slots__ = ('_args_')
 
-        if not isinstance(time, (int, IntervalVarTimePoint)):
+    def __new__(cls, time, height):
+        if isinstance(time, int):
+            return StepAt(time, height)
+        elif time.ctype is IntervalVarStartTime:
+            return StepAtStart(time.get_associated_interval_var(), height)
+        elif time.ctype is IntervalVarEndTime:
+            return StepAtEnd(time.get_associated_interval_var(), height)
+        else:
             raise TypeError("The 'time' argument for a 'Step' must be either "
                             "an 'IntervalVarTimePoint' (for example, the "
                             "'start_time' or 'end_time' of an IntervalVar) or "
                             "an integer time point in the time horizon.\n"
                             "Received: %s" % type(time))
 
-        self._time = time
-        self._height = height
+class StepBase(StepFunction):
+    def __init__(self, time, height):
+        self._args_ = [self, time, height]
+
+    @property
+    def _time(self):
+        return self._args_[1]
+
+    @property
+    def _height(self):
+        return self._args_[2]
 
     def __iadd__(self, other):
         # We can't really do this in place because we have to change type.
@@ -170,6 +189,22 @@ class Step(StepFunction):
 
     def __str__(self):
         return "Step(%s, height=%s)" % (str(self._time), self._height)
+
+
+class StepAt(StepBase):
+    pass
+
+
+class StepAtStart(StepBase):
+    def __str__(self):
+        return "Step(%s, height=%s)" % (str(self._time.start_time),
+                                        self._height)
+
+
+class StepAtEnd(StepBase):
+    def __str__(self):
+        return "Step(%s, height=%s)" % (str(self._time.end_time),
+                                        self._height)
 
 
 class CumulativeFunction(StepFunction):
