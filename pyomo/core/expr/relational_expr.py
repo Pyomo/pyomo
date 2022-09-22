@@ -327,6 +327,32 @@ class EqualityExpression(RelationalExpression):
         return "%s  ==  %s" % (values[0], values[1])
 
 
+class NotEqualExpression(RelationalExpression):
+    """
+    Not-equal expression::
+
+        x != y
+    """
+
+    __slots__ = ()
+
+    def nargs(self):
+        return 2
+
+    def __bool__(self):
+        lhs, rhs = self.args
+        if lhs is not rhs:
+            return True
+        return super().__bool__()
+        
+    def _apply_operation(self, result):
+        _l, _r = result
+        return _l != _r
+
+    def _to_string(self, values, verbose, smap):
+        return "%s  !=  %s" % (values[0], values[1])
+
+
 _relational_op = {
     _eq: (operator.eq, '==', None),
     _le: (operator.le, '<=', False),
