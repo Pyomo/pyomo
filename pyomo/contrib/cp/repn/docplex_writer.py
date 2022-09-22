@@ -14,6 +14,8 @@ import docplex.cp.model as cp
 
 import itertools
 
+from pyomo.common.config import ConfigBlock, ConfigValue
+
 from pyomo.contrib.cp import IntervalVar
 from pyomo.contrib.cp.interval_var import (
     IntervalVarStartTime, IntervalVarEndTime, IntervalVarPresence,
@@ -28,7 +30,8 @@ from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
     AlwaysIn
 )
 
-from pyomo.core.base.var import ScalarVar
+from pyomo.core.base.boolean_var import ScalarBooleanVar, _GeneralBooleanVarData
+from pyomo.core.base.var import ScalarVar, _GeneralVarData
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.logical_expr import (
     AndExpression, OrExpression, XorExpression, NotExpression,
@@ -36,12 +39,14 @@ from pyomo.core.expr.logical_expr import (
     AtMostExpression, AtLeastExpression
 )
 from pyomo.core.expr.numeric_expr import MinExpression, MaxExpression
+from pyomo.core.expr.relational_expr import NotEqualExpression
 from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor, identify_variables
 )
 from pyomo.core.base.set import SetProduct
+from pyomo.opt import WriterFactory
 
-from pdb import set_trace
+from pytest import set_trace
 
 def _check_var_domain(visitor, node, var):
     if not var.domain.isdiscrete():
@@ -69,7 +74,7 @@ def _handle_getitem(visitor, node, data):
     mult = 1
     # Note skipping the first argument: that should be the IndexedComponent
     for i, arg in enumerate(data[1:]):
-        if arg.__class__ in native_types:
+        if arg.__class__ in EXPR.native_types:
             arg_set = Set(initialize=[arg])
             arg_set.construct()
             arg_domain.append(arg_set)
@@ -142,20 +147,32 @@ def _handle_getitem(visitor, node, data):
             elements.append(None)
     return (elements, expr)
 
+def _before_boolean_var(visitor, child):
+    _id = id(child)
+    if _id not in visitor.var_map:
+        if child.fixed:
+            return False, child.value
+        nm = child.name if visitor.symbolic_solver_labels else None
+        # Sorry, universe, but docplex doesn't know the difference between
+        # Boolean and Binary...
+        cpx_var = cp.binary_var(name=nm)
+        # Because I want to pretend the world is sane from here on out, we will
+        # return a Boolean expression (in docplex land) so this can be used as
+        # an argument to logical expressions later
+        visitor.var_map[_id] = cpx_var == 1
+    return False, visitor.var_map[_id]
+
 def _before_var(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
         if child.fixed:
             return False, child.value
         nm = child.name if visitor.symbolic_solver_labels else None
-        if child.domain in (Integers, PositiveIntegers, NonPositiveIntegers,
-                            NegativeIntegers, NonNegativeIntegers):
+        if child.is_binary():
+            cpx_var = cp.binary_var(name=nm)
+        elif child.is_integer():
             cpx_var = cp.integer_var(min=child.bounds[0], max=child.bounds[1],
                                      name=nm)
-        elif child.domain in (Binary, Boolean):
-            # Sorry, universe, but docplex doesn't know the difference between
-            # Boolean and Binary...
-            cpx_var = cp.binary_var(name=nm)
         else:
             raise ValueError("The LogicalToDoCplex writer can only support "
                              "integer- or Boolean-valued variables. Cannot "
@@ -165,11 +182,12 @@ def _before_var(visitor, child):
         visitor.var_map[_id] = cpx_var
     return False, visitor.var_map[_id]
 
-def _create_docplex_interval_var(interval_var):
+def _create_docplex_interval_var(visitor, interval_var):
     # Create a new docplex interval var and then figure out all the info that
     # gets stored on it
     nm = interval_var.name if visitor.symbolic_solver_labels else None
     cpx_interval_var = cp.interval_var(name=nm)
+    visitor.var_map[id(interval_var)] = cpx_interval_var
 
     # Figure out if it exists
     if interval_var.is_present.fixed and not interval_var.is_present.value:
@@ -216,19 +234,19 @@ def _create_docplex_interval_var(interval_var):
 
     return cpx_interval_var
 
-def _get_docplex_interval_var(interval_var):
+def _get_docplex_interval_var(visitor, interval_var):
     # We might already have the interval_var and just need to retrieve it
     if id(interval_var) in visitor.var_map:
         cpx_interval_var = visitor.var_map[id(interval_var)]
     else:
-        cpx_interval_var = _create_docplex_interval_var(interval_var)
+        cpx_interval_var = _create_docplex_interval_var(visitor, interval_var)
         visitor.cpx.add(cpx_interval_var)
     return cpx_interval_var
 
 def _before_interval_var(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
-        cpx_interval_var = _get_docplex_interval_var(child)
+        cpx_interval_var = _get_docplex_interval_var(visitor, child)
         visitor.var_map[_id] = cpx_interval_var
 
     return False, visitor.var_map[_id]
@@ -237,7 +255,7 @@ def _before_interval_var_start_time(visitor, child):
     _id = id(child)
     interval_var = child.get_associated_interval_var()
     if _id not in visitor.var_map:
-        cpx_interval_var = _get_docplex_interval_var(interval_var)
+        cpx_interval_var = _get_docplex_interval_var(visitor, interval_var)
         visitor.var_map[_id] = cp.start_of(cpx_interval_var)
 
     return False, visitor.var_map[_id]
@@ -246,7 +264,7 @@ def _before_interval_var_end_time(visitor, child):
     _id = id(child)
     interval_var = child.get_associated_interval_var()
     if _id not in visitor.var_map:
-        cpx_interval_var = _get_docplex_interval_var(interval_var)
+        cpx_interval_var = _get_docplex_interval_var(visitor, interval_var)
         visitor.var_map[_id] = cp.end_of(cpx_interval_var)
 
     return False, visitor.var_map[_id]
@@ -255,7 +273,7 @@ def _before_interval_var_length(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
         interval_var = child.get_associated_interval_var()
-        cpx_interval_var = _get_docplex_interval_var(interval_var)
+        cpx_interval_var = _get_docplex_interval_var(visitor, interval_var)
 
         visitor.var_map[_id] = cp.length_of(cpx_interval_var)
     # There aren't any special types of constraints involving the length, so we
@@ -266,7 +284,7 @@ def _before_interval_var_presence(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
         interval_var = child.get_associated_interval_var()
-        cpx_interval_var = _get_docplex_interval_var(interval_var)
+        cpx_interval_var = _get_docplex_interval_var(visitor, interval_var)
 
         visitor.var_map[_id] = cp.presence_of(cpx_interval_var)
     # There aren't any special types of constraints involving the presence, so
@@ -333,7 +351,7 @@ def _handle_inequality_node(visitor, node, arg1, arg2):
     return cp.less_or_equal(arg1, arg2)
 
 def _handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
-    return (cp.less_or_equal(arg1, arg2), cp.less_or_equal(arg2, arg3))
+    return cp.range(arg2, lb=arg1, ub=arg3)
 
 def _handle_not_equal_node(visitor, node, arg1, arg2):
     return cp.diff(arg1, arg2)
@@ -410,6 +428,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         AtMostExpression: _handle_at_most_node,
         AtLeastExpression: _handle_at_least_node,
         EXPR.EqualityExpression: _handle_equality_node,
+        NotEqualExpression: _handle_not_equal_node,
         EXPR.InequalityExpression: _handle_inequality_node,
         EXPR.RangedExpression: _handle_ranged_inequality_node,
         StartBeforeStartExpression: _handle_start_before_start_expression_node,
@@ -429,7 +448,10 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         IntervalVarPresence: _before_interval_var_presence,
         ScalarIntervalVar: _before_interval_var,
         IntervalVarData: _before_interval_var,
-        ScalarVar: _before_var
+        ScalarVar: _before_var,
+        _GeneralVarData: _before_var,
+        ScalarBooleanVar: _before_boolean_var,
+        _GeneralBooleanVarData: _before_boolean_var,
     }
 
     def __init__(self, cpx_model, symbolic_solver_labels=False):
@@ -448,7 +470,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
 
     def beforeChild(self, node, child, child_idx):
         # Return native types
-        if child.__class__ in native_types:
+        if child.__class__ in EXPR.native_types:
             return False, child
 
         # Convert Vars Logical vars to docplex equivalents
@@ -464,11 +486,67 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
 
     finalizeResult = None
 
-    def _declare_docplex_algebraic_var(self, var):
-        pass
 
-    def _declare_docplex_interval_var(self, var):
-        pass
+@WriterFactory.register(
+    'docplex_model', 'Generate the corresponding docplex model object')
+class DocplexWriter(object):
+    CONFIG = ConfigBlock('docplex_model_writer')
+    CONFIG.declare('symbolic_solver_labels', ConfigValue(
+        default=False,
+        domain=bool,
+        description='Write Pyomo Var and Constraint names to docplex model',
+    ))
+
+    def __init__(self):
+        self.config = self.CONFIG()
+
+    def write(self, model, **options):
+        config = options.pop('config', self.config)(options)
+
+        cpx_model = cp.CpoModel()
+        visitor = LogicalToDoCplex(
+            docplex_model,
+            symbolic_solver_labels=config.symbolic_solver_labels)
+
+        active_objs = [obj for obj in model.component_data_objects(
+            Objective,
+            active=True,
+            descend_into=Block,
+            sort=SortComponents.deterministic)]
+        if len(active_objs) > 1:
+            raise ValueError("More than one active objective defined for "
+                             "input model '%s': Cannot write to docplex."
+                             % model.name)
+        elif len(active_objs) == 1:
+            obj = active_objs[0]
+            obj_expr = visitor.walk_expression((obj.expr, obj, 0))
+            cpx_model.add(cp.minimize(m.obj.sense*obj_expr))
+
+        # No objective is fine too, this is CP afterall...
+
+        # Write algebraic constraints
+        for cons in model.component_data_objects(
+                Constraint,
+                active=True,
+                descend_into=Block,
+                sort=SortComponents.deterministic):
+            expr = visitor.walk_expression((cons.body, cons, 0))
+            if cons.lower is not None:
+                cpx_model.add(value(cons.lower) <= expr)
+            if cons.upper is not None:
+                cpx_model.add(cons.upper >= expr)
+
+        # Write logical constraints
+        for cons in model.component_data_objects(
+                LogicalConstraint,
+                active=True,
+                descend_into=Block,
+                sort=SortComponents.deterministic):
+            expr = visitor.walk_expression((cons.expr, cons, 0))
+            cpx_model.add(expr)
+
+        # That's all, folks.
+        return cpx_model
 
 
 if __name__ == '__main__':
@@ -517,6 +595,7 @@ if __name__ == '__main__':
 
     m.c = Constraint(expr=m.x**2 + 4 + 2*6*m.x/(4*m.x) <= 3)
     expr = visitor.walk_expression((m.c.body, m.c, 0))
+    set_trace()
     print(expr)
 
     m.i = IntervalVar(optional=True)
