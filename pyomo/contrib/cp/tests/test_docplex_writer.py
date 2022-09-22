@@ -355,3 +355,121 @@ class TestCPExpressionWalker(unittest.TestCase):
 
         self.assertTrue(expr.equals(
             cp.less_or_equal(cp.count([a[i] == 4 for i in m.I], True), 3)))
+
+    def test_start_before_start(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.i.start_time.before(m.i2[1].start_time))
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.i), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+
+        i = visitor.var_map[id(m.i)]
+        i21 = visitor.var_map[id(m.i2[1])]
+
+        self.assertTrue(expr.equals(cp.start_before_start(i, i21, 0)))
+
+    def test_start_before_end(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.i.start_time.before(m.i2[1].end_time,
+                                                           delay=3))
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.i), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+
+        i = visitor.var_map[id(m.i)]
+        i21 = visitor.var_map[id(m.i2[1])]
+
+        self.assertTrue(expr.equals(cp.start_before_end(i, i21, 3)))
+
+    def test_end_before_start(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.i.end_time.before(m.i2[1].start_time,
+                                                         delay=-2))
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.i), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+
+        i = visitor.var_map[id(m.i)]
+        i21 = visitor.var_map[id(m.i2[1])]
+
+        self.assertTrue(expr.equals(cp.end_before_start(i, i21, -2)))
+
+    def test_end_before_end(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.i.end_time.before(m.i2[1].end_time,
+                                                         delay=6))
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.i), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+
+        i = visitor.var_map[id(m.i)]
+        i21 = visitor.var_map[id(m.i2[1])]
+
+        self.assertTrue(expr.equals(cp.end_before_end(i, i21, 6)))
+
+    def test_start_at_start(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.i.start_time.at(m.i2[1].start_time))
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.i), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+
+        i = visitor.var_map[id(m.i)]
+        i21 = visitor.var_map[id(m.i2[1])]
+
+        self.assertTrue(expr.equals(cp.start_at_start(i, i21, 0)))
+
+    def test_start_at_end(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.i.start_time.at(m.i2[1].end_time,
+                                                           delay=3))
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.i), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+
+        i = visitor.var_map[id(m.i)]
+        i21 = visitor.var_map[id(m.i2[1])]
+
+        self.assertTrue(expr.equals(cp.start_at_end(i, i21, 3)))
+
+    def test_end_at_start(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.i.end_time.at(m.i2[1].start_time,
+                                                         delay=-2))
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.i), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+
+        i = visitor.var_map[id(m.i)]
+        i21 = visitor.var_map[id(m.i2[1])]
+
+        self.assertTrue(expr.equals(cp.end_at_start(i, i21, -2)))
+
+    def test_end_at_end(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.i.end_time.at(m.i2[1].end_time,
+                                                         delay=6))
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.i), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+
+        i = visitor.var_map[id(m.i)]
+        i21 = visitor.var_map[id(m.i2[1])]
+
+        self.assertTrue(expr.equals(cp.end_at_end(i, i21, 6)))
