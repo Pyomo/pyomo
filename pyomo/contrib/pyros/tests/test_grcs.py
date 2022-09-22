@@ -3035,6 +3035,13 @@ class TestSubsolverTiming(unittest.TestCase):
             pyrosTerminationCondition.robust_feasible,
             msg="Did not identify robust optimal solution to problem instance."
         )
+        self.assertFalse(
+            math.isnan(results.time),
+            msg=(
+                "PyROS solve time is nan (expected otherwise since subsolver"
+                "time estimates are made using TicTocTimer"
+            ),
+        )
 
     @unittest.skipUnless(
         SolverFactory('gams:ipopt').available(exception_flag=False),
@@ -3079,6 +3086,13 @@ class TestSubsolverTiming(unittest.TestCase):
             results.pyros_termination_condition,
             pyrosTerminationCondition.robust_feasible,
             msg="Did not identify robust optimal solution to problem instance."
+        )
+        self.assertFalse(
+            math.isnan(results.time),
+            msg=(
+                "PyROS solve time is nan (expected otherwise since subsolver"
+                "time estimates are made using TicTocTimer"
+            ),
         )
 
 
