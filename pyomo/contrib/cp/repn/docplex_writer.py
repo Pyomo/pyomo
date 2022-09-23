@@ -27,7 +27,8 @@ from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     StartAtEndExpression, EndAtStartExpression, EndAtEndExpression
 )
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
-    AlwaysIn
+    AlwaysIn, StepAt, StepAtStart, StepAtEnd, Pulse, CumulativeFunction,
+    NegatedStepFunction
 )
 
 from pyomo.core.base.boolean_var import ScalarBooleanVar, _GeneralBooleanVarData
@@ -291,6 +292,45 @@ def _before_interval_var_presence(visitor, child):
     # we just treat this expression as if it's a normal variable.
     return False, visitor.var_map[_id]
 
+def _handle_step_at_node(visitor, node):
+    cpx_var = _get_docplex_interval_var(visitor, node._time)
+    return cp.step_at(cpx_var, node._height)
+
+def _handle_step_at_start_node(visitor, node):
+    cpx_var = _get_docplex_interval_var(visitor, node._time)
+    return cp.step_at_start(cpx_var, node._height)
+
+def _handle_step_at_end_node(visitor, node):
+    cpx_var = _get_docplex_interval_var(visitor, node._time)
+    return cp.step_at_end(cpx_var, node._height)
+
+def _handle_pulse_node(visitor, node):
+    cpx_var = _get_docplex_interval_var(visitor, node._interval_var)
+    return cp.pulse(cpx_var, node._height)
+
+_step_function_handles = {
+    StepAt: _handle_step_at_node,
+    StepAtStart: _handle_step_at_start_node,
+    StepAtEnd: _handle_step_at_end_node,
+    Pulse: _handle_pulse_node,
+}
+
+def _handle_negated_step_function_node(visitor, node):
+    return _step_function_handles[node.args[0].__class__](visitor, node.args[0])
+
+_step_function_handles[
+    NegatedStepFunction] = _handle_negated_step_function_node,
+
+def _before_cumulative_function(visitor, node):
+    expr = 0
+    for arg in node.args:
+        if arg.__class__ is NegatedStepFunction:
+            expr -= _handle_negated_step_function_node(visitor, arg)
+        else:
+            expr += _step_function_handles[arg.__class__](visitor, arg)
+
+    return False, expr
+
 ##
 # Algebraic expressions
 ##
@@ -403,8 +443,8 @@ def _handle_end_at_start_expression_node(visitor, node, before, after, delay):
 def _handle_end_at_end_expression_node(visitor, node, before, after, delay):
     return cp.end_at_end(before, after, delay=delay)
 
-def _handle_always_in_node(visitor, cumul_func, bounds, times):
-    pass
+def _handle_always_in_node(visitor, node, cumul_func, lb, ub, start, end):
+    return cp.always_in(cumul_func, lb, ub, start, end)
 
 class LogicalToDoCplex(StreamBasedExpressionVisitor):
     _operator_handles = {
@@ -452,6 +492,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         _GeneralVarData: _before_var,
         ScalarBooleanVar: _before_boolean_var,
         _GeneralBooleanVarData: _before_boolean_var,
+        CumulativeFunction: _before_cumulative_function,
     }
 
     def __init__(self, cpx_model, symbolic_solver_labels=False):
@@ -474,7 +515,6 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
             return False, child
 
         # Convert Vars Logical vars to docplex equivalents
-        # TODO
         if not child.is_expression_type():
             return self._var_handles[child.__class__](self, child)
 

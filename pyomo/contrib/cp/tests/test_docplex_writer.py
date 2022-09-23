@@ -16,7 +16,7 @@ import pyomo.common.unittest as unittest
 
 from pyomo.contrib.cp import IntervalVar
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
-    AlwaysIn
+    AlwaysIn, Step, Pulse
 )
 from pyomo.contrib.cp.repn.docplex_writer import LogicalToDoCplex
 
@@ -61,7 +61,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         self.assertIn(id(m.i.start_time), visitor.var_map)
         self.assertIn(id(m.i2[2]), visitor.var_map)
         self.assertIn(id(m.i2[2].length), visitor.var_map)
-        
+
         cpx_x = visitor.var_map[id(m.x)]
         cpx_i = visitor.var_map[id(m.i)]
         cpx_i2 = visitor.var_map[id(m.i2[2])]
@@ -276,7 +276,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         a4 = visitor.var_map[id(m.a[4])]
 
         self.assertTrue(expr.equals(cp.if_then(b, cp.less_or_equal(a4, a3))))
-        
+
     def test_ranged_inequality(self):
         m = self.get_model()
         m.a.domain = Integers
@@ -284,7 +284,7 @@ class TestCPExpressionWalker(unittest.TestCase):
 
         visitor = self.get_visitor()
         expr = visitor.walk_expression((m.c.expr, m.c, 0))
-        
+
         self.assertIn(id(m.a[2]), visitor.var_map)
         a2 = visitor.var_map[id(m.a[2])]
 
@@ -312,7 +312,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         m = self.get_model()
         m.a.domain = Integers
         m.c = LogicalConstraint(expr=exactly(3, [m.a[i] == 4 for i in m.I]))
-        
+
         visitor = self.get_visitor()
         expr = visitor.walk_expression((m.c.body, m.c, 0))
 
@@ -328,7 +328,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         m = self.get_model()
         m.a.domain = Integers
         m.c = LogicalConstraint(expr=atleast(3, [m.a[i] == 4 for i in m.I]))
-        
+
         visitor = self.get_visitor()
         expr = visitor.walk_expression((m.c.body, m.c, 0))
 
@@ -344,7 +344,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         m = self.get_model()
         m.a.domain = Integers
         m.c = LogicalConstraint(expr=atmost(3, [m.a[i] == 4 for i in m.I]))
-        
+
         visitor = self.get_visitor()
         expr = visitor.walk_expression((m.c.body, m.c, 0))
 
@@ -473,3 +473,24 @@ class TestCPExpressionWalker(unittest.TestCase):
         i21 = visitor.var_map[id(m.i2[1])]
 
         self.assertTrue(expr.equals(cp.end_at_end(i, i21, 6)))
+
+    def test_always_in(self):
+        m = self.get_model()
+        f = Pulse(m.i, height=3) + Step(m.i2[1].start_time, height=2) - \
+            Step(m.i2[2].end_time, height=-1)
+        m.c = LogicalConstraint(expr=f.within((0, 3), (0, 10)))
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.i), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+
+        i = visitor.var_map[id(m.i)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+
+        self.assertTrue(expr.equals(cp.always_in(cp.pulse(i, 3) +
+                                                 cp.step_at_start(i21, 2) -
+                                                 cp.step_at_end(i22, -1), 0, 3,
+                                                 0, 10)))
