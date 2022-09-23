@@ -24,7 +24,7 @@ from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
     IndexedComponent, UnindexedComponent_set)
 from pyomo.core.base.initializer import BoundInitializer, Initializer
-from pyomo.core.expr.current import GetItemExpression
+from pyomo.core.expr.current import GetAttrExpression, GetItemExpression
 
 class IntervalVarTimePoint(ScalarVar):
     """This class defines the abstract interface for a single variable
@@ -43,12 +43,15 @@ class IntervalVarStartTime(IntervalVarTimePoint):
         super().__init__(domain=Integers, ctype=IntervalVarStartTime)
 
     def before(self, time, delay=0):
-        if time.ctype is IntervalVarStartTime:
+        time_point = time.args[1] if isinstance(time, GetAttrExpression) \
+                     else None
+
+        if time_point == 'start_time' or time.ctype is IntervalVarStartTime:
             return StartBeforeStartExpression(
                 self.get_associated_interval_var(),
                 time.get_associated_interval_var(),
                 delay)
-        elif time.ctype is IntervalVarEndTime:
+        elif time_point == 'end_time' or time.ctype is IntervalVarEndTime:
             return StartBeforeEndExpression(
                 self.get_associated_interval_var(),
                 time.get_associated_interval_var(),
@@ -59,12 +62,15 @@ class IntervalVarStartTime(IntervalVarTimePoint):
                                "IntervalVarEndTime'\nRecieved: %s" % time.ctype)
 
     def after(self, time, delay=0):
-        if time.ctype is IntervalVarStartTime:
+        time_point = time.args[1] if isinstance(time, GetAttrExpression) \
+                     else None
+
+        if time_point == 'start_time' or time.ctype is IntervalVarStartTime:
             return StartBeforeStartExpression(
                 time.get_associated_interval_var(),
                 self.get_associated_interval_var(),
                 -delay)
-        elif time.ctype is IntervalVarEndTime:
+        elif time_point == 'end_time' or time.ctype is IntervalVarEndTime:
             return EndBeforeStartExpression(
                 time.get_associated_interval_var(),
                 self.get_associated_interval_var(),
@@ -75,12 +81,15 @@ class IntervalVarStartTime(IntervalVarTimePoint):
                                "IntervalVarEndTime'\nRecieved: %s" % time.ctype)
 
     def at(self, time, delay=0):
-        if time.ctype is IntervalVarStartTime:
+        time_point = time.args[1] if isinstance(time, GetAttrExpression) \
+                     else None
+
+        if time_point == 'start_time' or time.ctype is IntervalVarStartTime:
             return StartAtStartExpression(
                 self.get_associated_interval_var(),
                 time.get_associated_interval_var(),
                 delay)
-        elif time.ctype is IntervalVarEndTime:
+        elif time_point == 'end_time' or time.ctype is IntervalVarEndTime:
             return StartAtEndExpression(
                 self.get_associated_interval_var(),
                 time.get_associated_interval_var(),
@@ -98,12 +107,15 @@ class IntervalVarEndTime(IntervalVarTimePoint):
         super().__init__(domain=Integers, ctype=IntervalVarEndTime)
 
     def before(self, time, delay=0):
-        if time.ctype is IntervalVarStartTime:
+        time_point = time.args[1] if isinstance(time, GetAttrExpression) \
+                     else None
+
+        if time_point == 'start_time' or time.ctype is IntervalVarStartTime:
             return EndBeforeStartExpression(
                 self.get_associated_interval_var(),
                 time.get_associated_interval_var(),
                 delay)
-        elif time.ctype is IntervalVarEndTime:
+        elif time_point == 'end_time' or time.ctype is IntervalVarEndTime:
             return EndBeforeEndExpression(
                 self.get_associated_interval_var(),
                 time.get_associated_interval_var(),
@@ -114,12 +126,15 @@ class IntervalVarEndTime(IntervalVarTimePoint):
                                "IntervalVarEndTime'\nRecieved: %s" % time.ctype)
 
     def after(self, time, delay=0):
-        if time.ctype is IntervalVarStartTime:
+        time_point = time.args[1] if isinstance(time, GetAttrExpression) \
+                     else None
+
+        if time_point == 'start_time' or time.ctype is IntervalVarStartTime:
             return StartBeforeEndExpression(
                 time.get_associated_interval_var(),
                 self.get_associated_interval_var(),
                 -delay)
-        elif time.ctype is IntervalVarEndTime:
+        elif time_point == 'end_time' or time.ctype is IntervalVarEndTime:
             return EndBeforeEndExpression(
                 time.get_associated_interval_var(),
                 self.get_associated_interval_var(),
@@ -130,12 +145,15 @@ class IntervalVarEndTime(IntervalVarTimePoint):
                                "IntervalVarEndTime'\nRecieved: %s" % time.ctype)
 
     def at(self, time, delay=0):
-        if time.ctype is IntervalVarStartTime:
+        time_point = time.args[1] if isinstance(time, GetAttrExpression) \
+                     else None
+
+        if time_point == 'start_time' or time.ctype is IntervalVarStartTime:
             return EndAtStartExpression(
                 self.get_associated_interval_var(),
                 time.get_associated_interval_var(),
                 delay)
-        elif time.ctype is IntervalVarEndTime:
+        elif time_point == 'end_time' or time.ctype is IntervalVarEndTime:
             return EndAtEndExpression(
                 self.get_associated_interval_var(),
                 time.get_associated_interval_var(),
