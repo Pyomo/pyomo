@@ -13,8 +13,9 @@
 import docplex.cp.model as cp
 
 import itertools
+from operator import attrgetter
 
-from pyomo.common.config import ConfigBlock, ConfigValue
+from pyomo.common.config import ConfigDict, ConfigValue
 
 from pyomo.contrib.cp import IntervalVar
 from pyomo.contrib.cp.interval_var import (
@@ -45,7 +46,14 @@ from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor, identify_variables
 )
 from pyomo.core.base.set import SetProduct
-from pyomo.opt import WriterFactory
+from pyomo.repn.plugins.nl_writer import categorize_valid_components
+from pyomo.opt import WriterFactory, SolverFactory
+
+### FIXME: Remove the following as soon as non-active components no
+### longer report active==True
+from pyomo.core.base import Set, RangeSet
+from pyomo.network import Port
+###
 
 from pytest import set_trace
 
@@ -521,7 +529,6 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         return True, None
 
     def exitNode(self, node, data):
-        print("EXIT\n\tnode: %s\n\tdata: %s" % (node, data))
         return self._operator_handles[node.__class__](self, node, *data)
 
     finalizeResult = None
@@ -530,7 +537,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
 @WriterFactory.register(
     'docplex_model', 'Generate the corresponding docplex model object')
 class DocplexWriter(object):
-    CONFIG = ConfigBlock('docplex_model_writer')
+    CONFIG = ConfigDict('docplex_model_writer')
     CONFIG.declare('symbolic_solver_labels', ConfigValue(
         default=False,
         domain=bool,
@@ -543,50 +550,101 @@ class DocplexWriter(object):
     def write(self, model, **options):
         config = options.pop('config', self.config)(options)
 
+        sorter = SortComponents.deterministic
+        component_map, unknown = categorize_valid_components(
+            model,
+            active=True,
+            sort=sorter,
+            valid={
+                Block, Objective, Constraint, Var, Param, BooleanVar,
+                LogicalConstraint, Suffix,
+                # FIXME: Non-active components should not report as Active
+                Set, RangeSet, Port,
+            },
+            targets={
+                Objective, Constraint, LogicalConstraint, IntervalVar
+            }
+        )
+        if unknown:
+            raise ValueError(
+                "The model ('%s') contains the following active components "
+                "that the docplex writer does not know how to process:\n\t%s" %
+                (model.name, "\n\t".join("%s:\n\t\t%s" % (
+                    k, "\n\t\t".join(map(attrgetter('name'), v)))
+                    for k, v in unknown.items())))
+
         cpx_model = cp.CpoModel()
         visitor = LogicalToDoCplex(
             docplex_model,
             symbolic_solver_labels=config.symbolic_solver_labels)
 
-        active_objs = [obj for obj in model.component_data_objects(
-            Objective,
-            active=True,
-            descend_into=Block,
-            sort=SortComponents.deterministic)]
-        if len(active_objs) > 1:
-            raise ValueError("More than one active objective defined for "
-                             "input model '%s': Cannot write to docplex."
-                             % model.name)
-        elif len(active_objs) == 1:
-            obj = active_objs[0]
-            obj_expr = visitor.walk_expression((obj.expr, obj, 0))
-            cpx_model.add(cp.minimize(m.obj.sense*obj_expr))
+        active_objs = []
+        for block in component_map[Objective]:
+            for obj in block.component_data_objects(Objective,
+                                                    sort=sorter,
+                                                    active=True,
+                                                    descend_into=False):
+                active_objs.append(obj)
+                if len(active_objs) > 1:
+                    raise ValueError(
+                        "More than one active objective defined for "
+                        "input model '%s': Cannot write to docplex."
+                        % model.name)
+                obj_expr = visitor.walk_expression((obj.expr, obj, 0))
+                cpx_model.add(cp.minimize(m.obj.sense*obj_expr))
 
         # No objective is fine too, this is CP afterall...
 
         # Write algebraic constraints
-        for cons in model.component_data_objects(
-                Constraint,
-                active=True,
-                descend_into=Block,
-                sort=SortComponents.deterministic):
-            expr = visitor.walk_expression((cons.body, cons, 0))
-            if cons.lower is not None:
-                cpx_model.add(value(cons.lower) <= expr)
-            if cons.upper is not None:
-                cpx_model.add(cons.upper >= expr)
+        for block in component_map[Constraint]:
+            for cons in block.component_data_objects(
+                    Constraint,
+                    active=True,
+                    descend_into=False,
+                    sort=sorter):
+                expr = visitor.walk_expression((cons.body, cons, 0))
+                if cons.lower is not None and cons.upper is not None:
+                    cpx_model.add(cp.range(expr, lb=cons.lower, ub=cons.upper))
+                elif cons.lower is not None:
+                    cpx_model.add(value(cons.lower) <= expr)
+                elif cons.upper is not None:
+                    cpx_model.add(cons.upper >= expr)
 
         # Write logical constraints
-        for cons in model.component_data_objects(
-                LogicalConstraint,
-                active=True,
-                descend_into=Block,
-                sort=SortComponents.deterministic):
-            expr = visitor.walk_expression((cons.expr, cons, 0))
-            cpx_model.add(expr)
+        for block in component_map[LogicalConstraint]:
+            for cons in model.component_data_objects(
+                    LogicalConstraint,
+                    active=True,
+                    descend_into=False,
+                    sort=sorter):
+                expr = visitor.walk_expression((cons.expr, cons, 0))
+                cpx_model.add(expr)
 
         # That's all, folks.
-        return cpx_model
+        return cpx_model, visitor.var_map
+
+
+@SolverFactory.register(
+    'cp_optimizer',
+    doc='Direct interface to CPLEX CP Optimizer'
+)
+class CPOptimizerSolver(object):
+    def solve(self, model, **kwds):
+        """Solve the model.
+
+        Args:
+            model (Block): a Pyomo model or block to be solved
+
+        """
+        writer = DocplexWriter()
+        cpx_model, var_map = writer.write(model)
+        # TODO: solver options
+        msol = cpx_model.solve()
+
+        # TODO: solve status
+
+        # TODO: transfer the solutions back to the pyomo model: Should we have
+        # made var_map a ComponentMap? How do we do this?
 
 
 if __name__ == '__main__':
@@ -633,9 +691,8 @@ if __name__ == '__main__':
     docplex_model= cp.CpoModel()
     visitor = LogicalToDoCplex(docplex_model, symbolic_solver_labels=True)
 
-    m.c = Constraint(expr=m.x**2 + 4 + 2*6*m.x/(4*m.x) <= 3)
+    m.c = Constraint(expr=m.x**2 + 4 + 2*6*m.x/(4*m.x) >= 0)
     expr = visitor.walk_expression((m.c.body, m.c, 0))
-    set_trace()
     print(expr)
 
     m.i = IntervalVar(optional=True)
@@ -643,3 +700,5 @@ if __name__ == '__main__':
     m.c2 = LogicalConstraint(expr=m.i.start_time.before(m.i2[1].end_time))
     expr = visitor.walk_expression((m.c2.body, m.c2, 0))
     print(expr)
+
+    SolverFactory('cp_optimizer').solve(m)
