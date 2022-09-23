@@ -139,7 +139,7 @@ class ExpressionBase(object):
         Parameters
         ----------
         verbose: bool
-            If :const:`True`, then the the string representation
+            If :const:`True`, then the string representation
             consists of nested functions.  Otherwise, the string
             representation is an algebraic (infix notation) equation.
             Defaults to :const:`False`.
@@ -177,7 +177,7 @@ class ExpressionBase(object):
         Args:
             values (list): The string representations of the children of this
                 node.
-            verbose (bool): If :const:`True`, then the the string
+            verbose (bool): If :const:`True`, then the string
                 representation consists of nested functions.  Otherwise,
                 the string representation is an algebraic equation.
             smap:  If specified, this :class:`SymbolMap
@@ -366,10 +366,10 @@ class ExpressionBase(object):
             This method applies the logical operation of the
             operator to the arguments.  It does *not* evaluate
             the arguments in the process, but assumes that they
-            have been previously evaluated.  But noted that if
+            have been previously evaluated.  But note that if
             this class contains auxiliary data (e.g. like the
             numeric coefficients in the :class:`LinearExpression
-            <pyomo.core.expr.current.LinearExpression>` class, then
+            <pyomo.core.expr.current.LinearExpression>` class) then
             those values *must* be evaluated as part of this
             function call.  An uninitialized parameter value
             encountered during the execution of this method is

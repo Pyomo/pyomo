@@ -1593,7 +1593,6 @@ def expression_to_string(expr, verbose=None, labeler=None, smap=None,
         retrieved from :py:attr:`common.TO_STRING_VERBOSE`
 
     labeler: Callable
-
         If specified, this labeler is used to generate the string
         representation for leaves (Var / Param objects) in the
         expression.

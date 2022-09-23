@@ -172,7 +172,7 @@ class RangedExpression(RelationalExpression):
 
     args:
         args (tuple): child nodes
-        strict (tuple): flags that indicates whether the inequalities are strict
+        strict (tuple): flags that indicate whether the inequalities are strict
     """
 
     __slots__ = ('_strict',)
