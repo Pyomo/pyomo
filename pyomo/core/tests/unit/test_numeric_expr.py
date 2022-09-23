@@ -35,12 +35,14 @@ from pyomo.environ import (
 )
 from pyomo.kernel import variable, expression, objective
 
+from pyomo.core.expr.expr_common import ExpressionType
 from pyomo.core.expr.numvalue import (
     NumericConstant, as_numeric, native_numeric_types,
     is_potentially_variable, polynomial_degree
 )
+from pyomo.core.expr.base import ExpressionBase
 from pyomo.core.expr.numeric_expr import (
-    ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
+    NumericExpression, UnaryFunctionExpression, SumExpression, PowExpression,
     ProductExpression, NegationExpression, linear_expression,
     MonomialTermExpression, LinearExpression, DivisionExpression,
     NPV_NegationExpression, NPV_ProductExpression, 
@@ -49,7 +51,9 @@ from pyomo.core.expr.numeric_expr import (
     _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms,
     LinearDecompositionError, MaxExpression, MinExpression,
 )
-import pyomo.core.expr.logical_expr as logical_expr
+from pyomo.core.expr.relational_expr import (
+    RelationalExpression, EqualityExpression,
+)
 from pyomo.common.errors import PyomoException
 from pyomo.core.expr.visitor import (expression_to_string, 
                                      clone_expression)
@@ -207,8 +211,8 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
         #
         # Confirm that this is a relational expression
         #
-        self.assertTrue(isinstance(exp, ExpressionBase))
-        self.assertTrue(exp.is_relational())
+        self.assertTrue(isinstance(exp, RelationalExpression))
+        self.assertTrue(exp.is_expression_type(ExpressionType.RELATIONAL))
         #
         # Check that the expression evaluates correctly
         #
@@ -221,7 +225,7 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
         #
         # Check that the expression evaluates to 'val'
         #
-        if isinstance(exp, logical_expr.EqualityExpression) and exp.args[0] is exp.args[1]:
+        if isinstance(exp, EqualityExpression) and exp.args[0] is exp.args[1]:
             self.assertEqual(bool(exp), val)
         else:
             with self.assertRaises(PyomoException):
@@ -5252,7 +5256,7 @@ class TestNamedExpressionDuckTyping(unittest.TestCase):
         self.assertTrue(hasattr(obj, 'args'))
         self.assertTrue(hasattr(obj, '__call__'))
         self.assertTrue(hasattr(obj, 'to_string'))
-        self.assertTrue(hasattr(obj, '_precedence'))
+        self.assertTrue(hasattr(obj, 'PRECEDENCE'))
         self.assertTrue(hasattr(obj, '_to_string'))
         self.assertTrue(hasattr(obj, 'clone'))
         self.assertTrue(hasattr(obj, 'create_node_with_local_data'))
