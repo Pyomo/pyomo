@@ -22,10 +22,11 @@ from pyomo.core.expr import current as EXPR
 import pyomo.environ as pyo
 from math import copysign
 from pyomo.contrib.mindtpy.util import get_integer_solution, update_dual_bound, update_primal_bound
-from pyomo.contrib.gdpopt.util import copy_var_list_values, identify_variables, get_main_elapsed_time, time_code
+from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem, handle_nlp_subproblem_tc
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import Constraint, minimize, value, maximize
+from pyomo.core.expr.current import identify_variables
 cplex, cplex_available = attempt_import('cplex')
 
 
@@ -366,7 +367,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         opt : SolverFactory
             The cplex_persistent solver.
         """
-        if config.calculate_dual:
+        if config.calculate_dual_at_solution:
             for c in fixed_nlp.tmp_duals:
                 if fixed_nlp.dual.get(c, None) is None:
                     fixed_nlp.dual[c] = fixed_nlp.tmp_duals[c]
@@ -426,7 +427,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         # value?
         config.logger.info('NLP subproblem was locally infeasible.')
         solve_data.nlp_infeasible_counter += 1
-        if config.calculate_dual:
+        if config.calculate_dual_at_solution:
             for c in fixed_nlp.MindtPy_utils.constraint_list:
                 rhs = ((0 if c.upper is None else c.upper)
                        + (0 if c.lower is None else c.lower))

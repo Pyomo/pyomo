@@ -14,7 +14,7 @@ __all__ = ['Expression', '_ExpressionData']
 import sys
 import logging
 from weakref import ref as weakref_ref
-from typing import overload
+from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.log import is_debug_set
 from pyomo.common.deprecation import deprecated, RenamedClass
@@ -195,7 +195,21 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def set_value(self, expr):
         """Set the expression on this expression."""
-        self._expr = as_numeric(expr) if (expr is not None) else None
+        if expr is None:
+            self._expr = None
+            return
+        expr = as_numeric(expr)
+        # In-place operators will leave self as an argument.  We need to
+        # replace that with the current expression in order to avoid
+        # loops in the expression tree.
+        if expr.is_expression_type():
+            _args = expr.args
+            if any(arg is self for arg in _args):
+                new_args = _args.__class__(
+                    arg.expr if arg is self else arg for arg in _args
+                )
+                expr = expr.create_node_with_local_data(new_args)
+        self._expr = expr
 
     def is_constant(self):
         """A boolean indicating whether this expression is constant."""

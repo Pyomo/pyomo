@@ -54,11 +54,11 @@
 """
 from __future__ import division
 import logging
-from pyomo.contrib.gdpopt.util import (copy_var_list_values, create_utility_block,
-                                       time_code, setup_results_object, process_objective, lower_logger_level_to)
+from pyomo.contrib.gdpopt.util import (copy_var_list_values, 
+                                       time_code, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
-from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger, get_primal_integral, get_dual_integral
+from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger, get_primal_integral, get_dual_integral, setup_results_object, process_objective, create_utility_block
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
                         Var, VarList, TransformationFactory, RangeSet, minimize, Constraint, Objective)
 from pyomo.opt import SolverFactory
@@ -125,7 +125,9 @@ class MindtPySolver(object):
         }), preserve_implicit=True)  # TODO: do we need to set preserve_implicit=True?
         config.set_value(kwds)
         set_up_logger(config)
-        check_config(config)
+        new_logging_level = logging.INFO if config.tee else None
+        with lower_logger_level_to(config.logger, new_logging_level):
+            check_config(config)
 
         solve_data = set_up_solve_data(model, config)
 
@@ -133,7 +135,6 @@ class MindtPySolver(object):
             TransformationFactory('contrib.integer_to_binary'). \
                 apply_to(solve_data.working_model)
 
-        new_logging_level = logging.INFO if config.tee else None
         with time_code(solve_data.timing, 'total', is_main_timer=True), \
                 lower_logger_level_to(config.logger, new_logging_level), \
                 create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):

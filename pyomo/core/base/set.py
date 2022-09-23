@@ -15,7 +15,7 @@ import logging
 import math
 import sys
 import weakref
-from typing import overload
+from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.deprecation import (
     deprecated, deprecation_warning, RenamedClass,
@@ -4131,7 +4131,7 @@ def DeclareGlobalSet(obj, caller_globals=None):
         # least in Python 2.7), so we will explicitly set the __doc__
         # attribute.
 
-        __slots__ = ()
+        __slots__ = ('_bounds', '_interval')
 
         global_name = None
 
@@ -4181,6 +4181,15 @@ def DeclareGlobalSet(obj, caller_globals=None):
             if kwds:
                 raise RuntimeError("Unexpected keyword arguments: %s" % (kwds,))
             return ans
+        #
+        # Global sets are assumed to be constant sets.  For performance,
+        # we will precompute and cache the Set bounds() and interval
+        #
+        def bounds(self):
+            return self._bounds
+
+        def get_interval(self):
+            return self._interval
 
     _set = GlobalSet()
     # TODO: Can GlobalSets be a proper Block?
@@ -4190,6 +4199,9 @@ def DeclareGlobalSet(obj, caller_globals=None):
     _set.__class__.__setstate__(_set, obj.__getstate__())
     _set._component = weakref.ref(_set)
     _set.construct()
+    # Cache the set bounds / interval
+    _set._bounds = obj.bounds()
+    _set._interval = obj.get_interval()
     return _set
 
 

@@ -914,7 +914,7 @@ def _collect_standard_repn(exp, multiplier, idMap,
     #
     # Catch any known numeric constants
     #
-    if exp.__class__ in native_numeric_types:
+    if exp.__class__ in native_numeric_types or not exp.is_potentially_variable():
         return _collect_const(exp, multiplier, idMap, compute_values,
                               verbose, quadratic)
     #

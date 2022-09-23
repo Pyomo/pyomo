@@ -22,7 +22,8 @@ from pyomo.contrib.mindtpy.util import get_primal_integral, get_dual_integral, s
 from pyomo.contrib.mindtpy.nlp_solve import handle_subproblem_other_termination, handle_feasibility_subproblem_tc, solve_subproblem, handle_nlp_subproblem_tc
 from pyomo.core.base import TransformationFactory
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.gdpopt.util import create_utility_block, time_code, process_objective, setup_results_object
+from pyomo.contrib.gdpopt.util import time_code
+from pyomo.contrib.mindtpy.util import create_utility_block, process_objective, setup_results_object
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main, init_rNLP
 from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, handle_fp_main_tc
 from pyomo.core import Block, ConstraintList
@@ -330,17 +331,6 @@ class TestMindtPy(unittest.TestCase):
             config.threads = 8
             check_config(config)
             self.assertEqual(config.regularization_mip_threads, 8)
-
-            config.mip_solver = 'cplex'
-            config.single_tree = True
-            check_config(config)
-            self.assertEqual(config.mip_solver, 'cplex_persistent')
-            self.assertEqual(config.threads, 1)
-
-            config.add_slack = True
-            config.max_slack == 0.0
-            check_config(config)
-            self.assertEqual(config.add_slack, False)
 
             config.strategy = 'GOA'
             config.add_slack = True

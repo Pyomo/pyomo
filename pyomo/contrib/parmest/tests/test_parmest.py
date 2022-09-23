@@ -410,6 +410,55 @@ class TestModelVariants(unittest.TestCase):
             
             obj_at_theta = pest.objective_at_theta(parmest_input['theta_vals'])
             self.assertAlmostEqual(obj_at_theta['obj'][0], 16.531953, places=2)
+    
+    def test_parmest_basics_with_initialize_parmest_model_option(self):
+
+        for model_type, parmest_input in self.input.items():
+            pest = parmest.Estimator(parmest_input['model'], self.data, parmest_input['theta_names'], self.objective_function)
+
+            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+
+            self.assertAlmostEqual(objval, 4.3317112, places=2)
+            self.assertAlmostEqual(cov.iloc[0,0], 6.30579403, places=2) # 6.22864 from paper
+            self.assertAlmostEqual(cov.iloc[0,1], -0.4395341, places=2) # -0.4322 from paper
+            self.assertAlmostEqual(cov.iloc[1,0], -0.4395341, places=2) # -0.4322 from paper
+            self.assertAlmostEqual(cov.iloc[1,1], 0.04193591, places=2) # 0.04124 from paper
+            
+            obj_at_theta = pest.objective_at_theta(parmest_input['theta_vals'], initialize_parmest_model=True)
+
+            self.assertAlmostEqual(obj_at_theta['obj'][0], 16.531953, places=2)
+
+    def test_parmest_basics_with_square_problem_solve(self):
+
+        for model_type, parmest_input in self.input.items():
+            pest = parmest.Estimator(parmest_input['model'], self.data, parmest_input['theta_names'], self.objective_function)
+
+            obj_at_theta = pest.objective_at_theta(parmest_input['theta_vals'], initialize_parmest_model=True)
+
+            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+
+            self.assertAlmostEqual(objval, 4.3317112, places=2)
+            self.assertAlmostEqual(cov.iloc[0,0], 6.30579403, places=2) # 6.22864 from paper
+            self.assertAlmostEqual(cov.iloc[0,1], -0.4395341, places=2) # -0.4322 from paper
+            self.assertAlmostEqual(cov.iloc[1,0], -0.4395341, places=2) # -0.4322 from paper
+            self.assertAlmostEqual(cov.iloc[1,1], 0.04193591, places=2) # 0.04124 from paper
+            
+            self.assertAlmostEqual(obj_at_theta['obj'][0], 16.531953, places=2)
+    
+    def test_parmest_basics_with_square_problem_solve_no_theta_vals(self):
+
+        for model_type, parmest_input in self.input.items():
+            pest = parmest.Estimator(parmest_input['model'], self.data, parmest_input['theta_names'], self.objective_function)
+
+            obj_at_theta = pest.objective_at_theta(initialize_parmest_model=True)
+
+            objval, thetavals, cov = pest.theta_est(calc_cov=True, cov_n=6)
+
+            self.assertAlmostEqual(objval, 4.3317112, places=2)
+            self.assertAlmostEqual(cov.iloc[0,0], 6.30579403, places=2) # 6.22864 from paper
+            self.assertAlmostEqual(cov.iloc[0,1], -0.4395341, places=2) # -0.4322 from paper
+            self.assertAlmostEqual(cov.iloc[1,0], -0.4395341, places=2) # -0.4322 from paper
+            self.assertAlmostEqual(cov.iloc[1,1], 0.04193591, places=2) # 0.04124 from paper
 
 
 @unittest.skipIf(not parmest.parmest_available,

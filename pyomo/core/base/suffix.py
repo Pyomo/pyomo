@@ -14,7 +14,7 @@ __all__ = ('Suffix',
            'active_import_suffix_generator')
 
 import logging
-from typing import overload
+from pyomo.common.pyomo_typing import overload
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.log import is_debug_set
@@ -229,6 +229,37 @@ class Suffix(ComponentMap, ActiveComponent):
         if self._rule is not None:
             self.update_values(self._rule(self._parent()))
         timer.report()
+
+
+    @property
+    def datatype(self):
+        """Return the suffix datatype."""
+        return self._datatype
+    @datatype.setter
+    def datatype(self, datatype):
+        """Set the suffix datatype."""
+        if datatype not in self.SuffixDatatypeToStr:
+            raise ValueError(
+                "Suffix datatype must be one of: %s. \n"
+                "Value given: %s"
+                % (list(self.SuffixDatatypeToStr.values()),
+                   datatype))
+        self._datatype = datatype
+
+    @property
+    def direction(self):
+        """Return the suffix direction."""
+        return self._direction
+    @direction.setter
+    def direction(self, direction):
+        """Set the suffix direction."""
+        if direction not in self.SuffixDirectionToStr:
+            raise ValueError(
+                "Suffix direction must be one of: %s. \n"
+                "Value given: %s"
+                % (list(self.SuffixDirectionToStr.values()),
+                   direction))
+        self._direction = direction
 
     @deprecated('Suffix.exportEnabled is replaced with Suffix.export_enabled.',
                 version='4.1.10486')

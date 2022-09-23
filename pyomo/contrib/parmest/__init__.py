@@ -14,22 +14,18 @@ from pyomo.common.deprecation import relocated_module_attribute
 relocated_module_attribute(
     'create_ef', 
     'pyomo.contrib.parmest.utils.create_ef', 
-    '6.4.2', 
-    '6.5.0')
+    'TBD')
 relocated_module_attribute(
-    'ipopt_solver_wrapper ', 
-    'pyomo.contrib.parmest.utils.ipopt_solver_wrapper ', 
-    '6.4.2', 
-    '6.5.0')
+    'ipopt_solver_wrapper', 
+    'pyomo.contrib.parmest.utils.ipopt_solver_wrapper', 
+    'TBD')
 relocated_module_attribute(
-    'mpi_utils ', 
-    'pyomo.contrib.parmest.utils.mpi_utils ', 
-    '6.4.2', 
-    '6.5.0')
+    'mpi_utils', 
+    'pyomo.contrib.parmest.utils.mpi_utils', 
+    'TBD')
 relocated_module_attribute(
-    'scenario_tree ', 
-    'pyomo.contrib.parmest.utils.scenario_tree ', 
-    '6.4.2', 
-    '6.5.0')
+    'scenario_tree', 
+    'pyomo.contrib.parmest.utils.scenario_tree', 
+    'TBD')
 
 
