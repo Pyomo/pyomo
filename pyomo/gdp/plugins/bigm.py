@@ -206,6 +206,7 @@ class BigM_Transformation(Transformation):
         finally:
             # same for our bookkeeping about what we used from bigM arg dict
             self.used_args.clear()
+            self._transformation_blocks.clear()
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
@@ -267,14 +268,15 @@ class BigM_Transformation(Transformation):
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
-                if t.is_indexed():
-                    self._transform_disjunction(
-                        t, parent_disjunct=gdp_tree.parent(t),
-                        root_disjunct=gdp_tree.root_disjunct(t))
-                else:
-                    self._transform_disjunctionData(
-                        t, t.index(), parent_disjunct=gdp_tree.parent(t),
-                        root_disjunct=gdp_tree.root_disjunct(t))
+                # if t.is_indexed():
+                #     self._transform_disjunction(
+                #         t, parent_disjunct=gdp_tree.parent(t),
+                #         root_disjunct=gdp_tree.root_disjunct(t))
+                # else:
+                assert not t.is_indexed()
+                self._transform_disjunctionData(
+                    t, t.index(), parent_disjunct=gdp_tree.parent(t),
+                    root_disjunct=gdp_tree.root_disjunct(t))
             else:# We know t is a Disjunct after preprocessing
                 # if t.is_indexed():
                 #     self._transform_disjunct(t, bigM)
@@ -346,7 +348,7 @@ class BigM_Transformation(Transformation):
         # add the XOR (or OR) constraints to parent block (with unique name)
         # It's indexed if this is an IndexedDisjunction, not otherwise
         orC = Constraint(disjunction.index_set()) if \
-            disjunction.is_indexed() else Constraint()
+              disjunction.is_indexed() else Constraint()
         # The name used to indicate if there were OR or XOR disjunctions,
         # however now that Disjunctions are allowed to mix the state we
         # can no longer make that distinction in the name.
@@ -359,25 +361,25 @@ class BigM_Transformation(Transformation):
 
         return orC
 
-    def _transform_disjunction(self, obj, parent_disjunct=None):
-        if not obj.active:
-            return
+    # def _transform_disjunction(self, obj, parent_disjunct=None):
+    #     if not obj.active:
+    #         return
 
-        # if this is an IndexedDisjunction we have seen in a prior call to the
-        # transformation, we already have a transformation block for it. We'll
-        # use that.
-        if obj._algebraic_constraint is not None:
-            transBlock = obj._algebraic_constraint().parent_block()
-        else:
-            transBlock = self._add_transformation_block(obj.parent_block())
+    #     # if this is an IndexedDisjunction we have seen in a prior call to the
+    #     # transformation, we already have a transformation block for it. We'll
+    #     # use that.
+    #     if obj._algebraic_constraint is not None:
+    #         transBlock = obj._algebraic_constraint().parent_block()
+    #     else:
+    #         transBlock = self._add_transformation_block(obj.parent_block())
 
-        # relax each of the disjunctionDatas
-        for i in sorted(obj.keys()):
-            self._transform_disjunctionData(obj[i], i, transBlock,
-                                            parent_disjunct)
+    #     # relax each of the disjunctionDatas
+    #     for i in sorted(obj.keys()):
+    #         self._transform_disjunctionData(obj[i], i, transBlock,
+    #                                         parent_disjunct)
 
-        # deactivate so the writers don't scream
-        obj.deactivate()
+    #     # deactivate so the writers don't scream
+    #     obj.deactivate()
 
     def _transform_disjunctionData(self, obj, index, transBlock=None,
                                    parent_disjunct=None, root_disjunct=None):
@@ -389,9 +391,8 @@ class BigM_Transformation(Transformation):
         if transBlock is None:
             # It's possible that we have already created a transformation block
             # for another disjunctionData from this same container. If that's
-            # the case, let's use the same transformation block. (Else it will
-            # be really confusing that the XOR constraint goes to that old block
-            # but we create a new one here.)
+            # the case, let's use the same transformation block. Note that this
+            # may not be the same block as the transformed Disjuncts are on.
             if obj.parent_component()._algebraic_constraint is not None:
                 transBlock = obj.parent_component()._algebraic_constraint().\
                              parent_block()
@@ -443,34 +444,8 @@ class BigM_Transformation(Transformation):
         obj.deactivate()
 
     def _transform_disjunct(self, obj, bigM, root_disjunct):
-        # deactivated -> either we've already transformed or user deactivated
-        if not obj.active:
-            if obj.indicator_var.is_fixed():
-                if not value(obj.indicator_var):
-                    # The user cleanly deactivated the disjunct: there
-                    # is nothing for us to do here.
-                    return
-                else:
-                    raise GDP_Error(
-                        "The disjunct '%s' is deactivated, but the "
-                        "indicator_var is fixed to %s. This makes no sense."
-                        % ( obj.name, value(obj.indicator_var) ))
-            if obj._transformation_block is None:
-                raise GDP_Error(
-                    "The disjunct '%s' is deactivated, but the "
-                    "indicator_var is not fixed and the disjunct does not "
-                    "appear to have been transformed. This makes no sense. "
-                    "(If the intent is to deactivate the disjunct, fix its "
-                    "indicator_var to False.)"
-                    % ( obj.name, ))
-
-        if obj._transformation_block is not None:
-            # we've transformed it, which means this is the second time it's
-            # appearing in a Disjunction
-            raise GDP_Error(
-                    "The disjunct '%s' has been transformed, but a disjunction "
-                    "it appears in has not. Putting the same disjunct in "
-                    "multiple disjunctions is not supported." % obj.name)
+        assert obj.active
+        assert obj._transformation_block is None
 
         root = root_disjunct.parent_block() if root_disjunct is not None else \
                obj.parent_block()
@@ -594,8 +569,8 @@ class BigM_Transformation(Transformation):
     #     toBlock.add_component(unique_component_name(toBlock, xor.name),
     #                           nested_xor)
     #     #del xor
-        
-    #     #to_delete = []          
+
+    #     #to_delete = []
     #     for idx, disjunctBlock in fromBlock.relaxedDisjuncts.items():
     #         newblock = disjunctList[len(disjunctList)]
     #         newblock.transfer_attributes_from(disjunctBlock)

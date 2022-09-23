@@ -15,7 +15,7 @@ from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.component import _ComponentBase
 from pyomo.core import (
-    Block, TraversalStrategy, SortComponents, LogicalConstraint)
+    Block, TraversalStrategy, SortComponents, LogicalConstraint, value)
 from pyomo.core.base.block import _BlockData
 from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
 from pyomo.opt import TerminationCondition, SolverStatus
@@ -85,15 +85,23 @@ def clone_without_expression_components(expr, substitute=None):
                                                 remove_named_expressions=True)
     return visitor.walk_expression(expr)
 
+def _raise_disjunct_in_multiple_disjunctions_error(disjunct, disjunction):
+    # we've transformed it, which means this is the second time it's appearing
+    # in a Disjunction
+    raise GDP_Error(
+        "The disjunct '%s' has been transformed, but '%s', a disjunction "
+        "it appears in, has not. Putting the same disjunct in "
+        "multiple disjunctions is not supported." % (disjunct.name,
+                                                     disjunction.name))
 
 class GDPTree:
     def __init__(self):
         self._adjacency_list = {}
         self._in_degrees = {}
         # Every node has exactly one or 0 parents.
-        self._parent = {} 
-        
-        self._root_disjunct = {} 
+        self._parent = {}
+
+        self._root_disjunct = {}
         # This needs to be ordered so that topological sort is deterministic
         self._vertices = OrderedSet()
 
@@ -119,7 +127,7 @@ class GDPTree:
             return None
 
     def root_disjunct(self, u):
-        """ Returns the highest parent Disjunct in the hierarchy, or None if 
+        """ Returns the highest parent Disjunct in the hierarchy, or None if
         the component is not nested.
 
         Arg:
@@ -138,6 +146,8 @@ class GDPTree:
         if u not in self._adjacency_list:
             self._adjacency_list[u] = OrderedSet()
         self._adjacency_list[u].add(v)
+        if v in self._parent and self._parent[v] is not u:
+            _raise_disjunct_in_multiple_disjunctions_error(v, u)
         self._parent[v] = u
         self._vertices.add(u)
         self._vertices.add(v)
@@ -170,7 +180,7 @@ class GDPTree:
         if u not in self._parent:
             return 0
         return 1
-        
+
 
 def _parent_disjunct(obj):
     parent = obj.parent_block()
@@ -181,12 +191,36 @@ def _parent_disjunct(obj):
 
     return None
 
-def _gather_disjunctions(block, gdp_tree):
+def _check_properly_deactivated(disjunct):
+    if disjunct.indicator_var.is_fixed():
+        if not value(disjunct.indicator_var):
+            # The user cleanly deactivated the disjunct: there
+            # is nothing for us to do here.
+            return
+        else:
+            raise GDP_Error(
+                "The disjunct '%s' is deactivated, but the "
+                "indicator_var is fixed to %s. This makes no sense."
+                % ( disjunct.name, value(disjunct.indicator_var) ))
+    if disjunct._transformation_block is None:
+        raise GDP_Error(
+            "The disjunct '%s' is deactivated, but the "
+            "indicator_var is not fixed and the disjunct does not "
+            "appear to have been transformed. This makes no sense. "
+            "(If the intent is to deactivate the disjunct, fix its "
+            "indicator_var to False.)"
+            % ( disjunct.name, ))
+
+def _gather_disjunctions(block, gdp_tree, include_root=True):
+    if not include_root:
+        # The argument 'block' may be a root node (it was in the list of
+        # targets): We will not add it to the tree in this call. It may be added
+        # later if in fact it is a descendent of another target, but as far as
+        # we know now, it does not belong in the tree.
+        root = block
     to_explore = [block]
     while to_explore:
         block = to_explore.pop()
-        if block.ctype is Disjunct:
-            gdp_tree.add_node(block)
         for disjunction in block.component_data_objects(
                 Disjunction,
                 active=True,
@@ -197,10 +231,16 @@ def _gather_disjunctions(block, gdp_tree):
             gdp_tree.add_node(disjunction)
             for disjunct in disjunction.disjuncts:
                 if not disjunct.active:
+                    if disjunct.transformation_block is not None:
+                            _raise_disjunct_in_multiple_disjunctions_error(
+                                disjunct, disjunction)
+                    _check_properly_deactivated(disjunct)
                     continue
                 gdp_tree.add_edge(disjunction, disjunct)
                 to_explore.append(disjunct)
             if block.ctype is Disjunct:
+                if not include_root and block is root:
+                    continue
                 gdp_tree.add_edge(block, disjunction)
 
     return gdp_tree
@@ -218,16 +258,24 @@ def get_gdp_tree(targets, instance, knownBlocks):
             for block in _blocks:
                 if not block.active:
                     continue
-                gdp_tree = _gather_disjunctions(block, gdp_tree)
+                gdp_tree = _gather_disjunctions(block, gdp_tree,
+                                                include_root=False)
         elif t.ctype is Disjunction:
             parent = _parent_disjunct(t)
             if parent is not None and parent in targets:
                 gdp_tree.add_edge(parent, t)
             _disjunctions = t.values() if t.is_indexed() else (t,)
             for disjunction in _disjunctions:
+                if disjunction.algebraic_constraint is not None:
+                    # It's already transformed.
+                    continue
                 gdp_tree.add_node(disjunction)
                 for disjunct in disjunction.disjuncts:
                     if not disjunct.active:
+                        if disjunct.transformation_block is not None:
+                            _raise_disjunct_in_multiple_disjunctions_error(
+                                disjunct, disjunction)
+                        _check_properly_deactivated(disjunct)
                         continue
                     gdp_tree.add_edge(disjunction, disjunct)
                     gdp_tree = _gather_disjunctions(disjunct, gdp_tree)
@@ -497,7 +545,7 @@ def check_model_algebraic(instance):
                 return False
 
     for cons in instance.component_data_objects(LogicalConstraint,
-                                                descend_into=Block, 
+                                                descend_into=Block,
                                                 active=True):
         if cons.active:
             logger.warning('LogicalConstraint "%s" is currently active. It '
