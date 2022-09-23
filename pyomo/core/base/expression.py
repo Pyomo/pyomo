@@ -22,6 +22,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
@@ -45,6 +46,10 @@ class _ExpressionData(NumericValue):
 
     __slots__ = ()
 
+    EXPRESSION_SYSTEM = EXPR.common.ExpressionType.NUMERIC
+    PRECEDENCE = 0
+    ASSOCIATIVITY = EXPR.common.OperatorAssociativity.NON_ASSOCIATIVE
+
     #
     # Interface
     #
@@ -59,9 +64,10 @@ class _ExpressionData(NumericValue):
         """A boolean indicating whether this in a named expression."""
         return True
 
-    def is_expression_type(self):
+    def is_expression_type(self, expression_system=None):
         """A boolean indicating whether this in an expression."""
-        return True
+        return expression_system is None \
+            or expression_system == self.EXPRESSION_SYSTEM
 
     def arg(self, index):
         if index < 0 or index >= 1:
@@ -79,13 +85,7 @@ class _ExpressionData(NumericValue):
     def nargs(self):
         return 1
 
-    def _precedence(self):
-        return 0
-
-    def _associativity(self):
-        return 0
-
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
             return "%s{%s}" % (str(self), values[0])
         if self.expr is None:
@@ -219,7 +219,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
-        return self._expr.is_fixed()
+        return self._expr is None or self._expr.is_fixed()
 
 class _GeneralExpressionData(_GeneralExpressionDataImpl,
                              ComponentData):
