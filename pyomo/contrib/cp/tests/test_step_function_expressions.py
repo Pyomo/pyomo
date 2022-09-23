@@ -390,12 +390,13 @@ class TestAlwaysIn(CommonTests):
         m.c = LogicalConstraint(expr=f.within((0, 3), (0, 10)))
         self.assertIsInstance(m.c.expr, AlwaysIn)
 
-        self.assertEqual(m.c.expr.nargs(), 3)
-        self.assertEqual(len(m.c.expr.args), 3)
+        self.assertEqual(m.c.expr.nargs(), 5)
+        self.assertEqual(len(m.c.expr.args), 5)
         self.assertIs(m.c.expr.args[0], f)
-        self.assertEqual(m.c.expr.args[1], (0, 3))
-        self.assertEqual(m.c.expr.args[2], (0, 10))
-
+        self.assertEqual(m.c.expr.args[1], 0)
+        self.assertEqual(m.c.expr.args[2], 3)
+        self.assertEqual(m.c.expr.args[3], 0)
+        self.assertEqual(m.c.expr.args[4], 10)
         self.assertEqual(
             str(m.c.expr),
             "(Pulse(a, height=3) + Step(b.start_time, height=2) - "

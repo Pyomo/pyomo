@@ -269,12 +269,14 @@ class AlwaysIn(BooleanExpression):
             function.
     """
     def __init__(self, cumul_func, bounds, times):
-        self._args_ = (cumul_func, bounds, times)
+        self._args_ = (cumul_func, bounds[0], bounds[1], times[0], times[1])
 
     def nargs(self):
-        return 3
+        return 5
 
-    def __str__(self):
-        return "(%s).within(bounds=%s, times=%s)" % (str(self._args_[0]),
-                                                     str(self._args_[1]),
-                                                     str(self._args_[2]))
+    def _to_string(self, values, verbose, smap):
+        return "(%s).within(bounds=(%s, %s), times=(%s, %s))" % (values[0],
+                                                                 values[1],
+                                                                 values[2],
+                                                                 values[3],
+                                                                 values[4])
