@@ -1239,7 +1239,7 @@ def evaluate_expression(exp, exception=True, constant=False):
             clear_active = True
 
     try:
-        return visitor.dfs_postorder_stack(exp)
+        ans = visitor.dfs_postorder_stack(exp)
     except ( TemplateExpressionError, ValueError, TypeError,
              NonConstantExpressionError, FixedExpressionError ):
         # Errors that we want to be able to suppress:
@@ -1258,6 +1258,9 @@ def evaluate_expression(exp, exception=True, constant=False):
     finally:
         if clear_active:
            evaluate_expression.visitor_active = False
+    if ans.__class__ not in native_types and ans.is_numeric_type() is True:
+        return value(ans)
+    return ans
 
 evaluate_expression.visitor_cache = _EvaluationVisitor(True)
 evaluate_expression.visitor_active = False
