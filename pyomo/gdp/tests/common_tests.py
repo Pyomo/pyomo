@@ -601,25 +601,38 @@ def check_indexedDisj_only_targets_transformed(self, transformation):
     disjBlock = m.component("_pyomo_gdp_%s_reformulation" % transformation).\
                 relaxedDisjuncts
     self.assertEqual(len(disjBlock), 4)
-    self.assertIsInstance(disjBlock[0].component("disjunct1[1,0].c"),
-                          Constraint)
-    self.assertIsInstance(disjBlock[1].component("disjunct1[1,1].c"),
-                          Constraint)
-    self.assertIsInstance(disjBlock[2].component("disjunct1[2,0].c"),
-                          Constraint)
-    self.assertIsInstance(disjBlock[3].component("disjunct1[2,1].c"),
-                          Constraint)
+    self.assertIsInstance(
+        m.disjunct1[1,0].transformation_block().component("disjunct1[1,0].c"),
+        Constraint)
+    self.assertIsInstance(
+        m.disjunct1[1,1].transformation_block().component("disjunct1[1,1].c"),
+        Constraint)
+    self.assertIsInstance(
+        m.disjunct1[2,0].transformation_block().component("disjunct1[2,0].c"),
+        Constraint)
+    self.assertIsInstance(
+        m.disjunct1[2,1].transformation_block().component("disjunct1[2,1].c"),
+        Constraint)
 
     # This relies on the disjunctions being transformed in the same order
     # every time. These are the mappings between the indices of the original
     # disjuncts and the indices on the indexed block on the transformation
     # block.
-    pairs = [
-        ((1,0), 0),
-        ((1,1), 1),
-        ((2,0), 2),
-        ((2,1), 3),
-    ]
+    if transformation == 'bigm':
+        pairs = [
+            ((1,0), 0),
+            ((1,1), 1),
+            ((2,0), 2),
+            ((2,1), 3),
+        ]
+    elif transformation == 'hull':
+        pairs = [
+            ((2,0), 0),
+            ((2,1), 1),
+            ((1,0), 2),
+            ((1,1), 3),
+        ]
+
     for i, j in pairs:
         self.assertIs(trans.get_src_disjunct(disjBlock[j]), m.disjunct1[i])
         self.assertIs(disjBlock[j], m.disjunct1[i].transformation_block())
@@ -1409,13 +1422,9 @@ def check_mappings_between_disjunctions_and_xors(self, transformation):
     disjunctionPairs = [
         (m.disjunction, transBlock.disjunction_xor),
         (m.disjunct[1].innerdisjunction[0],
-         m.disjunct[1].component("_pyomo_gdp_%s_reformulation"
-                                 % transformation).\
-         component("disjunct[1].innerdisjunction_xor")[0]),
+         transBlock.component("disjunct[1].innerdisjunction_xor")[0]),
         (m.simpledisjunct.innerdisjunction,
-         m.simpledisjunct.component(
-             "_pyomo_gdp_%s_reformulation" % transformation).component(
-                 "simpledisjunct.innerdisjunction_xor"))
+         transBlock.component("simpledisjunct.innerdisjunction_xor"))
      ]
 
     # check disjunction mappings
@@ -1535,22 +1544,17 @@ def check_all_components_transformed(self, m):
 def check_transformation_blocks_nestedDisjunctions(self, m, transformation):
     disjunctionTransBlock = m.disj.algebraic_constraint().parent_block()
     transBlocks = disjunctionTransBlock.relaxedDisjuncts
-    #if transformation == 'bigm':
     self.assertEqual(len(transBlocks), 4)
-    self.assertIs(transBlocks[0], m.d1.d3.transformation_block())
-    self.assertIs(transBlocks[1], m.d1.d4.transformation_block())
-    self.assertIs(transBlocks[2], m.d1.transformation_block())
-    self.assertIs(transBlocks[3], m.d2.transformation_block())
-    # if transformation == 'hull':
-    #     self.assertEqual(len(transBlocks), 4)
-    #     self.assertIs(transBlocks[0], m.d1.transformation_block())
-    #     self.assertIs(transBlocks[3], m.d2.transformation_block())
-    #     # we only moved the references up, these still point to the inner
-    #     # transformation blocks
-    #     inner = m.d1.disj2.algebraic_constraint().parent_block().\
-    #             relaxedDisjuncts
-    #     self.assertIs(inner[0], m.d1.d3.transformation_block())
-    #     self.assertIs(inner[1], m.d1.d4.transformation_block())
+    if transformation == 'bigm':
+        self.assertIs(transBlocks[0], m.d1.d3.transformation_block())
+        self.assertIs(transBlocks[1], m.d1.d4.transformation_block())
+        self.assertIs(transBlocks[2], m.d1.transformation_block())
+        self.assertIs(transBlocks[3], m.d2.transformation_block())
+    if transformation == 'hull':
+        self.assertIs(transBlocks[2], m.d1.d3.transformation_block())
+        self.assertIs(transBlocks[3], m.d1.d4.transformation_block())
+        self.assertIs(transBlocks[0], m.d1.transformation_block())
+        self.assertIs(transBlocks[1], m.d2.transformation_block())
 
 def check_nested_disjunction_target(self, transformation):
     m = models.makeNestedDisjunctions_NestedDisjuncts()

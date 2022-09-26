@@ -162,7 +162,7 @@ class GDPTree:
 
     def _topological_sort(self):
         # this is reverse of the list we should return (but happens to be what
-        # we want for hull and bigm)
+        # we want for bigm)
         leaf_to_root = OrderedSet()
         for u in self.vertices:
             if u not in leaf_to_root:
@@ -171,7 +171,7 @@ class GDPTree:
         return leaf_to_root
 
     def topological_sort(self):
-        return reversed(self._topological_sort())
+        return list(reversed(self._topological_sort()))
 
     def reverse_topological_sort(self):
         return self._topological_sort()
