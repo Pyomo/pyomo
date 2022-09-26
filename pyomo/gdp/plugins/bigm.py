@@ -321,8 +321,7 @@ class BigM_Transformation(Transformation):
 
         # add the XOR (or OR) constraints to parent block (with unique name)
         # It's indexed if this is an IndexedDisjunction, not otherwise
-        orC = Constraint(disjunction.index_set()) if \
-              disjunction.is_indexed() else Constraint()
+        orC = Constraint(disjunction.index_set())
         orCname = unique_component_name( transBlock, disjunction.getname(
             fully_qualified=True) + '_xor')
         transBlock.add_component(orCname, orC)
@@ -413,8 +412,6 @@ class BigM_Transformation(Transformation):
 
     def _transform_block_components(self, block, disjunct, bigM, arg_list,
                                     suffix_list):
-        disjunctBlock = disjunct._transformation_block()
-
         # We don't know where all the BooleanVars are going to be used, so if
         # there are any that the logical_to_linear transformation didn't
         # transform, we need to do it now, so that the Reference gets moved
@@ -436,7 +433,7 @@ class BigM_Transformation(Transformation):
         # Find all the variables declared here (including the indicator_var) and
         # add a reference on the transformation block so these will be
         # accessible when the Disjunct is deactivated.
-        varRefBlock = disjunctBlock.localVarReferences
+        varRefBlock = disjunct._transformation_block().localVarReferences
         for v in block.component_objects(Var, descend_into=Block, active=None):
             varRefBlock.add_component(unique_component_name(
                 varRefBlock, v.getname(fully_qualified=True)), Reference(v))
