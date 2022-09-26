@@ -27,7 +27,7 @@ y_2_: 2;
 EQUATIONS c_e_FIX_ONE_VAR_CONST__, c;
 
 c_e_FIX_ONE_VAR_CONST__:  ONE_VAR_CONST__  == 1;
-c: y_1_*y_2_ - 2*x >= 0;
+c: y_1_*y_2_ + (-2)*x >= 0;
 
 OBJ: maximize y_1_ + y_2_;
 

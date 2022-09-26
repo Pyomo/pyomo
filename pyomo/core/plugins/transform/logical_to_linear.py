@@ -11,13 +11,15 @@ from pyomo.core.base.block import _BlockData
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.core.expr.cnf_walker import to_cnf
-from pyomo.core.expr.logical_expr import (AndExpression, OrExpression,
-                                          NotExpression, AtLeastExpression,
-                                          AtMostExpression, ExactlyExpression,
-                                          special_boolean_atom_types,
-                                          EqualityExpression,
-                                          InequalityExpression,
-                                          RangedExpression)
+from pyomo.core.expr.current import (
+    AndExpression, OrExpression,
+    NotExpression, AtLeastExpression,
+    AtMostExpression, ExactlyExpression,
+    special_boolean_atom_types,
+    EqualityExpression,
+    InequalityExpression,
+    RangedExpression,
+)
 from pyomo.core.expr.numvalue import native_logical_types, value
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.current import identify_variables

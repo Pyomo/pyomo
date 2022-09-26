@@ -12,7 +12,9 @@
 import pickle
 
 import pyomo.common.unittest as unittest
-from pyomo.core.expr import logical_expr
+from pyomo.core.expr.current import (
+    inequality, RangedExpression, EqualityExpression,
+)
 from pyomo.kernel import pprint
 from pyomo.core.tests.unit.kernel.test_dict_container import \
     _TestActiveDictContainerBase
@@ -745,14 +747,14 @@ class Test_constraint(unittest.TestCase):
         self.assertIs(c.body, x)
         self.assertEqual(c.equality, True)
 
-        c = constraint(expr=logical_expr.EqualityExpression((p, x)))
+        c = constraint(expr=EqualityExpression((p, x)))
         self.assertIs(c.upper, p)
         self.assertIs(c.lower, p)
         self.assertIs(c.rhs, p)
         self.assertIs(c.body, x)
         self.assertEqual(c.equality, True)
 
-        c = constraint(expr=logical_expr.EqualityExpression((x, p)))
+        c = constraint(expr=EqualityExpression((x, p)))
         self.assertIs(c.upper, p)
         self.assertIs(c.lower, p)
         self.assertIs(c.rhs, p)
@@ -879,10 +881,10 @@ class Test_constraint(unittest.TestCase):
         y = variable()
         z = variable()
         with self.assertRaises(ValueError):
-            constraint(logical_expr.RangedExpression((x, y, 1), (False, False)))
+            constraint(RangedExpression((x, y, 1), (False, False)))
 
         with self.assertRaises(ValueError):
-            constraint(logical_expr.RangedExpression((0, y, z), (False, False)))
+            constraint(RangedExpression((0, y, z), (False, False)))
 
     def test_expr_construct_equality(self):
         x = variable(value=1)
@@ -928,34 +930,34 @@ class Test_constraint(unittest.TestCase):
         with self.assertRaises(ValueError):
             c.expr = (x < 0)
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.inequality(body=x, upper=0, strict=True)
+            c.expr = inequality(body=x, upper=0, strict=True)
         c.expr = (x <= 0)
-        c.expr = logical_expr.inequality(body=x, upper=0, strict=False)
+        c.expr = inequality(body=x, upper=0, strict=False)
         with self.assertRaises(ValueError):
             c.expr = (x > 0)
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.inequality(body=x, lower=0, strict=True)
+            c.expr = inequality(body=x, lower=0, strict=True)
         c.expr = (x >= 0)
-        c.expr = logical_expr.inequality(body=x, lower=0, strict=False)
+        c.expr = inequality(body=x, lower=0, strict=False)
         with self.assertRaises(ValueError):
             c.expr = (x < y)
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.inequality(body=x, upper=y, strict=True)
+            c.expr = inequality(body=x, upper=y, strict=True)
         c.expr = (x <= y)
-        c.expr = logical_expr.inequality(body=x, upper=y, strict=False)
+        c.expr = inequality(body=x, upper=y, strict=False)
         with self.assertRaises(ValueError):
             c.expr = (x > y)
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.inequality(body=x, lower=y, strict=True)
+            c.expr = inequality(body=x, lower=y, strict=True)
         c.expr = (x >= y)
-        c.expr = logical_expr.inequality(body=x, lower=y, strict=False)
+        c.expr = inequality(body=x, lower=y, strict=False)
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.RangedExpression((0, x, 1), (True, True))
+            c.expr = RangedExpression((0, x, 1), (True, True))
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.RangedExpression((0, x, 1), (False, True))
+            c.expr = RangedExpression((0, x, 1), (False, True))
         with self.assertRaises(ValueError):
-            c.expr = logical_expr.RangedExpression((0, x, 1), (True, False))
-        c.expr = logical_expr.RangedExpression((0, x, 1), (False, False))
+            c.expr = RangedExpression((0, x, 1), (True, False))
+        c.expr = RangedExpression((0, x, 1), (False, False))
 
     def test_expr_construct_inf_equality(self):
         x = variable()

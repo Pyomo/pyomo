@@ -585,7 +585,7 @@ class TestTemplateSubstitution(unittest.TestCase):
         t = IndexTemplate(m.TIME)
         e = diffeq(m, t, 2)
 
-        self.assertTrue( isinstance(e, EXPR.ExpressionBase) )
+        self.assertTrue( isinstance(e, EXPR.RelationalExpression) )
 
         _map = {}
         E = substitute_template_expression(
@@ -649,7 +649,7 @@ class TestTemplateSubstitution(unittest.TestCase):
         e = diffeq(m,t, 2)
         t.set_value(5)
 
-        self.assertTrue( isinstance(e, EXPR.ExpressionBase) )
+        self.assertTrue( isinstance(e, EXPR.RelationalExpression) )
         self.assertEqual((e.arg(0)(), e.arg(1)()), (10,126))
 
         E = substitute_template_expression(e, substitute_template_with_value)

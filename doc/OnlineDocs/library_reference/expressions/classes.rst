@@ -4,12 +4,12 @@ Core Classes
 The following are the two core classes documented here:
 
    * :class:`NumericValue<pyomo.core.expr.numvalue.NumericValue>`
-   * :class:`ExpressionBase<pyomo.core.expr.current.ExpressionBase>`
+   * :class:`NumericExpression<pyomo.core.expr.current.NumericExpression>`
 
 The remaining classes are the public classes for expressions, which
 developers may need to know about. The methods for these classes are not
 documented because they are described in the
-:class:`ExpressionBase<pyomo.core.expr.current.ExpressionBase>` class.
+:class:`NumericExpression<pyomo.core.expr.current.NumericExpression>` class.
 
 Sets with Expression Types
 --------------------------
@@ -21,15 +21,15 @@ Pyomo expressions.
 .. autodata:: pyomo.core.expr.numvalue.native_types
 .. autodata:: pyomo.core.expr.numvalue.nonpyomo_leaf_types
 
-NumericValue and ExpressionBase
--------------------------------
+NumericValue and NumericExpression
+----------------------------------
 
 .. autoclass:: pyomo.core.expr.numvalue.NumericValue
     :members:
     :special-members:
     :private-members:
 
-.. autoclass:: pyomo.core.expr.current.ExpressionBase
+.. autoclass:: pyomo.core.expr.current.NumericExpression
     :members:
     :show-inheritance:
     :special-members:

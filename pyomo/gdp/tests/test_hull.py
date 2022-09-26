@@ -133,9 +133,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             "(_pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]."
             "disaggregatedVars.y/"
             "(%s*d[0].binary_indicator_var + %s))**2) - "
-            "%s*(0.0 + 0.0**2)*(1 - d[0].binary_indicator_var) "
-            "- 14.0*d[0].binary_indicator_var"
-            % (EPS_1, EPS, EPS_1, EPS, EPS_1, EPS, EPS))
+            "14.0*d[0].binary_indicator_var"
+            % (EPS_1, EPS, EPS_1, EPS, EPS_1, EPS))
 
     def test_transformed_constraints_linear(self):
         m = models.makeTwoTermDisj_Nonlinear()

@@ -26,7 +26,7 @@ def taylor_series_expansion(expr, diff_mode=differentiate.Modes.reverse_numeric,
 
     Parameters
     ----------
-    expr: pyomo.core.expr.numeric_expr.ExpressionBase
+    expr: pyomo.core.expr.numeric_expr.NumericExpression
     diff_mode: pyomo.core.expr.calculus.derivatives.Modes
         The method for differentiation.
     order: The order of the taylor series expansion
@@ -36,7 +36,7 @@ def taylor_series_expansion(expr, diff_mode=differentiate.Modes.reverse_numeric,
 
     Returns
     -------
-    res: pyomo.core.expr.numeric_expr.ExpressionBase
+    res: pyomo.core.expr.numeric_expr.NumericExpression
     """
     if order < 0:
         raise ValueError('Cannot compute taylor series expansion of order {0}'.format(str(order)))
