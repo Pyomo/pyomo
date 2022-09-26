@@ -330,35 +330,24 @@ class BigM_Transformation(Transformation):
 
         return orC
 
-    def _transform_disjunctionData(self, obj, index, transBlock=None,
-                                   parent_disjunct=None, root_disjunct=None):
+    def _transform_disjunctionData(self, obj, index, parent_disjunct=None,
+                                   root_disjunct=None):
         if not obj.active:
             return  # Do not process a deactivated disjunction
-        # We won't have these arguments if this got called straight from
-        # targets. But else, we created them earlier, and have just been passing
-        # them through.
-        if transBlock is None:
-            # It's possible that we have already created a transformation block
-            # for another disjunctionData from this same container. If that's
-            # the case, let's use the same transformation block. Note that this
-            # may not be the same block as the transformed Disjuncts are on.
-            if obj.parent_component()._algebraic_constraint is not None:
-                transBlock = obj.parent_component()._algebraic_constraint().\
-                             parent_block()
-            else:
-                if root_disjunct is not None:
-                # We want to put all the transformed things on the parent
-                # Disjunct's transformation block so that they do not get
-                # re-transformed
-                    transBlock = self._add_transformation_block(
-                        root_disjunct.parent_block())
-                else:
-                    transBlock = self._add_transformation_block(
-                        obj.parent_block())
+        # Create or fetch the transformation block
+        if root_disjunct is not None:
+            # We want to put all the transformed things on the root
+            # Disjunct's parent's block so that they do not get
+            # re-transformed
+            transBlock = self._add_transformation_block(
+                root_disjunct.parent_block())
+        else:
+            # This isn't nested--just put it on the parent block.
+            transBlock = self._add_transformation_block(obj.parent_block())
+
         # create or fetch the xor constraint
         xorConstraint = self._add_xor_constraint(obj.parent_component(),
                                                  transBlock)
-
         xor = obj.xor
         or_expr = 0
         # Just because it's unlikely this is what someone meant to do...
@@ -426,10 +415,11 @@ class BigM_Transformation(Transformation):
                                     suffix_list):
         disjunctBlock = disjunct._transformation_block()
 
-        # We don't know where all the BooleanVars are used, so if there are any
-        # that the above transformation didn't transform, we need to do it now,
-        # so that the Reference gets moved up. This won't be necessary when the
-        # writers are willing to find Vars not in the active subtree.
+        # We don't know where all the BooleanVars are going to be used, so if
+        # there are any that the logical_to_linear transformation didn't
+        # transform, we need to do it now, so that the Reference gets moved
+        # up. This won't be necessary when the writers are willing to find Vars
+        # not in the active subtree.
         for boolean in block.component_data_objects(BooleanVar,
                                                     descend_into=Block,
                                                     active=None):
@@ -445,9 +435,7 @@ class BigM_Transformation(Transformation):
 
         # Find all the variables declared here (including the indicator_var) and
         # add a reference on the transformation block so these will be
-        # accessible when the Disjunct is deactivated. We don't descend into
-        # Disjuncts because we just moved the references to their local
-        # variables up in the previous loop.
+        # accessible when the Disjunct is deactivated.
         varRefBlock = disjunctBlock.localVarReferences
         for v in block.component_objects(Var, descend_into=Block, active=None):
             varRefBlock.add_component(unique_component_name(
