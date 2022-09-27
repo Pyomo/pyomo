@@ -22,9 +22,8 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import AbstractModel, ConcreteModel, Set, Var, Param, Constraint, inequality, display
-import pyomo.core.expr.logical_expr as logical_expr
 from pyomo.core.expr.numvalue import value
-from pyomo.core.expr.logical_expr import (
+from pyomo.core.expr.relational_expr import (
     InequalityExpression, EqualityExpression, RangedExpression,
 )
 
@@ -64,51 +63,24 @@ class TestGenerate_RelationalExpression(unittest.TestCase):
         #     =   5
         #    / \
         #   a   b
-        # Python 2.7 supports better testing of exceptions
-        if sys.hexversion >= 0x02070000:
-            self.assertRaisesRegex(TypeError, "EqualityExpression .*"
-                                   "sub-expressions is a relational",
-                                   e.__eq__, m.a)
-            self.assertRaisesRegex(TypeError, "EqualityExpression .*"
-                                   "sub-expressions is a relational",
-                                   m.a.__eq__, e)
-
-            # NB: cannot test the reverse here: _VarArray (correctly)
-            # does not define __eq__
-            self.assertRaisesRegex(TypeError, "Argument .*"
-                                    "is an indexed numeric value",
-                                    m.a.__eq__, m.x)
-        else:
-            self.assertRaises(TypeError, e.__eq__, m.a)
-            self.assertRaises(TypeError, m.a.__eq__, e)
-            self.assertRaises(TypeError, m.a.__eq__, m.x)
-
-        try:
+        with self.assertRaisesRegex(
+                TypeError, "Attempting to use a non-numeric type "
+                r"\(EqualityExpression\) in a numeric expression context."):
             e == m.a
-            self.fail("expected nested equality expression to raise TypeError")
-        except TypeError:
-            pass
-
-        try:
+        with self.assertRaisesRegex(
+                TypeError, "Attempting to use a non-numeric type "
+                r"\(EqualityExpression\) in a numeric expression context."):
             m.a == e
-            self.fail("expected nested equality expression to raise TypeError")
-        except TypeError:
-            pass
 
         #
         # Test expression with an indexed variable
         #
-        try:
+        with self.assertRaisesRegex(
+                TypeError, "Argument .* is an indexed numeric value"):
             m.x == m.a
-            self.fail("expected use of indexed variable to raise TypeError")
-        except TypeError:
-            pass
-
-        try:
+        with self.assertRaisesRegex(
+                TypeError, "Argument .* is an indexed numeric value"):
             m.a == m.x
-            self.fail("expected use of indexed variable to raise TypeError")
-        except TypeError:
-            pass
 
     def test_simpleInequality1(self):
         #

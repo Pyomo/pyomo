@@ -117,8 +117,12 @@ def quicksum(args, start=0, linear=None):
                 e += start
                 for arg in args:
                     e += arg
-            # Return the constant term if the linear expression does not contains variables
-            if e.is_constant():
+            # Return the constant term if the linear expression does not
+            # contain variables
+            #
+            # getattr() because the linear expression may not have ended
+            # up being linear (and e could be a SumExpression)
+            if not getattr(e, 'linear_vars', True):
                 return e.constant
             return e
         else:

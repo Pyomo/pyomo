@@ -334,10 +334,6 @@ class BooleanVar(IndexedComponent):
         else:
             self._value_init_value = initialize
 
-    def is_expression_type(self):
-        """Returns False because this is not an expression"""
-        return False
-
     def flag_as_stale(self):
         """
         Set the 'stale' attribute of every variable data object to True.

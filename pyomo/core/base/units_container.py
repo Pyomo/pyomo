@@ -243,16 +243,12 @@ class _PyomoUnit(NumericValue):
         """ This is not a named expression (overloaded from NumericValue) """
         return False
 
-    def is_expression_type(self):
+    def is_expression_type(self, expression_system=None):
         """ This is a leaf, not an expression (overloaded from NumericValue) """
         return False
 
     def is_component_type(self):
         """ This is not a component type (overloaded from NumericValue) """
-        return False
-
-    def is_relational(self):
-        """ This is not relational (overloaded from NumericValue) """
         return False
 
     def is_indexed(self):

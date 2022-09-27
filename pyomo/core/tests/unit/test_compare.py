@@ -16,7 +16,7 @@ from pyomo.core.expr.numeric_expr import (
     NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression,
     Expr_ifExpression, AbsExpression
 )
-from pyomo.core.expr.logical_expr import (
+from pyomo.core.expr.relational_expr import (
     InequalityExpression, EqualityExpression, RangedExpression
 )
 from pyomo.core.expr.compare import (
