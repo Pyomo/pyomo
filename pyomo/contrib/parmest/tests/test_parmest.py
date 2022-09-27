@@ -625,11 +625,11 @@ class TestReactorDesign_DAE(unittest.TestCase):
                 [4.474,  -0.030,   0.036,   0.941],
                 [4.737,   0.004,   0.036,   0.971],
                 [5.000,  -0.024,   0.028,   0.985]]
-        data = pd.DataFrame(data, columns=['t', 'ca', 'cb', 'cc'])
-        data_df = data.set_index('t')
-        data_dict = {'ca': {k:v for (k, v) in zip(data.t, data.ca)},
-                     'cb': {k:v for (k, v) in zip(data.t, data.cb)},
-                     'cc': {k:v for (k, v) in zip(data.t, data.cc)} }
+        self.data = pd.DataFrame(data, columns=['t', 'ca', 'cb', 'cc'])
+        data_df = self.data.set_index('t')
+        data_dict = {'ca': {k:v for (k, v) in zip(self.data.t, self.data.ca)},
+                     'cb': {k:v for (k, v) in zip(self.data.t, self.data.cb)},
+                     'cc': {k:v for (k, v) in zip(self.data.t, self.data.cc)} }
 
         theta_names = ['k1', 'k2']
 
@@ -678,7 +678,14 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertTrue(cov.loc['k2', 'k2'] > 0)
         self.assertAlmostEqual(cov_diff, 0, places=6)
 
-
+    def test_return_continuous_set(self):
+        '''
+        test if ContinuousSet elements are returned correctly from theta_est()
+        '''
+        obj1, theta1, data_returned = self.pest_df.theta_est(return_values=['time','ca'])
+        print("returned_data",data_returned)
+        self.assertAlmostEqual(data_returned['time'].loc[9],self.data['t'].loc[9], places=3)
+        
 @unittest.skipIf(not parmest.parmest_available,
                  "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
