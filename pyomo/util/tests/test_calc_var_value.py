@@ -21,6 +21,7 @@ from pyomo.environ import (
 )
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.core.expr.calculus.diff_with_sympy import differentiate_available
+from pyomo.core.expr.calculus.derivatives import differentiate
 
 class Test_calc_var(unittest.TestCase):
     def test_initialize_value(self):
@@ -32,35 +33,56 @@ class Test_calc_var(unittest.TestCase):
         m.x.set_value(None)
         calculate_variable_from_constraint(m.x, m.c)
         self.assertEqual(value(m.x), 5)
+        m.x.set_value(None)
+        calculate_variable_from_constraint(m.x, m.c, diff_mode=differentiate.Modes.reverse_numeric)
+        self.assertEqual(value(m.x), 5)
 
         m.x.set_value(None)
         m.x.setlb(3)
         calculate_variable_from_constraint(m.x, m.c)
+        self.assertEqual(value(m.x), 5)
+        m.x.set_value(None)
+        calculate_variable_from_constraint(m.x, m.c, diff_mode=differentiate.Modes.reverse_numeric)
         self.assertEqual(value(m.x), 5)
 
         m.x.set_value(None)
         m.x.setlb(-10)
         calculate_variable_from_constraint(m.x, m.c)
         self.assertEqual(value(m.x), 5)
+        m.x.set_value(None)
+        calculate_variable_from_constraint(m.x, m.c, diff_mode=differentiate.Modes.reverse_numeric)
+        self.assertEqual(value(m.x), 5)
 
         m.x.set_value(None)
         m.x.setub(10)
         calculate_variable_from_constraint(m.x, m.c)
+        self.assertEqual(value(m.x), 5)
+        m.x.set_value(None)
+        calculate_variable_from_constraint(m.x, m.c, diff_mode=differentiate.Modes.reverse_numeric)
         self.assertEqual(value(m.x), 5)
 
         m.x.set_value(None)
         m.x.setlb(3)
         calculate_variable_from_constraint(m.x, m.c)
         self.assertEqual(value(m.x), 5)
+        m.x.set_value(None)
+        calculate_variable_from_constraint(m.x, m.c, diff_mode=differentiate.Modes.reverse_numeric)
+        self.assertEqual(value(m.x), 5)
 
         m.x.set_value(None)
         m.x.setlb(None)
         calculate_variable_from_constraint(m.x, m.c)
         self.assertEqual(value(m.x), 5)
+        m.x.set_value(None)
+        calculate_variable_from_constraint(m.x, m.c, diff_mode=differentiate.Modes.reverse_numeric)
+        self.assertEqual(value(m.x), 5)
 
         m.x.set_value(None)
         m.x.setub(-10)
         calculate_variable_from_constraint(m.x, m.c)
+        self.assertEqual(value(m.x), 5)
+        m.x.set_value(None)
+        calculate_variable_from_constraint(m.x, m.c, diff_mode=differentiate.Modes.reverse_numeric)
         self.assertEqual(value(m.x), 5)
 
         m.lt = Constraint(expr=m.x <= m.y)
@@ -75,6 +97,9 @@ class Test_calc_var(unittest.TestCase):
 
         calculate_variable_from_constraint(m.x, m.c)
         self.assertEqual(value(m.x), 2)
+        m.x.set_value(None)
+        calculate_variable_from_constraint(m.x, m.c, diff_mode=differentiate.Modes.reverse_numeric)
+        self.assertEqual(value(m.x), 2)
 
     def test_constraint_as_tuple(self):
         m = ConcreteModel()
@@ -83,9 +108,18 @@ class Test_calc_var(unittest.TestCase):
 
         calculate_variable_from_constraint(m.x, 5*m.x == 5)
         self.assertEqual(value(m.x), 1)
+        m.x.set_value(None)
+        calculate_variable_from_constraint(m.x, 5*m.x == 5, diff_mode=differentiate.Modes.reverse_numeric)
+        self.assertEqual(value(m.x), 1)
         calculate_variable_from_constraint(m.x, (5*m.x, 10))
         self.assertEqual(value(m.x), 2)
+        m.x.set_value(None)
+        calculate_variable_from_constraint(m.x, (5*m.x, 10), diff_mode=differentiate.Modes.reverse_numeric)
+        self.assertEqual(value(m.x), 2)
         calculate_variable_from_constraint(m.x, (15, 5*m.x, m.p))
+        self.assertEqual(value(m.x), 3)
+        m.x.set_value(None)
+        calculate_variable_from_constraint(m.x, (15, 5*m.x, m.p), diff_mode=differentiate.Modes.reverse_numeric)
         self.assertEqual(value(m.x), 3)
         with self.assertRaisesRegex(
                 ValueError, "Constraint 'tuple' is a Ranged Inequality "
@@ -103,6 +137,9 @@ class Test_calc_var(unittest.TestCase):
         m.x.set_value(1.0) # set an initial value
         calculate_variable_from_constraint(m.x, m.c, linesearch=False)
         self.assertAlmostEqual(value(m.x), 4)
+        m.x.set_value(1.0)
+        calculate_variable_from_constraint(m.x, m.c, linesearch=False, diff_mode=differentiate.Modes.reverse_numeric)
+        self.assertEqual(value(m.x), 4)
 
         # test that infeasible constraint throws error
         m.d = Constraint(expr=m.x**2 == -1)
@@ -111,6 +148,11 @@ class Test_calc_var(unittest.TestCase):
                RuntimeError, r'Iteration limit \(10\) reached'):
            calculate_variable_from_constraint(
                m.x, m.d, iterlim=10, linesearch=False)
+        with self.assertRaisesRegex(
+               RuntimeError, r'Iteration limit \(10\) reached'):
+           calculate_variable_from_constraint(
+               m.x, m.d, iterlim=10, linesearch=False,
+               diff_mode=differentiate.Modes.reverse_numeric)
 
         # same problem should throw a linesearch error if linesearch is on
         m.x.set_value(1.25) # set the initial value
@@ -118,6 +160,11 @@ class Test_calc_var(unittest.TestCase):
                 RuntimeError, "Linesearch iteration limit reached"):
            calculate_variable_from_constraint(
                m.x, m.d, iterlim=10, linesearch=True)
+        with self.assertRaisesRegex(
+                RuntimeError, "Linesearch iteration limit reached"):
+           calculate_variable_from_constraint(
+               m.x, m.d, iterlim=10, linesearch=True,
+               diff_mode=differentiate.Modes.reverse_numeric)
 
         # same problem should raise an error if initialized at 0
         m.x = 0
@@ -138,9 +185,21 @@ class Test_calc_var(unittest.TestCase):
         m.x.set_value(3.1)
         calculate_variable_from_constraint(m.x, m.e, linesearch=False)
         self.assertAlmostEqual(value(m.x), 3)
+        m.x.set_value(3.1)
+        calculate_variable_from_constraint(
+            m.x, m.e, linesearch=False,
+            diff_mode=differentiate.Modes.reverse_numeric
+        )
+        self.assertAlmostEqual(value(m.x), 3)
 
         m.x.set_value(3.1)
         calculate_variable_from_constraint(m.x, m.e, linesearch=True)
+        self.assertAlmostEqual(value(m.x), 3)
+        m.x.set_value(3.1)
+        calculate_variable_from_constraint(
+            m.x, m.e, linesearch=True,
+            diff_mode=differentiate.Modes.reverse_numeric
+        )
         self.assertAlmostEqual(value(m.x), 3)
 
 
@@ -149,6 +208,12 @@ class Test_calc_var(unittest.TestCase):
         m.x.set_value(3.0)
         calculate_variable_from_constraint(m.x, m.f, linesearch=True)
         self.assertAlmostEqual(value(m.x), 0)
+        m.x.set_value(3.0)
+        calculate_variable_from_constraint(
+            m.x, m.f, linesearch=True,
+            diff_mode=differentiate.Modes.reverse_numeric
+        )
+        self.assertAlmostEqual(value(m.x), 0)
 
         # we expect this to fail without a linesearch
         m.x.set_value(3.0)
@@ -156,6 +221,14 @@ class Test_calc_var(unittest.TestCase):
                 RuntimeError, "Newton's method encountered a derivative "
                 "that was too close to zero"):
             calculate_variable_from_constraint(m.x, m.f, linesearch=False)
+        m.x.set_value(3.0)
+        with self.assertRaisesRegex(
+                RuntimeError, "Newton's method encountered a derivative "
+                "that was too close to zero"):
+            calculate_variable_from_constraint(
+                m.x, m.f, linesearch=False,
+                diff_mode=differentiate.Modes.reverse_numeric
+            )
 
         # Calculate the bubble point of Benzene.  THe first step
         # computed by calculate_variable_from_constraint will make the
@@ -242,17 +315,35 @@ class Test_calc_var(unittest.TestCase):
         # Calculate value of v1 using constraint c1
         calculate_variable_from_constraint(m.v1, m.c1)
         self.assertEqual(value(m.v1), 0)
+        m.v1.set_value(None)
+        calculate_variable_from_constraint(
+            m.v1, m.c1,
+            diff_mode=differentiate.Modes.reverse_numeric
+        )
+        self.assertEqual(value(m.v1), 0)
 
         # Calculate value of v1 using a scaled constraint c2
         m.c2 = Constraint(expr=m.v1*10 == 0)
         m.v1.set_value(1)
         calculate_variable_from_constraint(m.v1, m.c2)
         self.assertEqual(value(m.v1), 0)
+        m.v1.set_value(1)
+        calculate_variable_from_constraint(
+            m.v1, m.c2,
+            diff_mode=differentiate.Modes.reverse_numeric
+        )
+        self.assertEqual(value(m.v1), 0)
 
         # Test linear solution falling outside bounds
         m.c3 = Constraint(expr=m.v1*10 == -1)
         m.v1.set_value(1)
         calculate_variable_from_constraint(m.v1, m.c3)
+        self.assertEqual(value(m.v1), -0.1)
+        m.v1.set_value(1)
+        calculate_variable_from_constraint(
+            m.v1, m.c3,
+            diff_mode=differentiate.Modes.reverse_numeric
+        )
         self.assertEqual(value(m.v1), -0.1)
 
     @unittest.skipUnless(differentiate_available, "this test requires sympy")
@@ -265,6 +356,12 @@ class Test_calc_var(unittest.TestCase):
         m.c4 = Constraint(expr=m.v1**3 == -8)
         m.v1.set_value(1)
         calculate_variable_from_constraint(m.v1, m.c4)
+        self.assertEqual(value(m.v1), -2)
+        m.v1.set_value(1)
+        calculate_variable_from_constraint(
+            m.v1, m.c4,
+            diff_mode=differentiate.Modes.reverse_numeric
+        )
         self.assertEqual(value(m.v1), -2)
 
     def test_warn_final_value_linear(self):
