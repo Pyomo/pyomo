@@ -2180,11 +2180,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         # General expressions...
         #
-        if node.is_potentially_variable():
-            cls = node.__class__
-        else:
-            cls = node.potentially_variable_base_class()
-        return self._operator_handles[cls](self, node, *data)
+        return self._operator_handles[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):
         ans = node_result_to_amplrepn(result)
@@ -2257,6 +2253,11 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 handlers[child_type] = _before_npv
         elif not child.is_potentially_variable():
             handlers[child_type] = _before_npv
+            # If we descend into the named expression (because of an
+            # evaluation error), then on the way back out, we will use
+            # the potentially variable handler to process the result.
+            _operator_handles[child_type] = _operator_handles[
+                child.potentially_variable_base_class()]
         elif ( id(child) in self.subexpression_cache or
                issubclass(child_type, _GeneralExpressionData) ):
             handlers[child_type] = _before_named_expression
