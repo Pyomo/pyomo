@@ -30,7 +30,7 @@ from pyomo.core.base.units_container import units
 __all__  = ( 'ExternalFunction', )
 
 logger = logging.getLogger('pyomo.core')
-
+nan = float('nan')
 
 class ExternalFunction(Component):
     """Interface to an external (non-algebraic) function.
@@ -360,7 +360,7 @@ class AMPLExternalFunction(ExternalFunction):
         fcn = self._known_functions[self._function][0]
         f = fcn(byref(arglist))
         if fgh >= 1:
-            g = [0]*N
+            g = [nan]*N
             for i in range(N):
                 if arglist.at[i] < 0:
                     continue
@@ -368,7 +368,7 @@ class AMPLExternalFunction(ExternalFunction):
         else:
             g = None
         if fgh >= 2:
-            h = [0]*((N + N**2)//2)
+            h = [nan]*((N + N**2)//2)
             for j in range(N):
                 j_r = arglist.at[j]
                 if j_r < 0:
