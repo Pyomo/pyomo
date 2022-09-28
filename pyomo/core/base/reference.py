@@ -708,14 +708,6 @@ def Reference(reference, ctype=NOTSET):
             # Note that this is redundant for Component and ComponentData
             # inputs, as _iter was already empty.
             _iter = ()
-        else:
-            # If the caller specified a ctype, then we will prepopulate
-            # the list to improve our chances of avoiding a scan of the
-            # entire Reference (by simulating multiple ctypes having
-            # been found, we can break out as soon as we know that there
-            # are not common subsets by forcing the len(ctypes) > 1 check
-            # to return True).
-            ctypes = set((1,2))
 
     for obj in _iter:
         #
@@ -724,16 +716,17 @@ def Reference(reference, ctype=NOTSET):
         # objects to attempt to infer both the ctype and, if a slice
         # was provided, the index_set (determined by slice_index).
         #
-        ctypes.add(obj.ctype)
-        if not isinstance(obj, ComponentData):
-            # This object is not a ComponentData (likely it is a pure
-            # IndexedComponent container).  As the Reference will treat
-            # it as if it *were* a ComponentData, we will skip ctype
-            # identification and return a base IndexedComponent, thereby
-            # preventing strange exceptions in the writers and with
-            # things like pprint().  Of course, all of this logic is
-            # skipped if the User knows better and forced a ctype on us.
-            ctypes.add(0)
+        if ctype is NOTSET:
+            ctypes.add(obj.ctype)
+            if not isinstance(obj, ComponentData):
+                # This object is not a ComponentData (likely it is a pure
+                # IndexedComponent container).  As the Reference will treat
+                # it as if it *were* a ComponentData, we will skip ctype
+                # identification and return a base IndexedComponent, thereby
+                # preventing strange exceptions in the writers and with
+                # things like pprint().  Of course, all of this logic is
+                # skipped if the User knows better and forced a ctype on us.
+                ctypes.add(0)
         # Note that we want to walk the entire slice, unless we can
         # prove that BOTH there aren't common indexing sets (i.e., index
         # is None) AND there is more than one ctype.
@@ -743,7 +736,7 @@ def Reference(reference, ctype=NOTSET):
             # identify the wilcards for this obj and check compatibility
             # of the wildcards with any previously-identified wildcards.
             slice_idx = _identify_wildcard_sets(_iter._iter_stack, slice_idx)
-        elif len(ctypes) > 1:
+        elif ctype is not NOTSET or len(ctypes) > 1:
             break
 
     if index is None:
