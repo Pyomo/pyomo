@@ -31,8 +31,6 @@ import random
 
 from io import StringIO
 
-from pytest import set_trace
-
 class CommonTests:
     def diff_apply_to_and_create_using(self, model):
         ct.diff_apply_to_and_create_using(self, model, 'gdp.bigm')
