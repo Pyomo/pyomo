@@ -29,8 +29,8 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
     clone_without_expression_components, is_child_of, get_src_disjunction,
     get_src_constraint, get_transformed_constraints,
-    get_src_disjunct, _warn_for_active_disjunction, _warn_for_active_disjunct,
-    preprocess_targets, get_gdp_tree)
+    get_src_disjunct, _warn_for_active_disjunct, preprocess_targets,
+    get_gdp_tree)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from functools import wraps
@@ -353,8 +353,6 @@ class Hull_Reformulation(Transformation):
 
     def _transform_disjunctionData(self, obj, index, parent_disjunct=None,
                                    root_disjunct=None):
-        if not obj.active:
-            return
         # Hull reformulation doesn't work if this is an OR constraint. So if
         # xor is false, give up
         if not obj.xor:
@@ -568,34 +566,11 @@ class Hull_Reformulation(Transformation):
 
     def _transform_disjunct(self, obj, transBlock, varSet, localVars,
                             local_var_set):
-        # deactivated should only come from the user
+        # We're not using the preprocessed list here, so this could be
+        # inactive. We've already done the error checking in preprocessing, so
+        # we just skip it here.
         if not obj.active:
-            if obj.indicator_var.is_fixed():
-                if not value(obj.indicator_var):
-                    # The user cleanly deactivated the disjunct: there
-                    # is nothing for us to do here.
-                    return
-                else:
-                    raise GDP_Error(
-                        "The disjunct '%s' is deactivated, but the "
-                        "indicator_var is fixed to %s. This makes no sense."
-                        % ( obj.name, value(obj.indicator_var) ))
-            if obj._transformation_block is None:
-                raise GDP_Error(
-                    "The disjunct '%s' is deactivated, but the "
-                    "indicator_var is not fixed and the disjunct does not "
-                    "appear to have been relaxed. This makes no sense. "
-                    "(If the intent is to deactivate the disjunct, fix its "
-                    "indicator_var to False.)"
-                    % ( obj.name, ))
-
-        if obj._transformation_block is not None:
-            # we've transformed it, which means this is the second time it's
-            # appearing in a Disjunction
-            raise GDP_Error(
-                    "The disjunct '%s' has been transformed, but a disjunction "
-                    "it appears in has not. Putting the same disjunct in "
-                    "multiple disjunctions is not supported." % obj.name)
+            return
 
         # create a relaxation block for this disjunct
         relaxedDisjuncts = transBlock.relaxedDisjuncts
@@ -785,15 +760,6 @@ class Hull_Reformulation(Transformation):
 
         return local_var_set
 
-    def _transfer_var_references(self, fromBlock, toBlock):
-        disjunctList = toBlock.relaxedDisjuncts
-        for idx, disjunctBlock in fromBlock.relaxedDisjuncts.items():
-            # move all the of the local var references
-            newblock = disjunctList[len(disjunctList)]
-            newblock.localVarReferences = Block()
-            newblock.localVarReferences.transfer_attributes_from(
-                disjunctBlock.localVarReferences)
-
     def _warn_for_active_disjunct( self, innerdisjunct, outerdisjunct,
                                    var_substitute_map, zero_substitute_map):
         disjuncts = innerdisjunct.values() if innerdisjunct.is_indexed() else \
@@ -807,11 +773,6 @@ class Hull_Reformulation(Transformation):
                 # doesn't belong in an active Disjunction that we are
                 # transforming and we should be confused.
                 _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
-
-    def _warn_for_active_logical_statement(
-            self, logical_statment, disjunct, var_substitute_map,
-            zero_substitute_map):
-        _warn_for_active_logical_constraint(logical_statment, disjunct)
 
     def _transform_constraint(self, obj, disjunct, var_substitute_map,
                               zero_substitute_map):

@@ -447,29 +447,6 @@ def get_transformed_constraints(srcConstraint):
                      % srcConstraint.name)
         raise
 
-def _warn_for_active_disjunction(disjunction, disjunct):
-    # this should only have gotten called if the disjunction is active
-    assert disjunction.active
-    problemdisj = disjunction
-    if disjunction.is_indexed():
-        for i in sorted(disjunction.keys()):
-            if disjunction[i].active:
-                # a _DisjunctionData is active, we will yell about
-                # it specifically.
-                problemdisj = disjunction[i]
-                break
-
-    parentblock = problemdisj.parent_block()
-    # the disjunction should only have been active if it wasn't transformed
-    assert problemdisj.algebraic_constraint is None
-    _probDisjName = problemdisj.getname(fully_qualified=True)
-    _disjName = disjunct.getname(fully_qualified=True)
-    raise GDP_Error("Found untransformed disjunction '%s' in disjunct '%s'! "
-                    "The disjunction must be transformed before the "
-                    "disjunct. If you are using targets, put the "
-                    "disjunction before the disjunct in the list."
-                    % (_probDisjName, _disjName))
-
 def _warn_for_active_disjunct(innerdisjunct, outerdisjunct):
     assert innerdisjunct.active
     problemdisj = innerdisjunct

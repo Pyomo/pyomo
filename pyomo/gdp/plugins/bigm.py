@@ -32,8 +32,7 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
     is_child_of, get_src_disjunction, get_src_constraint, get_gdp_tree,
     get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
-    _warn_for_active_disjunction, _warn_for_active_disjunct, preprocess_targets,
-    _to_dict)
+     _warn_for_active_disjunct, preprocess_targets, _to_dict)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
@@ -152,7 +151,7 @@ class BigM_Transformation(Transformation):
             Set:         False,
             SetOf:       False,
             RangeSet:    False,
-            Disjunction: self._warn_for_active_disjunction,
+            Disjunction: False,
             Disjunct:    self._warn_for_active_disjunct,
             Block:       False,
             ExternalFunction: False,
@@ -331,8 +330,6 @@ class BigM_Transformation(Transformation):
 
     def _transform_disjunctionData(self, obj, index, parent_disjunct=None,
                                    root_disjunct=None):
-        if not obj.active:
-            return  # Do not process a deactivated disjunction
         # Create or fetch the transformation block
         if root_disjunct is not None:
             # We want to put all the transformed things on the root
@@ -458,17 +455,9 @@ class BigM_Transformation(Transformation):
             # variables down the line.
             handler(obj, disjunct, bigM, arg_list, suffix_list)
 
-    def _warn_for_active_disjunction(self, disjunction, disjunct, bigMargs,
-                                     arg_list, suffix_list):
-        _warn_for_active_disjunction(disjunction, disjunct)
-
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, bigMargs,
                                   arg_list, suffix_list):
         _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
-
-    def _warn_for_active_logical_statement(
-            self, logical_statment, disjunct, infodict, bigMargs, suffix_list):
-        _warn_for_active_logical_constraint(logical_statment, disjunct)
 
     def _get_constraint_map_dict(self, transBlock):
         if not hasattr(transBlock, "_constraintMap"):
