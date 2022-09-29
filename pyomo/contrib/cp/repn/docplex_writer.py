@@ -11,7 +11,7 @@
 
 # TODO: How do we defer so this doesn't mess up everything?
 import docplex.cp.model as cp
-x
+
 import itertools
 from operator import attrgetter
 
@@ -644,6 +644,22 @@ class DocplexWriter(object):
     doc='Direct interface to CPLEX CP Optimizer'
 )
 class CPOptimizerSolver(object):
+    CONFIG = ConfigDict("cp_optimizer_solver")
+    CONFIG.declare('symbolic_solver_labels', ConfigValue(
+        default=False,
+        domain=bool,
+        description='Write Pyomo Var and Constraint names to docplex model',
+    ))
+    CONFIG.declare('tee', ConfigValue(
+        default=False,
+        domain=bool,
+        description="Stream solver output to terminal."
+    ))
+    CONFIG.declare('options', ConfigValue(
+        default={},
+        description="Dictionary of solver options."
+    ))
+
     _solve_status_map = {
         cp.SOLVE_STATUS_UNKNOWN: TerminationCondition.unknown,
         cp.SOLVE_STATUS_INFEASIBLE: TerminationCondition.infeasible,
@@ -661,8 +677,17 @@ class CPOptimizerSolver(object):
         cp.STOP_CAUSE_EXIT: TerminationCondition.userInterrupt,
         # docplex says "Search aborted externally"
         cp.STOP_CAUSE_ABORT: TerminationCondition.userInterrupt,
+        # This is in their documentation, but not here, for some reason
         #cp.STOP_CAUSE_UNKNOWN: TerminationCondition.unkown
     }
+
+    def __init__(self, **kwds):
+        self.config = self.CONFIG()
+        self.config.set_value(kwds)
+
+    @property
+    def options(self):
+        return self.config.options
 
     def solve(self, model, **kwds):
         """Solve the model.
@@ -671,10 +696,19 @@ class CPOptimizerSolver(object):
             model (Block): a Pyomo model or block to be solved
 
         """
+        config = self.config()
+        config.set_value(kwds)
+
         writer = DocplexWriter()
         cpx_model, var_map = writer.write(model)
-        # TODO: solver options
-        msol = cpx_model.solve()
+        if not config.tee:
+            # If the user has also set LogVerbosity, we'll assume they know what
+            # they're doing.
+            verbosity = config.options.get('LogVerbosity')
+            if verbosity is None:
+                config.options['LogVerbosity'] = 'Quiet'
+
+        msol = cpx_model.solve(**self.options)
 
         # Transfer the solver status to the pyomo results object
         results = SolverResults()
@@ -796,6 +830,8 @@ if __name__ == '__main__':
 
     m.obj = Objective(sense=maximize, expr=m.x)
 
-    results = SolverFactory('cp_optimizer').solve(m)
+    opt = SolverFactory('cp_optimizer', options={'TimeLimit': 5})
+    opt.options['TimeLimit'] = 10
+    results = opt.solve(m)#, tee=True)
     print(results)
-    m.pprint()
+    #m.pprint()
