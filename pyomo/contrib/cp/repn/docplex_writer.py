@@ -11,11 +11,13 @@
 
 # TODO: How do we defer so this doesn't mess up everything?
 import docplex.cp.model as cp
-
+x
 import itertools
 from operator import attrgetter
 
+from pyomo.common import DeveloperError
 from pyomo.common.config import ConfigDict, ConfigValue
+from pyomo.common.collections import ComponentMap
 
 from pyomo.contrib.cp import IntervalVar
 from pyomo.contrib.cp.interval_var import (
@@ -32,6 +34,7 @@ from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
     NegatedStepFunction
 )
 
+from pyomo.core.base import minimize, maximize
 from pyomo.core.base.boolean_var import ScalarBooleanVar, _GeneralBooleanVarData
 from pyomo.core.base.var import ScalarVar, _GeneralVarData
 import pyomo.core.expr.current as EXPR
@@ -47,7 +50,9 @@ from pyomo.core.expr.visitor import (
 )
 from pyomo.core.base.set import SetProduct
 from pyomo.repn.plugins.nl_writer import categorize_valid_components
-from pyomo.opt import WriterFactory, SolverFactory
+from pyomo.opt import (
+    WriterFactory, SolverFactory, TerminationCondition, SolverResults
+)
 
 ### FIXME: Remove the following as soon as non-active components no
 ### longer report active==True
@@ -169,6 +174,7 @@ def _before_boolean_var(visitor, child):
         # return a Boolean expression (in docplex land) so this can be used as
         # an argument to logical expressions later
         visitor.var_map[_id] = cpx_var == 1
+        visitor.pyomo_to_docplex[child] = cpx_var
     return False, visitor.var_map[_id]
 
 def _before_var(visitor, child):
@@ -189,6 +195,7 @@ def _before_var(visitor, child):
                                                               child.domain))
         visitor.cpx.add(cpx_var)
         visitor.var_map[_id] = cpx_var
+        visitor.pyomo_to_docplex[child] = cpx_var
     return False, visitor.var_map[_id]
 
 def _create_docplex_interval_var(visitor, interval_var):
@@ -257,6 +264,7 @@ def _before_interval_var(visitor, child):
     if _id not in visitor.var_map:
         cpx_interval_var = _get_docplex_interval_var(visitor, child)
         visitor.var_map[_id] = cpx_interval_var
+        visitor.pyomo_to_docplex[child] = cpx_interval_var
 
     return False, visitor.var_map[_id]
 
@@ -509,12 +517,13 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         self._process_node = self._process_node_bx
 
         self.var_map = {}
+        self.pyomo_to_docplex = ComponentMap()
 
     def initializeWalker(self, expr):
         expr, src, src_idx = expr
         walk, result = self.beforeChild(None, expr, 0)
         if not walk:
-            return False, self.finalizeResult(result)
+            return False, result
         return True, expr
 
     def beforeChild(self, node, child, child_idx):
@@ -585,13 +594,19 @@ class DocplexWriter(object):
                                                     active=True,
                                                     descend_into=False):
                 active_objs.append(obj)
+                # [ESJ 09/29/22]: TODO: I think that CP Optimizer can support
+                # multiple objectives. We should generalize this later, but for
+                # now I don't much care.
                 if len(active_objs) > 1:
                     raise ValueError(
                         "More than one active objective defined for "
                         "input model '%s': Cannot write to docplex."
                         % model.name)
                 obj_expr = visitor.walk_expression((obj.expr, obj, 0))
-                cpx_model.add(cp.minimize(m.obj.sense*obj_expr))
+                if obj.sense is minimize:
+                    cpx_model.add(cp.minimize(obj_expr))
+                else:
+                    cpx_model.add(cp.maximize(obj_expr))
 
         # No objective is fine too, this is CP afterall...
 
@@ -621,7 +636,7 @@ class DocplexWriter(object):
                 cpx_model.add(expr)
 
         # That's all, folks.
-        return cpx_model, visitor.var_map
+        return cpx_model, visitor.pyomo_to_docplex
 
 
 @SolverFactory.register(
@@ -629,6 +644,26 @@ class DocplexWriter(object):
     doc='Direct interface to CPLEX CP Optimizer'
 )
 class CPOptimizerSolver(object):
+    _solve_status_map = {
+        cp.SOLVE_STATUS_UNKNOWN: TerminationCondition.unknown,
+        cp.SOLVE_STATUS_INFEASIBLE: TerminationCondition.infeasible,
+        cp.SOLVE_STATUS_FEASIBLE: TerminationCondition.feasible,
+        cp.SOLVE_STATUS_OPTIMAL: TerminationCondition.optimal,
+        cp.SOLVE_STATUS_JOB_ABORTED: None, # we need the fail status
+        cp.SOLVE_STATUS_JOB_FAILED: TerminationCondition.solverFailure
+    }
+    _stop_cause_map = {
+        # We only need to check this if we get an 'aborted' status, so if this
+        # says it hasn't been stopped, we're just confused at this point.
+        cp.STOP_CAUSE_NOT_STOPPED: TerminationCondition.unknown,
+        cp.STOP_CAUSE_LIMIT: TerminationCondition.maxTimeLimit,
+        # User called exit, maybe in a callback.
+        cp.STOP_CAUSE_EXIT: TerminationCondition.userInterrupt,
+        # docplex says "Search aborted externally"
+        cp.STOP_CAUSE_ABORT: TerminationCondition.userInterrupt,
+        #cp.STOP_CAUSE_UNKNOWN: TerminationCondition.unkown
+    }
+
     def solve(self, model, **kwds):
         """Solve the model.
 
@@ -641,10 +676,68 @@ class CPOptimizerSolver(object):
         # TODO: solver options
         msol = cpx_model.solve()
 
-        # TODO: solve status
+        # Transfer the solver status to the pyomo results object
+        results = SolverResults()
+        results.solver.name = "CP Optimizer"
+        results.problem.name = model.name
 
-        # TODO: transfer the solutions back to the pyomo model: Should we have
-        # made var_map a ComponentMap? How do we do this?
+        info = msol.get_solver_infos()
+        results.problem.number_of_constraints = info.get_number_of_constraints()
+        int_vars = info.get_number_of_integer_vars()
+        interval_vars = info.get_number_of_interval_vars()
+        results.problem.number_of_integer_vars = int_vars
+        results.problem.number_of_interval_vars = interval_vars
+        # This is a useless number, but so is 0, so...
+        results.problem.number_of_variables = int_vars + interval_vars
+
+        val = msol.get_objective_value()
+        bound = msol.get_objective_bound()
+        if cpx_model.is_maximization():
+            results.problem.number_of_objectives = 1
+            results.problem.sense = maximize
+            results.problem.lower_bound = val
+            results.problem.upper_bound = bound
+        elif cpx_model.is_minimization():
+            results.problem.number_of_objectives = 1
+            results.problem.sense = minimize
+            results.problem.lower_bound = bound
+            results.problem.upper_bound = val
+        else:
+            # it's a satisfaction problem
+            results.problem.number_of_objectives = 0
+            results.problem.sense = None
+            results.problem.lower_bound = None
+            results.problem.upper_bound = None
+
+        results.solver.solve_time = msol.get_solve_time()
+        solve_status = msol.get_solve_status()
+        results.solver.termination_condition = self._solve_status_map[
+            solve_status] if solve_status is not None else \
+            self._stop_cause_map[msol.get_stop_cause()]
+
+        # Copy the variable values onto the Pyomo model, using the map we stored
+        # on the writer.
+        for py_var, cp_var in var_map.items():
+            if py_var.ctype is IntervalVar:
+                sol = msol.get_var_solution(cp_var).get_value()
+                if len(sol) == 0:
+                    # The interval_var is absent
+                    py_var.is_present.set_value(False)
+                else:
+                    (start, end, size) = sol
+                    py_var.is_present.set_value(True)
+                    py_var.start_time.set_value(start, skip_validation=True)
+                    py_var.end_time.set_value(end, skip_validation=True)
+                    py_var.length.set_value(end - start, skip_validation=True)
+            elif py_var.ctype is Var:
+                py_var.set_value(msol.get_var_solution(cp_var).get_value(),
+                                 skip_validation=True)
+            else:
+                raise DeveloperError(
+                    "Unrecognized Pyomo type in pyomo-to-docplex variable map: "
+                    "%s" % type(py_var))
+
+        return results
 
 
 if __name__ == '__main__':
@@ -696,9 +789,13 @@ if __name__ == '__main__':
     print(expr)
 
     m.i = IntervalVar(optional=True)
-    m.i2 = IntervalVar([1, 2], optional=False)
+    m.i2 = IntervalVar([1, 2], optional=False, length=1)
     m.c2 = LogicalConstraint(expr=m.i.start_time.before(m.i2[1].end_time))
     expr = visitor.walk_expression((m.c2.body, m.c2, 0))
     print(expr)
 
-    SolverFactory('cp_optimizer').solve(m)
+    m.obj = Objective(sense=maximize, expr=m.x)
+
+    results = SolverFactory('cp_optimizer').solve(m)
+    print(results)
+    m.pprint()
