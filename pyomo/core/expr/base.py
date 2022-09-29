@@ -48,7 +48,7 @@ class ExpressionBase(object):
 
         Individual expression nodes may use different internal storage
         schemes, so it is imperative that developers use this method and
-        not assume the existance of a particular attribute!
+        not assume the existence of a particular attribute!
 
         Returns
         -------
@@ -89,7 +89,7 @@ class ExpressionBase(object):
             Sequence containing only the child nodes of this node.  The
             return type depends on the node storage model.  Users are
             not permitted to change the returned data (even for the case
-            of data returned as a list), as that breaks the promist of
+            of data returned as a list), as that breaks the promise of
             tree immutability.
 
         """
@@ -139,7 +139,7 @@ class ExpressionBase(object):
         Parameters
         ----------
         verbose: bool
-            If :const:`True`, then the the string representation
+            If :const:`True`, then the string representation
             consists of nested functions.  Otherwise, the string
             representation is an algebraic (infix notation) equation.
             Defaults to :const:`False`.
@@ -177,7 +177,7 @@ class ExpressionBase(object):
         Args:
             values (list): The string representations of the children of this
                 node.
-            verbose (bool): If :const:`True`, then the the string
+            verbose (bool): If :const:`True`, then the string
                 representation consists of nested functions.  Otherwise,
                 the string representation is an algebraic equation.
             smap:  If specified, this :class:`SymbolMap
@@ -366,10 +366,10 @@ class ExpressionBase(object):
             This method applies the logical operation of the
             operator to the arguments.  It does *not* evaluate
             the arguments in the process, but assumes that they
-            have been previously evaluated.  But noted that if
-            this class contains auxilliary data (e.g. like the
+            have been previously evaluated.  But note that if
+            this class contains auxiliary data (e.g. like the
             numeric coefficients in the :class:`LinearExpression
-            <pyomo.core.expr.current.LinearExpression>` class, then
+            <pyomo.core.expr.current.LinearExpression>` class) then
             those values *must* be evaluated as part of this
             function call.  An uninitialized parameter value
             encountered during the execution of this method is

@@ -321,8 +321,9 @@ class _DisjunctData(_BlockData):
 
     def __init__(self, component):
         _BlockData.__init__(self, component)
-        self.indicator_var = AutoLinkedBooleanVar()
-        self.binary_indicator_var = AutoLinkedBinaryVar(self.indicator_var)
+        with self._declare_reserved_components():
+            self.indicator_var = AutoLinkedBooleanVar()
+            self.binary_indicator_var = AutoLinkedBinaryVar(self.indicator_var)
         self.indicator_var.associate_binary_var(self.binary_indicator_var)
         # pointer to transformation block if this disjunct has been
         # transformed. None indicates it hasn't been transformed.
@@ -503,7 +504,10 @@ class _DisjunctionData(ActiveComponentData):
                 elif e.is_expression_type(ExpressionType.LOGICAL):
                     p.add(e)
                 else:
-                    raise RuntimeError("Unsupported expression type on ")
+                    raise RuntimeError(
+                        "Unsupported expression type on Disjunct "
+                        f"{disjunct.name}: expected either relational or "
+                        f"logical expression, found {e.__class__.__name__}")
             self.disjuncts.append(disjunct)
 
 

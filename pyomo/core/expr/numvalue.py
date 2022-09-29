@@ -367,7 +367,7 @@ def as_numeric(obj):
             deprecation_warning(
                 "returning a relational expression from as_numeric().  "
                 "Relational expressions are no longer numeric types.  "
-                "In this future this will raise a TypeError.")
+                "In the future this will raise a TypeError.", version='TBD')
             return obj
         else:
             try:
@@ -400,7 +400,7 @@ def as_numeric(obj):
 def check_if_numeric_type(obj):
     """Test if the argument behaves like a numeric type.
 
-    We check for "numeric types" by by checking if we can add zero to it
+    We check for "numeric types" by checking if we can add zero to it
     without changing the object's type.  If that works, then we register
     the type in native_numeric_types.
 

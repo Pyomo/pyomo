@@ -56,6 +56,7 @@ class _GDPoptAlgorithm():
         self.incumbent_continuous_soln = None
 
         self.original_obj = None
+        self._dummy_obj = None
         self.original_util_block = None
 
         self.log_formatter = ('{:>9}   {:>15}   {:>11.5f}   {:>11.5f}   '
@@ -121,6 +122,11 @@ class _GDPoptAlgorithm():
             finally:
                 self._get_final_pyomo_results_object()
                 self._log_termination_message(config.logger)
+                if self.algorithm == "LBB":
+                    config.logger.warning(
+                        "09/06/22: The GDPopt LBB algorithm currently has "
+                        "known issues. Please use the results with caution "
+                        "and report any bugs!")
                 if (self.pyomo_results.solver.termination_condition not in
                     {tc.infeasible, tc.unbounded}):
                     self._transfer_incumbent_to_original_model(config.logger)
@@ -407,7 +413,7 @@ class _GDPoptAlgorithm():
         if number_of_objectives == 0:
             config.logger.warning(
                 'Model has no active objectives. Adding dummy objective.')
-            discrete_obj = Objective(expr=1)
+            self._dummy_obj = discrete_obj = Objective(expr=1)
             original_model.add_component(unique_component_name(original_model,
                                                                'dummy_obj'),
                                          discrete_obj)
@@ -451,6 +457,9 @@ class _GDPoptAlgorithm():
         # prior one.
         if self.original_obj is not None:
             self.original_obj.activate()
+        if self._dummy_obj is not None:
+            self._dummy_obj.parent_block().del_component(self._dummy_obj)
+            self._dummy_obj = None
 
     def _get_final_pyomo_results_object(self):
         """

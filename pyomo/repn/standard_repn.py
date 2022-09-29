@@ -211,7 +211,7 @@ class StandardRepn(object):
 
         if self.nonlinear_expr is not None:
             if expr.__class__ in native_numeric_types and expr == 0:
-                # Som "NL" expressions do not support addition
+                # Some "NL" expressions do not support addition
                 # (e.g. relational expressions)
                 return self.nonlinear_expr
             expr += self.nonlinear_expr
@@ -921,7 +921,7 @@ def _collect_standard_repn(exp, multiplier, idMap,
     #
     # Catch any known numeric constants
     #
-    if exp.__class__ in native_numeric_types:
+    if exp.__class__ in native_numeric_types or not exp.is_potentially_variable():
         return _collect_const(exp, multiplier, idMap, compute_values,
                               verbose, quadratic)
     #
