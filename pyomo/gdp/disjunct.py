@@ -504,7 +504,10 @@ class _DisjunctionData(ActiveComponentData):
                 elif e.is_expression_type(ExpressionType.LOGICAL):
                     p.add(e)
                 else:
-                    raise RuntimeError("Unsupported expression type on ")
+                    raise RuntimeError(
+                        "Unsupported expression type on Disjunct "
+                        f"{disjunct.name}: expected either relational or "
+                        f"logical expression, found {e.__class__.__name__}")
             self.disjuncts.append(disjunct)
 
 

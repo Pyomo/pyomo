@@ -160,7 +160,7 @@ class RangedExpression(RelationalExpression):
 
     args:
         args (tuple): child nodes
-        strict (tuple): flags that indicates whether the inequalities are strict
+        strict (tuple): flags that indicate whether the inequalities are strict
     """
 
     __slots__ = ('_strict',)
@@ -405,7 +405,7 @@ def _process_relational_arg(arg, n):
 def _generate_relational_expression(etype, lhs, rhs):
     # Note that the use of "global" state flags is fast, but not
     # thread-safe.  This should not be an issue because the GIL
-    # effectively prevents parallel model construction.  If we even need
+    # effectively prevents parallel model construction.  If we ever need
     # to revisit this design, we can pass in a "state" to
     # _process_relational_arg() - at the cost of creating/destroying the
     # state and an extra function argument.
