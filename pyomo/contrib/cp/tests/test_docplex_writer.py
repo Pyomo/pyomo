@@ -508,12 +508,41 @@ class TestCPExpressionWalker(unittest.TestCase):
 
         self.assertTrue(expr.equals(x**2 + 7))
 
-    # def test_indirection_single_index(self):
-    #     m = self.get_model()
-    #     m.c = LogicalConstraint(expr=m.a[m.x] >= 3.5)
+    def test_indirection_single_index(self):
+        m = self.get_model()
+        m.a.domain = Integers
+        m.c = Constraint(expr=m.a[m.x] >= 3.5)
 
-    #     visitor = self.get_visitor()
-    #     expr = visitor.walk_expression((m.c.body, m.c, 0))
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
 
-    #     self.assertIn(id(m.x), visitor.var_map)
-    #     x = visitor.var_map[id(m.x)]
+        self.assertIn(id(m.x), visitor.var_map)
+        x = visitor.var_map[id(m.x)]
+        a = []
+        for v in m.a.values():
+            self.assertIn(id(v), visitor.var_map)
+            a.append(visitor.var_map[id(v)])
+
+        self.assertTrue(expr.equals(cp.element(a, x)))
+
+    def test_indirection_interval_var(self):
+        m = self.get_model()
+        m.y = Var(domain=Integers, bounds=[1,2])
+        m.c = LogicalConstraint(expr=m.i2[m.y].start_time.before(m.i.end_time))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+        self.assertIn(id(m.i), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+        i = visitor.var_map[id(m.i)]
+
+        self.assertTrue(expr.equals(cp.element([cp.start_of(i21), 
+                                                cp.start_of(i22)], y) <=
+                                    cp.end_of(i)))

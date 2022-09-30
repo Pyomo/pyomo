@@ -22,7 +22,7 @@ from pyomo.common.collections import ComponentMap
 from pyomo.contrib.cp import IntervalVar
 from pyomo.contrib.cp.interval_var import (
     IntervalVarStartTime, IntervalVarEndTime, IntervalVarPresence,
-    IntervalVarLength, ScalarIntervalVar, IntervalVarData
+    IntervalVarLength, ScalarIntervalVar, IntervalVarData, IndexedIntervalVar
 )
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     StartBeforeStartExpression, StartBeforeEndExpression,
@@ -37,7 +37,7 @@ from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
 from pyomo.core.base import minimize, maximize
 from pyomo.core.base.boolean_var import ScalarBooleanVar, _GeneralBooleanVarData
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
-from pyomo.core.base.var import ScalarVar, _GeneralVarData
+from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.logical_expr import (
     AndExpression, OrExpression, XorExpression, NotExpression,
@@ -76,7 +76,7 @@ def _check_var_domain(visitor, node, var):
             % (node, var))
     return var.domain & RangeSet(*bnds)
 
-def _handle_getitem(visitor, node, data):
+def _handle_getitem(visitor, node, *data):#, *cpx_idx):
     # First we need to determine the range for each of the the
     # arguments.  They can be:
     #
@@ -155,12 +155,31 @@ def _handle_getitem(visitor, node, data):
     elements = []
     for idx in SetProduct(*arg_domain):
         try:
+            # print(idx)
+            idx = idx if len(idx) > 1 else idx[0]
+            # print(idx)
             elements.append(data[0][idx])
         except KeyError:
+            raise RuntimeError("CP optimizer thinks this is infeasible anyway")
             # TODO: fill in bogus variable and add a constraint
             # disallowing it from being selected
             elements.append(None)
-    return (elements, expr)
+    try:
+        return cp.element(elements, expr)
+    except:
+        return (elements, expr)
+
+# def _handle_getitem(visitor, node, array, index):
+#     return cp.element(array, index)
+
+def _handle_getattr(visitor, node, obj, attr):
+    set_trace()
+    if attr == 'start_time':
+        return cp.start_of(obj)
+    elif attr == 'end_time':
+        return cp.end_of(obj)
+    elif attr == 'length':
+        return cp.length_of(obj)
 
 def _before_boolean_var(visitor, child):
     _id = id(child)
@@ -178,26 +197,42 @@ def _before_boolean_var(visitor, child):
         visitor.pyomo_to_docplex[child] = cpx_var
     return False, visitor.var_map[_id]
 
+def _create_docplex_var(pyomo_var, name=None):
+    if pyomo_var.is_binary():
+        return cp.binary_var(name=name)
+    elif pyomo_var.is_integer():
+        return cp.integer_var(min=pyomo_var.bounds[0], max=pyomo_var.bounds[1],
+                              name=name)
+    else:
+        raise ValueError("The LogicalToDoCplex writer can only support "
+                         "integer- or Boolean-valued variables. Cannot "
+                         "write Var %s with domain %s" % (pyomo_var.name,
+                                                          pyomo_var.domain))
+
 def _before_var(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
         if child.fixed:
             return False, child.value
-        nm = child.name if visitor.symbolic_solver_labels else None
-        if child.is_binary():
-            cpx_var = cp.binary_var(name=nm)
-        elif child.is_integer():
-            cpx_var = cp.integer_var(min=child.bounds[0], max=child.bounds[1],
-                                     name=nm)
-        else:
-            raise ValueError("The LogicalToDoCplex writer can only support "
-                             "integer- or Boolean-valued variables. Cannot "
-                             "write Var %s with domain %s" % (child.name,
-                                                              child.domain))
+        cpx_var = _create_docplex_var(
+            child,
+            name=child.name if visitor.symbolic_solver_labels else None)
         visitor.cpx.add(cpx_var)
         visitor.var_map[_id] = cpx_var
         visitor.pyomo_to_docplex[child] = cpx_var
     return False, visitor.var_map[_id]
+
+def _before_indexed_var(visitor, child):
+    cpx_vars = {}
+    for i, v in child.items():
+        cpx_var = _create_docplex_var(
+            v,
+            name=v.name if visitor.symbolic_solver_labels else None)
+        visitor.cpx.add(cpx_var)
+        visitor.var_map[id(v)] = cpx_var
+        visitor.pyomo_to_docplex[v] = cpx_var
+        cpx_vars[i] = cpx_var
+    return False, cpx_vars
 
 def _handle_named_expression_node(visitor, node, expr):
     visitor._named_expressions[id(node)] = expr
@@ -278,6 +313,15 @@ def _before_interval_var(visitor, child):
         visitor.pyomo_to_docplex[child] = cpx_interval_var
 
     return False, visitor.var_map[_id]
+
+def _before_indexed_interval_var(visitor, child):
+    cpx_vars = {}
+    for i, v in child.items():
+        cpx_interval_var = _get_docplex_interval_var(visitor, v)
+        visitor.var_map[id(v)] = cpx_interval_var
+        visitor.pyomo_to_docplex[v] = cpx_interval_var
+        cpx_vars[i] = cpx_interval_var
+    return False, cpx_vars
 
 def _before_interval_var_start_time(visitor, child):
     _id = id(child)
@@ -476,6 +520,7 @@ def _handle_always_in_node(visitor, node, cumul_func, lb, ub, start, end):
 class LogicalToDoCplex(StreamBasedExpressionVisitor):
     _operator_handles = {
         EXPR.GetItemExpression: _handle_getitem,
+        EXPR.GetAttrExpression: _handle_getattr,
         EXPR.NegationExpression: _handle_negation_node,
         EXPR.ProductExpression: _handle_product_node,
         EXPR.DivisionExpression: _handle_division_node,
@@ -517,8 +562,10 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         IntervalVarPresence: _before_interval_var_presence,
         ScalarIntervalVar: _before_interval_var,
         IntervalVarData: _before_interval_var,
+        IndexedIntervalVar: _before_indexed_interval_var,
         ScalarVar: _before_var,
         _GeneralVarData: _before_var,
+        IndexedVar: _before_indexed_var,
         ScalarBooleanVar: _before_boolean_var,
         _GeneralBooleanVarData: _before_boolean_var,
         CumulativeFunction: _before_cumulative_function,
@@ -554,6 +601,9 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         return True, None
 
     def exitNode(self, node, data):
+        print(node.__class__)
+        print(node)
+        print(data)
         return self._operator_handles[node.__class__](self, node, *data)
 
     finalizeResult = None
@@ -805,6 +855,11 @@ if __name__ == '__main__':
 
     m.b = Var(m.I, m.I)
     m.y = Var(within=[1, 3, 5])
+
+    e = m.a[m.x]
+    ans = _handle_getitem(None, e, [m.a, m.x])
+    print("\n", e)
+    print(tostr(ans))
 
     e = m.b[m.x, 3]
     ans = _handle_getitem(None, e, [m.b, m.x, 3])
