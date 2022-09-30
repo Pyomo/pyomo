@@ -36,6 +36,7 @@ from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
 
 from pyomo.core.base import minimize, maximize
 from pyomo.core.base.boolean_var import ScalarBooleanVar, _GeneralBooleanVarData
+from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.var import ScalarVar, _GeneralVarData
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.logical_expr import (
@@ -197,6 +198,16 @@ def _before_var(visitor, child):
         visitor.var_map[_id] = cpx_var
         visitor.pyomo_to_docplex[child] = cpx_var
     return False, visitor.var_map[_id]
+
+def _handle_named_expression_node(visitor, node, expr):
+    visitor._named_expressions[id(node)] = expr
+    return expr
+
+def _before_named_expression(visitor, child):
+    _id = id(child)
+    if _id not in visitor._named_expressions:
+        return True, None
+    return False, visitor._named_expressions[_id]
 
 def _create_docplex_interval_var(visitor, interval_var):
     # Create a new docplex interval var and then figure out all the info that
@@ -496,6 +507,8 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         EndAtStartExpression: _handle_end_at_start_expression_node,
         EndAtEndExpression: _handle_end_at_end_expression_node,
         AlwaysIn: _handle_always_in_node,
+        _GeneralExpressionData: _handle_named_expression_node,
+        ScalarExpression: _handle_named_expression_node,
     }
     _var_handles = {
         IntervalVarStartTime: _before_interval_var_start_time,
@@ -509,6 +522,8 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         ScalarBooleanVar: _before_boolean_var,
         _GeneralBooleanVarData: _before_boolean_var,
         CumulativeFunction: _before_cumulative_function,
+        _GeneralExpressionData: _before_named_expression,
+        ScalarExpression: _before_named_expression,
     }
 
     def __init__(self, cpx_model, symbolic_solver_labels=False):
@@ -517,6 +532,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         self._process_node = self._process_node_bx
 
         self.var_map = {}
+        self._named_expressions = {}
         self.pyomo_to_docplex = ComponentMap()
 
     def initializeWalker(self, expr):
@@ -532,7 +548,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
             return False, child
 
         # Convert Vars Logical vars to docplex equivalents
-        if not child.is_expression_type():
+        if not child.is_expression_type() or child.is_named_expression_type():
             return self._var_handles[child.__class__](self, child)
 
         return True, None
@@ -832,6 +848,6 @@ if __name__ == '__main__':
 
     opt = SolverFactory('cp_optimizer', options={'TimeLimit': 5})
     opt.options['TimeLimit'] = 10
-    results = opt.solve(m)#, tee=True)
+    results = opt.solve(m, tee=True)
     print(results)
     #m.pprint()
