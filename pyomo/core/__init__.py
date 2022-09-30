@@ -17,10 +17,12 @@ from pyomo.core.expr.numvalue import (
 
 from pyomo.core.expr.boolean_value import BooleanValue
 
-from pyomo.core.expr.numeric_expr import linear_expression, nonlinear_expression
-from pyomo.core.expr.logical_expr import (land, lor, equivalent, exactly,
-                                          atleast, atmost, implies, lnot,
-                                          xor, inequality)
+from pyomo.core.expr import (
+    linear_expression, nonlinear_expression,
+    land, lor, equivalent, exactly,
+    atleast, atmost, implies, lnot,
+    xor, inequality,
+)
 
 from pyomo.core.expr.current import (
     log, log10, sin, cos, tan, cosh, sinh, tanh,
@@ -80,8 +82,7 @@ from pyomo.core.base.param import Param
 from pyomo.core.base.var import (Var, ScalarVar, VarList)
 from pyomo.core.base.boolean_var import (
     BooleanVar, BooleanVarList, ScalarBooleanVar)
-from pyomo.core.base.constraint import (logical_expr,
-                                        simple_constraint_rule,
+from pyomo.core.base.constraint import (simple_constraint_rule,
                                         simple_constraintlist_rule,
                                         ConstraintList, Constraint)
 from pyomo.core.base.logical_constraint import (

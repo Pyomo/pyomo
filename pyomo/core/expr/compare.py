@@ -10,16 +10,15 @@
 #  ___________________________________________________________________________
 from .visitor import StreamBasedExpressionVisitor
 from .numvalue import nonpyomo_leaf_types
-from .numeric_expr import (
+from .current import (
     LinearExpression, MonomialTermExpression, SumExpression, ExpressionBase,
     ProductExpression, DivisionExpression, PowExpression,
     NegationExpression, UnaryFunctionExpression, ExternalFunctionExpression,
     NPV_ProductExpression, NPV_DivisionExpression, NPV_PowExpression,
     NPV_SumExpression, NPV_NegationExpression, NPV_UnaryFunctionExpression,
     NPV_ExternalFunctionExpression, Expr_ifExpression, AbsExpression,
-    NPV_AbsExpression, NumericValue)
-from pyomo.core.expr.logical_expr import (
-    RangedExpression, InequalityExpression, EqualityExpression
+    NPV_AbsExpression, NumericValue,
+    RangedExpression, InequalityExpression, EqualityExpression,
 )
 from typing import List
 from pyomo.common.errors import PyomoException

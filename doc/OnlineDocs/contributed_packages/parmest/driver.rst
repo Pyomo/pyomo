@@ -156,3 +156,14 @@ expression which is used to define "SecondStageCost".  The objective
 function can be used to customize data points and weights that are used
 in parameter estimation.
 
+Suggested initialization procedure for parameter estimation problems
+--------------------------------------------------------------------
+
+To check the quality of initial guess values provided for the fitted parameters, we suggest solving a 
+square instance of the problem prior to solving the parameter estimation problem using the following steps:
+
+1. Create :class:`~pyomo.contrib.parmest.parmest.Estimator` object. To initialize the parameter estimation solve from the square problem solution, set optional argument ``solver_options = {bound_push: 1e-8}``.
+
+2. Call :class:`~pyomo.contrib.parmest.parmest.Estimator.objective_at_theta` with optional argument ``(initialize_parmest_model=True)``. Different initial guess values for the fitted parameters can be provided using optional argument `theta_values` (**Pandas Dataframe**)
+
+3. Solve parameter estimation problem by calling :class:`~pyomo.contrib.parmest.parmest.Estimator.theta_est`

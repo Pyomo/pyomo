@@ -450,7 +450,7 @@ def reverse_ad(expr):
 
     Parameters
     ----------
-    expr: pyomo.core.expr.numeric_expr.ExpressionBase
+    expr: pyomo.core.expr.numeric_expr.NumericExpression
         expression to differentiate
 
     Returns
@@ -468,7 +468,7 @@ def reverse_sd(expr):
 
     Parameters
     ----------
-    expr: pyomo.core.expr.numeric_expr.ExpressionBase
+    expr: pyomo.core.expr.numeric_expr.NumericExpression
         expression to differentiate
 
     Returns

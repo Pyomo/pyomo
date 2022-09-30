@@ -29,7 +29,7 @@ class PyomoObject(object):
         """Return False unless this class is a variable object"""
         return False
 
-    def is_expression_type(self):
+    def is_expression_type(self, expression_system=None):
         """Return True if this numeric value is an expression"""
         return False
 

@@ -156,6 +156,11 @@ class TestGDPoptUnit(unittest.TestCase):
             self.assertIn("Model has no active objectives. Adding dummy "
                           "objective.", output.getvalue().strip())
 
+        # check that the dummy objective is removed after the solve (else
+        # repeated solves result in the error about multiple active objectives
+        # on the model)
+        self.assertIsNone(m.component("dummy_obj"))
+
     def test_multiple_objectives(self):
         m = ConcreteModel()
         m.x = Var()
