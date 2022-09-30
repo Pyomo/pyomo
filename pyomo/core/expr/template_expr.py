@@ -242,7 +242,7 @@ class CallExpression(NumericExpression):
                 args += ', '
             args += ', '.join(
                 f'{key}={val}' for key, val in
-                zip(self._kwds, result[na:])
+                zip(self._kwds, values[na:])
             )
         if verbose:
             return f"call({values[0]}, {args})"
