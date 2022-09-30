@@ -27,7 +27,7 @@ from pyomo.core.expr.relational_expr import NotEqualExpression
 from pyomo.environ import (
     ConcreteModel, RangeSet, Var, BooleanVar, Constraint, LogicalConstraint,
     PositiveIntegers, Binary, NonNegativeIntegers, NegativeIntegers,
-    NonPositiveIntegers, Integers, inequality
+    NonPositiveIntegers, Integers, inequality, Expression
 )
 
 from pytest import set_trace
@@ -494,3 +494,26 @@ class TestCPExpressionWalker(unittest.TestCase):
                                                  cp.step_at_start(i21, 2) -
                                                  cp.step_at_end(i22, -1), 0, 3,
                                                  0, 10)))
+
+    def test_named_expression(self):
+        m = self.get_model()
+        m.e = Expression(expr=m.x**2 + 7)
+        m.c = Constraint(expr=m.e <= 32)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.x), visitor.var_map)
+        x = visitor.var_map[id(m.x)]
+
+        self.assertTrue(expr.equals(x**2 + 7))
+
+    # def test_indirection_single_index(self):
+    #     m = self.get_model()
+    #     m.c = LogicalConstraint(expr=m.a[m.x] >= 3.5)
+
+    #     visitor = self.get_visitor()
+    #     expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+    #     self.assertIn(id(m.x), visitor.var_map)
+    #     x = visitor.var_map[id(m.x)]
