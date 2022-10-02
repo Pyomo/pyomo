@@ -1070,9 +1070,14 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
                                rhs_vec=rhs_vec)
         m.uncertainty_set_constr = budget_set.set_as_constraint(uncertain_params=m.uncertain_params)
 
-        self.assertEqual(len(budget_membership_mat), len(m.uncertainty_set_constr.index_set()),
-                         msg="Budget uncertainty set constraints must be as many as the"
-                             "number of rows in the matrix A.")
+        self.assertEqual(
+            len(budget_set.coefficients_mat),
+            len(m.uncertainty_set_constr.index_set()),
+            msg=(
+                "Number of budget set constraints should be equal to the "
+                "number of rows in the 'coefficients_mat' attribute"
+            ),
+        )
 
     def test_point_in_set(self):
         m = ConcreteModel()

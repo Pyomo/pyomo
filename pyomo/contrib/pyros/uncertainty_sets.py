@@ -204,6 +204,84 @@ def validate_dimensions(arr_name, arr, dim, display_value=False):
         )
 
 
+def validate_array(
+        arr,
+        arr_name,
+        dim,
+        valid_types,
+        valid_type_desc=None,
+        required_shape=None,
+        ):
+    """
+    Validate shape and entry types of an array-like object.
+
+    Parameters
+    ----------
+    arr : array_like
+        Object to validate.
+    arr_name : str
+        A name/descriptor of the object to validate.
+        Usually, this is the name of an object attribute
+        to which the array is meant to be set.
+    dim : int
+        Required dimension of the array-like object.
+    valid_types : set[type]
+        Allowable type(s) for each entry of the array.
+    valid_type_desc : str or None, optional
+        Descriptor for the allowable types.
+    required_shape : list or None, optional
+        Specification of the length of the array in each dimension.
+        If `None` is provided, no specifications are imposed.
+        If a `list` is provided, then each entry of the listmust be
+        an `int` specifying the required length in the dimension
+        corresponding to the position of the entry
+        or `None` (meaning no requirement for the length in the
+        corresponding dimension).
+    """
+    np_arr = np.array(arr, dtype=object)
+    validate_dimensions(arr_name, np_arr, dim, display_value=False)
+
+    def generate_shape_str(shape, required_shape):
+        shape_str = ""
+        assert len(shape) == len(required_shape)
+        for idx, (sval, rsval) in enumerate(zip(shape, required_shape)):
+            if rsval is None:
+                shape_str += "..."
+            else:
+                shape_str += f"{sval}"
+            if idx < len(shape) - 1:
+                shape_str += ","
+        return "(" + shape_str + ")"
+
+    # validate shape requirements
+    if required_shape is not None:
+        assert len(required_shape) == dim
+        for idx, size in enumerate(required_shape):
+            if size is not None and size != np_arr.shape[idx]:
+                req_shape_str = generate_shape_str(
+                    required_shape,
+                    required_shape,
+                )
+                actual_shape_str = generate_shape_str(
+                    np_arr.shape,
+                    required_shape,
+                )
+                raise ValueError(
+                    f"Attribute '{arr_name}' should be of shape "
+                    f"{req_shape_str}, but detected shape "
+                    f"{actual_shape_str}"
+                )
+
+    for val in np_arr.flat:
+        validate_arg_type(
+            arr_name,
+            val,
+            valid_types,
+            valid_type_desc=valid_type_desc,
+            is_entry_of_arg=True,
+        )
+
+
 def uncertainty_sets(obj):
     if not isinstance(obj, UncertaintySet):
         raise ValueError("Expected an UncertaintySet object, instead recieved %s" % (obj,))
@@ -432,53 +510,64 @@ class BoxSet(UncertaintySet):
     Parameters
     ----------
     bounds : (N, 2) array_like
-        Lower and upper bounds for each uncertain parameter (i.e. each
-        dimension of the set).
-
-    Attributes
-    ----------
-    bounds : (N, 2) array_like
-        Lower and upper bounds for each of the N uncertain parameter
-        dimensions.
-    type : str
-        Brief descriptor of the type of the uncertainty set.
+        Lower and upper bounds for each dimension of the set.
     """
 
     def __init__(self, bounds):
         """Initialize self (see class docstring).
 
         """
-        # validate shape
-        validate_dimensions("bounds", bounds, 2)
-        bounds_arr = np.asarray(bounds)
-        if bounds_arr.shape[-1] != 2:
-            raise ValueError(
-                "Argument `bounds` to BoxSet constructor should be of shape "
-                f"(...,2), but detected shape (...,{bounds_arr.shape[-1]})"
-            )
+        self.bounds = bounds
 
-        # validate bound types, values
-        for lb_ub_pair in bounds:
-            for val in lb_ub_pair:
-                validate_arg_type(
-                    "bounds", val, valid_num_types,
-                    valid_type_desc="a valid numeric type",
-                    is_entry_of_arg=True,
-                )
+    @property
+    def type(self):
+        """
+        str : Brief description of the type of the uncertainty set.
+        """
+        return "box"
 
-            lb, ub = lb_ub_pair[0], lb_ub_pair[1]
+    @property
+    def bounds(self):
+        """
+        (N, 2) numpy.ndarray :
+            Lower and upper bounds for each dimension of the set.
+
+        The bounds of a ``BoxSet`` instance can be changed, such that
+        the dimension of the set remains unchanged.
+        """
+        return self._bounds
+
+    @bounds.setter
+    def bounds(self, val):
+        validate_array(
+            arr=val,
+            arr_name="bounds",
+            dim=2,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=[None, 2],
+        )
+
+        bounds_arr = np.array(val)
+
+        for lb, ub in bounds_arr:
             if lb > ub:
                 raise ValueError(
                     f"Lower bound {lb} exceeds upper bound {ub}"
                 )
 
-        self.bounds = bounds
-        self.type = "box"
+        # box set dimension is immutable
+        if hasattr(self, "_bounds") and bounds_arr.shape[0] != self.dim:
+            raise ValueError(
+                "Attempting to set bounds of a box set of dimension "
+                f"{self.dim} to a value of dimension {bounds_arr.shape[0]}"
+            )
+        self._bounds = np.array(val)
 
     @property
     def dim(self):
-        """Dimension of the box set.
-
+        """
+        int : Dimension of the box set.
         """
         return len(self.bounds)
 
@@ -497,11 +586,10 @@ class BoxSet(UncertaintySet):
 
         Returns
         -------
-        : (N, 2) array_like
-            Box set bounds; this is equal to the box set's `bounds`
-            attribute.
+        : list(tuple)
+            Box set bounds.
         """
-        return self.bounds
+        return [tuple(bound) for bound in self.bounds]
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
@@ -541,89 +629,137 @@ class CardinalitySet(UncertaintySet):
     Parameters
     ----------
     origin : (N,) array_like
-        Origin of the set (e.g. nominal parameter values).
+        Origin of the set (e.g. nominal uncertain parameter values).
     positive_deviation : (N,) array_like
-        Maximal deviation in each dimension (i.e. for the value
-        of each uncertain parameter).
+        Maximal non-negative coordinate deviation from the origin
+        in each dimension.
     gamma : numeric type
-        Scalar which provides an upper bound for the number
-        of uncertain parameters which may maximally deviate
-        from their respective origin values.
-        Setting `gamma` to 0 reduces the set to a singleton
-        containing the center, while setting `gamma` to N
-        reduces the set to a hyperrectangle whose bounds
-        are [origin, origin + max deviation] in each dimension.
-
-    Attributes
-    ----------
-    origin : (N,) array_like
-        Origin of the set (e.g. nominal parameter values).
-    positive_deviation : (N,) array_like
-        Maximal deviations in each dimension (i.e. for each
-        uncertain parameter).
-    gamma : numeric type
-        Scalar which provides an upper bound for the number
-        of uncertain parameters which may maximally deviate
-        from their respective origin values.
-        Setting `gamma` to 0 reduces the set to a singleton
-        containing the center, while setting `gamma` to N
-        reduces the set to a hyperrectangle whose bounds
-        are [origin, origin + max deviation] in each dimension.
-    type : str
-        Brief descriptor of the type of the uncertainty set.
+        Upper bound for the number of uncertain parameters which
+        may realize their maximal deviations from the origin
+        simultaneously.
     """
 
     def __init__(self, origin, positive_deviation, gamma):
         """Initialize self (see class docstring).
 
         """
-        # === Dimension of positive_deviations and origin must be same
-        origin_len = len(origin)
-        deviation_len = len(positive_deviation)
-        if len(origin) != len(positive_deviation):
-            raise ValueError(
-                f"Arguments `origin` (length {origin_len}) and "
-                f" `positive_deviation` (length {deviation_len}) "
-                "do not have the same length "
-            )
-
-        for orig_val, dev_val in zip(origin, positive_deviation):
-            # validate numeric type
-            validate_arg_type(
-                "origin", orig_val, valid_num_types,
-                "a valid numeric type", True,
-            )
-            validate_arg_type(
-                "positive_deviation", dev_val, valid_num_types,
-                "a valid numeric type", True,
-            )
-            if dev_val < 0:
-                raise ValueError(
-                    f"Entry '{dev_val}' of the argument `positive_deviation` "
-                    "is not non-negative (provided value {dev_val})"
-                )
-
-        # validate gamma
-        validate_arg_type(
-            "gamma", gamma, valid_num_types,
-            "a valid numeric type", False,
-        )
-        if gamma < 0 or gamma > origin_len:
-            raise ValueError(
-                "For origin and deviations provided, argument "
-                f"`gamma` must be a number between 0 and {origin_len} "
-                f"(provided value {gamma})"
-            )
-
         self.origin = origin
         self.positive_deviation = positive_deviation
         self.gamma = gamma
-        self.type = "cardinality"
+
+    @property
+    def type(self):
+        """
+        str : Brief description of the type of the uncertainty set.
+        """
+        return "cardinality"
+
+    @property
+    def origin(self):
+        """
+        (N,) numpy.ndarray :
+            Origin of the cardinality set (e.g. nominal parameter
+            values).
+        """
+        return self._origin
+
+    @origin.setter
+    def origin(self, val):
+        validate_array(
+            arr=val,
+            arr_name="origin",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+        )
+
+        # dimension of the set is immutable
+        val_arr = np.array(val)
+        if hasattr(self, "_origin"):
+            if val_arr.size != self.dim:
+                raise ValueError(
+                    "Attempting to set attribute 'origin' of cardinality "
+                    f"set of dimension {self.dim} "
+                    f"to value of dimension {val_arr.size}"
+                )
+
+        self._origin = val_arr
+
+    @property
+    def positive_deviation(self):
+        """
+        (N,) numpy.ndarray :
+            Maximal coordinate deviations from the origin
+            in each dimension. All entries are nonnegative.
+        """
+        return self._positive_deviation
+
+    @positive_deviation.setter
+    def positive_deviation(self, val):
+        validate_array(
+            arr=val,
+            arr_name="positive_deviation",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+        )
+
+        for dev_val in val:
+            if dev_val < 0:
+                raise ValueError(
+                    f"Entry {dev_val} of attribute 'positive_deviation' "
+                    f"is negative value"
+                )
+
+        val_arr = np.array(val)
+
+        # dimension of the set is immutable
+        if hasattr(self, "_origin"):
+            if val_arr.size != self.dim:
+                raise ValueError(
+                    "Attempting to set attribute 'positive_deviation' of "
+                    f"cardinality set of dimension {self.dim} "
+                    f"to value of dimension {val_arr.size}"
+                )
+
+        self._positive_deviation = val_arr
+
+    @property
+    def gamma(self):
+        """
+        numeric type :
+            Upper bound for the number of uncertain parameters which
+            may maximally deviate from their respective origin values
+            simultaneously. Must be a numerical value ranging from 0 to
+            the set dimension.
+
+        Note that mathematically, setting `gamma` to 0 reduces the set
+        to a singleton containing the center, while setting `gamma`
+        to the set dimension reduces the set to a hyperrectangle
+        with bounds ``[origin, origin + positive_deviation]``.
+        """
+        return self._gamma
+
+    @gamma.setter
+    def gamma(self, val):
+        validate_arg_type(
+            "gamma", val, valid_num_types,
+            "a valid numeric type", False,
+        )
+        if val < 0 or val > self.dim:
+            raise ValueError(
+                "Cardinality set attribute "
+                f"'gamma' must be a real number between 0 and dimension "
+                f"{self.dim} "
+                f"(provided value {val})"
+            )
+
+        self._gamma = val
 
     @property
     def dim(self):
-        """Dimension of the cardinality set.
-
+        """
+        int : Dimension of the cardinality set.
         """
         return len(self.origin)
 
@@ -730,72 +866,37 @@ class PolyhedralSet(UncertaintySet):
     rhs_vec : (M,) array_like
         Right-hand side values for the linear inequality
         constraints defining the polyhedral set.
-
-    Attributes
-    ----------
-    coefficients_mat : (M, N) array_like
-        Left-hand side coefficients for the linear
-        inequality constraints defining the polyhedral set.
-    rhs_vec : (M,) array_like
-        Right-hand side values for the linear inequality
-        constraints defining the polyhedral set.
-        The polyedral set is the set of points ``q`` satisfying
-        ``coefficients_mat @ q <= rhs_vec``
-    type : str
-        Brief descriptor of the type of the uncertainty set.
     """
 
     def __init__(self, lhs_coefficients_mat, rhs_vec):
         """Initialize self (see class docstring).
 
         """
-        lhs_matrix_arr = np.asarray(lhs_coefficients_mat)
-        rhs_vec_arr = np.asarray(rhs_vec)
+        # set attributes to copies of the originals
+        self.coefficients_mat = lhs_coefficients_mat
+        self.rhs_vec = rhs_vec
 
-        validate_dimensions("lhs_coefficients_mat", lhs_matrix_arr, 2)
-        validate_dimensions("rhs_vec", rhs_vec_arr, 1)
+        # validate nonemptiness and boundedness here.
+        # This check is only performed at construction.
+        self._validate()
 
-        # ensure number of rows of matrix matches number of
-        # entries of rhs vector
-        if lhs_matrix_arr.shape[0] != rhs_vec_arr.shape[0]:
-            raise ValueError(
-                "Argument `lhs_coefficients_mat` "
-                f"({lhs_matrix_arr.shape[0]} rows) "
-                "does not have same number of rows as length of "
-                f"`rhs_vec` ({len(rhs_vec)} entries)"
-            )
+    def _validate(self):
+        """
+        Check polyhedral set attributes are such that set is nonempty
+        and bounded. Currently, this method is invoked only at
+        construction.
 
-        # validate entry types
-        for row, rhs_entry in zip(lhs_coefficients_mat, rhs_vec):
-            for coeff in row:
-                validate_arg_type(
-                    "lhs_coefficients_mat",
-                    coeff,
-                    valid_num_types,
-                    "a valid numeric type",
-                    is_entry_of_arg=True,
-                )
-            validate_arg_type(
-                "rhs_vec",
-                rhs_entry,
-                valid_num_types,
-                "a valid numeric type",
-                is_entry_of_arg=True,
-            )
-
-        # === Matrix is not all zeros
-        if np.all(np.isclose(lhs_coefficients_mat, 0)):
-            raise ValueError(
-                "Argument `lhs_coefficients_mat` must have"
-                "at least one nonzero entry"
-            )
-
-        # solve LP to verify set is nonempty; check results
-        # perhaps this can be moved to an is_em
+        Raises
+        ------
+        ValueError
+            If set is empty, unbounded, or the check was not
+            successfully completed due to numerical issues.
+        """
+        # solve LP to verify set is nonempty and bounded; check results
         res = sp.optimize.linprog(
-            c=np.zeros(lhs_matrix_arr.shape[0]),
-            A_ub=lhs_matrix_arr,
-            b_ub=rhs_vec,
+            c=np.zeros(self.coefficients_mat.shape[1]),
+            A_ub=self.coefficients_mat,
+            b_ub=self.rhs_vec,
             method="simplex",
             bounds=(None, None),
         )
@@ -807,23 +908,115 @@ class PolyhedralSet(UncertaintySet):
             )
         elif res.status == 2:
             raise ValueError(
-                "PolyhedralSet defined by `lhs_coefficients_mat` and "
-                "`rhs_vec` is empty. Check arguments"
+                "PolyhedralSet defined by 'coefficients_mat' and "
+                "'rhs_vec' is empty. Check arguments"
             )
         elif res.status == 3:
             raise ValueError(
-                "PolyhedralSet defined by `lhs_coefficients_mat` and "
-                "`rhs_vec` is unbounded. Check arguments"
+                "PolyhedralSet defined by 'coefficients_mat' and "
+                "'rhs_vec: is unbounded. Check arguments"
             )
 
-        self.coefficients_mat = lhs_coefficients_mat
-        self.rhs_vec = rhs_vec
-        self.type = "polyhedral"
+    @property
+    def type(self):
+        """
+        str : Brief description of the type of the uncertainty set.
+        """
+        return "polyhedral"
+
+    @property
+    def coefficients_mat(self):
+        """
+        (M, N) numpy.ndarray :
+            Coefficient matrix for the (linear) inequality constraints
+            defining the polyhedral set.
+
+        In tandem with the `rhs_vec` attribute, this matrix should
+        be such that the polyhedral set is nonempty and bounded.
+        Such a check is performed only at instance construction.
+        """
+        return self._coefficients_mat
+
+    @coefficients_mat.setter
+    def coefficients_mat(self, val):
+        validate_array(
+            arr=val,
+            arr_name="coefficients_mat",
+            dim=2,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        lhs_coeffs_arr = np.array(val)
+
+        # check no change in set dimension
+        if hasattr(self, "_coefficients_mat"):
+            if lhs_coeffs_arr.shape[1] != self.dim:
+                raise ValueError(
+                    f"Polyhedral set attribute 'coefficients_mat' must have "
+                    f"{self.dim} columns to match set dimension "
+                    f"(provided matrix with {lhs_coeffs_arr.shape[1]} columns)"
+                )
+
+        # check shape match with rhs vector
+        if hasattr(self, "_rhs_vec"):
+            if lhs_coeffs_arr.shape[0] != self.rhs_vec.size:
+                raise ValueError(
+                    "PolyhedralSet attribute 'coefficients_mat' "
+                    f"must have {self.rhs_vec.size} rows "
+                    f"to match shape of attribute 'rhs_vec' "
+                    f"(provided {lhs_coeffs_arr.shape[0]} rows)"
+                )
+
+        # === Matrix is not all zeros
+        if np.all(np.isclose(lhs_coeffs_arr, 0)):
+            raise ValueError(
+                "PolyhedralSet attribute 'coefficients_mat' must have"
+                "at least one nonzero entry"
+            )
+
+        self._coefficients_mat = lhs_coeffs_arr
+
+    @property
+    def rhs_vec(self):
+        """
+        (M,) numpy.ndarray :
+            Right-hand side values (upper bounds) for the (linear)
+            inequality constraints defining the polyhedral set.
+        """
+        return self._rhs_vec
+
+    @rhs_vec.setter
+    def rhs_vec(self, val):
+        validate_array(
+            arr=val,
+            arr_name="rhs_vec",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        rhs_vec_arr = np.array(val)
+
+        # ensure shape of coefficients matrix
+        # and rhs vec match
+        if hasattr(self, "_coefficients_mat"):
+            if len(val) != self.coefficients_mat.shape[0]:
+                raise ValueError(
+                    "PolyhedralSet attribute 'rhs_vec' "
+                    f"must have {self.coefficients_mat.shape[0]} entries "
+                    f"to match shape of attribute 'coefficients_mat' "
+                    f"(provided {rhs_vec_arr.size} entries)"
+                )
+
+        self._rhs_vec = rhs_vec_arr
 
     @property
     def dim(self):
-        """Dimension of the polyhedral set.
-
+        """
+        int : Dimension of the cardinality set.
         """
         return len(self.coefficients_mat[0])
 
@@ -907,103 +1100,177 @@ class PolyhedralSet(UncertaintySet):
         add_bounds_for_uncertain_parameters(model=model, config=config)
 
 
-class BudgetSet(PolyhedralSet):
+class BudgetSet(UncertaintySet):
     """
     A budget set.
 
     Parameters
     ----------
-    budget_member_mat : (M, N) array_like
+    budget_membership_mat : (M, N) array_like
         Incidence matrix of the budget constraints.
         Each row corresponds to a single budget constraint,
         and defines which uncertain parameters
         (which dimensions) participate in that row's constraint.
     rhs_vec : (N,) array_like
         Right-hand side values for the budget constraints.
-
-    Attributes
-    ----------
-    coefficients_mat : (M, N) array_like
-        Incidence matrix of the budget constraints.
-        Each row corresponds to a single budget constraint,
-        and defines which uncertain parameters
-        (which dimensions) participate in that row's constraint.
-    rhs_vec : (N,) array_like
-        Right-hand side values for the budget constraints.
-    type : str
-        Brief descriptor of the type of the uncertainty set.
     """
 
     def __init__(self, budget_membership_mat, rhs_vec):
         """Initialize self (see class docstring).
 
         """
-        # === Non-zero number of columns
-        budget_mat_arr = np.asarray(budget_membership_mat)
-        rhs_vec_arr = np.asarray(rhs_vec)
+        self.budget_membership_mat = budget_membership_mat
+        self.budget_rhs_vec = rhs_vec
 
-        validate_dimensions("budget_membership_mat", budget_mat_arr, 2)
-        validate_dimensions("rhs_vec", rhs_vec_arr, 1)
+    @property
+    def type(self):
+        """
+        str : Brief description of the type of the uncertainty set.
+        """
+        return "budget"
 
-        # === Matrix dimension compatibility
-        if budget_mat_arr.shape[0] != rhs_vec_arr.shape[0]:
-            raise ValueError(
-                "Argument `budget_membership_mat` "
-                f"({budget_mat_arr.shape[0]} rows) "
-                "does not have same number of rows as entries of "
-                f"`rhs_vec` ({rhs_vec_arr.shape[0]} entries)"
-            )
-        # === Ensure a 0-1 matrix
-        for row, rhs_entry in zip(budget_membership_mat, rhs_vec):
-            for entry in row:
-                validate_arg_type(
-                    "budget_membership_mat",
-                    entry,
-                    valid_num_types,
-                    "a valid numeric type",
-                    True,
+    @property
+    def coefficients_mat(self):
+        """
+        (M + N, N) numpy.ndarray :
+            Coefficient matrix of all polyhedral constraints
+            defining the budget set. Composed from the incidence
+            matrix used for defining the budget constraints
+            and a coefficient matrix for individual uncertain
+            parameter nonnegativity constraints.
+
+        This attribute cannot be set. The budget constraint
+        incidence matrix may be altered through the
+        `budget_membership_mat` attribute.
+        """
+        neg_identity = -1 * np.identity(self.dim)
+
+        return np.append(self.budget_membership_mat, neg_identity, axis=0)
+
+    @property
+    def rhs_vec(self):
+        """
+        (M + N,) numpy.ndarray :
+            Right-hand side vector for polyhedral constraints defining
+            the budget set. This also includes entries for nonnegativity
+            constraints on the uncertain parameters.
+
+        This attribute cannot be set. The right-hand
+        sides for the budget constraints may be modified/accessed
+        through the `budget_rhs_vec` attribute.
+        """
+        return np.append(self.budget_rhs_vec, np.zeros(self.dim))
+
+    @property
+    def budget_membership_mat(self):
+        """
+        (M, N) numpy.ndarray :
+            Incidence matrix of the budget constraints.
+            Each row corresponds to a single budget constraint,
+            and defines which uncertain parameters
+            (which dimensions) participate in that row's constraint.
+        """
+        return self._budget_membership_mat
+
+    @budget_membership_mat.setter
+    def budget_membership_mat(self, val):
+        validate_array(
+            arr=val,
+            arr_name="budget_membership_mat",
+            dim=2,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        lhs_coeffs_arr = np.array(val)
+
+        # check dimension match
+        if hasattr(self, "_budget_membership_mat"):
+            if lhs_coeffs_arr.shape[1] != self.dim:
+                raise ValueError(
+                    f"BudgetSet attribute 'budget_membership_mat' "
+                    "must have "
+                    f"{self.dim} columns to match set dimension "
+                    f"(provided matrix with {lhs_coeffs_arr.shape[1]} columns)"
                 )
-                if not np.any(np.isclose(entry, [0, 1])):
-                    raise ValueError(
-                        f"Entry {entry} of argument `budget_membership_mat`"
-                        " is not 0 or 1"
-                    )
+
+        # check shape match with rhs vector
+        if hasattr(self, "_budget_rhs_vec"):
+            if lhs_coeffs_arr.shape[0] != self.budget_rhs_vec.size:
+                raise ValueError(
+                    "BudgetSet attribute 'budget_membership_mat' "
+                    f"must have {self.budget_rhs_vec.size} rows "
+                    f"to match shape of attribute 'budget_rhs_vec' "
+                    f"(provided {lhs_coeffs_arr.shape[0]} rows)"
+                )
+
+        # validate entry values
+        for row in lhs_coeffs_arr:
             if np.allclose(row, 0):
                 raise ValueError(
                    "Each row of argument `budget_membership_mat` should "
                    "have at least one nonzero entry"
                 )
-            validate_arg_type(
-                "rhs_vec",
-                rhs_entry,
-                valid_num_types,
-                "a valid numeric type",
-                True,
-            )
-            if rhs_entry < 0:
+
+            for entry in row:
+                if not np.any(np.isclose(entry, [0, 1])):
+                    raise ValueError(
+                        f"Entry {entry} of argument `budget_membership_mat`"
+                        " is not 0 or 1"
+                    )
+
+        self._budget_membership_mat = lhs_coeffs_arr
+
+    @property
+    def budget_rhs_vec(self):
+        """
+        (M,) numpy.ndarray
+            Right-hand side values (upper bounds) for the budget
+            constraints.
+        """
+        return self._budget_rhs_vec
+
+    @budget_rhs_vec.setter
+    def budget_rhs_vec(self, val):
+        validate_array(
+            arr=val,
+            arr_name="budget_rhs_vec",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        rhs_vec_arr = np.array(val)
+
+        # ensure shape of coefficients matrix
+        # and rhs vec match
+        if hasattr(self, "_budget_membership_mat"):
+            if len(val) != self.budget_membership_mat.shape[0]:
                 raise ValueError(
-                    f"Entry {rhs_entry} of argument `rhs_vec` is negative. "
+                    "Budget set attribute 'budget_rhs_vec' "
+                    f"must have {self.budget_membership_mat.shape[0]} entries "
+                    f"to match shape of attribute 'budget_membership_mat' "
+                    f"(provided {rhs_vec_arr.size} entries)"
+                )
+
+        # ensure all entries are nonnegative
+        for entry in rhs_vec_arr:
+            if entry < 0:
+                raise ValueError(
+                    f"Entry {entry} of argument 'rhs_vec' is negative. "
                     "Ensure all entries are nonnegative"
                 )
 
-        # add rows for nonnegativity constraints
-        # on the uncertain parameters to the budget matrix and rhs vector
-        num_cols = budget_mat_arr.shape[1]
-        neg_identity = np.identity(num_cols) * -1
-        for row in neg_identity:
-            budget_membership_mat.append(row.tolist())
-            rhs_vec.append(0)
-
-        self.coefficients_mat = budget_membership_mat
-        self.rhs_vec = rhs_vec
-        self.type = "budget"
+        self._budget_rhs_vec = rhs_vec_arr
 
     @property
     def dim(self):
         """Dimension of the budget set.
 
         """
-        return np.asarray(self.coefficients_mat).shape[1]
+        return self.budget_membership_mat.shape[1]
 
     @property
     def geometry(self):
@@ -1101,129 +1368,172 @@ class FactorModelSet(UncertaintySet):
     number_of_factors : int
         Natural number representing the dimensionality of the
         space to which the set projects.
-    psi : (N, `number_of_factors`) array_like
-        Matrix with nonnegative entires designating each
-        uncertain parameter's contribution to each  factor.
-        Each row is associated with a separate uncertain parameter.
-        Each column with a separate factor.
-    beta : numeric type
-        Number in [0, 1] representing the fraction of the
-        independent factors that can simultaneously attain
-        their extreme values.
-        Setting 'beta = 0' will enforce that as many
-        factors will be above 0 as there will be below 0
-        (i.e., "zero-net-alpha" model). Setting 'beta = 1'
-        produces the hyper-rectangle
-        [origin - psi @ e, origin + psi @ e],
-        where 'e' is a vector of ones.
-
-    Attributes
-    ----------
-    origin : (N,) array_like
-        Uncertain parameter values around which deviations are
-        restrained.
-    number_of_factors : int
-        Natural number representing the dimensionality of the
-        space to which the set projects.
     psi_mat : (N, `number_of_factors`) array_like
-        Matrix with nonnegative entires designating each
-        uncertain parameter's contribution to each  factor.
+        Matrix with nonnegative entries designating each
+        uncertain parameter's contribution to each factor.
         Each row is associated with a separate uncertain parameter.
-        Each column with a separate factor.
+        Each column is associated with a separate factor.
     beta : numeric type
-        Number in [0, 1] representing the fraction of the
+        Real value between 0 and 1 specifying the fraction of the
         independent factors that can simultaneously attain
         their extreme values.
-        Setting 'beta = 0' will enforce that as many
-        factors will be above 0 as there will be below 0
-        (i.e., "zero-net-alpha" model). Setting 'beta = 1'
-        produces the hyper-rectangle
-        [origin - psi e, origin + psi e],
-        where 'e' is a vector of ones.
-    type : str
-        Brief descriptor of the type of the uncertainty set.
     """
 
     def __init__(self, origin, number_of_factors, psi_mat, beta):
         """Initialize self (see class docstring).
 
         """
-        validate_dimensions("psi_mat", psi_mat, 2)
-        validate_dimensions("origin", origin, 1)
+        self.origin = origin
+        self.number_of_factors = number_of_factors
+        self.beta = beta
+        self.psi_mat = psi_mat
 
-        psi_mat_arr = np.asarray(psi_mat)
+    @property
+    def type(self):
+        """
+        str : Brief description of the type of the uncertainty set.
+        """
+        return "factor_model"
 
-        validate_arg_type(
-            "beta",
-            beta,
-            valid_num_types,
-            "a valid numeric type",
-            False,
+    @property
+    def origin(self):
+        """
+        (N,) numpy.ndarray :
+            Uncertain parameter values around which deviations are
+            restrained.
+        """
+        return self._origin
+
+    @origin.setter
+    def origin(self, val):
+        validate_array(
+            arr=val,
+            arr_name="origin",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
         )
-        validate_arg_type(
-            "number_of_factors",
-            number_of_factors,
-            int,
-            "an integer",
-            False,
-        )
 
-        # ensure psi matrix shape matches origin dimensions
-        # and number of factors
-        if psi_mat_arr.shape != (len(origin), number_of_factors):
-            raise ValueError(
-                "Psi matrix for factor model set with "
-                f"{number_of_factors} factors and "
-                f"origin with {len(origin)} entries "
-                f"should be of shape {number_of_factors, len(origin)} "
-                f"(detected shape {psi_mat_arr.shape})"
-            )
-
-        for row, orig_entry in zip(psi_mat, origin):
-            for entry in row:
-                validate_arg_type(
-                    "psi_mat",
-                    entry,
-                    valid_num_types,
-                    "a valid numeric type",
-                    True,
+        # dimension of the set is immutable
+        val_arr = np.array(val)
+        if hasattr(self, "_origin"):
+            if val_arr.size != self.dim:
+                raise ValueError(
+                    "Attempting to set attribute 'origin' of cardinality "
+                    f"set of dimension {self.dim} "
+                    f"to value of dimension {val_arr.size}"
                 )
-                if entry < 0:
-                    raise ValueError(
-                        f"Entry {entry} of argument `psi_mat` is negative. "
-                        "Check that all entries are nonnegative"
-                    )
-            validate_arg_type(
-                "origin",
-                orig_entry,
-                valid_num_types,
-                "a valid numeric type",
-                True,
+
+        self._origin = val_arr
+
+    @property
+    def number_of_factors(self):
+        """
+        int :
+            Natural number representing the dimensionality of the
+            space to which the set projects.
+
+        This attribute is immutable, and may only be set at
+        object construction. Typically, the number of factors
+        is significantly less than the set dimension, but no
+        restriction to that end is imposed here.
+        """
+        return self._number_of_factors
+
+    @number_of_factors.setter
+    def number_of_factors(self, val):
+        if hasattr(self, "_number_of_factors"):
+            raise AttributeError("Attribute 'number_of_factors' is immutable")
+        else:
+            # validate type and value
+            validate_arg_type("number_of_factors", val, int)
+            if val < 1:
+                raise ValueError(
+                    "Attribute 'number_of_factors' must be a positive int"
+                    f"(provided value {val})"
+                )
+        self._number_of_factors = val
+
+    @property
+    def psi_mat(self):
+        """
+        (N, `number_of_factors`) numpy.ndarray :
+            Matrix designating each uncertain parameter's contribution
+            to each factor. Each row is associated with a separate
+            uncertain parameter. Each column with a separate factor.
+            Every entry of the matrix must be nonnegative.
+        """
+        return self._psi_mat
+
+    @psi_mat.setter
+    def psi_mat(self, val):
+        validate_array(
+            arr=val,
+            arr_name="psi_mat",
+            dim=2,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        psi_mat_arr = np.array(val)
+
+        # validate shape (check it matches set dimensions)
+        # origin and number of factors already set
+        if psi_mat_arr.shape != (self.dim, self.number_of_factors):
+            raise ValueError(
+                "Psi matrix for factor model set "
+                f"should be of shape {self.dim, self.number_of_factors} "
+                f"to match the set and factor model space dimensions "
+                f"(provided shape {psi_mat_arr.shape})"
             )
 
+        # check values acceptable
         for column in psi_mat_arr.T:
             if np.allclose(column, 0):
                 raise ValueError(
-                    "Each column of argument `psi_mat` should have at least "
+                    "Each column of attribute 'psi_mat' should have at least "
                     "one nonzero entry"
                 )
 
-        # === Ensure beta in [0,1]
-        if beta > 1 or beta < 0:
+            for entry in column:
+                if entry < 0:
+                    raise ValueError(
+                        f"Entry {entry} of attribute 'psi_mat' is negative. "
+                        "Ensure all entries are nonnegative"
+                    )
+
+        self._psi_mat = psi_mat_arr
+
+    @property
+    def beta(self):
+        """
+        numeric type :
+            Real number ranging from 0 to 1 representing the fraction
+            of the independent factors that can simultaneously attain
+            their extreme values.
+
+        Note that mathematically, setting `beta = 0` will enforce
+        that as many factors will be above 0 as there will be below 0
+        (i.e., "zero-net-alpha" model). Setting `beta = 1` produces the
+        hyper-rectangle ``[origin - psi @ e, origin + psi @ e]``, where
+        `e` is a vector of ones.
+        """
+        return self._beta
+
+    @beta.setter
+    def beta(self, val):
+        if val > 1 or val < 0:
             raise ValueError(
-                "Beta parameter must be in [0, 1] "
-                f"(provided value {beta})"
+                "Beta parameter must be a real number between 0 "
+                f"and 1 inclusive (provided value {val})"
             )
 
-        self.origin = origin
-        self.number_of_factors = number_of_factors
-        self.psi_mat = psi_mat
-        self.beta = beta
-        self.type = "factor_model"
+        self._beta = val
 
     @property
     def dim(self):
-        """Dimension of the factor model set.
+        """int : Dimension of the factor model set.
 
         """
         return len(self.origin)
