@@ -248,9 +248,13 @@ class TicTocTimer(object):
             msg = "Resetting the tic/toc delta timer"
         if msg is not None:
             if args and '%' not in msg:
+                # Note: specify the parent module scope for the logger
+                # so this does not hit (and get handled by) the local
+                # pyomo.common.timing logger.
                 deprecation_warning(
                     "tic(): 'ostream' and 'logger' should be "
-                    "specified as keyword arguments", version='6.4.2')
+                    "specified as keyword arguments", version='6.4.2',
+                    logger=__package__)
                 ostream, *args = args
                 if args:
                     logger, *args = args
@@ -288,9 +292,13 @@ class TicTocTimer(object):
             msg = 'File "%s", line %s in %s' % \
                   traceback.extract_stack(limit=2)[0][:3]
         if args and msg is not None and '%' not in msg:
+            # Note: specify the parent module scope for the logger
+            # so this does not hit (and get handled by) the local
+            # pyomo.common.timing logger.
             deprecation_warning(
                 "toc(): 'delta', 'ostream', and 'logger' should be "
-                "specified as keyword arguments", version='6.4.2')
+                "specified as keyword arguments", version='6.4.2',
+                logger=__package__)
             delta, *args = args
             if args:
                 ostream, *args = args
