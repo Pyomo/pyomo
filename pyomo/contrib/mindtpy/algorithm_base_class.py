@@ -56,7 +56,7 @@ from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.opt import SolutionStatus, SolverStatus
 from pyomo.contrib.gdpopt.solve_discrete_problem import distinguish_mip_infeasible_or_unbounded
 from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy, update_dual_bound, update_suboptimal_dual_bound
-from pyomo.contrib.mindtpy.util import calc_jacobians
+from pyomo.contrib.mindtpy.util import calc_jacobians, MindtPySolveData
 from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, fp_converged, add_orthogonality_cuts
 from pyomo.core import Constraint, Expression, Objective, minimize, value
 
@@ -1934,8 +1934,9 @@ class _MindtPyAlgorithm(object):
             if config.use_tabu_list:
                 tabulist = mainopt._solver_model.register_callback(
                     tabu_list.IncumbentCallback_cplex)
-                # TODO: fix here
-                # tabulist.solve_data = solve_data # -------------------------
+                self.solve_data = MindtPySolveData()
+                self.export_attributes()
+                tabulist.solve_data = self.solve_data
                 tabulist.opt = mainopt
                 tabulist.config = config
                 mainopt._solver_model.parameters.preprocessing.reduce.set(1)
@@ -1951,6 +1952,10 @@ class _MindtPyAlgorithm(object):
                                             tee=config.mip_solver_tee, 
                                             load_solutions=False,
                                             **mip_args)
+            if config.use_tabu_list:
+                self.update_attributes()
+            print('primal_bound', self.primal_bound)
+            print('dual_bound', self.dual_bound)
             if len(main_mip_results.solution) > 0:
                 self.mip.solutions.load_from(main_mip_results)
 
@@ -2008,6 +2013,9 @@ class _MindtPyAlgorithm(object):
                                                 **mip_args)
                 if len(main_mip_results.solution) > 0:
                     self.mip.solutions.load_from(main_mip_results)
+                if config.single_tree or (config.use_tabu_list and config.mip_solver == 'cplex_persistent'):
+                # if (config.single_tree or config.use_tabu_list) and config.mip_solver == 'cplex_persistent':
+                    self.update_attributes()
         except (ValueError, AttributeError):
             if config.single_tree:
                 config.logger.warning('Single tree terminate.')
@@ -2077,9 +2085,9 @@ class _MindtPyAlgorithm(object):
         else:
             if config.mip_solver == 'gurobi_persistent' and config.single_tree:
                 mainopt = GurobiPersistent4MindtPy()
-                # -----------------------------------------------------------------------------------------------
-                # TODO: fix
-                # mainopt.solve_data = solve_data
+                self.solve_data = MindtPySolveData()
+                self.export_attributes()
+                mainopt.solve_data = self.solve_data
                 mainopt.config = config
             else:
                 mainopt = SolverFactory(config.mip_solver)
@@ -2094,9 +2102,9 @@ class _MindtPyAlgorithm(object):
                     single_tree.LazyOACallback_cplex)
                 # pass necessary data and parameters to lazyoa
                 lazyoa.main_mip = self.mip
-                # -----------------------------------------------------------------------------------------------
-                # TODO: fix
-                # lazyoa.solve_data = solve_data
+                self.solve_data = MindtPySolveData()
+                self.export_attributes()
+                lazyoa.solve_data = self.solve_data
                 lazyoa.config = config
                 lazyoa.opt = mainopt
                 mainopt._solver_model.set_warning_stream(None)
@@ -2105,11 +2113,11 @@ class _MindtPyAlgorithm(object):
             if config.mip_solver == 'gurobi_persistent':
                 mainopt.set_callback(single_tree.LazyOACallback_gurobi)
         if config.use_tabu_list:
+            self.solve_data = MindtPySolveData()
+            self.export_attributes()
             tabulist = mainopt._solver_model.register_callback(
                 tabu_list.IncumbentCallback_cplex)
-            # -----------------------------------------------------------------------------------------------
-            # TODO: fix
-            # tabulist.solve_data = solve_data
+            tabulist.solve_data = self.solve_data
             tabulist.opt = mainopt
             tabulist.config = config
             mainopt._solver_model.parameters.preprocessing.reduce.set(1)
@@ -2701,3 +2709,10 @@ class _MindtPyAlgorithm(object):
             self.working_model.MindtPy_utils.cuts.del_component(
                 'fp_orthogonality_cuts')
 
+    def export_attributes(self):
+        for name, val in self.__dict__.items():
+            setattr(self.solve_data, name, val) 
+
+    def update_attributes(self):
+        for name, val in self.solve_data.__dict__.items():
+            self.__dict__[name] = val
