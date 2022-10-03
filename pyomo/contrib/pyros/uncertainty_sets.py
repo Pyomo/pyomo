@@ -1661,58 +1661,91 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
         Center of the ellipsoid.
     half_lengths : (N,) aray_like
         Semi-axis lengths of the ellipsoid.
-
-    Attributes
-    ----------
-    center : (N,) array_like
-        Center of the ellipsoid.
-    half_lengths : (N,) aray_like
-        Semi-axis lengths of the ellipsoid.
-    type : str
-        Brief descriptor for the type of the uncertainty set.
     """
 
     def __init__(self, center, half_lengths):
         """Initialize self (see class docstring).
 
         """
-        validate_dimensions("center", center, 1)
-        validate_dimensions("half_lengths", half_lengths, 1)
-
-        # check parity of lengths
-        if not len(center) == len(half_lengths):
-            raise ValueError(
-                f"Arguments `center` (length {len(center)}) and "
-                f"`half_lengths` (length {len(half_lengths)}) "
-                "are not of the same length"
-            )
-
-        # validate entry types
-        for half_len, center_val in zip(half_lengths, center):
-            validate_arg_type(
-                "half_lengths",
-                half_len,
-                valid_num_types,
-                "a valid numeric type",
-                True,
-            )
-            validate_arg_type(
-                "center",
-                center_val,
-                valid_num_types,
-                "a valid numeric type",
-                True,
-            )
-
-            if half_len < 0:
-                raise ValueError(
-                    f"Entry {half_len} of argument `half_lengths` "
-                    "is negative. Ensure all half-lengths are nonnegative"
-                )
-
         self.center = center
         self.half_lengths = half_lengths
-        self.type = "ellipsoidal"
+
+    @property
+    def type(self):
+        """
+        str : Brief description of the type of the uncertainty set.
+        """
+        return "ellipsoidal"
+
+    @property
+    def center(self):
+        """
+        (N,) numpy.ndarray : Center of the ellipsoid.
+        """
+        return self._center
+
+    @center.setter
+    def center(self, val):
+        validate_array(
+            arr=val,
+            arr_name="center",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        val_arr = np.array(val)
+
+        # dimension of the set is immutable
+        if hasattr(self, "_center"):
+            if val_arr.size != self.dim:
+                raise ValueError(
+                    "Attempting to set attribute 'center' of "
+                    f"AxisAlignedEllipsoidalSet of dimension {self.dim} "
+                    f"to value of dimension {val_arr.size}"
+                )
+
+        self._center = val_arr
+
+    @property
+    def half_lengths(self):
+        """
+        (N,) numpy.ndarray : Semi-axis lengths.
+        """
+        return self._half_lengths
+
+    @half_lengths.setter
+    def half_lengths(self, val):
+        validate_array(
+            arr=val,
+            arr_name="half_lengths",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        val_arr = np.array(val)
+
+        # dimension of the set is immutable
+        if hasattr(self, "_center"):
+            if val_arr.size != self.dim:
+                raise ValueError(
+                    "Attempting to set attribute 'half_lengths' of "
+                    f"AxisAlignedEllipsoidalSet of dimension {self.dim} "
+                    f"to value of dimension {val_arr.size}"
+                )
+
+        # ensure half-lengths are non-negative
+        for half_len in val_arr:
+            if half_len < 0:
+                raise ValueError(
+                    f"Entry {half_len} of 'half_lengths' "
+                    "is negative. All half-lengths must be nonnegative"
+                )
+
+        self._half_lengths = val_arr
 
     @property
     def dim(self):
@@ -1821,87 +1854,86 @@ class EllipsoidalSet(UncertaintySet):
         Square of the factor by which to scale the semi-axes
         of the ellipsoid (i.e. the eigenvectors of the shape
         matrix). The default is `1`.
-
-    Attributes
-    ----------
-    center : (N,) array-like
-        Center of the ellipsoid.
-    shape_matrix : (N, N) array-like
-        A positive definite matrix characterizing the shape
-        and orientation of the ellipsoid.
-    scale : numeric type
-        Square of the factor by which to scale the semi-axes
-        of the ellipsoid (i.e. the eigenvectors of the shape
-        matrix).
-    type : str
-        Brief descriptor for the type of the uncertainty set.
     """
 
     def __init__(self, center, shape_matrix, scale=1):
         """Initialize self (see class docstring).
 
         """
-        shape_matrix_arr = np.asarray(shape_matrix)
-        center_arr = np.asarray(center)
+        self.center = center
+        self.shape_matrix = shape_matrix
+        self.scale = scale
 
-        validate_dimensions("center", center_arr, 1)
-        validate_dimensions("shape_matrix", shape_matrix_arr, 2)
+    @property
+    def type(self):
+        """
+        str : Brief description of the type of the uncertainty set.
+        """
+        return "ellipsoidal"
 
-        # check lengths match
-        if shape_matrix_arr.shape[0] != shape_matrix_arr.shape[-1]:
-            raise ValueError(
-                "Argument `shape_matrix` should be a square matrix "
-                f"(detected shape {shape_matrix_arr.shape})"
-            )
-        if center_arr.shape[0] != shape_matrix_arr.shape[0]:
-            raise ValueError(
-                f"Arguments `center` ({center_arr.shape[0]} entries) "
-                "does not have as many entries as there are rows in "
-                f"`shape_matrix` ({shape_matrix_arr.shape[0]} rows) "
-            )
+    @property
+    def center(self):
+        """
+        (N,) numpy.ndarray : Center of the ellipsoid.
+        """
+        return self._center
 
-        # validate types
-        for entry, row in zip(center, shape_matrix):
-            validate_arg_type(
-                "center",
-                entry,
-                valid_num_types,
-                "a valid numeric type",
-                True,
-            )
-            for coeff in row:
-                validate_arg_type(
-                    "shape_matrix",
-                    coeff,
-                    valid_num_types,
-                    "a valid numeric type",
-                    True,
-                )
-        validate_arg_type(
-            "scale",
-            scale,
-            valid_num_types,
-            "a valid numeric type",
-            False,
+    @center.setter
+    def center(self, val):
+        validate_array(
+            arr=val,
+            arr_name="center",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
         )
 
-        # validate scale
-        if scale < 0:
-            raise ValueError(
-                f"Argument `scale` (value {scale}) should be non-negative "
-            )
+        val_arr = np.array(val)
 
-        # ---------- CHECK SHAPE MATRIX POSITIVE DEFINITE
-        # check symmetric
-        if not np.allclose(shape_matrix_arr, shape_matrix_arr.T, atol=1e-8):
+        # dimension of the set is immutable
+        if hasattr(self, "_center"):
+            if val_arr.size != self.dim:
+                raise ValueError(
+                    "Attempting to set attribute 'center' of "
+                    f"AxisAlignedEllipsoidalSet of dimension {self.dim} "
+                    f"to value of dimension {val_arr.size}"
+                )
+
+        self._center = val_arr
+
+    @staticmethod
+    def _verify_positive_definite(matrix):
+        """
+        Verify that a given symmetric square matrix is positive
+        definite. An exception is raised at any point this
+        verificiation ro
+
+        Parameters
+        ----------
+        matrix : (N, N) array_like
+            Candidate matrix.
+
+        Raises
+        ------
+        ValueError
+            If matrix is not symmetirc, not positive definite,
+            or the square roots of the diagonal entries are
+            not accessible.
+        LinAlgError
+            If matrix is not invertible.
+        """
+        matrix = np.array(matrix)
+
+        if not np.allclose(matrix, matrix.T, atol=1e-8):
             raise ValueError("Shape matrix must be symmetric.")
 
-        # check invertible (Exception raised)
-        np.linalg.inv(shape_matrix)
+        # Numpy raises LinAlgError if not invertible
+        np.linalg.inv(matrix)
 
         # check positive semi-definite.
         # since also invertible, means positive definite
-        eigvals = np.linalg.eigvals(shape_matrix)
+        eigvals = np.linalg.eigvals(matrix)
         if np.min(eigvals) < 0:
             raise ValueError(
                 "Non positive-definite shape matrix "
@@ -1910,8 +1942,7 @@ class EllipsoidalSet(UncertaintySet):
 
         # check roots of diagonal entries accessible
         # (should theoretically be true if positive definite)
-        for idx in range(len(shape_matrix_arr)):
-            diag_entry = shape_matrix[idx][idx]
+        for diag_entry in np.diagonal(matrix):
             if np.isnan(np.power(diag_entry, 0.5)):
                 raise ValueError(
                     "Cannot evaluate square root of the diagonal entry "
@@ -1919,10 +1950,65 @@ class EllipsoidalSet(UncertaintySet):
                     "Check that this entry is nonnegative"
                 )
 
-        self.center = center
-        self.shape_matrix = shape_matrix
-        self.scale = scale
-        self.type = "ellipsoidal"
+    @property
+    def shape_matrix(self):
+        """
+        (N, N) numpy.ndarray :
+            A positive definite matrix characterizing the shape
+            and orientation of the ellipsoid.
+        """
+        return self._shape_matrix
+
+    @shape_matrix.setter
+    def shape_matrix(self, val):
+        validate_array(
+            arr=val,
+            arr_name="shape_matrix",
+            dim=2,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        shape_mat_arr = np.array(val)
+
+        # check matrix shape matches set dimension
+        if hasattr(self, "_center"):
+            if not all(size == self.dim for size in shape_mat_arr.shape):
+                raise ValueError(
+                    f"EllipsoidalSet attribute 'shape_matrix' "
+                    f"must be a square matrix of size "
+                    f"{self.dim} to match set dimension "
+                    f"(provided matrix with shape {shape_mat_arr.shape})"
+                )
+
+        self._verify_positive_definite(shape_mat_arr)
+        self._shape_matrix = shape_mat_arr
+
+    @property
+    def scale(self):
+        """
+        numeric type :
+            Square of the factor by which to scale the semi-axes
+            of the ellipsoid (i.e. the eigenvectors of the shape
+            matrix).
+        """
+        return self._scale
+
+    @scale.setter
+    def scale(self, val):
+        validate_arg_type(
+            "scale", val, valid_num_types,
+            "a valid numeric type", False,
+        )
+        if val < 0:
+            raise ValueError(
+                "EllipsoidalSet attribute "
+                f"'scale' must be a non-negative real "
+                f"(provided value {val})"
+            )
+
+        self._scale = val
 
     @property
     def dim(self):
@@ -2013,33 +2099,56 @@ class DiscreteScenarioSet(UncertaintySet):
     ----------
     scenarios : (M, N) array_like
         A sequence of M distinct uncertain parameter realizations.
-
-    Attributes
-    ----------
-    scenarios : list of tuples of numeric types
-        A sequence of the distinct uncertain parameter realizations.
-    type : str
-        Brief descriptor for the type of the uncertainty set.
     """
 
     def __init__(self, scenarios):
         """Initialize self (see class docstring).
 
         """
-        validate_dimensions("scenarios", scenarios, 2, display_value=True)
-        for pt in scenarios:
-            for val in pt:
-                validate_arg_type(
-                    "scenarios",
-                    val,
-                    valid_num_types,
-                    "a valid numeric type",
-                    True,
+        # Standardize to list of tuples
+        self.scenarios = scenarios
+
+    @property
+    def type(self):
+        """
+        str : Brief description of the type of the uncertainty set.
+        """
+        return "discrete"
+
+    @property
+    def scenarios(self):
+        """
+        list(tuple) :
+            Uncertain parameter realizations comprising the set.
+            Each tuple is an uncertain parameter realization.
+
+        Note that the `scenarios` attribute may be modified, but
+        only such that the dimension of the set remains unchanged.
+        """
+        return self._scenarios
+
+    @scenarios.setter
+    def scenarios(self, val):
+        validate_array(
+            arr=val,
+            arr_name="scenarios",
+            dim=2,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        scenario_arr = np.array(val)
+        if hasattr(self, "_scenarios"):
+            if scenario_arr.shape[1] != self.dim:
+                raise ValueError(
+                    f"DiscreteScenarioSet attribute 'scenarios' must have "
+                    f"{self.dim} columns to match set dimension "
+                    f"(provided array-like with {scenario_arr.shape[1]} "
+                    "columns)"
                 )
 
-        # Standardize to list of tuples
-        self.scenarios = list(tuple(s) for s in scenarios)
-        self.type = "discrete"
+        self._scenarios = [tuple(s) for s in val]
 
     @property
     def dim(self):
