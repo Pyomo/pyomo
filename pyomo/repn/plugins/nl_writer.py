@@ -135,7 +135,7 @@ def _activate_nl_writer_version(n):
     WriterFactory.register('nl', doc)(WriterFactory.get_class(f'nl_v{n}'))
 
 
-def _apply_node_op(node, args):
+def _apply_node_operation(node, args):
     try:
         tmp = (_CONSTANT, node._apply_operation(args))
         if tmp[1].__class__ is complex:
@@ -1707,10 +1707,12 @@ def handle_product_node(visitor, node, arg1, arg2):
             return arg2
         elif arg2[0] is _MONOMIAL:
             if mult != mult:
+                # This catches mult (i.e., arg1) == nan
                 return arg1
             return (_MONOMIAL, arg2[1], mult*arg2[2])
         elif arg2[0] is _GENERAL:
             if mult != mult:
+                # This catches mult (i.e., arg1) == nan
                 return arg1
             arg2[1].mult *= mult
             return arg2
@@ -1731,18 +1733,20 @@ def handle_division_node(visitor, node, arg1, arg2):
         if div == 1:
             return arg1
         if arg1[0] is _MONOMIAL:
-            tmp = _apply_node_op(node, (arg1[2], div))
+            tmp = _apply_node_operation(node, (arg1[2], div))
             if tmp[1] != tmp[1]:
+                # This catches if the coefficient division results in nan
                 return tmp
             return (_MONOMIAL, arg1[1], tmp[1])
         elif arg1[0] is _GENERAL:
-            tmp = _apply_node_op(node, (arg1[1].mult, div))
+            tmp = _apply_node_operation(node, (arg1[1].mult, div))
             if tmp[1] != tmp[1]:
+                # This catches if the multiplier division results in nan
                 return tmp
             arg1[1].mult = tmp[1]
             return arg1
         elif arg1[0] is _CONSTANT:
-            return _apply_node_op(node, (arg1[1], div))
+            return _apply_node_operation(node, (arg1[1], div))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.division)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
@@ -1750,7 +1754,7 @@ def handle_division_node(visitor, node, arg1, arg2):
 
 def handle_pow_node(visitor, node, arg1, arg2):
     if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return _apply_node_op(node, (arg1[1], arg2[1]))
+        return _apply_node_operation(node, (arg1[1], arg2[1]))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.pow)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
@@ -1765,7 +1769,7 @@ def handle_abs_node(visitor, node, arg1):
 
 def handle_unary_node(visitor, node, arg1):
     if arg1[0] is _CONSTANT:
-        return _apply_node_op(node, (arg1[1],))
+        return _apply_node_operation(node, (arg1[1],))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.unary[node.name])
     return (_GENERAL, AMPLRepn(0, None, nonlin))
@@ -1936,7 +1940,7 @@ def handle_external_function_node(visitor, node, *args):
            for arg in args):
         arg_list = [arg[1] if arg[0] is _CONSTANT else arg[1].const
                     for arg in args]
-        return _apply_node_op(node, arg_list)
+        return _apply_node_operation(node, arg_list)
     if func in visitor.external_functions:
         if node._fcn._library != visitor.external_functions[func][1]._library:
             raise RuntimeError(
