@@ -301,7 +301,7 @@ class FileDownloader(object):
                 ctx.check_hostname = False
                 ctx.verify_mode = ssl.CERT_NONE
             fetch = request.urlopen(url, context=ctx)
-        except AttributeError:
+        except:
             # This is a fix implemented if we get stuck behind server
             # security features (blocks "bot" agents).
             # We are setting a known user-agent to get around that.
