@@ -2096,9 +2096,8 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def shape_matrix(self):
         """
-        (N, N) numpy.ndarray :
-            A positive definite matrix characterizing the shape
-            and orientation of the ellipsoid.
+        (N, N) numpy.ndarray : A positive definite matrix characterizing
+        the shape and orientation of the ellipsoid.
         """
         return self._shape_matrix
 
@@ -2131,10 +2130,9 @@ class EllipsoidalSet(UncertaintySet):
     @property
     def scale(self):
         """
-        numeric type :
-            Square of the factor by which to scale the semi-axes
-            of the ellipsoid (i.e. the eigenvectors of the shape
-            matrix).
+        numeric type : Square of the factor by which to scale the
+        semi-axes of the ellipsoid (i.e. the eigenvectors of the shape
+        matrix).
         """
         return self._scale
 
@@ -2155,8 +2153,8 @@ class EllipsoidalSet(UncertaintySet):
 
     @property
     def dim(self):
-        """Dimension of the ellipsoidal set.
-
+        """
+        int : Dimension of the ellipsoidal set.
         """
         return len(self.center)
 
