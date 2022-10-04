@@ -1544,9 +1544,8 @@ class FactorModelSet(UncertaintySet):
     @property
     def origin(self):
         """
-        (N,) numpy.ndarray :
-            Uncertain parameter values around which deviations are
-            restrained.
+        (N,) numpy.ndarray : Uncertain parameter values around which
+        deviations are restrained.
         """
         return self._origin
 
@@ -1575,9 +1574,8 @@ class FactorModelSet(UncertaintySet):
     @property
     def number_of_factors(self):
         """
-        int :
-            Natural number representing the dimensionality of the
-            space to which the set projects.
+        int : Natural number representing the dimensionality of the
+        space to which the set projects.
 
         This attribute is immutable, and may only be set at
         object construction. Typically, the number of factors
@@ -1603,11 +1601,11 @@ class FactorModelSet(UncertaintySet):
     @property
     def psi_mat(self):
         """
-        (N, `number_of_factors`) numpy.ndarray :
-            Matrix designating each uncertain parameter's contribution
-            to each factor. Each row is associated with a separate
-            uncertain parameter. Each column with a separate factor.
-            Every entry of the matrix must be nonnegative.
+        (N, `number_of_factors`) numpy.ndarray : Matrix designating each
+        uncertain parameter's contribution to each factor. Each row is
+        associated with a separate uncertain parameter. Each column with
+        a separate factor.  Every entry of the matrix must be
+        nonnegative.
         """
         return self._psi_mat
 
@@ -1654,10 +1652,9 @@ class FactorModelSet(UncertaintySet):
     @property
     def beta(self):
         """
-        numeric type :
-            Real number ranging from 0 to 1 representing the fraction
-            of the independent factors that can simultaneously attain
-            their extreme values.
+        numeric type : Real number ranging from 0 to 1 representing the
+        fraction of the independent factors that can simultaneously
+        attain their extreme values.
 
         Note that mathematically, setting `beta = 0` will enforce
         that as many factors will be above 0 as there will be below 0
@@ -1679,8 +1676,8 @@ class FactorModelSet(UncertaintySet):
 
     @property
     def dim(self):
-        """int : Dimension of the factor model set.
-
+        """
+        int : Dimension of the factor model set.
         """
         return len(self.origin)
 
