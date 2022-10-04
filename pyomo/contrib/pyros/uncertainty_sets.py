@@ -2419,9 +2419,8 @@ class IntersectionSet(UncertaintySet):
     @property
     def all_sets(self):
         """
-        UncertaintySetList :
-            List of the uncertainty sets of which to take the
-            intersection. Must be of minimum length 2.
+        UncertaintySetList : List of the uncertainty sets of which to
+        take the intersection. Must be of minimum length 2.
 
         This attribute may be set through any iterable of
         `UncertaintySet` objects, and exhibits similar behavior
@@ -2456,8 +2455,8 @@ class IntersectionSet(UncertaintySet):
 
     @property
     def dim(self):
-        """Dimension of the intersection set.
-
+        """
+        int : Dimension of the intersection set.
         """
         return self.all_sets[0].dim
 
