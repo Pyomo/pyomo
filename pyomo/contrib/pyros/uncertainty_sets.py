@@ -48,6 +48,7 @@ Classes
 import abc
 import math
 import functools
+from collections.abc import Iterable, MutableSequence
 from enum import Enum
 
 from pyomo.common.dependencies import numpy as np, scipy as sp
@@ -501,6 +502,160 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         for i, p in enumerate(model.util.uncertain_param_vars.values()):
             p.setlb(parameter_bounds[i][0])
             p.setub(parameter_bounds[i][1])
+
+
+class UncertaintySetList(MutableSequence):
+    """
+    List-like container for a(n ordered) sequence of uncertainty
+    sets of an immutable common dimension.
+
+    Parameters
+    ----------
+    iterable : Iterable
+        Sequence of uncertainty sets to be contained within
+        the list.
+    name : str or None, optional
+        Name of the uncertainty set list.
+    min_length : int or None, optional
+        Minimum length requirement for the set.
+        If `None` is provided, then the set has a minimum
+        length requirement of 0.
+    """
+
+    def __init__(self, iterable=[], name=None, min_length=None):
+        self._name = name
+        self._min_length = 0 if min_length is None else min_length
+
+        # check minimum length requirement satisfied
+        initlist = list(iterable)
+        if len(initlist) < self._min_length:
+            raise ValueError(
+                f"Attempting to initialize uncertainty set list "
+                f"{self._name!r} "
+                f"of minimum required length {self._min_length} with an "
+                f"iterable of length {len(initlist)}"
+            )
+
+        # validate first entry of initial list.
+        # The common dimension is set to that of the entry
+        # if validation is successful
+        self._dim = None
+        if initlist:
+            self._validate(initlist[0])
+
+        # now initialize the list
+        self._list = []
+        self.extend(initlist)
+
+    def __len__(self):
+        return len(self._list)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({repr(self._list)})"
+
+    def __getitem__(self, idx):
+        return self._list[idx]
+
+    def __setitem__(self, idx, value):
+        self._validate(value)
+        self._check_length_update(idx, value)
+        self._list[idx] = value
+
+    def __delitem__(self, idx):
+        self._check_length_update(idx, [])
+        del self._list[idx]
+
+    def clear(self):
+        self._check_length_update(slice(0, len(self)), [])
+        self._list.clear()
+
+    def insert(self, idx, value):
+        self._validate(value, single_item=True)
+        self._list.insert(idx, value)
+
+    def _check_length_update(self, idx, value):
+        """
+        Check whether the update ``self[idx] = value`` reduces the
+        length of self to a value smaller than the minimum length.
+
+        Raises
+        ------
+        ValueError
+            If minimum length requirement is violated by the update.
+        """
+        def default(val, def_val):
+            return def_val if val is None else val
+
+        if isinstance(idx, slice):
+            slice_len = len(
+                range(
+                    default(idx.start, 0),
+                    min(default(idx.stop, len(self)), len(self)),
+                    default(idx.step, 1),
+                )
+            )
+        else:
+            slice_len = 1
+
+        val_len = len(value) if isinstance(value, Iterable) else 1
+        new_len = len(self) + val_len - slice_len
+        if new_len < self._min_length:
+            raise ValueError(
+                f"Length of uncertainty set list {self._name!r} must "
+                f"be at least {self._min_length}"
+            )
+
+    def _validate(self, value, single_item=False):
+        """
+        Validate item or sequence of items to be inserted into self.
+
+        Parameters
+        ----------
+        value : object
+            Object to validate.
+        single_item : bool, optional
+            Do not allow validation of iterables of objects
+            (e.g. a list of ``UncertaintySet`` objects).
+            The default is `False`.
+
+        Raises
+        ------
+        TypeError
+            If object passed is not of the appropriate type
+            (``UncertaintySet``, or an iterable thereof).
+        ValueError
+            If object passed is (or contains) an ``UncertaintySet``
+            whose dimension does not match that of other uncertainty
+            sets in self.
+        """
+        if not single_item and isinstance(value, Iterable):
+            for val in value:
+                self._validate(val, single_item=True)
+        else:
+            validate_arg_type(
+                self._name,
+                value,
+                UncertaintySet,
+                "An `UncertaintySet` object",
+                is_entry_of_arg=True,
+            )
+            if self._dim is None:
+                # common dimension is now set
+                self._dim = value.dim
+            else:
+                # ensure set added matches common dimension
+                if value.dim != self._dim:
+                    raise ValueError(
+                        f"Uncertainty set list with name {self._name!r} "
+                        f"contains UncertaintySet objects of dimension "
+                        f"{self._dim}, but attempting to add set of dimension "
+                        f"{value.dim}"
+                    )
+
+    @property
+    def dim(self):
+        """Dimension of all sets contained in self."""
+        return self._dim
 
 
 class BoxSet(UncertaintySet):
@@ -2260,48 +2415,59 @@ class IntersectionSet(UncertaintySet):
     **uncertainty_sets : dict
         PyROS ``UncertaintySet`` objects of which to construct
         an intersection. At least two uncertainty sets must
-        be provided.
-
-    Attributes
-    ----------
-    all_sets : list(UncertaintySet)
-        The ``UncertaintySet`` objects from which the intersection
-        is formed.
-    type : str
-        Brief descriptor for the type of the uncertainty set.
+        be provided. All sets must be of the same dimension.
     """
 
     def __init__(self, **unc_sets):
         """Initialize self (see class docstring).
 
         """
-        for idx, (kwd, unc_set) in enumerate(unc_sets.items()):
-            validate_arg_type(
-                kwd,
-                unc_set,
-                UncertaintySet,
-                "an UncertaintySet object",
-                False,
-            )
-            if idx == 0:
-                set_dim = unc_set.dim
-            else:
-                if unc_set.dim != set_dim:
-                    raise ValueError(
-                        "UncertaintySet objects from which to construct "
-                        "an intersection must be of the same dimension "
-                        f" (detected dimensions {unc_set.dim} and {set_dim})"
-                    )
+        self.all_sets = unc_sets
 
-        if len(unc_sets) < 2:
-            raise ValueError(
-                "IntersectionSet construction requires at least 2 "
-                "UncertaintySet objects "
-                f"(detected {len(uncertainty_sets)} objects)"
-            )
+    @property
+    def type(self):
+        """
+        str : Brief description of the type of the uncertainty set.
+        """
+        return "intersection"
 
-        self.all_sets = list(unc_sets.values())
-        self.type = "intersection"
+    @property
+    def all_sets(self):
+        """
+        UncertaintySetList :
+            List of the uncertainty sets of which to take the
+            intersection. Must be of minimum length 2.
+
+        This attribute may be set through any iterable of
+        `UncertaintySet` objects, and exhibits similar behavior
+        to a ``list``.
+        """
+        return self._all_sets
+
+    @all_sets.setter
+    def all_sets(self, val):
+        if isinstance(val, dict):
+            the_sets = val.values()
+        else:
+            the_sets = list(val)
+
+        # type validation, ensure all entries have same dimension
+        all_sets = UncertaintySetList(
+            iterable=the_sets,
+            name="all_sets",
+            min_length=2,
+        )
+
+        # set dimension is immutable
+        if hasattr(self, "_all_sets"):
+            if all_sets.dim != self.dim:
+                raise ValueError(
+                    "Attempting to set attribute 'all_sets' of an "
+                    f"IntersectionSet of dimension {self.dim} to a sequence "
+                    f"of sets of dimension {all_sets[0].dim}"
+                )
+
+        self._all_sets = all_sets
 
     @property
     def dim(self):
