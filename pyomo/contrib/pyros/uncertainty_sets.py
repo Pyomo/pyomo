@@ -812,9 +812,8 @@ class CardinalitySet(UncertaintySet):
     @property
     def origin(self):
         """
-        (N,) numpy.ndarray :
-            Origin of the cardinality set (e.g. nominal parameter
-            values).
+        (N,) numpy.ndarray : Origin of the cardinality set
+        (e.g. nominal parameter values).
         """
         return self._origin
 
@@ -843,9 +842,8 @@ class CardinalitySet(UncertaintySet):
     @property
     def positive_deviation(self):
         """
-        (N,) numpy.ndarray :
-            Maximal coordinate deviations from the origin
-            in each dimension. All entries are nonnegative.
+        (N,) numpy.ndarray : Maximal coordinate deviations from the
+        origin in each dimension. All entries are nonnegative.
         """
         return self._positive_deviation
 
@@ -882,16 +880,15 @@ class CardinalitySet(UncertaintySet):
     @property
     def gamma(self):
         """
-        numeric type :
-            Upper bound for the number of uncertain parameters which
-            may maximally deviate from their respective origin values
-            simultaneously. Must be a numerical value ranging from 0 to
-            the set dimension.
+        numeric type : Upper bound for the number of uncertain
+        parameters which may maximally deviate from their respective
+        origin values simultaneously. Must be a numerical value ranging
+        from 0 to the set dimension.
 
         Note that mathematically, setting `gamma` to 0 reduces the set
-        to a singleton containing the center, while setting `gamma`
-        to the set dimension reduces the set to a hyperrectangle
-        with bounds ``[origin, origin + positive_deviation]``.
+        to a singleton containing the center, while setting `gamma` to
+        the set dimension reduces the set to a hyperrectangle with
+        bounds ``[origin, origin + positive_deviation]``.
         """
         return self._gamma
 
