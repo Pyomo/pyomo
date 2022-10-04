@@ -22,8 +22,8 @@ logger = logging.getLogger('pyomo.common')
 #     https://ampl.com/resources/extended-function-library/
 urlmap = {
     'linux':   'https://old.ampl.com/dl/open/amplgsl/amplgsl-linux%s.zip',
-    'windows': 'https://old.ampl.com/dl/open/amplgsl/amplgsl-mswin%s.zip',
-    'cygwin':  'https://old.ampl.com/dl/open/amplgsl/amplgsl-mswin%s.zip',
+    'windows': 'https://old.ampl.com/dl/open/amplgsl/amplgsl-win%s.zip',
+    'cygwin':  'https://old.ampl.com/dl/open/amplgsl/amplgsl-win%s.zip',
     'darwin':  'https://old.ampl.com/dl/open/amplgsl/amplgsl-osx.zip'
 }
 
