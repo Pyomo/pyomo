@@ -1282,12 +1282,11 @@ class BudgetSet(UncertaintySet):
     @property
     def coefficients_mat(self):
         """
-        (M + N, N) numpy.ndarray :
-            Coefficient matrix of all polyhedral constraints
-            defining the budget set. Composed from the incidence
-            matrix used for defining the budget constraints
-            and a coefficient matrix for individual uncertain
-            parameter nonnegativity constraints.
+        (M + N, N) numpy.ndarray : Coefficient matrix of all polyhedral
+        constraints defining the budget set. Composed from the incidence
+        matrix used for defining the budget constraints and a
+        coefficient matrix for individual uncertain parameter
+        nonnegativity constraints.
 
         This attribute cannot be set. The budget constraint
         incidence matrix may be altered through the
@@ -1300,10 +1299,9 @@ class BudgetSet(UncertaintySet):
     @property
     def rhs_vec(self):
         """
-        (M + N,) numpy.ndarray :
-            Right-hand side vector for polyhedral constraints defining
-            the budget set. This also includes entries for nonnegativity
-            constraints on the uncertain parameters.
+        (M + N,) numpy.ndarray : Right-hand side vector for polyhedral
+        constraints defining the budget set. This also includes entries
+        for nonnegativity constraints on the uncertain parameters.
 
         This attribute cannot be set. The right-hand
         sides for the budget constraints may be modified/accessed
@@ -1314,11 +1312,10 @@ class BudgetSet(UncertaintySet):
     @property
     def budget_membership_mat(self):
         """
-        (M, N) numpy.ndarray :
-            Incidence matrix of the budget constraints.
-            Each row corresponds to a single budget constraint,
-            and defines which uncertain parameters
-            (which dimensions) participate in that row's constraint.
+        (M, N) numpy.ndarray : Incidence matrix of the budget
+        constraints.  Each row corresponds to a single budget
+        constraint, and defines which uncertain parameters (which
+        dimensions) participate in that row's constraint.
         """
         return self._budget_membership_mat
 
@@ -1375,9 +1372,8 @@ class BudgetSet(UncertaintySet):
     @property
     def budget_rhs_vec(self):
         """
-        (M,) numpy.ndarray
-            Right-hand side values (upper bounds) for the budget
-            constraints.
+        (M,) numpy.ndarray : Right-hand side values (upper bounds) for
+        the budget constraints.
         """
         return self._budget_rhs_vec
 
@@ -1417,8 +1413,8 @@ class BudgetSet(UncertaintySet):
 
     @property
     def dim(self):
-        """Dimension of the budget set.
-
+        """
+        int : Dimension of the budget set.
         """
         return self.budget_membership_mat.shape[1]
 
