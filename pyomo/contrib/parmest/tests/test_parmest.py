@@ -625,16 +625,20 @@ class TestReactorDesign_DAE(unittest.TestCase):
                 [4.474,  -0.030,   0.036,   0.941],
                 [4.737,   0.004,   0.036,   0.971],
                 [5.000,  -0.024,   0.028,   0.985]]
-        self.data = pd.DataFrame(data, columns=['t', 'ca', 'cb', 'cc'])
-        data_df = self.data.set_index('t')
-        data_dict = {'ca': {k:v for (k, v) in zip(self.data.t, self.data.ca)},
-                     'cb': {k:v for (k, v) in zip(self.data.t, self.data.cb)},
-                     'cc': {k:v for (k, v) in zip(self.data.t, self.data.cc)} }
+        data = pd.DataFrame(data, columns=['t', 'ca', 'cb', 'cc'])
+        data_df = data.set_index('t')
+        data_dict = {'ca': {k:v for (k, v) in zip(data.t, data.ca)},
+                     'cb': {k:v for (k, v) in zip(data.t, data.cb)},
+                     'cc': {k:v for (k, v) in zip(data.t, data.cc)} }
 
         theta_names = ['k1', 'k2']
 
         self.pest_df = parmest.Estimator(ABC_model, [data_df], theta_names)
         self.pest_dict = parmest.Estimator(ABC_model, [data_dict], theta_names)
+
+        # Estimator object with multiple scenarios
+        self.pest_df_multiple = parmest.Estimator(ABC_model, [data_df,data_df], theta_names)
+        self.pest_dict_multiple = parmest.Estimator(ABC_model, [data_dict,data_dict], theta_names)
 
         # Create an instance of the model
         self.m_df = ABC_model(data_df)
@@ -649,6 +653,20 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertAlmostEqual(obj1, obj2, places=6)
         self.assertAlmostEqual(theta1['k1'], theta2['k1'], places=6)
         self.assertAlmostEqual(theta1['k2'], theta2['k2'], places=6)
+    
+    def test_return_continuous_set(self):
+        '''
+        test if ContinuousSet elements are returned correctly from theta_est()
+        '''
+        obj, theta, return_vals = self.pest_df.theta_est(return_values=['time'])
+        self.assertAlmostEqual(return_vals['time'].loc[18],2.368, places=3)
+    
+    def test_return_continuous_set_multiple_datasets(self):
+        '''
+        test if ContinuousSet elements are returned correctly from theta_est()
+        '''
+        obj, theta, return_vals = self.pest_df_multiple.theta_est(return_values=['time'])
+        self.assertAlmostEqual(return_vals['time'].loc[1][18],2.368, places=3)
 
     def test_covariance(self):
 
@@ -677,14 +695,6 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertTrue(cov.loc['k1', 'k1'] > 0)
         self.assertTrue(cov.loc['k2', 'k2'] > 0)
         self.assertAlmostEqual(cov_diff, 0, places=6)
-
-    def test_return_continuous_set(self):
-        '''
-        test if ContinuousSet elements are returned correctly from theta_est()
-        '''
-        obj1, theta1, data_returned = self.pest_df.theta_est(return_values=['time','ca'])
-        print("returned_data",data_returned)
-        self.assertAlmostEqual(data_returned['time'].loc[9],self.data['t'].loc[9], places=3)
         
 @unittest.skipIf(not parmest.parmest_available,
                  "Cannot test parmest: required dependencies are missing")
