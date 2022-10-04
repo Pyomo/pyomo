@@ -2259,9 +2259,8 @@ class DiscreteScenarioSet(UncertaintySet):
     @property
     def scenarios(self):
         """
-        list(tuple) :
-            Uncertain parameter realizations comprising the set.
-            Each tuple is an uncertain parameter realization.
+        list(tuple) : Uncertain parameter realizations comprising the
+        set.  Each tuple is an uncertain parameter realization.
 
         Note that the `scenarios` attribute may be modified, but
         only such that the dimension of the set remains unchanged.
@@ -2293,8 +2292,8 @@ class DiscreteScenarioSet(UncertaintySet):
 
     @property
     def dim(self):
-        """Dimension of the discrete scenario set.
-
+        """
+        int : Dimension of the discrete scenario set.
         """
         return len(self.scenarios[0])
 
