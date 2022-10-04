@@ -302,8 +302,13 @@ class FileDownloader(object):
                 ctx.verify_mode = ssl.CERT_NONE
             fetch = request.urlopen(url, context=ctx)
         except AttributeError:
-            # Revert to pre-2.7.9 syntax
-            fetch = request.urlopen(url)
+            # This is a fix implemented if we get stuck behind server
+            # security features (blocks "bot" agents).
+            # We are setting a known user-agent to get around that.
+            req = request.Request(
+                url=url,
+                headers={'User-Agent': 'Mozilla/5.0'})
+            fetch = request.urlopen(req)
         ans = fetch.read()
         logger.info("  ...downloaded %s bytes" % (len(ans),))
         return ans
