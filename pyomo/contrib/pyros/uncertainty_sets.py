@@ -1079,9 +1079,8 @@ class PolyhedralSet(UncertaintySet):
     @property
     def coefficients_mat(self):
         """
-        (M, N) numpy.ndarray :
-            Coefficient matrix for the (linear) inequality constraints
-            defining the polyhedral set.
+        (M, N) numpy.ndarray : Coefficient matrix for the (linear)
+        inequality constraints defining the polyhedral set.
 
         In tandem with the `rhs_vec` attribute, this matrix should
         be such that the polyhedral set is nonempty and bounded.
@@ -1133,9 +1132,8 @@ class PolyhedralSet(UncertaintySet):
     @property
     def rhs_vec(self):
         """
-        (M,) numpy.ndarray :
-            Right-hand side values (upper bounds) for the (linear)
-            inequality constraints defining the polyhedral set.
+        (M,) numpy.ndarray : Right-hand side values (upper bounds) for
+        the (linear) inequality constraints defining the polyhedral set.
         """
         return self._rhs_vec
 
