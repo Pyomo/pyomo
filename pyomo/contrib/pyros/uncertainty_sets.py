@@ -1892,8 +1892,8 @@ class AxisAlignedEllipsoidalSet(UncertaintySet):
 
     @property
     def dim(self):
-        """Dimension of the axis-aligned ellipsoidal set.
-
+        """
+        int : Dimension of the axis-aligned ellipsoidal set.
         """
         return len(self.center)
 
