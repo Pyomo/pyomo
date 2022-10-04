@@ -158,34 +158,34 @@ PyROS Uncertainty Set Classes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BoxSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: bounds, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.CardinalitySet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: origin, positive_deviation, gamma, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BudgetSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: coefficients_mat, rhs_vec, budget_membership_mat, budget_rhs_vec, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: origin, number_of_factors, psi_mat, beta, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.PolyhedralSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: coefficients_mat, rhs_vec, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.AxisAlignedEllipsoidalSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: center, half_lengths, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.EllipsoidalSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: center, shape_matrix, scale, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.UncertaintySet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.DiscreteScenarioSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: scenarios, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.IntersectionSet
-    :special-members: __init__, parameter_bounds, dim, point_in_set
+    :special-members: all_sets, type, parameter_bounds, dim, point_in_set
 
 
 PyROS Usage Example
