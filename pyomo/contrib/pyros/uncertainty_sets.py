@@ -1166,7 +1166,7 @@ class PolyhedralSet(UncertaintySet):
     @property
     def dim(self):
         """
-        int : Dimension of the cardinality set.
+        int : Dimension of the polyhedral set.
         """
         return len(self.coefficients_mat[0])
 
