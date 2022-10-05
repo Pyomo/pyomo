@@ -76,7 +76,7 @@ def _check_var_domain(visitor, node, var):
             % (node, var))
     return var.domain & RangeSet(*bnds)
 
-def _handle_getitem(visitor, node, *data):#, *cpx_idx):
+def _handle_getitem(visitor, node, *data):
     # First we need to determine the range for each of the the
     # arguments.  They can be:
     #
@@ -87,14 +87,14 @@ def _handle_getitem(visitor, node, *data):#, *cpx_idx):
     arg_scale = []
     expr = 0
     mult = 1
-    # Note skipping the first argument: that should be the IndexedComponent
+    # Note: skipping the first argument: that should be the IndexedComponent
     for i, arg in enumerate(data[1:]):
         if arg.__class__ in EXPR.native_types:
             arg_set = Set(initialize=[arg])
             arg_set.construct()
             arg_domain.append(arg_set)
             arg_scale.append(None)
-        elif node.arg(i+1).is_expression_type(): #arg.is_docplex_expression():
+        elif node.arg(i+1).is_expression_type():
             # This argument is an expression.  It could be any
             # combination of any number of integer variables, as long as
             # the resulting expression is still an IntExpression.  We
@@ -130,7 +130,7 @@ def _handle_getitem(visitor, node, *data):#, *cpx_idx):
             arg_scale.append(interval)
         else:
             # This had better be a simple variable over a regular
-            # discrete domain.  When we add support for ategorical
+            # discrete domain.  When we add support for categorical
             # variables, we will need to ensure that the categoricals
             # have already been converted to simple integer domains by
             # this point.
@@ -141,9 +141,12 @@ def _handle_getitem(visitor, node, *data):#, *cpx_idx):
         # position in the elements list
         if arg_scale[-1] is not None:
             _min, _max, _step = arg_scale[-1]
-            expr += mult * (arg - _min) / _step
+            # ESJ: Have to use integer division here because otherwise, later,
+            # when we construct the element constraint, docplex won't believe
+            # the index is an integer expression.
+            expr += cp.int_div(mult * (arg - _min), _step)
             # This could be (_max - _min) // _step + 1, but that assumes
-            # tht the set correctly collapsed the bounds and that the
+            # that the set correctly collapsed the bounds and that the
             # lower and upper bounds were part of the step.  That
             # *should* be the case for Set, but I am suffering from a
             # crisis of confidence at the moment.
@@ -155,9 +158,7 @@ def _handle_getitem(visitor, node, *data):#, *cpx_idx):
     elements = []
     for idx in SetProduct(*arg_domain):
         try:
-            # print(idx)
             idx = idx if len(idx) > 1 else idx[0]
-            # print(idx)
             elements.append(data[0][idx])
         except KeyError:
             raise RuntimeError("CP optimizer thinks this is infeasible anyway")
@@ -173,13 +174,28 @@ def _handle_getitem(visitor, node, *data):#, *cpx_idx):
 #     return cp.element(array, index)
 
 def _handle_getattr(visitor, node, obj, attr):
-    set_trace()
-    if attr == 'start_time':
-        return cp.start_of(obj)
-    elif attr == 'end_time':
-        return cp.end_of(obj)
-    elif attr == 'length':
-        return cp.length_of(obj)
+    # currently the only time that obj will be a tuple is if we need to do
+    # getattr on a list of things instead of just one in order to pass as the
+    # list of integer-valued expression for an element constraint. So for now I
+    # guess we can just check, but if we ever add more complexity, we are going
+    # to need to label what it is since this is a deferred operation.
+    objects = (obj,) if type(obj) is not tuple else obj[0]
+    ans = []
+    for o in objects:
+        if attr == 'start_time':
+            ans.append(cp.start_of(o))
+        elif attr == 'end_time':
+            ans.append(cp.end_of(o))
+        elif attr == 'length':
+            ans.append(cp.length_of(o))
+        else:
+            set_trace()
+            raise RuntimeError("Unrecognized attrribute in GetAttrExpression: "
+                               "%s. Found for object: %s" % (attr, o))
+    if len(ans) == 1:
+        return ans[0]
+    else:
+        return cp.element(array=ans, index=obj[1])
 
 def _before_boolean_var(visitor, child):
     _id = id(child)
