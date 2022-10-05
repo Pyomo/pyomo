@@ -1948,7 +1948,7 @@ def handle_named_expression_node(visitor, node, arg1):
     visitor.subexpression_order.append(_id)
     ans = AMPLRepn(
         repn.const,
-        list(repn.linear) if repn.linear is not None else repn.linear,
+        list(repn.linear) if repn.linear is not None else None,
         repn.nonlinear
     )
     ans.nl = repn.nl
@@ -2129,7 +2129,7 @@ def _before_named_expression(visitor, child):
                 return False, (_CONSTANT, repn.const)
         ans = AMPLRepn(
             repn.const,
-            list(repn.linear) if repn.linear is not None else repn.linear,
+            list(repn.linear) if repn.linear is not None else None,
             repn.nonlinear
         )
         ans.nl = repn.nl
