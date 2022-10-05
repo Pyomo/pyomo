@@ -33,7 +33,7 @@ from pyomo.core.base.indexed_component import (
 )
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from pyomo.core.base.reference import (
-    _ReferenceDict, _ReferenceSet, Reference
+    _ReferenceDict, _ReferenceSet, Reference, UnindexedComponent_ReferenceSet,
 )
 
 
@@ -413,7 +413,7 @@ class TestReference(unittest.TestCase):
         self.assertIs(m.r.ctype, Var)
         self.assertIsNot(m.r.index_set(), m.x.index_set())
         self.assertIs(m.x.index_set(), UnindexedComponent_set)
-        self.assertIs(type(m.r.index_set()), OrderedSetOf)
+        self.assertIs(m.r.index_set(), UnindexedComponent_ReferenceSet)
         self.assertEqual(len(m.r), 1)
         self.assertTrue(m.r.is_indexed())
         self.assertIn(None, m.r)
@@ -458,8 +458,9 @@ class TestReference(unittest.TestCase):
         self.assertIs(m.r.ctype, Var)
         self.assertIsNot(m.r.index_set(), m.y.index_set())
         self.assertIs(m.y.index_set(), m.y_index)
-        self.assertIs(type(m.r.index_set()), OrderedSetOf)
+        self.assertIs(m.r.index_set(), UnindexedComponent_ReferenceSet)
         self.assertEqual(len(m.r), 1)
+        self.assertTrue(m.r.is_reference())
         self.assertTrue(m.r.is_indexed())
         self.assertIn(None, m.r)
         self.assertNotIn(1, m.r)
@@ -919,12 +920,15 @@ class TestReference(unittest.TestCase):
 
         m.ref0 = Reference(m.v0)
         m.ref1 = Reference(m.v1)
+        m.ref2 = Reference(m.v1[2])
 
         self.assertFalse(m.v0.is_reference())
         self.assertFalse(m.v1.is_reference())
+        self.assertFalse(m.v1[2].is_reference())
 
         self.assertTrue(m.ref0.is_reference())
         self.assertTrue(m.ref1.is_reference())
+        self.assertTrue(m.ref2.is_reference())
 
         unique_vars = list(
                 v for v in m.component_objects(Var) if not v.is_reference())
@@ -993,11 +997,46 @@ class TestReference(unittest.TestCase):
             normalize_index.flatten = _old_flatten
 
     def test_pprint_nonfinite_sets(self):
-        # test issue #2039
         self.maxDiff = None
         m = ConcreteModel()
         m.v = Var(NonNegativeIntegers, dense=False)
         m.ref = Reference(m.v)
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue().strip(), """
+2 Var Declarations
+    ref : Size=0, Index=NonNegativeIntegers, ReferenceTo=v
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+    v : Size=0, Index=NonNegativeIntegers
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+
+2 Declarations: v ref
+""".strip())
+
+        m.v[3]
+        m.ref[5]
+        buf = StringIO()
+        m.pprint(ostream=buf)
+        self.assertEqual(buf.getvalue().strip(), """
+2 Var Declarations
+    ref : Size=2, Index=NonNegativeIntegers, ReferenceTo=v
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          3 :  None :  None :  None : False :  True :  Reals
+          5 :  None :  None :  None : False :  True :  Reals
+    v : Size=2, Index=NonNegativeIntegers
+        Key : Lower : Value : Upper : Fixed : Stale : Domain
+          3 :  None :  None :  None : False :  True :  Reals
+          5 :  None :  None :  None : False :  True :  Reals
+
+2 Declarations: v ref
+""".strip())
+
+    def test_pprint_nonfinite_sets_ctypeNone(self):
+        # test issue #2039
+        self.maxDiff = None
+        m = ConcreteModel()
+        m.v = Var(NonNegativeIntegers, dense=False)
+        m.ref = Reference(m.v, ctype=None)
         buf = StringIO()
         m.pprint(ostream=buf)
         self.assertEqual(buf.getvalue().strip(), """
@@ -1006,15 +1045,10 @@ class TestReference(unittest.TestCase):
         Key : Lower : Value : Upper : Fixed : Stale : Domain
 
 1 IndexedComponent Declarations
-    ref : Size=0, Index=ref_index, ReferenceTo=v
+    ref : Size=0, Index=NonNegativeIntegers, ReferenceTo=v
         Key : Object
 
-1 SetOf Declarations
-    ref_index : Dimen=0, Size=0, Bounds=(None, None)
-        Key  : Ordered : Members
-        None :   False : ReferenceSet(v[...])
-
-3 Declarations: v ref_index ref
+2 Declarations: v ref
 """.strip())
 
         m.v[3]
@@ -1029,17 +1063,12 @@ class TestReference(unittest.TestCase):
           5 :  None :  None :  None : False :  True :  Reals
 
 1 IndexedComponent Declarations
-    ref : Size=2, Index=ref_index, ReferenceTo=v
+    ref : Size=2, Index=NonNegativeIntegers, ReferenceTo=v
         Key : Object
           3 : <class 'pyomo.core.base.var._GeneralVarData'>
           5 : <class 'pyomo.core.base.var._GeneralVarData'>
 
-1 SetOf Declarations
-    ref_index : Dimen=1, Size=2, Bounds=(3, 5)
-        Key  : Ordered : Members
-        None :   False : ReferenceSet(v[...])
-
-3 Declarations: v ref_index ref
+2 Declarations: v ref
 """.strip())
 
     def test_pprint_nested(self):

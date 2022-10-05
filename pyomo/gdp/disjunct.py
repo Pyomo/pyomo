@@ -33,7 +33,7 @@ from pyomo.core.base.numvalue import native_types
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
-
+from pyomo.core.expr.expr_common import ExpressionType
 
 logger = logging.getLogger('pyomo.gdp')
 
@@ -329,8 +329,9 @@ class _DisjunctData(_BlockData):
 
     def __init__(self, component):
         _BlockData.__init__(self, component)
-        self.indicator_var = AutoLinkedBooleanVar()
-        self.binary_indicator_var = AutoLinkedBinaryVar(self.indicator_var)
+        with self._declare_reserved_components():
+            self.indicator_var = AutoLinkedBooleanVar()
+            self.binary_indicator_var = AutoLinkedBinaryVar(self.indicator_var)
         self.indicator_var.associate_binary_var(self.binary_indicator_var)
         # pointer to transformation block if this disjunct has been
         # transformed. None indicates it hasn't been transformed.
@@ -487,33 +488,18 @@ class _DisjunctionData(ActiveComponentData):
                 e_iter = [e]
             for _tmpe in e_iter:
                 try:
-                    isexpr = _tmpe.is_expression_type()
+                    if _tmpe.is_expression_type():
+                        expressions.append(_tmpe)
+                        continue
                 except AttributeError:
-                    isexpr = False
-                if not isexpr or not _tmpe.is_relational():
-                    try:
-                        isvar = _tmpe.is_variable_type()
-                    except AttributeError:
-                        isvar = False
-                    if isvar and _tmpe.is_relational():
-                        expressions.append(_tmpe)
-                        continue
-                    try:
-                        isbool = _tmpe.is_logical_type()
-                    except AttributeError:
-                        isbool = False
-                    if isbool:
-                        expressions.append(_tmpe)
-                        continue
-                    msg = "\n\tin %s" % (type(e),) if e_iter is e else ""
-                    raise ValueError(
-                        "Unexpected term for Disjunction %s.\n"
-                        "\tExpected a Disjunct object, relational expression, "
-                        "or iterable of\n"
-                        "\trelational expressions but got %s%s"
-                        % (self.name, type(_tmpe), msg) )
-                else:
-                    expressions.append(_tmpe)
+                    pass
+                msg = "\n\tin %s" % (type(e),) if e_iter is e else ""
+                raise ValueError(
+                    "Unexpected term for Disjunction %s.\n"
+                    "\tExpected a Disjunct object, relational expression, "
+                    "or iterable of\n"
+                    "\trelational expressions but got %s%s"
+                    % (self.name, type(_tmpe), msg) )
 
             comp = self.parent_component()
             if comp._autodisjuncts is None:
@@ -530,10 +516,15 @@ class _DisjunctionData(ActiveComponentData):
             disjunct.constraint = c = ConstraintList()
             disjunct.propositions = p = LogicalConstraintList()
             for e in expressions:
-                if isinstance(e, BooleanValue):
+                if e.is_expression_type(ExpressionType.RELATIONAL):
+                    c.add(e)
+                elif e.is_expression_type(ExpressionType.LOGICAL):
                     p.add(e)
                 else:
-                    c.add(e)
+                    raise RuntimeError(
+                        "Unsupported expression type on Disjunct "
+                        f"{disjunct.name}: expected either relational or "
+                        f"logical expression, found {e.__class__.__name__}")
             self.disjuncts.append(disjunct)
 
 

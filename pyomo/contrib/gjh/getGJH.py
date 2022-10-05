@@ -21,10 +21,10 @@ logger = logging.getLogger('pyomo.common')
 #     https://ampl.com/resources/hooking-your-solver-to-ampl/
 # All 32-bit downloads are used - 64-bit is available only for Linux
 urlmap = {
-    'linux':   'https://ampl.com/netlib/ampl/student/linux/gjh.gz',
-    'windows': 'https://ampl.com/netlib/ampl/student/mswin/gjh.exe.gz',
-    'cygwin':  'https://ampl.com/netlib/ampl/student/mswin/gjh.exe.gz',
-    'darwin':  'https://ampl.com/netlib/ampl/student/macosx/x86_32/gjh.gz',
+    'linux':   'https://netlib.org/ampl/student/linux/gjh.gz',
+    'windows': 'https://netlib.org/ampl/student/mswin/gjh.exe.gz',
+    'cygwin':  'https://netlib.org/ampl/student/mswin/gjh.exe.gz',
+    'darwin':  'https://netlib.org/ampl/student/macosx/x86_32/gjh.gz',
 }
 exemap = {
     'linux':   '',

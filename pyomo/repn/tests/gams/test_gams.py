@@ -255,7 +255,7 @@ class Test(unittest.TestCase):
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
         self.assertEqual(expression_to_string(
-            m.x ** -3, tc, lbl, smap=smap), ("power(x1, (-3))", False))
+            m.x ** -3, tc, smap=smap), ("power(x1, (-3))", False))
         self.assertEqual(expression_to_string(
             m.x ** 0.33, tc, smap=smap), ("x1 ** 0.33", False))
         self.assertEqual(expression_to_string(
@@ -271,7 +271,7 @@ class Test(unittest.TestCase):
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
         self.assertEqual(expression_to_string(
-            m.x + m.y - m.z, tc, lbl, smap=smap), ("x1 + x2 + 3", False))
+            m.x + m.y - m.z, tc, smap=smap), ("x1 + x2 + 3", False))
         m.z.fix(-400)
         self.assertEqual(expression_to_string(
             m.z + m.y - m.z, tc, smap=smap), ("(-400) + x2 + 400", False))
@@ -291,11 +291,11 @@ class Test(unittest.TestCase):
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
         self.assertEqual(expression_to_string(
-            ceil(m.x), tc, lbl, smap=smap), ("ceil(x1)", True))
+            ceil(m.x), tc, smap=smap), ("ceil(x1)", True))
         self.assertEqual(expression_to_string(
-            floor(m.x), tc, lbl, smap=smap), ("floor(x1)", True))
+            floor(m.x), tc, smap=smap), ("floor(x1)", True))
         self.assertEqual(expression_to_string(
-            abs(m.x), tc, lbl, smap=smap), ("abs(x1)", True))
+            abs(m.x), tc, smap=smap), ("abs(x1)", True))
 
     def test_arcfcn_to_string(self):
         m = ConcreteModel()
@@ -304,23 +304,23 @@ class Test(unittest.TestCase):
         smap = SymbolMap(lbl)
         tc = StorageTreeChecker(m)
         self.assertEqual(expression_to_string(
-            asin(m.x), tc, lbl, smap=smap), ("arcsin(x1)", False))
+            asin(m.x), tc, smap=smap), ("arcsin(x1)", False))
         self.assertEqual(expression_to_string(
-            acos(m.x), tc, lbl, smap=smap), ("arccos(x1)", False))
+            acos(m.x), tc, smap=smap), ("arccos(x1)", False))
         self.assertEqual(expression_to_string(
-            atan(m.x), tc, lbl, smap=smap), ("arctan(x1)", False))
+            atan(m.x), tc, smap=smap), ("arctan(x1)", False))
         with self.assertRaisesRegex(
                 RuntimeError,
                 "GAMS files cannot represent the unary function asinh"):
-            expression_to_string(asinh(m.x), tc, lbl, smap=smap)
+            expression_to_string(asinh(m.x), tc, smap=smap)
         with self.assertRaisesRegex(
                 RuntimeError,
                 "GAMS files cannot represent the unary function acosh"):
-            expression_to_string(acosh(m.x), tc, lbl, smap=smap)
+            expression_to_string(acosh(m.x), tc, smap=smap)
         with self.assertRaisesRegex(
                 RuntimeError,
                 "GAMS files cannot represent the unary function atanh"):
-            expression_to_string(atanh(m.x), tc, lbl, smap=smap)
+            expression_to_string(atanh(m.x), tc, smap=smap)
 
     def test_gams_arc_in_active_constraint(self):
         m = ConcreteModel()

@@ -1530,7 +1530,7 @@ def compute_bounds_on_expr(expr):
 
     Parameters
     ----------
-    expr: pyomo.core.expr.numeric_expr.ExpressionBase
+    expr: pyomo.core.expr.numeric_expr.NumericExpression
 
     Returns
     -------

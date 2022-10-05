@@ -10,11 +10,10 @@
 #  ___________________________________________________________________________
 
 from pyomo.core.expr import current as EXPR
-from pyomo.core.kernel.base import \
-    (ICategorizedObject,
-     _abstract_readwrite_property)
-from pyomo.core.kernel.container_utils import \
-    define_simple_containers
+from pyomo.core.kernel.base import (
+    ICategorizedObject, _abstract_readwrite_property,
+)
+from pyomo.core.kernel.container_utils import define_simple_containers
 from pyomo.core.expr.numvalue import (NumericValue,
                                       is_fixed,
                                       is_constant,
@@ -30,6 +29,11 @@ class IIdentityExpression(NumericValue):
     override all implemented methods.
     """
     __slots__ = ()
+
+
+    PRECEDENCE = 0
+
+    ASSOCIATIVITY = EXPR.common.OperatorAssociativity.NON_ASSOCIATIVE
 
     @property
     def expr(self):
@@ -73,7 +77,7 @@ class IIdentityExpression(NumericValue):
         """A boolean indicating whether this in a named expression."""
         return True
 
-    def is_expression_type(self):
+    def is_expression_type(self, expression_system=None):
         """A boolean indicating whether this in an expression."""
         return True
 
@@ -109,7 +113,7 @@ class IIdentityExpression(NumericValue):
         """Convert this expression into a string."""
         return EXPR.expression_to_string(self, verbose=verbose, labeler=labeler, smap=smap, compute_values=compute_values)
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
             name = self.getname()
             if name == None:
@@ -121,12 +125,6 @@ class IIdentityExpression(NumericValue):
         if self._expr is None:
             return "%s{Undefined}" % str(self)
         return values[0]
-
-    def _precedence(self):
-        return 0
-
-    def _associativity(self):
-        return 0
 
     def _apply_operation(self, result):
         return result[0]
