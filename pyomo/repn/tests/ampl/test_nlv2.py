@@ -216,11 +216,11 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         info = INFO()
         with LoggingIntercept() as LOG:
             repn = info.visitor.walk_expression((m.p*(1 / m.p), None, None))
-        self.assertEqual(
-            LOG.getvalue(),
+        self.assertIn(
             "Exception encountered evaluating expression 'div(1, 0)'\n"
             "\tmessage: division by zero\n"
-            "\texpression: 1/p\n"
+            "\texpression: 1/p\n",
+            LOG.getvalue(),
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -231,11 +231,11 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         info = INFO()
         with LoggingIntercept() as LOG:
             repn = info.visitor.walk_expression(((1 / m.p)*m.p, None, None))
-        self.assertEqual(
-            LOG.getvalue(),
+        self.assertIn(
             "Exception encountered evaluating expression 'div(1, 0)'\n"
             "\tmessage: division by zero\n"
-            "\texpression: 1/p\n"
+            "\texpression: 1/p\n",
+            LOG.getvalue(),
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -246,11 +246,11 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         info = INFO()
         with LoggingIntercept() as LOG:
             repn = info.visitor.walk_expression((m.p*(m.x / m.p), None, None))
-        self.assertEqual(
-            LOG.getvalue(),
+        self.assertIn(
             "Exception encountered evaluating expression 'div(1, 0)'\n"
             "\tmessage: division by zero\n"
-            "\texpression: 1/p\n"
+            "\texpression: 1/p\n",
+            LOG.getvalue(),
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -261,11 +261,11 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         info = INFO()
         with LoggingIntercept() as LOG:
             repn = info.visitor.walk_expression((m.p*(3*(m.x + 2) / m.p), None, None))
-        self.assertEqual(
-            LOG.getvalue(),
+        self.assertIn(
             "Exception encountered evaluating expression 'div(3, 0)'\n"
             "\tmessage: division by zero\n"
-            "\texpression: 3*(x + 2)/p\n"
+            "\texpression: 3*(x + 2)/p\n",
+            LOG.getvalue(),
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)
@@ -276,11 +276,11 @@ class Test_AMPLRepnVisitor(unittest.TestCase):
         info = INFO()
         with LoggingIntercept() as LOG:
             repn = info.visitor.walk_expression((m.p*(m.x**2 / m.p), None, None))
-        self.assertEqual(
-            LOG.getvalue(),
+        self.assertIn(
             "Exception encountered evaluating expression 'div(1, 0)'\n"
             "\tmessage: division by zero\n"
-            "\texpression: x**2/p\n"
+            "\texpression: x**2/p\n",
+            LOG.getvalue(),
         )
         self.assertEqual(repn.nl, None)
         self.assertEqual(repn.mult, 1)

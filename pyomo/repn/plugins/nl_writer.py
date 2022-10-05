@@ -20,6 +20,7 @@ from pyomo.common.backports import nullcontext
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, InEnum, add_docstring_list,
 )
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
@@ -1702,6 +1703,17 @@ def handle_product_node(visitor, node, arg1, arg2):
             # including this for backwards compatibility with the NLv1
             # writer, but arguably we should deprecate/remove this
             # "feature" in the future.
+            if arg2[0] is _CONSTANT:
+                _prod = mult * arg2[1]
+                if _prod:
+                    deprecation_warning(
+                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        "Mapping the NaN result to 0 for compatibility "
+                        "with the nl_v1 writer.  In the future, this NaN "
+                        "will be preserved/emitted to comply with IEEE-754.",
+                        version='TBD')
+                    _prod = 0
+                return (_CONSTANT, _prod)
             return arg1
         if mult == 1:
             return arg2
@@ -1720,7 +1732,16 @@ def handle_product_node(visitor, node, arg1, arg2):
             if not arg2[1]:
                 # Simplify multiplication by 0; see note above about
                 # IEEE-754 incompatibility.
-                return arg2
+                _prod = mult * arg2[1]
+                if _prod:
+                    deprecation_warning(
+                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        "Mapping the NaN result to 0 for compatibility "
+                        "with the nl_v1 writer.  In the future, this NaN "
+                        "will be preserved/emitted to comply with IEEE-754.",
+                        version='TBD')
+                    _prod = 0
+                return (_CONSTANT, _prod)
             return (_CONSTANT, mult*arg2[1])
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.product)
