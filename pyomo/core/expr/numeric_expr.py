@@ -134,7 +134,7 @@ class NumericExpression(ExpressionBase, NumericValue):
             Sequence containing only the child nodes of this node.  The
             return type depends on the node storage model.  Users are
             not permitted to change the returned data (even for the case
-            of data returned as a list), as that breaks the promist of
+            of data returned as a list), as that breaks the promise of
             tree immutability.
         """
         return self._args_

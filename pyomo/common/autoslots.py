@@ -60,7 +60,7 @@ _unchanged = [None]
 def fast_deepcopy(obj, memo):
     """A faster implementation of copy.deepcopy()
 
-    Python's default implementation of deepcopy has several fetures that
+    Python's default implementation of deepcopy has several features that
     are slower than they need to be.  This is an implementation of
     deepcopy that provides special handling to circumvent some of the
     slowest parts of deepcopy().
@@ -236,10 +236,10 @@ class AutoSlots(type):
             AutoSlots.collect_autoslots(cls)
 
         def __deepcopy__(self, memo):
-            """Default implementation of __depcopy__ based on __getstate__
+            """Default implementation of __deepcopy__ based on __getstate__
 
             This defines a default implementation of __deepcopy__ that
-            leverages :py:meth:__getstate__` and :py:meth:`__setstate__`
+            leverages :py:meth:`__getstate__` and :py:meth:`__setstate__`
             to duplicate an object.  Having a default __deepcopy__
             implementation shortcuts significant logic in
             :py:func:`copy.deepcopy()`, thereby speeding up deepcopy
