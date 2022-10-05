@@ -290,17 +290,17 @@ class BigM_Transformation(Transformation):
                         warning_msg += "\t%s\n" % component
                 logger.warning(warning_msg)
 
-    def _add_transformation_block(self, instance):
-        if instance in self._transformation_blocks:
-            return self._transformation_blocks[instance]
+    def _add_transformation_block(self, to_block):
+        if to_block in self._transformation_blocks:
+            return self._transformation_blocks[to_block]
 
-        # make a transformation block on instance to put transformed disjuncts
+        # make a transformation block on to_block to put transformed disjuncts
         # on
         transBlockName = unique_component_name(
-            instance,
+            to_block,
             '_pyomo_gdp_bigm_reformulation')
-        self._transformation_blocks[instance] = transBlock = Block()
-        instance.add_component(transBlockName, transBlock)
+        self._transformation_blocks[to_block] = transBlock = Block()
+        to_block.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = Block(NonNegativeIntegers)
         transBlock.lbub = Set(initialize=['lb', 'ub'])
 
