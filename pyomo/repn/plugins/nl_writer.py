@@ -2291,8 +2291,15 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             # If we descend into the named expression (because of an
             # evaluation error), then on the way back out, we will use
             # the potentially variable handler to process the result.
-            _operator_handles[child_type] = _operator_handles[
-                child.potentially_variable_base_class()]
+            pv_base_type = child.potentially_variable_base_class()
+            if pv_base_type not in handlers:
+                try:
+                    child.__class__ = pv_base_type
+                    _register_new_before_child_processor(self, child)
+                finally:
+                    child.__class__ = child_type
+            if pv_base_type in _operator_handles:
+                _operator_handles[child_type] = _operator_handles[pv_base_type]
         elif ( id(child) in self.subexpression_cache or
                issubclass(child_type, _GeneralExpressionData) ):
             handlers[child_type] = _before_named_expression
