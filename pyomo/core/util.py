@@ -200,7 +200,6 @@ def sum_product(*args, **kwds):
             params_.append(arg)
     nvars = len(vars_)
 
-    num_index = range(0,nargs)
     if ndenom == 0:
         #
         # Sum of polynomial terms
@@ -224,8 +223,8 @@ def sum_product(*args, **kwds):
                         expr += start
                         for i in index:
                             term = 1
-                            for j in params_:
-                                term *= params_[j][i]
+                            for p in params_:
+                                term *= p[i]
                             expr += term * v[i]
                 return expr
             #
@@ -233,24 +232,24 @@ def sum_product(*args, **kwds):
                 expr += start
                 for i in index:
                     term = 1
-                    for j in num_index:
-                        term *= args[j][i]
+                    for arg in args:
+                        term *= arg[i]
                     expr += term
             return expr
         #
-        return quicksum((prod(args[j][i] for j in num_index) for i in index), start)
+        return quicksum((prod(arg[i] for arg in args) for i in index), start)
     elif nargs == 0:
         #
         # Sum of reciprocals
         #
-        denom_index = range(0,ndenom)
-        return quicksum((1/prod(denom[j][i] for j in denom_index) for i in index), start)
+        return quicksum((1/prod(den[i] for den in denom) for i in index), start)
     else:
         #
         # Sum of fractions
         #
-        denom_index = range(0,ndenom)
-        return quicksum((prod(args[j][i] for j in num_index)/prod(denom[j][i] for j in denom_index) for i in index), start)
+        return quicksum((
+            prod(arg[i] for arg in args) / prod(den[i] for den in denom)
+            for i in index), start)
 
 
 #: An alias for :func:`sum_product <pyomo.core.expr.util>`

@@ -21,7 +21,9 @@ import traceback
 logger = logging.getLogger('pyomo.core')
 
 from pyomo.common.errors import PyomoException, DeveloperError
-from pyomo.common.deprecation import deprecation_warning, RenamedClass
+from pyomo.common.deprecation import (
+    deprecation_warning, RenamedClass, relocated_module_attribute,
+)
 from .numvalue import (
     native_types,
     native_numeric_types,
@@ -41,6 +43,22 @@ from .expr_common import (
 
 import operator
 
+relocated_module_attribute(
+    'EqualityExpression',
+    'pyomo.core.expr.relational_expr',
+    version='TBD')
+relocated_module_attribute(
+    'InequalityExpression',
+    'pyomo.core.expr.relational_expr',
+    version='TBD')
+relocated_module_attribute(
+    'RangedExpression',
+    'pyomo.core.expr.relational_expr',
+    version='TBD')
+relocated_module_attribute(
+    'inequality',
+    'pyomo.core.expr.relational_expr',
+    version='TBD')
 
 
 def _generate_logical_proposition(etype, lhs, rhs):
