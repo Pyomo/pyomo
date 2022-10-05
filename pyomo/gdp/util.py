@@ -160,9 +160,9 @@ class GDPTree:
         # we're done--we've been to all its children
         leaf_to_root.add(u)
 
-    def _topological_sort(self):
-        # this is reverse of the list we should return (but happens to be what
-        # we want for bigm)
+    def _reverse_topological_iterator(self):
+        # this returns nodes of the tree ordered so that no node is before any
+        # of its decendents.
         leaf_to_root = OrderedSet()
         for u in self.vertices:
             if u not in leaf_to_root:
@@ -171,10 +171,10 @@ class GDPTree:
         return leaf_to_root
 
     def topological_sort(self):
-        return list(reversed(self._topological_sort()))
+        return list(reversed(self._reverse_topological_iterator()))
 
     def reverse_topological_sort(self):
-        return self._topological_sort()
+        return self._reverse_topological_iterator()
 
     def in_degree(self, u):
         if u not in self._parent:
