@@ -2028,7 +2028,7 @@ def _before_native(visitor, child):
     return False, (_CONSTANT, child)
 
 def _before_string(visitor, child):
-    ans = AMPLRepn(None, None, None)
+    ans = AMPLRepn(child, None, None)
     ans.nl = (visitor.template.string % (len(child), child), ())
     return False, (_GENERAL, ans)
 
