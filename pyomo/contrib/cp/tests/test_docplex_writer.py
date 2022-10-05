@@ -58,15 +58,14 @@ class TestCPExpressionWalker(unittest.TestCase):
 
         self.assertIn(id(m.x), visitor.var_map)
         self.assertIn(id(m.i), visitor.var_map)
-        self.assertIn(id(m.i.start_time), visitor.var_map)
         self.assertIn(id(m.i2[2]), visitor.var_map)
         self.assertIn(id(m.i2[2].length), visitor.var_map)
 
         cpx_x = visitor.var_map[id(m.x)]
         cpx_i = visitor.var_map[id(m.i)]
         cpx_i2 = visitor.var_map[id(m.i2[2])]
-        self.assertTrue(expr.equals(cpx_x + cp.start_of(cpx_i) +
-                                    cp.length_of(cpx_i2)))
+        self.assertTrue(expr[1].equals(cpx_x + cp.start_of(cpx_i) +
+                                       cp.length_of(cpx_i2)))
 
     def test_write_subtraction(self):
         m = self.get_model()
@@ -81,7 +80,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         x = visitor.var_map[id(m.x)]
         a1 = visitor.var_map[id(m.a[1])]
 
-        self.assertTrue(expr.equals(x + (-1 * a1)))
+        self.assertTrue(expr[1].equals(x + (-1 * a1)))
 
     def test_write_product(self):
         m = self.get_model()
@@ -96,7 +95,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         x = visitor.var_map[id(m.x)]
         a1 = visitor.var_map[id(m.a[1])]
 
-        self.assertTrue(expr.equals(x*(a1 + 1)))
+        self.assertTrue(expr[1].equals(x*(a1 + 1)))
 
     def test_write_floating_point_division(self):
         m = self.get_model()
@@ -111,7 +110,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         x = visitor.var_map[id(m.x)]
         a1 = visitor.var_map[id(m.a[1])]
 
-        self.assertTrue(expr.equals(x/(a1 + 1)))
+        self.assertTrue(expr[1].equals(x/(a1 + 1)))
 
     def test_write_power_expression(self):
         m = self.get_model()
@@ -122,7 +121,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         self.assertIn(id(m.x), visitor.var_map)
         cpx_x = visitor.var_map[id(m.x)]
         # .equals checks the equality of two expressions in docplex.
-        self.assertTrue(expr.equals(cpx_x**2))
+        self.assertTrue(expr[1].equals(cpx_x**2))
 
     def test_write_absolute_value_expression(self):
         m = self.get_model()
@@ -135,7 +134,7 @@ class TestCPExpressionWalker(unittest.TestCase):
 
         a1 = visitor.var_map[id(m.a[1])]
 
-        self.assertTrue(expr.equals(cp.abs(a1) + 1))
+        self.assertTrue(expr[1].equals(cp.abs(a1) + 1))
 
     def test_write_min_expression(self):
         m = self.get_model()
@@ -149,7 +148,7 @@ class TestCPExpressionWalker(unittest.TestCase):
             self.assertIn(id(m.a[i]), visitor.var_map)
             a[i] = visitor.var_map[id(m.a[i])]
 
-        self.assertTrue(expr.equals(cp.min(a[i] for i in m.I)))
+        self.assertTrue(expr[1].equals(cp.min(a[i] for i in m.I)))
 
     def test_write_max_expression(self):
         m = self.get_model()
@@ -163,7 +162,7 @@ class TestCPExpressionWalker(unittest.TestCase):
             self.assertIn(id(m.a[i]), visitor.var_map)
             a[i] = visitor.var_map[id(m.a[i])]
 
-        self.assertTrue(expr.equals(cp.max(a[i] for i in m.I)))
+        self.assertTrue(expr[1].equals(cp.max(a[i] for i in m.I)))
 
     def test_write_logical_and(self):
         m = self.get_model()
@@ -177,7 +176,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         b = visitor.var_map[id(m.b)]
         b2b = visitor.var_map[id(m.b2['b'])]
 
-        self.assertTrue(expr.equals(cp.logical_and(b, b2b)))
+        self.assertTrue(expr[1].equals(cp.logical_and(b, b2b)))
 
     def test_write_logical_or(self):
         m = self.get_model()
@@ -190,7 +189,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         b = visitor.var_map[id(m.b)]
         i = visitor.var_map[id(m.i)]
 
-        self.assertTrue(expr.equals(cp.logical_or(b, cp.presence_of(i))))
+        self.assertTrue(expr[1].equals(cp.logical_or(b, cp.presence_of(i))))
 
     def test_write_xor(self):
         m = self.get_model()
@@ -205,7 +204,7 @@ class TestCPExpressionWalker(unittest.TestCase):
 
         # [ESJ 9/22/22]: This isn't the greatest test because there's no direct
         # translation so how we choose to represent this could change.
-        self.assertTrue(expr.equals(
+        self.assertTrue(expr[1].equals(
             cp.count([b, cp.less_or_equal(5, cp.start_of(i22))], True) == 1))
 
     def test_write_logical_not(self):
@@ -217,7 +216,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         self.assertIn(id(m.b2['a']), visitor.var_map)
         b2a = visitor.var_map[id(m.b2['a'])]
 
-        self.assertTrue(expr.equals(cp.logical_not(b2a)))
+        self.assertTrue(expr[1].equals(cp.logical_not(b2a)))
 
     def test_equivalence(self):
         m = self.get_model()
@@ -230,7 +229,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         b = visitor.var_map[id(m.b)]
         b2a = visitor.var_map[id(m.b2['a'])]
 
-        self.assertTrue(expr.equals(cp.equal(cp.logical_not(b2a), b)))
+        self.assertTrue(expr[1].equals(cp.equal(cp.logical_not(b2a), b)))
 
     def test_implication(self):
         m = self.get_model()
@@ -243,7 +242,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         b = visitor.var_map[id(m.b)]
         b2a = visitor.var_map[id(m.b2['a'])]
 
-        self.assertTrue(expr.equals(cp.if_then(b2a, cp.logical_not(b))))
+        self.assertTrue(expr[1].equals(cp.if_then(b2a, cp.logical_not(b))))
 
     def test_equality(self):
         m = self.get_model()
@@ -258,7 +257,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         b = visitor.var_map[id(m.b)]
         a3 = visitor.var_map[id(m.a[3])]
 
-        self.assertTrue(expr.equals(cp.if_then(b, cp.equal(a3, 4))))
+        self.assertTrue(expr[1].equals(cp.if_then(b, cp.equal(a3, 4))))
 
     def test_inequality(self):
         m = self.get_model()
@@ -275,7 +274,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         a3 = visitor.var_map[id(m.a[3])]
         a4 = visitor.var_map[id(m.a[4])]
 
-        self.assertTrue(expr.equals(cp.if_then(b, cp.less_or_equal(a4, a3))))
+        self.assertTrue(expr[1].equals(cp.if_then(b, cp.less_or_equal(a4, a3))))
 
     def test_ranged_inequality(self):
         m = self.get_model()
@@ -288,7 +287,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         self.assertIn(id(m.a[2]), visitor.var_map)
         a2 = visitor.var_map[id(m.a[2])]
 
-        self.assertTrue(expr.equals(cp.range(a2, 3, 5)))
+        self.assertTrue(expr[1].equals(cp.range(a2, 3, 5)))
 
     def test_not_equal(self):
         m = self.get_model()
@@ -306,7 +305,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         a3 = visitor.var_map[id(m.a[3])]
         a4 = visitor.var_map[id(m.a[4])]
 
-        self.assertTrue(expr.equals(cp.if_then(b, a3 !=  a4)))
+        self.assertTrue(expr[1].equals(cp.if_then(b, a3 !=  a4)))
 
     def test_exactly_expression(self):
         m = self.get_model()
@@ -321,7 +320,7 @@ class TestCPExpressionWalker(unittest.TestCase):
             self.assertIn(id(m.a[i]), visitor.var_map)
             a[i] = visitor.var_map[id(m.a[i])]
 
-        self.assertTrue(expr.equals(
+        self.assertTrue(expr[1].equals(
             cp.equal(cp.count([a[i] == 4 for i in m.I], True), 3)))
 
     def test_atleast_expression(self):
@@ -337,7 +336,7 @@ class TestCPExpressionWalker(unittest.TestCase):
             self.assertIn(id(m.a[i]), visitor.var_map)
             a[i] = visitor.var_map[id(m.a[i])]
 
-        self.assertTrue(expr.equals(
+        self.assertTrue(expr[1].equals(
             cp.greater_or_equal(cp.count([a[i] == 4 for i in m.I], True), 3)))
 
     def test_atmost_expression(self):
@@ -353,7 +352,7 @@ class TestCPExpressionWalker(unittest.TestCase):
             self.assertIn(id(m.a[i]), visitor.var_map)
             a[i] = visitor.var_map[id(m.a[i])]
 
-        self.assertTrue(expr.equals(
+        self.assertTrue(expr[1].equals(
             cp.less_or_equal(cp.count([a[i] == 4 for i in m.I], True), 3)))
 
     def test_start_before_start(self):
@@ -368,7 +367,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         i = visitor.var_map[id(m.i)]
         i21 = visitor.var_map[id(m.i2[1])]
 
-        self.assertTrue(expr.equals(cp.start_before_start(i, i21, 0)))
+        self.assertTrue(expr[1].equals(cp.start_before_start(i, i21, 0)))
 
     def test_start_before_end(self):
         m = self.get_model()
@@ -383,7 +382,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         i = visitor.var_map[id(m.i)]
         i21 = visitor.var_map[id(m.i2[1])]
 
-        self.assertTrue(expr.equals(cp.start_before_end(i, i21, 3)))
+        self.assertTrue(expr[1].equals(cp.start_before_end(i, i21, 3)))
 
     def test_end_before_start(self):
         m = self.get_model()
@@ -398,7 +397,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         i = visitor.var_map[id(m.i)]
         i21 = visitor.var_map[id(m.i2[1])]
 
-        self.assertTrue(expr.equals(cp.end_before_start(i, i21, -2)))
+        self.assertTrue(expr[1].equals(cp.end_before_start(i, i21, -2)))
 
     def test_end_before_end(self):
         m = self.get_model()
@@ -413,7 +412,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         i = visitor.var_map[id(m.i)]
         i21 = visitor.var_map[id(m.i2[1])]
 
-        self.assertTrue(expr.equals(cp.end_before_end(i, i21, 6)))
+        self.assertTrue(expr[1].equals(cp.end_before_end(i, i21, 6)))
 
     def test_start_at_start(self):
         m = self.get_model()
@@ -427,7 +426,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         i = visitor.var_map[id(m.i)]
         i21 = visitor.var_map[id(m.i2[1])]
 
-        self.assertTrue(expr.equals(cp.start_at_start(i, i21, 0)))
+        self.assertTrue(expr[1].equals(cp.start_at_start(i, i21, 0)))
 
     def test_start_at_end(self):
         m = self.get_model()
@@ -442,7 +441,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         i = visitor.var_map[id(m.i)]
         i21 = visitor.var_map[id(m.i2[1])]
 
-        self.assertTrue(expr.equals(cp.start_at_end(i, i21, 3)))
+        self.assertTrue(expr[1].equals(cp.start_at_end(i, i21, 3)))
 
     def test_end_at_start(self):
         m = self.get_model()
@@ -457,7 +456,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         i = visitor.var_map[id(m.i)]
         i21 = visitor.var_map[id(m.i2[1])]
 
-        self.assertTrue(expr.equals(cp.end_at_start(i, i21, -2)))
+        self.assertTrue(expr[1].equals(cp.end_at_start(i, i21, -2)))
 
     def test_end_at_end(self):
         m = self.get_model()
@@ -472,7 +471,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         i = visitor.var_map[id(m.i)]
         i21 = visitor.var_map[id(m.i2[1])]
 
-        self.assertTrue(expr.equals(cp.end_at_end(i, i21, 6)))
+        self.assertTrue(expr[1].equals(cp.end_at_end(i, i21, 6)))
 
     def test_always_in(self):
         m = self.get_model()
@@ -490,10 +489,10 @@ class TestCPExpressionWalker(unittest.TestCase):
         i21 = visitor.var_map[id(m.i2[1])]
         i22 = visitor.var_map[id(m.i2[2])]
 
-        self.assertTrue(expr.equals(cp.always_in(cp.pulse(i, 3) +
-                                                 cp.step_at_start(i21, 2) -
-                                                 cp.step_at_end(i22, -1), 0, 3,
-                                                 0, 10)))
+        self.assertTrue(expr[1].equals(cp.always_in(cp.pulse(i, 3) +
+                                                    cp.step_at_start(i21, 2) -
+                                                    cp.step_at_end(i22, -1), 0,
+                                                    3, 0, 10)))
 
     def test_named_expression(self):
         m = self.get_model()
@@ -506,7 +505,7 @@ class TestCPExpressionWalker(unittest.TestCase):
         self.assertIn(id(m.x), visitor.var_map)
         x = visitor.var_map[id(m.x)]
 
-        self.assertTrue(expr.equals(x**2 + 7))
+        self.assertTrue(expr[1].equals(x**2 + 7))
 
     def test_indirection_single_index(self):
         m = self.get_model()
@@ -522,8 +521,8 @@ class TestCPExpressionWalker(unittest.TestCase):
         for v in m.a.values():
             self.assertIn(id(v), visitor.var_map)
             a.append(visitor.var_map[id(v)])
-
-        self.assertTrue(expr.equals(cp.element(a, x)))
+        print("Why -6? Is this right?")
+        self.assertTrue(expr[1].equals(cp.element(a, x)))
 
     def test_indirection_interval_var(self):
         m = self.get_model()
@@ -543,6 +542,6 @@ class TestCPExpressionWalker(unittest.TestCase):
         i22 = visitor.var_map[id(m.i2[2])]
         i = visitor.var_map[id(m.i)]
 
-        self.assertTrue(expr.equals(cp.element([cp.start_of(i21), 
-                                                cp.start_of(i22)], y) <=
-                                    cp.end_of(i)))
+        self.assertTrue(expr[1].equals(cp.element([cp.start_of(i21),
+                                                   cp.start_of(i22)], y) <=
+                                       cp.end_of(i)))
