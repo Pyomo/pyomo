@@ -12,7 +12,7 @@
 from pyomo.core.expr.base import ExpressionBase
 from pyomo.core.expr.boolean_value import BooleanValue
 
-class PrecedenceExpression(ExpressionBase, BooleanValue):
+class BeforeExpression(ExpressionBase, BooleanValue):
     """
     Base class for all precedence expressions.
 
@@ -41,140 +41,53 @@ class PrecedenceExpression(ExpressionBase, BooleanValue):
         """
         return self._args_
 
-    def _to_string_impl(self, before, after, operator):
-        delay = self.delay
+    def _to_string(self, values, verbose, smap):
+        delay = int(values[2])
         if delay == 0:
-            first = before
+            first = values[0]
         elif delay > 0:
-            first = "%s + %s" % (before, delay)
+            first = "%s + %s" % (values[0], delay)
         else:
-            first = "%s - %s" % (before, abs(delay))
-        return "%s %s %s" % (first, operator, after)
+            first = "%s - %s" % (values[0], abs(delay))
+        return "%s <= %s" % (values[0], values[1])
 
-class StartBeforeStartExpression(PrecedenceExpression):
-    """
-    Expression representing that one IntervalVar must be scheduled to start
-    before another starts
 
-    args:
-        args (tuple): child nodes of type IntervalVar
-        delay: A (possibly negative) integer value representing the number of
-               time periods required between the start of the first argument
-               and the start of the second argument
+class AtExpression(ExpressionBase, BooleanValue):
     """
-    def _to_string(self, values, verbose, smap):
-        return self._to_string_impl(values[0] + '.start_time',
-                                    values[1] + '.start_time',
-                                    "<=")
-
-class StartBeforeEndExpression(PrecedenceExpression):
-    """
-    Expression representing that one IntervalVar must be scheduled to start
-    before another ends
+    Base class for all precedence expressions.
 
     args:
         args (tuple): child nodes of type IntervalVar
         delay: A (possibly negative) integer value representing the number of
-               time periods required between the start of the first argument
-               and the end of the second argument
+               time periods delay in the precedence relationship
     """
+
+    def __init__(self, first, second, delay):
+        self._args_ = (first, second, delay)
+
+    def nargs(self):
+        return 3
+
+    @property
+    def delay(self):
+        return self._args_[2]
+
+    @property
+    def args(self):
+        """
+        Return the child nodes
+
+        Returns: Tuple containing the child nodes of this node
+        """
+        return self._args_
+
     def _to_string(self, values, verbose, smap):
-        return self._to_string_impl(values[0] + '.start_time',
-                                    values[1] + '.end_time',
-                                    "<=")
+        delay = int(values[2])#self.delay
+        if delay == 0:
+            first = values[1]
+        elif delay > 0:
+            first = "%s + %s" % (values[1], delay)
+        else:
+            first = "%s - %s" % (values[1], abs(delay))
+        return "%s == %s" % (values[1], values[2])
 
-class EndBeforeStartExpression(PrecedenceExpression):
-    """
-    Expression representing that one IntervalVar must be scheduled to end
-    before another starts
-
-    args:
-        args (tuple): child nodes of type IntervalVar
-        delay: A (possibly negative) integer value representing the number of
-               time periods required between the end of the first argument
-               and the start of the second argument
-    """
-    def _to_string(self, values, verbose, smap):
-        return self._to_string_impl(values[0] + '.end_time',
-                                    values[1] + '.start_time',
-                                    "<=")
-
-class EndBeforeEndExpression(PrecedenceExpression):
-    """
-    Expression representing that one IntervalVar must be scheduled to end
-    before another ends
-
-    args:
-        args (tuple): child nodes of type IntervalVar
-        delay: A (possibly negative) integer value representing the number of
-               time periods required between the end of the first argument
-               and the end of the second argument
-    """
-    def _to_string(self, values, verbose, smap):
-        return self._to_string_impl(values[0] + '.end_time',
-                                    values[1] + '.end_time',
-                                    "<=")
-
-class StartAtStartExpression(PrecedenceExpression):
-    """
-    Temporal expression representing that on IntervalVar must be scheduled to
-    start in coordination with another's start
-
-    args:
-        args (tuple): child nodes of type IntervalVar
-        delay: A (possibly negative) integer value representing the number of
-               time periods required between the first argument's start time
-               and the second argument's start time
-    """
-    def _to_string(self, values, verbose, smap):
-        return self._to_string_impl(values[0] + '.start_time',
-                                    values[1] + '.start_time',
-                                    "==")
-
-class StartAtEndExpression(PrecedenceExpression):
-    """
-    Temporal expression representing that on IntervalVar must be scheduled to
-    start in coordination with another's end
-
-    args:
-        args (tuple): child nodes of type IntervalVar
-        delay: A (possibly negative) integer value representing the number of
-               time periods required between the first argument's start time
-               and the second argument's end time
-    """
-    def _to_string(self, values, verbose, smap):
-        return self._to_string_impl(values[0] + '.start_time',
-                                    values[1] + '.end_time',
-                                    "==")
-
-class EndAtStartExpression(PrecedenceExpression):
-    """
-    Temporal expression representing that on IntervalVar must be scheduled to
-    end in coordination with another's start
-
-    args:
-        args (tuple): child nodes of type IntervalVar
-        delay: A (possibly negative) integer value representing the number of
-               time periods required between the first argument's end time
-               and the second argument's start time
-    """
-    def _to_string(self, values, verbose, smap):
-        return self._to_string_impl(values[0] + '.end_time',
-                                    values[1] + '.start_time',
-                                    "==")
-
-class EndAtEndExpression(PrecedenceExpression):
-    """
-    Temporal expression representing that on IntervalVar must be scheduled to
-    end in coordination with another's end
-
-    args:
-        args (tuple): child nodes of type IntervalVar
-        delay: A (possibly negative) integer value representing the number of
-               time periods required between the first argument's end time
-               and the second argument's end time
-    """
-    def _to_string(self, values, verbose, smap):
-        return self._to_string_impl(values[0] + '.end_time',
-                                    values[1] + '.end_time',
-                                    "==")
