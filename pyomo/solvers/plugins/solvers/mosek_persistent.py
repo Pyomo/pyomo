@@ -221,7 +221,6 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
             self._solver_model.putvartypelist(var_ids, vtypes)
             self._solver_model.putvarboundlist(var_ids, bound_types, lbs, ubs)
         except KeyError:
-            print(v.name)
             v_name = self._symbol_map.getSymbol(v, self._labeler)
             raise ValueError(
                 "Variable {} needs to be added before it can be modified.".format(

@@ -254,6 +254,45 @@ class MOSEKDirectTests(unittest.TestCase):
         self.assertEqual(results.solution.status,
                          SolutionStatus.optimal)
 
+    def _test_model(self):
+        model = pmo.block()
+        model.x0, model.x1, model.x2 = [pmo.variable() for i in range(3)]
+        model.obj = pmo.objective(2*model.x0 + 3*model.x1 - model.x2, sense=-1)
+
+        model.con1 = pmo.constraint(model.x0 + model.x1 + model.x2 == 1)
+        model.quad = pmo.conic.quadratic.as_domain(r=0.03, x=[pmo.expression(
+            1.5*model.x0 + 0.1*model.x1), pmo.expression(0.3*model.x0 + 2.1*model.x2 + 0.1)])
+        return model
+
+    def test_conic_duals(self):
+        check = [-1.94296808, -0.303030303, -1.91919191]
+        # load_duals (without args)
+        with pmo.SolverFactory('mosek_direct') as solver:
+            model = self._test_model()
+            results = solver.solve(model)
+            model.dual = pmo.suffix(direction=pmo.suffix.IMPORT)
+            solver.load_duals()
+            for i in range(3):
+                self.assertAlmostEqual(
+                    model.dual[model.quad.q][i], check[i], 5)
+        # load_duals  (with args)
+        with pmo.SolverFactory('mosek_direct') as solver:
+            model = self._test_model()
+            results = solver.solve(model)
+            model.dual = pmo.suffix(direction=pmo.suffix.IMPORT)
+            solver.load_duals([model.quad.q])
+            for i in range(3):
+                self.assertAlmostEqual(
+                    model.dual[model.quad.q][i], check[i], 5)
+        # save_results=True (deprecated)
+        with pmo.SolverFactory('mosek_direct') as solver:
+            model = self._test_model()
+            model.dual = pmo.suffix(direction=pmo.suffix.IMPORT)
+            results = solver.solve(model, save_results=True)
+            for i in range(3):
+                self.assertAlmostEqual(
+                    results.Solution.constraint['x11']['Dual'][i], check[i], 5)
+
 
 if __name__ == "__main__":
     unittest.main()
