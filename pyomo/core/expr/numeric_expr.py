@@ -618,41 +618,6 @@ class SumExpressionBase(_LinearOperatorExpression):
         return 'sum'
 
 
-class NPV_SumExpression(NPV_Mixin, SumExpressionBase):
-    __slots__ = ()
-
-    def create_potentially_variable_object(self):
-        return SumExpression( self._args_ )
-
-    def _apply_operation(self, result):
-        l_, r_ = result
-        return l_ + r_
-
-    def _to_string(self, values, verbose, smap):
-        if verbose:
-            return f"{self.getname()}({', '.join(values)})"
-        if values[1][0] == '-':
-            return f"{values[0]} {values[1]}"
-        return f"{values[0]} + {values[1]}"
-
-    def create_node_with_local_data(self, args, classtype=None):
-        assert classtype is None
-        try:
-            npv_args = all(
-                type(arg) in native_types or not arg.is_potentially_variable()
-                for arg in args
-            )
-        except AttributeError:
-            # We can hit this during expression replacement when the new
-            # type is not a PyomoObject type, but is not in the
-            # native_types set.  We will play it safe and clear the NPV flag
-            npv_args = False
-        if npv_args:
-            return NPV_SumExpression(args)
-        else:
-            return SumExpression(args)
-
-
 class SumExpression(SumExpressionBase):
     """
     Sum expression::
@@ -713,6 +678,41 @@ class SumExpression(SumExpressionBase):
             else:
                 values[i] = ' + ' + val
         return ''.join(values)
+
+
+class NPV_SumExpression(NPV_Mixin, SumExpression):
+    __slots__ = ()
+
+    def create_potentially_variable_object(self):
+        return SumExpression( self._args_ )
+
+    def _apply_operation(self, result):
+        l_, r_ = result
+        return l_ + r_
+
+    def _to_string(self, values, verbose, smap):
+        if verbose:
+            return f"{self.getname()}({', '.join(values)})"
+        if values[1][0] == '-':
+            return f"{values[0]} {values[1]}"
+        return f"{values[0]} + {values[1]}"
+
+    def create_node_with_local_data(self, args, classtype=None):
+        assert classtype is None
+        try:
+            npv_args = all(
+                type(arg) in native_types or not arg.is_potentially_variable()
+                for arg in args
+            )
+        except AttributeError:
+            # We can hit this during expression replacement when the new
+            # type is not a PyomoObject type, but is not in the
+            # native_types set.  We will play it safe and clear the NPV flag
+            npv_args = False
+        if npv_args:
+            return NPV_SumExpression(args)
+        else:
+            return SumExpression(args)
 
 
 class _MutableSumExpression(SumExpression):
