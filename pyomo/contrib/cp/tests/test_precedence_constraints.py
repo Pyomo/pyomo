@@ -12,9 +12,8 @@
 import pyomo.common.unittest as unittest
 from pyomo.contrib.cp import IntervalVar
 from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
-    StartBeforeStartExpression, StartBeforeEndExpression,
-    EndBeforeStartExpression, EndBeforeEndExpression, StartAtStartExpression,
-    StartAtEndExpression, EndAtStartExpression, EndAtEndExpression)
+    BeforeExpression, AtExpression
+)
 from pyomo.environ import ConcreteModel, LogicalConstraint
 
 class TestPrecedenceRelationships(unittest.TestCase):
