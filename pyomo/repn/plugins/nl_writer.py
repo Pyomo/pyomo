@@ -1467,7 +1467,8 @@ class AMPLRepn(object):
                 visitor._mark_named_expression_as_used(nl_args)
             if prefix:
                 nl = prefix + nl
-            if args is not None and args is not nl_args:
+            if args is not None:
+                assert args is not nl_args
                 args.extend(nl_args)
             else:
                 args = list(nl_args)
