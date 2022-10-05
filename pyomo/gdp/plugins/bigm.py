@@ -151,7 +151,10 @@ class BigM_Transformation(Transformation):
             Set:         False,
             SetOf:       False,
             RangeSet:    False,
-            Disjunction: False,
+            Disjunction: False,# It's impossible to encounter an active
+                               # Disjunction because preprocessing would have
+                               # put it before its parent Disjunct in the order
+                               # of transformation.
             Disjunct:    self._warn_for_active_disjunct,
             Block:       False,
             ExternalFunction: False,

@@ -187,7 +187,11 @@ class Hull_Reformulation(Transformation):
             SetOf :      False,
             RangeSet:    False,
             Suffix :     False,
-            Disjunction: False,
+            Disjunction: False, # We intentionally pass over active Disjunctions
+                                # that are on Disjuncts because we know they are
+                                # in the list of objects to transform after
+                                # preprocessing, so they will be transformed
+                                # later.
             Disjunct:    self._warn_for_active_disjunct,
             Block:       False,
             Port:        False,
