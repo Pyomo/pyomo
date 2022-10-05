@@ -14,7 +14,10 @@ from pyomo.common.collections import (
     UserDict, OrderedDict, Mapping, MutableMapping,
     Set as collections_Set, Sequence,
 )
-from pyomo.core.base.set import SetOf, OrderedSetOf, _SetDataBase
+from pyomo.common.modeling import NOTSET
+from pyomo.core.base.set import (
+    DeclareGlobalSet, Set, SetOf, OrderedSetOf, _SetDataBase,
+)
 from pyomo.core.base.component import Component, ComponentData
 from pyomo.core.base.global_set import (
     UnindexedComponent_set,
@@ -28,10 +31,16 @@ from pyomo.core.base.indexed_component_slice import (
 from pyomo.core.base.util import flatten_tuple
 from pyomo.common.deprecation import deprecated
 
-_NotSpecified = object()
-
 _UnindexedComponent_key = list(UnindexedComponent_set)
 _UnindexedComponent_base_key = tuple(UnindexedComponent_set)
+
+DeclareGlobalSet(Set(
+    initialize=UnindexedComponent_set,
+    name='UnindexedComponent_ReferenceSet',
+    doc='An indexing set used by references to unindexed (scalar) '
+    'components that is equivalent to but NOT the UnindexedComponent_set',
+), globals())
+
 
 class _fill_in_known_wildcards(object):
     """Variant of "six.advance_iterator" that substitutes wildcard values
@@ -539,7 +548,7 @@ def _identify_wildcard_sets(iter_stack, index):
         #     Reference(m.c[:].v)
     return index
 
-def Reference(reference, ctype=_NotSpecified):
+def Reference(reference, ctype=NOTSET):
     """Creates a component that references other components
 
     ``Reference`` generates a *reference component*; that is, an indexed
@@ -639,33 +648,49 @@ def Reference(reference, ctype=_NotSpecified):
 
     """
     referent = reference
+    #
+    # Before constructing the reference object that we will return,
+    # we need to know its index set, its ctype, and its _data
+    # dict. The following if statement sets the _data dict
+    # for all possible input types and sets up data structures
+    # necessary to determine the index set and ctype.
+    #
     if isinstance(reference, IndexedComponent_slice):
-        _data = _ReferenceDict(reference)
-        _iter = iter(reference)
         slice_idx = []
         index = None
+        _data = _ReferenceDict(reference)
+        _iter = iter(reference)
     elif isinstance(reference, Component):
+        slice_idx = None
+        if reference.is_indexed():
+            index = reference.index_set()
+        else:
+            index = UnindexedComponent_ReferenceSet
+        if ctype is NOTSET:
+            ctype = reference.ctype
         reference = reference[...]
         _data = _ReferenceDict(reference)
-        _iter = iter(reference)
-        slice_idx = []
-        index = None
+        # index and ctype are now set; no need to iterate over the slice
+        _iter = ()
     elif isinstance(reference, ComponentData):
+        slice_idx = None
+        index = UnindexedComponent_ReferenceSet
+        if ctype is NOTSET:
+            ctype = reference.ctype
         reference = IndexedComponent_slice(reference.parent_component())[
             reference.index()]
         _data = _ReferenceDict(reference)
-        _iter = iter(reference)
-        slice_idx = []
-        index = SetOf(UnindexedComponent_set)
+        # index and ctype are now set; no need to iterate over the slice
+        _iter = ()
     elif isinstance(reference, Mapping):
+        slice_idx = None
         _data = _ReferenceDict_mapping(dict(reference))
         _iter = _data.values()
-        slice_idx = None
         index = SetOf(_data)
     elif isinstance(reference, Sequence):
+        slice_idx = None
         _data = _ReferenceDict_mapping(OrderedDict(enumerate(reference)))
         _iter = _data.values()
-        slice_idx = None
         index = OrderedSetOf(_data)
     else:
         raise TypeError(
@@ -673,27 +698,35 @@ def Reference(reference, ctype=_NotSpecified):
             "component, component slice, Sequence, or Mapping (received %s)"
             % (type(reference).__name__,))
 
-    if ctype is _NotSpecified:
+    if ctype is NOTSET:
         ctypes = set()
     else:
-        # If the caller specified a ctype, then we will prepopulate the
-        # list to improve our chances of avoiding a scan of the entire
-        # Reference (by simulating multiple ctypes having been found, we
-        # can break out as soon as we know that there are not common
-        # subsets).
-        ctypes = set((1,2))
+        if slice_idx is None:
+            # A slice was not provided. We know the ctype and that there
+            # cannot be common subsets (because a slice was not provided).
+            # We don't need to iterate over the data objects at all.
+            # Note that this is redundant for Component and ComponentData
+            # inputs, as _iter was already empty.
+            _iter = ()
 
     for obj in _iter:
-        ctypes.add(obj.ctype)
-        if not isinstance(obj, ComponentData):
-            # This object is not a ComponentData (likely it is a pure
-            # IndexedComponent container).  As the Reference will treat
-            # it as if it *were* a ComponentData, we will skip ctype
-            # identification and return a base IndexedComponent, thereby
-            # preventing strange exceptions in the writers and with
-            # things like pprint().  Of course, all of this logic is
-            # skipped if the User knows better and forced a ctype on us.
-            ctypes.add(0)
+        #
+        # We were provided a collection of ComponentData, either via
+        # a slice, sequence, or mapping. Now we iterate over these
+        # objects to attempt to infer both the ctype and, if a slice
+        # was provided, the index_set (determined by slice_index).
+        #
+        if ctype is NOTSET:
+            ctypes.add(obj.ctype)
+            if not isinstance(obj, ComponentData):
+                # This object is not a ComponentData (likely it is a pure
+                # IndexedComponent container).  As the Reference will treat
+                # it as if it *were* a ComponentData, we will skip ctype
+                # identification and return a base IndexedComponent, thereby
+                # preventing strange exceptions in the writers and with
+                # things like pprint().  Of course, all of this logic is
+                # skipped if the User knows better and forced a ctype on us.
+                ctypes.add(0)
         # Note that we want to walk the entire slice, unless we can
         # prove that BOTH there aren't common indexing sets (i.e., index
         # is None) AND there is more than one ctype.
@@ -703,10 +736,16 @@ def Reference(reference, ctype=_NotSpecified):
             # identify the wilcards for this obj and check compatibility
             # of the wildcards with any previously-identified wildcards.
             slice_idx = _identify_wildcard_sets(_iter._iter_stack, slice_idx)
-        elif len(ctypes) > 1:
+        elif ctype is not NOTSET or len(ctypes) > 1:
             break
 
     if index is None:
+        #
+        # index is None, i.e. a slice was provided. If a slice index
+        # has been identified (by all slice members having the same
+        # "wildcard sets"), use this to construct an indexing set.
+        # Otherwise, use a _ReferenceSet.
+        #
         if not slice_idx:
             index = SetOf(_ReferenceSet(reference))
         else:
@@ -724,8 +763,10 @@ def Reference(reference, ctype=_NotSpecified):
                 index = index * idx
             # index is now either a single Set, or a SetProduct of the
             # wildcard sets.
-    if ctype is _NotSpecified:
+    if ctype is NOTSET:
         if len(ctypes) == 1:
+            # If ctype is not set and only one ctype was identified above,
+            # use this ctype.
             ctype = ctypes.pop()
         else:
             ctype = IndexedComponent

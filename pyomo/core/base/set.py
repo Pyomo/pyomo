@@ -621,7 +621,11 @@ class _SetData(_SetDataBase):
         # but problemmatic for code coverage.
         ranges = list(self.ranges())
         if len(ranges) == 1:
-            start, end, c = ranges[0].normalize_bounds()
+            try:
+                start, end, c = ranges[0].normalize_bounds()
+            except AttributeError:
+                # Catching Any, NonNumericRange, etc...
+                return self.bounds() + (None,)
             return (
                 None if start == -_inf else start,
                 None if end == _inf else end,
