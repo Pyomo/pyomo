@@ -20,6 +20,7 @@ from pyomo.common.backports import nullcontext
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, InEnum, add_docstring_list,
 )
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
@@ -64,6 +65,9 @@ logger=logging.getLogger(__name__)
 # Feasibility tolerance for trivial (fixed) constraints
 TOL = 1e-8
 inf = float('inf')
+nan = float('nan')
+
+HALT_ON_EVALUATION_ERROR = False
 
 class _CONSTANT(object): pass
 class _MONOMIAL(object): pass
@@ -99,7 +103,7 @@ class NLWriterInfo(object):
 
         The list of string names for the constraints / objectives
         written to the NL file in the same order as
-        :py:attr:`constraints` + :\p:attr:`objectives` and the generated
+        :py:attr:`constraints` + :py:attr:`objectives` and the generated
         .row file.
 
     column_labels: List[str]
@@ -130,6 +134,27 @@ def _activate_nl_writer_version(n):
     doc = WriterFactory.doc('nl')
     WriterFactory.unregister('nl')
     WriterFactory.register('nl', doc)(WriterFactory.get_class(f'nl_v{n}'))
+
+
+def _apply_node_operation(node, args):
+    try:
+        tmp = (_CONSTANT, node._apply_operation(args))
+        if tmp[1].__class__ is complex:
+            raise ValueError('Pyomo does not support complex numbers')
+        return tmp
+    except:
+        logger.warning(
+            "Exception encountered evaluating expression "
+            "'%s(%s)'\n\tmessage: %s\n\texpression: %s" % (
+                node.name,
+                ", ".join(map(str, args)),
+                str(sys.exc_info()[1]),
+                node
+            ))
+        if HALT_ON_EVALUATION_ERROR:
+            raise
+        return (_CONSTANT, nan)
+
 
 def categorize_valid_components(
         model, active=True, sort=None, valid=set(), targets=set()):
@@ -390,7 +415,7 @@ class _NLWriter_impl(object):
             self.external_functions,
             self.var_map,
             self.used_named_expressions,
-            config.symbolic_solver_labels,
+            self.symbolic_solver_labels,
         )
         self.next_V_line_id = 0
         self.pause_gc = None
@@ -1438,10 +1463,12 @@ class AMPLRepn(object):
                 prefix += template.multiplier % self.mult
         if self.nl is not None:
             nl, nl_args = self.nl
-            visitor._mark_named_expression_as_used(nl_args)
+            if nl_args:
+                visitor._mark_named_expression_as_used(nl_args)
             if prefix:
                 nl = prefix + nl
-            if args is not None and args is not nl_args:
+            if args is not None:
+                assert args is not nl_args
                 args.extend(nl_args)
             else:
                 args = list(nl_args)
@@ -1671,17 +1698,51 @@ def handle_product_node(visitor, node, arg1, arg2):
         mult = arg1[1]
         if not mult:
             # simplify multiplication by 0 (if arg2 is zero, the
-            # simplification happens implicitly when we evaluate the
-            # constant below)
+            # simplification happens when we evaluate the constant
+            # below).  Note that this is not IEEE-754 compliant, and
+            # will map 0*inf and 0*nan to 0 (and not to nan).  We are
+            # including this for backwards compatibility with the NLv1
+            # writer, but arguably we should deprecate/remove this
+            # "feature" in the future.
+            if arg2[0] is _CONSTANT:
+                _prod = mult * arg2[1]
+                if _prod:
+                    deprecation_warning(
+                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        "Mapping the NaN result to 0 for compatibility "
+                        "with the nl_v1 writer.  In the future, this NaN "
+                        "will be preserved/emitted to comply with IEEE-754.",
+                        version='TBD')
+                    _prod = 0
+                return (_CONSTANT, _prod)
             return arg1
         if mult == 1:
             return arg2
         elif arg2[0] is _MONOMIAL:
+            if mult != mult:
+                # This catches mult (i.e., arg1) == nan
+                return arg1
             return (_MONOMIAL, arg2[1], mult*arg2[2])
         elif arg2[0] is _GENERAL:
+            if mult != mult:
+                # This catches mult (i.e., arg1) == nan
+                return arg1
             arg2[1].mult *= mult
             return arg2
         elif arg2[0] is _CONSTANT:
+            if not arg2[1]:
+                # Simplify multiplication by 0; see note above about
+                # IEEE-754 incompatibility.
+                _prod = mult * arg2[1]
+                if _prod:
+                    deprecation_warning(
+                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        "Mapping the NaN result to 0 for compatibility "
+                        "with the nl_v1 writer.  In the future, this NaN "
+                        "will be preserved/emitted to comply with IEEE-754.",
+                        version='TBD')
+                    _prod = 0
+                return (_CONSTANT, _prod)
             return (_CONSTANT, mult*arg2[1])
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.product)
@@ -1694,34 +1755,53 @@ def handle_division_node(visitor, node, arg1, arg2):
         if div == 1:
             return arg1
         if arg1[0] is _MONOMIAL:
-            return (_MONOMIAL, arg1[1], arg1[2]/div)
+            tmp = _apply_node_operation(node, (arg1[2], div))
+            if tmp[1] != tmp[1]:
+                # This catches if the coefficient division results in nan
+                return tmp
+            return (_MONOMIAL, arg1[1], tmp[1])
         elif arg1[0] is _GENERAL:
-            arg1[1].mult /= div
+            tmp = _apply_node_operation(node, (arg1[1].mult, div))
+            if tmp[1] != tmp[1]:
+                # This catches if the multiplier division results in nan
+                return tmp
+            arg1[1].mult = tmp[1]
             return arg1
         elif arg1[0] is _CONSTANT:
-            return (_CONSTANT, arg1[1]/div)
+            return _apply_node_operation(node, (arg1[1], div))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.division)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_pow_node(visitor, node, arg1, arg2):
+    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
+        return _apply_node_operation(node, (arg1[1], arg2[1]))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.pow)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_abs_node(visitor, node, arg1):
+    if arg1[0] is _CONSTANT:
+        return (_CONSTANT, abs(arg1[1]))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.abs)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_unary_node(visitor, node, arg1):
+    if arg1[0] is _CONSTANT:
+        return _apply_node_operation(node, (arg1[1],))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.unary[node.name])
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_exprif_node(visitor, node, arg1, arg2, arg3):
+    if arg1[0] is _CONSTANT:
+        if arg1[1]:
+            return arg2
+        else:
+            return arg3
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.exprif)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
@@ -1729,18 +1809,24 @@ def handle_exprif_node(visitor, node, arg1, arg2, arg3):
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_equality_node(visitor, node, arg1, arg2):
+    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
+        return (_CONSTANT, arg1[1] == arg2[1])
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.equality)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_inequality_node(visitor, node, arg1, arg2):
+    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
+        return (_CONSTANT, node._apply_operation((arg1[1], arg2[1])))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.strict_inequality_map[node.strict])
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
+    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT and arg3[0] is _CONSTANT:
+        return (_CONSTANT, node._apply_operation((arg1[1], arg2[1], arg3[1])))
     op = visitor.template.strict_inequality_map[node.strict]
     nl, args = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.and_expr + op[0])
@@ -1855,10 +1941,15 @@ def handle_named_expression_node(visitor, node, arg1):
         #    [(con_id, obj_id, substitute); see above]
         expression_source,
     )
+    if expression_source[2]:
+        if repn.linear:
+            return (_MONOMIAL, repn.linear[0][0], 1)
+        else:
+            return (_CONSTANT, repn.const)
     visitor.subexpression_order.append(_id)
     ans = AMPLRepn(
         repn.const,
-        list(repn.linear) if repn.linear is not None else repn.linear,
+        list(repn.linear) if repn.linear is not None else None,
         repn.nonlinear
     )
     ans.nl = repn.nl
@@ -1876,7 +1967,7 @@ def handle_external_function_node(visitor, node, *args):
            for arg in args):
         arg_list = [arg[1] if arg[0] is _CONSTANT else arg[1].const
                     for arg in args]
-        return (_CONSTANT, node._apply_operation(arg_list))
+        return _apply_node_operation(node, arg_list)
     if func in visitor.external_functions:
         if node._fcn._library != visitor.external_functions[func][1]._library:
             raise RuntimeError(
@@ -1926,7 +2017,11 @@ _operator_handles = {
     # These are handled explicitly in beforeChild():
     # LinearExpression: handle_linear_expression,
     # SumExpression: handle_sum_expression,
-    # MonomialTermExpression: handle_monomial_term,
+    #
+    # Note: MonomialTermExpression is only hit when processing NPV
+    # subexpressions that raise errors (e.g., log(0) * m.x), so no
+    # special processing is needed [it is just a product expression]
+    MonomialTermExpression: handle_product_node,
 }
 
 
@@ -1934,7 +2029,7 @@ def _before_native(visitor, child):
     return False, (_CONSTANT, child)
 
 def _before_string(visitor, child):
-    ans = AMPLRepn(None, None, None)
+    ans = AMPLRepn(child, None, None)
     ans.nl = (visitor.template.string % (len(child), child), ())
     return False, (_GENERAL, ans)
 
@@ -1957,7 +2052,16 @@ def _before_npv(visitor, child):
     # else:
     #     child = visitor.value_cache[_id] = child()
     # return False, (_CONSTANT, child)
-    return False, (_CONSTANT, child())
+    try:
+        tmp = False, (_CONSTANT, child())
+        if tmp[1][1].__class__ is complex:
+            return True, None
+        return tmp
+    except:
+        # If there was an exception evaluating the subexpression, then
+        # we need to descend into it (in case there is something like 0 *
+        # nan that we need to map to 0)
+        return True, None
 
 def _before_monomial(visitor, child):
     #
@@ -1975,14 +2079,32 @@ def _before_monomial(visitor, child):
         #     arg1 = visitor.value_cache[_id]
         # else:
         #     arg1 = visitor.value_cache[_id] = arg1()
-        arg1 = arg1()
-    # Trap multiplication by 0
+        try:
+            arg1 = arg1()
+        except:
+            # If there was an exception evaluating the subexpression,
+            # then we need to descend into it (in case there is something
+            # like 0 * nan that we need to map to 0)
+            return True, None
+
+    if arg2.fixed:
+        arg2 = arg2.value
+        _prod = arg1 * arg2
+        if not (arg1 and arg2) and _prod:
+            deprecation_warning(
+                f"Encountered {arg1}*{arg2} in expression tree.  "
+                "Mapping the NaN result to 0 for compatibility "
+                "with the nl_v1 writer.  In the future, this NaN "
+                "will be preserved/emitted to comply with IEEE-754.",
+                version='TBD')
+            _prod = 0
+        return (_CONSTANT, _prod)
+
+    # Trap multiplication by 0.
     if not arg1:
         return False, (_CONSTANT, 0)
     _id = id(arg2)
     if _id not in visitor.var_map:
-        if arg2.fixed:
-            return False, (_CONSTANT, arg1 * arg2())
         visitor.var_map[_id] = arg2
     return False, (_MONOMIAL, _id, arg1)
 
@@ -2011,9 +2133,14 @@ def _before_named_expression(visitor, child):
     _id = id(child)
     if _id in visitor.subexpression_cache:
         obj, repn, info = visitor.subexpression_cache[_id]
+        if info[2]:
+            if repn.linear:
+                return False, (_MONOMIAL, repn.linear[0][0], 1)
+            else:
+                return False, (_CONSTANT, repn.const)
         ans = AMPLRepn(
             repn.const,
-            list(repn.linear) if repn.linear is not None else repn.linear,
+            list(repn.linear) if repn.linear is not None else None,
             repn.nonlinear
         )
         ans.nl = repn.nl
@@ -2099,11 +2226,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         # General expressions...
         #
-        if all(arg[0] is _CONSTANT for arg in data):
-            return (
-                _CONSTANT, node._apply_operation(list(map(
-                    itemgetter(1), data)))
-            )
         return self._operator_handles[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):
@@ -2177,8 +2299,22 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 handlers[child_type] = _before_npv
         elif not child.is_potentially_variable():
             handlers[child_type] = _before_npv
-        elif id(child) in self.subexpression_cache:
+            # If we descend into the named expression (because of an
+            # evaluation error), then on the way back out, we will use
+            # the potentially variable handler to process the result.
+            pv_base_type = child.potentially_variable_base_class()
+            if pv_base_type not in handlers:
+                try:
+                    child.__class__ = pv_base_type
+                    _register_new_before_child_processor(self, child)
+                finally:
+                    child.__class__ = child_type
+            if pv_base_type in _operator_handles:
+                _operator_handles[child_type] = _operator_handles[pv_base_type]
+        elif ( id(child) in self.subexpression_cache or
+               issubclass(child_type, _GeneralExpressionData) ):
             handlers[child_type] = _before_named_expression
+            _operator_handles[child_type] = handle_named_expression_node
         else:
             handlers[child_type] = _before_general_expression
 
