@@ -2087,14 +2087,24 @@ def _before_monomial(visitor, child):
             # like 0 * nan that we need to map to 0)
             return True, None
 
-    # Trap multiplication by 0.  See note in handle_product_node
-    # regarding IEEE 754 combatability.
+    if arg2.fixed:
+        arg2 = arg2.value
+        _prod = arg1 * arg2
+        if not (arg1 and arg2) and _prod:
+            deprecation_warning(
+                f"Encountered {arg1}*{arg2} in expression tree.  "
+                "Mapping the NaN result to 0 for compatibility "
+                "with the nl_v1 writer.  In the future, this NaN "
+                "will be preserved/emitted to comply with IEEE-754.",
+                version='TBD')
+            _prod = 0
+        return (_CONSTANT, _prod)
+
+    # Trap multiplication by 0.
     if not arg1:
         return False, (_CONSTANT, 0)
     _id = id(arg2)
     if _id not in visitor.var_map:
-        if arg2.fixed:
-            return False, (_CONSTANT, arg1 * arg2())
         visitor.var_map[_id] = arg2
     return False, (_MONOMIAL, _id, arg1)
 
