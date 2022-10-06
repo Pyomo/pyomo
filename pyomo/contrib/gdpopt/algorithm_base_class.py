@@ -309,7 +309,7 @@ class _GDPoptAlgorithm():
         else:
             self._update_bounds(dual=float('-inf'))
 
-    def _update_primal_bound_to_unbounded(self):
+    def _update_primal_bound_to_unbounded(self, config):
         if self.objective_sense == minimize:
             self._update_bounds(primal=float('-inf'))
         else:
@@ -322,7 +322,7 @@ class _GDPoptAlgorithm():
         self.pyomo_results.solver.termination_condition = tc.infeasible
 
     def bounds_converged(self, config):
-        if pyomo_results.solver.termination_condition == tc.unbounded:
+        if self.pyomo_results.solver.termination_condition == tc.unbounded:
             return True
         elif self.LB + config.bound_tolerance >= self.UB:
             if self.LB == float('inf') and self.UB == float('inf'):

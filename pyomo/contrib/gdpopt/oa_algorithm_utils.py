@@ -35,7 +35,7 @@ class _OAAlgorithmMixIn(object):
                                                    config, self.timing)
             elif nlp_termination == tc.unbounded:
                 # the whole problem is unbounded, we can stop
-                self._update_primal_bound_to_unbounded()
+                self._update_primal_bound_to_unbounded(config)
 
         return nlp_termination not in {tc.infeasible, tc.unbounded}
 

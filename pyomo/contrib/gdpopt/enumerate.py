@@ -89,7 +89,7 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
                                                            util_block)
 
         discrete_solns = list(self._discrete_solution_iterator(
-            subproblem_util_block.disjunction_list, 
+            subproblem_util_block.disjunction_list,
             subproblem_util_block.non_indicator_boolean_variable_list,
             subproblem_util_block.discrete_variable_list))
         num_discrete_solns = len(discrete_solns)
@@ -116,8 +116,14 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
 
                     elif nlp_termination == tc.unbounded:
                         # the whole problem is unbounded, we can stop
-                        self._update_primal_bound_to_unbounded()
+                        self._update_primal_bound_to_unbounded(config)
+                        self._log_current_state(config.logger, 'subproblem',
+                                                True)
                         break
+
+                    else:
+                        # Just log where we are
+                        self._log_current_state(config.logger, 'subproblem')
 
             if self.iteration == num_discrete_solns:
                 # We can terminate optimally or declare infeasibility: We have
@@ -125,6 +131,7 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
                 # locally optimal, depending on how we solved the subproblems)
                 # if it exists, and if not then there is no solution.
                 if self.incumbent_boolean_soln is None:
+                    self._update_dual_bound_to_infeasible()
                     self._load_infeasible_termination_status(config)
                 else: # the incumbent is optimal
                     self._update_bounds(dual=self.primal_bound(),
