@@ -15,6 +15,8 @@ from pyomo.common.errors import InfeasibleConstraintException, DeveloperError
 from pyomo.contrib import appsi
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.contrib.fbbt.fbbt import fbbt
+from pyomo.contrib.gdpopt.solve_discrete_problem import (
+    distinguish_mip_infeasible_or_unbounded)
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
                                        is_feasible, get_main_elapsed_time)
 from pyomo.core import Constraint, TransformationFactory, Objective, Block
@@ -136,7 +138,11 @@ def solve_linear_subproblem(subproblem, config, timing):
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
         return tc.optimal
-    elif subprob_terminate_cond is tc.infeasible:
+    elif subprob_terminate_cond is tc.infeasibleOrUnbounded:
+        (results,
+         subprob_terminate_cond) = distinguish_mip_infeasible_or_unbounded(
+             subproblem, config)
+    if subprob_terminate_cond is tc.infeasible:
         config.logger.debug('MILP subproblem was infeasible.')
         return tc.infeasible
     elif subprob_terminate_cond is tc.unbounded:
