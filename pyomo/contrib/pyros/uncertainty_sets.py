@@ -507,28 +507,29 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
 
 class UncertaintySetList(MutableSequence):
     """
-    List-like container for a(n ordered) sequence of uncertainty
-    sets of an immutable common dimension.
+    Wrapper around a list of uncertainty sets, all of which have
+    an immutable common dimension.
 
     Parameters
     ----------
-    iterable : Iterable
-        Sequence of uncertainty sets to be contained within
-        the list.
+    uncertainty_sets : iterable, optional
+        Sequence of uncertainty sets.
     name : str or None, optional
         Name of the uncertainty set list.
     min_length : int or None, optional
-        Minimum length requirement for the set.
-        If `None` is provided, then the set has a minimum
-        length requirement of 0.
+        Minimum required length of the sequence. If `None` is
+        provided, then the minimum required length is set to 0.
     """
 
-    def __init__(self, iterable=[], name=None, min_length=None):
+    def __init__(self, uncertainty_sets=[], name=None, min_length=None):
+        """Initialize self (see class docstring).
+
+        """
         self._name = name
         self._min_length = 0 if min_length is None else min_length
 
         # check minimum length requirement satisfied
-        initlist = list(iterable)
+        initlist = list(uncertainty_sets)
         if len(initlist) < self._min_length:
             raise ValueError(
                 f"Attempting to initialize uncertainty set list "
@@ -538,7 +539,7 @@ class UncertaintySetList(MutableSequence):
             )
 
         # validate first entry of initial list.
-        # The common dimension is set to that of the entry
+        # The common dimension is set to that of the first entry
         # if validation is successful
         self._dim = None
         if initlist:
@@ -549,15 +550,19 @@ class UncertaintySetList(MutableSequence):
         self.extend(initlist)
 
     def __len__(self):
+        """Length of the list contained in self."""
         return len(self._list)
 
     def __repr__(self):
+        """Return repr(self)."""
         return f"{self.__class__.__name__}({repr(self._list)})"
 
     def __getitem__(self, idx):
+        """Return self[idx]."""
         return self._list[idx]
 
     def __setitem__(self, idx, value):
+        """Set self[idx] = value."""
         if self._index_is_valid(idx):
             # perform validation and length check only if
             # index is valid, so that exceptions due to
@@ -569,15 +574,18 @@ class UncertaintySetList(MutableSequence):
         self._list[idx] = value
 
     def __delitem__(self, idx):
+        """Perform del self[idx]."""
         if self._index_is_valid(idx):
             self._check_length_update(idx, [])
         del self._list[idx]
 
     def clear(self):
+        """Remove all items from the list."""
         self._check_length_update(slice(0, len(self)), [])
         self._list.clear()
 
     def insert(self, idx, value):
+        """Insert an object before index denoted by idx."""
         if self._index_is_valid(idx, allow_int_only=True):
             self._validate(value, single_item=True)
         self._list.insert(idx, value)
@@ -684,7 +692,7 @@ class UncertaintySetList(MutableSequence):
 
     @property
     def dim(self):
-        """Dimension of all sets contained in self."""
+        """Dimension of all uncertainty sets contained in self."""
         return self._dim
 
 
@@ -2466,11 +2474,7 @@ class IntersectionSet(UncertaintySet):
             the_sets = list(val)
 
         # type validation, ensure all entries have same dimension
-        all_sets = UncertaintySetList(
-            iterable=the_sets,
-            name="all_sets",
-            min_length=2,
-        )
+        all_sets = UncertaintySetList(the_sets, name="all_sets", min_length=2)
 
         # set dimension is immutable
         if hasattr(self, "_all_sets"):
