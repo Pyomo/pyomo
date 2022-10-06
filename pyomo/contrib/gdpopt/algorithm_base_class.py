@@ -47,7 +47,6 @@ class _GDPoptAlgorithm():
         # expression of the original (possibly nonlinear) objective function.
         self.LB = float('-inf')
         self.UB = float('inf')
-        self.unbounded = False
         self.timing = Bunch()
         self.initialization_iteration = 0
         self.iteration = 0
@@ -315,20 +314,21 @@ class _GDPoptAlgorithm():
             self._update_bounds(primal=float('-inf'))
         else:
             self._update_bounds(primal=float('inf'))
-        self.unbounded = True
+        config.logger.info('GDPopt exiting--GDP is unbounded.')
+        self.pyomo_results.solver.termination_condition = tc.unbounded
+
+    def _load_infeasible_termination_status(self, config):
+        config.logger.info('GDPopt exiting--problem is infeasible.')
+        self.pyomo_results.solver.termination_condition = tc.infeasible
 
     def bounds_converged(self, config):
-        if self.unbounded:
-            config.logger.info('GDPopt exiting--GDP is unbounded.')
-            self.pyomo_results.solver.termination_condition = tc.unbounded
+        if pyomo_results.solver.termination_condition == tc.unbounded:
             return True
         elif self.LB + config.bound_tolerance >= self.UB:
             if self.LB == float('inf') and self.UB == float('inf'):
-                config.logger.info('GDPopt exiting--problem is infeasible.')
-                self.pyomo_results.solver.termination_condition = tc.infeasible
+                self._load_infeasible_termination_status(config)
             elif self.LB == float('-inf') and self.UB == float('-inf'):
-                config.logger.info('GDPopt exiting--problem is infeasible.')
-                self.pyomo_results.solver.termination_condition = tc.infeasible
+                self._load_infeasible_termination_status(config)
             else:
                 # if they've crossed, then the gap is actually 0: Update the
                 # dual (discrete problem) bound to be equal to the primal

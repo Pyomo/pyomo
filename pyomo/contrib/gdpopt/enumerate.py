@@ -88,11 +88,13 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
         subproblem, subproblem_util_block = get_subproblem(original_model,
                                                            util_block)
 
-        for soln in self._discrete_solution_iterator(
-                subproblem_util_block.disjunction_list, 
-                subproblem_util_block.non_indicator_boolean_variable_list,
-                subproblem_util_block.discrete_variable_list):
-
+        discrete_solns = list(self._discrete_solution_iterator(
+            subproblem_util_block.disjunction_list, 
+            subproblem_util_block.non_indicator_boolean_variable_list,
+            subproblem_util_block.discrete_variable_list))
+        num_discrete_solns = len(discrete_solns)
+        for soln in discrete_solns:
+            # We will interrupt based on time limit of iteration limit:
             if (self.reached_time_limit(config) or 
                 self.reached_iteration_limit(config)):
                 break
@@ -111,11 +113,29 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
                             logger=config.logger)
                         if primal_improved:
                             self.update_incumbent(subproblem_util_block)
-                            
 
                     elif nlp_termination == tc.unbounded:
                         # the whole problem is unbounded, we can stop
                         self._update_primal_bound_to_unbounded()
+                        break
+
+            if self.iteration == num_discrete_solns:
+                # We can terminate optimally or declare infeasibility: We have
+                # enumerated all solutions, so our incumbent is optimal (or
+                # locally optimal, depending on how we solved the subproblems)
+                # if it exists, and if not then there is no solution.
+                if self.incumbent_boolean_soln is None:
+                    self._load_infeasible_termination_status(config)
+                else: # the incumbent is optimal
+                    self._update_bounds(dual=self.primal_bound(),
+                                        force_update=True)
+                    self._log_current_state(config.logger, '')
+                    config.logger.info(
+                        'GDPopt exiting--all discrete solutions have been '
+                        'enumerated.')
+                    self.pyomo_results.solver.termination_condition = tc.optimal
+                    break
+
 
 GDP_Enumeration_Solver.solve.__doc__ = add_docstring_list(
     GDP_Enumeration_Solver.solve.__doc__, GDP_Enumeration_Solver.CONFIG,
