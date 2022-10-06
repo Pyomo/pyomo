@@ -45,19 +45,19 @@ import operator
 
 relocated_module_attribute(
     'EqualityExpression',
-    'pyomo.core.expr.relational_expr',
+    'pyomo.core.expr.relational_expr.EqualityExpression',
     version='TBD')
 relocated_module_attribute(
     'InequalityExpression',
-    'pyomo.core.expr.relational_expr',
+    'pyomo.core.expr.relational_expr.InequalityExpression',
     version='TBD')
 relocated_module_attribute(
     'RangedExpression',
-    'pyomo.core.expr.relational_expr',
+    'pyomo.core.expr.relational_expr.RangedExpression',
     version='TBD')
 relocated_module_attribute(
     'inequality',
-    'pyomo.core.expr.relational_expr',
+    'pyomo.core.expr.relational_expr.inequality',
     version='TBD')
 
 
