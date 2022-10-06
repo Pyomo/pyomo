@@ -48,6 +48,7 @@ Classes
 import abc
 import math
 import functools
+from numbers import Integral
 from collections.abc import Iterable, MutableSequence
 from enum import Enum
 
@@ -557,12 +558,19 @@ class UncertaintySetList(MutableSequence):
         return self._list[idx]
 
     def __setitem__(self, idx, value):
-        self._validate(value)
-        self._check_length_update(idx, value)
+        if self._index_is_valid(idx):
+            # perform validation and length check only if
+            # index is valid, so that exceptions due to
+            # index referencing (wrong type, out of range)
+            # are raised in update attempt
+            self._validate(value)
+            self._check_length_update(idx, value)
+
         self._list[idx] = value
 
     def __delitem__(self, idx):
-        self._check_length_update(idx, [])
+        if self._index_is_valid(idx):
+            self._check_length_update(idx, [])
         del self._list[idx]
 
     def clear(self):
@@ -570,8 +578,39 @@ class UncertaintySetList(MutableSequence):
         self._list.clear()
 
     def insert(self, idx, value):
-        self._validate(value, single_item=True)
+        if self._index_is_valid(idx, allow_int_only=True):
+            self._validate(value, single_item=True)
         self._list.insert(idx, value)
+
+    def _index_is_valid(self, idx, allow_int_only=False):
+        """
+        Object to be used as list index is within range of
+        list contained within self.
+
+        Parameters
+        ----------
+        idx : object
+            List index. Usually an integer type or slice.
+        allow_int_only : bool, optional
+            Being an integral type is a necessary condition
+            for validity. The default is True.
+
+        Returns
+        -------
+        : bool
+            True if index is valid, False otherwise.
+        """
+        try:
+            self._list[idx]
+        except (TypeError, IndexError):
+            slice_valid = False
+        else:
+            slice_valid = True
+
+        # if only integer types allowed, then must be an integer type
+        int_req_satisfied = not allow_int_only or isinstance(idx, Integral)
+
+        return slice_valid and int_req_satisfied
 
     def _check_length_update(self, idx, value):
         """
@@ -583,19 +622,10 @@ class UncertaintySetList(MutableSequence):
         ValueError
             If minimum length requirement is violated by the update.
         """
-        def default(val, def_val):
-            return def_val if val is None else val
-
-        if isinstance(idx, slice):
-            slice_len = len(
-                range(
-                    default(idx.start, 0),
-                    min(default(idx.stop, len(self)), len(self)),
-                    default(idx.step, 1),
-                )
-            )
-        else:
+        if isinstance(idx, Integral):
             slice_len = 1
+        else:
+            slice_len = len(self._list[idx])
 
         val_len = len(value) if isinstance(value, Iterable) else 1
         new_len = len(self) + val_len - slice_len
