@@ -80,6 +80,15 @@ class TestGDPoptEnumerate(unittest.TestCase):
         # We don't know what values they take, but they have to be different
         self.assertNotEqual(value(m.Y[1]), value(m.Y[2]))
 
+    def test_stop_at_iteration_limit(self):
+        m = models.makeLogicalConstraintsOnDisjuncts()
+
+        results = SolverFactory('gdpopt.enumerate').solve(m, iterlim=4)
+
+        self.assertEqual(results.solver.iterations, 4)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.maxIterations)
+
     def test_infeasible_GDP(self):
         m = models.make_infeasible_gdp_model()
 
