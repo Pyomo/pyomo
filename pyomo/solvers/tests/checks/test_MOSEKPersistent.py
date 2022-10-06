@@ -11,13 +11,13 @@ import sys
 diff_tol = 1e-3
 
 mosek_available = check_available_solvers('mosek_direct')
+msk_version = [0]
+if mosek_available:
+    msk_version = pyo.SolverFactory('mosek')._version
 
 
 @unittest.skipIf(not mosek_available, "MOSEK's python bindings are missing.")
 class MOSEKPersistentTests(unittest.TestCase):
-
-    from mosek import Env
-    msk_version = Env.getversion()
 
     def setUp(self):
         self.stderr = sys.stderr
