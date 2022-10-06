@@ -55,18 +55,22 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
 
     def _discrete_solution_iterator(self, disjunctions,
                                     non_indicator_boolean_vars,
-                                    discrete_var_list):
+                                    discrete_var_list, config):
         discrete_var_values = [range(v.lb, v.ub + 1) for v in discrete_var_list]
         # we will calculate all the possible indicator_var realizations, and
         # then multiply those out by all the boolean var realizations and all
         # the integer var realizations.
         for true_indicators in product(*[disjunction.disjuncts for disjunction
                                          in disjunctions]):
-            for boolean_realization in product(
-                    [True, False], repeat=len(non_indicator_boolean_vars)):
-                for integer_realization in product(*discrete_var_values):
-                    yield (ComponentSet(true_indicators), boolean_realization,
-                           integer_realization)
+            if not config.force_subproblem_nlp:
+                yield (ComponentSet(true_indicators), (), ())
+            else:
+                for boolean_realization in product(
+                        [True, False], repeat=len(non_indicator_boolean_vars)):
+                    for integer_realization in product(*discrete_var_values):
+                        yield (ComponentSet(true_indicators),
+                               boolean_realization,
+                               integer_realization)
 
     def _solve_gdp(self, original_model, config):
         logger = config.logger
@@ -87,7 +91,8 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
         discrete_solns = list(self._discrete_solution_iterator(
             subproblem_util_block.disjunction_list,
             subproblem_util_block.non_indicator_boolean_variable_list,
-            subproblem_util_block.discrete_variable_list))
+            subproblem_util_block.discrete_variable_list,
+            config))
         num_discrete_solns = len(discrete_solns)
         for soln in discrete_solns:
             # We will interrupt based on time limit of iteration limit:

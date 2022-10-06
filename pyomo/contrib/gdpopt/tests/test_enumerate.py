@@ -19,7 +19,8 @@ from pyomo.environ import (
 from pyomo.gdp import Disjunction
 import pyomo.gdp.tests.models as models
 
-
+@unittest.skipUnless(SolverFactory('gurobi').available(),
+                     'Gurobi not available')
 class TestGDPoptEnumerate(unittest.TestCase):
     def test_solve_two_term_disjunction(self):
         m = models.makeTwoTermDisj()
@@ -37,8 +38,7 @@ class TestGDPoptEnumerate(unittest.TestCase):
         self.assertTrue(value(m.d[0].indicator_var))
         self.assertFalse(value(m.d[1].indicator_var))
 
-    def test_solve_GDP_with_discrete_variables(self):
-        m = models.makeTwoTermDisj()
+    def modify_two_term_disjunction(self, m):
         # Make first disjunct feasible
         m.a.setlb(0)
         # Discrete variable
@@ -48,7 +48,12 @@ class TestGDPoptEnumerate(unittest.TestCase):
 
         m.obj = Objective(expr=-m.x - m.y)
 
-        results = SolverFactory('gdpopt.enumerate').solve(m)
+    def test_solve_GDP_iterate_over_discrete_variables(self):
+        m = models.makeTwoTermDisj()
+        self.modify_two_term_disjunction(m)
+
+        results = SolverFactory('gdpopt.enumerate').solve(
+            m, force_subproblem_nlp=True)
 
         self.assertEqual(results.solver.iterations, 6)
         self.assertEqual(results.solver.termination_condition,
@@ -61,12 +66,49 @@ class TestGDPoptEnumerate(unittest.TestCase):
         self.assertTrue(value(m.d[0].indicator_var))
         self.assertFalse(value(m.d[1].indicator_var))
 
-    def test_solve_GDP_with_Boolean_variables(self):
+    def test_solve_GDP_do_not_iterate_over_discrete_variables(self):
+        m = models.makeTwoTermDisj()
+        self.modify_two_term_disjunction(m)
+
+        results = SolverFactory('gdpopt.enumerate').solve(m)
+
+        self.assertEqual(results.solver.iterations, 2)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertEqual(results.problem.lower_bound, -11)
+        self.assertEqual(results.problem.upper_bound, -11)
+
+        self.assertEqual(value(m.x), 9)
+        self.assertEqual(value(m.y), 2)
+        self.assertTrue(value(m.d[0].indicator_var))
+        self.assertFalse(value(m.d[1].indicator_var))
+
+    def test_solve_GDP_iterate_over_Boolean_variables(self):
+        m = models.makeLogicalConstraintsOnDisjuncts()
+
+        results = SolverFactory('gdpopt.enumerate').solve(
+            m, force_subproblem_nlp=True)
+
+        self.assertEqual(results.solver.iterations, 16)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertEqual(results.problem.lower_bound, 8)
+        self.assertEqual(results.problem.upper_bound, 8)
+
+        self.assertTrue(value(m.d[2].indicator_var))
+        self.assertTrue(value(m.d[3].indicator_var))
+        self.assertFalse(value(m.d[1].indicator_var))
+        self.assertFalse(value(m.d[4].indicator_var))
+        self.assertEqual(value(m.x), 8)
+        # We don't know what values they take, but they have to be different
+        self.assertNotEqual(value(m.Y[1]), value(m.Y[2]))
+
+    def test_solve_GDP_do_not_iterate_over_Boolean_variables(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
 
         results = SolverFactory('gdpopt.enumerate').solve(m)
 
-        self.assertEqual(results.solver.iterations, 16)
+        self.assertEqual(results.solver.iterations, 4)
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.optimal)
         self.assertEqual(results.problem.lower_bound, 8)
@@ -83,7 +125,8 @@ class TestGDPoptEnumerate(unittest.TestCase):
     def test_stop_at_iteration_limit(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
 
-        results = SolverFactory('gdpopt.enumerate').solve(m, iterlim=4)
+        results = SolverFactory('gdpopt.enumerate').solve(
+            m, iterlim=4, force_subproblem_nlp=True)
 
         self.assertEqual(results.solver.iterations, 4)
         self.assertEqual(results.solver.termination_condition,

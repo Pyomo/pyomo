@@ -177,6 +177,11 @@ def _add_nlp_solve_configs(CONFIG):
         on the variables in the NLP subproblem before solving it.""",
         domain=bool
     ))
+    CONFIG.declare("round_discrete_vars", ConfigValue(
+        default=True,
+        description="""Flag to round subproblem discrete variable values to the
+        nearest integer. Rounding is done before fixing disjuncts."""
+    ))
 
 def _add_oa_configs(CONFIG):
     _add_nlp_solve_configs(CONFIG)
@@ -253,11 +258,6 @@ def _add_oa_configs(CONFIG):
         default=_DoNothing,
         description="DEPRECATED: Please use "
         "'call_after_discrete_problem_solve'",
-    ))
-    CONFIG.declare("round_discrete_vars", ConfigValue(
-        default=True,
-        description="""Flag to round subproblem discrete variable values to the
-        nearest integer. Rounding is done before fixing disjuncts."""
     ))
     CONFIG.declare("mip_presolve", ConfigValue(
         default=True,
