@@ -45,10 +45,6 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
     the algorithm will not be exact unless the NLP subproblems are solved
     globally.
     """
-
-    def _log_citation(self, config):
-        pass
-
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_nlp_solver_configs(CONFIG, default_solver='ipopt')
     _add_nlp_solve_configs(CONFIG)

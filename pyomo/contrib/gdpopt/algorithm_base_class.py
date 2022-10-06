@@ -137,6 +137,9 @@ class _GDPoptAlgorithm():
         raise NotImplementedError("Derived _GDPoptAlgorithms need to "
                                   "implement the _solve_gdp method.")
 
+    def _log_citation(self, config):
+        pass
+
     def _log_solver_intro_message(self, config):
         config.logger.info(
             "Starting GDPopt version %s using %s algorithm"
@@ -155,6 +158,7 @@ class _GDPoptAlgorithm():
         development.
         Optimization and Engineering, 2021.
         """.strip())
+        self._log_citation(config)
 
     def _log_header(self, logger):
         logger.info(
