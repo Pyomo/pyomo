@@ -132,6 +132,8 @@ class TestGDPoptEnumerate(unittest.TestCase):
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.maxIterations)
 
+    @unittest.skipUnless(SolverFactory('ipopt').available(),
+                         'Ipopt not available')
     def test_infeasible_GDP(self):
         m = models.make_infeasible_gdp_model()
 
