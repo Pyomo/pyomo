@@ -105,9 +105,17 @@ def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
         is fixed in the subproblem and before the subproblem is solved (or
         pre-solved).
 
-        Accepts three arguments: the solver object, the subproblem GDPopt
-        utility block and the discrete problem GDPopt utility block. The
+        For algorithms with a discrete problem relaxation:
+        This method accepts three arguments: the solver object, the subproblem
+        GDPopt utility block and the discrete problem GDPopt utility block. The
         discrete problem contains the most recent discrete problem solution.
+
+        For algorithms without a discrete problem relaxation:
+        This method accepts four arguments: the list of Disjuncts that are
+        currently fixed as being active, a list of values for the non-indicator
+        BooleanVars (empty if force_nlp_subproblem=False), and a list of
+        values for the integer vars (also empty if force_nlp_subproblem=False),
+        and last the subproblem GDPopt utility block.
 
         The return of this method will be unused: The method should directly
         set the value of the variables on the subproblem
