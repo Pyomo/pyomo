@@ -150,8 +150,6 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         expr       The expression owned by this data.
     """
 
-    __pickle_slots__ = ('_expr',)
-
     __slots__ = ()
 
     def __init__(self, expr=None):
@@ -169,16 +167,6 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         obj.construct()
         obj.expr = values[0]
         return obj
-
-    def __getstate__(self):
-        state = super(_GeneralExpressionDataImpl, self).__getstate__()
-        for i in _GeneralExpressionDataImpl.__pickle_slots__:
-            state[i] = getattr(self, i)
-        return state
-
-    # Note: because NONE of the slots on this class need to be edited,
-    #       we don't need to implement a specialized __setstate__
-    #       method.
 
     #
     # Abstract Interface
@@ -237,7 +225,7 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
         _component  The expression component.
     """
 
-    __slots__ = _GeneralExpressionDataImpl.__pickle_slots__
+    __slots__ = ('_expr',)
 
     def __init__(self, expr=None, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
@@ -391,16 +379,6 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         _GeneralExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
-
-    #
-    # Since this class derives from Component and
-    # Component.__getstate__ just packs up the entire __dict__ into
-    # the state dict, we do not need to define the __getstate__ or
-    # __setstate__ methods.  We just defer to the super() get/set
-    # state.  Since all of our get/set state methods rely on super()
-    # to traverse the MRO, this will automatically pick up both the
-    # Component and Data base classes.
-    #
 
     #
     # Override abstract interface methods to first check for

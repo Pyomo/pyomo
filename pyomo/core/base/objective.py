@@ -22,11 +22,12 @@ import logging
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
 
+from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
-from pyomo.common.deprecation import RenamedClass
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
+
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import ActiveComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -143,8 +144,7 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
         _active         A boolean that indicates whether this data is active
     """
 
-    __pickle_slots__ = ("_sense",)
-    __slots__ = __pickle_slots__ + _GeneralExpressionDataImpl.__pickle_slots__
+    __slots__ = ("_sense", "_expr")
 
     def __init__(self, expr=None, sense=minimize, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
@@ -160,19 +160,6 @@ class _GeneralObjectiveData(_GeneralExpressionDataImpl,
             raise ValueError("Objective sense must be set to one of "
                              "'minimize' (%s) or 'maximize' (%s). Invalid "
                              "value: %s'" % (minimize, maximize, sense))
-
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        state = _GeneralExpressionDataImpl.__getstate__(self)
-        for i in _GeneralObjectiveData.__pickle_slots__:
-            state[i] = getattr(self,i)
-        return state
-
-    # Note: because NONE of the slots on this class need to be edited,
-    #       we don't need to implement a specialized __setstate__
-    #       method.
 
     def set_value(self, expr):
         if expr is None:
@@ -408,17 +395,6 @@ class ScalarObjective(_GeneralObjectiveData, Objective):
         _GeneralObjectiveData.__init__(self, expr=None, component=self)
         Objective.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
-
-    #
-    # Since this class derives from Component and
-    # Component.__getstate__ just packs up the entire __dict__ into
-    # the state dict, we do not need to define the __getstate__ or
-    # __setstate__ methods.  We just defer to the super() get/set
-    # state.  Since all of our get/set state methods rely on super()
-    # to traverse the MRO, this will automatically pick up both the
-    # Component and Data base classes.
-    #
-
     #
     # Override abstract interface methods to first check for
     # construction
