@@ -167,7 +167,8 @@ class TestGDPoptEnumerate(unittest.TestCase):
     def test_algorithm_specified_to_solve(self):
         m = models.twoDisj_twoCircles_easy()
 
-        results = SolverFactory('gdpopt').solve(m, algorithm='enumerate')
+        results = SolverFactory('gdpopt').solve(m, algorithm='enumerate',
+                                                tee=True)
 
         self.assertEqual(results.solver.iterations, 2)
         self.assertEqual(results.solver.termination_condition,

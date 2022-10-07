@@ -25,7 +25,7 @@ from pyomo.contrib.gdpopt.create_oa_subproblems import (
 )
 from pyomo.contrib.gdpopt.solve_subproblem import solve_subproblem
 from pyomo.contrib.gdpopt.util import (
-    fix_discrete_solution_in_subproblem, time_code
+    fix_discrete_solution_in_subproblem, time_code, get_main_elapsed_time
 )
 
 from pyomo.core import value
@@ -76,6 +76,16 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
                                boolean_realization,
                                integer_realization)
 
+    # Override logging so that we print progress in terms of the number of
+    # iterations needed to fully enumerate the discrete space.
+    def _log_current_state(self, logger, subproblem_type,
+                           primal_improved=False):
+        star = "*" if primal_improved else ""
+        logger.info(self.log_formatter.format(
+            "{}/{}".format(self.iteration, self.num_discrete_solns),
+            subproblem_type, self.LB, self.UB, self.relative_gap(),
+            get_main_elapsed_time(self.timing), star))
+
     def _solve_gdp(self, original_model, config):
         logger = config.logger
 
@@ -97,7 +107,7 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
             subproblem_util_block.non_indicator_boolean_variable_list,
             subproblem_util_block.discrete_variable_list,
             config))
-        num_discrete_solns = len(discrete_solns)
+        self.num_discrete_solns = len(discrete_solns)
         for soln in discrete_solns:
             # We will interrupt based on time limit of iteration limit:
             if (self.reached_time_limit(config) or 
@@ -130,7 +140,7 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
                         # Just log where we are
                         self._log_current_state(config.logger, 'subproblem')
 
-            if self.iteration == num_discrete_solns:
+            if self.iteration == self.num_discrete_solns:
                 # We can terminate optimally or declare infeasibility: We have
                 # enumerated all solutions, so our incumbent is optimal (or
                 # locally optimal, depending on how we solved the subproblems)
