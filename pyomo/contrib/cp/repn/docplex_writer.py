@@ -61,17 +61,16 @@ from pyomo.network import Port
 
 from pytest import set_trace
 
+# These are things that don't need special handling:
+class _GENERAL(object): pass
+# TODO: do I need this??
+_GENERAL_LIST = _GENERAL
+
+# These are operations that need to be deferred sometimes, usually because of
+# indirection:
 class _START_TIME(object): pass
 class _END_TIME(object): pass
-class _CPX_EXPR(object): pass
-class _CPX_CONSTRAINT(object): pass
-class _CPX_EXPRS(object): pass
-_CPX_VAR = _CPX_EXPR
-_CPX_VARS = _CPX_EXPRS
-class _CPX_INTERVAL_VAR(object): pass
-class _CPX_INTERVAL_VARS(object): pass
 class _ELEMENT_CONSTRAINT(object): pass
-class _CONSTANT(object): pass
 
 def _check_var_domain(visitor, node, var):
     if not var.domain.isdiscrete():
@@ -180,33 +179,41 @@ def _handle_getitem(visitor, node, *data):
     except:
         return (_ELEMENT_CONSTRAINT, (elements, expr))
 
+# _docplex_attrs = {
+#     'start_time': cp.start_of,
+#     'end_time': cp.end_of,
+#     'length': cp.length_of,
+#     'before'
+# }
+
 def _handle_getattr(visitor, node, obj, attr):
     if obj[0] is _ELEMENT_CONSTRAINT:
         # then obj[1] is a list of cp thingies that we need to get the attr on,
         # and then at the end we need to make the element constraint we couldn't
         # make before.
         objects = obj[1][0]
-    else:
-        objects = (obj[1],)
-    ans = []
-    for o in objects:
+        ans = []
+        for o in objects:
+            if attr[1] == 'start_time':
+                ans.append(cp.start_of(o))
+            elif attr[1] == 'end_time':
+                ans.append(cp.end_of(o))
+            elif attr[1] == 'length':
+                ans.append(cp.length_of(o))
+            else:
+                raise RuntimeError(
+                    "Unrecognized attrribute in GetAttrExpression: "
+                    "%s. Found for object: %s" % (attr, o))
+        return (_GENERAL, cp.element(array=ans, index=obj[1][1]))
+    elif obj[0] is _GENERAL:
         if attr[1] == 'start_time':
-            ans.append(cp.start_of(o))
+            return cp.start_of(o)
         elif attr[1] == 'end_time':
-            ans.append(cp.end_of(o))
+            return cp.end_of(o)
         elif attr[1] == 'length':
-            ans.append(cp.length_of(o))
+            return cp.length_of(o)
         elif attr[1] == 'before':
-            print("John, I'm confused: I need the argument to 'before' to be "
-                  "here or I can't do anything sensible, I don't think. Where "
-                  "is it?")
-        else:
-            raise RuntimeError("Unrecognized attrribute in GetAttrExpression: "
-                               "%s. Found for object: %s" % (attr, o))
-    if len(ans) == 1:
-        return (_CPX_EXPR, ans[0])
-    else:
-        return (_CPX_EXPR, cp.element(array=ans, index=obj[1][1]))
+            raise NotImplementedError()
 
 def _before_boolean_var(visitor, child):
     _id = id(child)
@@ -222,7 +229,7 @@ def _before_boolean_var(visitor, child):
         # an argument to logical expressions later
         visitor.var_map[_id] = cpx_var == 1
         visitor.pyomo_to_docplex[child] = cpx_var
-    return False, (_CPX_VAR, visitor.var_map[_id])
+    return False, (_GENERAL, visitor.var_map[_id])
 
 def _create_docplex_var(pyomo_var, name=None):
     if pyomo_var.is_binary():
@@ -247,7 +254,7 @@ def _before_var(visitor, child):
         visitor.cpx.add(cpx_var)
         visitor.var_map[_id] = cpx_var
         visitor.pyomo_to_docplex[child] = cpx_var
-    return False, (_CPX_VAR, visitor.var_map[_id])
+    return False, (_GENERAL, visitor.var_map[_id])
 
 def _before_indexed_var(visitor, child):
     cpx_vars = {}
@@ -259,7 +266,7 @@ def _before_indexed_var(visitor, child):
         visitor.var_map[id(v)] = cpx_var
         visitor.pyomo_to_docplex[v] = cpx_var
         cpx_vars[i] = cpx_var
-    return False, (_CPX_VARS, cpx_vars)
+    return False, (_GENERAL_LIST, cpx_vars)
 
 def _handle_named_expression_node(visitor, node, expr):
     visitor._named_expressions[id(node)] = expr
@@ -269,7 +276,7 @@ def _before_named_expression(visitor, child):
     _id = id(child)
     if _id not in visitor._named_expressions:
         return True, None
-    return False, (_CPX_EXPR, visitor._named_expressions[_id])
+    return False, (_GENERAL, visitor._named_expressions[_id])
 
 def _create_docplex_interval_var(visitor, interval_var):
     # Create a new docplex interval var and then figure out all the info that
@@ -339,7 +346,7 @@ def _before_interval_var(visitor, child):
         visitor.var_map[_id] = cpx_interval_var
         visitor.pyomo_to_docplex[child] = cpx_interval_var
 
-    return False, (_CPX_INTERVAL_VAR, visitor.var_map[_id])
+    return False, (_GENERAL, visitor.var_map[_id])
 
 def _before_indexed_interval_var(visitor, child):
     cpx_vars = {}
@@ -348,7 +355,7 @@ def _before_indexed_interval_var(visitor, child):
         visitor.var_map[id(v)] = cpx_interval_var
         visitor.pyomo_to_docplex[v] = cpx_interval_var
         cpx_vars[i] = cpx_interval_var
-    return False, (_CPX_INTERVAL_VARS, cpx_vars)
+    return False, (_GENERAL_LIST, cpx_vars)
 
 def _before_interval_var_start_time(visitor, child):
     _id = id(child)
@@ -377,7 +384,7 @@ def _before_interval_var_length(visitor, child):
         visitor.var_map[_id] = cp.length_of(cpx_interval_var)
     # There aren't any special types of constraints involving the length, so we
     # just treat this expression as if it's a normal variable.
-    return False, (_CPX_VAR, visitor.var_map[_id])
+    return False, (_GENERAL, visitor.var_map[_id])
 
 def _before_interval_var_presence(visitor, child):
     _id = id(child)
@@ -388,7 +395,7 @@ def _before_interval_var_presence(visitor, child):
         visitor.var_map[_id] = cp.presence_of(cpx_interval_var)
     # There aren't any special types of constraints involving the presence, so
     # we just treat this expression as if it's a normal variable.
-    return False, (_CPX_VAR, visitor.var_map[_id])
+    return False, (_GENERAL, visitor.var_map[_id])
 
 def _handle_step_at_node(visitor, node):
     cpx_var = _get_docplex_interval_var(visitor, node._time)
@@ -427,14 +434,14 @@ def _before_cumulative_function(visitor, node):
         else:
             expr += _step_function_handles[arg.__class__](visitor, arg)
 
-    return False, (_CPX_EXPR, expr)
+    return False, (_GENERAL, expr)
 
 ##
 # Algebraic expressions
 ##
 
 def _get_int_expr(arg):
-    if arg[0] in (_CPX_EXPR, _CONSTANT):
+    if arg[0] is _GENERAL:
         return arg[1]
     elif arg[0] is _START_TIME:
         return cp.start_of(arg[1])
@@ -445,144 +452,87 @@ def _get_int_expr(arg):
                              "object in class %s" % arg[0])
 
 def _handle_monomial_expr(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return (_CONSTANT, arg1[1]*arg2[1])
-    return (_CPX_EXPR, cp.times(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.times(_get_int_expr(arg1), _get_int_expr(arg2)))
 
 def _handle_sum_node(visitor, node, *args):
-    if all(arg[0] is _CONSTANT for arg in args):
-        return (_CONSTANT, sum(args))
-    return (_CPX_EXPR, sum((_get_int_expr(arg) for arg in args[1:]),
+    return (_GENERAL, sum((_get_int_expr(arg) for arg in args[1:]),
                            start=_get_int_expr(args[0])))
 
 def _handle_negation_node(visitor, node, arg1):
-    if arg1[0] is _CONSTANT:
-        return (_CONSTANT, -arg1)
-    return (_CPX_EXPR, cp.times(-1, _get_int_expr(arg1)))
+    return (_GENERAL, cp.times(-1, _get_int_expr(arg1)))
 
 def _handle_product_node(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return (_CONSTANT, arg1[1]*arg2[1])
-    return (_CPX_EXPR, cp.times(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.times(_get_int_expr(arg1), _get_int_expr(arg2)))
 
 def _handle_division_node(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return (_CONSTANT, arg1[1]/arg2[1])
-    return (_CPX_EXPR, cp.float_div(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.float_div(_get_int_expr(arg1), _get_int_expr(arg2)))
 
 def _handle_integer_division_node(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return (_CONSTANT, arg1[1]//arg2[1])
-    return (_CPX_EXPR, cp.int_div(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.int_div(_get_int_expr(arg1), _get_int_expr(arg2)))
 
 def _handle_pow_node(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return (_CONSTANT, arg1[1]**arg2[1])
-    return (_CPX_EXPR, cp.power(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.power(_get_int_expr(arg1), _get_int_expr(arg2)))
 
 def _handle_abs_node(visitor, node, arg1):
-    if arg1[0] is _CONSTANT:
-        return (_CONSTANT, abs(arg1))
-    return (_CPX_EXPR, cp.abs(_get_int_expr(arg1)))
+    return (_GENERAL, cp.abs(_get_int_expr(arg1)))
 
 def _handle_min_node(visitor, node, *args):
-    if all(arg[0] is _CONSTANT for arg in args):
-        return (_CONSTANT, min(args))
-    return (_CPX_EXPR, cp.min((_get_int_expr(arg) for arg in args)))
+    return (_GENERAL, cp.min((_get_int_expr(arg) for arg in args)))
 
 def _handle_max_node(visitor, node, *args):
-    if all(arg[0] is _CONSTANT for arg in args):
-        return (_CONSTANT, max(args))
-    return (_CPX_EXPR, cp.max((_get_int_expr(arg) for arg in args)))
+    return (_GENERAL, cp.max((_get_int_expr(arg) for arg in args)))
 
 ##
 # Logical expressions
 ##
 
 def _handle_and_node(visitor, node, *args):
-    if all(arg[0] is _CONSTANT for arg in args):
-        return (_CONSTANT, all(args))
-    return (_CPX_EXPR, cp.logical_and((_get_int_expr(arg) for arg in args)))
+    return (_GENERAL, cp.logical_and((_get_int_expr(arg) for arg in args)))
 
 def _handle_or_node(visitor, node, *args):
-    if all(arg[0] is _CONSTANT for arg in args):
-        return (_CONSTANT, any(args))
-    return (_CPX_EXPR, cp.logical_or((_get_int_expr(arg) for arg in args)))
+    return (_GENERAL, cp.logical_or((_get_int_expr(arg) for arg in args)))
 
 def _handle_xor_node(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return (_CONSTANT, bool(arg1[1]) ^ bool(arg2[1]))
-    return (_CPX_EXPR, cp.equal(cp.count([_get_int_expr(arg1),
-                                          _get_int_expr(arg2)], True), 1))
+    return (_GENERAL, cp.equal(cp.count([_get_int_expr(arg1),
+                                         _get_int_expr(arg2)], True), 1))
 
 def _handle_not_node(visitor, node, arg):
-    if arg[0] is _CONSTANT:
-        return (_CONSTANT, not arg[1])
-    return (_CPX_EXPR, cp.logical_not(_get_int_expr(arg)))
+    return (_GENERAL, cp.logical_not(_get_int_expr(arg)))
 
 def _handle_equality_node(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return (_CONSTANT, arg1[1] == arg2[1])
-    return (_CPX_EXPR, cp.equal(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.equal(_get_int_expr(arg1), _get_int_expr(arg2)))
 
 def _handle_equivalence_node(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return (_CONSTANT, arg1[1] == arg2[1])
-    return (_CPX_EXPR, cp.equal(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.equal(_get_int_expr(arg1), _get_int_expr(arg2)))
 
 def _handle_inequality_node(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return (_CONSTANT, arg1[1] <= arg2[1])
-    return (_CPX_EXPR, cp.less_or_equal(_get_int_expr(arg1),
-                                        _get_int_expr(arg2)))
+    return (_GENERAL, cp.less_or_equal(_get_int_expr(arg1),
+                                       _get_int_expr(arg2)))
 
 def _handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT and arg3[0] is _CONSTANT:
-        return (_CONSTANT, arg1[1] <= arg2[1] and arg2[1] <= arg3[1])
-    return (_CPX_EXPR, cp.range(_get_int_expr(arg2), lb=_get_int_expr(arg1),
-                                ub=_get_int_expr(arg3)))
+    return (_GENERAL, cp.range(_get_int_expr(arg2), lb=_get_int_expr(arg1),
+                               ub=_get_int_expr(arg3)))
 
 def _handle_not_equal_node(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
-        return (_CONSTANT, arg1[1] != arg2[1])
-    return (_CPX_EXPR, cp.diff(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.diff(_get_int_expr(arg1), _get_int_expr(arg2)))
 
 def _handle_implication_node(visitor, node, arg1, arg2):
-    if arg1[0] is _CONSTANT:
-        if arg1[1]:
-            if arg2[0] is _CONSTANT:
-                return (_CONSTANT, arg2[1])
-            else:
-                return (_CPX_EXPR, _get_int_expr(arg2[1]))
-    else:
-        # NOTE: We're just going to let docplex deal with it for now, if arg1 is
-        # constant and False. Because I'm not sure how to communicate the
-        # 'empty' thing.
-        return (_CPX_EXPR, cp.if_then(_get_int_expr(arg1), _get_int_expr(arg2)))
+        return (_GENERAL, cp.if_then(_get_int_expr(arg1), _get_int_expr(arg2)))
 
 def _handle_exactly_node(visitor, node, *args):
-    if all(arg[0] is _CONSTANT for arg in args):
-        return (_CONSTANT, sum(bool(arg[1]) for arg in args[1:]) ==
-                args[0][1])
-    return (_CPX_EXPR, cp.equal(cp.count((_get_int_expr(arg) for arg in
-                                          args[1:]), True),
-                                _get_int_expr(args[0])))
+    return (_GENERAL, cp.equal(cp.count((_get_int_expr(arg) for arg in
+                                         args[1:]), True),
+                               _get_int_expr(args[0])))
 
 def _handle_at_most_node(visitor, node, *args):
-    if all(arg[0] is _CONSTANT for arg in args):
-        return (_CONSTANT, sum(bool(arg[1]) for arg in args[1:]) <=
-                args[0][1])
-    return (_CPX_EXPR, cp.less_or_equal(cp.count((_get_int_expr(arg) for arg in
-                                                  args[1:]), True),
-                                        _get_int_expr(args[0])))
+    return (_GENERAL, cp.less_or_equal(cp.count((_get_int_expr(arg) for arg in
+                                                 args[1:]), True),
+                                       _get_int_expr(args[0])))
 
 def _handle_at_least_node(visitor, node, *args):
-    if all(arg[0] is _CONSTANT for arg in args):
-        return (_CONSTANT, sum(bool(arg[1]) for arg in args[1:]) >=
-                args[0][1])
-    return (_CPX_EXPR, cp.greater_or_equal(cp.count((_get_int_expr(arg) for arg
-                                                     in args[1:]), True),
-                                                    _get_int_expr(args[0])))
+    return (_GENERAL, cp.greater_or_equal(cp.count((_get_int_expr(arg) for arg
+                                                    in args[1:]), True),
+                                          _get_int_expr(args[0])))
 
 ##
 # Scheduling
@@ -602,18 +552,16 @@ _at_handlers = {
 }
 
 def _handle_before_expression_node(visitor, node, time1, time2, delay):
-    return (_CPX_CONSTRAINT, _before_handlers[time1[0], time2[0]](time1[1],
-                                                                  time2[1],
-                                                                  delay[1]))
+    return (_GENERAL, _before_handlers[time1[0], time2[0]](time1[1], time2[1],
+                                                           delay[1]))
 
 def _handle_at_expression_node(visitor, node, time1, time2, delay):
-    return (_CPX_CONSTRAINT, _at_handlers[time1[0], time2[0]](time1[1],
-                                                              time2[1],
-                                                              delay[1]))
+    return (_GENERAL, _at_handlers[time1[0], time2[0]](time1[1], time2[1],
+                                                       delay[1]))
 
 def _handle_always_in_node(visitor, node, cumul_func, lb, ub, start, end):
-    return (_CPX_CONSTRAINT, cp.always_in(cumul_func[1], lb[1], ub[1], start[1],
-                                          end[1]))
+    return (_GENERAL, cp.always_in(cumul_func[1], lb[1], ub[1], start[1],
+                                   end[1]))
 
 class LogicalToDoCplex(StreamBasedExpressionVisitor):
     _operator_handles = {
@@ -641,14 +589,6 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         NotEqualExpression: _handle_not_equal_node,
         EXPR.InequalityExpression: _handle_inequality_node,
         EXPR.RangedExpression: _handle_ranged_inequality_node,
-        # StartBeforeStartExpression: _handle_start_before_start_expression_node,
-        # StartBeforeEndExpression: _handle_start_before_end_expression_node,
-        # EndBeforeStartExpression: _handle_end_before_start_expression_node,
-        # EndBeforeEndExpression: _handle_end_before_end_expression_node,
-        # StartAtStartExpression: _handle_start_at_start_expression_node,
-        # StartAtEndExpression: _handle_start_at_end_expression_node,
-        # EndAtStartExpression: _handle_end_at_start_expression_node,
-        # EndAtEndExpression: _handle_end_at_end_expression_node,
         BeforeExpression: _handle_before_expression_node,
         AtExpression: _handle_at_expression_node,
         AlwaysIn: _handle_always_in_node,
@@ -692,7 +632,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
     def beforeChild(self, node, child, child_idx):
         # Return native types
         if child.__class__ in EXPR.native_types:
-            return False, (_CONSTANT, child)
+            return False, (_GENERAL, child)
 
         # Convert Vars Logical vars to docplex equivalents
         if not child.is_expression_type() or child.is_named_expression_type():
