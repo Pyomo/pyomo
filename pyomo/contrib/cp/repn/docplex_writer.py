@@ -44,6 +44,7 @@ from pyomo.core.expr.logical_expr import (
 )
 from pyomo.core.expr.numeric_expr import MinExpression, MaxExpression
 from pyomo.core.expr.relational_expr import NotEqualExpression
+from pyomo.core.expr.template_expr import CallExpression
 from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor, identify_variables
 )
@@ -71,6 +72,7 @@ _GENERAL_LIST = _GENERAL
 class _START_TIME(object): pass
 class _END_TIME(object): pass
 class _ELEMENT_CONSTRAINT(object): pass
+class _BEFORE(object): pass
 
 def _check_var_domain(visitor, node, var):
     if not var.domain.isdiscrete():
@@ -153,7 +155,7 @@ def _handle_getitem(visitor, node, *data):
             # ESJ: Have to use integer division here because otherwise, later,
             # when we construct the element constraint, docplex won't believe
             # the index is an integer expression.
-            expr += cp.int_div(mult * (arg[1] - _min), _step)
+            expr += mult * (arg[1] - _min) // _step
             # This could be (_max - _min) // _step + 1, but that assumes
             # that the set correctly collapsed the bounds and that the
             # lower and upper bounds were part of the step.  That
@@ -175,7 +177,7 @@ def _handle_getitem(visitor, node, *data):
             # disallowing it from being selected
             elements.append(None)
     try:
-        return (_CPX_EXPR, cp.element(elements, expr))
+        return (_GENERAL, cp.element(elements, expr))
     except:
         return (_ELEMENT_CONSTRAINT, (elements, expr))
 
@@ -213,7 +215,14 @@ def _handle_getattr(visitor, node, obj, attr):
         elif attr[1] == 'length':
             return cp.length_of(o)
         elif attr[1] == 'before':
-            raise NotImplementedError()
+            return (_BEFORE, obj)
+
+def _handle_call(visitor, node, *args):
+    func = args[0][0]
+    if func is _BEFORE:
+        return _handle_inequality_node(visitor, None, args[0][1], args[1])
+    else:
+        raise NotImplementedError("Function call: %s" % func)
 
 def _before_boolean_var(visitor, child):
     _id = id(child)
@@ -567,6 +576,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
     _operator_handles = {
         EXPR.GetItemExpression: _handle_getitem,
         EXPR.GetAttrExpression: _handle_getattr,
+        CallExpression: _handle_call,
         EXPR.NegationExpression: _handle_negation_node,
         EXPR.ProductExpression: _handle_product_node,
         EXPR.DivisionExpression: _handle_division_node,

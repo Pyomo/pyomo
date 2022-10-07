@@ -518,11 +518,15 @@ class TestCPExpressionWalker(unittest.TestCase):
         self.assertIn(id(m.x), visitor.var_map)
         x = visitor.var_map[id(m.x)]
         a = []
-        for v in m.a.values():
+        # only need indices 6, 7, and 8 from a, since that's what x is capable
+        # of selecting.
+        for idx in [6, 7, 8]:
+            v = m.a[idx]
             self.assertIn(id(v), visitor.var_map)
             a.append(visitor.var_map[id(v)])
-        print("Why -6? Is this right?")
-        self.assertTrue(expr[1].equals(cp.element(a, x)))
+        # since x is between 6 and 8, we subtract 6 from it for it to be the
+        # right index
+        self.assertTrue(expr[1].equals(cp.element(a, 0 + 1 *(x - 6) // 1)))
 
     def test_indirection_interval_var(self):
         m = self.get_model()
@@ -542,6 +546,6 @@ class TestCPExpressionWalker(unittest.TestCase):
         i22 = visitor.var_map[id(m.i2[2])]
         i = visitor.var_map[id(m.i)]
 
-        self.assertTrue(expr[1].equals(cp.element([cp.start_of(i21),
-                                                   cp.start_of(i22)], y) <=
-                                       cp.end_of(i)))
+        self.assertTrue(expr[1].equals(
+            cp.element([cp.start_of(i21), cp.start_of(i22)],
+                       0 + 1 * (y-1) // 1) <= cp.end_of(i)))
