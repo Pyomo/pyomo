@@ -900,10 +900,11 @@ class IndexedParam(Param):
             return super()._create_objects_for_deepcopy(memo, component_list)
         # This is immutable; only add the container (not the _data) to
         # the component_list.
-        _id = id(self)
-        if _id not in memo:
+        _new = self.__class__.__new__(self.__class__)
+        _ans = memo.setdefault(id(self), _new)
+        if _ans is _new:
             component_list.append(self)
-            memo[_id] = self.__class__.__new__(self.__class__)
+        return _ans
 
     # Because Emma wants crazy things... (Where crazy things are the ability to
     # index Params by other (integer) Vars and integer-valued expressions--a

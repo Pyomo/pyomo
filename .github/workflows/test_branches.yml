@@ -537,7 +537,7 @@ jobs:
         echo ""
         echo "Pyomo download-extensions"
         echo ""
-        pyomo download-extensions
+        pyomo download-extensions || exit 1
         echo ""
         echo "Pyomo build-extensions"
         echo ""

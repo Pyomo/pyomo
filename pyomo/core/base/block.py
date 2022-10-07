@@ -31,7 +31,6 @@ from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import (
     deprecated, deprecation_warning, RenamedClass,
 )
-
 from pyomo.common.formatting import StreamIndenter
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.log import is_debug_set
@@ -1367,13 +1366,6 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # should be preserved as singletons.
         #
         with PauseGC():
-            # Note: dict() is faster than OrderedDict, however, it does
-            # not support reverse iteration over the keys (even though
-            # starting in Python 3.7, dict() is ordered), so we can not
-            # "roll back" the memo after an exception.  So we will try
-            # the "fast" version first, and if we hit any issues, we
-            # will go back and re-try with the slower OrderedDict /
-            # paranoid mode.
             new_block = copy.deepcopy(
                 self, dict(
                     __block_scope__={id(self): True, id(None): False},
@@ -2039,18 +2031,18 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         return filename, smap_id
 
     def _create_objects_for_deepcopy(self, memo, component_list):
-        _id = id(self)
-        if _id in memo:
-            return
-        component_list.append(self)
-        memo[_id] = self.__class__.__new__(self.__class__)
-        # Blocks (and block-like things) need to pre-populate all
-        # Components / ComponentData objects to help prevent deepcopy()
-        # from violating the Python recursion limit.  This step is
-        # recursive; however, we do not expect "super deep" Pyomo block
-        # hierarchies, so should be okay.
-        for comp in self.component_objects(descend_into=False):
-            comp._create_objects_for_deepcopy(memo, component_list)
+        _new = self.__class__.__new__(self.__class__)
+        _ans = memo.setdefault(id(self), _new)
+        if _ans is _new:
+            component_list.append(self)
+            # Blocks (and block-like things) need to pre-populate all
+            # Components / ComponentData objects to help prevent
+            # deepcopy() from violating the Python recursion limit.
+            # This step is recursive; however, we do not expect "super
+            # deep" Pyomo block hierarchies, so should be okay.
+            for comp in self.component_map().values():
+                comp._create_objects_for_deepcopy(memo, component_list)
+        return _ans
 
 
 @ModelComponentFactory.register("A component that contains one or more model components.")

@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import types
 from collections import namedtuple
 from copy import deepcopy
 from weakref import ref as _weakref_ref
@@ -18,10 +19,69 @@ _autoslot_info = namedtuple(
     ['has_dict', 'slots', 'slot_mappers', 'field_mappers']
 )
 
-class AutoSlots(type):
-    """Metaclass to automatically collect __slots__ for generic pickling
+def _deepcopy_tuple(obj, memo, _id):
+    _unchanged.append(True)
+    ans = tuple(fast_deepcopy(x, memo) for x in obj)
+    if _unchanged.pop():
+        # It appears to be faster *not* to cache the fact that this
+        # particular tuple was unchanged by the deepcopy
+        #   memo[_id] = obj
+        return obj
+    memo[_id] = ans
+    return ans
 
-    The class __slots__ are collected in reverse MRO order.
+def _deepcopy_list(obj, memo, _id):
+    # Two steps here because a list can include itself
+    memo[_id] = ans = []
+    ans.extend(fast_deepcopy(x, memo) for x in obj)
+    return ans
+
+def _deepcopy_dict(obj, memo, _id):
+    # Two steps here because a dict can include itself
+    memo[_id] = ans = {}
+    for key, val in obj.items():
+        ans[fast_deepcopy(key, memo)] = fast_deepcopy(val, memo)
+    return ans
+
+def _deepcopier(obj, memo, _id):
+    return deepcopy(obj, memo)
+
+_atomic_types = {int, float, bool, complex, bytes, str, type, range,
+                 type(None), types.BuiltinFunctionType, types.FunctionType}
+
+_deepcopy_mapper = {
+    tuple: _deepcopy_tuple,
+    list: _deepcopy_list,
+    dict: _deepcopy_dict,
+}
+
+_unchanged = [None]
+
+def fast_deepcopy(obj, memo):
+    """A faster implementation of copy.deepcopy()
+
+    Python's default implementation of deepcopy has several features that
+    are slower than they need to be.  This is an implementation of
+    deepcopy that provides special handling to circumvent some of the
+    slowest parts of deepcopy().
+
+    """
+    if obj.__class__ in _atomic_types:
+        return obj
+    _id = id(obj)
+    if _id in memo:
+        ans = memo[_id]
+    else:
+        ans = _deepcopy_mapper.get(obj.__class__, _deepcopier)(obj, memo, _id)
+    if ans is not obj:
+        _unchanged[-1] = False
+    return ans
+
+
+class AutoSlots(type):
+    """Metaclass to automatically collect `__slots__` for generic pickling
+
+    The class `__slots__` are collected in reverse MRO order.
 
     Any fields that require special handling are handled through
     callbacks specified through the `__autoslot_mappers__` class
@@ -48,26 +108,27 @@ class AutoSlots(type):
     Result
     ~~~~~~
 
-    This metaclass will add a __auto_slots__ class attribute to the
-    class (and all derived classes).  This attribute is a 4-tuple:
+    This metaclass will add a `__auto_slots__` class attribute to the
+    class (and all derived classes).  This attribute is an instance of a
+    :py:class:`_autoslot_info` named 4-tuple:
 
        (has_dict, slots, slot_mappers, field_mappers)
 
     has_dict: bool
-        True if this class has a __dict__ attribute (that would need to
-        be pickled in addition to the __slots__)
+        True if this class has a `__dict__` attribute (that would need to
+        be pickled in addition to the `__slots__`)
 
     slots: tuple
         Tuple of all slots declared for this class (the union of any
         slots declared locally with all slots declared on any base class)
 
     slot_mappers: dict
-        Dict mapping index in all_slots to a function with signature
+        Dict mapping index in `slots` to a function with signature
         `mapper(encode: bool, val: Any)` that can be used to encode or
         decode that slot
 
     field_mappers: dict
-        Dict mapping field name in __dict__ to a function with signature
+        Dict mapping field name in `__dict__` to a function with signature
         `mapper(encode: bool, val: Any)` that can be used to encode or
         decode that field value.
 
@@ -157,15 +218,15 @@ class AutoSlots(type):
         """Mixin class to configure a class hierarchy to use AutoSlots
 
         Inheriting from this class will set up the automatic generation
-        of the __auto_slots__ class attribute, and define the standard
-        implementations for __deepcopy__, __getstate__, and
-        __setstate__.
+        of the `__auto_slots__` class attribute, and define the standard
+        implementations for `__deepcopy__`, `__getstate__`, and
+        `__setstate__`.
 
         """
         __slots__ = ()
 
         def __init_subclass__(cls, **kwds):
-            """Automatically define __auto_slots__ on derived subclasses
+            """Automatically define `__auto_slots__` on derived subclasses
 
             This accomplishes the same thing as the AutoSlots metaclass
             without incurring the overhead / runtime penalty of using a
@@ -176,25 +237,29 @@ class AutoSlots(type):
             AutoSlots.collect_autoslots(cls)
 
         def __deepcopy__(self, memo):
-            """Default implementation of __depcopy__ based on __getstate__
+            """Default implementation of `__deepcopy__` based on `__getstate__`
 
-            This defines a default implementation of __deepcopy__ that
-            leverages :py:meth:__getstate__` and :py:meth:`__setstate__`
-            to duplicate an object.  Having a default __deepcopy__
+            This defines a default implementation of `__deepcopy__` that
+            leverages :py:meth:`__getstate__` and :py:meth:`__setstate__`
+            to duplicate an object.  Having a default `__deepcopy__`
             implementation shortcuts significant logic in
             :py:func:`copy.deepcopy()`, thereby speeding up deepcopy
             operations.
 
             """
+            # Note: this implementation avoids deepcopying the temporary
+            # 'state' list, significantly speeding things up.
             memo[id(self)] = ans = self.__class__.__new__(self.__class__)
-            ans.__setstate__(deepcopy(self.__getstate__(), memo))
+            ans.__setstate__([
+                fast_deepcopy(field, memo) for field in self.__getstate__()
+            ])
             return ans
 
         def __getstate__(self):
-            """Generic implementation of __getstate__
+            """Generic implementation of `__getstate__`
 
             This implementation will collect the slots (in order) and
-            then the __dict__ (if necessary) and place everything into a
+            then the `__dict__` (if necessary) and place everything into a
             `list`.  This standard format is significantly faster to
             generate and deepcopy (when compared to a `dict`), although
             it can be more fragile (changing the number of slots can
@@ -203,7 +268,7 @@ class AutoSlots(type):
             Derived classes should not overload this method to provide
             special handling for fields (e.g., to resolve weak
             references).  Instead, special field handlers should be
-            declared via the __autoslot_mappers__ class attribute (see
+            declared via the `__autoslot_mappers__` class attribute (see
             :py:class:`AutoSlots`)
 
             """
@@ -223,14 +288,14 @@ class AutoSlots(type):
             return slots
 
         def __setstate__(self, state):
-            """Generic implementation of __setstate__
+            """Generic implementation of `__setstate__`
 
             Restore the state generated by :py:meth:`__getstate__()`
 
             Derived classes should not overload this method to provide
             special handling for fields (e.g., to restore weak
             references).  Instead, special field handlers should be
-            declared via the __autoslot_mappers__ class attribute (see
+            declared via the `__autoslot_mappers__` class attribute (see
             :py:class:`AutoSlots`)
 
             """
@@ -253,7 +318,7 @@ class AutoSlots(type):
                 for name, mapper in self.__auto_slots__.field_mappers.items():
                     if name in fields:
                         fields[name] = mapper(False, fields[name])
-                # Note that it appears to be aster to clear()/update()
+                # Note that it appears to be faster to clear()/update()
                 # than to simplify assign to __dict__.
                 self.__dict__.clear()
                 self.__dict__.update(fields)
