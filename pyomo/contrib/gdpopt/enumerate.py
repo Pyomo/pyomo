@@ -18,13 +18,15 @@ from pyomo.contrib.gdpopt.algorithm_base_class import _GDPoptAlgorithm
 from pyomo.contrib.gdpopt.config_options import (
     _add_mip_solver_configs, _add_nlp_solve_configs, _add_nlp_solver_configs
 )
+from pyomo.contrib.gdpopt.nlp_initialization import (
+    restore_vars_to_original_values_enumerate)
 from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_discrete_variable_list, add_disjunction_list, get_subproblem
 )
+from pyomo.contrib.gdpopt.solve_subproblem import solve_subproblem
 from pyomo.contrib.gdpopt.util import (
     fix_discrete_solution_in_subproblem, time_code
 )
-from pyomo.contrib.gdpopt.solve_subproblem import solve_subproblem
 
 from pyomo.core import value
 from pyomo.opt import TerminationCondition as tc
@@ -47,7 +49,9 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
     """
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_nlp_solver_configs(CONFIG, default_solver='ipopt')
-    _add_nlp_solve_configs(CONFIG)
+    _add_nlp_solve_configs(
+        CONFIG,
+        default_nlp_init_method=restore_vars_to_original_values_enumerate)
     # If we don't enumerate over integer values, we might have MILP subproblems
     _add_mip_solver_configs(CONFIG)
 

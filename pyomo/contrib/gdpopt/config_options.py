@@ -74,7 +74,7 @@ def _add_common_configs(CONFIG):
         domain=a_logger
     ))
 
-def _add_nlp_solve_configs(CONFIG):
+def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
     # All of these config options are expected if the algorithm solves NLP
     # subproblems.
     CONFIG.declare("integer_tolerance", ConfigValue(
@@ -95,7 +95,7 @@ def _add_nlp_solve_configs(CONFIG):
         description="Tolerance on variable bounds."
     ))
     CONFIG.declare("subproblem_initialization_method", ConfigValue(
-        default=restore_vars_to_original_values, # Historical default
+        default=default_nlp_init_method,
         description=""""
         callback to specify custom routines to initialize the
         (MI)NLP subproblems.""",
@@ -185,7 +185,8 @@ def _add_nlp_solve_configs(CONFIG):
     ))
 
 def _add_oa_configs(CONFIG):
-    _add_nlp_solve_configs(CONFIG)
+    _add_nlp_solve_configs(
+        CONFIG, default_nlp_init_method=restore_vars_to_original_values)
 
     CONFIG.declare("init_strategy", ConfigValue(
         default=None,

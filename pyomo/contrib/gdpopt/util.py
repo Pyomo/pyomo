@@ -235,9 +235,11 @@ class fix_discrete_solution_in_subproblem(object):
             self.config.logger.debug("Fixed the following integer variables: "
                                      "%s" % ", ".join(fixed_discrete))
 
-        # TODO: Call the subproblem initialization callback
-        # self.config.subproblem_initialization_method(self.solver,
-        #                                              self.subprob_util_block)
+        # Call the subproblem initialization callback
+        self.config.subproblem_initialization_method(self.True_disjuncts,
+                                                     self.boolean_var_values,
+                                                     self.discrete_var_values,
+                                                     self.subprob_util_block)
 
     def __exit__(self, type, value, traceback):
         # unfix all subproblem blocks
