@@ -161,3 +161,21 @@ class TestGDPoptEnumerate(unittest.TestCase):
                          TerminationCondition.unbounded)
         self.assertEqual(results.problem.lower_bound, -float('inf'))
         self.assertEqual(results.problem.upper_bound, -float('inf'))
+
+    @unittest.skipUnless(SolverFactory('ipopt').available(),
+                         'Ipopt not available')
+    def test_algorithm_specified_to_solve(self):
+        m = models.twoDisj_twoCircles_easy()
+
+        results = SolverFactory('gdpopt').solve(m, algorithm='enumerate')
+
+        self.assertEqual(results.solver.iterations, 2)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertAlmostEqual(results.problem.lower_bound, 9)
+        self.assertAlmostEqual(results.problem.upper_bound, 9)
+
+        self.assertAlmostEqual(value(m.x), 2)
+        self.assertAlmostEqual(value(m.y), 7)
+        self.assertTrue(value(m.upper_circle.indicator_var))
+        self.assertFalse(value(m.lower_circle.indicator_var))

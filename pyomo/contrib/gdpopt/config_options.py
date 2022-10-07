@@ -23,7 +23,8 @@ _supported_algorithms = {
     'LOA': ('gdpopt.loa', 'Logic-based Outer Approximation'),
     'GLOA': ('gdpopt.gloa', 'Global Logic-based Outer Approximation'),
     'LBB': ('gdpopt.lbb', 'Logic-based Branch and Bound'),
-    'RIC': ('gdpopt.ric', 'Relaxation with Integer Cuts')
+    'RIC': ('gdpopt.ric', 'Relaxation with Integer Cuts'),
+    'enumerate': ('gdpopt.enumerate', 'Enumeration of discrete solutions'),
 }
 
 def _strategy_deprecation(strategy):
