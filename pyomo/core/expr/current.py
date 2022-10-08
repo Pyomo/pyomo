@@ -33,8 +33,10 @@ from pyomo.core.expr import boolean_value as _logicalvalue
 # Pyomo5
 if _mode == Mode.pyomo5_trees:
     from pyomo.core.expr import numeric_expr as _numeric_expr
+    from .base import ExpressionBase
     from pyomo.core.expr.numeric_expr import (_add, _sub, _mul, _div, _pow,
                                               _neg, _abs, _inplace, _unary,
+                                              NumericExpression,
                                               NumericValue, native_types,
                                               nonpyomo_leaf_types, 
                                               native_numeric_types,
@@ -47,7 +49,7 @@ if _mode == Mode.pyomo5_trees:
                                               _expression_is_fixed,
                                               clone_counter,
                                               nonlinear_expression,
-                                              linear_expression, ExpressionBase,
+                                              linear_expression,
                                               NegationExpression,
                                               NPV_NegationExpression,
                                               ExternalFunctionExpression,
@@ -58,7 +60,6 @@ if _mode == Mode.pyomo5_trees:
                                               MonomialTermExpression,
                                               DivisionExpression,
                                               NPV_DivisionExpression,
-                                              _LinearOperatorExpression,
                                               SumExpressionBase,
                                               NPV_SumExpression, SumExpression,
                                               _MutableSumExpression,
@@ -80,13 +81,9 @@ if _mode == Mode.pyomo5_trees:
                                               NPV_expression_types)
     from pyomo.core.expr import logical_expr as _logical_expr
     from pyomo.core.expr.logical_expr import (native_logical_types, BooleanValue,
-                                              BooleanConstant, _lt, _le, _eq,
+                                              BooleanConstant,
                                               _and, _or, _equiv, _inv, _xor,
                                               _impl,
-                                              RangedExpression,
-                                              InequalityExpression, inequality,
-                                              EqualityExpression,
-                                              _generate_relational_expression,
                                               _generate_logical_proposition,
                                               BooleanExpressionBase, lnot,
                                               equivalent, xor, implies,
@@ -105,6 +102,11 @@ if _mode == Mode.pyomo5_trees:
                                               AtMostExpression,
                                               AtLeastExpression,
                                               special_boolean_atom_types)
+    from pyomo.core.expr.relational_expr import (
+        RelationalExpression,
+        RangedExpression, InequalityExpression, EqualityExpression,
+        inequality,
+    )
     from pyomo.core.expr.template_expr import (TemplateExpressionError,
                                                _NotSpecified, GetItemExpression,
                                                GetAttrExpression,
@@ -136,24 +138,7 @@ if _mode == Mode.pyomo5_trees:
                                          identify_mutable_parameters,
                                          _PolynomialDegreeVisitor,
                                          _IsFixedVisitor, _ToStringVisitor)
-    # FIXME: we shouldn't need circular dependencies between modules
-    _visitor.LinearExpression = _numeric_expr.LinearExpression
-    _visitor.MonomialTermExpression = _numeric_expr.MonomialTermExpression
-    _visitor.NPV_expression_types = _numeric_expr.NPV_expression_types
-    _visitor.clone_counter = _numeric_expr.clone_counter
 
-    # Initialize numvalue functions
-    _numvalue._generate_sum_expression \
-        = _numeric_expr._generate_sum_expression
-    _numvalue._generate_mul_expression \
-        = _numeric_expr._generate_mul_expression
-    _numvalue._generate_other_expression \
-        = _numeric_expr._generate_other_expression
-    _numvalue._generate_relational_expression \
-        = _logical_expr._generate_relational_expression
-
-    # Initialize logicalvalue functions
-    _logicalvalue._generate_logical_proposition = _logical_expr._generate_logical_proposition
 else:
     raise ValueError("No other expression systems are supported in Pyomo right now.")    #pragma: no cover
 
@@ -162,6 +147,8 @@ def Expr_if(IF=None, THEN=None, ELSE=None):
     """
     Function used to construct a logical conditional expression.
     """
+    if _numvalue.is_constant(IF):
+        return THEN if value(IF) else ELSE
     return Expr_ifExpression(IF_=IF, THEN_=THEN, ELSE_=ELSE)
 
 #

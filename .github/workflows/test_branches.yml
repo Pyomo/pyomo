@@ -18,6 +18,7 @@ env:
   PYTHONWARNINGS: ignore::UserWarning
   PYTHON_CORE_PKGS: wheel
   PYPI_ONLY: z3-solver
+  PYPY_EXCLUDE: scipy numdifftools seaborn statsmodels
   CACHE_VER: v210812.0
   NEOS_EMAIL: tests@pyomo.org
 
@@ -66,7 +67,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: mpi4py 'openmpi>4,!=4.1.3'
+          PACKAGES: mpi4py openmpi
 
         - os: ubuntu-latest
           python: 3.7
@@ -205,6 +206,8 @@ jobs:
       with:
         auto-update-conda: true
         python-version: ${{ matrix.python }}
+        channels: conda-forge
+        channel-priority: strict
 
     # GitHub actions is very fragile when it comes to setting up various
     # Python interpreters, expecially the setup-miniconda interface.
@@ -230,8 +233,17 @@ jobs:
         python -m pip install --cache-dir cache/pip --upgrade pip
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
-        python -m pip install --cache-dir cache/pip \
-            ${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES}
+        PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
+        if [[ ${{matrix.python}} == pypy* ]]; then
+            EXCLUDE="$PYPY_EXCLUDE $EXCLUDE"
+        fi
+        EXCLUDE=`echo "$EXCLUDE" | xargs`
+        if test -n "$EXCLUDE"; then
+            for WORD in $EXCLUDE; do
+                PACKAGES=${PACKAGES//$WORD / }
+            done
+        fi
+        python -m pip install --cache-dir cache/pip ${PACKAGES}
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
@@ -258,23 +270,35 @@ jobs:
         conda config --prepend pkgs_dirs $GITHUB_WORKSPACE/cache/conda
         conda info
         conda config --show-sources
+        conda config --show channels
         conda list --show-channel-urls
+        which python
+        python --version
         # Note: some pypi packages are not available through conda
         PYOMO_DEPENDENCIES=`python setup.py dependencies \
             --extras "$EXTRAS" | tail -1`
+        PACKAGES="${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${PYOMO_DEPENDENCIES} "
+        if [[ ${{matrix.python}} == pypy* ]]; then
+            EXCLUDE="$PYPY_EXCLUDE $EXCLUDE"
+        fi
         # HACK: Remove problem packages on conda+Linux
         if test "${{matrix.TARGET}}" == linux; then
-            WORDSTOREMOVE="casadi numdifftools pint"
-            for WORD in $WORDSTOREMOVE; do
-                PYOMO_DEPENDENCIES=${PYOMO_DEPENDENCIES//$WORD/}
+            EXCLUDE="casadi numdifftools pint $EXCLUDE"
+        fi
+        EXCLUDE=`echo "$EXCLUDE" | xargs`
+        if test -n "$EXCLUDE"; then
+            for WORD in $EXCLUDE; do
+                PACKAGES=${PACKAGES//$WORD / }
             done
         fi
-        CONDA_DEPENDENCIES=`echo $PYOMO_DEPENDENCIES | tr ' ' '\n' \
-            | grep -Ev ${PYPI_ONLY} | tr '\n' ' '`
-        PYPI_DEPENDENCIES=`echo $PYOMO_DEPENDENCIES | tr ' ' '\n' \
-            | grep -E ${PYPI_ONLY} | tr '\n' ' '`
-        conda install -q -y -c conda-forge \
-            ${PYTHON_CORE_PKGS} ${PYTHON_PACKAGES} ${CONDA_DEPENDENCIES}
+        for PKG in $PACKAGES; do
+            if [[ " $PYPI_ONLY " == *" $PKG "* ]]; then
+                PYPI_DEPENDENCIES="$PYPI_DEPENDENCIES $PKG"
+            else
+                CONDA_DEPENDENCIES="$CONDA_DEPENDENCIES $PKG"
+            fi
+        done
+        conda install -q -y -c conda-forge $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
             conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
                 || echo "WARNING: CPLEX Community Edition is not available"
@@ -559,7 +583,7 @@ jobs:
         echo ""
         echo "Pyomo download-extensions"
         echo ""
-        pyomo download-extensions
+        pyomo download-extensions || exit 1
         echo ""
         echo "Pyomo build-extensions"
         echo ""

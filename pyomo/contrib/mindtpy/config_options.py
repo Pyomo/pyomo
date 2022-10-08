@@ -182,7 +182,7 @@ def _get_MindtPy_config():
         description='Use dual solution from the NLP solver to add OA cuts for equality constraints.',
         domain=bool
     ))
-    CONFIG.declare('calculate_dual', ConfigValue(
+    CONFIG.declare('calculate_dual_at_solution', ConfigValue(
         default=False,
         description='Calculate duals of the NLP subproblem.',
         domain=bool
@@ -241,7 +241,7 @@ def _add_subsolver_configs(CONFIG):
     """
     CONFIG.declare('nlp_solver', ConfigValue(
         default='ipopt',
-        domain=In(['ipopt', 'gams', 'baron']),
+        domain=In(['ipopt', 'appsi_ipopt', 'gams', 'baron']),
         description='NLP subsolver name',
         doc='Which NLP subsolver is going to be used for solving the nonlinear'
             'subproblems.'
@@ -255,7 +255,7 @@ def _add_subsolver_configs(CONFIG):
     CONFIG.declare('mip_solver', ConfigValue(
         default='glpk',
         domain=In(['gurobi', 'cplex', 'cbc', 'glpk', 'gams',
-                   'gurobi_persistent', 'cplex_persistent']),
+                   'gurobi_persistent', 'cplex_persistent', 'appsi_cplex', 'appsi_gurobi']),
         description='MIP subsolver name',
         doc='Which MIP subsolver is going to be used for solving the mixed-'
             'integer main problems.'
@@ -301,7 +301,7 @@ def _add_subsolver_configs(CONFIG):
     CONFIG.declare('mip_regularization_solver', ConfigValue(
         default=None,
         domain=In(['gurobi', 'cplex', 'cbc', 'glpk', 'gams',
-                   'gurobi_persistent', 'cplex_persistent']),
+                   'gurobi_persistent', 'cplex_persistent', 'appsi_cplex', 'appsi_gurobi']),
         description='MIP subsolver for regularization problem',
         doc='Which MIP subsolver is going to be used for solving the regularization problem.'
     ))
@@ -325,8 +325,8 @@ def _add_tolerance_configs(CONFIG):
         default=1E-3,
         domain=PositiveFloat,
         description='Relative bound tolerance',
-        doc='Relative tolerance for bound feasibility checks.'
-            '|Primal Bound - Dual Bound| / (1e-10 + |Primal Bound|) <= relative tolerance.'
+        doc='Relative tolerance for bound feasibility checks. '
+            ':math:`|Primal Bound - Dual Bound| / (1e-10 + |Primal Bound|) <= relative tolerance`'
     ))
     CONFIG.declare('small_dual_tolerance', ConfigValue(
         default=1E-8,
@@ -504,7 +504,7 @@ def check_config(config):
     # configuration confirmation
     if config.add_regularization is not None:
         if config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
-            config.calculate_dual = True
+            config.calculate_dual_at_solution = True
         if config.regularization_mip_threads == 0 and config.threads > 0:
             config.regularization_mip_threads = config.threads
             config.logger.info(
@@ -521,17 +521,12 @@ def check_config(config):
         config.iteration_limit = 1
         config.add_slack = False
         if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
-            config.mip_solver = 'cplex_persistent'
-            config.logger.info(
-                'Only cplex_persistent and gurobi_persistent are supported for LP/NLP based Branch and Bound method. The MIP solver has been changed to cplex_persistent.')
+            raise ValueError("Only cplex_persistent and gurobi_persistent are supported for LP/NLP based Branch and Bound method."
+                             "Please refer to https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html#lp-nlp-based-branch-and-bound.")
         if config.threads > 1:
             config.threads = 1
             config.logger.info(
                 'The threads parameter is corrected to 1 since lazy constraint callback conflicts with multi-threads mode.')
-    # if the slacks fix to zero, just don't add them
-    if config.max_slack == 0.0:
-        config.add_slack = False
-
     if config.strategy == 'GOA':
         config.add_slack = False
         config.use_mcpp = True
@@ -564,7 +559,7 @@ def check_config(config):
         config.equality_relaxation = True
         config.add_slack = True
     if config.equality_relaxation:
-        config.calculate_dual = True
+        config.calculate_dual_at_solution = True
     if config.add_no_good_cuts:
         config.integer_to_binary = True
     if config.use_tabu_list:
@@ -575,4 +570,18 @@ def check_config(config):
                 'The threads parameter is corrected to 1 since incumbent callback conflicts with multi-threads mode.')
     if config.solution_pool:
         if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
+            if config.mip_solver in {'appsi_cplex', 'appsi_gurobi'}:
+                config.logger.info("Solution pool does not support APPSI solver.")
             config.mip_solver = 'cplex_persistent'
+    if config.calculate_dual_at_solution:
+        if config.mip_solver == 'appsi_cplex':
+            config.logger.info("APPSI-Cplex cannot get duals for mixed-integer problems"
+                            "mip_solver will be changed to Cplex.")
+            config.mip_solver = 'cplex'
+        if config.mip_regularization_solver == 'appsi_cplex':
+            config.logger.info("APPSI-Cplex cannot get duals for mixed-integer problems"
+                            "mip_solver will be changed to Cplex.")
+            config.mip_regularization_solver = 'cplex'
+        if config.mip_solver in {'gurobi', 'appsi_gurobi'} or \
+            config.mip_regularization_solver in {'gurobi', 'appsi_gurobi'}:
+            raise ValueError("GUROBI can not provide duals for mixed-integer problems.")

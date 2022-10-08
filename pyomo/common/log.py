@@ -262,14 +262,15 @@ class _GlobalLogFilter(object):
 # different formatter based on if the main pyomo logger is enabled for
 # debugging.  It has been updated to suppress output if any handlers
 # have been defined at the root level.
-_pyomoLogger = logging.getLogger('pyomo')
-_handler = StdoutHandler()
-_handler.setFormatter(LegacyPyomoFormatter(
+pyomo_logger = logging.getLogger('pyomo')
+pyomo_handler = StdoutHandler()
+pyomo_formatter = LegacyPyomoFormatter(
     base=PYOMO_ROOT_DIR,
-    verbosity=lambda: _pyomoLogger.isEnabledFor(logging.DEBUG),
-))
-_handler.addFilter(_GlobalLogFilter())
-_pyomoLogger.addHandler(_handler)
+    verbosity=lambda: pyomo_logger.isEnabledFor(logging.DEBUG),
+)
+pyomo_handler.setFormatter(pyomo_formatter)
+pyomo_handler.addFilter(_GlobalLogFilter())
+pyomo_logger.addHandler(pyomo_handler)
 
 
 @deprecated('The pyomo.common.log.LogHandler class has been deprecated '
@@ -300,10 +301,17 @@ class LoggingIntercept(object):
     logger will be temporarily removed and the logger will be set not to
     propagate messages up to higher-level loggers.
 
-    Args:
-        output (FILE): the file stream to send log messages to
-        module (str): the target logger name to intercept
-        level (int): the logging level to intercept
+    Parameters
+    ----------
+    output: io.TextIOBase
+        the file stream to send log messages to
+    module: str
+        the target logger name to intercept
+    level: int
+        the logging level to intercept
+    formatter: logging.Formatter
+        the formatter to use when rendering the log messages.  If not
+        specified, uses `'%(message)s'`
 
     Examples:
         >>> import io, logging
@@ -312,30 +320,42 @@ class LoggingIntercept(object):
         >>> with LoggingIntercept(buf, 'pyomo.core', logging.WARNING):
         ...     logging.getLogger('pyomo.core').warning('a simple message')
         >>> buf.getvalue()
+
     """
 
-    def __init__(self, output=None, module=None, level=logging.WARNING):
-        if output is None:
-            output = io.StringIO()
+    def __init__(self, output=None, module=None, level=logging.WARNING,
+                 formatter=None):
+        self.handler = None
         self.output = output
-        self.handler = logging.StreamHandler(output)
-        self.handler.setFormatter(logging.Formatter('%(message)s'))
-        self.handler.setLevel(level)
         self.module = module
+        self._level = level
+        if formatter is None:
+            formatter = logging.Formatter('%(message)s')
+        self._formatter = formatter
         self._save = None
 
     def __enter__(self):
+        # Set up the handler
+        output = self.output
+        if output is None:
+            output = io.StringIO()
+        assert self.handler is None
+        self.handler = logging.StreamHandler(output)
+        self.handler.setFormatter(self._formatter)
+        self.handler.setLevel(self._level)
+        # Register the handler with the appropriate module scope
         logger = logging.getLogger(self.module)
         self._save = logger.level, logger.propagate, logger.handlers
         logger.handlers = []
         logger.propagate = 0
         logger.setLevel(self.handler.level)
         logger.addHandler(self.handler)
-        return self.output
+        return output
 
     def __exit__(self, et, ev, tb):
         logger = logging.getLogger(self.module)
         logger.removeHandler(self.handler)
+        self.handler = None
         logger.setLevel(self._save[0])
         logger.propagate = self._save[1]
         for h in self._save[2]:
@@ -351,10 +371,18 @@ class LogStream(io.TextIOBase):
     def __init__(self, level, logger):
         self._level = level
         self._logger = logger
+        self._buffer = ''
 
     def write(self, s: str) -> int:
         res = len(s)
-        s = s.rstrip('\n')
-        for line in s.split('\n'):
+        if self._buffer:
+            s = self._buffer + s
+        lines = s.split('\n')
+        for line in lines[:-1]:
             self._logger.log(self._level, line)
+        self._buffer = lines[-1]
         return res
+
+    def flush(self):
+        if self._buffer:
+            self.write('\n')

@@ -15,6 +15,7 @@
 
    deprecated
    deprecation_warning
+   relocated_module
    relocated_module_attribute
    RenamedClass
 """
@@ -114,7 +115,8 @@ def _wrap_func(func, msg, logger, version, remove_in):
     @functools.wraps(func, assigned=(
         '__module__', '__name__', '__qualname__', '__annotations__'))
     def wrapper(*args, **kwargs):
-        deprecation_warning(message, logger)
+        cf = _find_calling_frame(1)
+        deprecation_warning(message, logger, calling_frame=cf)
         return func(*args, **kwargs)
 
     wrapper.__doc__ = 'DEPRECATED.\n\n'
@@ -183,11 +185,13 @@ def deprecation_warning(msg, logger=None, version=None,
             # function/method that called deprecation_warning
             cf = _find_calling_frame(1)
         if cf is not None:
-            logger = cf.f_globals.get('__package__', None)
+            logger = cf.f_globals.get('__name__', None)
             if logger is not None and not logger.startswith('pyomo'):
                 logger = None
         if logger is None:
             logger = 'pyomo'
+    if isinstance(logger, str):
+        logger = logging.getLogger(logger)
 
     msg = textwrap.fill(
         'DEPRECATED: %s' % (_default_msg(None, msg, version, remove_in),),
@@ -209,7 +213,7 @@ def deprecation_warning(msg, logger=None, version=None,
                 return
             deprecation_warning.emitted_warnings.add(msg)
 
-    logging.getLogger(logger).warning(msg)
+    logger.warning(msg)
 
 if in_testing_environment():
     deprecation_warning.emitted_warnings = None
@@ -322,6 +326,71 @@ class _ModuleGetattrBackport_35(types.ModuleType):
         raise AttributeError("module '%s' has no attribute '%s'"
                              % (self.__name__, name))
 
+def relocated_module(new_name, msg=None, logger=None,
+                     version=None, remove_in=None):
+    """Provide a deprecation path for moved / renamed modules
+
+    Upon import, the old module (that called `relocated_module()`) will
+    be replaced in `sys.modules` by an alias that points directly to the
+    new module.  As a result, the old module should have only two lines
+    of executable Python code (the import of `relocated_module` and the
+    call to it).
+
+    Parameters
+    ----------
+    new_name: str
+        The new (fully-qualified) module name
+
+    msg: str
+        A custom deprecation message.
+
+    logger: str
+        The logger to use for emitting the warning (default: the calling
+        pyomo package, or "pyomo")
+
+    version: str [required]
+        The version in which the module was renamed or moved.
+        General practice is to set version to '' or 'TBD' during
+        development and update it to the actual release as part of the
+        release process.
+
+    remove_in: str
+        The version in which the module will be removed from the code.
+
+    Example
+    -------
+    >>> from pyomo.common.deprecation import relocated_module
+    >>> relocated_module('pyomo.common.deprecation', version='1.2.3')
+    WARNING: DEPRECATED: The '...' module has been moved to
+        'pyomo.common.deprecation'. Please update your import.
+        (deprecated in 1.2.3) ...
+
+    """
+    from importlib import import_module
+    new_module = import_module(new_name)
+
+    # The relevant module (the one being deprecated) is the one that
+    # holds the function/method that called deprecated_module().  The
+    # relevant calling frame for the deprecation warning is the first
+    # frame in the stack that doesn't look like the importer (i.e., the
+    # thing that imported the deprecated module).
+    cf = _find_calling_frame(1)
+    old_name = cf.f_globals.get('__name__', '<stdin>')
+    cf = cf.f_back
+    if cf is not None:
+        importer = cf.f_back.f_globals['__name__'].split('.')[0]
+        while cf is not None and \
+              cf.f_globals['__name__'].split('.')[0] == importer:
+            cf = cf.f_back
+    if cf is None:
+        cf = _find_calling_frame(1)
+
+    sys.modules[old_name] = new_module
+    if msg is None:
+        msg = f"The '{old_name}' module has been moved to '{new_name}'. " \
+              'Please update your import.'
+    deprecation_warning(msg, logger, version, remove_in, cf)
+
 def relocated_module_attribute(local, target, version, remove_in=None):
     """Provide a deprecation path for moved / renamed module attributes
 
@@ -386,40 +455,40 @@ class RenamedClass(type):
     This metaclass provides a mechanism for renaming old classes while
     still preserving isinstance / issubclass relationships.
 
-    Example
-    -------
-        >>> from pyomo.common.deprecation import RenamedClass
-        >>> class NewClass(object):
-        ...     pass
-        >>> class OldClass(metaclass=RenamedClass):
-        ...     __renamed__new_class__ = NewClass
-        ...     __renamed__version__ = '6.0'
+    Examples
+    --------
+    >>> from pyomo.common.deprecation import RenamedClass
+    >>> class NewClass(object):
+    ...     pass
+    >>> class OldClass(metaclass=RenamedClass):
+    ...     __renamed__new_class__ = NewClass
+    ...     __renamed__version__ = '6.0'
 
-        Deriving from the old class generates a warning:
+    Deriving from the old class generates a warning:
 
-        >>> class DerivedOldClass(OldClass):
-        ...     pass
-        WARNING: DEPRECATED: Declaring class 'DerivedOldClass' derived from
-            'OldClass'. The class 'OldClass' has been renamed to 'NewClass'.
-            (deprecated in 6.0) ...
+    >>> class DerivedOldClass(OldClass):
+    ...     pass
+    WARNING: DEPRECATED: Declaring class 'DerivedOldClass' derived from
+        'OldClass'. The class 'OldClass' has been renamed to 'NewClass'.
+        (deprecated in 6.0) ...
 
-        As does instantiating the old class:
+    As does instantiating the old class:
 
-        >>> old = OldClass()
-        WARNING: DEPRECATED: Instantiating class 'OldClass'.  The class
-            'OldClass' has been renamed to 'NewClass'.  (deprecated in 6.0) ...
+    >>> old = OldClass()
+    WARNING: DEPRECATED: Instantiating class 'OldClass'.  The class
+        'OldClass' has been renamed to 'NewClass'.  (deprecated in 6.0) ...
 
-        Finally, isinstance and issubclass still work, for example:
+    Finally, `isinstance` and `issubclass` still work, for example:
 
-        >>> isinstance(old, NewClass)
-        True
-        >>> class NewSubclass(NewClass):
-        ...     pass
-        >>> new = NewSubclass()
-        >>> isinstance(new, OldClass)
-        WARNING: DEPRECATED: Checking type relative to 'OldClass'.  The class
-            'OldClass' has been renamed to 'NewClass'.  (deprecated in 6.0) ...
-        True
+    >>> isinstance(old, NewClass)
+    True
+    >>> class NewSubclass(NewClass):
+    ...     pass
+    >>> new = NewSubclass()
+    >>> isinstance(new, OldClass)
+    WARNING: DEPRECATED: Checking type relative to 'OldClass'.  The class
+        'OldClass' has been renamed to 'NewClass'.  (deprecated in 6.0) ...
+    True
 
     """
     def __new__(cls, name, bases, classdict, *args, **kwargs):

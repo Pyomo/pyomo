@@ -736,5 +736,11 @@ class TestComponentSlices(unittest.TestCase):
                 s, (IndexedComponent_slice.set_attribute, 'bogus', 10))),
             'b[...].bogus = 10')
 
+    def test_slice_to_componentdata(self):
+        m = ConcreteModel()
+        m.x = Var([1,2])
+        i = IndexedComponent_slice(m.x, None, None, None)[2]
+        self.assertEqual(list(i), [m.x[2]])
+
 if __name__ == "__main__":
     unittest.main()

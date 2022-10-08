@@ -115,10 +115,10 @@ ipopt_command_line_options = {'acceptable_compl_inf_tol',
 
 
 class Ipopt(PersistentSolver):
-    def __init__(self):
+    def __init__(self, only_child_vars=True):
         self._config = IpoptConfig()
         self._solver_options = dict()
-        self._writer = NLWriter()
+        self._writer = NLWriter(only_child_vars=only_child_vars)
         self._filename = None
         self._dual_sol = dict()
         self._primal_sol = ComponentMap()
@@ -173,11 +173,12 @@ class Ipopt(PersistentSolver):
     @property
     def ipopt_options(self):
         """
+        A dictionary mapping solver options to values for those options. These are solver specific.
+
         Returns
         -------
-        ipopt_options: dict
-            A dictionary mapping solver options to values for those options. These
-            are solver specific.
+            dict
+                A dictionary mapping solver options to values for those options
         """
         return self._solver_options
 

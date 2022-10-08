@@ -2,11 +2,7 @@ import math
 
 from pyomo.common.dependencies import attempt_import
 from pyomo.core import value, SymbolMap, NumericLabeler, Var, Constraint
-from pyomo.core.expr.logical_expr import (
-    EqualityExpression,
-    InequalityExpression,
-)
-from pyomo.core.expr.numeric_expr import (
+from pyomo.core.expr.current import (
     ProductExpression,
     SumExpression,
     PowExpression,
@@ -15,6 +11,8 @@ from pyomo.core.expr.numeric_expr import (
     DivisionExpression,
     AbsExpression,
     UnaryFunctionExpression,
+    EqualityExpression,
+    InequalityExpression,
 )
 from pyomo.core.expr.numvalue import (
     nonpyomo_leaf_types,

@@ -12,11 +12,10 @@
 import logging
 from weakref import ref as weakref_ref, ReferenceType
 
-from pyomo.common.deprecation import RenamedClass
+from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
-from pyomo.common.timing import ConstructionTimer
 from pyomo.common.modeling import unique_component_name, NOTSET
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.timing import ConstructionTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
 from pyomo.core.expr.numvalue import value
@@ -59,10 +58,11 @@ class _DeprecatedImplicitAssociatedBinaryVariable(object):
         return new_var
 
     def __getstate__(self):
-        return {'_boolvar': self._boolvar()}
+        return self._boolvar()
 
     def __setstate__(self, state):
-        self._boolvar = weakref_ref(state['_boolvar'])
+        self._boolvar = weakref_ref(state)
+
 
 class _BooleanVarData(ComponentData, BooleanValue):
     """
@@ -173,6 +173,18 @@ class _BooleanVarData(ComponentData, BooleanValue):
         return self.unfix()
 
 
+def _associated_binary_mapper(encode, val):
+    if val is None:
+        return None
+    if encode:
+        if val.__class__ is not _DeprecatedImplicitAssociatedBinaryVariable:
+            return val()
+    else:
+        if val.__class__ is not _DeprecatedImplicitAssociatedBinaryVariable:
+            return weakref_ref(val)
+    return val
+
+
 class _GeneralBooleanVarData(_BooleanVarData):
     """
     This class defines the data for a single Boolean variable.
@@ -197,6 +209,10 @@ class _GeneralBooleanVarData(_BooleanVarData):
     """
 
     __slots__ = ('_value', 'fixed', '_stale', '_associated_binary')
+    __autoslot_mappers__ = {
+        '_associated_binary': _associated_binary_mapper,
+        '_stale': StaleFlagManager.stale_mapper,
+    }
 
     def __init__(self, component=None):
         #
@@ -213,31 +229,6 @@ class _GeneralBooleanVarData(_BooleanVarData):
         self._stale = 0 # True
 
         self._associated_binary = None
-
-    def __getstate__(self):
-        state = super().__getstate__()
-        for i in _GeneralBooleanVarData.__slots__:
-            state[i] = getattr(self, i)
-        if isinstance(self._associated_binary, ReferenceType):
-            state['_associated_binary'] = self._associated_binary()
-        state['_stale'] = StaleFlagManager.is_stale(self._stale)
-        return state
-
-    def __setstate__(self, state):
-        """Restore a picked state into this instance.
-
-        Note: adapted from class ComponentData in pyomo.core.base.component
-
-        """
-        if state.pop('_stale', True):
-            state['_stale'] = 0
-        else:
-            state['_stale'] = StaleFlagManager.get_flag(0)
-        super().__setstate__(state)
-        if self._associated_binary is not None and \
-           type(self._associated_binary) is not \
-           _DeprecatedImplicitAssociatedBinaryVariable:
-            self._associated_binary = weakref_ref(self._associated_binary)
 
     #
     # Abstract Interface
@@ -333,10 +324,6 @@ class BooleanVar(IndexedComponent):
             self._value_init_rule = initialize
         else:
             self._value_init_value = initialize
-
-    def is_expression_type(self):
-        """Returns False because this is not an expression"""
-        return False
 
     def flag_as_stale(self):
         """
@@ -507,15 +494,6 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
         BooleanVar.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
 
-    """
-    # Since this class derives from Component and Component.__getstate__
-    # just packs up the entire __dict__ into the state dict, we do not
-    # need to define the __getstate__ or __setstate__ methods.
-    # We just defer to the super() get/set state.  Since all of our
-    # get/set state methods rely on super() to traverse the MRO, this
-    # will automatically pick up both the Component and Data base classes.
-    #
-
     #
     # Override abstract interface methods to first check for
     # construction
@@ -523,7 +501,6 @@ class ScalarBooleanVar(_GeneralBooleanVarData, BooleanVar):
 
     # NOTE: that we can't provide these errors for
     # fixed and stale because they are attributes
-    """
 
     @property
     def value(self):

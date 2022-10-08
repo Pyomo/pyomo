@@ -530,16 +530,16 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         constraints = m._pyomo_contrib_fme_transformation.projected_constraints
         # we of course get tremendous amounts of garbage, but we make sure that
         # what should be here is:
-        self.check_hull_projected_constraints(m, constraints, [16, 12, 69, 71,
-                                                               48, 60, 29, 1, 2,
-                                                               4, 5])
+        self.check_hull_projected_constraints(m, constraints, [23, 19, 8, 10,
+                                                               55, 67, 36, 3, 4,
+                                                               1, 2])
         # and when we filter, it's still there.
         constraints = filtered._pyomo_contrib_fme_transformation.\
                       projected_constraints
-        self.check_hull_projected_constraints(filtered, constraints, [8, 6, 20,
-                                                                      21, 14,
-                                                                      17, 10, 1,
-                                                                      2, 3, 4])
+        self.check_hull_projected_constraints(filtered, constraints, [10, 8, 5,
+                                                                      6, 16, 19,
+                                                                      12, 3, 4,
+                                                                      1, 2])
     
     @unittest.skipIf(not 'glpk' in solvers, 'glpk not available')
     def test_post_processing(self):
@@ -555,9 +555,9 @@ class TestFourierMotzkinElimination(unittest.TestCase):
 
         # They should be the same as the above, but now these are *all* the
         # constraints
-        self.check_hull_projected_constraints(m, constraints, [8, 6, 20, 21, 14,
-                                                               17, 10, 1, 2, 3,
-                                                               4])
+        self.check_hull_projected_constraints(m, constraints, [10, 8, 5, 6, 16,
+                                                               19, 12, 3, 4, 1,
+                                                               2])
 
         # and check that we didn't change the model
         for disj in m.component_data_objects(Disjunct):

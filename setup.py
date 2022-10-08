@@ -209,6 +209,7 @@ setup_kwargs = dict(
     ],
     extras_require = {
         'tests': [
+            #'codecov', # useful for testing infrastructures, but not required
             'coverage',
             'pytest',
             'pytest-parallel',
@@ -222,6 +223,7 @@ setup_kwargs = dict(
             'sphinxcontrib-jsmath',
             'sphinxcontrib-napoleon',
             'numpy', # Needed by autodoc for pynumero
+            'scipy', # Needed by autodoc for pynumero
         ],
         'optional': [
             'dill',      # No direct use, but improves lambda pickle
@@ -234,6 +236,7 @@ setup_kwargs = dict(
             'pint',      # units
             'python-louvain', # community_detection
             'pyyaml',    # core
+            'scipy',
             'sympy',     # differentiation
             'xlrd',      # dataportals
             'z3-solver', # community_detection
@@ -248,7 +251,6 @@ setup_kwargs = dict(
             'casadi; implementation_name!="pypy"',  # dae
             'numdifftools; implementation_name!="pypy"', # pynumero
             'pandas; implementation_name!="pypy"',
-            'scipy; implementation_name!="pypy"',
             'seaborn; implementation_name!="pypy"',   # parmest.graphics
         ],
     },

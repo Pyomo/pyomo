@@ -7,6 +7,7 @@ from pyomo.common.dependencies import attempt_import
 from pyomo.common.errors import PyomoException
 from pyomo.common.tee import capture_output
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.shutdown import python_is_shutting_down
 from pyomo.common.config import ConfigValue
 from pyomo.core.kernel.objective import minimize, maximize
 from pyomo.core.base import SymbolMap, NumericLabeler, TextLabeler
@@ -205,8 +206,8 @@ class Gurobi(PersistentBase, PersistentSolver):
     """
     _available = None
 
-    def __init__(self):
-        super(Gurobi, self).__init__()
+    def __init__(self, only_child_vars=True):
+        super(Gurobi, self).__init__(only_child_vars=only_child_vars)
         self._config = GurobiConfig()
         self._solver_options = dict()
         self._solver_model = None
@@ -262,6 +263,19 @@ class Gurobi(PersistentBase, PersistentSolver):
             cls._available = Gurobi.Availability.LimitedLicense
         finally:
             m.dispose()
+            del m
+            with capture_output(capture_fd=True):
+                gurobipy.disposeDefaultEnv()
+
+    def release_license(self):
+        self._reinit()
+        if gurobipy_available:
+            with capture_output(capture_fd=True):
+                gurobipy.disposeDefaultEnv()
+
+    def __del__(self):
+        if not python_is_shutting_down():
+            self.release_license()
 
     def version(self):
         version = (gurobipy.GRB.VERSION_MAJOR,
@@ -280,11 +294,13 @@ class Gurobi(PersistentBase, PersistentSolver):
     @property
     def gurobi_options(self):
         """
+        A dictionary mapping solver options to values for those options. These
+        are solver specific.
+
         Returns
         -------
-        gurobi_options: dict
-            A dictionary mapping solver options to values for those options. These
-            are solver specific.
+        dict
+            A dictionary mapping solver options to values for those options
         """
         return self._solver_options
 
@@ -412,6 +428,15 @@ class Gurobi(PersistentBase, PersistentSolver):
     def _add_params(self, params: List[_ParamData]):
         pass
 
+    def _reinit(self):
+        saved_config = self.config
+        saved_options = self.gurobi_options
+        saved_update_config = self.update_config
+        self.__init__(only_child_vars=self._only_child_vars)
+        self.config = saved_config
+        self.gurobi_options = saved_options
+        self.update_config = saved_update_config        
+
     def set_instance(self, model):
         if self._last_results_object is not None:
             self._last_results_object.solution_loader.invalidate()
@@ -420,13 +445,7 @@ class Gurobi(PersistentBase, PersistentSolver):
             raise PyomoException(
                 f'Solver {c.__module__}.{c.__qualname__} is not available '
                 f'({self.available()}).')
-        saved_config = self.config
-        saved_options = self.gurobi_options
-        saved_update_config = self.update_config
-        self.__init__()
-        self.config = saved_config
-        self.gurobi_options = saved_options
-        self.update_config = saved_update_config
+        self._reinit()
         self._model = model
         if self.use_extensions and cmodel_available:
             self._expr_types = cmodel.PyomoExprTypes()
@@ -722,6 +741,12 @@ class Gurobi(PersistentBase, PersistentSolver):
                                               mutable_linear_coefficients,
                                               mutable_quadratic_coefficients)
         self._mutable_objective = mutable_objective
+
+        # These two lines are needed as a workaround
+        # see PR #2454
+        self._solver_model.setObjective(0)
+        self._solver_model.update()
+
         self._solver_model.setObjective(gurobi_expr + value(repn_constant), sense=sense)
         self._needs_updated = True
 
@@ -766,14 +791,14 @@ class Gurobi(PersistentBase, PersistentSolver):
         else:
             results.termination_condition = TerminationCondition.unknown
 
-        if self._objective is None:
-            results.best_feasible_objective = None
-            results.best_objective_bound = None
-        else:
-            try:
-                results.best_feasible_objective = gprob.ObjVal
-            except (gurobipy.GurobiError, AttributeError):
-                results.best_feasible_objective = None
+        results.best_feasible_objective = None
+        results.best_objective_bound = None
+        if self._objective is not None:
+            if gprob.SolCount > 0:
+                try:
+                    results.best_feasible_objective = gprob.ObjVal
+                except (gurobipy.GurobiError, AttributeError):
+                    results.best_feasible_objective = None
             try:
                 if gprob.NumBinVars + gprob.NumIntVars == 0:
                     results.best_objective_bound = gprob.ObjVal
@@ -1169,14 +1194,21 @@ class Gurobi(PersistentBase, PersistentSolver):
             gurobipy.GRB.Callback. This will indicate where in the branch and bound algorithm gurobi is at. For
             example, suppose we want to solve
 
-            min 2*x + y
-            s.t.
-                y >= (x-2)**2
-                0 <= x <= 4
-                y >= 0
-                y integer
+            .. math::
 
-            as an MILP using exteneded cutting planes in callbacks.
+                min 2*x + y
+                
+                s.t.
+                
+                    y >= (x-2)**2
+                    
+                    0 <= x <= 4
+                    
+                    y >= 0
+                    
+                    y integer
+
+            as an MILP using extended cutting planes in callbacks.
 
                 >>> from gurobipy import GRB # doctest:+SKIP
                 >>> import pyomo.environ as pe
@@ -1193,7 +1225,7 @@ class Gurobi(PersistentBase, PersistentSolver):
                 ...     # a function to generate the cut
                 ...     m.x.value = xval
                 ...     return m.cons.add(m.y >= taylor_series_expansion((m.x - 2)**2))
-                >>>
+                ...
                 >>> _c = _add_cut(0)  # start with 2 cuts at the bounds of x
                 >>> _c = _add_cut(4)  # this is an arbitrary choice
                 >>>
@@ -1208,7 +1240,7 @@ class Gurobi(PersistentBase, PersistentSolver):
                 ...         cb_opt.cbGetSolution(vars=[m.x, m.y])
                 ...         if m.y.value < (m.x.value - 2)**2 - 1e-6:
                 ...             cb_opt.cbLazy(_add_cut(m.x.value))
-                >>>
+                ...
                 >>> opt.set_callback(my_callback)
                 >>> res = opt.solve(m) # doctest:+SKIP
 

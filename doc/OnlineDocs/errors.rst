@@ -16,6 +16,10 @@ Common Warnings/Errors
 .. py:currentmodule:: pyomo.environ
 
 
+.. ===================================================================
+.. Extended descriptions for Pyomo warnings
+.. ===================================================================
+
 Warnings
 --------
 
@@ -51,6 +55,7 @@ Users can bypass all domain validation by setting the value using:
    0.75
 
 
+
 .. _W1002:
 
 W1002: Setting Var value outside the bounds
@@ -82,6 +87,72 @@ Users can bypass all domain validation by setting the value using:
    10
 
 
+
+.. _W1003:
+
+W1003: Unexpected RecursionError walking an expression tree
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Pyomo leverages a recursive walker (the
+:py:class:`~pyomo.core.expr.visitor.StreamBasedExpressionVisitor`) to
+traverse (walk) expression trees.  For most expressions, this recursive
+walker is the most efficient.  However, Python has a relatively shallow
+recursion limit (generally, 1000 frames).  The recursive walker is
+designed to monitor the stack depth and cleanly switch to a nonrecursive
+walker before hitting the stack limit.  However, there are two (rare)
+cases where the Python stack limit can still generate a
+:py:exc:`RecursionError` exception:
+
+#. Starting the walker with fewer than
+   :py:data:`pyomo.core.expr.visitor.RECURSION_LIMIT` available frames.
+#. Callbacks that require more than 2 *
+   :py:data:`pyomo.core.expr.visitor.RECURSION_LIMIT` frames.
+
+The (default) recursive walker will catch the exception and restart the
+walker from the beginning in non-recursive mode, issuing this warning.
+The caution is that any partial work done by the walker before the
+exception was raised will be lost, potentially leaving the walker in an
+inconsistent state.  Users can avoid this by
+
+- avoiding recursive callbacks
+- restructuring the system design to avoid triggering the walker with
+  few available stack frames
+- directly calling the
+  :py:meth:`~pyomo.core.expr.visitor.StreamBasedExpressionVisitor.walk_expression_nonrecursive()`
+  walker method
+
+.. doctest::
+   :skipif: (on_github_actions and system_info[0].startswith('win')) \
+            or system_info[2] == 'PyPy'
+
+   >>> import sys
+   >>> import pyomo.core.expr.visitor as visitor
+   >>> from pyomo.core.tests.unit.test_visitor import fill_stack
+   >>> expression_depth = visitor.StreamBasedExpressionVisitor(
+   ...     exitNode=lambda node, data: max(data) + 1 if data else 1)
+   >>> m = pyo.ConcreteModel()
+   >>> m.x = pyo.Var()
+   >>> @m.Expression(range(35))
+   ... def e(m, i):
+   ...     return m.e[i-1] if i else m.x
+   >>> expression_depth.walk_expression(m.e[34])
+   36
+   >>> fill_stack(sys.getrecursionlimit() - visitor.get_stack_depth() - 30,
+   ...            expression_depth.walk_expression,
+   ...            m.e[34])
+   WARNING (W1003): Unexpected RecursionError walking an expression tree.
+       See also https://pyomo.readthedocs.io/en/stable/errors.html#w1003
+   36
+   >>> fill_stack(sys.getrecursionlimit() - visitor.get_stack_depth() - 30,
+   ...            expression_depth.walk_expression_nonrecursive,
+   ...            m.e[34])
+   36
+
+
+.. ===================================================================
+.. Extended descriptions for Pyomo errors
+.. ===================================================================
+
 Errors
 ------
 
@@ -110,7 +181,12 @@ this warning (and an exception from the converter):
        See also https://pyomo.readthedocs.io/en/stable/errors.html#e2001
 
 
-Exceptions
-----------
 
-.. _X101:
+.. ===================================================================
+.. Extended descriptions for Pyomo exceptions
+.. ===================================================================
+
+.. Exceptions
+.. ----------
+
+.. .. _X101:

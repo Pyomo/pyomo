@@ -1,6 +1,20 @@
-# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
+
 """Main driver module for GDPopt solver.
 
+22.5.13 changes:
+- rewrite of all algorithms
+- deprecate 'strategy' in favor of 'algorithm'
+- deprecate 'init_strategy' in favor of 'init_algorithm'
 20.2.28 changes:
 - bugfixes on tests
 20.1.22 changes:
@@ -30,27 +44,19 @@
 - start keeping basic changelog
 
 """
-from __future__ import division
-
-from io import StringIO
-
 from pyomo.common.config import (
-    add_docstring_list
-)
-from pyomo.contrib.gdpopt.branch_and_bound import _perform_branch_and_bound
-from pyomo.contrib.gdpopt.config_options import _get_GDPopt_config
-from pyomo.contrib.gdpopt.iterate import GDPopt_iteration_loop
-from pyomo.contrib.gdpopt.master_initialize import (
-    GDPopt_initialize_master
-)
-from pyomo.contrib.gdpopt.util import (
-    presolve_lp_nlp, process_objective,
-    time_code, indent,
-    setup_solver_environment)
+    add_docstring_list, ConfigDict)
+from pyomo.contrib.gdpopt import __version__
+from pyomo.contrib.gdpopt.config_options import (
+    _add_common_configs, _supported_algorithms, _get_algorithm_config)
 from pyomo.opt.base import SolverFactory
 
-__version__ = (20, 2, 28)  # Note: date-based version number
-
+def _handle_strategy_deprecation(config):
+    # This method won't be needed when the strategy arg is removed, but for now,
+    # we need to copy it over as algorithm. The config system already gave the
+    # deprecation warning.
+    if config.algorithm is None and config.strategy is not None:
+        config.algorithm = config.strategy
 
 @SolverFactory.register(
     'gdpopt',
@@ -88,64 +94,46 @@ class GDPoptSolver(object):
     - Logic-to-linear transformation: Romeo Valentin
 
     """
-
-    # Declare configuration options for the GDPopt solver
-    CONFIG = _get_GDPopt_config()
+    CONFIG = ConfigDict("GDPopt")
+    _add_common_configs(CONFIG)
 
     def solve(self, model, **kwds):
         """Solve the model.
-
-        Warning: this solver is still in beta. Keyword arguments subject to
-        change. Undocumented keyword arguments definitely subject to change.
-
-        This function performs all of the GDPopt solver setup and problem
-        validation. It then calls upon helper functions to construct the
-        initial master approximation and iteration loop.
 
         Args:
             model (Block): a Pyomo model or block to be solved
 
         """
-        config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
-        config.set_value(kwds)
-        if config.strategy is None:
-            msg = 'Please specify solution strategy. Options are: \n'
-            msg += '    LOA:  Logic-based Outer Approximation\n'
-            msg += '    GLOA: Global Logic-based Outer Approximation\n'
-            msg += '    LBB:  Logic-based Branch and Bound\n'
-            msg += '    RIC:  Relaxation with Integer Cuts'
-            raise ValueError(msg)
+        # The algorithm should have been specifed as an argument to the solve
+        # method. We will instantiate an ephemeral instance of the correct
+        # solver and call its solve method.
+        options = kwds.pop('options', {})
+        config = self.CONFIG(options, preserve_implicit=True)
+        # Don't complain about extra things, they aren't for us. We just need to
+        # get the algorithm and then our job is done.
+        config.set_value(kwds, skip_implicit=True)
 
-        with setup_solver_environment(model, config) as solve_data:
-            self._log_solver_intro_message(config)
-            solve_data.results.solver.name = 'GDPopt %s - %s' % (
-                str(self.version()), config.strategy)
+        alg_config = _get_algorithm_config()(options, preserve_implicit=True)
+        alg_config.set_value(kwds, skip_implicit=True)
 
-            # Verify that objective has correct form
-            process_objective(solve_data, config)
+        _handle_strategy_deprecation(alg_config)
+        algorithm = alg_config.algorithm
+        if algorithm is None:
+            raise ValueError(
+                "No algorithm was specified to the solve method. "
+                "Please specify an algorithm or use an "
+                "algorithm-specific solver.")
 
-            # Presolve LP or NLP problems using subsolvers
-            presolved, presolve_results = presolve_lp_nlp(solve_data, config)
-            if presolved:
-                # TODO merge the solver results
-                return presolve_results  # problem presolved
+        # get rid of 'algorithm' and 'strategy' if they exist so that the solver
+        # can validate.
+        kwds.pop('algorithm', None)
+        kwds.pop('strategy', None)
 
-            if solve_data.active_strategy in {'LOA', 'GLOA', 'RIC'}:
-                # Initialize the master problem
-                with time_code(solve_data.timing, 'initialization'):
-                    GDPopt_initialize_master(solve_data, config)
+        # The algorithm has already been validated, so this will work.
+        return SolverFactory(
+            _supported_algorithms[algorithm][0]).solve(model, **kwds)
 
-                # Algorithm main loop
-                with time_code(solve_data.timing, 'main loop'):
-                    GDPopt_iteration_loop(solve_data, config)
-            elif solve_data.active_strategy == 'LBB':
-                _perform_branch_and_bound(solve_data)
-            else:
-                raise ValueError('Unrecognized strategy: ' + config.strategy)
-
-        return solve_data.results
-
-    """Support use as a context manager under current solver API"""
+    # Support use as a context manager under current solver API
     def __enter__(self):
         return self
 
@@ -153,11 +141,8 @@ class GDPoptSolver(object):
         pass
 
     def available(self, exception_flag=True):
-        """Check if solver is available.
-
-        TODO: For now, it is always available. However, sub-solvers may not
-        always be available, and so this should reflect that possibility.
-
+        """Solver is always available. Though subsolvers may not be, they will
+        raise an error when the time comes.
         """
         return True
 
@@ -168,93 +153,7 @@ class GDPoptSolver(object):
         """Return a 3-tuple describing the solver version."""
         return __version__
 
-    def _log_solver_intro_message(self, config):
-        config.logger.info(
-            "Starting GDPopt version %s using %s algorithm"
-            % (".".join(map(str, self.version())), config.strategy)
-        )
-        mip_args_output = StringIO()
-        nlp_args_output = StringIO()
-        minlp_args_output = StringIO()
-        lminlp_args_output = StringIO()
-        config.mip_solver_args.display(ostream=mip_args_output)
-        config.nlp_solver_args.display(ostream=nlp_args_output)
-        config.minlp_solver_args.display(ostream=minlp_args_output)
-        config.local_minlp_solver_args.display(ostream=lminlp_args_output)
-        mip_args_text = indent(mip_args_output.getvalue().rstrip(), prefix=" " *
-                               2 + " - ")
-        nlp_args_text = indent(nlp_args_output.getvalue().rstrip(), prefix=" " *
-                               2 + " - ")
-        minlp_args_text = indent(minlp_args_output.getvalue().rstrip(),
-                                 prefix=" " * 2 + " - ")
-        lminlp_args_text = indent(lminlp_args_output.getvalue().rstrip(),
-                                  prefix=" " * 2 + " - ")
-        mip_args_text = "" if len(mip_args_text.strip()) == 0 else \
-                        "\n" + mip_args_text
-        nlp_args_text = "" if len(nlp_args_text.strip()) == 0 else \
-                        "\n" + nlp_args_text
-        minlp_args_text = "" if len(minlp_args_text.strip()) == 0 else \
-                          "\n" + minlp_args_text
-        lminlp_args_text = "" if len(lminlp_args_text.strip()) == 0 else \
-                           "\n" + lminlp_args_text
-        config.logger.info(
-            """
-Subsolvers:
-- MILP: {milp}{milp_args}
-- NLP: {nlp}{nlp_args}
-- MINLP: {minlp}{minlp_args}
-- local MINLP: {lminlp}{lminlp_args}
-            """.format(
-                milp=config.mip_solver,
-                milp_args=mip_args_text,
-                nlp=config.nlp_solver,
-                nlp_args=nlp_args_text,
-                minlp=config.minlp_solver,
-                minlp_args=minlp_args_text,
-                lminlp=config.local_minlp_solver,
-                lminlp_args=lminlp_args_text,
-            ).strip()
-        )
-        to_cite_text = """
-If you use this software, you may cite the following:
-- Implementation:
-Chen, Q; Johnson, ES; Bernal, DE; Valentin, R; Kale, S;
-Bates, J; Siirola, JD; Grossmann, IE.
-Pyomo.GDP: an ecosystem for logic based modeling and optimization development.
-Optimization and Engineering, 2021. 
-        """.strip()
-        if config.strategy == "LOA":
-            to_cite_text += "\n"
-            to_cite_text += """
-- LOA algorithm:
-Türkay, M; Grossmann, IE.
-Logic-based MINLP algorithms for the optimal synthesis of process networks.
-Comp. and Chem. Eng. 1996, 20(8), 959–978.
-DOI: 10.1016/0098-1354(95)00219-7.
-            """.strip()
-        elif config.strategy == "GLOA":
-            to_cite_text += "\n"
-            to_cite_text += """
-- GLOA algorithm:
-Lee, S; Grossmann, IE.
-A Global Optimization Algorithm for Nonconvex Generalized Disjunctive
-Programming and Applications to Process Systems.
-Comp. and Chem. Eng. 2001, 25, 1675-1697.
-DOI: 10.1016/S0098-1354(01)00732-3.
-            """.strip()
-        elif config.strategy == "LBB":
-            to_cite_text += "\n"
-            to_cite_text += """
-- LBB algorithm:
-Lee, S; Grossmann, IE.
-New algorithms for nonlinear generalized disjunctive programming.
-Comp. and Chem. Eng. 2000, 24, 2125-2141.
-DOI: 10.1016/S0098-1354(00)00581-0.
-            """.strip()
-        config.logger.info(to_cite_text)
-
     _metasolver = False
 
-# Add the CONFIG arguments to the solve method docstring
 GDPoptSolver.solve.__doc__ = add_docstring_list(
     GDPoptSolver.solve.__doc__, GDPoptSolver.CONFIG, indent_by=8)
