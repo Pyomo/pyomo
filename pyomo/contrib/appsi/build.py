@@ -14,10 +14,6 @@ import glob
 import os
 import sys
 import tempfile
-import warnings
-from pyomo.common.envvar import PYOMO_CONFIG_DIR
-from pyomo.common.fileutils import this_file_dir, find_library
-
 
 def handleReadonly(function, path, excinfo):
     excvalue = excinfo[1]
@@ -82,15 +78,14 @@ def build_appsi(args=[]):
             try:
                 super(appsi_build_ext, self).run()
                 if not self.inplace:
+                    library = glob.glob("build/*/appsi_cmodel.*")[0]
                     target = os.path.join(
                         PYOMO_CONFIG_DIR, 'lib',
                         'python%s.%s' % sys.version_info[:2],
                         'site-packages', '.')
                     if not os.path.exists(target):
                         os.makedirs(target)
-                    for ext in self.extensions:
-                        library = glob.glob(f'build/*/{ext.name}.*')[0]
-                        shutil.copy(library, target)
+                    shutil.copy(library, target)
             finally:
                 os.chdir(basedir)
                 if not self.inplace:
@@ -100,34 +95,10 @@ def build_appsi(args=[]):
         original_pybind11_setup_helpers_macos = pybind11.setup_helpers.MACOS
         pybind11.setup_helpers.MACOS = False
 
-        extensions = list()
-        extensions.append(Pybind11Extension("appsi_cmodel", sources))
-
-        # search for Highs; if found, add an extension
-        highs_lib = find_library('highs', include_PATH=False)
-        if highs_lib is not None:
-            print(f'found Highs library: {highs_lib}')
-            highs_lib_dir = os.path.dirname(highs_lib)
-            highs_build_dir = os.path.dirname(highs_lib_dir)
-            highs_include_dir = os.path.join(highs_build_dir, 'include')
-            if os.path.exists(os.path.join(highs_include_dir, 'Highs.h')):
-                print('found Highs include dir')
-                highs_ext = Pybind11Extension('appsi_highs',
-                                              sources=[os.path.join(appsi_root, 'highs_bindings', 'highs_bindings.cpp')],
-                                              language='c++',
-                                              include_dirs=[highs_include_dir],
-                                              library_dirs=[highs_lib_dir],
-                                              libraries=['highs'])
-                extensions.append(highs_ext)
-            else:
-                print(f'Found HiGHS library, but could not find HiGHS include directory ({highs_include_dir}). Skipping HiGHS Python bindings.')
-        else:
-            print('Could not find HiGHS library; Skipping HiGHS Python bindings')
-
         package_config = {
             'name': 'appsi_cmodel',
             'packages': [],
-            'ext_modules': extensions,
+            'ext_modules': [ get_appsi_extension(False) ],
             'cmdclass': {
                 "build_ext": appsi_build_ext,
             },
