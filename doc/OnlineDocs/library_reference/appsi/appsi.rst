@@ -81,9 +81,7 @@ attribute. For example:
 
 Installation
 ------------
-There are a few ways to install Appsi listed below. For any of these installation approaches,
-the HiGHS shared library must be in the LD_LIBRARY_PATH in order for the Appsi interface to
-HiGHS to be built.
+There are a few ways to install Appsi listed below.
 
 Option1:
 
