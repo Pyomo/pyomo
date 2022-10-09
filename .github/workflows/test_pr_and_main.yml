@@ -276,7 +276,7 @@ jobs:
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
             python -m pip install --cache-dir cache/pip highspy \
-	        || echo "WARNING: highspy is not available"
+                || echo "WARNING: highspy is not available"
         fi
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
