@@ -17,9 +17,6 @@ from pyomo import gdp
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
-if not param_available:
-    raise unittest.SkipTest('Parameterized is not available.')
-
 all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex), ('cbc', Cbc), ('highs', Highs)]
 mip_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('cbc', Cbc), ('highs', Highs)]
 nlp_solvers = [('ipopt', Ipopt)]
