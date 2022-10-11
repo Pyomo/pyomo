@@ -34,6 +34,7 @@ PARAM_IS_CERTAIN_ABS_TOL = 0
 COEFF_MATCH_REL_TOL = 1e-6
 COEFF_MATCH_ABS_TOL = 0
 ABS_CON_CHECK_FEAS_TOL = 1e-5
+TIC_TOC_SOLVE_TIME_ATTR = "pyros_tic_toc_time"
 
 
 '''Code borrowed from gdpopt: time_code, get_main_ellapsed_time, a_logger.'''
@@ -196,22 +197,43 @@ def turn_bounds_to_constraints(variable, model, config=None):
 
 
 def get_time_from_solver(results):
-    '''
-    Based on the solver used (GAMS or other pyomo solver) the time is named differently. This function gets the time
-    based on which sub-solver type is used.
-    :param results: the results returned from the solver
-    :return: time
-    '''
-    if hasattr(results.solver, "name"):
-        if type(results.solver.name) == str:
-            if "GAMS" in results.solver.name:
-                return results.solver.user_time
-            else:
-                raise ValueError("Accessing the time for this type of solver is not supported by get_time_from_solver.")
-        else:
-            return results.solver.time
-    else:
-        return results.solver.time
+    """
+    Obtain solver time from a Pyomo `SolverResults` object.
+
+    Returns
+    -------
+    : float
+        Solver time. May be CPU time or elapsed time,
+        depending on the solver. If no time attribute
+        is found, then `float("nan")` is returned.
+
+    NOTE
+    ----
+    This method attempts to access solver time through the
+    attributes of `results.solver` in the following order
+    of precedence:
+    1) `'user_time'` if the results object was returned by a GAMS
+       solver, `'time'` otherwise.
+    2) a custom-added attribute (with name
+       `pyros.util.TIC_TOC_SOLVE_TIME_ATTR`), which contains
+       an estimate of the elapsed solve time obtained using the Pyomo
+       `TicTocTimer` at the point the solver from which the results
+       object is derived was invoked.
+    """
+    solver_name = getattr(results.solver, "name", None)
+
+    # is this sufficient to confirm GAMS solver used?
+    from_gams = (
+        solver_name is not None
+        and str(solver_name).startswith("GAMS ")
+    )
+    time_attr_name = "user_time" if from_gams else "time"
+    for attr_name in [time_attr_name, TIC_TOC_SOLVE_TIME_ATTR]:
+        solve_time = getattr(results.solver, attr_name, None)
+        if solve_time is not None:
+            break
+
+    return float("nan") if solve_time is None else solve_time
 
 
 def validate_uncertainty_set(config):
