@@ -45,7 +45,9 @@ from pyomo.contrib.pyros.pyros_algorithm_methods import ROSolver_iterative_solve
 from pyomo.contrib.pyros.uncertainty_sets import uncertainty_sets
 from pyomo.core.base import Constraint
 
-__version__ =  "1.1.4"
+
+__version__ = "1.2.1"
+
 
 def NonNegIntOrMinusOne(obj):
     '''

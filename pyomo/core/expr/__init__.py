@@ -17,22 +17,44 @@
 # symbols that are used by developers.
 # 
 
-from pyomo.core.expr import numvalue, numeric_expr, boolean_value, logical_expr, current
+from . import (
+    numvalue, visitor, numeric_expr, boolean_value, logical_expr,
+    relational_expr, current,
+)
 
-from pyomo.core.expr.numvalue import (
+
+# FIXME: we shouldn't need circular dependencies between modules
+visitor.LinearExpression = numeric_expr.LinearExpression
+
+# Initialize numvalue functions
+numvalue._generate_sum_expression \
+    = numeric_expr._generate_sum_expression
+numvalue._generate_mul_expression \
+    = numeric_expr._generate_mul_expression
+numvalue._generate_other_expression \
+    = numeric_expr._generate_other_expression
+
+numvalue._generate_relational_expression \
+    = relational_expr._generate_relational_expression
+
+# Initialize logicalvalue functions
+boolean_value._generate_logical_proposition \
+    = logical_expr._generate_logical_proposition
+
+from .numvalue import (
     value, is_constant, is_fixed, is_variable_type,
     is_potentially_variable, NumericValue, ZeroConstant,
     native_numeric_types, native_types, polynomial_degree,
 )
 
-from pyomo.core.expr.boolean_value import BooleanValue
+from .boolean_value import BooleanValue
 
-from pyomo.core.expr.numeric_expr import linear_expression, nonlinear_expression
-from pyomo.core.expr.logical_expr import (land, lor, equivalent, exactly,
-                                          atleast, atmost, implies, lnot,
-                                          xor, inequality)
-
-from pyomo.core.expr.current import (
+from .numeric_expr import linear_expression, nonlinear_expression
+from .logical_expr import (
+    land, lnot, lor, xor, equivalent, exactly, atleast, atmost, implies,
+)
+from .relational_expr import inequality
+from .current import (
     log, log10, sin, cos, tan, cosh, sinh, tanh,
     asin, acos, atan, exp, sqrt, asinh, acosh,
     atanh, ceil, floor,

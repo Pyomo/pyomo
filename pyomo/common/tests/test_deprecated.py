@@ -425,6 +425,25 @@ class TestRelocated(unittest.TestCase):
             "DEPRECATED: the 'oldName' class has been moved to "
             "'pyomo.common.tests.test_deprecated.TestRelocated'")
 
+    def test_relocated_module(self):
+        with LoggingIntercept() as LOG:
+            # Can import attributes defined only in the new module
+            from pyomo.common.tests.relo_mod import ReloClass
+        self.assertRegex(
+            LOG.getvalue().replace('\n', ' '),
+            r"DEPRECATED: The 'pyomo\.common\.tests\.relo_mod' module has "
+            r"been moved to 'pyomo\.common\.tests\.relo_mod_new'. Please "
+            r"update your import. \(deprecated in 1\.2\) \(called from "
+            r".*test_deprecated\.py")
+        with LoggingIntercept() as LOG:
+            # Second import: no warning
+            import pyomo.common.tests.relo_mod as relo
+        self.assertEqual(LOG.getvalue(), '')
+        import pyomo.common.tests.relo_mod_new as relo_new
+        self.assertIs(relo, relo_new)
+        self.assertEqual(relo.RELO_ATTR, 42)
+        self.assertIs(ReloClass, relo_new.ReloClass)
+
 
 class TestRenamedClass(unittest.TestCase):
     def test_renamed(self):

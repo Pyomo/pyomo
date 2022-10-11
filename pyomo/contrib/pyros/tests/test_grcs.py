@@ -24,6 +24,8 @@ from pyomo.contrib.pyros.solve_data import MasterProblemData
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
 from pyomo.environ import maximize as pyo_max
+from pyomo.common.errors import ApplicationError
+
 
 if not (numpy_available and scipy_available):
     raise unittest.SkipTest('PyROS unit tests require numpy and scipy')
@@ -1980,6 +1982,7 @@ class RegressionTest(unittest.TestCase):
         config.global_solver = SolverFactory('baron')
         config.uncertain_params = m.working_model.util.uncertain_params
         config.tee = False
+        config.solve_master_globally = True
 
         add_decision_rule_variables(model_data=m, config=config)
         add_decision_rule_constraints(model_data=m, config=config)
@@ -2125,6 +2128,181 @@ class RegressionTest(unittest.TestCase):
 
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.time_out,
                          msg="Returned termination condition is not return time_out.")
+
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_terminate_with_application_error(self):
+        """
+        Check that PyROS correctly raises ApplicationError
+        in event of abnormal IPOPT termination.
+        """
+        m = ConcreteModel()
+        m.p = Param(mutable=True, initialize=1.5)
+        m.x1 = Var(initialize=-1)
+        m.obj = Objective(expr=log(m.x1) * m.p)
+        m.con = Constraint(expr=m.x1 * m.p >= -2)
+
+        solver = SolverFactory("ipopt")
+        solver.options["halt_on_ampl_error"] = "yes"
+        baron = SolverFactory("baron")
+
+        box_set = BoxSet(bounds=[(1, 2)])
+        pyros_solver = SolverFactory("pyros")
+        with self.assertRaisesRegex(
+                ApplicationError,
+                r"Solver \(ipopt\) did not exit normally",
+                ):
+            pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1],
+                second_stage_variables=[],
+                uncertain_params=[m.p],
+                uncertainty_set=box_set,
+                local_solver=solver,
+                global_solver=baron,
+                objective_focus=ObjectiveType.nominal,
+            )
+
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_master_subsolver_error(self):
+        """
+        Test PyROS on a two-stage problem with a subsolver error
+        termination in the initial master problem.
+        """
+        m = ConcreteModel()
+
+        m.q = Param(initialize=1, mutable=True)
+
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+
+        # source of subsolver error: can't converge to log(0)
+        # in separation problem (make x2 second-stage var)
+        m.x2 = Var(initialize=2, bounds=(0, m.q))
+
+        m.obj = Objective(expr=log(m.x1) + m.x2)
+
+        box_set = BoxSet(bounds=[(0, 1)])
+
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.q],
+            uncertainty_set=box_set,
+            local_solver=local_solver,
+            global_solver=global_solver,
+            decision_rule_order=1,
+            tee=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.subsolver_error,
+            msg=(
+                f"Returned termination condition for separation error"
+                "test is not {pyrosTerminationCondition.subsolver_error}.",
+            )
+        )
+
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_separation_subsolver_error(self):
+        """
+        Test PyROS on a two-stage problem with a subsolver error
+        termination in separation.
+        """
+        m = ConcreteModel()
+
+        m.q = Param(initialize=1, mutable=True)
+
+        m.x1 = Var(initialize=1, bounds=(0, 1))
+
+        # source of subsolver error: can't converge to log(0)
+        # in separation problem (make x2 second-stage var)
+        m.x2 = Var(initialize=2, bounds=(0, log(m.q)))
+
+        m.obj = Objective(expr=m.x1 + m.x2)
+
+        box_set = BoxSet(bounds=[(0, 1)])
+        d_set = DiscreteScenarioSet(scenarios=[(1,), (0,)])
+
+        local_solver = SolverFactory("ipopt")
+        global_solver = SolverFactory("baron")
+        pyros_solver = SolverFactory("pyros")
+
+        res = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.q],
+            uncertainty_set=box_set,
+            local_solver=local_solver,
+            global_solver=global_solver,
+            decision_rule_order=1,
+            tee=True,
+        )
+        self.assertEqual(
+            res.pyros_termination_condition,
+            pyrosTerminationCondition.subsolver_error,
+            msg=(
+                f"Returned termination condition for separation error"
+                "test is not {pyrosTerminationCondition.subsolver_error}.",
+            )
+        )
+
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_nominal_focus_robust_feasible(self):
+        """
+        Test problem under nominal objective focus terminates
+        successfully.
+        """
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # singleton set, guaranteed robust feasibility
+        discrete_scenarios = DiscreteScenarioSet(scenarios=[[1.125]])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u],
+            uncertainty_set=discrete_scenarios,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            solve_master_globally=False,
+            bypass_local_separation=True,
+            options={
+                "objective_focus": ObjectiveType.nominal,
+                "solve_master_globally": True
+            },
+        )
+        # check for robust feasible termination
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg="Returned termination condition is not return robust_optimal.",
+        )
 
     @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
                          "Global NLP solver is not available and licensed.")
@@ -2786,6 +2964,137 @@ class testMasterFeasibilityUnitConsistency(unittest.TestCase):
                 " test case."
             )
         )
+
+
+class TestSubsolverTiming(unittest.TestCase):
+    """
+    Tests to confirm that the PyROS subsolver timing routines
+    work appropriately.
+    """
+    def simple_nlp_model(self):
+        """
+        Create simple NLP for the unit tests defined
+        within this class
+        """
+        # define model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u1 = Param(initialize=1.125, mutable=True)
+        m.u2 = Param(initialize=1, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+
+        return m
+
+    @unittest.skipUnless(
+        SolverFactory('appsi_ipopt').available(exception_flag=False),
+        "Local NLP solver is not available.",
+    )
+    def test_pyros_appsi_ipopt(self):
+        """
+        Test PyROS usage with solver appsi ipopt
+        works without exceptions.
+        """
+        m = self.simple_nlp_model()
+
+        # Define the uncertainty set
+        # we take the parameter `u2` to be 'fixed'
+        ellipsoid = AxisAlignedEllipsoidalSet(
+            center=[1.125, 1],
+            half_lengths=[1, 0],
+        )
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('appsi_ipopt')
+        global_subsolver = SolverFactory("appsi_ipopt")
+
+        # Call the PyROS solver
+        # note: second-stage variable and uncertain params have units
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u1, m.u2],
+            uncertainty_set=ellipsoid,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            objective_focus=ObjectiveType.worst_case,
+            solve_master_globally=False,
+            bypass_global_separation=True,
+        )
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg="Did not identify robust optimal solution to problem instance."
+        )
+        self.assertFalse(
+            math.isnan(results.time),
+            msg=(
+                "PyROS solve time is nan (expected otherwise since subsolver"
+                "time estimates are made using TicTocTimer"
+            ),
+        )
+
+    @unittest.skipUnless(
+        SolverFactory('gams:ipopt').available(exception_flag=False),
+        "Local NLP solver GAMS/IPOPT is not available.",
+    )
+    def test_pyros_gams_ipopt(self):
+        """
+        Test PyROS usage with solver GAMS ipopt
+        works without exceptions.
+        """
+        m = self.simple_nlp_model()
+
+        # Define the uncertainty set
+        # we take the parameter `u2` to be 'fixed'
+        ellipsoid = AxisAlignedEllipsoidalSet(
+            center=[1.125, 1],
+            half_lengths=[1, 0],
+        )
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('gams:ipopt')
+        global_subsolver = SolverFactory("gams:ipopt")
+
+        # Call the PyROS solver
+        # note: second-stage variable and uncertain params have units
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u1, m.u2],
+            uncertainty_set=ellipsoid,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            objective_focus=ObjectiveType.worst_case,
+            solve_master_globally=False,
+            bypass_global_separation=True,
+        )
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg="Did not identify robust optimal solution to problem instance."
+        )
+        self.assertFalse(
+            math.isnan(results.time),
+            msg=(
+                "PyROS solve time is nan (expected otherwise since subsolver"
+                "time estimates are made using TicTocTimer"
+            ),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

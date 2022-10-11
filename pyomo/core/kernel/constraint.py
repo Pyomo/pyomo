@@ -14,7 +14,10 @@ from pyomo.core.expr.numvalue import (ZeroConstant,
                                       is_potentially_variable,
                                       is_numeric_data,
                                       value)
-from pyomo.core.expr import logical_expr
+from pyomo.core.expr.expr_common import ExpressionType
+from pyomo.core.expr.relational_expr import (
+    EqualityExpression, RangedExpression, InequalityExpression
+)
 from pyomo.core.kernel.base import \
     (ICategorizedObject,
      _abstract_readonly_property)
@@ -23,6 +26,7 @@ from pyomo.core.kernel.container_utils import \
 
 _pos_inf = float('inf')
 _neg_inf = float('-inf')
+_RELATIONAL = ExpressionType.RELATIONAL
 
 class IConstraint(ICategorizedObject):
     """The interface for constraints"""
@@ -35,11 +39,15 @@ class IConstraint(ICategorizedObject):
     #
 
     body = _abstract_readonly_property(
-        doc="The body of the constraint")
+        doc="The expression for the body of the constraint")
+    lower = _abstract_readonly_property(
+        doc="The expression for the lower bound of the constraint")
+    upper = _abstract_readonly_property(
+        doc="The expression for the upper bound of the constraint")
     lb = _abstract_readonly_property(
-        doc="The lower bound of the constraint")
+        doc="The value of the lower bound of the constraint")
     ub = _abstract_readonly_property(
-        doc="The upper bound of the constraint")
+        doc="The value of the upper bound of the constraint")
     rhs = _abstract_readonly_property(
         doc="The right-hand side of the constraint")
     equality = _abstract_readonly_property(
@@ -51,14 +59,6 @@ class IConstraint(ICategorizedObject):
              "instance provides the properties that "
              "define the linear canonical form of a "
              "constraint"))
-
-    # temporary (for backwards compatibility)
-    @property
-    def lower(self):
-        return self.lb
-    @property
-    def upper(self):
-        return self.ub
 
     #
     # Interface
@@ -131,7 +131,7 @@ class IConstraint(ICategorizedObject):
                 return body_expr <= self.ub
             elif self.ub is None:
                 return self.lb <= body_expr
-            return logical_expr.RangedExpression((self.lb, body_expr, self.ub), (False, False))
+            return RangedExpression((self.lb, body_expr, self.ub), (False, False))
 
     @property
     def bounds(self):
@@ -168,14 +168,14 @@ class _MutableBoundsConstraintMixin(object):
     #
 
     @property
-    def lb(self):
-        """The lower bound of the constraint"""
+    def lower(self):
+        """The expression for the lower bound of the constraint"""
         return self._lb
-    @lb.setter
-    def lb(self, lb):
+    @lower.setter
+    def lower(self, lb):
         if self.equality:
             raise ValueError(
-                "The lb property can not be set "
+                "The lower property can not be set "
                 "when the equality property is True.")
         if (lb is not None) and \
            (not is_numeric_data(lb)):
@@ -185,14 +185,14 @@ class _MutableBoundsConstraintMixin(object):
         self._lb = lb
 
     @property
-    def ub(self):
-        """The upper bound of the constraint"""
+    def upper(self):
+        """The expression for the upper bound of the constraint"""
         return self._ub
-    @ub.setter
-    def ub(self, ub):
+    @upper.setter
+    def upper(self, ub):
         if self.equality:
             raise ValueError(
-                "The ub property can not be set "
+                "The upper property can not be set "
                 "when the equality property is True.")
         if (ub is not None) and \
            (not is_numeric_data(ub)):
@@ -200,6 +200,22 @@ class _MutableBoundsConstraintMixin(object):
                     "Constraint upper bounds must be "
                     "expressions restricted to numeric data.")
         self._ub = ub
+
+    @property
+    def lb(self):
+        """The value of the lower bound of the constraint"""
+        return value(self._lb)
+    @lb.setter
+    def lb(self, lb):
+        self.lower = lb
+
+    @property
+    def ub(self):
+        """The value of the upper bound of the constraint"""
+        return value(self._ub)
+    @ub.setter
+    def ub(self, ub):
+        self.upper = ub
 
     @property
     def rhs(self):
@@ -476,7 +492,7 @@ class constraint(_MutableBoundsConstraintMixin,
             relational_expr = False
         else:
             try:
-                relational_expr = expr.is_relational()
+                relational_expr = expr.is_expression_type(_RELATIONAL)
                 if not relational_expr:
                     raise ValueError(
                         "Constraint '%s' does not have a proper "
@@ -507,7 +523,7 @@ class constraint(_MutableBoundsConstraintMixin,
         # (i.e. explicit '==', '<', and '<=')
         #
         if relational_expr:
-            if _expr_type is logical_expr.EqualityExpression:
+            if _expr_type is EqualityExpression:
                 # assigning to the rhs property
                 # will set the equality flag to True
                 if not is_potentially_variable(expr.arg(1)):
@@ -521,7 +537,7 @@ class constraint(_MutableBoundsConstraintMixin,
                     self.body = expr.arg(0)
                     self.body -= expr.arg(1)
 
-            elif _expr_type is logical_expr.InequalityExpression:
+            elif _expr_type is InequalityExpression:
                 if expr._strict:
                     raise ValueError(
                         "Constraint '%s' encountered a strict "
@@ -579,8 +595,8 @@ class constraint(_MutableBoundsConstraintMixin,
         # Error check, to ensure that we don't have an equality
         # constraint with 'infinite' RHS
         #
-        assert not (self.equality and (self.lb is None))
-        assert (not self.equality) or (self.lb is self.ub)
+        assert not (self.equality and (self.lower is None))
+        assert (not self.equality) or (self.lower is self.upper)
 
 #
 # Note: This class is experimental. The implementation may

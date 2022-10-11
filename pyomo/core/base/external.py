@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 import logging
-import os
 import types
 import weakref
 from pyomo.common.pyomo_typing import overload
@@ -19,10 +18,11 @@ from ctypes import (
     Structure, POINTER, CFUNCTYPE, cdll, byref,
     c_int, c_long, c_ulong, c_double, c_byte, c_char_p, c_void_p )
 
+from pyomo.common.autoslots import AutoSlots
 from pyomo.common.fileutils import find_library
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, pyomo_constant_types,
-    NonNumericValue, NumericConstant,
+    NonNumericValue, NumericConstant, value
 )
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import Component
@@ -31,7 +31,7 @@ from pyomo.core.base.units_container import units
 __all__  = ( 'ExternalFunction', )
 
 logger = logging.getLogger('pyomo.core')
-
+nan = float('nan')
 
 class ExternalFunction(Component):
     """Interface to an external (non-algebraic) function.
@@ -318,6 +318,13 @@ class ExternalFunction(Component):
 
 class AMPLExternalFunction(ExternalFunction):
 
+    __autoslot_mappers__ = {
+        # Remove reference to loaded library (they are not copyable or
+        # picklable)
+        '_so': AutoSlots.encode_as_none,
+        '_known_functions': AutoSlots.encode_as_none,
+    }
+
     def __init__(self, *args, **kwargs):
         if args:
             raise ValueError(
@@ -339,13 +346,6 @@ class AMPLExternalFunction(ExternalFunction):
                     f'specified library "{self._library}"')
         ExternalFunction.__init__(self, *args, **kwargs)
 
-    def __getstate__(self):
-        state = super().__getstate__()
-        # Remove reference to loaded library (they are not copyable or
-        # picklable)
-        state['_so'] = state['_known_functions'] = None
-        return state
-
     def _evaluate(self, args, fixed, fgh):
         if self._so is None:
             self.load_library()
@@ -361,11 +361,24 @@ class AMPLExternalFunction(ExternalFunction):
         fcn = self._known_functions[self._function][0]
         f = fcn(byref(arglist))
         if fgh >= 1:
-            g = [arglist.derivs[i] for i in range(N)]
+            g = [nan]*N
+            for i in range(N):
+                if arglist.at[i] < 0:
+                    continue
+                g[i] = arglist.derivs[arglist.at[i]]
         else:
             g = None
         if fgh >= 2:
-            h = [arglist.hes[i] for i in range((N + N**2)//2)]
+            h = [nan]*((N + N**2)//2)
+            for j in range(N):
+                j_r = arglist.at[j]
+                if j_r < 0:
+                    continue
+                for i in range(j+1):
+                    i_r = arglist.at[i]
+                    if i_r < 0:
+                        continue
+                    h[i + j*(j + 1)//2] = arglist.hes[i_r + j_r*(j_r + 1)//2]
         else:
             h = None
         return f, g, h
@@ -419,6 +432,13 @@ class AMPLExternalFunction(ExternalFunction):
         )
 
 
+def _python_callback_fid_mapper(encode, val):
+    if encode:
+        return PythonCallbackFunction.global_registry[val]()
+    else:
+        return PythonCallbackFunction.register_instance(val)
+
+
 class _PythonCallbackFunctionID(NumericConstant):
     """A specialized NumericConstant to preserve FunctionIDs through deepcopy.
 
@@ -429,25 +449,18 @@ class _PythonCallbackFunctionID(NumericConstant):
 
     """
     __slots__ = ()
+    __autoslot_mappers__ = {'value': _python_callback_fid_mapper}
 
     def is_constant(self):
         # Return False so this object is not simplified out of expressions
         return False
 
-    def __getstate__(self):
-        state = super().__getstate__()
-        state['value'] = PythonCallbackFunction.global_registry[
-            state['value']]()
-        return state
-
-    def __setstate__(self, state):
-        state['value'] = state['value']._fcn_id
-        super().__setstate__(state)
-
 pyomo_constant_types.add(_PythonCallbackFunctionID)
 
 
 class PythonCallbackFunction(ExternalFunction):
+    __autoslot_mappers__ = {'_fcn_id': _python_callback_fid_mapper}
+
     global_registry = []
     global_id_to_fid = {}
 
@@ -503,16 +516,6 @@ class PythonCallbackFunction(ExternalFunction):
         self._function = 'pyomo_socket_server'
         ExternalFunction.__init__(self, *args, **kwargs)
         self._fcn_id = PythonCallbackFunction.register_instance(self)
-
-    def __getstate__(self):
-        state = super().__getstate__()
-        state['_fcn_id'] = self
-        return state
-
-    def __setstate__(self, state):
-        state['_fcn_id'] = PythonCallbackFunction.register_instance(
-            state['_fcn_id'])
-        super().__setstate__(state)
 
     def __call__(self, *args):
         # NOTE: we append the Function ID to the END of the argument

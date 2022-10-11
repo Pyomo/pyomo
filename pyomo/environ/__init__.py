@@ -39,7 +39,6 @@ _packages = [
     'pyomo.contrib.example',
     'pyomo.contrib.fme',
     'pyomo.contrib.gdp_bounds',
-    'pyomo.contrib.gdpbb',
     'pyomo.contrib.gdpopt',
     'pyomo.contrib.gjh',
     'pyomo.contrib.gdp_bounds',
@@ -87,7 +86,7 @@ import pyomo.core.kernel
 from pyomo.common.collections import ComponentMap
 import pyomo.core.base.indexed_component
 import pyomo.core.base.util
-from pyomo.core import expr, base, beta, kernel, plugins
+from pyomo.core import expr, base, kernel, plugins
 from pyomo.core.base import util
 
 from pyomo.core import (numvalue, numeric_expr, boolean_value,

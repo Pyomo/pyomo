@@ -30,7 +30,7 @@ from pyomo.environ import (AbstractModel, ConcreteModel, Var, Set,
                            Objective, Expression, SOSConstraint,
                            SortComponents, NonNegativeIntegers,
                            TraversalStrategy, RangeSet, SolverFactory,
-                           value, sum_product, ComponentUID)
+                           value, sum_product, ComponentUID, Any)
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core.base.block import ScalarBlock, SubclassOf, _BlockData, declare_custom_block
@@ -708,12 +708,13 @@ class TestBlock(unittest.TestCase):
         self.assertEqual(m._decl_order, [])
 
         m.b = DerivedBlock()
-        m.b.a = a = Param()
-        m.b.x = Var()
-        m.b.b = b = Var()
-        m.b.y = Var()
-        m.b.z = Param()
-        m.b.c = c = Param()
+        with m.b._declare_reserved_components():
+            m.b.a = a = Param()
+            m.b.x = Var()
+            m.b.b = b = Var()
+            m.b.y = Var()
+            m.b.z = Param()
+            m.b.c = c = Param()
         m.b.clear()
         self.assertEqual(m.b._ctypes, {Var: [1, 1, 1], Param:[0,2,2]})
         self.assertEqual(m.b._decl, {'a':0, 'b':1, 'c':2})
@@ -745,8 +746,9 @@ class TestBlock(unittest.TestCase):
             _Block_reserved_words = set()
             def __init__(self, *args, **kwds):
                 super(DerivedBlock, self).__init__(*args, **kwds)
-                self.x = Var()
-                self.y = Var()
+                with self._declare_reserved_components():
+                    self.x = Var()
+                    self.y = Var()
         DerivedBlock._Block_reserved_words = set(dir(DerivedBlock()))
 
         b = DerivedBlock(concrete=True)
@@ -776,7 +778,7 @@ class TestBlock(unittest.TestCase):
 
         b.clear()
         b.transfer_attributes_from(c)
-        self.assertEqual(list(b.component_map()), ['y','x','z'])
+        self.assertEqual(list(b.component_map()), ['y','z','x'])
         self.assertEqual(sorted(list(c.keys())), ['x','y','z'])
         self.assertIs(b.x, c['x'])
         self.assertIsNot(b.y, c['y'])
@@ -2053,6 +2055,49 @@ class TestBlock(unittest.TestCase):
             sorted(id(x) for x in (m.x, m.y[1], nb.x, nb.y[1])),
         )
 
+    def test_clone_indexed_subblock(self):
+        m = ConcreteModel()
+        @m.Block([1,2,3])
+        def blk(b, i):
+            b.IDX = RangeSet(i)
+            b.x = Var(b.IDX)
+        m.c = Block(rule=m.blk[2].clone())
+
+        self.assertEqual([1, 2], list(m.c.IDX))
+        self.assertEqual(list(m.blk[2].IDX), list(m.c.IDX))
+        self.assertIsNot(m.blk[2].IDX, m.c.IDX)
+        self.assertIsNot(m.blk[2].x, m.c.x)
+        self.assertIsNot(m.blk[2].IDX, m.c.x.index_set())
+        self.assertIs(m.c.IDX, m.c.x.index_set())
+        self.assertIs(m.c.parent_component(), m.c)
+        self.assertIs(m.c.parent_block(), m)
+
+        m.c1 = Block()
+        m.c1.transfer_attributes_from(m.blk[3].clone())
+
+        self.assertEqual([1, 2, 3], list(m.c1.IDX))
+        self.assertEqual(list(m.blk[3].IDX), list(m.c1.IDX))
+        self.assertIsNot(m.blk[3].IDX, m.c1.IDX)
+        self.assertIsNot(m.blk[3].x, m.c1.x)
+        self.assertIsNot(m.blk[3].IDX, m.c1.x.index_set())
+        self.assertIs(m.c1.IDX, m.c1.x.index_set())
+        self.assertIs(m.c1.parent_component(), m.c1)
+        self.assertIs(m.c1.parent_block(), m)
+
+        @m.Block([1,2,3])
+        def d(b, i):
+            return b.model().blk[i].clone()
+
+        for i in [1, 2, 3]:
+            self.assertEqual(list(range(1, i+1)), list(m.d[i].IDX))
+            self.assertEqual(list(m.blk[i].IDX), list(m.d[i].IDX))
+            self.assertIsNot(m.blk[i].IDX, m.d[i].IDX)
+            self.assertIsNot(m.blk[i].x, m.d[i].x)
+            self.assertIsNot(m.blk[i].IDX, m.d[i].x.index_set())
+            self.assertIs(m.d[i].IDX, m.d[i].x.index_set())
+            self.assertIs(m.d[i].parent_component(), m.d)
+            self.assertIs(m.d[i].parent_block(), m)
+
     def test_clone_unclonable_attribute(self):
         class foo(object):
             def __deepcopy__(bogus):
@@ -2080,7 +2125,9 @@ class TestBlock(unittest.TestCase):
                       OUTPUT.getvalue())
         self.assertIn("'__paranoid__'", OUTPUT.getvalue())
         self.assertTrue(hasattr(m.b, 'bad2'))
-        self.assertFalse(hasattr(nb, 'bad2'))
+        self.assertIsNotNone(m.b.bad2)
+        self.assertTrue(hasattr(nb, 'bad2'))
+        self.assertIsNone(nb.bad2)
 
         # Simple tests for the subblock
         OUTPUT = StringIO()
@@ -2092,7 +2139,9 @@ class TestBlock(unittest.TestCase):
                       OUTPUT.getvalue())
         self.assertNotIn("'__paranoid__'", OUTPUT.getvalue())
         self.assertTrue(hasattr(m.b, 'bad2'))
-        self.assertFalse(hasattr(nb, 'bad2'))
+        self.assertIsNotNone(m.b.bad2)
+        self.assertTrue(hasattr(nb, 'bad2'))
+        self.assertIsNone(nb.bad2)
 
         # more involved tests for the model
         OUTPUT = StringIO()
@@ -2104,9 +2153,13 @@ class TestBlock(unittest.TestCase):
                       OUTPUT.getvalue())
         self.assertNotIn("'__paranoid__'", OUTPUT.getvalue())
         self.assertTrue(hasattr(m, 'bad1'))
-        self.assertFalse(hasattr(n, 'bad1'))
+        self.assertIsNotNone(m.bad1)
+        self.assertTrue(hasattr(n, 'bad1'))
+        self.assertIsNone(n.bad1)
         self.assertTrue(hasattr(m.b, 'bad2'))
-        self.assertFalse(hasattr(n.b, 'bad2'))
+        self.assertIsNotNone(m.b.bad2)
+        self.assertTrue(hasattr(n.b, 'bad2'))
+        self.assertIsNone(n.b.bad2)
 
         self.assertNotEqual(id(m), id(n))
 
@@ -2429,6 +2482,35 @@ class TestBlock(unittest.TestCase):
         with self.assertRaisesRegex(
                 ValueError, ".*using the name of a reserved attribute"):
             m.b.foo = Var()
+
+        class DerivedBlockReservedComp(DerivedBlock):
+            def __init__(self, *args, **kwargs):
+                """Constructor"""
+                super(DerivedBlock, self).__init__(*args, **kwargs)
+                with self._declare_reserved_components():
+                    self.x = Var()
+        DerivedBlockReservedComp._Block_reserved_words = set(
+            dir(DerivedBlockReservedComp()))
+
+        m.c = DerivedBlockReservedComp()
+
+        with self.assertRaisesRegex(
+                ValueError, "Attempting to delete a reserved block component"):
+            m.c.del_component('x')
+
+        with self.assertRaisesRegex(
+                ValueError, "Attempting to delete a reserved block component"):
+            m.c.x = Var()
+
+        class RestrictedBlock(ScalarBlock):
+            _Block_reserved_words = Any - {'start', 'end',}
+
+        m.d = RestrictedBlock()
+        m.d.start = v = Var()
+        self.assertIs(m.d.start, v)
+        with self.assertRaisesRegex(
+                ValueError, "using the name of a reserved attribute"):
+            m.d.step = Var()
 
         #
         # Overriding attributes with non-components is (currently) allowed

@@ -18,6 +18,7 @@ Contributed packages distributed with Pyomo:
    community.rst
    doe/doe.rst
    gdpopt.rst
+   iis.rst
    mindtpy.rst
    multistart.rst
    preprocessing.rst

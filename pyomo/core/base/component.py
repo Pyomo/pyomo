@@ -17,6 +17,8 @@ from weakref import ref as weakref_ref
 
 import pyomo.common
 from pyomo.common import DeveloperError
+from pyomo.common.autoslots import AutoSlots, fast_deepcopy
+from pyomo.common.collections import OrderedDict
 from pyomo.common.deprecation import (
     deprecated, deprecation_warning, relocated_module_attribute)
 from pyomo.common.factory import Factory
@@ -104,13 +106,7 @@ class _ComponentBase(PyomoObject):
         # expressions can refer to container (non-Simple) components, so
         # we need to override __deepcopy__ for both Component and
         # ComponentData.
-
-        #try:
-        #    print("Component: %s" % (self.name,))
-        #except:
-        #    print("DANGLING ComponentData: %s on %s" % (
-        #        type(self),self.parent_component()))
-
+        #
         # Note: there is an edge case when cloning a block: the initial
         # call to deepcopy (on the target block) has __block_scope__
         # defined, however, the parent block of self is either None, or
@@ -138,9 +134,54 @@ class _ComponentBase(PyomoObject):
 
             if not _known[tmpId]:
                 # component is out-of-scope.  shallow copy only
-                ans = memo[id(self)] = self
-                return ans
-
+                memo[id(self)] = self
+                return self
+        #
+        # At this point we know we need to deepcopy this component (and
+        # everything under it).  We can't do the "obvious", since this
+        # is a (partially) slot-ized class and the __dict__ structure is
+        # nonauthoritative:
+        #
+        # for key, val in self.__dict__.iteritems():
+        #     object.__setattr__(ans, key, deepcopy(val, memo))
+        #
+        # Further, __slots__ is also nonauthoritative (this may be a
+        # singleton component -- in which case it also has a __dict__).
+        # Plus, this may be a derived class with several layers of
+        # slots.  So, we will piggyback on the __getstate__/__setstate__
+        # logic amd resort to partially "pickling" the object,
+        # deepcopying the state, and then restoring the copy into
+        # the new instance.
+        #
+        # [JDS 7/7/14] I worry about the efficiency of using both
+        # getstate/setstate *and* deepcopy, but we need deepcopy to
+        # update the _parent refs appropriately, and since this is a
+        # slot-ized class, we cannot overwrite the __deepcopy__
+        # attribute to prevent infinite recursion.
+        #
+        # deepcopy() is an inherently recursive operation.  This can
+        # cause problems for highly interconnected Pyomo models (for
+        # example, a time linked model where each time block has a
+        # linking constraint [in the time block] to the next / previous
+        # block).  This would effectively put the entire time horizon on
+        # the stack.  To avoid this, we will leverage the useful
+        # knowledge that all component references point to other
+        # components / component datas, and NOT to attributes on the
+        # components/datas.  So, if we can first go through and stub in
+        # all the objects that we will need to populate, and then go
+        # through and deepcopy them, then we can unroll the vast
+        # majority of the recursion.
+        #
+        component_list = []
+        self._create_objects_for_deepcopy(memo, component_list)
+        #
+        # Now that we have created (but not populated) all the
+        # components that we expect to need, we can go through and
+        # populate all the components.
+        #
+        # The component_list is roughly in declaration order.  This
+        # means that it should be relatively safe to clone the contents
+        # in the same order.
         #
         # There is a particularly subtle bug with 'uncopyable'
         # attributes: if the exception is thrown while copying a complex
@@ -149,99 +190,119 @@ class _ComponentBase(PyomoObject):
         # haven't had their state set yet.  When the exception moves us
         # into the except block, we need to effectively "undo" those
         # partially copied classes.  The only way is to restore the memo
-        # to the state it was in before we started.  Right now, our
-        # solution is to make a (shallow) copy of the memo before each
-        # operation and restoring it in the case of exception.
-        # Unfortunately that is a lot of usually unnecessary work.
-        # Since *most* classes are copyable, we will avoid that
-        # "paranoia" unless the naive clone generated an error - in
-        # which case Block.clone() will switch over to the more
-        # "paranoid" mode.
+        # to the state it was in before we started.  We will make use of
+        # the knowledge that 1) memo entries are never reassigned during
+        # a deepcopy(), and 2) dict are ordered by insertion order in
+        # Python >= 3.7.  As a result, we do not need to preserve the
+        # whole memo before calling __getstate__/__setstate__, and can
+        # get away with only remembering the number of items in the
+        # memo.
         #
-        paranoid = memo.get('__paranoid__', None)
-
-        ans = memo[id(self)] = self.__class__.__new__(self.__class__)
-        # We can't do the "obvious", since this is a (partially)
-        # slot-ized class and the __dict__ structure is
-        # nonauthoritative:
+        # Note that entering/leaving try-except contexts has a
+        # not-insignificant overhead.  On the hope that the user wrote a
+        # sane (deepcopy-able) model, we will try to do everything in
+        # one try-except block.
         #
-        # for key, val in self.__dict__.iteritems():
-        #     object.__setattr__(ans, key, deepcopy(val, memo))
-        #
-        # Further, __slots__ is also nonauthoritative (this may be a
-        # singleton component -- in which case it also has a __dict__).
-        # Plus, as this may be a derived class with several layers of
-        # slots.  So, we will resort to partially "pickling" the object,
-        # deepcopying the state dict, and then restoring the copy into
-        # the new instance.
-        #
-        # [JDS 7/7/14] I worry about the efficiency of using both
-        # getstate/setstate *and* deepcopy, but we need deepcopy to
-        # update the _parent refs appropriately, and since this is a
-        # slot-ized class, we cannot overwrite the __deepcopy__
-        # attribute to prevent infinite recursion.
-        state = self.__getstate__()
         try:
-            if paranoid:
-                saved_memo = dict(memo)
-            new_state = deepcopy(state, memo)
+            for i, comp in enumerate(component_list):
+                saved_memo = len(memo)
+                # Note: this implementation avoids deepcopying the
+                # temporary 'state' list, significantly speeding things
+                # up.
+                memo[id(comp)].__setstate__([
+                    fast_deepcopy(field, memo) for field in comp.__getstate__()
+                ])
+            return memo[id(self)]
         except:
-            if paranoid:
-                # Note: memo is intentionally pass-by-reference.  We
-                # need to clear and reset the object we were handed (and
-                # not overwrite it)
-                memo.clear()
-                memo.update(saved_memo)
-            elif paranoid is not None:
-                raise PickleError()
-            new_state = {}
-            for k, v in state.items():
-                try:
-                    if paranoid:
-                        saved_memo = dict(memo)
-                    new_state[k] = deepcopy(v, memo)
-                except CloneError:
-                    raise
-                except:
-                    if paranoid:
-                        memo.clear()
-                        memo.update(saved_memo)
-                    elif paranoid is None:
-                        logger.warning("""
-                            Uncopyable field encountered when deep
-                            copying outside the scope of Block.clone().
-                            There is a distinct possibility that the new
-                            copy is not complete.  To avoid this
-                            situation, either use Block.clone() or set
-                            'paranoid' mode by adding '__paranoid__' ==
-                            True to the memo before calling
-                            copy.deepcopy.""")
-                    if self.model() is self:
-                        what = 'Model'
-                    else:
-                        what = 'Component'
-                    logger.error(
-                        "Unable to clone Pyomo component attribute.\n"
-                        "%s '%s' contains an uncopyable field '%s' (%s)"
-                        % ( what, self.name, k, type(v) ))
-                    # If this is an abstract model, then we are probably
-                    # in the middle of create_instance, and the model
-                    # that will eventually become the concrete model is
-                    # missing initialization data.  This is an
-                    # exceptional event worthy of a stronger (and more
-                    # informative) error.
-                    if not self.parent_component()._constructed:
-                        raise CloneError(
-                            "Uncopyable attribute (%s) encountered when "
-                            "cloning component %s on an abstract block.  "
-                            "The resulting instance is therefore "
-                            "missing data from the original abstract model "
-                            "and likely will not construct correctly.  "
-                            "Consider changing how you initialize this "
-                            "component or using a ConcreteModel."
-                            % ( k, self.name ))
-        ans.__setstate__(new_state)
-        return ans
+            pass
+        #
+        # We hit an error deepcopying a component.  Attempt to reset
+        # things and try again, but in a more cautious manner (after
+        # all, if one component was not deepcopyable, it stands to
+        # reason that several others will not be either).
+        #
+        # We want to remove any new entries added to the memo during the
+        # failed try above.
+        #
+        for _ in range(len(memo) - saved_memo):
+            memo.popitem()
+        #
+        # Now we are going to continue on, but in a more cautious
+        # manner: we will clone entries field at a time so that we can
+        # get the most "complete" copy possible.
+        for comp in component_list[i:]:
+            state = comp.__getstate__()
+            # Note: if has_dict, then __auto_slots__.slots will be 1
+            # shorter than the state (the last element is the __dict__).
+            # Zip will ignore it.
+            _deepcopy_field = comp._deepcopy_field
+            new_state = [
+                _deepcopy_field(memo, slot, value)
+                for slot, value in zip(comp.__auto_slots__.slots, state)
+            ]
+            if comp.__auto_slots__.has_dict:
+                new_state.append({
+                    slot: _deepcopy_field(memo, slot, value)
+                    for slot, value in state[-1].items()
+                })
+            memo[id(comp)].__setstate__(new_state)
+        return memo[id(self)]
+
+    def _create_objects_for_deepcopy(self, memo, component_list):
+        _new = self.__class__.__new__(self.__class__)
+        _ans = memo.setdefault(id(self), _new)
+        if _ans is _new:
+            component_list.append(self)
+        return _ans
+
+    def _deepcopy_field(self, memo, slot_name, value):
+        saved_memo = len(memo)
+        try:
+            return deepcopy(value, memo)
+        except CloneError:
+            raise
+        except:
+            # remove entries added to the memo
+            for _ in range(len(memo) - saved_memo):
+                memo.popitem()
+            # warn the user
+            if '__block_scope__' not in memo:
+                logger.warning("""
+                    Uncopyable field encountered when deep
+                    copying outside the scope of Block.clone().
+                    There is a distinct possibility that the new
+                    copy is not complete.  To avoid this
+                    situation, either use Block.clone() or set
+                    'paranoid' mode by adding '__paranoid__' ==
+                    True to the memo before calling
+                    copy.deepcopy.""")
+            if self.model() is self:
+                what = 'Model'
+            else:
+                what = 'Component'
+            logger.error(
+                "Unable to clone Pyomo component attribute.\n"
+                "%s '%s' contains an uncopyable field '%s' (%s).  "
+                "Setting field to `None` on new object"
+                % ( what, self.name, slot_name, type(value) ))
+            # If this is an abstract model, then we are probably
+            # in the middle of create_instance, and the model
+            # that will eventually become the concrete model is
+            # missing initialization data.  This is an
+            # exceptional event worthy of a stronger (and more
+            # informative) error.
+            if not self.parent_component()._constructed:
+                raise CloneError(
+                    "Uncopyable attribute (%s) encountered when "
+                    "cloning component %s on an abstract block.  "
+                    "The resulting instance is therefore "
+                    "missing data from the original abstract model "
+                    "and likely will not construct correctly.  "
+                    "Consider changing how you initialize this "
+                    "component or using a ConcreteModel."
+                    % ( slot_name, self.name ))
+        # Drop the offending field value.  The user has been warned.
+        return None
 
     @deprecated("""The cname() method has been renamed to getname().
     The preferred method of obtaining a component name is to use the
@@ -389,6 +450,8 @@ class Component(_ComponentBase):
         _ctype          The class type for the derived subclass
     """
 
+    __autoslot_mappers__ = {'_parent': AutoSlots.weakref_mapper}
+
     def __init__ (self, **kwds):
         #
         # Get arguments
@@ -410,59 +473,6 @@ class Component(_ComponentBase):
         #
         self._constructed   = False
         self._parent        = None    # Must be a weakref
-
-    def __getstate__(self):
-        """
-        This method must be defined to support pickling because this class
-        owns weakrefs for '_parent'.
-        """
-        #
-        # Nominally, __getstate__() should return:
-        #
-        # state = super(Class, self).__getstate__()
-        # for i in Class.__dict__:
-        #     state[i] = getattr(self,i)
-        # return state
-        #
-        # However, in this case, the (nominal) parent class is 'object',
-        # and object does not implement __getstate__.  So, we will check
-        # to make sure that there is a base __getstate__() to call...
-        #
-        _base = super(Component,self)
-        if hasattr(_base, '__getstate__'):
-            state = _base.__getstate__()
-            for key,val in self.__dict__.items():
-                if key not in state:
-                    state[key] = val
-        else:
-            state = dict(self.__dict__)
-        if self._parent is not None:
-            state['_parent'] = self._parent()
-        return state
-
-    def __setstate__(self, state):
-        """
-        This method must be defined to support pickling because this class
-        owns weakrefs for '_parent'.
-        """
-        if state['_parent'].__class__ not in _ref_types:
-            state['_parent'] = weakref_ref(state['_parent'])
-        #
-        # Note: our model for setstate is for derived classes to modify
-        # the state dictionary as control passes up the inheritance
-        # hierarchy (using super() calls).  All assignment of state ->
-        # object attributes is handled at the last class before 'object'
-        # (which may -- or may not (thanks to MRO) -- be here.
-        #
-        _base = super(Component,self)
-        if hasattr(_base, '__setstate__'):
-            _base.__setstate__(state)
-        else:
-            for key, val in state.items():
-                # Note: per the Python data model docs, we explicitly
-                # set the attribute using object.__setattr__() instead
-                # of setting self.__dict__[key] = val.
-                object.__setattr__(self, key, val)
 
     @property
     def ctype(self):
@@ -699,8 +709,8 @@ class ComponentData(_ComponentBase):
         _index          The index of this data object
         """
 
-    __pickle_slots__ = ('_component', '_index')
-    __slots__ = __pickle_slots__ + ('__weakref__',)
+    __slots__ = ('_component', '_index', '__weakref__',)
+    __autoslot_mappers__ = {'_component': AutoSlots.weakref_mapper}
 
     # NOTE: This constructor is in-lined in the constructors for the following
     # classes: _BooleanVarData, _ConnectorData, _ConstraintData,
@@ -720,82 +730,6 @@ class ComponentData(_ComponentBase):
         #
         self._component = weakref_ref(component)
         self._index = NOTSET
-
-    def __getstate__(self):
-        """Prepare a picklable state of this instance for pickling.
-
-        Nominally, __getstate__() should return:
-
-            state = super(Class, self).__getstate__()
-            for i in Class.__slots__:
-                state[i] = getattr(self,i)
-            return state
-
-        However, in this case, the (nominal) parent class is 'object',
-        and object does not implement __getstate__.  So, we will check
-        to make sure that there is a base __getstate__() to call...
-        You might think that there is nothing to check, but multiple
-        inheritance could mean that another class got stuck between
-        this class and "object" in the MRO.
-
-        This method must be defined to support pickling because this
-        class owns weakrefs for '_component', which must be either
-        removed or converted to hard references prior to pickling.
-
-        Further, since there is only a single slot, and that slot
-        (_component) requires special processing, we will just deal with
-        it explicitly.  As _component is a weakref (not pickable), we
-        need to resolve it to a concrete object.
-        """
-        _base = super(ComponentData,self)
-        if hasattr(_base, '__getstate__'):
-            state = _base.__getstate__()
-        else:
-            state = {}
-        #
-        if self._component is None:
-            state['_component'] = None
-        else:
-            state['_component'] = self._component()
-        state['_index'] = self._index
-        return state
-
-    def __setstate__(self, state):
-        """Restore a pickled state into this instance
-
-        Note: our model for setstate is for derived classes to modify
-        the state dictionary as control passes up the inheritance
-        hierarchy (using super() calls).  All assignment of state ->
-        object attributes is handled at the last class before 'object'
-        (which may -- or may not (thanks to MRO) -- be here.
-
-        This method must be defined to support unpickling because this
-        class owns weakrefs for '_component', which must be restored
-        from the hard references used in the piclke.
-        """
-        #
-        # FIXME: We shouldn't have to check for weakref.ref here, but if
-        # we don't the model cloning appears to fail (in the Benders
-        # example)
-        #
-        if state['_component'].__class__ not in _ref_types:
-            state['_component'] = weakref_ref(state['_component'])
-        #
-        # Note: our model for setstate is for derived classes to modify
-        # the state dictionary as control passes up the inheritance
-        # hierarchy (using super() calls).  All assignment of state ->
-        # object attributes is handled at the last class before 'object'
-        # (which may -- or may not (thanks to MRO) -- be here.
-        #
-        _base = super(ComponentData,self)
-        if hasattr(_base, '__setstate__'):
-            _base.__setstate__(state)
-        else:
-            for key, val in state.items():
-                # Note: per the Python data model docs, we explicitly
-                # set the attribute using object.__setattr__() instead
-                # of setting self.__dict__[key] = val.
-                object.__setattr__(self, key, val)
 
     @property
     def ctype(self):
@@ -997,18 +931,6 @@ class ActiveComponentData(ComponentData):
     def __init__(self, component):
         super(ActiveComponentData, self).__init__(component)
         self._active = True
-
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        result = super(ActiveComponentData, self).__getstate__()
-        for i in ActiveComponentData.__slots__:
-            result[i] = getattr(self, i)
-        return result
-
-    # Since this class requires no special processing of the state
-    # dictionary, it does not need to implement __setstate__()
 
     @property
     def active(self):

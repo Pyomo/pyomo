@@ -149,6 +149,37 @@ class InconsistentUnitsError(UnitsError):
         super(InconsistentUnitsError, self).__init__(msg)
 
 
+def _pint_unit_mapper(encode, val):
+    if encode:
+        return str(val)
+    else:
+        return units._pint_registry(val).units
+
+def _pint_registry_mapper(encode, val):
+    if encode:
+        if val is not units._pint_registry:
+            # FIXME: we currently will not correctly unpickle units
+            # associated with a unit manager other than the default
+            # singleton.  If we wanted to support this, we would need to
+            # do something like create a global units manager registry
+            # that would associate each unit manager with a name.  We
+            # could then pickle that name and then attempt to restore
+            # the association with the original units manager.  As we
+            # expect all users to just use the global default, for the
+            # time being we will just issue a warning that things may
+            # break.
+            logger.warning(
+                "pickling a _PyomoUnit associated with a PyomoUnitsContainer "
+                "that is not the default singleton (%s.units).  Restoring "
+                "this state will attempt to return a unit associated with "
+                "the default singleton." % (__name__,))
+        return None
+    elif val is None:
+        return units._pint_registry
+    else:
+        return val
+
+
 class _PyomoUnit(NumericValue):
     """An object that represents a single unit in Pyomo (e.g., kg, meter)
 
@@ -158,6 +189,10 @@ class _PyomoUnit(NumericValue):
     See module documentation for more information.
     """
     __slots__ = ('_pint_unit', '_pint_registry')
+    __autoslot_mappers__ = {
+        '_pint_unit': _pint_unit_mapper,
+        '_pint_registry': _pint_registry_mapper,
+    }
 
     def __init__(self, pint_unit, pint_registry):
         super(_PyomoUnit, self).__init__()
@@ -243,16 +278,12 @@ class _PyomoUnit(NumericValue):
         """ This is not a named expression (overloaded from NumericValue) """
         return False
 
-    def is_expression_type(self):
+    def is_expression_type(self, expression_system=None):
         """ This is a leaf, not an expression (overloaded from NumericValue) """
         return False
 
     def is_component_type(self):
         """ This is not a component type (overloaded from NumericValue) """
-        return False
-
-    def is_relational(self):
-        """ This is not relational (overloaded from NumericValue) """
         return False
 
     def is_indexed(self):
@@ -264,32 +295,6 @@ class _PyomoUnit(NumericValue):
         Note that :py:meth:`NumericValue.polynomial_degree` calls this method.
         """
         return 0
-
-    def __getstate__(self):
-        state = super(_PyomoUnit, self).__getstate__()
-        state['_pint_unit'] = str(self._pint_unit)
-        if self._pint_registry is not units._pint_registry:
-            # FIXME: we currently will not correctly unpickle units
-            # associated with a unit manager other than the default
-            # singleton.  If we wanted to support this, we would need to
-            # do something like create a global units manager registry
-            # that would associate each unit manager with a name.  We
-            # could then pickle that name and then attempt to restore
-            # the association with the original units manager.  As we
-            # expect all users to just use the global default, for the
-            # time being we will just issue a warning that things may
-            # break.
-            logger.warning(
-                "pickling a _PyomoUnit associated with a PyomoUnitsContainer "
-                "that is not the default singleton (%s.units).  Restoring "
-                "this pickle will attempt to return a unit associated with "
-                "the default singleton." % (__name__,))
-        return state
-
-    def __setstate__(self, state):
-        self._pint_registry = units._pint_registry
-        self._pint_unit = self._pint_registry(state.pop('_pint_unit')).units
-        super(_PyomoUnit, self).__setstate__(state)
 
     def __deepcopy__(self, memo):
         # Note that while it is possible to deepcopy the _pint_unit and

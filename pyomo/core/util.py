@@ -21,6 +21,8 @@ from pyomo.core.expr import current as EXPR
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
 from pyomo.core.base.component import _ComponentBase
+import logging
+logger = logging.getLogger(__name__)
 
 def prod(terms):
     """
@@ -66,6 +68,14 @@ def quicksum(args, start=0, linear=None):
     Returns:
         The value of the sum, which may be a Pyomo expression object.
     """
+
+    # Ensure that args is an iterator (this manages things like IndexedComponent_slice objects)
+    try:
+        args = iter(args)
+    except:
+        logger.error('The argument `args` to quicksum() is not iterable!')
+        raise
+
     #
     # If we're starting with a numeric value, then 
     # create a new nonlinear sum expression but 
@@ -76,14 +86,7 @@ def quicksum(args, start=0, linear=None):
             #
             # Get the first term, which we will test for linearity
             #
-            try:
-                first = next(args, None)
-            except:
-                try:
-                    args = args.__iter__()
-                    first = next(args, None)
-                except:
-                    raise RuntimeError("The argument to quicksum() is not iterable!")
+            first = next(args, None)
             if first is None:
                 return start
             #
@@ -114,8 +117,12 @@ def quicksum(args, start=0, linear=None):
                 e += start
                 for arg in args:
                     e += arg
-            # Return the constant term if the linear expression does not contains variables
-            if e.is_constant():
+            # Return the constant term if the linear expression does not
+            # contain variables
+            #
+            # getattr() because the linear expression may not have ended
+            # up being linear (and e could be a SumExpression)
+            if not getattr(e, 'linear_vars', True):
                 return e.constant
             return e
         else:
@@ -193,7 +200,6 @@ def sum_product(*args, **kwds):
             params_.append(arg)
     nvars = len(vars_)
 
-    num_index = range(0,nargs)
     if ndenom == 0:
         #
         # Sum of polynomial terms
@@ -217,8 +223,8 @@ def sum_product(*args, **kwds):
                         expr += start
                         for i in index:
                             term = 1
-                            for j in params_:
-                                term *= params_[j][i]
+                            for p in params_:
+                                term *= p[i]
                             expr += term * v[i]
                 return expr
             #
@@ -226,24 +232,24 @@ def sum_product(*args, **kwds):
                 expr += start
                 for i in index:
                     term = 1
-                    for j in num_index:
-                        term *= args[j][i]
+                    for arg in args:
+                        term *= arg[i]
                     expr += term
             return expr
         #
-        return quicksum((prod(args[j][i] for j in num_index) for i in index), start)
+        return quicksum((prod(arg[i] for arg in args) for i in index), start)
     elif nargs == 0:
         #
         # Sum of reciprocals
         #
-        denom_index = range(0,ndenom)
-        return quicksum((1/prod(denom[j][i] for j in denom_index) for i in index), start)
+        return quicksum((1/prod(den[i] for den in denom) for i in index), start)
     else:
         #
         # Sum of fractions
         #
-        denom_index = range(0,ndenom)
-        return quicksum((prod(args[j][i] for j in num_index)/prod(denom[j][i] for j in denom_index) for i in index), start)
+        return quicksum((
+            prod(arg[i] for arg in args) / prod(den[i] for den in denom)
+            for i in index), start)
 
 
 #: An alias for :func:`sum_product <pyomo.core.expr.util>`
