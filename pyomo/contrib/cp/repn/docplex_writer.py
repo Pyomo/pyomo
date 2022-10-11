@@ -300,7 +300,7 @@ def _before_indexed_var(visitor, child):
     return False, (_GENERAL_LIST, cpx_vars)
 
 def _handle_named_expression_node(visitor, node, expr):
-    visitor._named_expressions[id(node)] = expr
+    visitor._named_expressions[id(node)] = expr[1]
     return expr
 
 def _before_named_expression(visitor, child):
