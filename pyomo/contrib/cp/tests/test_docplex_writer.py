@@ -32,7 +32,7 @@ from pyomo.environ import (
 
 from pytest import set_trace
 
-class TestCPExpressionWalker(unittest.TestCase):
+class CommonTest(unittest.TestCase):
     def get_visitor(self):
         docplex_model= cp.CpoModel()
         return LogicalToDoCplex(docplex_model, symbolic_solver_labels=True)
@@ -50,6 +50,7 @@ class TestCPExpressionWalker(unittest.TestCase):
 
         return m
 
+class TestCPExpressionWalker_AlgebraicExpressions(CommonTest):
     def test_write_addition(self):
         m = self.get_model()
         m.c = Constraint(expr=m.x + m.i.start_time + m.i2[2].length <= 3)
@@ -164,6 +165,29 @@ class TestCPExpressionWalker(unittest.TestCase):
 
         self.assertTrue(expr[1].equals(cp.max(a[i] for i in m.I)))
 
+    def test_indirection_single_index(self):
+        m = self.get_model()
+        m.a.domain = Integers
+        m.c = Constraint(expr=m.a[m.x] >= 3.5)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.x), visitor.var_map)
+        x = visitor.var_map[id(m.x)]
+        a = []
+        # only need indices 6, 7, and 8 from a, since that's what x is capable
+        # of selecting.
+        for idx in [6, 7, 8]:
+            v = m.a[idx]
+            self.assertIn(id(v), visitor.var_map)
+            a.append(visitor.var_map[id(v)])
+        # since x is between 6 and 8, we subtract 6 from it for it to be the
+        # right index
+        self.assertTrue(expr[1].equals(cp.element(a, 0 + 1 *(x - 6) // 1)))
+
+
+class TestCPExpressionWalker_LogicalExpressions(CommonTest):
     def test_write_logical_and(self):
         m = self.get_model()
         m.c = LogicalConstraint(expr=m.b.land(m.b2['b']))
@@ -355,6 +379,32 @@ class TestCPExpressionWalker(unittest.TestCase):
         self.assertTrue(expr[1].equals(
             cp.less_or_equal(cp.count([a[i] == 4 for i in m.I], True), 3)))
 
+    def test_interval_var_is_present(self):
+        m = self.get_model()
+        m.y = Var(domain=Integers, bounds=[1,2])
+
+        m.c = LogicalConstraint(m.i2[m.y].is_present.implies(m.a[1] >= 7))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.a[1]), visitor.var_map)
+        a1 = visitor.var_map[id(m.a[1])]
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+
+        self.assertTrue(expr[1].equals(
+            cp.if_then(cp.element([cp.presence_of(i21), cp.presence_of(i22)],
+                                  0 + 1 * (y - 1) // 1) == True,
+                       a1 >= 7)))
+
+class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
     def test_start_before_start(self):
         m = self.get_model()
         m.c = LogicalConstraint(expr=m.i.start_time.before(m.i2[1].start_time))
@@ -473,60 +523,9 @@ class TestCPExpressionWalker(unittest.TestCase):
 
         self.assertTrue(expr[1].equals(cp.end_at_end(i, i21, 6)))
 
-    def test_always_in(self):
-        m = self.get_model()
-        f = Pulse(m.i, height=3) + Step(m.i2[1].start_time, height=2) - \
-            Step(m.i2[2].end_time, height=-1)
-        m.c = LogicalConstraint(expr=f.within((0, 3), (0, 10)))
-        visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.expr, m.c, 0))
-
-        self.assertIn(id(m.i), visitor.var_map)
-        self.assertIn(id(m.i2[1]), visitor.var_map)
-        self.assertIn(id(m.i2[2]), visitor.var_map)
-
-        i = visitor.var_map[id(m.i)]
-        i21 = visitor.var_map[id(m.i2[1])]
-        i22 = visitor.var_map[id(m.i2[2])]
-
-        self.assertTrue(expr[1].equals(cp.always_in(cp.pulse(i, 3) +
-                                                    cp.step_at_start(i21, 2) -
-                                                    cp.step_at_end(i22, -1), 0,
-                                                    3, 0, 10)))
-
-    def test_named_expression(self):
-        m = self.get_model()
-        m.e = Expression(expr=m.x**2 + 7)
-        m.c = Constraint(expr=m.e <= 32)
-
-        visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
-
-        self.assertIn(id(m.x), visitor.var_map)
-        x = visitor.var_map[id(m.x)]
-
-        self.assertTrue(expr[1].equals(x**2 + 7))
-
-    def test_indirection_single_index(self):
-        m = self.get_model()
-        m.a.domain = Integers
-        m.c = Constraint(expr=m.a[m.x] >= 3.5)
-
-        visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.c.body, m.c, 0))
-
-        self.assertIn(id(m.x), visitor.var_map)
-        x = visitor.var_map[id(m.x)]
-        a = []
-        # only need indices 6, 7, and 8 from a, since that's what x is capable
-        # of selecting.
-        for idx in [6, 7, 8]:
-            v = m.a[idx]
-            self.assertIn(id(v), visitor.var_map)
-            a.append(visitor.var_map[id(v)])
-        # since x is between 6 and 8, we subtract 6 from it for it to be the
-        # right index
-        self.assertTrue(expr[1].equals(cp.element(a, 0 + 1 *(x - 6) // 1)))
+    ##
+    # Tests for precedence constraints with indirection
+    ##
 
     def test_indirection_before_constraint(self):
         m = self.get_model()
@@ -762,3 +761,54 @@ class TestCPExpressionWalker(unittest.TestCase):
                        0 + 1 * (x + (-3) - 3) // 1) ==
             cp.element([cp.end_of(i21), cp.end_of(i22)],
                        0 + 1 * (y - 1) // 1)))
+
+
+class TestCPExpressionWalker_CumulFuncExpressions(CommonTest):
+    def test_always_in(self):
+        m = self.get_model()
+        f = Pulse(m.i, height=3) + Step(m.i2[1].start_time, height=2) - \
+            Step(m.i2[2].end_time, height=-1)
+        m.c = LogicalConstraint(expr=f.within((0, 3), (0, 10)))
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.i), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+
+        i = visitor.var_map[id(m.i)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+
+        self.assertTrue(expr[1].equals(cp.always_in(cp.pulse(i, 3) +
+                                                    cp.step_at_start(i21, 2) -
+                                                    cp.step_at_end(i22, -1), 0,
+                                                    3, 0, 10)))
+
+
+class TestCPExpressionWalker_NamedExpressions(CommonTest):
+    def test_named_expression(self):
+        m = self.get_model()
+        m.e = Expression(expr=m.x**2 + 7)
+        m.c = Constraint(expr=m.e <= 32)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.x), visitor.var_map)
+        x = visitor.var_map[id(m.x)]
+
+        self.assertTrue(expr[1].equals(x**2 + 7))
+
+    def test_repeated_named_expression(self):
+        m = self.get_model()
+        m.e = Expression(expr=m.x**2 + 7)
+        m.c = Constraint(expr=m.e - 8*m.e <= 32)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.x), visitor.var_map)
+        x = visitor.var_map[id(m.x)]
+
+        self.assertTrue(expr[1].equals(x**2 + 7 + (-1) *(8*(x**2 + 7))))
