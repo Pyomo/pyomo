@@ -73,6 +73,8 @@ class _START_TIME(object): pass
 class _END_TIME(object): pass
 class _ELEMENT_CONSTRAINT(object): pass
 class _BEFORE(object): pass
+class _AFTER(object): pass
+class _AT(object): pass
 
 def _check_var_domain(visitor, node, var):
     if not var.domain.isdiscrete():
@@ -216,11 +218,31 @@ def _handle_getattr(visitor, node, obj, attr):
             return cp.length_of(o)
         elif attr[1] == 'before':
             return (_BEFORE, obj)
+        elif attr[1] == 'after':
+            return (_AFTER, obj)
+        elif attr[1] == 'at':
+            return (_AT, obj)
 
 def _handle_call(visitor, node, *args):
     func = args[0][0]
     if func is _BEFORE:
-        return _handle_inequality_node(visitor, None, args[0][1], args[1])
+        if len(args) == 2:
+            return _handle_inequality_node(visitor, None, args[0][1], args[1])
+        else: # a delay is also specified
+            lhs = _handle_sum_node(visitor, None, args[0][1], args[2])
+            return _handle_inequality_node(visitor, None, lhs, args[1])
+    elif func is _AFTER:
+        if len(args) == 2:
+            return _handle_inequality_node(visitor, None, args[1], args[0][1])
+        else: # delay is also specified
+            lhs = _handle_sum_node(visitor, None, args[1], args[2])
+            return _handle_inequality_node(visitor, None, lhs, args[0][1])
+    elif func is _AT:
+        if len(args) == 2:
+            return _handle_equality_node(visitor, None, args[0][1], args[1])
+        else: # a delay is also specified
+            rhs = _handle_sum_node(visitor, None, args[1], args[2])
+            return _handle_equality_node(visitor, None, args[0][1], rhs)
     else:
         raise NotImplementedError("Function call: %s" % func)
 
@@ -458,7 +480,7 @@ def _get_int_expr(arg):
         return cp.end_of(arg[1])
     else:
         raise DeveloperError("I don't know how to get an integer var from "
-                             "object in class %s" % arg[0])
+                             "object in class %s" % str(arg[0]))
 
 def _handle_monomial_expr(visitor, node, arg1, arg2):
     return (_GENERAL, cp.times(_get_int_expr(arg1), _get_int_expr(arg2)))
@@ -551,7 +573,7 @@ _before_handlers = {
     (_START_TIME, _START_TIME) : cp.start_before_start,
     (_START_TIME, _END_TIME): cp.start_before_end,
     (_END_TIME, _START_TIME): cp.end_before_start,
-    (_END_TIME, _END_TIME): cp.end_before_end
+    (_END_TIME, _END_TIME): cp.end_before_end,
 }
 _at_handlers = {
     (_START_TIME, _START_TIME) : cp.start_at_start,
@@ -559,12 +581,33 @@ _at_handlers = {
     (_END_TIME, _START_TIME): cp.end_at_start,
     (_END_TIME, _END_TIME): cp.end_at_end
 }
+_time_point_handlers = {
+    _START_TIME: cp.start_of,
+    _END_TIME: cp.end_of,
+    _GENERAL: lambda x : x,
+}
 
 def _handle_before_expression_node(visitor, node, time1, time2, delay):
+    if time1[0] is _GENERAL or time2[0] is _GENERAL:
+        # we can't use a start_before_start function or its ilk: Just build the
+        # correct inequality.
+        t1 = (_GENERAL, _time_point_handlers[time1[0]](time1[1]))
+        t2 = (_GENERAL, _time_point_handlers[time2[0]](time2[1]))
+        rhs = _handle_sum_node(visitor, None, t2, delay)
+        return _handle_inequality_node( visitor, None, t1, rhs)
+
     return (_GENERAL, _before_handlers[time1[0], time2[0]](time1[1], time2[1],
                                                            delay[1]))
 
 def _handle_at_expression_node(visitor, node, time1, time2, delay):
+    if time1[0] is _GENERAL or time2[0] is _GENERAL:
+        # we can't use a start_before_start function or its ilk: Just build the
+        # correct inequality.
+        t1 = (_GENERAL, _time_point_handlers[time1[0]](time1[1]))
+        t2 = (_GENERAL, _time_point_handlers[time2[0]](time2[1]))
+        rhs = _handle_sum_node(visitor, None, t2, delay)
+        return _handle_equality_node( visitor, None, t1, rhs)
+
     return (_GENERAL, _at_handlers[time1[0], time2[0]](time1[1], time2[1],
                                                        delay[1]))
 

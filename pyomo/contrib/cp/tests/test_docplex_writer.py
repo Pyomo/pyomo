@@ -528,10 +528,11 @@ class TestCPExpressionWalker(unittest.TestCase):
         # right index
         self.assertTrue(expr[1].equals(cp.element(a, 0 + 1 *(x - 6) // 1)))
 
-    def test_indirection_interval_var(self):
+    def test_indirection_before_constraint(self):
         m = self.get_model()
         m.y = Var(domain=Integers, bounds=[1,2])
-        m.c = LogicalConstraint(expr=m.i2[m.y].start_time.before(m.i.end_time))
+        m.c = LogicalConstraint(expr=m.i2[m.y].start_time.before(m.i.end_time,
+                                                                 delay=3))
 
         visitor = self.get_visitor()
         expr = visitor.walk_expression((m.c.expr, m.c, 0))
@@ -548,4 +549,216 @@ class TestCPExpressionWalker(unittest.TestCase):
 
         self.assertTrue(expr[1].equals(
             cp.element([cp.start_of(i21), cp.start_of(i22)],
-                       0 + 1 * (y-1) // 1) <= cp.end_of(i)))
+                       0 + 1 * (y-1) // 1) + 3 <= cp.end_of(i)))
+
+    def test_indirection_after_constraint(self):
+        m = self.get_model()
+        m.y = Var(domain=Integers, bounds=[1,2])
+        m.c = LogicalConstraint(expr=m.i2[m.y].start_time.after(m.i.end_time,
+                                                                delay=-2))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+        self.assertIn(id(m.i), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+        i = visitor.var_map[id(m.i)]
+
+        self.assertTrue(expr[1].equals(
+            cp.end_of(i) + (-2) <=
+            cp.element([cp.start_of(i21), cp.start_of(i22)],
+                       0 + 1 * (y-1) // 1)))
+
+    def test_indirection_at_constraint(self):
+        m = self.get_model()
+        m.y = Var(domain=Integers, bounds=[1,2])
+        m.c = LogicalConstraint(expr=m.i2[m.y].start_time.at(m.i.end_time,
+                                                             delay=4))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+        self.assertIn(id(m.i), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+        i = visitor.var_map[id(m.i)]
+
+        self.assertTrue(expr[1].equals(
+            cp.element([cp.start_of(i21), cp.start_of(i22)],
+                       0 + 1 * (y-1) // 1) == cp.end_of(i) + 4))
+
+    def test_before_indirection_constraint(self):
+        m = self.get_model()
+        m.y = Var(domain=Integers, bounds=[1,2])
+        m.c = LogicalConstraint(expr=m.i.start_time.before(m.i2[m.y].end_time,
+                                                           delay=-4))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+        self.assertIn(id(m.i), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+        i = visitor.var_map[id(m.i)]
+
+        self.assertTrue(expr[1].equals(
+            cp.start_of(i) <= cp.element([cp.end_of(i21), cp.end_of(i22)],
+                                         0 + 1 * (y-1) // 1) + (- 4)))
+
+    def test_after_indirection_constraint(self):
+        m = self.get_model()
+        m.y = Var(domain=Integers, bounds=[1,2])
+        m.c = LogicalConstraint(expr=m.i.start_time.after(m.i2[m.y].end_time))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+        self.assertIn(id(m.i), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+        i = visitor.var_map[id(m.i)]
+
+        self.assertTrue(expr[1].equals(
+            cp.element([cp.end_of(i21), cp.end_of(i22)],
+                       0 + 1 * (y-1) // 1) <= cp.start_of(i) + 0))
+
+    def test_at_indirection_constraint(self):
+        m = self.get_model()
+        m.y = Var(domain=Integers, bounds=[1,2])
+        m.c = LogicalConstraint(expr=m.i.start_time.at(m.i2[m.y].end_time,
+                                                       delay=-6))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+        self.assertIn(id(m.i), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+        i = visitor.var_map[id(m.i)]
+
+        self.assertTrue(expr[1].equals(
+            cp.start_of(i) == cp.element([cp.end_of(i21), cp.end_of(i22)],
+                                         0 + 1 * (y-1) // 1) + (- 6)))
+
+    def test_double_indirection_before_constraint(self):
+        m = self.get_model()
+        # add interval var x can index
+        m.i3 = IntervalVar([(1,3), (1,4), (1,5)], length=4, optional=True)
+        m.y = Var(domain=Integers, bounds=[1,2])
+        m.c = LogicalConstraint(
+            expr=m.i3[1, m.x - 3].start_time.before(m.i2[m.y].end_time))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+        self.assertIn(id(m.i3[1,3]), visitor.var_map)
+        self.assertIn(id(m.i3[1,4]), visitor.var_map)
+        self.assertIn(id(m.i3[1,5]), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        x = visitor.var_map[id(m.x)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+        i33 = visitor.var_map[id(m.i3[1,3])]
+        i34 = visitor.var_map[id(m.i3[1,4])]
+        i35 = visitor.var_map[id(m.i3[1,5])]
+
+        self.assertTrue(expr[1].equals(
+            cp.element([cp.start_of(i33), cp.start_of(i34), cp.start_of(i35)],
+                       0 + 1 * (x + (-3) - 3) // 1) <=
+            cp.element([cp.end_of(i21), cp.end_of(i22)],
+                       0 + 1 * (y - 1) // 1)))
+
+    def test_double_indirection_after_constraint(self):
+        m = self.get_model()
+        # add interval var x can index
+        m.i3 = IntervalVar([(1,3), (1,4), (1,5)], length=4, optional=True)
+        m.y = Var(domain=Integers, bounds=[1,2])
+        m.c = LogicalConstraint(
+            expr=m.i3[1, m.x - 3].start_time.after(m.i2[m.y].end_time))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+        self.assertIn(id(m.i3[1,3]), visitor.var_map)
+        self.assertIn(id(m.i3[1,4]), visitor.var_map)
+        self.assertIn(id(m.i3[1,5]), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        x = visitor.var_map[id(m.x)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+        i33 = visitor.var_map[id(m.i3[1,3])]
+        i34 = visitor.var_map[id(m.i3[1,4])]
+        i35 = visitor.var_map[id(m.i3[1,5])]
+
+        print(expr[1])
+        self.assertTrue(expr[1].equals(
+            cp.element([cp.end_of(i21), cp.end_of(i22)],
+                       0 + 1 * (y - 1) // 1) <=
+            cp.element([cp.start_of(i33), cp.start_of(i34), cp.start_of(i35)],
+                       0 + 1 * (x + (-3) - 3) // 1)))
+
+    def test_double_indirection_at_constraint(self):
+        m = self.get_model()
+        # add interval var x can index
+        m.i3 = IntervalVar([(1,3), (1,4), (1,5)], length=4, optional=True)
+        m.y = Var(domain=Integers, bounds=[1,2])
+        m.c = LogicalConstraint(
+            expr=m.i3[1, m.x - 3].start_time.at(m.i2[m.y].end_time))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+        self.assertIn(id(m.i3[1,3]), visitor.var_map)
+        self.assertIn(id(m.i3[1,4]), visitor.var_map)
+        self.assertIn(id(m.i3[1,5]), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        x = visitor.var_map[id(m.x)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+        i33 = visitor.var_map[id(m.i3[1,3])]
+        i34 = visitor.var_map[id(m.i3[1,4])]
+        i35 = visitor.var_map[id(m.i3[1,5])]
+
+        self.assertTrue(expr[1].equals(
+            cp.element([cp.start_of(i33), cp.start_of(i34), cp.start_of(i35)],
+                       0 + 1 * (x + (-3) - 3) // 1) ==
+            cp.element([cp.end_of(i21), cp.end_of(i22)],
+                       0 + 1 * (y - 1) // 1)))
