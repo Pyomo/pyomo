@@ -381,9 +381,26 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
 
     def test_interval_var_is_present(self):
         m = self.get_model()
+        m.a.domain = Integers
+        m.c = LogicalConstraint(expr=m.i.is_present.implies(m.a[1] == 5))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.a[1]), visitor.var_map)
+        self.assertIn(id(m.i), visitor.var_map)
+        a1 = visitor.var_map[id(m.a[1])]
+        i = visitor.var_map[id(m.i)]
+
+        self.assertTrue(expr[1].equals(
+            cp.if_then(cp.presence_of(i), a1 == 5)))
+
+    def test_interval_var_is_present_indirection(self):
+        m = self.get_model()
+        m.a.domain = Integers
         m.y = Var(domain=Integers, bounds=[1,2])
 
-        m.c = LogicalConstraint(m.i2[m.y].is_present.implies(m.a[1] >= 7))
+        m.c = LogicalConstraint(expr=m.i2[m.y].is_present.implies(m.a[1] >= 7))
 
         visitor = self.get_visitor()
         expr = visitor.walk_expression((m.c.expr, m.c, 0))
@@ -402,7 +419,33 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
         self.assertTrue(expr[1].equals(
             cp.if_then(cp.element([cp.presence_of(i21), cp.presence_of(i22)],
                                   0 + 1 * (y - 1) // 1) == True,
-                       a1 >= 7)))
+                       cp.less_or_equal(7, a1))))
+
+    def test_is_present_indirection_and_length(self):
+        m = self.get_model()
+        m.y = Var(domain=Integers, bounds=[1,2])
+
+        m.c = LogicalConstraint(
+            expr=m.i2[m.y].is_present.land(m.i2[m.y].length >= 7))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+
+        self.assertTrue(expr[1].equals(
+            cp.logical_and(
+                cp.element([cp.presence_of(i21), cp.presence_of(i22)],
+                           0 + 1 * (y - 1) // 1) == True,
+                cp.less_or_equal(7, cp.element([cp.length_of(i21),
+                                                cp.length_of(i22)],
+                                               0 + 1*(y - 1) // 1)))))
 
 class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
     def test_start_before_start(self):
@@ -812,3 +855,17 @@ class TestCPExpressionWalker_NamedExpressions(CommonTest):
         x = visitor.var_map[id(m.x)]
 
         self.assertTrue(expr[1].equals(x**2 + 7 + (-1) *(8*(x**2 + 7))))
+
+
+class TestCPExpressionWalker_Vars(CommonTest):
+    def test_complain_about_non_integer_vars(self):
+        m = self.get_model()
+        m.c = LogicalConstraint(expr=m.i.is_present.implies(m.a[1] == 5))
+
+        visitor = self.get_visitor()
+        with self.assertRaisesRegexp(
+                ValueError,
+                "The LogicalToDoCplex writer can only support integer- or "
+                "Boolean-valued variables. Cannot write Var a\[1\] with domain "
+                "Reals"):
+            expr = visitor.walk_expression((m.c.expr, m.c, 0))

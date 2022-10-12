@@ -71,10 +71,16 @@ _GENERAL_LIST = _GENERAL
 # indirection:
 class _START_TIME(object): pass
 class _END_TIME(object): pass
+class _DEFERRED_ELEMENT_CONSTRAINT(object): pass
 class _ELEMENT_CONSTRAINT(object): pass
 class _BEFORE(object): pass
 class _AFTER(object): pass
 class _AT(object): pass
+class _IMPLIES(object): pass
+class _LAND(object): pass
+class _LOR(object): pass
+class _XOR(object): pass
+class _EQUIVALENT_TO(object): pass
 
 def _check_var_domain(visitor, node, var):
     if not var.domain.isdiscrete():
@@ -179,9 +185,9 @@ def _handle_getitem(visitor, node, *data):
             # disallowing it from being selected
             elements.append(None)
     try:
-        return (_GENERAL, cp.element(elements, expr))
+        return (_ELEMENT_CONSTRAINT, cp.element(elements, expr))
     except:
-        return (_ELEMENT_CONSTRAINT, (elements, expr))
+        return (_DEFERRED_ELEMENT_CONSTRAINT, (elements, expr))
 
 # _docplex_attrs = {
 #     'start_time': cp.start_of,
@@ -191,7 +197,7 @@ def _handle_getitem(visitor, node, *data):
 # }
 
 def _handle_getattr(visitor, node, obj, attr):
-    if obj[0] is _ELEMENT_CONSTRAINT:
+    if obj[0] is _DEFERRED_ELEMENT_CONSTRAINT:
         # then obj[1] is a list of cp thingies that we need to get the attr on,
         # and then at the end we need to make the element constraint we couldn't
         # make before.
@@ -204,47 +210,43 @@ def _handle_getattr(visitor, node, obj, attr):
                 ans.append(cp.end_of(o))
             elif attr[1] == 'length':
                 ans.append(cp.length_of(o))
+            elif attr[1] == 'is_present':
+                ans.append(cp.presence_of(o))
             else:
                 raise RuntimeError(
                     "Unrecognized attrribute in GetAttrExpression: "
-                    "%s. Found for object: %s" % (attr, o))
-        return (_GENERAL, cp.element(array=ans, index=obj[1][1]))
-    elif obj[0] is _GENERAL:
+                    "%s. Found for object: %s" % (attr[1], o))
+        return (_ELEMENT_CONSTRAINT, cp.element(array=ans, index=obj[1][1]))
+    if obj[0] is _GENERAL:
         if attr[1] == 'start_time':
-            return cp.start_of(o)
+            return (_GENERAL, cp.start_of(obj[1]))
         elif attr[1] == 'end_time':
-            return cp.end_of(o)
+            return (_GENERAL, cp.end_of(obj[1]))
         elif attr[1] == 'length':
-            return cp.length_of(o)
-        elif attr[1] == 'before':
+            return (_GENERAL, cp.length_of(obj[1]))
+        elif attr[1] == 'is_present':
+            return (_GENERAL, cp.presence_of(obj[1]))
+    if obj[0] in {_GENERAL, _ELEMENT_CONSTRAINT}:
+        if attr[1] == 'before':
             return (_BEFORE, obj)
         elif attr[1] == 'after':
             return (_AFTER, obj)
         elif attr[1] == 'at':
             return (_AT, obj)
-
-def _handle_call(visitor, node, *args):
-    func = args[0][0]
-    if func is _BEFORE:
-        if len(args) == 2:
-            return _handle_inequality_node(visitor, None, args[0][1], args[1])
-        else: # a delay is also specified
-            lhs = _handle_sum_node(visitor, None, args[0][1], args[2])
-            return _handle_inequality_node(visitor, None, lhs, args[1])
-    elif func is _AFTER:
-        if len(args) == 2:
-            return _handle_inequality_node(visitor, None, args[1], args[0][1])
-        else: # delay is also specified
-            lhs = _handle_sum_node(visitor, None, args[1], args[2])
-            return _handle_inequality_node(visitor, None, lhs, args[0][1])
-    elif func is _AT:
-        if len(args) == 2:
-            return _handle_equality_node(visitor, None, args[0][1], args[1])
-        else: # a delay is also specified
-            rhs = _handle_sum_node(visitor, None, args[1], args[2])
-            return _handle_equality_node(visitor, None, args[0][1], rhs)
-    else:
-        raise NotImplementedError("Function call: %s" % func)
+        elif attr[1] == 'implies':
+            return (_IMPLIES, obj)
+        elif attr[1] == 'land':
+            return (_LAND, obj)
+        elif attr[1] == 'lor':
+            return (_LOR, obj)
+        elif attr[1] == 'xor':
+            return (_XOR, obj)
+        elif attr[1] == 'equivalent_to':
+            return (_EQUIVALENT_TO, obj)
+        else:
+            raise RuntimeError("Unrecognized attribute in GetAttrExpression:"
+                               "%s. Found for object: %s" % (attr[1], obj[1]))
+    raise RuntimeError("What have we here? %s, %s" % (obj[0], attr[1]))
 
 def _before_boolean_var(visitor, child):
     _id = id(child)
@@ -471,8 +473,8 @@ def _before_cumulative_function(visitor, node):
 # Algebraic expressions
 ##
 
-def _get_int_expr(arg):
-    if arg[0] is _GENERAL:
+def _get_int_valued_expr(arg):
+    if arg[0] in {_GENERAL, _ELEMENT_CONSTRAINT}:
         return arg[1]
     elif arg[0] is _START_TIME:
         return cp.start_of(arg[1])
@@ -482,88 +484,157 @@ def _get_int_expr(arg):
         raise DeveloperError("I don't know how to get an integer var from "
                              "object in class %s" % str(arg[0]))
 
+def _get_bool_valued_expr(arg):
+    if arg[0] is _GENERAL:
+        return arg[1]
+    elif arg[0] is _ELEMENT_CONSTRAINT:
+        # docplex doesn't bother to check if 'element' expressions are integer-
+        # or boolean-valued: they just complain if you use them in a boolean
+        # context. So if we are about to use one that way, we set it equivalent
+        # to True so that it will be boolean-valued according to docplex's
+        # idiosyncracies.
+        return arg[1] == True
+    else:
+        raise DeveloperError("I don't know how to get an integer var from "
+                             "object in class %s" % str(arg[0]))
+
 def _handle_monomial_expr(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.times(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.times(_get_int_valued_expr(arg1),
+                               _get_int_valued_expr(arg2)))
 
 def _handle_sum_node(visitor, node, *args):
-    return (_GENERAL, sum((_get_int_expr(arg) for arg in args[1:]),
-                           start=_get_int_expr(args[0])))
+    return (_GENERAL, sum((_get_int_valued_expr(arg) for arg in args[1:]),
+                           start=_get_int_valued_expr(args[0])))
 
 def _handle_negation_node(visitor, node, arg1):
-    return (_GENERAL, cp.times(-1, _get_int_expr(arg1)))
+    return (_GENERAL, cp.times(-1, _get_int_valued_expr(arg1)))
 
 def _handle_product_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.times(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.times(_get_int_valued_expr(arg1),
+                               _get_int_valued_expr(arg2)))
 
 def _handle_division_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.float_div(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.float_div(_get_int_valued_expr(arg1),
+                                   _get_int_valued_expr(arg2)))
 
 def _handle_integer_division_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.int_div(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.int_div(_get_int_valued_expr(arg1),
+                                 _get_int_valued_expr(arg2)))
 
 def _handle_pow_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.power(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.power(_get_int_valued_expr(arg1),
+                               _get_int_valued_expr(arg2)))
 
 def _handle_abs_node(visitor, node, arg1):
-    return (_GENERAL, cp.abs(_get_int_expr(arg1)))
+    return (_GENERAL, cp.abs(_get_int_valued_expr(arg1)))
 
 def _handle_min_node(visitor, node, *args):
-    return (_GENERAL, cp.min((_get_int_expr(arg) for arg in args)))
+    return (_GENERAL, cp.min((_get_int_valued_expr(arg) for arg in args)))
 
 def _handle_max_node(visitor, node, *args):
-    return (_GENERAL, cp.max((_get_int_expr(arg) for arg in args)))
+    return (_GENERAL, cp.max((_get_int_valued_expr(arg) for arg in args)))
+
+##
+# Relational expressions
+##
+
+def _handle_equality_node(visitor, node, arg1, arg2):
+    return (_GENERAL, cp.equal(_get_int_valued_expr(arg1),
+                               _get_int_valued_expr(arg2)))
+
+def _handle_inequality_node(visitor, node, arg1, arg2):
+    return (_GENERAL, cp.less_or_equal(_get_int_valued_expr(arg1),
+                                       _get_int_valued_expr(arg2)))
+
+def _handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
+    return (_GENERAL, cp.range(_get_int_valued_expr(arg2),
+                               lb=_get_int_valued_expr(arg1),
+                               ub=_get_int_valued_expr(arg3)))
+
+def _handle_not_equal_node(visitor, node, arg1, arg2):
+    return (_GENERAL, cp.diff(_get_int_valued_expr(arg1),
+                              _get_int_valued_expr(arg2)))
+
 
 ##
 # Logical expressions
 ##
 
 def _handle_and_node(visitor, node, *args):
-    return (_GENERAL, cp.logical_and((_get_int_expr(arg) for arg in args)))
+    return (_GENERAL, cp.logical_and((_get_bool_valued_expr(arg) for arg in
+                                      args)))
 
 def _handle_or_node(visitor, node, *args):
-    return (_GENERAL, cp.logical_or((_get_int_expr(arg) for arg in args)))
+    return (_GENERAL, cp.logical_or((_get_bool_valued_expr(arg) for arg in
+                                     args)))
 
 def _handle_xor_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.equal(cp.count([_get_int_expr(arg1),
-                                         _get_int_expr(arg2)], True), 1))
+    return (_GENERAL, cp.equal(cp.count([_get_bool_valued_expr(arg1),
+                                         _get_bool_valued_expr(arg2)], True),
+                               1))
 
 def _handle_not_node(visitor, node, arg):
-    return (_GENERAL, cp.logical_not(_get_int_expr(arg)))
-
-def _handle_equality_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.equal(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.logical_not(_get_bool_valued_expr(arg)))
 
 def _handle_equivalence_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.equal(_get_int_expr(arg1), _get_int_expr(arg2)))
-
-def _handle_inequality_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.less_or_equal(_get_int_expr(arg1),
-                                       _get_int_expr(arg2)))
-
-def _handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
-    return (_GENERAL, cp.range(_get_int_expr(arg2), lb=_get_int_expr(arg1),
-                               ub=_get_int_expr(arg3)))
-
-def _handle_not_equal_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.diff(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.equal(_get_bool_valued_expr(arg1),
+                               _get_bool_valued_expr(arg2)))
 
 def _handle_implication_node(visitor, node, arg1, arg2):
-        return (_GENERAL, cp.if_then(_get_int_expr(arg1), _get_int_expr(arg2)))
+    return (_GENERAL, cp.if_then(_get_bool_valued_expr(arg1),
+                                 _get_bool_valued_expr(arg2)))
 
 def _handle_exactly_node(visitor, node, *args):
-    return (_GENERAL, cp.equal(cp.count((_get_int_expr(arg) for arg in
+    return (_GENERAL, cp.equal(cp.count((_get_bool_valued_expr(arg) for arg in
                                          args[1:]), True),
-                               _get_int_expr(args[0])))
+                               _get_int_valued_expr(args[0])))
 
 def _handle_at_most_node(visitor, node, *args):
-    return (_GENERAL, cp.less_or_equal(cp.count((_get_int_expr(arg) for arg in
-                                                 args[1:]), True),
-                                       _get_int_expr(args[0])))
+    return (_GENERAL, cp.less_or_equal(cp.count((_get_bool_valued_expr(arg) for
+                                                 arg in args[1:]), True),
+                                       _get_int_valued_expr(args[0])))
 
 def _handle_at_least_node(visitor, node, *args):
-    return (_GENERAL, cp.greater_or_equal(cp.count((_get_int_expr(arg) for arg
-                                                    in args[1:]), True),
-                                          _get_int_expr(args[0])))
+    return (_GENERAL, cp.greater_or_equal(cp.count((_get_bool_valued_expr(arg)
+                                                    for arg in args[1:]), True),
+                                          _get_int_valued_expr(args[0])))
+
+## CallExpression handllers
+
+def _before_call_handler(visitor, node, *args):
+    if len(args) == 2:
+        return _handle_inequality_node(visitor, node, args[0], args[1])
+    else: # a delay is also specified
+        lhs = _handle_sum_node(visitor, node, args[0], args[2])
+        return _handle_inequality_node(visitor, node, lhs, args[1])
+
+def _after_call_handler(visitor, node, *args):
+    if len(args) == 2:
+        return _handle_inequality_node(visitor, node, args[1], args[0])
+    else: # delay is also specified
+        lhs = _handle_sum_node(visitor, node, args[1], args[2])
+        return _handle_inequality_node(visitor, node, lhs, args[0])
+
+def _at_call_handler(visitor, node, *args):
+    if len(args) == 2:
+        return _handle_equality_node(visitor, node, args[0], args[1])
+    else: # a delay is also specified
+        rhs = _handle_sum_node(visitor, node, args[1], args[2])
+        return _handle_equality_node(visitor, node, args[0], rhs)
+
+_call_handlers = {
+    _BEFORE: _before_call_handler,
+    _AFTER: _after_call_handler,
+    _AT: _at_call_handler,
+    _IMPLIES: _handle_implication_node,
+    _LAND: _handle_and_node,
+    _LOR: _handle_or_node,
+    _XOR: _handle_xor_node,
+    _EQUIVALENT_TO: _handle_equivalence_node,
+}
+
+def _handle_call(visitor, node, *args):
+    return _call_handlers[args[0][0]](visitor, node, args[0][1], *args[1:])
 
 ##
 # Scheduling
@@ -585,10 +656,12 @@ _time_point_handlers = {
     _START_TIME: cp.start_of,
     _END_TIME: cp.end_of,
     _GENERAL: lambda x : x,
+    _ELEMENT_CONSTRAINT: lambda x : x,
 }
 
 def _handle_before_expression_node(visitor, node, time1, time2, delay):
-    if time1[0] is _GENERAL or time2[0] is _GENERAL:
+    if (time1[0] in {_GENERAL, _ELEMENT_CONSTRAINT} or
+        time2[0] in {_GENERAL, _ELEMENT_CONSTRAINT}):
         # we can't use a start_before_start function or its ilk: Just build the
         # correct inequality.
         t1 = (_GENERAL, _time_point_handlers[time1[0]](time1[1]))
@@ -600,7 +673,8 @@ def _handle_before_expression_node(visitor, node, time1, time2, delay):
                                                            delay[1]))
 
 def _handle_at_expression_node(visitor, node, time1, time2, delay):
-    if time1[0] is _GENERAL or time2[0] is _GENERAL:
+    if (time1[0] in {_GENERAL, _ELEMENT_CONSTRAINT} or
+        time2[0] in {_GENERAL, _ELEMENT_CONSTRAINT}):
         # we can't use a start_before_start function or its ilk: Just build the
         # correct inequality.
         t1 = (_GENERAL, _time_point_handlers[time1[0]](time1[1]))
@@ -694,6 +768,10 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         return True, None
 
     def exitNode(self, node, data):
+        print(node.__class__)
+        print(node.to_string(verbose=True))
+        for thing in data:
+            print(thing)
         return self._operator_handles[node.__class__](self, node, *data)
 
     finalizeResult = None
