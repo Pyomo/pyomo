@@ -447,6 +447,40 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
                                                 cp.length_of(i22)],
                                                0 + 1*(y - 1) // 1)))))
 
+
+class TestCPExpressionWalker_IntervalVars(CommonTest):
+    def test_interval_var_fixed_presences_correct(self):
+        m = self.get_model()
+
+        m.silly = LogicalConstraint(expr=m.i.is_present)
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.silly.body, m.silly, 0))
+        self.assertIn(id(m.i), visitor.var_map)
+        i = visitor.var_map[id(m.i)]
+        # Check that docplex knows it's optional
+        self.assertTrue(i.is_optional())
+
+        # Now fix it to absent
+        m.i.is_present.fix(False)
+        m.c = LogicalConstraint(
+            expr=m.i.is_present.lor(m.i2[1].start_time == 2))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        i21 = visitor.var_map[id(m.i2[1])]
+        self.assertIn(id(m.i), visitor.var_map)
+        i = visitor.var_map[id(m.i)]
+
+        # Check that we passed on the presence info to docplex
+        self.assertTrue(i.is_absent())
+        self.assertTrue(i21.is_present())
+        # Not testing the expression here because sometime we might optimize out
+        # the presence_of call for fixed absent vars, but for now I haven't.
+
+
+
 class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
     def test_start_before_start(self):
         m = self.get_model()
@@ -810,7 +844,7 @@ class TestCPExpressionWalker_CumulFuncExpressions(CommonTest):
     def test_always_in(self):
         m = self.get_model()
         f = Pulse(m.i, height=3) + Step(m.i2[1].start_time, height=2) - \
-            Step(m.i2[2].end_time, height=-1)
+            Step(m.i2[2].end_time, height=-1) + Step(3, height=4)
         m.c = LogicalConstraint(expr=f.within((0, 3), (0, 10)))
         visitor = self.get_visitor()
         expr = visitor.walk_expression((m.c.expr, m.c, 0))
@@ -825,7 +859,8 @@ class TestCPExpressionWalker_CumulFuncExpressions(CommonTest):
 
         self.assertTrue(expr[1].equals(cp.always_in(cp.pulse(i, 3) +
                                                     cp.step_at_start(i21, 2) -
-                                                    cp.step_at_end(i22, -1), 0,
+                                                    cp.step_at_end(i22, -1) +
+                                                    cp.step_at(3, 4), 0,
                                                     3, 0, 10)))
 
 
@@ -869,3 +904,32 @@ class TestCPExpressionWalker_Vars(CommonTest):
                 "Boolean-valued variables. Cannot write Var a\[1\] with domain "
                 "Reals"):
             expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+    def test_fixed_integer_var(self):
+        m = self.get_model()
+        m.a.domain = Integers
+        m.a[1].fix(3)
+        m.c = Constraint(expr=m.a[1] + m.a[2] >= 4)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.body, m.c, 0))
+
+        self.assertIn(id(m.a[2]), visitor.var_map)
+        a2 = visitor.var_map[id(m.a[2])]
+
+        self.assertTrue(expr[1].equals(3 + a2))
+
+    def test_fixed_boolean_var(self):
+        m = self.get_model()
+        m.b.fix(False)
+        m.b2['a'].fix(True)
+        m.c = LogicalConstraint(expr=m.b.lor(m.b2['a'].land(m.b2['b'])))
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.c.expr, m.c, 0))
+
+        self.assertIn(id(m.b2['b']), visitor.var_map)
+        b2b = visitor.var_map[id(m.b2['b'])]
+
+        self.assertTrue(expr[1].equals(
+            cp.logical_or(False, cp.logical_and(True, b2b))))

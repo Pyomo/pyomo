@@ -252,7 +252,7 @@ def _before_boolean_var(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
         if child.fixed:
-            return False, child.value
+            return False, (_GENERAL, child.value)
         nm = child.name if visitor.symbolic_solver_labels else None
         # Sorry, universe, but docplex doesn't know the difference between
         # Boolean and Binary...
@@ -280,7 +280,7 @@ def _before_var(visitor, child):
     _id = id(child)
     if _id not in visitor.var_map:
         if child.fixed:
-            return False, child.value
+            return False, (_GENERAL, child.value)
         cpx_var = _create_docplex_var(
             child,
             name=child.name if visitor.symbolic_solver_labels else None)
@@ -431,8 +431,7 @@ def _before_interval_var_presence(visitor, child):
     return False, (_GENERAL, visitor.var_map[_id])
 
 def _handle_step_at_node(visitor, node):
-    cpx_var = _get_docplex_interval_var(visitor, node._time)
-    return cp.step_at(cpx_var, node._height)
+    return cp.step_at(node._time, node._height)
 
 def _handle_step_at_start_node(visitor, node):
     cpx_var = _get_docplex_interval_var(visitor, node._time)
