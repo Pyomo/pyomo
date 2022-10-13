@@ -2247,8 +2247,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.used_named_expressions = used_named_expressions
         self.symbolic_solver_labels = symbolic_solver_labels
         #self.value_cache = {}
-        self._before_child_handlers = _before_child_handlers
-        self._operator_handles = _operator_handles
 
     def initializeWalker(self, expr):
         expr, src, src_idx = expr
@@ -2260,10 +2258,10 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def beforeChild(self, node, child, child_idx):
         try:
-            return self._before_child_handlers[child.__class__](self, child)
+            return _before_child_handlers[child.__class__](self, child)
         except KeyError:
             self._register_new_before_child_processor(child)
-        return self._before_child_handlers[child.__class__](self, child)
+        return _before_child_handlers[child.__class__](self, child)
 
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
@@ -2285,7 +2283,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         # General expressions...
         #
-        return self._operator_handles[node.__class__](self, node, *data)
+        return _operator_handles[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):
         # We need to make a copy of the AMPLRepn as we will be modifying
