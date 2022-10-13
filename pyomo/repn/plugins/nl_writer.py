@@ -1382,7 +1382,11 @@ class _NLWriter_impl(object):
             if info[2]:
                 pass
             elif info[1] is None:
-                n_subexpressions[3 if info[0] else 1] += 1
+                if info[0] is None:
+                    # Unused subexpression
+                    pass
+                else:
+                    n_subexpressions[3 if info[0] else 1] += 1
             elif info[0] is None:
                 n_subexpressions[4 if info[1] else 2] += 1
             else:
