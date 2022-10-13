@@ -519,6 +519,9 @@ class _NLWriter_impl(object):
                     if not obj.active:
                         continue
                     expr = visitor.walk_expression((obj.expr, obj, 1))
+                    if expr.named_exprs:
+                        self._record_named_expression_usage(
+                            expr.named_exprs, obj, 1)
                     if expr.nonlinear:
                         objectives.append((obj, expr))
                     else:
@@ -554,6 +557,9 @@ class _NLWriter_impl(object):
                     if not con.active:
                         continue
                     expr = visitor.walk_expression((con.body, con, 0))
+                    if expr.named_exprs:
+                        self._record_named_expression_usage(
+                            expr.named_exprs, con, 0)
                     lb = con.lb
                     if lb is not None:
                         lb = repr(lb - expr.const)
@@ -628,6 +634,11 @@ class _NLWriter_impl(object):
         # var objects themselves)
         #
 
+        # Filter out any unused named expressions
+        self.subexpression_order = list(filter(
+            self.used_named_expressions.__contains__,
+            self.subexpression_order))
+
         # linear contribution by (constraint, objective) component.
         # Keys are component id(), Values are dicts mapping variable
         # id() to linear coefficient.  All nonzeros in the component
@@ -640,8 +651,7 @@ class _NLWriter_impl(object):
         # in constraints / objectives
         self._categorize_vars(
             map(self.subexpression_cache.__getitem__,
-                filter(self.used_named_expressions.__contains__,
-                       self.subexpression_order)),
+                self.subexpression_order),
             linear_by_comp
         )
         n_subexpressions = self._count_subexpression_occurances()
@@ -1037,8 +1047,6 @@ class _NLWriter_impl(object):
         single_use_subexpressions = {}
         self.next_V_line_id = n_vars
         for _id in self.subexpression_order:
-            if _id not in self.used_named_expressions:
-                continue
             cache_info = self.subexpression_cache[_id][2]
             if cache_info[2]:
                 # substitute expression directly into expression trees
@@ -1368,10 +1376,9 @@ class _NLWriter_impl(object):
         #     used by one constraint,
         #     used by one objective ]
         n_subexpressions = [0]*5
-        for info in map(itemgetter(2),
-                        map(self.subexpression_cache.__getitem__,
-                            filter(self.used_named_expressions.__contains__,
-                                   self.subexpression_order))):
+        for info in map(itemgetter(2), map(
+                self.subexpression_cache.__getitem__,
+                self.subexpression_order)):
             if info[2]:
                 pass
             elif info[1] is None:
@@ -1381,6 +1388,16 @@ class _NLWriter_impl(object):
             else:
                 n_subexpressions[0] += 1
         return n_subexpressions
+
+    def _record_named_expression_usage(self, named_exprs, src, comp_type):
+        self.used_named_expressions.update(named_exprs)
+        src = id(src)
+        for _id in named_exprs:
+            info = self.subexpression_cache[_id][2]
+            if info[comp_type] is None:
+                info[comp_type] = src
+            elif info[comp_type] != src:
+                info[comp_type] = 0
 
     def _write_nl_expression(self, repn, include_const):
         # Note that repn.mult should always be 1 (the AMPLRepn was
@@ -1443,7 +1460,7 @@ class NLFragment(object):
 
 
 class AMPLRepn(object):
-    __slots__ = ('nl', 'mult', 'const', 'linear', 'nonlinear')
+    __slots__ = ('nl', 'mult', 'const', 'linear', 'nonlinear', 'named_exprs')
 
     ActiveVisitor = None
 
@@ -1452,19 +1469,48 @@ class AMPLRepn(object):
         self.mult = 1
         self.const = const
         self.linear = linear
-        self.nonlinear = nonlinear
+        if nonlinear is None:
+            self.nonlinear = self.named_exprs = None
+        else:
+            nl, nl_args, self.named_exprs = nonlinear
+            self.nonlinear = nl, nl_args
 
-    def compile_repn(self, visitor, prefix='', args=None):
+    def __str__(self):
+        return (
+            f'AMPLRepn(mult={self.mult}, const={self.const}, '
+            f'linear={self.linear}, nonlinear={self.nonlinear}, '
+            f'nl={self.nl}, named_exprs={self.named_exprs})'
+        )
+
+    def __repr__(self):
+        return str(self)
+
+    def duplicate(self):
+        ans = self.__class__.__new__(self.__class__)
+        ans.nl = self.nl
+        ans.mult = self.mult
+        ans.const = self.const
+        ans.linear = self.linear
+        ans.nonlinear = self.nonlinear
+        ans.named_exprs = self.named_exprs
+        return ans
+
+    def compile_repn(self, visitor, prefix='', args=None, named_exprs=None):
         template = visitor.template
         if self.mult != 1:
             if self.mult == -1:
                 prefix += template.negation
             else:
                 prefix += template.multiplier % self.mult
+        if self.named_exprs is not None:
+            if named_exprs is None:
+                named_exprs = set(self.named_exprs)
+            else:
+                named_exprs.update(self.named_exprs)
         if self.nl is not None:
+            # This handles both named subexpressions and embedded
+            # non-numeric (e.g., string) arguments.
             nl, nl_args = self.nl
-            if nl_args:
-                visitor._mark_named_expression_as_used(nl_args)
             if prefix:
                 nl = prefix + nl
             if args is not None:
@@ -1472,7 +1518,14 @@ class AMPLRepn(object):
                 args.extend(nl_args)
             else:
                 args = list(nl_args)
-            return nl, args
+            if nl_args:
+                # For string arguments, nl_args is an empty tuple and
+                # self.named_exprs is None.  For named subexpressions,
+                # we are guaranteed that named_exprs is NOT None.  We
+                # need to ensure that the named subexpression that we
+                # are returning is added to the named_exprs set.
+                named_exprs.update(nl_args)
+            return nl, args, named_exprs
 
         if args is None:
             args = []
@@ -1501,13 +1554,17 @@ class AMPLRepn(object):
             nl_sum += template.const % self.const
 
         if nterms > 2:
-            return prefix + (template.nary_sum % nterms) + nl_sum, args
+            return (
+                prefix + (template.nary_sum % nterms) + nl_sum,
+                args,
+                named_exprs,
+            )
         elif nterms == 2:
-            return prefix + template.binary_sum + nl_sum, args
+            return prefix + template.binary_sum + nl_sum, args, named_exprs
         elif nterms == 1:
-            return prefix + nl_sum, args
+            return prefix + nl_sum, args, named_exprs
         else: # nterms == 0
-            return prefix + (template.const % 0), []
+            return prefix + (template.const % 0), [], named_exprs
 
     def compile_nonlinear_fragment(self, visitor):
         args = []
@@ -1551,20 +1608,24 @@ class AMPLRepn(object):
                     # nonlinear component.  We want to merge it with
                     # this AMPLRepn, preserving the named expression for
                     # only the nonlinear component (merging the linear
-                    # component with this AMPLRepn).  We need to make
-                    # sure that we have marked that we are using the
-                    # named expression for the nonlinear component.
-                    self.ActiveVisitor._mark_named_expression_as_used(
-                        other.nonlinear[1])
+                    # component with this AMPLRepn).
+                    pass
                 else:
                     # This is a nonlinear-only named expression,
                     # possibly with a multiplier that is not 1.  Compile
                     # it and append it (this both resolves the
                     # multiplier, and marks the named expression as
                     # having been used)
-                    self.nonlinear.append(
-                        other.compile_repn(self.ActiveVisitor))
+                    other = other.compile_repn(
+                        self.ActiveVisitor, '', None, self.named_exprs)
+                    nl, nl_args, self.named_exprs = other
+                    self.nonlinear.append((nl, nl_args))
                     return
+            if other.named_exprs is not None:
+                if self.named_exprs is None:
+                    self.named_exprs = set(other.named_exprs)
+                else:
+                    self.named_exprs.update(other.named_exprs)
             if other.mult != 1:
                 mult = other.mult
                 self.const += mult * other.const
@@ -1828,13 +1889,15 @@ def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
     if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT and arg3[0] is _CONSTANT:
         return (_CONSTANT, node._apply_operation((arg1[1], arg2[1], arg3[1])))
     op = visitor.template.strict_inequality_map[node.strict]
-    nl, args = node_result_to_amplrepn(arg1).compile_repn(
+    nl, args, named = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.and_expr + op[0])
-    nl2, args2 = node_result_to_amplrepn(arg2).compile_repn(visitor)
+    nl2, args2, named = node_result_to_amplrepn(arg2).compile_repn(
+        visitor, '', None, named)
     nl += nl2 + op[1] + nl2
     args.extend(args2)
     args.extend(args2)
-    nonlin = node_result_to_amplrepn(arg3).compile_repn(visitor, nl, args)
+    nonlin = node_result_to_amplrepn(arg3).compile_repn(
+        visitor, nl, args, named)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_named_expression_node(visitor, node, arg1):
@@ -1845,6 +1908,8 @@ def handle_named_expression_node(visitor, node, arg1):
     # definition.  We will return this as a "var" template, but
     # wrapped in the nonlinear portion of the expression tree.
     repn = node_result_to_amplrepn(arg1)
+    if not repn.named_exprs:
+        repn.named_exprs = set()
 
     # When converting this shared subexpression to a (nonlinear)
     # node, we want to just reference this subexpression:
@@ -1883,24 +1948,24 @@ def handle_named_expression_node(visitor, node, arg1):
             # named subexpressions when appropriate.
             sub_node = NLFragment(repn, node)
             sub_id = id(sub_node)
-            sub_repn = AMPLRepn(0, None, repn.nonlinear)
+            sub_repn = AMPLRepn(0, None, None)
+            sub_repn.nonlinear = repn.nonlinear
             sub_repn.nl = (visitor.template.var, (sub_id,))
+            sub_repn.named_exprs = set(repn.named_exprs)
+
+            repn.named_exprs.add(sub_id)
+            repn.nonlinear = sub_repn.nl
+
             # See above for the meaning of this source information
             nl_info = list(expression_source)
             visitor.subexpression_cache[sub_id] = (
                 sub_node, sub_repn, nl_info,
             )
-            repn.nonlinear = sub_repn.nl
             # It is important that the NL subexpression comes before the
             # main named expression:
             visitor.subexpression_order.append(sub_id)
-            # The nonlinear identifier is *always* used
-            visitor.used_named_expressions.add(sub_id)
         else:
             nl_info = expression_source
-        # The nonlinear component of this named expression is
-        # guaranteed to be used by this expression
-        setitem(nl_info, *visitor.active_expression_source)
     else:
         repn.nonlinear = None
         if repn.linear:
@@ -1946,14 +2011,12 @@ def handle_named_expression_node(visitor, node, arg1):
             return (_MONOMIAL, repn.linear[0][0], 1)
         else:
             return (_CONSTANT, repn.const)
+
+    # Defer recording this _id until after we know that this repn will
+    # not be directly substituted.
     visitor.subexpression_order.append(_id)
-    ans = AMPLRepn(
-        repn.const,
-        list(repn.linear) if repn.linear is not None else None,
-        repn.nonlinear
-    )
-    ans.nl = repn.nl
-    return (_GENERAL, ans)
+
+    return (_GENERAL, repn.duplicate())
 
 def handle_external_function_node(visitor, node, *args):
     func = node._fcn._function
@@ -2138,13 +2201,7 @@ def _before_named_expression(visitor, child):
                 return False, (_MONOMIAL, repn.linear[0][0], 1)
             else:
                 return False, (_CONSTANT, repn.const)
-        ans = AMPLRepn(
-            repn.const,
-            list(repn.linear) if repn.linear is not None else None,
-            repn.nonlinear
-        )
-        ans.nl = repn.nl
-        return False, (_GENERAL, ans)
+        return False, (_GENERAL, repn.duplicate())
     else:
         return True, None
 
@@ -2212,7 +2269,9 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
         if node.__class__ is SumExpression:
-            return node.args, AMPLRepn(0, [], [])
+            data = AMPLRepn(0, [], None)
+            data.nonlinear = []
+            return node.args, data
         else:
             return node.args, []
 
@@ -2229,7 +2288,10 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         return self._operator_handles[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):
-        ans = node_result_to_amplrepn(result)
+        # We need to make a copy of the AMPLRepn as we will be modifying
+        # things.
+        ans = node_result_to_amplrepn(result).duplicate()
+
         # If this was a nonlinear named expression, and that expression
         # has no linear portion, then we will directly use this as a
         # named expression.  We need to mark that the expression was
@@ -2240,14 +2302,30 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         # this outer named expression).  This prevents accidentally
         # recharacterizing variables that only appear linearly as
         # nonlinear variables.
-        if ans.nl and ans.nonlinear:
-            if ans.linear:
-                self._mark_named_expression_as_used(ans.nonlinear[1])
-            else:
-                self._mark_named_expression_as_used(ans.nl[1])
+        if ans.nl is not None:
+            if not ans.nl[1]:
+                raise ValueError(
+                    "Numeric expression resolved to a string constant")
+            # This *is* a named subexpression.  If there is no linear
+            # component, then replace this expression with the named
+            # expression.  The mult will be handled later.  We know that
+            # the const is built into the nonlinear expression, because
+            # it cannot be changed "in place" (only through addition,
+            # which would have "cleared" the nl attribute)
+            if not ans.linear:
+                ans.named_exprs.update(ans.nl[1])
                 ans.nonlinear = ans.nl
-
-        ans.nl = None
+                ans.const = 0
+            else:
+                # This named expression has both a linear and a
+                # nonlinear component, and possibly a multiplier and
+                # constant.  We will not include this named expression
+                # and instead will expost the components so that linear
+                # variables are not accidentally re-characterized as
+                # nonlinear.
+                pass
+                #ans.nonlinear = orig.nonlinear
+            ans.nl = None
 
         if ans.nonlinear.__class__ is list:
             if ans.nonlinear:
@@ -2317,15 +2395,3 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             _operator_handles[child_type] = handle_named_expression_node
         else:
             handlers[child_type] = _before_general_expression
-
-    def _mark_named_expression_as_used(self, ref):
-        assert len(ref) == 1
-        _named_expr_id = ref[0]
-        self.used_named_expressions.add(_named_expr_id)
-        # Record that this named expression was used
-        info = self.subexpression_cache[_named_expr_id][2]
-        _idx = self.active_expression_source[0]
-        if info[_idx] is None:
-            info[_idx] = self.active_expression_source[1]
-        elif info[_idx] != self.active_expression_source[1]:
-            info[_idx] = 0
