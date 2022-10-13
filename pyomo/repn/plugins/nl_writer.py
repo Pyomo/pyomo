@@ -2345,10 +2345,8 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
             ans.nl = None
 
         if ans.nonlinear.__class__ is list:
-            if ans.nonlinear:
-                ans.compile_nonlinear_fragment(self)
-            else:
-                ans.nonlinear = None
+            ans.compile_nonlinear_fragment(self)
+
         linear = {}
         if ans.mult != 1:
             mult, ans.mult = ans.mult, 1
@@ -2365,7 +2363,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 else:
                     prefix = self.template.multiplier % mult
                 ans.nonlinear = prefix + ans.nonlinear[0], ans.nonlinear[1]
-
         elif ans.linear:
             for v, c in ans.linear:
                 if v in linear:
