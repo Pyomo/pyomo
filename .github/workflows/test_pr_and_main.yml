@@ -335,7 +335,14 @@ jobs:
             # TODO: This is a hack to stop test_qt.py from running until we
             # can better troubleshoot why it fails on GHA
             for QTPACKAGE in qt pyqt; do
-                conda remove $QTPACKAGE || echo "$QTPACKAGE not in this environment"
+                # Because conda is insane, removing packages can cause
+                # unrelated packages to be updated (breaking version
+                # specifications specified previously, e.g., in
+                # setup.py).  There doesn't appear to be a good
+                # workaround, so we will just force-remove (recognizing
+                # that it may break other conda cruft).
+                conda remove --force-remove $QTPACKAGE \
+                    || echo "$QTPACKAGE not in this environment"
             done
         fi
         # Re-try Pyomo (optional) dependencies with pip
