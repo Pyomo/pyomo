@@ -1534,12 +1534,22 @@ class AMPLRepn(object):
         if args is None:
             args = []
         if self.linear:
+            nl_sum = ''
             nterms = len(self.linear)
             _v_template = template.var
             _m_template = template.monomial
-            nl_sum = ''.join(_v_template if c == 1 else _m_template % c
-                             for c in map(itemgetter(1), self.linear))
-            args.extend(map(itemgetter(0), self.linear))
+            for v, c in self.linear:
+                if not c:
+                    nterms -= 1
+                    continue
+                if c == 1:
+                    nl_sum += _v_template
+                else:
+                    nl_sum += _m_template % c
+                args.append(v)
+            # nl_sum = ''.join(_v_template if c == 1 else _m_template % c
+            #                  for c in map(itemgetter(1), self.linear))
+            # args.extend(map(itemgetter(0), self.linear))
         else:
             nterms = 0
             nl_sum = ''
@@ -1603,10 +1613,11 @@ class AMPLRepn(object):
         #assert self.mult == 1
         _type = other[0]
         if _type is _MONOMIAL:
-            self.linear.append(other[1:])
+            if other[2]:
+                self.linear.append(other[1:])
         elif _type is _GENERAL:
             other = other[1]
-            if other.nl is not None and other.nonlinear:
+            if other.nl is not None and other.nl[1]:
                 if other.linear:
                     # This is a named expression with both a linear and
                     # nonlinear component.  We want to merge it with
@@ -1634,7 +1645,7 @@ class AMPLRepn(object):
                 mult = other.mult
                 self.const += mult * other.const
                 if other.linear:
-                    self.linear.extend((v, c*mult) for v, c in other.linear)
+                    self.linear.extend((v, c*mult) for v, c in other.linear if c)
                 if other.nonlinear:
                     if other.nonlinear.__class__ is list:
                         other.compile_nonlinear_fragment(self.ActiveVisitor)
@@ -1826,14 +1837,19 @@ def handle_division_node(visitor, node, arg1, arg2):
                 return tmp
             return (_MONOMIAL, arg1[1], tmp[1])
         elif arg1[0] is _GENERAL:
-            tmp = _apply_node_operation(node, (arg1[1].mult, div))
-            if tmp[1] != tmp[1]:
+            tmp = _apply_node_operation(node, (arg1[1].mult, div))[1]
+            if tmp != tmp:
                 # This catches if the multiplier division results in nan
-                return tmp
-            arg1[1].mult = tmp[1]
+                return _CONSTANT, tmp
+            arg1[1].mult = tmp
             return arg1
         elif arg1[0] is _CONSTANT:
             return _apply_node_operation(node, (arg1[1], div))
+    elif arg1[0] is _CONSTANT and not arg1[1]:
+        # trap "0 / expr"
+        if not arg1[1]:
+            return _CONSTANT, 0
+        return (_CONSTANT, 0)
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.division)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
@@ -1912,6 +1928,7 @@ def handle_named_expression_node(visitor, node, arg1):
     # definition.  We will return this as a "var" template, but
     # wrapped in the nonlinear portion of the expression tree.
     repn = node_result_to_amplrepn(arg1)
+    mult, repn.mult = repn.mult, 1
     if not repn.named_exprs:
         repn.named_exprs = set()
 
@@ -1988,12 +2005,10 @@ def handle_named_expression_node(visitor, node, arg1):
             repn.nl = None
             expression_source[2] = True
 
-    if repn.mult != 1:
-        mult = repn.mult
-        repn.mult = 1
+    if mult != 1:
         repn.const *= mult
         if repn.linear:
-            repn.linear = [(v, c*mult) for v, c in repn.linear]
+            repn.linear = [(v, c*mult) for v, c in repn.linear if c]
         if repn.nonlinear:
             if mult == -1:
                 prefix = visitor.template.negation
@@ -2336,8 +2351,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 ans.nonlinear = None
         linear = {}
         if ans.mult != 1:
-            mult = ans.mult
-            ans.mult = 1
+            mult, ans.mult = ans.mult, 1
             ans.const *= mult
             if ans.linear:
                 for v, c in ans.linear:
