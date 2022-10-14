@@ -1515,6 +1515,7 @@ class AMPLRepn(object):
                 prefix += template.negation
             else:
                 prefix += template.multiplier % self.mult
+            self.mult = 1
         if self.named_exprs is not None:
             if named_exprs is None:
                 named_exprs = set(self.named_exprs)
