@@ -43,6 +43,7 @@ class INFO(object):
             self.var_map,
             self.used_named_expressions,
             self.symbolic_solver_labels,
+            True,
         )
 
 class Test_AMPLRepnVisitor(unittest.TestCase):

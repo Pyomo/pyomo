@@ -251,6 +251,14 @@ class NLWriter(object):
         variables.  In all cases, column_order is preserved within each
         group."""
     ))
+    CONFIG.declare('export_defined_variables', ConfigValue(
+        default=True,
+        domain=bool,
+        description='Preferred variable ordering',
+        doc="""
+        If True, export Expression objects to the NL file as 'defined
+        variables'."""
+    ))
 
     def __init__(self):
         self.config = self.CONFIG()
@@ -416,6 +424,7 @@ class _NLWriter_impl(object):
             self.var_map,
             self.used_named_expressions,
             self.symbolic_solver_labels,
+            self.config.export_defined_variables,
         )
         self.next_V_line_id = 0
         self.pause_gc = None
@@ -1928,13 +1937,6 @@ def handle_named_expression_node(visitor, node, arg1):
     # definition.  We will return this as a "var" template, but
     # wrapped in the nonlinear portion of the expression tree.
     repn = node_result_to_amplrepn(arg1)
-    mult, repn.mult = repn.mult, 1
-    if not repn.named_exprs:
-        repn.named_exprs = set()
-
-    # When converting this shared subexpression to a (nonlinear)
-    # node, we want to just reference this subexpression:
-    repn.nl = (visitor.template.var, (_id,))
 
     # A local copy of the expression source list.  This will be updated
     # later if the same Expression node is encountered in another
@@ -1948,6 +1950,27 @@ def handle_named_expression_node(visitor, node, arg1):
     # expression tree that references this node (i.e., do NOT emit the V
     # line).
     expression_source = [None, None, False]
+    # Record this common expression
+    visitor.subexpression_cache[_id] = (
+        # 0: the "component" that generated this expression ID
+        node,
+        # 1: the common subexpression (to be written out)
+        repn,
+        # 2: the source usage information for this subexpression:
+        #    [(con_id, obj_id, substitute); see above]
+        expression_source,
+    )
+
+    if not visitor.use_named_exprs:
+        return _GENERAL, repn.duplicate()
+
+    mult, repn.mult = repn.mult, 1
+    if not repn.named_exprs:
+        repn.named_exprs = set()
+
+    # When converting this shared subexpression to a (nonlinear)
+    # node, we want to just reference this subexpression:
+    repn.nl = (visitor.template.var, (_id,))
 
     if repn.nonlinear:
         # As we will eventually need the compiled form of any nonlinear
@@ -2016,15 +2039,6 @@ def handle_named_expression_node(visitor, node, arg1):
                 prefix = visitor.template.multiplier % mult
             repn.nonlinear = prefix + repn.nonlinear[0], repn.nonlinear[1]
 
-    visitor.subexpression_cache[_id] = (
-        # 0: the "component" that generated this expression ID
-        node,
-        # 1: the common subexpression (to be written out)
-        repn,
-        # 2: the source usage information for this subexpression:
-        #    [(con_id, obj_id, substitute); see above]
-        expression_source,
-    )
     if expression_source[2]:
         if repn.linear:
             return (_MONOMIAL, repn.linear[0][0], 1)
@@ -2032,7 +2046,8 @@ def handle_named_expression_node(visitor, node, arg1):
             return (_CONSTANT, repn.const)
 
     # Defer recording this _id until after we know that this repn will
-    # not be directly substituted.
+    # not be directly substituted (and to ensure that the NL fragment is
+    # added to the order first).
     visitor.subexpression_order.append(_id)
 
     return (_GENERAL, repn.duplicate())
@@ -2255,7 +2270,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def __init__(self, template, subexpression_cache, subexpression_order,
                  external_functions, var_map, used_named_expressions,
-                 symbolic_solver_labels):
+                 symbolic_solver_labels, use_named_exprs):
         super().__init__()
         self.template = template
         self.subexpression_cache = subexpression_cache
@@ -2265,6 +2280,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.var_map = var_map
         self.used_named_expressions = used_named_expressions
         self.symbolic_solver_labels = symbolic_solver_labels
+        self.use_named_exprs = use_named_exprs
         #self.value_cache = {}
 
     def initializeWalker(self, expr):
