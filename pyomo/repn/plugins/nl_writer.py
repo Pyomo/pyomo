@@ -1544,22 +1544,12 @@ class AMPLRepn(object):
         if args is None:
             args = []
         if self.linear:
-            nl_sum = ''
             nterms = len(self.linear)
             _v_template = template.var
             _m_template = template.monomial
-            for v, c in self.linear:
-                if not c:
-                    nterms -= 1
-                    continue
-                if c == 1:
-                    nl_sum += _v_template
-                else:
-                    nl_sum += _m_template % c
-                args.append(v)
-            # nl_sum = ''.join(_v_template if c == 1 else _m_template % c
-            #                  for c in map(itemgetter(1), self.linear))
-            # args.extend(map(itemgetter(0), self.linear))
+            nl_sum = ''.join(_v_template if c == 1 else _m_template % c
+                             for c in map(itemgetter(1), self.linear))
+            args.extend(map(itemgetter(0), self.linear))
         else:
             nterms = 0
             nl_sum = ''
@@ -1623,8 +1613,7 @@ class AMPLRepn(object):
         #assert self.mult == 1
         _type = other[0]
         if _type is _MONOMIAL:
-            if other[2]:
-                self.linear.append(other[1:])
+            self.linear.append(other[1:])
         elif _type is _GENERAL:
             other = other[1]
             if other.nl is not None and other.nl[1]:
@@ -1655,7 +1644,7 @@ class AMPLRepn(object):
                 mult = other.mult
                 self.const += mult * other.const
                 if other.linear:
-                    self.linear.extend((v, c*mult) for v, c in other.linear if c)
+                    self.linear.extend((v, c*mult) for v, c in other.linear)
                 if other.nonlinear:
                     if other.nonlinear.__class__ is list:
                         other.compile_nonlinear_fragment(self.ActiveVisitor)
@@ -1856,10 +1845,7 @@ def handle_division_node(visitor, node, arg1, arg2):
         elif arg1[0] is _CONSTANT:
             return _apply_node_operation(node, (arg1[1], div))
     elif arg1[0] is _CONSTANT and not arg1[1]:
-        # trap "0 / expr"
-        if not arg1[1]:
-            return _CONSTANT, 0
-        return (_CONSTANT, 0)
+        return _CONSTANT, 0
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.division)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
@@ -1966,7 +1952,7 @@ def handle_named_expression_node(visitor, node, arg1):
         return _GENERAL, repn.duplicate()
 
     mult, repn.mult = repn.mult, 1
-    if not repn.named_exprs:
+    if repn.named_exprs is None:
         repn.named_exprs = set()
 
     # When converting this shared subexpression to a (nonlinear)
@@ -2322,9 +2308,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         return _operator_handles[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):
-        # We need to make a copy of the AMPLRepn as we will be modifying
-        # things.
-        ans = node_result_to_amplrepn(result).duplicate()
+        ans = node_result_to_amplrepn(result)
 
         # If this was a nonlinear named expression, and that expression
         # has no linear portion, then we will directly use this as a
