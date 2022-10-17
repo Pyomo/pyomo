@@ -32,7 +32,10 @@ from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
     NegatedStepFunction
 )
 
-from pyomo.core.base import minimize, maximize
+from pyomo.core.base import (
+    minimize, maximize, SortComponents, Block, Objective, Constraint, Var,
+    Param, BooleanVar, LogicalConstraint, Suffix
+)
 from pyomo.core.base.boolean_var import ScalarBooleanVar, _GeneralBooleanVarData
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
@@ -84,6 +87,9 @@ class _EQUIVALENT_TO(object): pass
 
 def _check_var_domain(visitor, node, var):
     if not var.domain.isdiscrete():
+        # Note: in the context of the current writer, this should be unreachable
+        # because we can't handle non-discrete variables at all, so there will
+        # already be errors handling the children of this expression.
         raise ValueError(
             "Variable indirection '%s' contains argument '%s', "
             "which is not a discrete variable" % (node, var))
@@ -270,6 +276,15 @@ def _create_docplex_var(pyomo_var, name=None):
     elif pyomo_var.is_integer():
         return cp.integer_var(min=pyomo_var.bounds[0], max=pyomo_var.bounds[1],
                               name=name)
+    elif pyomo_var.domain.isdiscrete():
+        if pyomo_var.domain.isfinite():
+            return cp.integer_var(domain=[d for d in pyomo_var.domain],
+                                  name=name)
+        else:
+            raise ValueError("The LogicalToDoCplex writer does not support "
+                             "infinite discrete domains. Cannot "
+                             "write Var %s with domain %s" % (pyomo_var.name,
+                                                              pyomo_var.domain))
     else:
         raise ValueError("The LogicalToDoCplex writer can only support "
                          "integer- or Boolean-valued variables. Cannot "
@@ -329,6 +344,8 @@ def _create_docplex_interval_var(visitor, interval_var):
 
     # Figure out constraints on its length
     length = interval_var.length
+    if length.fixed:
+        cpx_interval_var.set_length(length.value)
     if length.lb is not None:
         cpx_interval_var.set_length_min(length.lb)
     if length.ub is not None:
@@ -336,9 +353,8 @@ def _create_docplex_interval_var(visitor, interval_var):
 
     # Figure out constraints on start time
     start_time = interval_var.start_time
-    start = start_time.value if start_time.fixed else None
-    if start is not None:
-        cpx_interval_var.set_start(start)
+    if start_time.fixed:
+        cpx_interval_var.set_start(start_time.value)
     else:
         if start_time.lb is not None:
             cpx_interval_var.set_start_min(start_time.lb)
@@ -347,9 +363,8 @@ def _create_docplex_interval_var(visitor, interval_var):
 
     # Figure out constraints on end time
     end_time = interval_var.end_time
-    end = end_time.value if end_time.fixed else None
-    if end is not None:
-        cpx_interval_var.set_end(end)
+    if end_time.fixed:
+        cpx_interval_var.set_end(end_time.value)
     else:
         if end_time.lb is not None:
             cpx_interval_var.set_end_min(end_time.lb)
@@ -390,7 +405,6 @@ def _before_interval_var_start_time(visitor, child):
     interval_var = child.get_associated_interval_var()
     if _id not in visitor.var_map:
         cpx_interval_var = _get_docplex_interval_var(visitor, interval_var)
-        #visitor.var_map[_id] = cp.start_of(cpx_interval_var)
 
     return False, (_START_TIME, visitor.var_map[id(interval_var)])
 
@@ -399,7 +413,6 @@ def _before_interval_var_end_time(visitor, child):
     interval_var = child.get_associated_interval_var()
     if _id not in visitor.var_map:
         cpx_interval_var = _get_docplex_interval_var(visitor, interval_var)
-        #visitor.var_map[_id] = cp.end_of(cpx_interval_var)
 
     return False, (_END_TIME, visitor.var_map[id(interval_var)])
 
@@ -762,10 +775,6 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         return True, None
 
     def exitNode(self, node, data):
-        print(node.__class__)
-        print(node.to_string(verbose=True))
-        for thing in data:
-            print(thing)
         return self._operator_handles[node.__class__](self, node, *data)
 
     finalizeResult = None
@@ -812,7 +821,7 @@ class DocplexWriter(object):
 
         cpx_model = cp.CpoModel()
         visitor = LogicalToDoCplex(
-            docplex_model,
+            cpx_model,
             symbolic_solver_labels=config.symbolic_solver_labels)
 
         active_objs = []
@@ -854,9 +863,21 @@ class DocplexWriter(object):
                 elif cons.upper is not None:
                     cpx_model.add(cons.upper >= expr[1])
 
+        # Write interval vars (these are secretly constraints if they have to be
+        # scheduled)
+        for block in component_map[IntervalVar]:
+            for var in block.component_data_objects(
+                    IntervalVar,
+                    descend_into=False,
+                    sort=sorter):
+                # we just walk it so it gets added to the model. Note that
+                # adding it again here would add it for a second time, so that's
+                # why we don't.
+                visitor.walk_expression((var, var, 0))
+
         # Write logical constraints
         for block in component_map[LogicalConstraint]:
-            for cons in model.component_data_objects(
+            for cons in block.component_data_objects(
                     LogicalConstraint,
                     active=True,
                     descend_into=False,
@@ -1011,18 +1032,10 @@ if __name__ == '__main__':
     m.a = Var(m.I)
     m.x = Var(within=PositiveIntegers, bounds=(6,8))
 
-    # e = m.a[m.x]
-    # ans = _handle_getitem(None, e, [m.a, m.x])
-    # print("\n", e)
-    # print(tostr(ans))
 
     # m.b = Var(m.I, m.I)
     # m.y = Var(within=[1, 3, 5])
 
-    # e = m.a[m.x]
-    # ans = _handle_getitem(None, e, [m.a, m.x])
-    # print("\n", e)
-    # print(tostr(ans))
 
     # e = m.b[m.x, 3]
     # ans = _handle_getitem(None, e, [m.b, m.x, 3])
