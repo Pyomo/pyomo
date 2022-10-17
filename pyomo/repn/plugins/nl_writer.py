@@ -1332,52 +1332,14 @@ class _NLWriter_impl(object):
         return all_linear_vars, all_nonlinear_vars, nnz_by_var
 
     def _count_subexpression_occurances(self):
-        # We now need to go through the subexpression cache and update
-        # the flag for nested subexpressions used by multiple components
-        # (the walker can only update the flag in subexpressions
-        # appearing explicitly in the tree, so we now need to propagate
-        # this usage info into subexpressions nested in other
-        # subexpressions).
-        #
-        # We need to walk twice: once to sort out the use in Constraints
-        # and once to sort out the use in Objectives
-        for idx in (0, 1):
-            cache = self.subexpression_cache
-            for id_ in self.subexpression_order:
-                src_id = cache[id_][2][idx]
-                if src_id is None:
-                    continue
-                # This expression is used by this component type
-                # (constraint or objective); ensure that all
-                # subexpressions (recursively) used by this expression
-                # are also marked as being used by this component type
-                queue = [id_]
-                while queue:
-                    info = cache[queue.pop()]
-                    if not info[1].nonlinear:
-                        # Subexpressions can only appear in the
-                        # nonlinear terms.  If there are none, then we
-                        # are done.
-                        continue
-                    for subid in info[1].nonlinear[1]:
-                        # Check if this "id" (normally a var id, but
-                        # could be a subexpression id) is a
-                        # subexpression id
-                        if subid not in cache:
-                            continue
-                        # Check if we need to update this subexpression:
-                        # either it has never been marked as being used
-                        # by this component type, or else it was used by
-                        # a different id.  If we need to update the
-                        # flag, then do so and recurse into it
-                        target = cache[subid][2]
-                        if target[idx] is None:
-                            target[idx] = src_id
-                            queue.append(subid)
-                        elif target[idx] and target[idx] != src_id:
-                            target[idx] = 0
-                            queue.append(subid)
-        # Now we can reliably know where nested subexpressions are used.
+        """Categorize named subexpressions based on where they are used.
+
+        This iterates through the `subexpression_order` and categorizes
+        each _id based on where it is used (1 constraint, many
+        constraints, 1 objective, many objectives, constraints and
+        objectives).
+
+        """
         # Group them into:
         #   [ used in both objectives and constraints,
         #     used by more than one constraint (but no objectives),
