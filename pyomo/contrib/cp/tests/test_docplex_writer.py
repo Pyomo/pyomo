@@ -454,7 +454,7 @@ class TestCPExpressionWalker_IntervalVars(CommonTest):
 
         m.silly = LogicalConstraint(expr=m.i.is_present)
         visitor = self.get_visitor()
-        expr = visitor.walk_expression((m.silly.body, m.silly, 0))
+        expr = visitor.walk_expression((m.silly.expr, m.silly, 0))
         self.assertIn(id(m.i), visitor.var_map)
         i = visitor.var_map[id(m.i)]
         # Check that docplex knows it's optional
@@ -479,7 +479,21 @@ class TestCPExpressionWalker_IntervalVars(CommonTest):
         # Not testing the expression here because sometime we might optimize out
         # the presence_of call for fixed absent vars, but for now I haven't.
 
+    def test_interval_var_fixed_length(self):
+        m = ConcreteModel()
+        m.i = IntervalVar(length=4, start=(2, 7), end=(6, 11), optional=True)
+        m.silly = LogicalConstraint(expr=m.i.is_present)
 
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((m.silly.expr, m.silly, 0))
+
+        self.assertIn(id(m.i), visitor.var_map)
+        i = visitor.var_map[id(m.i)]
+
+        self.assertTrue(i.is_optional())
+        self.assertEqual(i.get_length(), (4, 4))
+        self.assertEqual(i.get_start(), (2, 7))
+        self.assertEqual(i.get_end(), (6, 11))
 
 class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
     def test_start_before_start(self):

@@ -328,16 +328,11 @@ def _create_docplex_interval_var(visitor, interval_var):
         cpx_interval_var.set_present()
 
     # Figure out constraints on its length
-    length = interval_var.length.value if interval_var.length.fixed else \
-             None
-    if length is not None:
-        cpx_interval_var.set_length(length)
-    else:
-        length = interval_var.length
-        if length.lb is not None:
-            cpx_interval_var.set_length_min(length.lb)
-        if length.ub is not None:
-            cpx_interval_var.set_length_max(length.ub)
+    length = interval_var.length
+    if length.lb is not None:
+        cpx_interval_var.set_length_min(length.lb)
+    if length.ub is not None:
+        cpx_interval_var.set_length_max(length.ub)
 
     # Figure out constraints on start time
     start_time = interval_var.start_time
@@ -346,9 +341,9 @@ def _create_docplex_interval_var(visitor, interval_var):
         cpx_interval_var.set_start(start)
     else:
         if start_time.lb is not None:
-            cpx_interval_var.set_start_min(start.lb)
+            cpx_interval_var.set_start_min(start_time.lb)
         if start_time.ub is not None:
-            cpx_interval_var.set_start_max(start.ub)
+            cpx_interval_var.set_start_max(start_time.ub)
 
     # Figure out constraints on end time
     end_time = interval_var.end_time
@@ -357,9 +352,9 @@ def _create_docplex_interval_var(visitor, interval_var):
         cpx_interval_var.set_end(end)
     else:
         if end_time.lb is not None:
-            cpx_interval_var.set_end_min(end.lb)
+            cpx_interval_var.set_end_min(end_time.lb)
         if end_time.ub is not None:
-            cpx_interval_var.set_end_max(end.ub)
+            cpx_interval_var.set_end_max(end_time.ub)
 
     return cpx_interval_var
 
@@ -480,8 +475,8 @@ def _get_int_valued_expr(arg):
     elif arg[0] is _END_TIME:
         return cp.end_of(arg[1])
     else:
-        raise DeveloperError("I don't know how to get an integer var from "
-                             "object in class %s" % str(arg[0]))
+        raise DeveloperError("Attempting to get a docplex integer-valued "
+                             "expression from object in class %s" % str(arg[0]))
 
 def _get_bool_valued_expr(arg):
     if arg[0] is _GENERAL:
@@ -494,8 +489,8 @@ def _get_bool_valued_expr(arg):
         # idiosyncracies.
         return arg[1] == True
     else:
-        raise DeveloperError("I don't know how to get an integer var from "
-                             "object in class %s" % str(arg[0]))
+        raise DeveloperError("Attempting to get a docplex Boolean-valued "
+                             "expression from object in class %s" % str(arg[0]))
 
 def _handle_monomial_expr(visitor, node, arg1, arg2):
     return (_GENERAL, cp.times(_get_int_valued_expr(arg1),
