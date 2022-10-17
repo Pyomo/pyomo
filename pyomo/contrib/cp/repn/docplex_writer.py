@@ -907,30 +907,31 @@ class CPOptimizerSolver(object):
         description="Dictionary of solver options."
     ))
 
-    _solve_status_map = {
-        cp.SOLVE_STATUS_UNKNOWN: TerminationCondition.unknown,
-        cp.SOLVE_STATUS_INFEASIBLE: TerminationCondition.infeasible,
-        cp.SOLVE_STATUS_FEASIBLE: TerminationCondition.feasible,
-        cp.SOLVE_STATUS_OPTIMAL: TerminationCondition.optimal,
-        cp.SOLVE_STATUS_JOB_ABORTED: None, # we need the fail status
-        cp.SOLVE_STATUS_JOB_FAILED: TerminationCondition.solverFailure
-    }
-    _stop_cause_map = {
-        # We only need to check this if we get an 'aborted' status, so if this
-        # says it hasn't been stopped, we're just confused at this point.
-        cp.STOP_CAUSE_NOT_STOPPED: TerminationCondition.unknown,
-        cp.STOP_CAUSE_LIMIT: TerminationCondition.maxTimeLimit,
-        # User called exit, maybe in a callback.
-        cp.STOP_CAUSE_EXIT: TerminationCondition.userInterrupt,
-        # docplex says "Search aborted externally"
-        cp.STOP_CAUSE_ABORT: TerminationCondition.userInterrupt,
-        # This is in their documentation, but not here, for some reason
-        #cp.STOP_CAUSE_UNKNOWN: TerminationCondition.unkown
-    }
-
     def __init__(self, **kwds):
         self.config = self.CONFIG()
         self.config.set_value(kwds)
+        if docplex_available:
+            self._solve_status_map = {
+                cp.SOLVE_STATUS_UNKNOWN: TerminationCondition.unknown,
+                cp.SOLVE_STATUS_INFEASIBLE: TerminationCondition.infeasible,
+                cp.SOLVE_STATUS_FEASIBLE: TerminationCondition.feasible,
+                cp.SOLVE_STATUS_OPTIMAL: TerminationCondition.optimal,
+                cp.SOLVE_STATUS_JOB_ABORTED: None, # we need the fail status
+                cp.SOLVE_STATUS_JOB_FAILED: TerminationCondition.solverFailure
+            }
+            self._stop_cause_map = {
+                # We only need to check this if we get an 'aborted' status, so
+                # if this says it hasn't been stopped, we're just confused at
+                # this point.
+                cp.STOP_CAUSE_NOT_STOPPED: TerminationCondition.unknown,
+                cp.STOP_CAUSE_LIMIT: TerminationCondition.maxTimeLimit,
+                # User called exit, maybe in a callback.
+                cp.STOP_CAUSE_EXIT: TerminationCondition.userInterrupt,
+                # docplex says "Search aborted externally"
+                cp.STOP_CAUSE_ABORT: TerminationCondition.userInterrupt,
+                # This is in their documentation, but not here, for some reason
+                #cp.STOP_CAUSE_UNKNOWN: TerminationCondition.unkown
+    }
 
     @property
     def options(self):
