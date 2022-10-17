@@ -937,6 +937,13 @@ class CPOptimizerSolver(object):
     def options(self):
         return self.config.options
 
+    # Support use as a context manager under current solver API
+    def __enter__(self):
+        return self
+
+    def __exit__(self, t, v, traceback):
+        pass
+
     def solve(self, model, **kwds):
         """Solve the model.
 
