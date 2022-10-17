@@ -1581,6 +1581,9 @@ class AMPLRepn(object):
             return prefix + (template.const % 0), [], named_exprs
 
     def compile_nonlinear_fragment(self, visitor):
+        if not self.nonlinear:
+            self.nonlinear = None
+            return
         args = []
         nterms = len(self.nonlinear)
         nl_sum = ''.join(map(itemgetter(0), self.nonlinear))
@@ -1591,10 +1594,8 @@ class AMPLRepn(object):
             self.nonlinear = (visitor.template.nary_sum % nterms) + nl_sum, args
         elif nterms == 2:
             self.nonlinear = visitor.template.binary_sum + nl_sum, args
-        elif nterms == 1:
+        else: # nterms == 1:
             self.nonlinear = nl_sum, args
-        else: # nterms == 0
-            self.nonlinear = None
 
     def append(self, other):
         """Append a child result from acceptChildResult
@@ -2018,7 +2019,7 @@ def handle_named_expression_node(visitor, node, arg1):
     if mult != 1:
         repn.const *= mult
         if repn.linear:
-            repn.linear = [(v, c*mult) for v, c in repn.linear if c]
+            repn.linear = [(v, c*mult) for v, c in repn.linear]
         if repn.nonlinear:
             if mult == -1:
                 prefix = visitor.template.negation
