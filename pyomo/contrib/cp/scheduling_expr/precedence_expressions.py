@@ -49,7 +49,7 @@ class BeforeExpression(ExpressionBase, BooleanValue):
             first = "%s + %s" % (values[0], delay)
         else:
             first = "%s - %s" % (values[0], abs(delay))
-        return "%s <= %s" % (values[0], values[1])
+        return "%s <= %s" % (first, values[1])
 
 
 class AtExpression(ExpressionBase, BooleanValue):
@@ -84,10 +84,10 @@ class AtExpression(ExpressionBase, BooleanValue):
     def _to_string(self, values, verbose, smap):
         delay = int(values[2])#self.delay
         if delay == 0:
-            first = values[1]
+            first = values[0]
         elif delay > 0:
-            first = "%s + %s" % (values[1], delay)
+            first = "%s + %s" % (values[0], delay)
         else:
-            first = "%s - %s" % (values[1], abs(delay))
-        return "%s == %s" % (values[1], values[2])
+            first = "%s - %s" % (values[0], abs(delay))
+        return "%s == %s" % (first, values[1])
 

@@ -38,7 +38,7 @@ class IntervalVarTimePoint(ScalarVar):
         return BeforeExpression(self, time, delay)
 
     def after(self, time, delay=0):
-        return BeforeExpression(time, self, -delay)
+        return BeforeExpression(time, self, delay)
 
     def at(self, time, delay=0):
         return AtExpression(self, time, delay)
