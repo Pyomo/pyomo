@@ -30,8 +30,11 @@ from pyomo.environ import (
     NonPositiveIntegers, Integers, inequality, Expression, Reals, Set
 )
 
-if docplex_available:
+try:
     import docplex.cp.model as cp
+    docplex_available = True
+except:
+    docplex_available = False
 
 class CommonTest(unittest.TestCase):
     def get_visitor(self):

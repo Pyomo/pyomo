@@ -12,15 +12,20 @@
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.cp import IntervalVar, Pulse, Step, AlwaysIn
-from pyomo.contrib.cp.repn.docplex_writer import (
-    docplex_available, LogicalToDoCplex)
+from pyomo.contrib.cp.repn.docplex_writer import LogicalToDoCplex
 from pyomo.environ import (
     ConcreteModel, Set, Var, Integers, LogicalConstraint, implies, value,
-    TerminationCondition, Constraint
+    TerminationCondition, Constraint, PositiveIntegers, maximize, minimize,
+    Objective
 )
 from pyomo.opt import (
     WriterFactory, SolverFactory
 )
+try:
+    import docplex.cp.model as cp
+    docplex_available = True
+except:
+    docplex_available = False
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
 class TestWriteModel(unittest.TestCase):
@@ -70,6 +75,7 @@ class TestSolveModel(unittest.TestCase):
 
         m.read_story = IntervalVar(start=(15, 24), end=(0, 24), length=(2, 3))
         m.sweep_crumbs = IntervalVar(optional=True, length=1, end=(0, 24))
+        m.do_dishes = IntervalVar(optional=True, length=5, end=(0,24))
 
         m.num_crumbs = Var(domain=Integers, bounds=(0, 100))
 
@@ -85,7 +91,7 @@ class TestSolveModel(unittest.TestCase):
 
         m.mice_occupied = sum(Pulse(m.eat_cookie[i], 1) for i in range(2)) + \
                           Step(m.read_story.start_time, 1) + \
-                          Pulse(m.sweep_crumbs, 1)
+                          Pulse(m.sweep_crumbs, 1) - Pulse(m.do_dishes, 1)
 
         # Must keep exactly one mouse occupied for a 25-hour day
         m.treat_your_mouse_well = LogicalConstraint(
@@ -107,7 +113,6 @@ class TestSolveModel(unittest.TestCase):
         # So there was sweeping:
         self.assertTrue(value(m.sweep_crumbs.is_present))
 
-        # Precedence:
         # start with the first cookie:
         self.assertEqual(value(m.eat_cookie[0].start_time), 0)
         self.assertEqual(value(m.eat_cookie[0].end_time), 8)
@@ -124,6 +129,15 @@ class TestSolveModel(unittest.TestCase):
         # indefinitely (in this particular retelling)
         self.assertEqual(value(m.read_story.start_time), 17)
 
+        # Since doing the dishes actually *bores* a mouse, we leave the dishes
+        # in the sink
+        self.assertFalse(value(m.do_dishes.is_present))
+
+        self.assertEqual(results.problem.number_of_objectives, 0)
+        self.assertEqual(results.problem.number_of_constraints, 5)
+        self.assertEqual(results.problem.number_of_integer_vars, 1)
+        self.assertEqual(results.problem.number_of_interval_vars, 5)
+
     def test_solve_infeasible_problem(self):
         m = ConcreteModel()
         m.x = Var(within=[1, 2, 3, 5])
@@ -135,3 +149,43 @@ class TestSolveModel(unittest.TestCase):
 
         self.assertIsNone(m.x.value)
 
+    def test_solve_max_problem(self):
+        m = ConcreteModel()
+        m.cookies = Var(domain=PositiveIntegers, bounds=(7, 10))
+        m.chocolate_chip_equity = Constraint(expr=m.cookies <= 9)
+
+        m.obj = Objective(expr=m.cookies, sense=maximize)
+
+        results = SolverFactory('cp_optimizer').solve(m)
+
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertEqual(value(m.cookies), 9)
+
+        self.assertEqual(results.problem.number_of_objectives, 1)
+        self.assertEqual(results.problem.sense, maximize)
+        self.assertEqual(results.problem.lower_bound, 9)
+        self.assertEqual(results.problem.upper_bound, 9)
+
+    def test_solve_min_problem(self):
+        m = ConcreteModel()
+        m.x = Var([1, 2, 3], bounds=(4, 6), domain=Integers)
+        m.y = Var(within=[1, 2, 3])
+
+        m.c1 = Constraint(expr=m.y >= 2.5)
+        @m.Constraint([1, 2, 3])
+        def x_bounds(m, i):
+            return m.x[i] >= 3*(i - 1)
+        m.obj = Objective(expr=m.x[m.y])
+
+        results = SolverFactory('cp_optimizer').solve(m)
+
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
+        self.assertEqual(value(m.x[3]), 6)
+        self.assertEqual(value(m.y), 3)
+
+        self.assertEqual(results.problem.number_of_objectives, 1)
+        self.assertEqual(results.problem.sense, minimize)
+        self.assertEqual(results.problem.lower_bound, 6)
+        self.assertEqual(results.problem.upper_bound, 6)

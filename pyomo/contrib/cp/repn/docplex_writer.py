@@ -862,7 +862,7 @@ class DocplexWriter(object):
                 if cons.lower is not None and cons.upper is not None:
                     cpx_model.add(cp.range(expr[1], lb=cons.lb, ub=cons.ub))
                 elif cons.lower is not None:
-                    cpx_model.add(value(cons.lb) <= expr[1])
+                    cpx_model.add(cons.lb <= expr[1])
                 elif cons.upper is not None:
                     cpx_model.add(cons.ub >= expr[1])
 
@@ -1033,63 +1033,3 @@ class CPOptimizerSolver(object):
                         "variable map: %s" % type(py_var))
 
         return results
-
-
-if __name__ == '__main__':
-    from pyomo.common.formatting import tostr
-    from pyomo.environ import *
-    m = ConcreteModel()
-    m.I = RangeSet(10)
-    m.a = Var(m.I)
-    m.x = Var(within=PositiveIntegers, bounds=(6,8))
-
-
-    # m.b = Var(m.I, m.I)
-    # m.y = Var(within=[1, 3, 5])
-
-
-    # e = m.b[m.x, 3]
-    # ans = _handle_getitem(None, e, [m.b, m.x, 3])
-    # print("\n", e)
-    # print(tostr(ans))
-
-    # e = m.b[3, m.x]
-    # ans = _handle_getitem(None, e, [m.b, 3, m.x])
-    # print("\n", e)
-    # print(tostr(ans))
-
-    # e = m.b[m.x, m.x]
-    # ans = _handle_getitem(None, e, [m.b, m.x, m.x])
-    # print("\n", e)
-    # print(tostr(ans))
-
-    # e = m.b[m.x, m.y]
-    # ans = _handle_getitem(None, e, [m.b, m.x, m.y])
-    # print("\n", e)
-    # print(tostr(ans))
-
-    # e = m.a[m.x - m.y]
-    # ans = _handle_getitem(None, e, [m.a, m.x - m.y])
-    # print("\n", e)
-    # print(tostr(ans))
-
-    docplex_model= cp.CpoModel()
-    visitor = LogicalToDoCplex(docplex_model, symbolic_solver_labels=True)
-
-    m.c = Constraint(expr=m.x**2 + 4 + 2*6*m.x/(4*m.x) >= 0)
-    expr = visitor.walk_expression((m.c.body, m.c, 0))
-    print(expr[1])
-
-    m.i = IntervalVar(optional=True)
-    m.i2 = IntervalVar([1, 2], optional=False, length=1)
-    m.c2 = LogicalConstraint(expr=m.i.start_time.before(m.i2[1].end_time))
-    expr = visitor.walk_expression((m.c2.body, m.c2, 0))
-    print(expr[1])
-
-    m.obj = Objective(sense=maximize, expr=m.x)
-
-    opt = SolverFactory('cp_optimizer', options={'TimeLimit': 5})
-    opt.options['TimeLimit'] = 10
-    results = opt.solve(m, tee=True)
-    print(results)
-    m.pprint()
