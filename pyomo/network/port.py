@@ -14,6 +14,7 @@ __all__ = [ 'Port' ]
 import logging, sys
 from weakref import ref as weakref_ref
 
+from pyomo.common.autoslots import AutoSlots
 from pyomo.common.collections import ComponentMap
 from pyomo.common.deprecation import RenamedClass
 from pyomo.common.formatting import tabular_writer
@@ -48,6 +49,11 @@ class _PortData(ComponentData):
     """
 
     __slots__ = ('vars', '_arcs', '_sources', '_dests', '_rules', '_splitfracs')
+    __autoslot_mappers__ = {
+        '_arcs': AutoSlots.weakref_sequence_mapper,
+        '_sources': AutoSlots.weakref_sequence_mapper,
+        '_dests': AutoSlots.weakref_sequence_mapper,
+    }
 
     def __init__(self, component=None):
         #
@@ -65,26 +71,6 @@ class _PortData(ComponentData):
         self._dests = []
         self._rules = {}
         self._splitfracs = ComponentMap()
-
-    def __getstate__(self):
-        state = super(_PortData, self).__getstate__()
-        for i in _PortData.__slots__:
-            state[i] = getattr(self, i)
-
-        # Remove/resolve weak references
-        for i in ('_arcs', '_sources', '_dests'):
-            state[i] = [ref() for ref in state[i]]
-        return state
-
-    def __setstate__(self, state):
-        state['_arcs'] = [weakref_ref(i) for i in state['_arcs']]
-        state['_sources'] = [weakref_ref(i) for i in state['_sources']]
-        state['_dests'] = [weakref_ref(i) for i in state['_dests']]
-        super(_PortData, self).__setstate__(state)
-
-    # Note: None of the slots on this class need to be edited, so we
-    # don't need to implement a specialized __setstate__ method, and
-    # can quietly rely on the super() class's implementation.
 
     def __getattr__(self, name):
         """Returns `self.vars[name]` if it exists"""

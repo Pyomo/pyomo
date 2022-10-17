@@ -180,7 +180,7 @@ class InitializerBase(object):
         classes (where __slots__ are only declared on the most derived
         class).
         """
-        return {k:getattr(self,k) for k in self.__slots__}
+        return {k:getattr(self, k) for k in self.__slots__}
 
     def __setstate__(self, state):
         for key, val in state.items():
@@ -206,7 +206,7 @@ class InitializerBase(object):
 
 class ConstantInitializer(InitializerBase):
     """Initializer for constant values"""
-    __slots__ = ('val','verified')
+    __slots__ = ('val', 'verified')
 
     def __init__(self, val):
         self.val = val

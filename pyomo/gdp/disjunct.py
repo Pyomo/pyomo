@@ -16,7 +16,8 @@ import types
 from math import fabs
 from weakref import ref as weakref_ref
 
-from pyomo.common.deprecation import RenamedClass,  deprecation_warning
+from pyomo.common.autoslots import AutoSlots
+from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name, NOTSET
@@ -63,6 +64,8 @@ class AutoLinkedBinaryVar(ScalarVar):
 
     INTEGER_TOLERANCE = 0.001
 
+    __autoslot_mappers__ = {'_associated_boolean': AutoSlots.weakref_mapper}
+
     def __init__(self, boolean_var=None):
         super().__init__(domain=Binary)
         self._associated_boolean = weakref_ref(boolean_var)
@@ -96,17 +99,6 @@ class AutoLinkedBinaryVar(ScalarVar):
         bool_var = self.get_associated_boolean()
         if bool_var.is_fixed():
             bool_var.unfix()
-
-    def __getstate__(self):
-        state = super().__getstate__()
-        if self._associated_boolean is not None:
-            state['_associated_boolean'] = self._associated_boolean()
-        return state
-
-    def __setstate__(self, state):
-        super().__setstate__(state)
-        if self._associated_boolean is not None:
-            self._associated_boolean = weakref_ref(self._associated_boolean)
 
 
 class AutoLinkedBooleanVar(ScalarBooleanVar):
@@ -434,7 +426,7 @@ _DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
 
 class _DisjunctionData(ActiveComponentData):
-    __slots__ = ('disjuncts','xor', '_algebraic_constraint')
+    __slots__ = ('disjuncts', 'xor', '_algebraic_constraint')
     _NoArgument = (0,)
 
     @property
@@ -457,15 +449,6 @@ class _DisjunctionData(ActiveComponentData):
         # pointer to XOR (or OR) constraint if this disjunction has been
         # transformed. None if it has not been transformed
         self._algebraic_constraint = None
-
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        result = super(_DisjunctionData, self).__getstate__()
-        for i in _DisjunctionData.__slots__:
-            result[i] = getattr(self, i)
-        return result
 
     def set_value(self, expr):
         for e in expr:

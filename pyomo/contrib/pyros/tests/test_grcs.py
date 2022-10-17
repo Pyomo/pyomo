@@ -2965,5 +2965,136 @@ class testMasterFeasibilityUnitConsistency(unittest.TestCase):
             )
         )
 
+
+class TestSubsolverTiming(unittest.TestCase):
+    """
+    Tests to confirm that the PyROS subsolver timing routines
+    work appropriately.
+    """
+    def simple_nlp_model(self):
+        """
+        Create simple NLP for the unit tests defined
+        within this class
+        """
+        # define model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u1 = Param(initialize=1.125, mutable=True)
+        m.u2 = Param(initialize=1, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+
+        return m
+
+    @unittest.skipUnless(
+        SolverFactory('appsi_ipopt').available(exception_flag=False),
+        "Local NLP solver is not available.",
+    )
+    def test_pyros_appsi_ipopt(self):
+        """
+        Test PyROS usage with solver appsi ipopt
+        works without exceptions.
+        """
+        m = self.simple_nlp_model()
+
+        # Define the uncertainty set
+        # we take the parameter `u2` to be 'fixed'
+        ellipsoid = AxisAlignedEllipsoidalSet(
+            center=[1.125, 1],
+            half_lengths=[1, 0],
+        )
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('appsi_ipopt')
+        global_subsolver = SolverFactory("appsi_ipopt")
+
+        # Call the PyROS solver
+        # note: second-stage variable and uncertain params have units
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u1, m.u2],
+            uncertainty_set=ellipsoid,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            objective_focus=ObjectiveType.worst_case,
+            solve_master_globally=False,
+            bypass_global_separation=True,
+        )
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg="Did not identify robust optimal solution to problem instance."
+        )
+        self.assertFalse(
+            math.isnan(results.time),
+            msg=(
+                "PyROS solve time is nan (expected otherwise since subsolver"
+                "time estimates are made using TicTocTimer"
+            ),
+        )
+
+    @unittest.skipUnless(
+        SolverFactory('gams:ipopt').available(exception_flag=False),
+        "Local NLP solver GAMS/IPOPT is not available.",
+    )
+    def test_pyros_gams_ipopt(self):
+        """
+        Test PyROS usage with solver GAMS ipopt
+        works without exceptions.
+        """
+        m = self.simple_nlp_model()
+
+        # Define the uncertainty set
+        # we take the parameter `u2` to be 'fixed'
+        ellipsoid = AxisAlignedEllipsoidalSet(
+            center=[1.125, 1],
+            half_lengths=[1, 0],
+        )
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('gams:ipopt')
+        global_subsolver = SolverFactory("gams:ipopt")
+
+        # Call the PyROS solver
+        # note: second-stage variable and uncertain params have units
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1],
+            second_stage_variables=[m.x2],
+            uncertain_params=[m.u1, m.u2],
+            uncertainty_set=ellipsoid,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            objective_focus=ObjectiveType.worst_case,
+            solve_master_globally=False,
+            bypass_global_separation=True,
+        )
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_feasible,
+            msg="Did not identify robust optimal solution to problem instance."
+        )
+        self.assertFalse(
+            math.isnan(results.time),
+            msg=(
+                "PyROS solve time is nan (expected otherwise since subsolver"
+                "time estimates are made using TicTocTimer"
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

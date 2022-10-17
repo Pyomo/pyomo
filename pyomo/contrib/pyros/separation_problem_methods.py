@@ -20,8 +20,11 @@ from pyomo.contrib.pyros.util import get_main_elapsed_time, is_certain_parameter
 from pyomo.contrib.pyros.uncertainty_sets import Geometry
 from pyomo.common.errors import ApplicationError
 from pyomo.contrib.pyros.util import ABS_CON_CHECK_FEAS_TOL
+from pyomo.common.timing import TicTocTimer
+from pyomo.contrib.pyros.util import TIC_TOC_SOLVE_TIME_ATTR
 import os
 from copy import deepcopy
+
 
 def add_uncertainty_set_constraints(model, config):
     """
@@ -559,7 +562,9 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
     # === Initialize separation problem; fix first-stage variables
     initialize_separation(model_data, config)
 
+    timer = TicTocTimer()
     for opt in backup_solvers:
+        timer.tic(msg=None)
         try:
             results = opt.solve(
                 nlp_model,
@@ -576,6 +581,12 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
                 f"optimize master problem in iteration {model_data.iteration}"
             )
             raise
+        else:
+            setattr(
+                results.solver,
+                TIC_TOC_SOLVE_TIME_ATTR,
+                timer.toc(msg=None),
+            )
 
         # record termination condition for this particular solver
         solver_status_dict[str(opt)] = results.solver.termination_condition

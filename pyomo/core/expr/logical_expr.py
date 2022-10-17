@@ -114,17 +114,6 @@ class BooleanExpression(ExpressionBase, BooleanValue):
         """
         return self._args_[:self.nargs()]
 
-    def __getstate__(self):
-        """
-        Pickle the expression object
-
-        Returns:
-            The pickled state.
-        """
-        state = super().__getstate__()
-        for i in BooleanExpression.__slots__:
-           state[i] = getattr(self,i)
-        return state
 
 class BooleanExpressionBase(metaclass=RenamedClass):
     __renamed__new_class__ = BooleanExpression
@@ -351,18 +340,6 @@ class NaryBooleanExpression(BooleanExpression):
 
     def getname(self, *arg, **kwd):
         return 'NaryBooleanExpression'
-
-    def __getstate__(self):
-        """
-        Pickle the expression object
-
-        Returns:
-            The pickled state.
-        """
-        state = super().__getstate__()
-        for i in NaryBooleanExpression.__slots__:
-           state[i] = getattr(self, i)
-        return state
 
 
 def _add_to_and_or_expression(orig_expr, new_arg):

@@ -60,7 +60,6 @@ if _mode == Mode.pyomo5_trees:
                                               MonomialTermExpression,
                                               DivisionExpression,
                                               NPV_DivisionExpression,
-                                              _LinearOperatorExpression,
                                               SumExpressionBase,
                                               NPV_SumExpression, SumExpression,
                                               _MutableSumExpression,
