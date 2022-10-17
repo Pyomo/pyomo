@@ -2298,7 +2298,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 # This named expression has both a linear and a
                 # nonlinear component, and possibly a multiplier and
                 # constant.  We will not include this named expression
-                # and instead will expost the components so that linear
+                # and instead will expose the components so that linear
                 # variables are not accidentally re-characterized as
                 # nonlinear.
                 pass
