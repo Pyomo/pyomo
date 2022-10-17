@@ -64,8 +64,6 @@ from pyomo.core.base import Set, RangeSet
 from pyomo.network import Port
 ###
 
-from pytest import set_trace
-
 logger = logging.getLogger('pyomo.contrib.cp')
 
 # These are things that don't need special handling:

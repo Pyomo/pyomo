@@ -33,7 +33,6 @@ from pyomo.environ import (
 if docplex_available:
     import docplex.cp.model as cp
 
-@unittest.skipIf(not docplex_available, "docplex is not available")
 class CommonTest(unittest.TestCase):
     def get_visitor(self):
         docplex_model= cp.CpoModel()
@@ -52,6 +51,7 @@ class CommonTest(unittest.TestCase):
 
         return m
 
+@unittest.skipIf(not docplex_available, "docplex is not available")
 class TestCPExpressionWalker_AlgebraicExpressions(CommonTest):
     def test_write_addition(self):
         m = self.get_model()
@@ -168,6 +168,7 @@ class TestCPExpressionWalker_AlgebraicExpressions(CommonTest):
         self.assertTrue(expr[1].equals(cp.max(a[i] for i in m.I)))
 
 
+@unittest.skipIf(not docplex_available, "docplex is not available")
 class TestCPExpressionWalker_LogicalExpressions(CommonTest):
     def test_write_logical_and(self):
         m = self.get_model()
@@ -429,6 +430,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
                                                0 + 1*(y - 1) // 1)))))
 
 
+@unittest.skipIf(not docplex_available, "docplex is not available")
 class TestCPExpressionWalker_IntervalVars(CommonTest):
     def test_interval_var_fixed_presences_correct(self):
         m = self.get_model()
@@ -493,6 +495,8 @@ class TestCPExpressionWalker_IntervalVars(CommonTest):
         self.assertEqual(i.get_start(), (3,3))
         self.assertEqual(i.get_end(), (6,6))
 
+
+@unittest.skipIf(not docplex_available, "docplex is not available")
 class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
     def test_start_before_start(self):
         m = self.get_model()
@@ -852,6 +856,7 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
                        0 + 1 * (y - 1) // 1)))
 
 
+@unittest.skipIf(not docplex_available, "docplex is not available")
 class TestCPExpressionWalker_CumulFuncExpressions(CommonTest):
     def test_always_in(self):
         m = self.get_model()
@@ -877,6 +882,7 @@ class TestCPExpressionWalker_CumulFuncExpressions(CommonTest):
                                                     max=3)))
 
 
+@unittest.skipIf(not docplex_available, "docplex is not available")
 class TestCPExpressionWalker_NamedExpressions(CommonTest):
     def test_named_expression(self):
         m = self.get_model()
@@ -905,6 +911,7 @@ class TestCPExpressionWalker_NamedExpressions(CommonTest):
         self.assertTrue(expr[1].equals(x**2 + 7 + (-1) *(8*(x**2 + 7))))
 
 
+@unittest.skipIf(not docplex_available, "docplex is not available")
 class TestCPExpressionWalker_Vars(CommonTest):
     def test_complain_about_non_integer_vars(self):
         m = self.get_model()
