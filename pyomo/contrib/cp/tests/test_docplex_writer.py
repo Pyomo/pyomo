@@ -11,11 +11,12 @@
 
 import pyomo.common.unittest as unittest
 
-from pyomo.contrib.cp import IntervalVar
+from pyomo.contrib.cp import IntervalVar, Pulse, Step, AlwaysIn
 from pyomo.contrib.cp.repn.docplex_writer import (
     docplex_available, LogicalToDoCplex)
 from pyomo.environ import (
-    ConcreteModel, Set
+    ConcreteModel, Set, Var, Integers, LogicalConstraint, implies, value,
+    TerminationCondition, Constraint
 )
 from pyomo.opt import (
     WriterFactory, SolverFactory
@@ -45,7 +46,7 @@ class TestWriteModel(unittest.TestCase):
         self.assertIs(exprs[2][0], var_map[m.h[1]])
         self.assertIs(variables[1], var_map[m.h[0]])
         self.assertIs(exprs[1][0], var_map[m.h[0]])
-        
+
         for i in [0, 1]:
             self.assertTrue(variables[i].is_optional())
             self.assertEqual(variables[i].get_start(), (1,2))
@@ -57,3 +58,80 @@ class TestWriteModel(unittest.TestCase):
         self.assertEqual(variables[2].get_start(), (2,4))
         self.assertEqual(variables[2].get_end(), (5,19))
         self.assertEqual(variables[2].get_length(), (7,7))
+
+@unittest.skipIf(not docplex_available, "docplex is not available")
+class TestSolveModel(unittest.TestCase):
+    def test_solve_scheduling_problem(self):
+        m = ConcreteModel()
+        m.eat_cookie = IntervalVar([0, 1], length=8, end=(0, 24),
+                                   optional=False)
+        m.eat_cookie[0].start_time.bounds = (0, 4)
+        m.eat_cookie[1].start_time.bounds = (5, 20)
+
+        m.read_story = IntervalVar(start=(15, 24), end=(0, 24), length=(2, 3))
+        m.sweep_crumbs = IntervalVar(optional=True, length=1, end=(0, 24))
+
+        m.num_crumbs = Var(domain=Integers, bounds=(0, 100))
+
+        ## Precedence
+        m.cookies = LogicalConstraint(expr=m.eat_cookie[1].start_time.after(
+            m.eat_cookie[0].end_time))
+        m.cookies_imply_crumbs = LogicalConstraint(
+            expr=m.eat_cookie[0].is_present.implies(m.num_crumbs == 5))
+        m.good_mouse = LogicalConstraint(expr=implies(
+            m.num_crumbs >= 3, m.sweep_crumbs.is_present))
+        m.sweep_after = LogicalConstraint(expr=m.sweep_crumbs.start_time.after(
+            m.eat_cookie[1].end_time))
+
+        m.mice_occupied = sum(Pulse(m.eat_cookie[i], 1) for i in range(2)) + \
+                          Step(m.read_story.start_time, 1) + \
+                          Pulse(m.sweep_crumbs, 1)
+
+        # Must keep exactly one mouse occupied for a 25-hour day
+        m.treat_your_mouse_well = LogicalConstraint(
+            expr=AlwaysIn(m.mice_occupied, (1, 1), (0, 24)))
+
+        results = SolverFactory('cp_optimizer').solve(
+            m,
+            symbolic_solver_labels=True,
+            tee=True)
+
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.feasible)
+
+        # check solution
+        self.assertTrue(value(m.eat_cookie[0].is_present))
+        self.assertTrue(value(m.eat_cookie[1].is_present))
+        # That means there were crumbs:
+        self.assertEqual(value(m.num_crumbs), 5)
+        # So there was sweeping:
+        self.assertTrue(value(m.sweep_crumbs.is_present))
+
+        # Precedence:
+        # start with the first cookie:
+        self.assertEqual(value(m.eat_cookie[0].start_time), 0)
+        self.assertEqual(value(m.eat_cookie[0].end_time), 8)
+        self.assertEqual(value(m.eat_cookie[0].length), 8)
+        # Proceed to second cookie:
+        self.assertEqual(value(m.eat_cookie[1].start_time), 8)
+        self.assertEqual(value(m.eat_cookie[1].end_time), 16)
+        self.assertEqual(value(m.eat_cookie[1].length), 8)
+        # Sweep
+        self.assertEqual(value(m.sweep_crumbs.start_time), 16)
+        self.assertEqual(value(m.sweep_crumbs.end_time), 17)
+        self.assertEqual(value(m.sweep_crumbs.length), 1)
+        # End with read story, as it keeps exactly one mouse occupied
+        # indefinitely (in this particular retelling)
+        self.assertEqual(value(m.read_story.start_time), 17)
+
+    def test_solve_infeasible_problem(self):
+        m = ConcreteModel()
+        m.x = Var(within=[1, 2, 3, 5])
+        m.c = Constraint(expr=m.x == 0)
+
+        result = SolverFactory('cp_optimizer').solve(m)
+        self.assertEqual(result.solver.termination_condition,
+                         TerminationCondition.infeasible)
+
+        self.assertIsNone(m.x.value)
+

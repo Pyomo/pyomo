@@ -872,8 +872,9 @@ class TestCPExpressionWalker_CumulFuncExpressions(CommonTest):
         self.assertTrue(expr[1].equals(cp.always_in(cp.pulse(i, 3) +
                                                     cp.step_at_start(i21, 2) -
                                                     cp.step_at_end(i22, -1) +
-                                                    cp.step_at(3, 4), 0,
-                                                    3, 0, 10)))
+                                                    cp.step_at(3, 4),
+                                                    interval=(0, 10), min=0,
+                                                    max=3)))
 
 
 class TestCPExpressionWalker_NamedExpressions(CommonTest):

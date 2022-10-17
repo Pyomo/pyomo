@@ -13,6 +13,7 @@ from pyomo.common.dependencies import attempt_import
 cp, docplex_available = attempt_import('docplex.cp.model')
 
 import itertools
+import logging
 from operator import attrgetter
 
 from pyomo.common import DeveloperError
@@ -62,6 +63,10 @@ from pyomo.opt import (
 from pyomo.core.base import Set, RangeSet
 from pyomo.network import Port
 ###
+
+from pytest import set_trace
+
+logger = logging.getLogger('pyomo.contrib.cp')
 
 # These are things that don't need special handling:
 class _GENERAL(object): pass
@@ -694,8 +699,8 @@ def _handle_at_expression_node(visitor, node, time1, time2, delay):
                                                        delay[1]))
 
 def _handle_always_in_node(visitor, node, cumul_func, lb, ub, start, end):
-    return (_GENERAL, cp.always_in(cumul_func[1], lb[1], ub[1], start[1],
-                                   end[1]))
+    return (_GENERAL, cp.always_in(cumul_func[1], interval=(start[1], end[1]),
+                                   min=lb[1], max=ub[1]))
 
 class LogicalToDoCplex(StreamBasedExpressionVisitor):
     _operator_handles = {
@@ -857,12 +862,11 @@ class DocplexWriter(object):
                     sort=sorter):
                 expr = visitor.walk_expression((cons.body, cons, 0))
                 if cons.lower is not None and cons.upper is not None:
-                    cpx_model.add(cp.range(expr[1], lb=cons.lower,
-                                           ub=cons.upper))
+                    cpx_model.add(cp.range(expr[1], lb=cons.lb, ub=cons.ub))
                 elif cons.lower is not None:
-                    cpx_model.add(value(cons.lower) <= expr[1])
+                    cpx_model.add(value(cons.lb) <= expr[1])
                 elif cons.upper is not None:
-                    cpx_model.add(cons.upper >= expr[1])
+                    cpx_model.add(cons.ub >= expr[1])
 
         # Write interval vars (these are secretly constraints if they have to be
         # scheduled)
@@ -951,7 +955,8 @@ class CPOptimizerSolver(object):
         config.set_value(kwds)
 
         writer = DocplexWriter()
-        cpx_model, var_map = writer.write(model)
+        cpx_model, var_map = writer.write(
+            model, symbolic_solver_labels=config.symbolic_solver_labels)
         if not config.tee:
             # If the user has also set LogVerbosity, we'll assume they know what
             # they're doing.
@@ -1002,25 +1007,32 @@ class CPOptimizerSolver(object):
 
         # Copy the variable values onto the Pyomo model, using the map we stored
         # on the writer.
-        for py_var, cp_var in var_map.items():
-            if py_var.ctype is IntervalVar:
-                sol = msol.get_var_solution(cp_var).get_value()
-                if len(sol) == 0:
-                    # The interval_var is absent
-                    py_var.is_present.set_value(False)
+        cp_sol = msol.get_solution()
+        if cp_sol is not None:
+            for py_var, cp_var in var_map.items():
+                sol = cp_sol.get_var_solution(cp_var)
+                if sol is None:
+                    logger.warning("CP optimizer did not return a value "
+                                   "for variable '%s'" % py_var.name)
                 else:
-                    (start, end, size) = sol
-                    py_var.is_present.set_value(True)
-                    py_var.start_time.set_value(start, skip_validation=True)
-                    py_var.end_time.set_value(end, skip_validation=True)
-                    py_var.length.set_value(end - start, skip_validation=True)
-            elif py_var.ctype is Var:
-                py_var.set_value(msol.get_var_solution(cp_var).get_value(),
-                                 skip_validation=True)
-            else:
-                raise DeveloperError(
-                    "Unrecognized Pyomo type in pyomo-to-docplex variable map: "
-                    "%s" % type(py_var))
+                    sol = sol.get_value()
+                if py_var.ctype is IntervalVar:
+                    if len(sol) == 0:
+                        # The interval_var is absent
+                        py_var.is_present.set_value(False)
+                    else:
+                        (start, end, size) = sol
+                        py_var.is_present.set_value(True)
+                        py_var.start_time.set_value(start, skip_validation=True)
+                        py_var.end_time.set_value(end, skip_validation=True)
+                        py_var.length.set_value(end - start,
+                                                skip_validation=True)
+                elif py_var.ctype is Var:
+                    py_var.set_value(sol, skip_validation=True)
+                else:
+                    raise DeveloperError(
+                        "Unrecognized Pyomo type in pyomo-to-docplex "
+                        "variable map: %s" % type(py_var))
 
         return results
 
