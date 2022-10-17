@@ -121,7 +121,7 @@ jobs:
     # the 5 GB GitHub allows.
     #
     #- name: Conda package cache
-    #  uses: actions/cache@v2
+    #  uses: actions/cache@v3
     #  if: matrix.PYENV == 'conda'
     #  id: conda-cache
     #  with:
@@ -129,7 +129,7 @@ jobs:
     #    key: conda-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     #- name: Pip package cache
-    #  uses: actions/cache@v2
+    #  uses: actions/cache@v3
     #  if: matrix.PYENV == 'pip'
     #  id: pip-cache
     #  with:
@@ -137,7 +137,7 @@ jobs:
     #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-${{matrix.python}}
 
     #- name: OS package cache
-    #  uses: actions/cache@v2
+    #  uses: actions/cache@v3
     #  if: matrix.TARGET != 'osx'
     #  id: os-cache
     #  with:
@@ -145,7 +145,7 @@ jobs:
     #    key: pkg-${{env.CACHE_VER}}.0-${{runner.os}}
 
     - name: TPL package download cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       if: ${{ ! matrix.slim }}
       id: download-cache
       with:
@@ -594,7 +594,7 @@ jobs:
         coverage xml -i
 
     - name: Record build artifacts
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: ${{github.job}}_${{env.GHA_JOBGROUP}}-${{env.GHA_JOBNAME}}
         path: |
@@ -670,14 +670,14 @@ jobs:
       # We need the source for .codecov.yml and running "coverage xml"
 
     #- name: Pip package cache
-    #  uses: actions/cache@v2
+    #  uses: actions/cache@v3
     #  id: pip-cache
     #  with:
     #    path: cache/pip
     #    key: pip-${{env.CACHE_VER}}.0-${{runner.os}}-3.8
 
     - name: Download build artifacts
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v3
       with:
         path: artifacts
 
@@ -777,7 +777,7 @@ jobs:
 
     - name: Upload codecov reports
       if: github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main'
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
       with:
         files: coverage.xml
         name: ${{ matrix.TARGET }}
@@ -788,7 +788,7 @@ jobs:
       if: |
         hashFiles('coverage-other.xml') != '' &&
         (github.repository_owner == 'Pyomo' || github.ref != 'refs/heads/main')
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v3
       with:
         files: coverage-other.xml
         name: ${{ matrix.TARGET }}/other

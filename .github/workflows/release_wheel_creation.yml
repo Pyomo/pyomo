@@ -26,7 +26,7 @@ jobs:
           TARGET: manylinux
         python-version: [3.7]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
@@ -51,7 +51,7 @@ jobs:
       run: |
         sudo rm -rfv dist/*-linux_x86_64.whl
     - name: Upload artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: manylinux-wheels
         path: dist
@@ -69,7 +69,7 @@ jobs:
           TARGET: manylinuxaarch64
         python-version: [3.7]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
@@ -96,7 +96,7 @@ jobs:
       run: |
         sudo rm -rfv dist/*-linux_aarch64.whl
     - name: Upload artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: manylinux-aarch64-wheels
         path: dist
@@ -113,7 +113,7 @@ jobs:
           TARGET: generic_tarball
         python-version: [3.7]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
@@ -126,7 +126,7 @@ jobs:
       run: |
         python setup.py --without-cython sdist --format=gztar
     - name: Upload artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: generictarball
         path: dist
@@ -143,7 +143,7 @@ jobs:
           TARGET: osx
         python-version: [ 3.7, 3.8, 3.9, '3.10' ]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
@@ -157,7 +157,7 @@ jobs:
         python setup.py  --with-cython --with-distributable-extensions sdist --format=gztar bdist_wheel
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: osx-wheels
         path: dist
@@ -174,7 +174,7 @@ jobs:
           TARGET: win
         python-version: [ 3.7, 3.8, 3.9, '3.10' ]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
@@ -191,7 +191,7 @@ jobs:
         $env:PYTHONWARNINGS="ignore::UserWarning"
         Invoke-Expression "python setup.py  --with-cython --with-distributable-extensions sdist --format=gztar bdist_wheel"
     - name: Upload artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: win-wheels
         path: dist
