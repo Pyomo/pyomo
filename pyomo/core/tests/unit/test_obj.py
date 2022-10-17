@@ -50,7 +50,7 @@ class TestScalarObj(unittest.TestCase):
         m.x = Var()
         with self.assertRaisesRegex(
                 ValueError, "Cannot assign InequalityExpression to 'obj': "
-                "ScalarObjective components only allows numeric expression "
+                "ScalarObjective components only allow numeric expression "
                 "types."):
             m.obj = Objective(expr=m.x <= 0)
 

@@ -191,7 +191,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
             raise ValueError(
                 f"Cannot assign {expr.__class__.__name__} to "
                 f"'{self.name}': {self.__class__.__name__} components only "
-                "allows numeric expression types.")
+                "allow numeric expression types.")
         # In-place operators will leave self as an argument.  We need to
         # replace that with the current expression in order to avoid
         # loops in the expression tree.
