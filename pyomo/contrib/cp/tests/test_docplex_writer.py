@@ -9,16 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# TODO: How do we defer so this doesn't mess up everything?
-import docplex.cp.model as cp
-
 import pyomo.common.unittest as unittest
 
 from pyomo.contrib.cp import IntervalVar
 from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
     AlwaysIn, Step, Pulse
 )
-from pyomo.contrib.cp.repn.docplex_writer import LogicalToDoCplex
+from pyomo.contrib.cp.repn.docplex_writer import (
+    docplex_available, LogicalToDoCplex
+)
 
 from pyomo.core.base.range import NumericRange
 from pyomo.core.expr.numeric_expr import MinExpression, MaxExpression
@@ -31,8 +30,10 @@ from pyomo.environ import (
     NonPositiveIntegers, Integers, inequality, Expression, Reals, Set
 )
 
-from pytest import set_trace
+if docplex_available:
+    import docplex.cp.model as cp
 
+@unittest.skipIf(not docplex_available, "docplex is not available")
 class CommonTest(unittest.TestCase):
     def get_visitor(self):
         docplex_model= cp.CpoModel()

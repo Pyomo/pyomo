@@ -9,8 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# TODO: How do we defer so this doesn't mess up everything?
-import docplex.cp.model as cp
+from pyomo.common.dependencies import attempt_import
+cp, docplex_available = attempt_import('docplex.cp.model')
 
 import itertools
 from operator import attrgetter
@@ -62,8 +62,6 @@ from pyomo.opt import (
 from pyomo.core.base import Set, RangeSet
 from pyomo.network import Port
 ###
-
-from pytest import set_trace
 
 # These are things that don't need special handling:
 class _GENERAL(object): pass
