@@ -944,6 +944,9 @@ class CPOptimizerSolver(object):
     def __exit__(self, t, v, traceback):
         pass
 
+    def available(self, exception_flag=True):
+        return docplex_available
+
     def solve(self, model, **kwds):
         """Solve the model.
 
