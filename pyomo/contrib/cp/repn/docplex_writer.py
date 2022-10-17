@@ -186,10 +186,13 @@ def _handle_getitem(visitor, node, *data):
             idx = idx if len(idx) > 1 else idx[0]
             elements.append(data[0][1][idx])
         except KeyError:
-            raise RuntimeError("CP optimizer thinks this is infeasible anyway")
-            # TODO: fill in bogus variable and add a constraint
+            raise ValueError(
+                "Variable indirection '%s' permits an index '%s' "
+                "that is not a valid key. In CP Optimizer, this is a "
+                "structural infeasibility." % (node, idx))
+            # NOTE: If we thought it was the right thing to do in the future, we
+            # could fill in with a bogus variable and add a constraint
             # disallowing it from being selected
-            elements.append(None)
     try:
         return (_ELEMENT_CONSTRAINT, cp.element(elements, expr))
     except:
@@ -281,15 +284,19 @@ def _create_docplex_var(pyomo_var, name=None):
             return cp.integer_var(domain=[d for d in pyomo_var.domain],
                                   name=name)
         else:
+            # If we ever want to handle this case, I think we might be able to
+            # make a normal integer var and then constrain it into the
+            # domain. But no reason to go to the effort for now because I don't
+            # know if the solver can even work with such a var.
             raise ValueError("The LogicalToDoCplex writer does not support "
-                             "infinite discrete domains. Cannot "
-                             "write Var %s with domain %s" % (pyomo_var.name,
-                                                              pyomo_var.domain))
+                             "infinite discrete domains. Cannot write "
+                             "Var '%s' with domain '%s'" % (pyomo_var.name,
+                                                            pyomo_var.domain))
     else:
         raise ValueError("The LogicalToDoCplex writer can only support "
                          "integer- or Boolean-valued variables. Cannot "
-                         "write Var %s with domain %s" % (pyomo_var.name,
-                                                          pyomo_var.domain))
+                         "write Var '%s' with domain '%s'" % (pyomo_var.name,
+                                                              pyomo_var.domain))
 
 def _before_var(visitor, child):
     _id = id(child)
@@ -523,10 +530,6 @@ def _handle_product_node(visitor, node, arg1, arg2):
 def _handle_division_node(visitor, node, arg1, arg2):
     return (_GENERAL, cp.float_div(_get_int_valued_expr(arg1),
                                    _get_int_valued_expr(arg2)))
-
-def _handle_integer_division_node(visitor, node, arg1, arg2):
-    return (_GENERAL, cp.int_div(_get_int_valued_expr(arg1),
-                                 _get_int_valued_expr(arg2)))
 
 def _handle_pow_node(visitor, node, arg1, arg2):
     return (_GENERAL, cp.power(_get_int_valued_expr(arg1),
