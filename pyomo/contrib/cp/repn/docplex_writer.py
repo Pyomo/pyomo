@@ -199,13 +199,6 @@ def _handle_getitem(visitor, node, *data):
     except:
         return (_DEFERRED_ELEMENT_CONSTRAINT, (elements, expr))
 
-# _docplex_attrs = {
-#     'start_time': cp.start_of,
-#     'end_time': cp.end_of,
-#     'length': cp.length_of,
-#     'before'
-# }
-
 def _handle_getattr(visitor, node, obj, attr):
     if obj[0] is _DEFERRED_ELEMENT_CONSTRAINT:
         # then obj[1] is a list of cp thingies that we need to get the attr on,
@@ -651,24 +644,25 @@ def _handle_call(visitor, node, *args):
 # Scheduling
 ##
 
-_before_handlers = {
-    (_START_TIME, _START_TIME) : cp.start_before_start,
-    (_START_TIME, _END_TIME): cp.start_before_end,
-    (_END_TIME, _START_TIME): cp.end_before_start,
-    (_END_TIME, _END_TIME): cp.end_before_end,
-}
-_at_handlers = {
-    (_START_TIME, _START_TIME) : cp.start_at_start,
-    (_START_TIME, _END_TIME): cp.start_at_end,
-    (_END_TIME, _START_TIME): cp.end_at_start,
-    (_END_TIME, _END_TIME): cp.end_at_end
-}
-_time_point_handlers = {
-    _START_TIME: cp.start_of,
-    _END_TIME: cp.end_of,
-    _GENERAL: lambda x : x,
-    _ELEMENT_CONSTRAINT: lambda x : x,
-}
+if docplex_available:
+    _before_handlers = {
+        (_START_TIME, _START_TIME) : cp.start_before_start,
+        (_START_TIME, _END_TIME): cp.start_before_end,
+        (_END_TIME, _START_TIME): cp.end_before_start,
+        (_END_TIME, _END_TIME): cp.end_before_end,
+    }
+    _at_handlers = {
+        (_START_TIME, _START_TIME) : cp.start_at_start,
+        (_START_TIME, _END_TIME): cp.start_at_end,
+        (_END_TIME, _START_TIME): cp.end_at_start,
+        (_END_TIME, _END_TIME): cp.end_at_end
+    }
+    _time_point_handlers = {
+        _START_TIME: cp.start_of,
+        _END_TIME: cp.end_of,
+        _GENERAL: lambda x : x,
+        _ELEMENT_CONSTRAINT: lambda x : x,
+    }
 
 def _handle_before_expression_node(visitor, node, time1, time2, delay):
     if (time1[0] in {_GENERAL, _ELEMENT_CONSTRAINT} or
