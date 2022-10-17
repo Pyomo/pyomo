@@ -68,6 +68,7 @@ class SuppressInfeasibleWarning(object):
     def __enter__(self):
         logger = logging.getLogger('pyomo.core')
         logger.addFilter(self.warning_filter)
+        return self
 
     def __exit__(self, exception_type, exception_value, traceback):
         logger = logging.getLogger('pyomo.core')
@@ -241,6 +242,8 @@ class fix_discrete_solution_in_subproblem(object):
                                                      self.discrete_var_values,
                                                      self.subprob_util_block)
 
+        return self
+
     def __exit__(self, type, value, traceback):
         # unfix all subproblem blocks
         for block in self.subprob_util_block.disjunct_list:
@@ -336,6 +339,7 @@ class fix_discrete_problem_solution_in_subproblem(
         self.config.subproblem_initialization_method(
             self.solver, self.subprob_util_block, self.discrete_prob_util_block)
 
+        return self
 
 def is_feasible(model, config):
     """Checks to see if the algebraic model is feasible in its current state.
