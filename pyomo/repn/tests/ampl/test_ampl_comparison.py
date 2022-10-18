@@ -109,7 +109,7 @@ class ASLJSONTests(Tests):
         TempfileManager.add_tempfile(testFile_col, exists=False)
 
         cmd = ['--output='+testFile,
-               '--file-determinism=3',
+               '--file-determinism=2',
                '--symbolic-solver-labels',
                join(currdir, name+'_testCase.py')]
         if os.path.exists(join(currdir, name + '.dat')):

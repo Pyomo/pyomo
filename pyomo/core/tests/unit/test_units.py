@@ -91,7 +91,8 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual(kg.is_named_expression_type(), False)
         self.assertEqual(kg.is_expression_type(), False)
         self.assertEqual(kg.is_component_type(), False)
-        self.assertEqual(kg.is_relational(), False)
+        self.assertEqual(kg.is_expression_type(
+            EXPR.common.ExpressionType.RELATIONAL), False)
         self.assertEqual(kg.is_indexed(), False)
         self.assertEqual(kg._compute_polynomial_degree(None), 0)
 
@@ -747,7 +748,7 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertEqual(q, True)
 
         class UnknownPyomoType(object):
-            def is_expression_type(self):
+            def is_expression_type(self, expression_system=None):
                 return False
 
             def is_numeric_type(self):

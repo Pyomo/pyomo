@@ -17,17 +17,23 @@
 #
 
 import os
-from os.path import abspath, dirname
-currdir = dirname(abspath(__file__)) + os.sep
 
 from filecmp import cmp
 import pyomo.common.unittest as unittest
 
-from pyomo.opt import ProblemFormat
-from pyomo.core import ConcreteModel, Var, Constraint, TransformationFactory, Objective, Block, inequality
+from pyomo.common.fileutils import this_file_dir
 from pyomo.common.tee import capture_output
-from pyomo.mpec import Complementarity, complements, ComplementarityList
+from pyomo.common.tempfiles import TempfileManager
+from pyomo.core import (
+    ConcreteModel, Var, Constraint, TransformationFactory, Objective,
+    Block, inequality
+)
 from pyomo.gdp import Disjunct, Disjunction
+from pyomo.mpec import Complementarity, complements, ComplementarityList
+from pyomo.opt import ProblemFormat
+from pyomo.repn.tests.ampl.nl_diff import load_and_compare_nl_baseline
+
+currdir = this_file_dir()
 
 class CCTests(object):
 
@@ -47,23 +53,22 @@ class CCTests(object):
         model.cc.pprint()
 
     def _test(self, tname, M):
-        ofile = currdir + tname + '_%s.out' % str(self.xfrm)
-        bfile = currdir + tname + '_%s.txt' % str(self.xfrm)
+        bfile = os.path.join(currdir, tname + f'_{self.xfrm}.txt')
         if self.xfrm is not None:
             xfrm = TransformationFactory(self.xfrm)
             xfrm.apply_to(M)
-        with capture_output(ofile):
-            self._print(M)
-        if not os.path.exists(bfile):
-            os.rename(ofile, bfile)
-        try:
-            self.assertTrue(cmp(ofile, bfile),
-                            msg="Files %s and %s differ" % (ofile, bfile))
-        except:
-            with open(ofile, 'r') as f1, open(bfile, 'r') as f2:
-                f1_contents = list(filter(None, f1.read().split()))
-                f2_contents = list(filter(None, f2.read().split()))
-                self.assertEqual(f1_contents, f2_contents)
+        with TempfileManager:
+            ofile = TempfileManager.create_tempfile(suffix=f'_{self.xfrm}.out')
+            with capture_output(ofile):
+                self._print(M)
+            try:
+                self.assertTrue(cmp(ofile, bfile),
+                                msg="Files %s and %s differ" % (ofile, bfile))
+            except:
+                with open(ofile, 'r') as f1, open(bfile, 'r') as f2:
+                    f1_contents = list(filter(None, f1.read().split()))
+                    f2_contents = list(filter(None, f2.read().split()))
+                    self.assertEqual(f1_contents, f2_contents)
 
     def test_t1a(self):
         # y + x1 >= 0  _|_  x1 + 2*x2 + 3*x3 >= 1
@@ -389,15 +394,14 @@ class CCTests_simple_disjunction(CCTests, unittest.TestCase):
 class CCTests_nl_nlxfrm(CCTests, unittest.TestCase):
 
     def _test(self, tname, M):
-        ofile = currdir + tname + '_nlxfrm.out'
-        bfile = currdir + tname + '_nlxfrm.nl'
+        bfile = os.path.join(currdir, tname + '_nlxfrm.nl')
         xfrm = TransformationFactory('mpec.nl')
         xfrm.apply_to(M)
-        M.write(ofile, format=ProblemFormat.nl)
-        if not os.path.exists(bfile):
-            os.rename(ofile, bfile)
-        self.assertTrue(cmp(ofile, bfile),
-                        msg="Files %s and %s differ" % (ofile, bfile))
+        with TempfileManager:
+            ofile = TempfileManager.create_tempfile(suffix='_nlxfrm.out')
+            M.write(ofile, format=ProblemFormat.nl)
+            self.assertEqual(*load_and_compare_nl_baseline(bfile, ofile))
+
 
 class DescendIntoDisjunct(unittest.TestCase):
     def get_model(self):

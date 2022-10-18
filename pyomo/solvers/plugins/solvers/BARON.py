@@ -369,11 +369,11 @@ class BARONSHELL(SystemCallSolver):
             try:
                 results.problem.lower_bound = float(line[5])
             except ValueError:
-                results.problem.lower_bound = None
+                results.problem.lower_bound = float("-inf")
             try:
                 results.problem.upper_bound = float(line[6])
             except ValueError:
-                results.problem.upper_bound = None
+                results.problem.upper_bound = float("inf")
             results.problem.missing_bounds = line[9]
             results.problem.iterations = line[10]
             results.problem.node_opt = line[11]

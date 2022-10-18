@@ -129,9 +129,6 @@ def suffix_generator(a_block, datatype=False):
             if suffix.get_datatype() is datatype:
                 yield name, suffix
 
-# Note: The order of inheritance here is important so that
-#       __setstate__ works correctly on the ActiveComponent base class.
-
 
 @ModelComponentFactory.register("Declare a container for extraneous model data")
 class Suffix(ComponentMap, ActiveComponent):
@@ -205,14 +202,6 @@ class Suffix(ComponentMap, ActiveComponent):
         if self._rule is None:
             self.construct()
 
-    def __setstate__(self, state):
-        """
-        This method must be defined for deepcopy/pickling because this
-        class relies on component ids.
-        """
-        ActiveComponent.__setstate__(self, state)
-        ComponentMap.__setstate__(self, state)
-
     def construct(self, data=None):
         """
         Constructs this component, applying rule if it exists.
@@ -229,6 +218,37 @@ class Suffix(ComponentMap, ActiveComponent):
         if self._rule is not None:
             self.update_values(self._rule(self._parent()))
         timer.report()
+
+
+    @property
+    def datatype(self):
+        """Return the suffix datatype."""
+        return self._datatype
+    @datatype.setter
+    def datatype(self, datatype):
+        """Set the suffix datatype."""
+        if datatype not in self.SuffixDatatypeToStr:
+            raise ValueError(
+                "Suffix datatype must be one of: %s. \n"
+                "Value given: %s"
+                % (list(self.SuffixDatatypeToStr.values()),
+                   datatype))
+        self._datatype = datatype
+
+    @property
+    def direction(self):
+        """Return the suffix direction."""
+        return self._direction
+    @direction.setter
+    def direction(self, direction):
+        """Set the suffix direction."""
+        if direction not in self.SuffixDirectionToStr:
+            raise ValueError(
+                "Suffix direction must be one of: %s. \n"
+                "Value given: %s"
+                % (list(self.SuffixDirectionToStr.values()),
+                   direction))
+        self._direction = direction
 
     @deprecated('Suffix.exportEnabled is replaced with Suffix.export_enabled.',
                 version='4.1.10486')

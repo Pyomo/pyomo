@@ -17,8 +17,12 @@ from pyomo.core.expr import expr_common
 
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import ConcreteModel, AbstractModel, Expression, Var, Set, Param, Objective, value, sum_product
+from pyomo.environ import (
+    ConcreteModel, AbstractModel, Expression, Var, Set, Param, Objective,
+    value, sum_product,
+)
 from pyomo.core.base.expression import _GeneralExpressionData
+from pyomo.core.expr.compare import compare_expressions
 from pyomo.common.tee import capture_output
 
 class TestExpressionData(unittest.TestCase):
@@ -902,6 +906,13 @@ E : Size=2, Index=E_index
             expr += v
         self.assertEqual(e.expr, 1)
         self.assertEqual(expr(), 2)
+        # Make sure that using in-place operators on named expressions
+        # do not create loops inthe expression tree (test #1890)
+        m.x = Var()
+        m.y = Var()
+        m.e.expr = m.x
+        m.e += m.y
+        self.assertTrue(compare_expressions(m.e.expr, m.x + m.y))
 
     def test_isub(self):
         # make sure simple for loops that look like they
@@ -919,6 +930,13 @@ E : Size=2, Index=E_index
             expr -= v
         self.assertEqual(e.expr, 1)
         self.assertEqual(expr(), -2)
+        # Make sure that using in-place operators on named expressions
+        # do not create loops inthe expression tree (test #1890)
+        m.x = Var()
+        m.y = Var()
+        m.e.expr = m.x
+        m.e -= m.y
+        self.assertTrue(compare_expressions(m.e.expr, m.x - m.y))
 
     def test_imul(self):
         # make sure simple for loops that look like they
@@ -936,6 +954,13 @@ E : Size=2, Index=E_index
             expr *= v
         self.assertEqual(e.expr, 3)
         self.assertEqual(expr(), 6)
+        # Make sure that using in-place operators on named expressions
+        # do not create loops inthe expression tree (test #1890)
+        m.x = Var()
+        m.y = Var()
+        m.e.expr = m.x
+        m.e *= m.y
+        self.assertTrue(compare_expressions(m.e.expr, m.x * m.y))
 
     def test_idiv(self):
         # make sure simple for loops that look like they
@@ -968,6 +993,13 @@ E : Size=2, Index=E_index
             expr /= v
         self.assertEqual(e.expr, 3)
         self.assertEqual(expr(), 1.5)
+        # Make sure that using in-place operators on named expressions
+        # do not create loops inthe expression tree (test #1890)
+        m.x = Var()
+        m.y = Var()
+        m.e.expr = m.x
+        m.e /= m.y
+        self.assertTrue(compare_expressions(m.e.expr, m.x / m.y))
 
     def test_ipow(self):
         # make sure simple for loops that look like they
@@ -985,6 +1017,13 @@ E : Size=2, Index=E_index
             expr **= v
         self.assertEqual(e.expr, 3)
         self.assertEqual(expr(), 9)
+        # Make sure that using in-place operators on named expressions
+        # do not create loops inthe expression tree (test #1890)
+        m.x = Var()
+        m.y = Var()
+        m.e.expr = m.x
+        m.e **= m.y
+        self.assertTrue(compare_expressions(m.e.expr, m.x ** m.y))
 
 if __name__ == "__main__":
     unittest.main()

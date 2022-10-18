@@ -29,27 +29,35 @@ Credit for prototyping and development can be found in the ``GDPopt`` class docu
 .. _Lee & Grossmann, 2000: https://doi.org/10.1016/S0098-1354(00)00581-0
 .. _Chen et al., 2018: https://doi.org/10.1016/B978-0-444-64241-7.50143-9
 
-Usage of GDPopt to solve a Pyomo.GDP concrete model involves:
+GDPopt can be used to solve a Pyomo.GDP concrete model in two ways.
+The simplest is to instantiate the generic GDPopt solver and specify the desired algorithm as an argument to the ``solve`` method:
 
 .. code::
 
-  >>> SolverFactory('gdpopt').solve(model)
+  >>> SolverFactory('gdpopt').solve(model, algorithm='LOA')
+
+The alternative is to instantiate an algorithm-specific GDPopt solver:
+
+.. code::
+
+  >>> SolverFactory('gdpopt.loa').solve(model)
+
+In the above examples, GDPopt uses the GDPopt-LOA algorithm.
+Other algorithms may be used by specifying them in the ``algorithm`` argument when using the generic solver or by instantiating the algorithm-specific GDPopt solvers. All GDPopt options are listed below.
 
 .. note::
 
-  By default, GDPopt uses the GDPopt-LOA strategy.
-  Other strategies may be used by specifying the ``strategy`` argument during ``solve()``.
-  All GDPopt options are listed below.
+  The generic GDPopt solver allows minimal configuration outside of the arguments to the ``solve`` method. To avoid repeatedly specifying the same configuration options to the ``solve`` method, use the algorithm-specific solvers.
 
-Logic-based Outer Approximation
--------------------------------
+Logic-based Outer Approximation (LOA)
+-------------------------------------
 
 `Chen et al., 2018`_ contains the following flowchart, taken from the preprint version:
 
 .. image:: gdpopt_flowchart.png
     :scale: 70%
 
-An example which includes the modeling approach may be found below.
+An example that includes the modeling approach may be found below.
 
 .. doctest::
   :skipif: not glpk_available
@@ -75,8 +83,8 @@ An example which includes the modeling approach may be found below.
   >>> model.objective = Objective(expr=model.x + 0.1*model.y, sense=minimize)
 
   Solve the model using GDPopt
-  >>> results = SolverFactory('gdpopt').solve(
-  ...     model, strategy='LOA', mip_solver='glpk') # doctest: +IGNORE_RESULT
+  >>> results = SolverFactory('gdpopt.loa').solve(
+  ...     model, mip_solver='glpk') # doctest: +IGNORE_RESULT
 
   Display the final solution
   >>> model.display()
@@ -107,10 +115,38 @@ An example which includes the modeling approach may be found below.
 
 .. code::
 
-  >>> SolverFactory('gdpopt').solve(model, tee=True)
+  >>> SolverFactory('gdpopt.loa').solve(model, tee=True)
 
-Logic-based Branch-and-Bound
-----------------------------
+Global Logic-based Outer Approximation (GLOA)
+---------------------------------------------
+
+The same algorithm can be used to solve GDPs involving nonconvex nonlinear constraints by solving the subproblems globally:
+
+.. code::
+
+  >>> SolverFactory('gdpopt.gloa').solve(model)
+
+.. warning::
+
+  The ``nlp_solver`` option must be set to a global solver for the solution returned by GDPopt to also be globally optimal.
+
+Relaxation with Integer Cuts (RIC)
+----------------------------------
+
+Instead of outer approximation, GDPs can be solved using the same MILP relaxation as in the previous two algorithms, but instead of using the subproblems to generate outer-approximation cuts, the algorithm adds only no-good cuts for every discrete solution encountered:
+
+.. code::
+
+  >>> SolverFactory('gdpopt.ric').solve(model)
+
+Again, this is a global algorithm if the subproblems are solved globally, and is not otherwise.
+
+.. note::
+
+  The RIC algorithm will not necessarily enumerate all discrete solutions as it is possible for the bounds to converge first. However, full enumeration is not uncommon.
+
+Logic-based Branch-and-Bound (LBB)
+----------------------------------
 
 The GDPopt-LBB solver branches through relaxed subproblems with inactive disjunctions.
 It explores the possibilities based on best lower bound,
@@ -139,7 +175,7 @@ To use the GDPopt-LBB solver, define your Pyomo GDP model as usual:
   >>> m.djn = Disjunction(expr=[m.y1, m.y2])
 
   Invoke the GDPopt-LBB solver
-  >>> results = SolverFactory('gdpopt').solve(m, strategy='LBB')
+  >>> results = SolverFactory('gdpopt.lbb').solve(m)
 
   >>> print(results)  # doctest: +SKIP
   >>> print(results.solver.status)
@@ -159,4 +195,16 @@ GDPopt implementation and optional arguments
    subject to change.
 
 .. autoclass:: pyomo.contrib.gdpopt.GDPopt.GDPoptSolver
+    :members:
+
+.. autoclass:: pyomo.contrib.gdpopt.loa.GDP_LOA_Solver
+    :members:
+
+.. autoclass:: pyomo.contrib.gdpopt.gloa.GDP_GLOA_Solver
+    :members:
+
+.. autoclass:: pyomo.contrib.gdpopt.ric.GDP_RIC_Solver
+    :members:
+
+.. autoclass:: pyomo.contrib.gdpopt.branch_and_bound.GDP_LBB_Solver
     :members:

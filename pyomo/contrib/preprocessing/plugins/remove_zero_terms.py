@@ -19,6 +19,7 @@ from pyomo.core.base.transformation import TransformationFactory
 from pyomo.core.expr import current as EXPR
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.repn import generate_standard_repn
+from pyomo.common.config import ConfigDict, ConfigValue
 
 
 @TransformationFactory.register(
@@ -33,9 +34,16 @@ class RemoveZeroTerms(IsomorphicTransformation):
     .. note:: TODO: support nonlinear expressions
 
     """
+    CONFIG = ConfigDict("RemoveZeroTerms")
+    CONFIG.declare("constraints_modified", ConfigValue(
+        default={},
+        description="A dictionary that maps the constraints modified during "
+        "the transformation to a tuple: (original_expr, modified_expr)"
+    ))
 
-    def _apply_to(self, model):
+    def _apply_to(self, model, **kwargs):
         """Apply the transformation."""
+        config = self.CONFIG(kwargs)
         m = model
 
         for constr in m.component_data_objects(
@@ -47,6 +55,7 @@ class RemoveZeroTerms(IsomorphicTransformation):
                           # deactivated or will be deactivated in a different
                           # step
 
+            original_expr = constr.expr
             # get the index of all nonzero coefficient variables
             nonzero_vars_indx = [
                 i for i, _ in enumerate(repn.linear_vars)
@@ -59,12 +68,14 @@ class RemoveZeroTerms(IsomorphicTransformation):
             constr_body = quicksum(repn.linear_coefs[i] * repn.linear_vars[i]
                                    for i in nonzero_vars_indx) + const
             if constr.equality:
-                constr.set_value(constr_body == constr.upper)
+                new_expr = constr_body == constr.upper
             elif constr.has_lb() and not constr.has_ub():
-                constr.set_value(constr_body >= constr.lower)
+                new_expr = constr_body >= constr.lower
             elif constr.has_ub() and not constr.has_lb():
-                constr.set_value(constr_body <= constr.upper)
+                new_expr = constr_body <= constr.upper
             else:
                 # constraint is a bounded inequality of form a <= x <= b.
-                constr.set_value(EXPR.inequality(
-                    constr.lower, constr_body, constr.upper))
+                new_expr = EXPR.inequality( constr.lower, constr_body,
+                                            constr.upper)
+            constr.set_value(new_expr)
+            config.constraints_modified[constr] = (original_expr, new_expr)

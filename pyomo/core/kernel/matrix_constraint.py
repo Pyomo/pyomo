@@ -13,7 +13,7 @@ from pyomo.common.dependencies import (
     numpy, numpy_available as has_numpy,
     scipy, scipy_available as has_scipy,
 )
-from pyomo.core.expr.numvalue import NumericValue
+from pyomo.core.expr.numvalue import NumericValue, value
 from pyomo.core.kernel.constraint import \
     (IConstraint,
      constraint_tuple)
@@ -95,14 +95,14 @@ class _MatrixConstraintData(IConstraint):
         return sum(c * v for v, c in self.terms)
 
     @property
-    def lb(self):
-        """The lower bound of the constraint"""
+    def lower(self):
+        """The expression for the lower bound of the constraint"""
         return self.parent.lb[self._storage_key]
-    @lb.setter
-    def lb(self, lb):
+    @lower.setter
+    def lower(self, lb):
         if self.equality:
             raise ValueError(
-                "The lb property can not be set "
+                "The lower property can not be set "
                 "when the equality property is True.")
         if lb is None:
             lb = -numpy.inf
@@ -113,14 +113,14 @@ class _MatrixConstraintData(IConstraint):
         self.parent.lb[self._storage_key] = lb
 
     @property
-    def ub(self):
-        """The upper bound of the constraint"""
+    def upper(self):
+        """The expression for the upper bound of the constraint"""
         return self.parent.ub[self._storage_key]
-    @ub.setter
-    def ub(self, ub):
+    @upper.setter
+    def upper(self, ub):
         if self.equality:
             raise ValueError(
-                "The ub property can not be set "
+                "The upper property can not be set "
                 "when the equality property is True.")
         if ub is None:
             ub = numpy.inf
@@ -129,6 +129,22 @@ class _MatrixConstraintData(IConstraint):
                              "a simple numeric type "
                              "or None")
         self.parent.ub[self._storage_key] = ub
+
+    @property
+    def lb(self):
+        """The value of the lower bound of the constraint"""
+        return value(self.lower)
+    @lb.setter
+    def lb(self, lb):
+        self.lower = lb
+
+    @property
+    def ub(self):
+        """The value of the upper bound of the constraint"""
+        return value(self.upper)
+    @ub.setter
+    def ub(self, ub):
+        self.upper = ub
 
     @property
     def rhs(self):

@@ -9,10 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from .utils.ipopt_solver_wrapper import *
-
-from pyomo.common.deprecation import deprecation_warning
-deprecation_warning(
-    'The pyomo.contrib.parmest.ipopt_solver_wrapper module has been moved to '
-    'pyomo.contrib.parmest.utils.ipopt_solver_wrapper. Please update your import',
-    version='TBD')
+from pyomo.common.deprecation import relocated_module
+relocated_module('pyomo.contrib.parmest.utils.ipopt_solver_wrapper',
+                 version='6.4.2')

@@ -406,6 +406,22 @@ class TestGurobiPersistent(unittest.TestCase):
         res.solution_loader.load_vars(solution_number=2)
         self.assertAlmostEqual(pe.value(m.obj.expr), 6.592304628123309)
 
+    def test_zero_time_limit(self):
+        m = create_pmedian_model()
+        opt = Gurobi()
+        opt.config.time_limit = 0
+        opt.config.load_solution = False
+        res = opt.solve(m)
+        num_solutions = opt.get_model_attr('SolCount')
+
+        # Behavior is different on different platforms, so
+        # we have to see if there are any solutions
+        # This means that there is no guarantee we are testing
+        # what we are trying to test. Unfortunately, I'm
+        # not sure of a good way to guarantee that
+        if num_solutions == 0:
+            self.assertIsNone(res.best_feasible_objective)
+
 
 class TestManualModel(unittest.TestCase):
     def setUp(self):

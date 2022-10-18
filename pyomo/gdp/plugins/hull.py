@@ -22,14 +22,15 @@ from pyomo.core.base import Transformation, TransformationFactory, Reference
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, Any, RangeSet, Reals, value,
-    NonNegativeIntegers, LogicalConstraint, Binary )
+    NonNegativeIntegers, Binary )
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
     clone_without_expression_components, is_child_of, get_src_disjunction,
-    get_src_constraint, get_transformed_constraints, get_src_disjunct,
-    _warn_for_active_disjunction, _warn_for_active_disjunct, preprocess_targets)
+    get_src_constraint, get_transformed_constraints,
+    get_src_disjunct, _warn_for_active_disjunct, preprocess_targets,
+    get_gdp_tree)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from functools import wraps
@@ -186,12 +187,18 @@ class Hull_Reformulation(Transformation):
             SetOf :      False,
             RangeSet:    False,
             Suffix :     False,
-            Disjunction: self._warn_for_active_disjunction,
+            Disjunction: False, # We intentionally pass over active Disjunctions
+                                # that are on Disjuncts because we know they are
+                                # in the list of objects to transform after
+                                # preprocessing, so they will be transformed
+                                # later.
             Disjunct:    self._warn_for_active_disjunct,
-            Block:       self._transform_block_on_disjunct,
+            Block:       False,
             Port:        False,
             }
         self._generate_debug_messages = False
+        self._transformation_blocks = {}
+        self._targets = set()
 
     def _add_local_vars(self, block, local_var_dict):
         localVars = block.component('LocalVars')
@@ -223,7 +230,11 @@ class Hull_Reformulation(Transformation):
         return local_var_dict
 
     def _apply_to(self, instance, **kwds):
-        self._apply_to_impl(instance, **kwds)
+        try:
+            self._apply_to_impl(instance, **kwds)
+        finally:
+            self._transformation_blocks.clear()
+            self._targets = set()
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
@@ -260,26 +271,36 @@ class Hull_Reformulation(Transformation):
         targets = list(_filter_inactive(targets))
 
         # we need to preprocess targets to make sure that if there are any
-        # disjunctions in targets that their disjuncts appear before them in
-        # the list.
-        targets = preprocess_targets(targets, instance, knownBlocks)
-        for t in targets:
-            if t.ctype is Disjunction:
-                if t.is_indexed():
-                    self._transform_disjunction(t)
-                else:
-                    self._transform_disjunctionData(t, t.index())
-            else:# t.ctype in (Block, Disjunct):
-                if t.is_indexed():
-                    self._transform_block(t)
-                else:
-                    self._transform_blockData(t)
+        # disjunctions in targets that they appear before disjunctions that are
+        # contained in their disjuncts. That is, in hull, we will transform from
+        # root to leaf in order to avoid have to modify transformed constraints
+        # more than once: It is most efficient to build nested transformed
+        # constraints when we already have the disaggregated variables of the
+        # parent disjunct.
+        gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
 
-        # at the end, transform any logical constraints that might be on
-        # instance
-        TransformationFactory('core.logical_to_linear').apply_to(instance)
+        preprocessed_targets = gdp_tree.topological_sort()
+        self._targets = set(preprocessed_targets)
+        # transform any logical constraints that might be anywhere on the stuff
+        # we're about to transform.
+        TransformationFactory('core.logical_to_linear').apply_to(
+            instance,
+            targets=[blk for blk in targets if blk.ctype is Block] +
+            [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
+
+        for t in preprocessed_targets:
+            if t.ctype is Disjunction:
+                self._transform_disjunctionData(
+                    t, t.index(), parent_disjunct=gdp_tree.parent(t),
+                    root_disjunct=gdp_tree.root_disjunct(t))
+            # We skip disjuncts now, because we need information from the
+            # disjunctions to transform them (which variables to disaggregate),
+            # so for hull's purposes, they need not be in the tree.
 
     def _add_transformation_block(self, instance):
+        if instance in self._transformation_blocks:
+            return self._transformation_blocks[instance]
+
         # make a transformation block on instance where we will store
         # transformed components
         transBlockName = unique_component_name(
@@ -287,6 +308,7 @@ class Hull_Reformulation(Transformation):
             '_pyomo_gdp_hull_reformulation')
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
+        self._transformation_blocks[instance] = transBlock
         transBlock.relaxedDisjuncts = Block(NonNegativeIntegers)
         transBlock.lbub = Set(initialize = ['lb','ub','eq'])
         # Map between disaggregated variables and their
@@ -300,8 +322,7 @@ class Hull_Reformulation(Transformation):
         transBlock._bigMConstraintMap = ComponentMap()
         # We will store all of the disaggregation constraints for any
         # Disjunctions we transform onto this block here.
-        transBlock.disaggregationConstraints = Constraint(NonNegativeIntegers,
-                                                          Any)
+        transBlock.disaggregationConstraints = Constraint(NonNegativeIntegers)
 
         # This will map from srcVar to a map of srcDisjunction to the
         # disaggregation constraint corresponding to srcDisjunction
@@ -315,29 +336,8 @@ class Hull_Reformulation(Transformation):
 
         return transBlock
 
-    def _transform_block(self, obj):
-        for i in sorted(obj.keys()):
-            self._transform_blockData(obj[i])
-
-    def _transform_blockData(self, obj):
-        # Transform every (active) disjunction in the block
-        for disjunction in obj.component_objects(
-                Disjunction,
-                active=True,
-                sort=SortComponents.deterministic,
-                descend_into=(Block,Disjunct),
-                descent_order=TraversalStrategy.PostfixDFS):
-            self._transform_disjunction(disjunction)
-        # transform any logical constraints
-        TransformationFactory('core.logical_to_linear').apply_to(obj)
-
     def _add_xor_constraint(self, disjunction, transBlock):
         # Put XOR constraint on the transformation block
-
-        # We never do this for just a DisjunctionData because we need
-        # to know about the index set of its parent component. So if
-        # we called this on a DisjunctionData, we did something wrong.
-        assert isinstance(disjunction, Disjunction)
 
         # check if the constraint already exists
         if disjunction._algebraic_constraint is not None:
@@ -355,34 +355,8 @@ class Hull_Reformulation(Transformation):
 
         return orC
 
-    def _transform_disjunction(self, obj):
-        # NOTE: this check is actually necessary because it's possible we go
-        # straight to this function when we use targets.
-        if not obj.active:
-            return
-
-        # put the transformation block on the parent block of the Disjunction,
-        # unless this is a disjunction we have seen in a prior call to hull, in
-        # which case we will use the same transformation block we created
-        # before.
-        if obj._algebraic_constraint is not None:
-            transBlock = obj._algebraic_constraint().parent_block()
-        else:
-            transBlock = self._add_transformation_block(obj.parent_block())
-        # and create the xor constraint
-        xorConstraint = self._add_xor_constraint(obj, transBlock)
-
-        # create the disjunction constraint and disaggregation
-        # constraints and then relax each of the disjunctionDatas
-        for i in sorted(obj.keys()):
-            self._transform_disjunctionData(obj[i], i, transBlock)
-
-        # deactivate so the writers will be happy
-        obj.deactivate()
-
-    def _transform_disjunctionData(self, obj, index, transBlock=None):
-        if not obj.active:
-            return
+    def _transform_disjunctionData(self, obj, index, parent_disjunct=None,
+                                   root_disjunct=None):
         # Hull reformulation doesn't work if this is an OR constraint. So if
         # xor is false, give up
         if not obj.xor:
@@ -390,21 +364,19 @@ class Hull_Reformulation(Transformation):
                             "Disjunction '%s' with OR constraint.  "
                             "Must be an XOR!" % obj.name)
 
-        if transBlock is None:
-            # It's possible that we have already created a transformation block
-            # for another disjunctionData from this same container. If that's
-            # the case, let's use the same transformation block. (Else it will
-            # be really confusing that the XOR constraint goes to that old block
-            # but we create a new one here.)
-            if obj.parent_component()._algebraic_constraint is not None:
-                transBlock = obj.parent_component()._algebraic_constraint().\
-                             parent_block()
-            else:
-                transBlock = self._add_transformation_block(obj.parent_block())
+        # Create or fetch the transformation block
+        if root_disjunct is not None:
+            # We want to put all the transformed things on the root
+            # Disjunct's parent's block so that they do not get
+            # re-transformed
+            transBlock = self._add_transformation_block(
+                root_disjunct.parent_block())
+        else:
+            # This isn't nested--just put it on the parent block.
+            transBlock = self._add_transformation_block(obj.parent_block())
 
-        parent_component = obj.parent_component()
-
-        orConstraint = self._add_xor_constraint(parent_component, transBlock)
+        orConstraint = self._add_xor_constraint(obj.parent_component(),
+                                                transBlock)
         disaggregationConstraint = transBlock.disaggregationConstraints
         disaggregationConstraintMap = transBlock._disaggregationConstraintMap
         disaggregatedVars = transBlock._disaggregatedVars
@@ -434,7 +406,7 @@ class Hull_Reformulation(Transformation):
                     Constraint,
                     active = True,
                     sort=SortComponents.deterministic,
-                    descend_into=Block):
+                    descend_into=(Block, Disjunct)):
                 # [ESJ 02/14/2020] By default, we disaggregate fixed variables
                 # on the philosophy that fixing is not a promise for the future
                 # and we are mathematically wrong if we don't transform these
@@ -457,9 +429,10 @@ class Hull_Reformulation(Transformation):
             localVarsByDisjunct = self._get_local_var_suffixes(
                 disjunct, localVarsByDisjunct)
 
-        # We will disaggregate all variables which are not explicitly declared
-        # as being local. Note however, that we do declare our own disaggregated
-        # variables as local, so they will not be re-disaggregated.
+        # We will disaggregate all variables that are not explicitly declared as
+        # being local. Since we transform from leaf to root, we are implicitly
+        # treating our own disaggregated variables as local, so they will not be
+        # re-disaggregated.
         varSet = []
         varSet = {disj: [] for disj in obj.disjuncts}
         # Note that variables are local with respect to a Disjunct. We deal with
@@ -510,7 +483,9 @@ class Hull_Reformulation(Transformation):
             or_expr += disjunct.indicator_var.get_associated_binary()
             self._transform_disjunct(disjunct, transBlock, varSet[disjunct],
                                      localVars.get(disjunct, []), local_var_set)
-        orConstraint.add(index, (or_expr, 1))
+        rhs = 1 if parent_disjunct is None else \
+              parent_disjunct.binary_indicator_var
+        orConstraint.add(index, (or_expr, rhs))
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
         obj._algebraic_constraint = weakref_ref(orConstraint[index])
@@ -570,50 +545,36 @@ class Hull_Reformulation(Transformation):
                                        'disaggregatedVar'][disjunct][var]
                 disaggregatedExpr += disaggregatedVar
 
-            disaggregationConstraint.add((i, index), var == disaggregatedExpr)
+            # We equate the sum of the disaggregated vars to var (the original)
+            # if parent_disjunct is None, else it needs to be the disaggregated
+            # var corresponding to var on the parent disjunct. This is the
+            # reason we transform from root to leaf: This constraint is now
+            # correct regardless of how nested something may have been.
+            parent_var = var if parent_disjunct is None else \
+                         self.get_disaggregated_var(var, parent_disjunct)
+            cons_idx = len(disaggregationConstraint)
+            disaggregationConstraint.add(cons_idx, parent_var ==
+                                         disaggregatedExpr)
             # and update the map so that we can find this later. We index by
             # variable and the particular disjunction because there is a
             # different one for each disjunction
             if disaggregationConstraintMap.get(var) is not None:
                 disaggregationConstraintMap[var][
-                    obj] = disaggregationConstraint[(i, index)]
+                    obj] = disaggregationConstraint[cons_idx]
             else:
                 thismap = disaggregationConstraintMap[var] = ComponentMap()
-                thismap[obj] = disaggregationConstraint[(i, index)]
+                thismap[obj] = disaggregationConstraint[cons_idx]
 
         # deactivate for the writers
         obj.deactivate()
 
     def _transform_disjunct(self, obj, transBlock, varSet, localVars,
                             local_var_set):
-        # deactivated should only come from the user
+        # We're not using the preprocessed list here, so this could be
+        # inactive. We've already done the error checking in preprocessing, so
+        # we just skip it here.
         if not obj.active:
-            if obj.indicator_var.is_fixed():
-                if not value(obj.indicator_var):
-                    # The user cleanly deactivated the disjunct: there
-                    # is nothing for us to do here.
-                    return
-                else:
-                    raise GDP_Error(
-                        "The disjunct '%s' is deactivated, but the "
-                        "indicator_var is fixed to %s. This makes no sense."
-                        % ( obj.name, value(obj.indicator_var) ))
-            if obj._transformation_block is None:
-                raise GDP_Error(
-                    "The disjunct '%s' is deactivated, but the "
-                    "indicator_var is not fixed and the disjunct does not "
-                    "appear to have been relaxed. This makes no sense. "
-                    "(If the intent is to deactivate the disjunct, fix its "
-                    "indicator_var to False.)"
-                    % ( obj.name, ))
-
-        if obj._transformation_block is not None:
-            # we've transformed it, which means this is the second time it's
-            # appearing in a Disjunction
-            raise GDP_Error(
-                    "The disjunct '%s' has been transformed, but a disjunction "
-                    "it appears in has not. Putting the same disjunct in "
-                    "multiple disjunctions is not supported." % obj.name)
+            return
 
         # create a relaxation block for this disjunct
         relaxedDisjuncts = transBlock.relaxedDisjuncts
@@ -702,34 +663,6 @@ class Hull_Reformulation(Transformation):
 
     def _transform_block_components( self, block, disjunct, var_substitute_map,
                                      zero_substitute_map):
-        # As opposed to bigm, in hull the only special thing we need to do for
-        # nested Disjunctions is to make sure that we move up local var
-        # references and also references to the disaggregated variables so that
-        # all will be accessible after we transform this Disjunct. The indicator
-        # variables and disaggregated variables of the inner disjunction will
-        # need to be disaggregated again, but the transformed constraints will
-        # not be. But this way nothing will get double-bigm-ed. (If an
-        # untransformed disjunction is lurking here, we will catch it below).
-
-        disjunctBlock = disjunct._transformation_block()
-        destinationBlock = disjunctBlock.parent_block()
-        for obj in block.component_data_objects(
-                Disjunction,
-                sort=SortComponents.deterministic,
-                descend_into=(Block)):
-            if obj.algebraic_constraint is None:
-                # This could be bad if it's active since that means its
-                # untransformed, but we'll wait to yell until the next loop
-                continue
-            # get this disjunction's relaxation block.
-            transBlock = obj.algebraic_constraint().parent_block()
-
-            self._transfer_var_references(transBlock, destinationBlock)
-
-        # Transform any logical constraints here. We need to do this before we
-        # create the variable references!
-        TransformationFactory('core.logical_to_linear').apply_to(block)
-
         # We don't know where all the BooleanVars are used, so if there are any
         # that the above transformation didn't transform, we need to do it now,
         # so that the Reference gets moved up. This won't be necessary when the
@@ -751,18 +684,16 @@ class Hull_Reformulation(Transformation):
         # indicator_var). Note that we do this after we have moved up the
         # transformation blocks for nested disjunctions, so that we don't have
         # duplicate references.
-        varRefBlock = disjunctBlock.localVarReferences
+        varRefBlock = disjunct._transformation_block().localVarReferences
         for v in block.component_objects(Var, descend_into=Block, active=None):
-            if len(v) > 0:
-                varRefBlock.add_component(unique_component_name(
-                    varRefBlock, v.getname(fully_qualified=True)),
-                                          Reference(v))
+            varRefBlock.add_component(unique_component_name(
+                varRefBlock, v.getname(fully_qualified=True)), Reference(v))
 
         # Look through the component map of block and transform everything we
         # have a handler for. Yell if we don't know how to handle it. (Note that
         # because we only iterate through active components, this means
         # non-ActiveComponent types cannot have handlers.)
-        for obj in block.component_objects(active=True, descend_into=False):
+        for obj in block.component_objects(active=True, descend_into=Block):
             handler = self.handlers.get(obj.ctype, None)
             if not handler:
                 if handler is None:
@@ -833,39 +764,19 @@ class Hull_Reformulation(Transformation):
 
         return local_var_set
 
-    def _transfer_var_references(self, fromBlock, toBlock):
-        disjunctList = toBlock.relaxedDisjuncts
-        for idx, disjunctBlock in fromBlock.relaxedDisjuncts.items():
-            # move all the of the local var references
-            newblock = disjunctList[len(disjunctList)]
-            newblock.localVarReferences = Block()
-            newblock.localVarReferences.transfer_attributes_from(
-                disjunctBlock.localVarReferences)
-
-    def _warn_for_active_disjunction( self, disjunction, disjunct,
-                                      var_substitute_map, zero_substitute_map):
-        _warn_for_active_disjunction(disjunction, disjunct)
-
     def _warn_for_active_disjunct( self, innerdisjunct, outerdisjunct,
                                    var_substitute_map, zero_substitute_map):
-        _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
-
-    def _warn_for_active_logical_statement(
-            self, logical_statment, disjunct, var_substitute_map,
-            zero_substitute_map):
-        _warn_for_active_logical_constraint(logical_statment, disjunct)
-
-    def _transform_block_on_disjunct( self, block, disjunct, var_substitute_map,
-                                      zero_substitute_map):
-        # We look through everything on the component map of the block
-        # and transform it just as we would if it was on the disjunct
-        # directly.  (We are passing the disjunct through so that when
-        # we find constraints, _transform_constraint will have access to
-        # the correct indicator variable.
-        for i in sorted(block.keys()):
-            self._transform_block_components( block[i], disjunct,
-                                              var_substitute_map,
-                                              zero_substitute_map)
+        disjuncts = innerdisjunct.values() if innerdisjunct.is_indexed() else \
+                    (innerdisjunct,)
+        for disj in disjuncts:
+            if disj in self._targets:
+                # We're getting to this, have some patience.
+                continue
+            else:
+                # But if it wasn't in the targets after preprocessing, it
+                # doesn't belong in an active Disjunction that we are
+                # transforming and we should be confused.
+                _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
 
     def _transform_constraint(self, obj, disjunct, var_substitute_map,
                               zero_substitute_map):
@@ -1084,7 +995,7 @@ class Hull_Reformulation(Transformation):
 
         Parameters
         ----------
-        v: a Var which appears in a constraint in a transformed Disjunct
+        v: a Var that appears in a constraint in a transformed Disjunct
         disjunct: a transformed Disjunct in which v appears
         """
         if disjunct._transformation_block is None:
@@ -1096,7 +1007,7 @@ class Hull_Reformulation(Transformation):
                 disjunct][v]
         except:
             logger.error("It does not appear '%s' is a "
-                         "variable which appears in disjunct '%s'"
+                         "variable that appears in disjunct '%s'"
                          % (v.name, disjunct.name))
             raise
 

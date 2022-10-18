@@ -146,8 +146,9 @@ class TestExternalInputOutputModel(unittest.TestCase):
                                         ex_input_output_model=PressureDropModel(),
                                         inputs=[m.Pin, m.c1, m.c2, m.F],
                                         outputs=[m.P1, m.P2],
-                                        outputs_eqn_scaling=[10.0, 11.0]
-                                        )
+                                        outputs_eqn_scaling=[10.0, 11.0],
+                                        nl_file_options={'file_determinism': 3},
+            )
 
         # solve the problem
         options={'hessian_approximation':'limited-memory',
@@ -171,11 +172,11 @@ class TestExternalInputOutputModel(unittest.TestCase):
         self.assertIn('DenseVector "x scaling vector" with 7 elements:', solver_trace)
         self.assertIn('x scaling vector[    1]= 6.0000000000000000e+00', solver_trace)
         self.assertIn('x scaling vector[    2]= 7.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    3]= 2.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    4]= 3.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    5]= 4.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    6]= 5.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    7]= 1.0000000000000000e+00', solver_trace)
+        self.assertIn('x scaling vector[    3]= 5.0000000000000000e+00', solver_trace)
+        self.assertIn('x scaling vector[    4]= 2.0000000000000000e+00', solver_trace)
+        self.assertIn('x scaling vector[    5]= 1.0000000000000000e+00', solver_trace)
+        self.assertIn('x scaling vector[    6]= 3.0000000000000000e+00', solver_trace)
+        self.assertIn('x scaling vector[    7]= 4.0000000000000000e+00', solver_trace)
         self.assertIn('DenseVector "c scaling vector" with 5 elements:', solver_trace)
         self.assertIn('c scaling vector[    1]= 8.0000000000000000e+00', solver_trace)
         self.assertIn('c scaling vector[    2]= 9.0000000000000000e+00', solver_trace)
@@ -213,12 +214,14 @@ class TestExternalInputOutputModel(unittest.TestCase):
 
         # test that this all works with ndarray input as well
         cyipopt_problem = \
-            PyomoExternalCyIpoptProblem(pyomo_model=m,
-                                        ex_input_output_model=PressureDropModel(),
-                                        inputs=[m.Pin, m.c1, m.c2, m.F],
-                                        outputs=[m.P1, m.P2],
-                                        outputs_eqn_scaling=np.asarray([10.0, 11.0], dtype=np.float64)
-                                        )
+            PyomoExternalCyIpoptProblem(
+                pyomo_model=m,
+                ex_input_output_model=PressureDropModel(),
+                inputs=[m.Pin, m.c1, m.c2, m.F],
+                outputs=[m.P1, m.P2],
+                outputs_eqn_scaling=np.asarray([10.0, 11.0], dtype=np.float64),
+                nl_file_options={'file_determinism': 3},
+            )
 
         # solve the problem
         options={'hessian_approximation':'limited-memory',
@@ -242,11 +245,11 @@ class TestExternalInputOutputModel(unittest.TestCase):
         self.assertIn('DenseVector "x scaling vector" with 7 elements:', solver_trace)
         self.assertIn('x scaling vector[    1]= 6.0000000000000000e+00', solver_trace)
         self.assertIn('x scaling vector[    2]= 7.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    3]= 2.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    4]= 3.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    5]= 4.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    6]= 5.0000000000000000e+00', solver_trace)
-        self.assertIn('x scaling vector[    7]= 1.0000000000000000e+00', solver_trace)
+        self.assertIn('x scaling vector[    3]= 5.0000000000000000e+00', solver_trace)
+        self.assertIn('x scaling vector[    4]= 2.0000000000000000e+00', solver_trace)
+        self.assertIn('x scaling vector[    5]= 1.0000000000000000e+00', solver_trace)
+        self.assertIn('x scaling vector[    6]= 3.0000000000000000e+00', solver_trace)
+        self.assertIn('x scaling vector[    7]= 4.0000000000000000e+00', solver_trace)
         self.assertIn('DenseVector "c scaling vector" with 5 elements:', solver_trace)
         self.assertIn('c scaling vector[    1]= 8.0000000000000000e+00', solver_trace)
         self.assertIn('c scaling vector[    2]= 9.0000000000000000e+00', solver_trace)

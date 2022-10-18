@@ -21,6 +21,7 @@ from pyomo.common.formatting import tabular_writer
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
+
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.expr.boolean_value import as_boolean, BooleanConstant
 from pyomo.core.expr.numvalue import native_types, native_logical_types
@@ -136,18 +137,6 @@ class _GeneralLogicalConstraintData(_LogicalConstraintData):
         self._expr = None
         if expr is not None:
             self.set_value(expr)
-
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        result = super(_GeneralLogicalConstraintData, self).__getstate__()
-        for i in _GeneralLogicalConstraintData.__slots__:
-            result[i] = getattr(self, i)
-        return result
-
-    # Since this class requires no special processing of the state
-    # dictionary, it does not need to implement __setstate__()
 
     #
     # Abstract Interface
@@ -428,16 +417,6 @@ class ScalarLogicalConstraint(_GeneralLogicalConstraintData, LogicalConstraint):
             self, component=self, expr=None)
         LogicalConstraint.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
-
-    #
-    # Since this class derives from Component and
-    # Component.__getstate__ just packs up the entire __dict__ into
-    # the state dict, we do not need to define the __getstate__ or
-    # __setstate__ methods.  We just defer to the super() get/set
-    # state.  Since all of our get/set state methods rely on super()
-    # to traverse the MRO, this will automatically pick up both the
-    # Component and Data base classes.
-    #
 
     #
     # Override abstract interface methods to first check for

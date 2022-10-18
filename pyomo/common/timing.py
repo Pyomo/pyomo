@@ -20,13 +20,17 @@ import logging
 import sys
 import time
 import traceback
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.modeling import NOTSET as _NotSpecified
 
 _logger = logging.getLogger('pyomo.common.timing')
 _logger.propagate = False
 _logger.setLevel(logging.WARNING)
 
-def report_timing(stream=True):
+_construction_logger = logging.getLogger('pyomo.common.timing.construction')
+_transform_logger = logging.getLogger('pyomo.common.timing.transformation')
+
+def report_timing(stream=True, level=logging.INFO):
     """Set reporting of Pyomo timing information.
 
     Parameters
@@ -35,10 +39,11 @@ def report_timing(stream=True):
         The destination stream to emit timing information.  If ``True``,
         defaults to ``sys.stdout``.  If ``False`` or ``None``, disables
         reporting of timing information.
-
+    level: int
+        The logging level for the timing logger
     """
     if stream:
-        _logger.setLevel(logging.INFO)
+        _logger.setLevel(level)
         if stream is True:
             stream = sys.stdout
         handler = logging.StreamHandler(stream)
@@ -50,85 +55,122 @@ def report_timing(stream=True):
         for h in _logger.handlers:
             _logger.removeHandler(h)
 
-_construction_logger = logging.getLogger('pyomo.common.timing.construction')
+
+class GeneralTimer(object):
+    def __init__(self, fmt, data):
+        self.fmt = fmt
+        self.data = data
+
+    def report(self):
+        _logger.info(self)
+
+    @property
+    def obj(self):
+        return self.data[-1]
+
+    @property
+    def timer(self):
+        return self.data[:-1]
+
+    def __str__(self):
+        return self.fmt % self.data
 
 
 class ConstructionTimer(object):
-    fmt = "%%6.%df seconds to construct %s %s; %d %s total"
+    __slots__ = ('obj', 'timer')
+    msg = "%6.*f seconds to construct %s %s%s"
+    in_progress = "ConstructionTimer object for %s %s; %0.3f elapsed seconds"
+
     def __init__(self, obj):
         self.obj = obj
-        self.timer = TicTocTimer()
+        self.timer = -default_timer()
 
     def report(self):
         # Record the elapsed time, as some log handlers may not
         # immediately generate the messge string
-        self.timer = self.timer.toc(msg=None)
+        self.timer += default_timer()
         _construction_logger.info(self)
 
-    def __str__(self):
-        total_time = self.timer
+    @property
+    def name(self):
         try:
-            idx = len(self.obj.index_set())
-        except AttributeError:
-            idx = 1
-        try:
-            name = self.obj.name
+            return self.obj.name
         except RuntimeError:
             try:
-                name = self.obj.local_name
+                return self.obj.local_name
             except RuntimeError:
-                name = '(unknown)'
+                return '(unknown)'
         except AttributeError:
-            name = '(unknown)'
+            return '(unknown)'
+
+    def __str__(self):
+        try:
+            if self.obj.is_indexed():
+                # indexed component
+                if self.obj.index_set().isfinite():
+                    idx = len(self.obj.index_set())
+                else:
+                    idx = len(self.obj)
+                idx_label = f'{idx} indices' if idx != 1 else '1 index'
+            elif hasattr(self.obj, 'index_set'):
+                # scalar indexed components
+                idx = len(self.obj.index_set())
+                idx_label = f'{idx} indices' if idx != 1 else '1 index'
+            else:
+                # other non-indexed component (e.g., Suffix)
+                idx_label = ''
+        except AttributeError:
+            # unknown component
+            idx_label = ''
+        if idx_label:
+            idx_label = f'; {idx_label} total'
         try:
             _type = self.obj.ctype.__name__
         except AttributeError:
             _type = type(self.obj).__name__
-        try:
-            return self.fmt % ( 2 if total_time>=0.005 else 0,
-                                _type,
-                                name,
-                                idx,
-                                'indices' if idx > 1 else 'index',
-                            ) % total_time
-        except TypeError:
-            return "ConstructionTimer object for %s %s; %s elapsed seconds" % (
-                _type,
-                name,
-                self.timer.toc("") )
-
-
-_transform_logger = logging.getLogger('pyomo.common.timing.transformation')
+        total_time = self.timer
+        if total_time < 0:
+            total_time += default_timer()
+            return self.in_progress % (_type, self.name, total_time)
+        return self.msg % ( 2 if total_time >= 0.005 else 0,
+                            total_time,
+                            _type,
+                            self.name,
+                            idx_label )
 
 
 class TransformationTimer(object):
-    fmt = "%%6.%df seconds to apply Transformation %s%s"
+    __slots__ = ('obj', 'mode', 'timer')
+    msg = "%6.*f seconds to apply Transformation %s%s"
+    in_progress = "TransformationTimer object for %s%s; %0.3f elapsed seconds"
+
     def __init__(self, obj, mode=None):
         self.obj = obj
         if mode is None:
             self.mode = ''
         else:
             self.mode = " (%s)" % (mode,)
-        self.timer = TicTocTimer()
+        self.timer = -default_timer()
 
     def report(self):
         # Record the elapsed time, as some log handlers may not
         # immediately generate the message string
-        self.timer = self.timer.toc(msg=None)
+        self.timer += default_timer()
         _transform_logger.info(self)
+
+    @property
+    def name(self):
+        return self.obj.__class__.__name__
 
     def __str__(self):
         total_time = self.timer
-        name = self.obj.__class__.__name__
-        try:
-            return self.fmt % ( 2 if total_time>=0.005 else 0,
-                                name,
-                                self.mode,
-                            ) % total_time
-        except TypeError:
-            return "TransformationTimer object for %s; %s elapsed seconds" % (
-                name,
-                self.timer.toc("") )
+        if total_time < 0:
+            total_time += default_timer()
+            return self.in_progress % (self.name, self.mode, total_time)
+        return self.msg % ( 2 if total_time>=0.005 else 0,
+                            total_time,
+                            self.name,
+                            self.mode )
 
 #
 # Setup the timer
@@ -171,14 +213,17 @@ class TicTocTimer(object):
            logging package. Note: the timing logged using ``logger.info()``
     """
     def __init__(self, ostream=_NotSpecified, logger=None):
+        if ostream is _NotSpecified and logger is not None:
+            ostream = None
         self._lastTime = self._loadTime = default_timer()
         self.ostream = ostream
         self.logger = logger
+        self.level = logging.INFO
         self._start_count = 0
         self._cumul = 0
 
-    def tic(self, msg=_NotSpecified,
-            ostream=_NotSpecified, logger=_NotSpecified):
+    def tic(self, msg=_NotSpecified, *args,
+            ostream=_NotSpecified, logger=_NotSpecified, level=_NotSpecified):
         """Reset the tic/toc delta timer.
 
         This resets the reference time from which the next delta time is
@@ -188,22 +233,37 @@ class TicTocTimer(object):
             msg (str): The message to print out.  If not specified, then
                 prints out "Resetting the tic/toc delta timer"; if msg
                 is None, then no message is printed.
+            *args (tuple): optional positional arguments used for
+                %-formatting the `msg`
             ostream (FILE): an optional output stream (overrides the ostream
                 provided when the class was constructed).
             logger (Logger): an optional output stream using the python
                 logging package (overrides the ostream provided when the
                 class was constructed). Note: timing logged using logger.info
+            level (int): an optional logging output level.
 
         """
-        self._lastTime = default_timer()
+        self._lastTime = self._loadTime = default_timer()
         if msg is _NotSpecified:
             msg = "Resetting the tic/toc delta timer"
         if msg is not None:
-            self.toc(msg=msg, delta=False, ostream=ostream, logger=logger)
+            if args and '%' not in msg:
+                # Note: specify the parent module scope for the logger
+                # so this does not hit (and get handled by) the local
+                # pyomo.common.timing logger.
+                deprecation_warning(
+                    "tic(): 'ostream' and 'logger' should be "
+                    "specified as keyword arguments", version='6.4.2',
+                    logger=__package__)
+                ostream, *args = args
+                if args:
+                    logger, *args = args
+            self.toc(msg, *args, delta=False,
+                     ostream=ostream, logger=logger, level=level)
 
 
-    def toc(self, msg=_NotSpecified, delta=True,
-            ostream=_NotSpecified, logger=_NotSpecified):
+    def toc(self, msg=_NotSpecified, *args, delta=True,
+            ostream=_NotSpecified, logger=_NotSpecified, level=_NotSpecified):
         """Print out the elapsed time.
 
         This resets the reference time from which the next delta time is
@@ -212,23 +272,38 @@ class TicTocTimer(object):
         Args:
             msg (str): The message to print out.  If not specified, then
                 print out the file name, line number, and function that
-                called this method; if msg is None, then no message is
+                called this method; if `msg` is None, then no message is
                 printed.
+            *args (tuple): optional positional arguments used for
+                %-formatting the `msg`
             delta (bool): print out the elapsed wall clock time since
-                the last call to :meth:`tic` or :meth:`toc`
-                (``True`` (default)) or since the module was first
-                loaded (``False``).
+                the last call to :meth:`tic` (``False``) or since the
+                most recent call to either :meth:`tic` or :meth:`toc`
+                (``True`` (default)).
             ostream (FILE): an optional output stream (overrides the ostream
                 provided when the class was constructed).
             logger (Logger): an optional output stream using the python
                 logging package (overrides the ostream provided when the
-                class was constructed). Note: timing logged using logger.info
-
+                class was constructed). Note: timing logged using `level`
+            level (int): an optional logging output level.
         """
 
         if msg is _NotSpecified:
             msg = 'File "%s", line %s in %s' % \
                   traceback.extract_stack(limit=2)[0][:3]
+        if args and msg is not None and '%' not in msg:
+            # Note: specify the parent module scope for the logger
+            # so this does not hit (and get handled by) the local
+            # pyomo.common.timing logger.
+            deprecation_warning(
+                "toc(): 'delta', 'ostream', and 'logger' should be "
+                "specified as keyword arguments", version='6.4.2',
+                logger=__package__)
+            delta, *args = args
+            if args:
+                ostream, *args = args
+            if args:
+                logger, *args = args
 
         now = default_timer()
         if self._start_count or self._lastTime is None:
@@ -236,42 +311,53 @@ class TicTocTimer(object):
             if self._lastTime:
                 ans += default_timer() - self._lastTime
             if msg is not None:
-                msg = "[%8.2f|%4d] %s\n" % (ans, self._start_count, msg)
+                fmt = "[%8.2f|%4d] %s"
+                data = (ans, self._start_count, msg)
         elif delta:
             ans = now - self._lastTime
             self._lastTime = now
             if msg is not None:
-                msg = "[+%7.2f] %s\n" % (ans, msg)
+                fmt = "[+%7.2f] %s"
+                data = (ans, msg)
         else:
             ans = now - self._loadTime
+            # Even though we are reporting the cumulative time, we will
+            # still reset the delta timer.
+            self._lastTime = now
             if msg is not None:
-                msg = "[%8.2f] %s\n" % (ans, msg)
+                fmt = "[%8.2f] %s"
+                data = (ans, msg)
 
         if msg is not None:
             if logger is _NotSpecified:
                 logger = self.logger
             if logger is not None:
-                logger.info(msg)
+                if level is _NotSpecified:
+                    level = self.level
+                logger.log(level, GeneralTimer(fmt, data), *args)
 
             if ostream is _NotSpecified:
                 ostream = self.ostream
-                if ostream is _NotSpecified and logger is None:
-                    ostream = sys.stdout
+                if ostream is _NotSpecified:
+                    if logger is None:
+                        ostream = sys.stdout
+                    else:
+                        ostream = None
             if ostream is not None:
-                ostream.write(msg)
+                msg = fmt % data
+                if args:
+                    msg = msg % args
+                ostream.write(msg + '\n')
 
         return ans
 
     def stop(self):
-        try:
-            delta = default_timer() - self._lastTime
-        except TypeError:
-            if self._lastTime is None:
-                raise RuntimeError(
-                    "Stopping a TicTocTimer that was already stopped")
-            raise
+        delta, self._lastTime = self._lastTime, None
+        if delta is None:
+            raise RuntimeError(
+                "Stopping a TicTocTimer that was already stopped")
+        delta = default_timer() - delta
         self._cumul += delta
-        self._lastTime = None
         return delta
 
     def start(self):

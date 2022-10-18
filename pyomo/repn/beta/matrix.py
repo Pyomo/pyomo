@@ -592,6 +592,16 @@ class _LinearMatrixConstraintData(_LinearConstraintData):
         return None
 
     @property
+    def lb(self):
+        """Access the lower bound of a constraint expression."""
+        return self.lower
+
+    @property
+    def ub(self):
+        """Access the upper bound of a constraint expression."""
+        return self.upper
+
+    @property
     def equality(self):
         """A boolean indicating whether this is an equality constraint."""
         return (self.parent_component()._range_types[self.index()] & \

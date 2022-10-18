@@ -209,6 +209,7 @@ setup_kwargs = dict(
     ],
     extras_require = {
         'tests': [
+            #'codecov', # useful for testing infrastructures, but not required
             'coverage',
             'pytest',
             'pytest-parallel',
@@ -227,7 +228,9 @@ setup_kwargs = dict(
         'optional': [
             'dill',      # No direct use, but improves lambda pickle
             'ipython',   # contrib.viewer
-            'matplotlib',
+            # Note: matplotlib 3.6.1 has bug #24127, which breaks
+            # seaborn's histplot (triggering parmest failures)
+            'matplotlib!=3.6.1',
             'networkx',  # network, incidence_analysis, community_detection
             'numpy',
             'openpyxl',  # dataportals

@@ -52,7 +52,7 @@ def build_simple_nonconvex_gdp():
 if __name__ == "__main__":
     model = build_simple_nonconvex_gdp()
     model.pprint()
-    res = SolverFactory('gdpopt').solve(model, tee=True, strategy='GLOA')
+    res = SolverFactory('gdpopt.gloa').solve(model, tee=True)
 
     model.display()
     print(res)

@@ -473,7 +473,7 @@ class block(IBlock):
                     raise KeyError("Constraint associated with symbol '%s' "
                                    "is not found on this block"
                                    % (label))
-            unseen_var_ids.remove(id(con))
+            unseen_var_ids.discard(id(con))
             for _attr_key, attr_value in entry.items():
                 attr_key = _attr_key[0].lower() + _attr_key[1:]
                 if attr_key in valid_import_suffixes:

@@ -162,7 +162,7 @@ if __name__ == "__main__":
     m = build_eight_process_flowsheet()
     from pyomo.environ import TransformationFactory
     TransformationFactory('core.logical_to_linear').apply_to(m)
-    SolverFactory('gdpopt').solve(m, tee=True, strategy='LOA')
+    SolverFactory('gdpopt.loa').solve(m, tee=True)
     update_boolean_vars_from_binary(m)
     m.Y.display()
     m.flow.display()

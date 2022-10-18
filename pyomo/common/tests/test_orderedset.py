@@ -85,3 +85,8 @@ class testOrderedSet(unittest.TestCase):
         self.assertEqual(list(c), [3, 'c'])
         self.assertEqual(list(a), [1, 2, 3, 'a', 'b', 'c'])
         self.assertEqual(list(b), [3, 4, 'c', 'd'])
+
+    def test_reversed(self):
+        a = OrderedSet([1,5,3])
+        self.assertEqual(list(a), [1, 5, 3])
+        self.assertEqual(list(reversed(a)), [3, 5, 1])

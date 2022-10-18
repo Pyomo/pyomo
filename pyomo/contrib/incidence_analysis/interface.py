@@ -16,7 +16,7 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.reference import Reference
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.core.expr.logical_expr import EqualityExpression
+from pyomo.core.expr.current import EqualityExpression
 from pyomo.util.subsystems import create_subsystem_block
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.dependencies import scipy_available

@@ -18,6 +18,7 @@ import random
 from filecmp import cmp
 import pyomo.common.unittest as unittest
 
+from pyomo.common.log import LoggingIntercept
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.environ import (
     ConcreteModel, Var, Constraint, Objective, Block, ComponentMap,
@@ -187,19 +188,41 @@ class TestCPXLP_writer(unittest.TestCase):
         return prefix+".lp.baseline", prefix+".lp.out"
 
     def test_var_on_other_model(self):
+        baseline_fname, test_fname = self._get_fnames()
+        self._cleanup(test_fname)
+
         other = ConcreteModel()
         other.a = Var()
 
         model = ConcreteModel()
         model.x = Var()
-        model.c = Constraint(expr=other.a + 2*model.x <= 0)
         model.obj = Objective(expr=model.x)
 
-        baseline_fname, test_fname = self._get_fnames()
+        # Test var in linear expression
+        model.c = Constraint(expr=other.a + 2*model.x <= 0)
+        with LoggingIntercept() as LOG:
+            self.assertRaises(
+                KeyError,
+                model.write, test_fname, format='lp')
+        self.assertEqual(
+            LOG.getvalue().replace('\n', ' ').strip(),
+            'Model contains an expression (c) that contains a variable '
+            '(a) that is not attached to an active block on the '
+            'submodel being written')
         self._cleanup(test_fname)
-        self.assertRaises(
-            KeyError,
-            model.write, test_fname, format='lp')
+
+        # Test var in quadratic expression
+        del model.c
+        model.c = Constraint(expr=other.a * model.x <= 0)
+        with LoggingIntercept() as LOG:
+            self.assertRaises(
+                KeyError,
+                model.write, test_fname, format='lp')
+        self.assertEqual(
+            LOG.getvalue().replace('\n', ' ').strip(),
+            'Model contains an expression (c) that contains a variable '
+            '(a) that is not attached to an active block on the '
+            'submodel being written')
         self._cleanup(test_fname)
 
     def test_var_on_deactivated_block(self):

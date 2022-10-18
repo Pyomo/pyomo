@@ -25,6 +25,7 @@ from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.sorting import sorted_robust
 from pyomo.common.timing import ConstructionTimer
+
 from pyomo.core.expr.numvalue import (
     native_types, native_numeric_types, as_numeric, value, is_constant,
 )
@@ -250,7 +251,7 @@ class SetInitializer(InitializerBase):
     initializers.
 
     """
-    __slots__ = ('_set','verified')
+    __slots__ = ('_set', 'verified')
 
     def __init__(self, init, allow_generators=True):
         self.verified = False
@@ -621,7 +622,11 @@ class _SetData(_SetDataBase):
         # but problemmatic for code coverage.
         ranges = list(self.ranges())
         if len(ranges) == 1:
-            start, end, c = ranges[0].normalize_bounds()
+            try:
+                start, end, c = ranges[0].normalize_bounds()
+            except AttributeError:
+                # Catching Any, NonNumericRange, etc...
+                return self.bounds() + (None,)
             return (
                 None if start == -_inf else start,
                 None if end == _inf else end,
@@ -1208,18 +1213,6 @@ class _FiniteSetData(_FiniteSetMixin, _SetData):
         self._filter = None
         self._dimen = UnknownSetDimen
 
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        state = super(_FiniteSetData, self).__getstate__()
-        for i in _FiniteSetData.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
-    # Note: because none of the slots on this class need to be edited,
-    # we don't need to implement a specialized __setstate__ method.
-
     def get(self, value, default=None):
         """
         Return True if the set contains a given value.
@@ -1536,18 +1529,6 @@ class _OrderedSetData(_OrderedSetMixin, _FiniteSetData):
         self._ordered_values = []
         _FiniteSetData.__init__(self, component=component)
 
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        state = super(_OrderedSetData, self).__getstate__()
-        for i in _OrderedSetData.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
-    # Note: because none of the slots on this class need to be edited,
-    # we don't need to implement a specialized __setstate__ method.
-
     def _iter_impl(self):
         """
         Return an iterator for the set.
@@ -1678,18 +1659,6 @@ class _SortedSetData(_SortedSetMixin, _OrderedSetData):
         # An empty set is sorted...
         self._is_sorted = True
         _OrderedSetData.__init__(self, component=component)
-
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        state = super(_SortedSetData, self).__getstate__()
-        for i in _SortedSetData.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
-    # Note: because none of the slots on this class need to be edited,
-    # we don't need to implement a specialized __setstate__ method.
 
     def _iter_impl(self):
         """
@@ -2459,18 +2428,6 @@ class _InfiniteRangeSetData(_SetData):
         _SetData.__init__(self, component=component)
         self._ranges = None
 
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        state = super(_InfiniteRangeSetData, self).__getstate__()
-        for i in _InfiniteRangeSetData.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
-    # Note: because none of the slots on this class need to be edited,
-    # we don't need to implement a specialized __setstate__ method.
-
     def get(self, value, default=None):
         # The bulk of single-value set members were stored as scalars.
         # Check that first.
@@ -3087,15 +3044,6 @@ class SetOperator(_SetData, Set):
         if all(_.parent_component()._constructed for _ in self._sets):
             self.construct()
 
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        state = super(SetOperator, self).__getstate__()
-        for i in SetOperator.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
     def construct(self, data=None):
         if self._constructed:
             return
@@ -3126,9 +3074,6 @@ class SetOperator(_SetData, Set):
                     "Constructing SetOperator %s with incompatible data "
                     "(data=%s}" % (self.name, data))
         timer.report()
-
-    # Note: because none of the slots on this class need to be edited,
-    # we don't need to implement a specialized __setstate__ method.
 
     def __len__(self):
         """Return the length of this Set
@@ -4131,7 +4076,7 @@ def DeclareGlobalSet(obj, caller_globals=None):
         # least in Python 2.7), so we will explicitly set the __doc__
         # attribute.
 
-        __slots__ = ()
+        __slots__ = ('_bounds', '_interval')
 
         global_name = None
 
@@ -4181,6 +4126,15 @@ def DeclareGlobalSet(obj, caller_globals=None):
             if kwds:
                 raise RuntimeError("Unexpected keyword arguments: %s" % (kwds,))
             return ans
+        #
+        # Global sets are assumed to be constant sets.  For performance,
+        # we will precompute and cache the Set bounds() and interval
+        #
+        def bounds(self):
+            return self._bounds
+
+        def get_interval(self):
+            return self._interval
 
     _set = GlobalSet()
     # TODO: Can GlobalSets be a proper Block?
@@ -4190,6 +4144,9 @@ def DeclareGlobalSet(obj, caller_globals=None):
     _set.__class__.__setstate__(_set, obj.__getstate__())
     _set._component = weakref.ref(_set)
     _set.construct()
+    # Cache the set bounds / interval
+    _set._bounds = obj.bounds()
+    _set._interval = obj.get_interval()
     return _set
 
 

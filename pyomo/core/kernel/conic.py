@@ -98,13 +98,23 @@ class _ConicBase(IConstraint):
         return self._body
 
     @property
+    def lower(self):
+        """The expression for the lower bound of the constraint"""
+        return None
+
+    @property
+    def upper(self):
+        """The expression for the upper bound of the constraint"""
+        return 0.0
+
+    @property
     def lb(self):
-        """The lower bound of the constraint"""
+        """The value of the lower bound of the constraint"""
         return None
 
     @property
     def ub(self):
-        """The upper bound of the constraint"""
+        """The value of the upper bound of the constraint"""
         return 0.0
 
     @property

@@ -22,7 +22,8 @@ from pyomo.contrib.mindtpy.util import get_primal_integral, get_dual_integral, s
 from pyomo.contrib.mindtpy.nlp_solve import handle_subproblem_other_termination, handle_feasibility_subproblem_tc, solve_subproblem, handle_nlp_subproblem_tc
 from pyomo.core.base import TransformationFactory
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.gdpopt.util import create_utility_block, time_code, process_objective, setup_results_object
+from pyomo.contrib.gdpopt.util import time_code
+from pyomo.contrib.mindtpy.util import create_utility_block, process_objective, setup_results_object
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main, init_rNLP
 from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, handle_fp_main_tc
 from pyomo.core import Block, ConstraintList

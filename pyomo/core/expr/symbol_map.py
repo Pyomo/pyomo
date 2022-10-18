@@ -76,9 +76,9 @@ class SymbolMap(object):
 
         This method assumes that symbol names will not conflict.
         """
-        tuples = [(obj, symb) for obj,symb in obj_symbol_tuples]
-        self.byObject.update((id(obj_), symb_) for obj_,symb_ in tuples)
-        self.bySymbol.update((symb_, weakref_ref(obj_)) for obj_,symb_ in tuples)
+        for obj, symbol in obj_symbol_tuples:
+            self.byObject[id(obj)] = symbol
+            self.bySymbol[symbol] = weakref_ref(obj)
 
     def createSymbol(self, obj, labeler=None, *args):
         """

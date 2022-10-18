@@ -89,7 +89,7 @@ if __name__ == "__main__":
         res = SolverFactory('gams').solve(model, tee=True, solver='baron', add_options=['option optcr = 0;'], keepfiles=True)
     else:
         # Note: MC++ needs to be properly installed to use strategy GLOA
-        res = SolverFactory('gdpopt').solve(model, tee=True, strategy='GLOA')
+        res = SolverFactory('gdpopt.gloa').solve(model, tee=True)
 
     # model.display()
     print(res)

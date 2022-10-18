@@ -11,9 +11,17 @@
 
 from collections.abc import MutableMapping as collections_MutableMapping
 from collections.abc import Mapping as collections_Mapping
+from pyomo.common.autoslots import AutoSlots
 
+def _rebuild_ids(encode, val):
+    if encode:
+        return val
+    else:
+        # object id() may have changed after unpickling,
+        # so we rebuild the dictionary keys
+        return {id(obj):(obj,v) for obj, v in val.values()}
 
-class ComponentMap(collections_MutableMapping):
+class ComponentMap(AutoSlots.Mixin, collections_MutableMapping):
     """
     This class is a replacement for dict that allows Pyomo
     modeling components to be used as entry keys. The
@@ -38,48 +46,13 @@ class ComponentMap(collections_MutableMapping):
     part of a block). ***
     """
     __slots__ = ("_dict",)
+    __autoslot_mappers__ = {'_dict': _rebuild_ids}
+
     def __init__(self, *args, **kwds):
         # maps id(obj) -> (obj,val)
         self._dict = {}
         # handle the dict-style initialization scenarios
         self.update(*args, **kwds)
-
-    #
-    # This method must be defined for deepcopy/pickling
-    # because this class relies on Python ids.
-    #
-    def __setstate__(self, state):
-        # *** Temporary hack to allow this class to be used
-        # *** in inheritance chains for both the old and new
-        # *** component hierarchies.
-        for cls in self.__class__.__mro__:
-            if cls.__name__ == "ICategorizedObject":
-                super(ComponentMap, self).__setstate__(state)
-                break
-
-        # object id() may have changed after unpickling,
-        # so we rebuild the dictionary keys
-        self._dict = \
-            {id(obj):(obj,val) \
-                 for obj, val in state['_dict'].values()}
-
-    def __getstate__(self):
-        # *** Temporary hack to allow this class to be used
-        # *** in inheritance chains for both the old and new
-        # *** component hierarchies.
-        try:
-            super(ComponentMap, self).__getstate__
-        except AttributeError:
-            state = {}
-        else:
-            state = super(ComponentMap, self).__getstate__()
-        for cls in self.__class__.__mro__:
-            if cls.__name__ == "ICategorizedObject":
-                break
-        else:
-            for i in ComponentMap.__slots__:
-                state[i] = getattr(self, i)
-        return state
 
     def __str__(self):
         """String representation of the mapping."""

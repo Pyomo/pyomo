@@ -9,269 +9,81 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-"""This module provides functions for cut generation."""
-from __future__ import division
+"""This module provides functions for cut generation used across multiple
+algorithms."""
+from math import fabs
+from pyomo.common.collections import ComponentSet
+from pyomo.core import TransformationFactory, value, Constraint, Block
 
-from collections import namedtuple
-from math import copysign, fabs
-from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.contrib.gdp_bounds.info import disjunctive_bounds
-from pyomo.contrib.gdpopt.util import time_code, constraints_in_True_disjuncts
-from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
-from pyomo.core import (Block, ConstraintList, NonNegativeReals, VarList,
-                        minimize, value, TransformationFactory)
-from pyomo.core.expr import differentiate
-from pyomo.core.expr.visitor import identify_variables
-
-MAX_SYMBOLIC_DERIV_SIZE = 1000
-JacInfo = namedtuple('JacInfo', ['mode','vars','jac'])
-
-def add_subproblem_cuts(subprob_result, solve_data, config):
-    if config.strategy == "LOA":
-        return add_outer_approximation_cuts(subprob_result, solve_data, config)
-    elif config.strategy == "GLOA":
-        return add_affine_cuts(subprob_result, solve_data, config)
-    elif config.strategy == 'RIC':
-        pass
+def _record_binary_value(var, var_value_is_one, var_value_is_zero, int_tol):
+    val = value(var)
+    if fabs(val - 1) <= int_tol:
+        var_value_is_one.add(var)
+    elif fabs(val) <= int_tol:
+        var_value_is_zero.add(var)
     else:
-        raise ValueError('Unrecognized strategy: ' + config.strategy)
+        raise ValueError(
+            'Binary %s = %s is not 0 or 1 within integer tolerance %s' %
+            (var.name, val, int_tol))
 
-def add_outer_approximation_cuts(nlp_result, solve_data, config):
-    """Add outer approximation cuts to the linear GDP model."""
-    with time_code(solve_data.timing, 'OA cut generation'):
-        m = solve_data.linear_GDP
-        GDPopt = m.GDPopt_utils
-        sign_adjust = -1 if solve_data.objective_sense == minimize else 1
+def add_no_good_cut(target_model_util_block, config):
+    """Cut the current integer solution from the target model."""
+    var_value_is_one = ComponentSet()
+    var_value_is_zero = ComponentSet()
+    for var in target_model_util_block.transformed_boolean_variable_list:
+        _record_binary_value(var, var_value_is_one, var_value_is_zero,
+                             config.integer_tolerance)
 
-        # copy values over
-        for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
-            if val is not None and not var.fixed:
-                var.set_value(val, skip_validation=True)
-
-        # TODO some kind of special handling if the dual is phenomenally small?
-        config.logger.debug('Adding OA cuts.')
-
-        counter = 0
-        if not hasattr(GDPopt, 'jacobians'):
-            GDPopt.jacobians = ComponentMap()
-        for constr, dual_value in zip(GDPopt.constraint_list,
-                                      nlp_result.dual_values):
-            if dual_value is None or constr.body.polynomial_degree() in (1, 0):
-                continue
-
-            # Determine if the user pre-specified that OA cuts should not be
-            # generated for the given constraint.
-            parent_block = constr.parent_block()
-            ignore_set = getattr(parent_block, 'GDPopt_ignore_OA', None)
-            config.logger.debug('Ignore_set %s' % ignore_set)
-            if (ignore_set and (constr in ignore_set or
-                                constr.parent_component() in ignore_set)):
-                config.logger.debug(
-                    'OA cut addition for %s skipped because it is in '
-                    'the ignore set.' % constr.name)
-                continue
-
-            config.logger.debug(
-                "Adding OA cut for %s with dual value %s"
-                % (constr.name, dual_value))
-
-            # Cache jacobian
-            jacobian = GDPopt.jacobians.get(constr, None)
-            if jacobian is None:
-                constr_vars = list(identify_variables(
-                    constr.body, include_fixed=False))
-                if len(constr_vars) >= MAX_SYMBOLIC_DERIV_SIZE:
-                    mode = differentiate.Modes.reverse_numeric
-                else:
-                    mode = differentiate.Modes.sympy
-
-                try:
-                    jac_list = differentiate(
-                        constr.body, wrt_list=constr_vars, mode=mode)
-                    jac_map = ComponentMap(zip(constr_vars, jac_list))
-                except:
-                    if mode is differentiate.Modes.reverse_numeric:
-                        raise
-                    mode = differentiate.Modes.reverse_numeric
-                    jac_map = ComponentMap()
-                jacobian = JacInfo(mode=mode, vars=constr_vars, jac=jac_map)
-                GDPopt.jacobians[constr] = jacobian
-            # Recompute numeric derivatives
-            if not jacobian.jac:
-                jac_list = differentiate(
-                    constr.body, wrt_list=jacobian.vars, mode=jacobian.mode)
-                jacobian.jac.update(zip(jacobian.vars, jac_list))
-
-            # Create a block on which to put outer approximation cuts.
-            oa_utils = parent_block.component('GDPopt_OA')
-            if oa_utils is None:
-                oa_utils = parent_block.GDPopt_OA = Block(
-                    doc="Block holding outer approximation cuts "
-                    "and associated data.")
-                oa_utils.GDPopt_OA_cuts = ConstraintList()
-                oa_utils.GDPopt_OA_slacks = VarList(
-                    bounds=(0, config.max_slack),
-                    domain=NonNegativeReals, initialize=0)
-
-            oa_cuts = oa_utils.GDPopt_OA_cuts
-            slack_var = oa_utils.GDPopt_OA_slacks.add()
-            rhs = value(constr.lower) if constr.has_lb() else value(
-                constr.upper)
-            try:
-                new_oa_cut = (
-                    copysign(1, sign_adjust * dual_value) * (
-                        value(constr.body) - rhs + sum(
-                            value(jac) * (var - value(var))
-                            for var, jac in jacobian.jac.items())
-                        ) - slack_var <= 0)
-                if new_oa_cut.polynomial_degree() not in (1, 0):
-                    for var, jac in jacobian.jac.items():
-                        print(var.name, value(jac))
-                oa_cuts.add(expr=new_oa_cut)
-                counter += 1
-            except ZeroDivisionError:
-                config.logger.warning(
-                    "Zero division occured attempting to generate OA cut for "
-                    "constraint %s.\n"
-                    "Skipping OA cut generation for this constraint."
-                    % (constr.name,)
-                )
-                # Simply continue on to the next constraint.
-            # Clear out the numeric Jacobian values
-            if jacobian.mode is differentiate.Modes.reverse_numeric:
-                jacobian.jac.clear()
-
-        config.logger.info('Added %s OA cuts' % counter)
-
-
-def add_affine_cuts(nlp_result, solve_data, config):
-    with time_code(solve_data.timing, "affine cut generation"):
-        m = solve_data.linear_GDP
-        if config.calc_disjunctive_bounds:
-            with time_code(solve_data.timing, "disjunctive variable bounding"):
-                TransformationFactory('contrib.compute_disj_var_bounds').\
-                    apply_to( m, solver=config.mip_solver if
-                              config.obbt_disjunctive_bounds else None )
-        config.logger.info("Adding affine cuts.")
-        GDPopt = m.GDPopt_utils
-        counter = 0
-        for var, val in zip(GDPopt.variable_list, nlp_result.var_values):
-            if val is not None and not var.fixed:
-                var.set_value(val, skip_validation=True)
-
-        for constr in constraints_in_True_disjuncts(m, config):
-            # Note: this includes constraints that are deactivated in the
-            # current model (linear_GDP)
-
-            disjunctive_var_bounds = disjunctive_bounds(constr.parent_block())
-
-            if constr.body.polynomial_degree() in (1, 0):
-                continue
-
-            vars_in_constr = list(
-                identify_variables(constr.body))
-            if any(var.value is None for var in vars_in_constr):
-                continue  # a variable has no values
-
-            # mcpp stuff
-            try:
-                mc_eqn = mc(constr.body, disjunctive_var_bounds)
-            except MCPP_Error as e:
-                config.logger.debug("Skipping constraint %s due to MCPP "
-                                    "error %s" % (constr.name, str(e)))
-                continue  # skip to the next constraint
-            ccSlope = mc_eqn.subcc()
-            cvSlope = mc_eqn.subcv()
-            ccStart = mc_eqn.concave()
-            cvStart = mc_eqn.convex()
-            ub_int = min(constr.upper, mc_eqn.upper()) if constr.has_ub() \
-                     else mc_eqn.upper()
-            lb_int = max(constr.lower, mc_eqn.lower()) if constr.has_lb() \
-                     else mc_eqn.lower()
-
-            parent_block = constr.parent_block()
-            # Create a block on which to put outer approximation cuts.
-            aff_utils = parent_block.component('GDPopt_aff')
-            if aff_utils is None:
-                aff_utils = parent_block.GDPopt_aff = Block(
-                    doc="Block holding affine constraints")
-                aff_utils.GDPopt_aff_cons = ConstraintList()
-            aff_cuts = aff_utils.GDPopt_aff_cons
-            concave_cut = sum(ccSlope[var] * (var - var.value)
-                              for var in vars_in_constr
-                              if not var.fixed) + ccStart >= lb_int
-            convex_cut = sum(cvSlope[var] * (var - var.value)
-                             for var in vars_in_constr
-                             if not var.fixed) + cvStart <= ub_int
-            aff_cuts.add(expr=concave_cut)
-            aff_cuts.add(expr=convex_cut)
-            counter += 2
-
-        config.logger.info("Added %s affine cuts" % counter)
-
-
-def add_integer_cut(var_values, target_model, solve_data, config,
-                    feasible=False):
-    """Add an integer cut to the target GDP model."""
-    with time_code(solve_data.timing, 'integer cut generation'):
-        m = target_model
-        GDPopt = m.GDPopt_utils
-        var_value_is_one = ComponentSet()
-        var_value_is_zero = ComponentSet()
-        indicator_vars = ComponentSet(
-            disj.binary_indicator_var for disj in GDPopt.disjunct_list)
-        for var, val in zip(GDPopt.variable_list, var_values):
-            if not var.is_binary():
-                continue
-            if var.fixed:
-                # if val is not None and var.value != val:
-                #     # val needs to be None or match var.value. Otherwise, we have a
-                #     # contradiction.
-                #     raise ValueError(
-                #         "Fixed variable %s has value %s != "
-                #         "provided value of %s." % (var.name, var.value, val))
-
-                # Note: FBBT may cause some disjuncts to be fathomed, which can cause
-                # a fixed variable to be different than the subproblem value.
-                # In this case, we simply construct the integer cut as usual with
-                # the subproblem value rather than its fixed value.
-                if val is None:
-                    val = var.value
-
-            if not config.force_subproblem_nlp:
-                # By default (config.force_subproblem_nlp = False), we only want
-                # the integer cuts to be over disjunct indicator vars.
-                if var not in indicator_vars:
-                    continue
-
-            if fabs(val - 1) <= config.integer_tolerance:
-                var_value_is_one.add(var)
-            elif fabs(val) <= config.integer_tolerance:
-                var_value_is_zero.add(var)
+    disjuncts = []
+    if config.force_subproblem_nlp:
+        # We need to also cut the solutions for the other discrete variables
+        for var in target_model_util_block.discrete_variable_list:
+            # This has possible duplicates with the above, but few enough that
+            # we'll leave it for now.
+            if var.is_binary():
+                _record_binary_value(var, var_value_is_one, var_value_is_zero,
+                                     config.integer_tolerance)
             else:
-                raise ValueError(
-                    'Binary %s = %s is not 0 or 1' % (var.name, val))
+                # It's integer. It still has to be in the no-good cut because
+                # else the algorithm is wrong (We're cutting more than just this
+                # solution), so we're going to do this as a Disjunction for
+                # now. I think this is the *wrong* way to model if you are using
+                # GDPopt, so if it's a little inefficient then... We'll deal
+                # with that if it becomes an issue.
+                val = round(value(var), 0)
+                less = var <= val - 1
+                more = var >= val + 1
+                disjuncts.extend([less, more])
 
-        if not (var_value_is_one or var_value_is_zero):
-            # if no remaining binary variables, then terminate algorithm.
-            config.logger.info(
-                'Adding integer cut to a model without discrete variables. '
-                'Model is now infeasible.')
-            if solve_data.objective_sense == minimize:
-                solve_data.LB = float('inf')
-            else:
-                solve_data.UB = float('-inf')
-            return False
+    # It shouldn't be possible to get here unless there's a solution to be cut.
+    assert (var_value_is_one or var_value_is_zero) or len(disjuncts) == 0
 
-        int_cut = (sum(1 - v for v in var_value_is_one) +
-                   sum(v for v in var_value_is_zero)) >= 1
+    int_cut = (sum(1 - v for v in var_value_is_one) +
+               sum(v for v in var_value_is_zero)) >= 1
 
+    if len(disjuncts) > 0:
+        idx = len(target_model_util_block.no_good_disjunctions)
+        target_model_util_block.no_good_disjunctions[idx] = [
+            [disj] for disj in disjuncts] + [[int_cut]]
+        config.logger.debug('Adding no-good disjunction: %s' %
+                            _disjunction_to_str(
+                                target_model_util_block.no_good_disjunctions[
+                                    idx]))
+        # transform it
+        TransformationFactory(config.discrete_problem_transformation).apply_to(
+            target_model_util_block,
+            targets=[target_model_util_block.no_good_disjunctions[idx]])
+    else:
+        config.logger.debug('Adding no-good cut: %s' % int_cut)
         # Exclude the current binary combination
-        config.logger.info('Adding integer cut')
-        GDPopt.integer_cuts.add(expr=int_cut)
+        target_model_util_block.no_good_cuts.add(expr=int_cut)
 
-    if config.calc_disjunctive_bounds:
-        with time_code(solve_data.timing, "disjunctive variable bounding"):
-            TransformationFactory('contrib.compute_disj_var_bounds').apply_to(
-                m, solver=config.mip_solver if config.obbt_disjunctive_bounds
-                else None )
+def _disjunction_to_str(disjunction):
+    pretty = []
+    for disjunct in disjunction.disjuncts:
+        exprs = []
+        for cons in disjunct.component_data_objects(Constraint, active=True,
+                                                    descend_into=Block):
+            exprs.append(str(cons.expr))
+        pretty.append("[%s]" % ", ".join(exprs))
+    return " v ".join(pretty)

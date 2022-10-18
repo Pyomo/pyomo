@@ -35,12 +35,14 @@ from pyomo.environ import (
 )
 from pyomo.kernel import variable, expression, objective
 
+from pyomo.core.expr.expr_common import ExpressionType
 from pyomo.core.expr.numvalue import (
     NumericConstant, as_numeric, native_numeric_types,
     is_potentially_variable, polynomial_degree
 )
+from pyomo.core.expr.base import ExpressionBase
 from pyomo.core.expr.numeric_expr import (
-    ExpressionBase, UnaryFunctionExpression, SumExpression, PowExpression,
+    NumericExpression, UnaryFunctionExpression, SumExpression, PowExpression,
     ProductExpression, NegationExpression, linear_expression,
     MonomialTermExpression, LinearExpression, DivisionExpression,
     NPV_NegationExpression, NPV_ProductExpression, 
@@ -49,7 +51,9 @@ from pyomo.core.expr.numeric_expr import (
     _MutableLinearExpression, _MutableSumExpression, _decompose_linear_terms,
     LinearDecompositionError, MaxExpression, MinExpression,
 )
-import pyomo.core.expr.logical_expr as logical_expr
+from pyomo.core.expr.relational_expr import (
+    RelationalExpression, EqualityExpression,
+)
 from pyomo.common.errors import PyomoException
 from pyomo.core.expr.visitor import (expression_to_string, 
                                      clone_expression)
@@ -207,8 +211,8 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
         #
         # Confirm that this is a relational expression
         #
-        self.assertTrue(isinstance(exp, ExpressionBase))
-        self.assertTrue(exp.is_relational())
+        self.assertTrue(isinstance(exp, RelationalExpression))
+        self.assertTrue(exp.is_expression_type(ExpressionType.RELATIONAL))
         #
         # Check that the expression evaluates correctly
         #
@@ -221,7 +225,7 @@ class TestExpression_EvaluateNumericValue(TestExpression_EvaluateNumericConstant
         #
         # Check that the expression evaluates to 'val'
         #
-        if isinstance(exp, logical_expr.EqualityExpression) and exp.args[0] is exp.args[1]:
+        if isinstance(exp, EqualityExpression) and exp.args[0] is exp.args[1]:
             self.assertEqual(bool(exp), val)
         else:
             with self.assertRaises(PyomoException):
@@ -3677,6 +3681,32 @@ class TestSumExpression(unittest.TestCase):
         e = quicksum(self.m.p[i]*self.m.q[i] for i in self.m.I)
         self.assertEqual( e(), 15 )
         self.assertIs(type(e), SumExpression)
+        
+    def test_quicksum_reject_noniterable(self):
+        with LoggingIntercept() as LOG:
+            with self.assertRaisesRegex(TypeError, "'int' object is not iterable"):
+                quicksum(1)
+        self.assertEqual(LOG.getvalue(), 'The argument `args` to quicksum() is not iterable!\n')
+
+    def test_quicksum_exception_exposure(self):
+        ex0 = Exception()
+        def f(): raise ex0
+
+        with self.assertRaises(Exception) as cm:
+            quicksum((f() for i in [1, 2, 3]), linear=None)
+        self.assertIs(cm.exception, ex0)
+
+        with self.assertRaises(Exception) as cm:
+            quicksum((f() for i in [1, 2, 3]), linear=True)
+        self.assertIs(cm.exception, ex0)
+
+        with self.assertRaises(Exception) as cm:
+            quicksum((f() for i in [1, 2, 3]), linear=False)
+        self.assertIs(cm.exception, ex0)
+
+        with self.assertRaises(Exception) as cm:
+            quicksum((f() for i in [1, 2, 3]), start=self.m.a[1])
+        self.assertIs(cm.exception, ex0)
 
 
 class TestCloneExpression(unittest.TestCase):
@@ -4026,6 +4056,35 @@ class TestCloneExpression(unittest.TestCase):
             #
             total = counter.count - start
             self.assertEqual(total, 1)
+
+    def test_LinearExpression(self):
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var([1,2])
+        e = LinearExpression()
+        f = e.clone()
+        self.assertIsNot(e, f)
+        self.assertIsNot(e.linear_coefs, f.linear_coefs)
+        self.assertIsNot(e.linear_vars, f.linear_vars)
+        self.assertEqual(e.constant, f.constant)
+        self.assertEqual(e.linear_coefs, f.linear_coefs)
+        self.assertEqual(e.linear_vars, f.linear_vars)
+        self.assertEqual(f.constant, 0)
+        self.assertEqual(f.linear_coefs, [])
+        self.assertEqual(f.linear_vars, [])
+
+        e = LinearExpression(
+            constant=5, linear_vars=[m.x, m.y[1]], linear_coefs=[10, 20])
+        f = e.clone()
+        self.assertIsNot(e, f)
+        self.assertIsNot(e.linear_coefs, f.linear_coefs)
+        self.assertIsNot(e.linear_vars, f.linear_vars)
+        self.assertEqual(e.constant, f.constant)
+        self.assertEqual(e.linear_coefs, f.linear_coefs)
+        self.assertEqual(e.linear_vars, f.linear_vars)
+        self.assertEqual(f.constant, 5)
+        self.assertEqual(f.linear_coefs, [10, 20])
+        self.assertEqual(f.linear_vars, [m.x, m.y[1]])
 
     def test_getitem(self):
         # Testing cloning of the abs() function
@@ -5197,7 +5256,7 @@ class TestNamedExpressionDuckTyping(unittest.TestCase):
         self.assertTrue(hasattr(obj, 'args'))
         self.assertTrue(hasattr(obj, '__call__'))
         self.assertTrue(hasattr(obj, 'to_string'))
-        self.assertTrue(hasattr(obj, '_precedence'))
+        self.assertTrue(hasattr(obj, 'PRECEDENCE'))
         self.assertTrue(hasattr(obj, '_to_string'))
         self.assertTrue(hasattr(obj, 'clone'))
         self.assertTrue(hasattr(obj, 'create_node_with_local_data'))

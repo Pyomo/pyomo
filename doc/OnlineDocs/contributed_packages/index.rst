@@ -17,6 +17,7 @@ Contributed packages distributed with Pyomo:
    
    community.rst
    gdpopt.rst
+   iis.rst
    mindtpy.rst
    mpc/index.rst
    multistart.rst

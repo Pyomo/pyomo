@@ -121,30 +121,34 @@ class TestPyomoEnviron(unittest.TestCase):
         ref = {
             '__future__',
             'argparse',
+            'ast',       # Imported on Windows
+            'base64',    # Imported on Windows
             'cPickle',
-            'copy',
             'csv',
             'ctypes',
             'decimal',
-            'gc',
+            'gc',        # Imported on MacOS, Windows; Linux in 3.10
             'glob',
+            'heapq',     # Added in Python 3.10
+            'importlib', # Imported on Windows
             'inspect',
-            'json',
+            'json',      # Imported on Windows
+            'locale',    # Added in Python 3.9
             'logging',
             'pickle',
             'platform',
-            'pyutilib',
-            'random',
+            'random',    # Imported on MacOS, Windows
             'shlex',
-            'socket',
-            'tempfile',
+            'socket',    # Imported on MacOS, Windows; Linux in 3.10
+            'tempfile',  # Imported on MacOS, Windows
             'textwrap',
             'typing',
-            'win32file',
-            'win32pipe',
+            'win32file', # Imported on Windows
+            'win32pipe', # Imported on Windows
         }
         # Non-standard-library TPLs that Pyomo will load unconditionally
         ref.add('ply')
+        ref.add('pyutilib')
         if numpy_available:
             ref.add('numpy')
         diff = set(_[0] for _ in tpl_by_time[-5:]).difference(ref)

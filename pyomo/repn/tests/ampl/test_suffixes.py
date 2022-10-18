@@ -13,20 +13,30 @@
 #
 
 import os
-from os.path import abspath, dirname, join
-currdir = dirname(abspath(__file__))
 
-from filecmp import cmp
 import pyomo.common.unittest as unittest
 
+from pyomo.common.fileutils import this_file_dir
+from pyomo.common.tempfiles import TempfileManager
+
 from pyomo.opt import ProblemFormat
-from pyomo.core import ConcreteModel, Suffix, Var, Objective, Constraint, SOSConstraint, sum_product
+from pyomo.environ import (
+    ConcreteModel, Suffix, Var, Objective, Constraint, SOSConstraint,
+    sum_product,
+)
+from .nl_diff import load_and_compare_nl_baseline
+
+currdir = this_file_dir()
 
 class TestSuffix(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
-        import pyomo.environ
+        cls.context = TempfileManager.new_context()
+        cls.tempdir = cls.context.create_tempdir()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.context.release()
 
     # test that EXPORT suffixes on variables,
     # constraints, objectives, and models
@@ -62,13 +72,12 @@ class TestSuffix(unittest.TestCase):
         # This one should NOT end up in the NL file
         model.junk_inactive.deactivate()
 
-        model.write(filename=join(currdir,"EXPORT_suffixes.test.nl"),
+        _test = os.path.join(self.tempdir, "EXPORT_suffixes.test.nl")
+        model.write(filename=_test,
                     format=ProblemFormat.nl,
-                    io_options={"symbolic_solver_labels" : False})
-
-        _test, _base = join(currdir,"EXPORT_suffixes.test.nl"), join(currdir,"EXPORT_suffixes_int.baseline.nl")
-        self.assertTrue(cmp(_test, _base),
-                        msg="Files %s and %s differ" % (_test, _base))
+                    io_options={"symbolic_solver_labels": False})
+        _base = os.path.join(currdir, "EXPORT_suffixes_int.baseline.nl")
+        self.assertEqual(*load_and_compare_nl_baseline(_base, _test))
 
     # test that EXPORT suffixes on variables,
     # constraints, objectives, and models
@@ -104,13 +113,12 @@ class TestSuffix(unittest.TestCase):
         # This one should NOT end up in the NL file
         model.junk_inactive.deactivate()
 
-        model.write(filename=join(currdir,"EXPORT_suffixes.test.nl"),
+        _test = os.path.join(self.tempdir, "EXPORT_suffixes.test.nl")
+        model.write(filename=_test,
                     format=ProblemFormat.nl,
                     io_options={"symbolic_solver_labels" : False})
-
-        _test, _base = join(currdir,"EXPORT_suffixes.test.nl"), join(currdir,"EXPORT_suffixes_float.baseline.nl")
-        self.assertTrue(cmp(_test, _base),
-                        msg="Files %s and %s differ" % (_test, _base))
+        _base = os.path.join(currdir, "EXPORT_suffixes_float.baseline.nl")
+        self.assertEqual(*load_and_compare_nl_baseline(_base, _test))
 
     # Test that user defined ref suffixes fail to
     # merge with those created from translating the SOSConstraint
@@ -128,22 +136,12 @@ class TestSuffix(unittest.TestCase):
         for i,val in zip([1,2,3],[11,12,13]):
             model.ref.set_value(model.y[i],val)
         
-        try:
-            model.write(filename=join(currdir,"junk.nl"),
+        with self.assertRaisesRegex(
+                RuntimeError, "NL file writer does not allow both manually "
+                "declared 'ref' suffixes as well as SOSConstraint "):
+            model.write(filename=os.path.join(self.tempdir, "junk.nl"),
                         format=ProblemFormat.nl,
                         io_options={"symbolic_solver_labels" : False})
-        except RuntimeError:
-            pass
-        else:
-            os.remove(join(currdir,"junk.nl"))
-            self.fail("The NL writer should have thrown an exception "\
-                      "when overlap of SOSConstraint generated suffixes "\
-                      "and user declared suffixes occurs.")
-        
-        try:
-            os.remove(join(currdir,"junk.nl"))
-        except:
-            pass
 
     # Test that user defined sosno suffixes fail to
     # merge with those created from translating the SOSConstraint
@@ -161,21 +159,12 @@ class TestSuffix(unittest.TestCase):
         for i in [1,2,3]:
             model.sosno.set_value(model.y[i],-1)
         
-        try:
-            model.write(filename=join(currdir,"junk.nl"),
+        with self.assertRaisesRegex(
+                RuntimeError, "NL file writer does not allow both manually "
+                "declared 'sosno' suffixes as well as SOSConstraint "):
+            model.write(filename=os.path.join(self.tempdir, "junk.nl"),
                         format=ProblemFormat.nl,
                         io_options={"symbolic_solver_labels" : False})
-        except RuntimeError:
-            pass
-        else:
-            os.remove(join(currdir,"junk.nl"))
-            self.fail("The NL writer should have thrown an exception "\
-                      "when overlap of SOSConstraint generated suffixes "\
-                      "and user declared suffixes occurs.")
-        try:
-            os.remove(join(currdir,"junk.nl"))
-        except:
-            pass
 
     # Test that user defined sosno suffixes fail to
     # merge with those created from translating the SOSConstraint
@@ -193,20 +182,12 @@ class TestSuffix(unittest.TestCase):
         for i in [1,2,3]:
             model.sosno.set_value(model.y[i],-1)
         
-        try:
-            model.write(filename=join(currdir,"junk.nl"),
+        with self.assertRaisesRegex(
+                RuntimeError, "NL file writer does not allow both manually "
+                "declared 'sosno' suffixes as well as SOSConstraint "):
+            model.write(filename=os.path.join(self.tempdir, "junk.nl"),
                         format=ProblemFormat.nl,
                         io_options={"symbolic_solver_labels" : False})
-        except RuntimeError:
-            pass
-        else:
-            os.remove(join(currdir,"junk.nl"))
-            self.fail("The NL writer should have thrown an exception "\
-                      "when using an EXPORT suffix with datatype=None")
-        try:
-            os.remove(join(currdir,"junk.nl"))
-        except:
-            pass
 
 if __name__ == "__main__":
     unittest.main()
