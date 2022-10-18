@@ -79,8 +79,10 @@ class _START_TIME(object): pass
 class _END_TIME(object): pass
 class _DEFERRED_ELEMENT_CONSTRAINT(object): pass
 class _ELEMENT_CONSTRAINT(object): pass
+class _DEFERRED_BEFORE(object): pass
+class _DEFERRED_AFTER(object): pass
+class _DEFERRED_AT(object): pass
 class _BEFORE(object): pass
-class _AFTER(object): pass
 class _AT(object): pass
 class _IMPLIES(object): pass
 class _LAND(object): pass
@@ -228,11 +230,11 @@ def _handle_getattr(visitor, node, obj, attr):
         return (_ELEMENT_CONSTRAINT, cp.element(array=ans, index=obj[1][1]))
     elif obj[0] is _ELEMENT_CONSTRAINT:
         if attr[1] == 'before':
-            return (_BEFORE, obj)
+            return (_DEFERRED_BEFORE, obj)
         elif attr[1] == 'after':
-            return (_AFTER, obj)
+            return (_DEFERRED_AFTER, obj)
         elif attr[1] == 'at':
-            return (_AT, obj)
+            return (_DEFERRED_AT, obj)
         elif attr[1] == 'implies':
             return (_IMPLIES, obj)
         elif attr[1] == 'land':
@@ -515,6 +517,16 @@ def _get_bool_valued_expr(arg):
         # to True so that it will be boolean-valued according to docplex's
         # idiosyncracies.
         return arg[1] == True
+    elif arg[0] is _BEFORE:
+        # We're using a start-before-start or it's ilk in a boolean-valued
+        # context. docplex doesn't believe these things are boolean-valued, so
+        # we have to convert to the inequality version:
+        (lhs, rhs) = arg[2]
+        return _handle_inequality_node(None, None, lhs, rhs)[1]
+    elif arg[0] is _AT:
+        # Same as above, but now we need an equality node
+        (lhs, rhs) = arg[2]
+        return _handle_equality_node(None, None, lhs, rhs)[1]
     else:
         raise DeveloperError("Attempting to get a docplex Boolean-valued "
                              "expression from object in class %s" % str(arg[0]))
@@ -640,9 +652,9 @@ def _at_call_handler(visitor, node, *args):
         return _handle_equality_node(visitor, node, args[0], rhs)
 
 _call_handlers = {
-    _BEFORE: _before_call_handler,
-    _AFTER: _after_call_handler,
-    _AT: _at_call_handler,
+    _DEFERRED_BEFORE: _before_call_handler,
+    _DEFERRED_AFTER: _after_call_handler,
+    _DEFERRED_AT: _at_call_handler,
     _IMPLIES: _handle_implication_node,
     _LAND: _handle_and_node,
     _LOR: _handle_or_node,
@@ -678,30 +690,33 @@ if docplex_available:
     }
 
 def _handle_before_expression_node(visitor, node, time1, time2, delay):
+    t1 = (_GENERAL, _time_point_handlers[time1[0]](time1[1]))
+    t2 = (_GENERAL, _time_point_handlers[time2[0]](time2[1]))
+    lhs = _handle_sum_node(visitor, None, t1, delay)
     if (time1[0] in {_GENERAL, _ELEMENT_CONSTRAINT} or
         time2[0] in {_GENERAL, _ELEMENT_CONSTRAINT}):
-        # we can't use a start_before_start function or its ilk: Just build the
-        # correct inequality.
-        t1 = (_GENERAL, _time_point_handlers[time1[0]](time1[1]))
-        t2 = (_GENERAL, _time_point_handlers[time2[0]](time2[1]))
-        rhs = _handle_sum_node(visitor, None, t2, delay)
-        return _handle_inequality_node( visitor, None, t1, rhs)
+        # we alredy know we can't use a start_before_start function or its ilk:
+        # Just build the correct inequality.
+        return _handle_inequality_node( visitor, None, lhs, t2)
 
-    return (_GENERAL, _before_handlers[time1[0], time2[0]](time1[1], time2[1],
-                                                           delay[1]))
+    # If this turns out to be the root, we can use the second return, but we
+    # also pass the args for the inequality expression in case we use this in a
+    # boolean-valued context.
+    return (_BEFORE, _before_handlers[time1[0], time2[0]](time1[1], time2[1],
+                                                          delay[1]), (lhs, t2))
 
 def _handle_at_expression_node(visitor, node, time1, time2, delay):
+    t1 = (_GENERAL, _time_point_handlers[time1[0]](time1[1]))
+    t2 = (_GENERAL, _time_point_handlers[time2[0]](time2[1]))
+    lhs = _handle_sum_node(visitor, None, t1, delay)
     if (time1[0] in {_GENERAL, _ELEMENT_CONSTRAINT} or
         time2[0] in {_GENERAL, _ELEMENT_CONSTRAINT}):
         # we can't use a start_before_start function or its ilk: Just build the
         # correct inequality.
-        t1 = (_GENERAL, _time_point_handlers[time1[0]](time1[1]))
-        t2 = (_GENERAL, _time_point_handlers[time2[0]](time2[1]))
-        rhs = _handle_sum_node(visitor, None, t2, delay)
-        return _handle_equality_node( visitor, None, t1, rhs)
+        return _handle_equality_node( visitor, None, lhs, t2)
 
-    return (_GENERAL, _at_handlers[time1[0], time2[0]](time1[1], time2[1],
-                                                       delay[1]))
+    return (_AT, _at_handlers[time1[0], time2[0]](time1[1], time2[1], delay[1]),
+            (lhs, t2))
 
 def _handle_always_in_node(visitor, node, cumul_func, lb, ub, start, end):
     return (_GENERAL, cp.always_in(cumul_func[1], interval=(start[1], end[1]),
