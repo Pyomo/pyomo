@@ -931,7 +931,7 @@ class CPOptimizerSolver(object):
                 cp.STOP_CAUSE_ABORT: TerminationCondition.userInterrupt,
                 # This is in their documentation, but not here, for some reason
                 #cp.STOP_CAUSE_UNKNOWN: TerminationCondition.unkown
-    }
+            }
 
     @property
     def options(self):
