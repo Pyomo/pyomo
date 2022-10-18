@@ -45,6 +45,15 @@ class TestScalarObj(unittest.TestCase):
         model.o.expr += 2
         self.assertEqual(model.o.expr(), 4)
 
+    def test_scalar_invalid_expr(self):
+        m = ConcreteModel()
+        m.x = Var()
+        with self.assertRaisesRegex(
+                ValueError, "Cannot assign InequalityExpression to 'obj': "
+                "ScalarObjective components only allow numeric expression "
+                "types."):
+            m.obj = Objective(expr=m.x <= 0)
+
     def test_empty_singleton(self):
         a = Objective()
         a.construct()
