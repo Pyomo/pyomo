@@ -227,7 +227,7 @@ class Test(unittest.TestCase):
     def test_pickle_concrete_model_objective(self):
         model = ConcreteModel()
         model.x = Var()
-        model.A = Objective(expr=model.x <= 0)
+        model.A = Objective(expr=model.x**2)
         str = pickle.dumps(model)
         tmodel = pickle.loads(str)
         self.verifyModel(model, tmodel)
