@@ -432,6 +432,130 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
                                                 cp.length_of(i22)],
                                                0 + 1*(y - 1) // 1)))))
 
+    def test_handle_getattr_lor(self):
+        m = self.get_model()
+        m.y = Var(domain=Integers, bounds=(1,2))
+
+        e = m.i2[m.y].is_present.lor(~m.b)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((e, e, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+        self.assertIn(id(m.b), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+        b = visitor.var_map[id(m.b)]
+
+        self.assertTrue(expr[1].equals(
+            cp.logical_or(
+                cp.element([cp.presence_of(i21), cp.presence_of(i22)],
+                           0 + 1 * (y - 1) // 1) == True,
+                cp.logical_not(b))))
+
+    def test_handle_getattr_xor(self):
+        m = self.get_model()
+        m.y = Var(domain=Integers, bounds=(1,2))
+
+        e = m.i2[m.y].is_present.xor(m.b)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((e, e, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+        self.assertIn(id(m.b), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+        b = visitor.var_map[id(m.b)]
+
+        self.assertTrue(expr[1].equals(
+            cp.equal(cp.count(
+                [cp.element([cp.presence_of(i21), cp.presence_of(i22)],
+                           0 + 1 * (y - 1) // 1) == True,
+                 b], True), 1)))
+
+    def test_handle_getattr_equivalent_to(self):
+        m = self.get_model()
+        m.y = Var(domain=Integers, bounds=(1,2))
+
+        e = m.i2[m.y].is_present.equivalent_to(~m.b)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((e, e, 0))
+
+        self.assertIn(id(m.y), visitor.var_map)
+        self.assertIn(id(m.i2[1]), visitor.var_map)
+        self.assertIn(id(m.i2[2]), visitor.var_map)
+        self.assertIn(id(m.b), visitor.var_map)
+
+        y = visitor.var_map[id(m.y)]
+        i21 = visitor.var_map[id(m.i2[1])]
+        i22 = visitor.var_map[id(m.i2[2])]
+        b = visitor.var_map[id(m.b)]
+
+        self.assertTrue(expr[1].equals(
+            cp.equal(
+                cp.element([cp.presence_of(i21), cp.presence_of(i22)],
+                           0 + 1 * (y - 1) // 1) == True,
+                cp.logical_not(b))))
+
+    def test_logical_or_on_indirection(self):
+        m = ConcreteModel()
+        m.b = BooleanVar([2, 3, 4, 5])
+        m.x = Var(domain=Integers, bounds=(3,5))
+
+        e = m.b[m.x].lor(m.x == 5)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((e, e, 0))
+
+        self.assertIn(id(m.x), visitor.var_map)
+        self.assertIn(id(m.b[3]), visitor.var_map)
+        self.assertIn(id(m.b[4]), visitor.var_map)
+        self.assertIn(id(m.b[5]), visitor.var_map)
+
+        x = visitor.var_map[id(m.x)]
+        b3 = visitor.var_map[id(m.b[3])]
+        b4 = visitor.var_map[id(m.b[4])]
+        b5 = visitor.var_map[id(m.b[5])]
+
+        self.assertTrue(expr[1].equals(
+            cp.logical_or(
+                cp.element([b3, b4, b5], 0 + 1 * (x - 3) // 1) == True,
+                cp.equal(x, 5))))
+
+    def test_logical_xor_on_indirection(self):
+        m = ConcreteModel()
+        m.b = BooleanVar([2, 3, 4, 5])
+        m.b[4].fix(False)
+        m.x = Var(domain=Integers, bounds=(3,5))
+
+        e = m.b[m.x].xor(m.x == 5)
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((e, e, 0))
+
+        self.assertIn(id(m.x), visitor.var_map)
+        self.assertIn(id(m.b[3]), visitor.var_map)
+        self.assertIn(id(m.b[5]), visitor.var_map)
+
+        x = visitor.var_map[id(m.x)]
+        b3 = visitor.var_map[id(m.b[3])]
+        b5 = visitor.var_map[id(m.b[5])]
+
+        self.assertTrue(expr[1].equals(
+            cp.equal(cp.count(
+                [cp.element([b3, False, b5], 0 + 1 * (x - 3) // 1) == True,
+                 cp.equal(x, 5)], True), 1)))
+
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
 class TestCPExpressionWalker_IntervalVars(CommonTest):

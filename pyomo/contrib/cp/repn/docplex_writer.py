@@ -37,7 +37,9 @@ from pyomo.core.base import (
     minimize, maximize, SortComponents, Block, Objective, Constraint, Var,
     Param, BooleanVar, LogicalConstraint, Suffix
 )
-from pyomo.core.base.boolean_var import ScalarBooleanVar, _GeneralBooleanVarData
+from pyomo.core.base.boolean_var import (
+    ScalarBooleanVar, _GeneralBooleanVarData, IndexedBooleanVar
+)
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
 import pyomo.core.expr.current as EXPR
@@ -200,6 +202,10 @@ def _handle_getitem(visitor, node, *data):
         return (_DEFERRED_ELEMENT_CONSTRAINT, (elements, expr))
 
 def _handle_getattr(visitor, node, obj, attr):
+    # We either end up here because we do not yet know the list of variables to
+    # make an element constraint (the first case) or because we are asking for
+    # an attribute on something with indirection, so at this point we *have* a
+    # constructed element constraint (the second case).
     if obj[0] is _DEFERRED_ELEMENT_CONSTRAINT:
         # then obj[1] is a list of cp thingies that we need to get the attr on,
         # and then at the end we need to make the element constraint we couldn't
@@ -220,16 +226,7 @@ def _handle_getattr(visitor, node, obj, attr):
                     "Unrecognized attrribute in GetAttrExpression: "
                     "%s. Found for object: %s" % (attr[1], o))
         return (_ELEMENT_CONSTRAINT, cp.element(array=ans, index=obj[1][1]))
-    if obj[0] is _GENERAL:
-        if attr[1] == 'start_time':
-            return (_GENERAL, cp.start_of(obj[1]))
-        elif attr[1] == 'end_time':
-            return (_GENERAL, cp.end_of(obj[1]))
-        elif attr[1] == 'length':
-            return (_GENERAL, cp.length_of(obj[1]))
-        elif attr[1] == 'is_present':
-            return (_GENERAL, cp.presence_of(obj[1]))
-    if obj[0] in {_GENERAL, _ELEMENT_CONSTRAINT}:
+    elif obj[0] is _ELEMENT_CONSTRAINT:
         if attr[1] == 'before':
             return (_BEFORE, obj)
         elif attr[1] == 'after':
@@ -249,7 +246,9 @@ def _handle_getattr(visitor, node, obj, attr):
         else:
             raise RuntimeError("Unrecognized attribute in GetAttrExpression:"
                                "%s. Found for object: %s" % (attr[1], obj[1]))
-    raise RuntimeError("What have we here? %s, %s" % (obj[0], attr[1]))
+    else:
+        raise DeveloperError("Unrecognized argument type '%s' to getattr "
+                             "handler." % obj[0])
 
 def _before_boolean_var(visitor, child):
     _id = id(child)
@@ -266,6 +265,20 @@ def _before_boolean_var(visitor, child):
         visitor.var_map[_id] = cpx_var == 1
         visitor.pyomo_to_docplex[child] = cpx_var
     return False, (_GENERAL, visitor.var_map[_id])
+
+def _before_indexed_boolean_var(visitor, child):
+    cpx_vars = {}
+    for i, v in child.items():
+        if v.fixed:
+            cpx_vars[i] = v.value
+            continue
+        cpx_var = cp.binary_var(name=v.name if visitor.symbolic_solver_labels
+                                else None)
+        visitor.cpx.add(cpx_var)
+        visitor.var_map[id(v)] = cpx_var == 1
+        visitor.pyomo_to_docplex[v] = cpx_var
+        cpx_vars[i] = cpx_var == 1
+    return False, (_GENERAL_LIST, cpx_vars)
 
 def _create_docplex_var(pyomo_var, name=None):
     if pyomo_var.is_binary():
@@ -740,6 +753,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         IndexedVar: _before_indexed_var,
         ScalarBooleanVar: _before_boolean_var,
         _GeneralBooleanVarData: _before_boolean_var,
+        IndexedBooleanVar: _before_indexed_boolean_var,
         CumulativeFunction: _before_cumulative_function,
         _GeneralExpressionData: _before_named_expression,
         ScalarExpression: _before_named_expression,
