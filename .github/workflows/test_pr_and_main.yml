@@ -545,7 +545,7 @@ jobs:
     # this has to be done after Pyomo is installed because highspy 
     # depends on pyomo's find_library function
     - name: Install HiGHS
-      if matrix.PYENV == 'pip'
+      if: matrix.PYENV == 'pip'
       shell: bash
       run: |
         if test -z "${{matrix.slim}}"; then
