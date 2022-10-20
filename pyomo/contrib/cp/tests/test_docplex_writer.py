@@ -33,7 +33,7 @@ class TestWriteModel(unittest.TestCase):
         m = ConcreteModel()
         m.i = IntervalVar(start=(2, 4), end=(5, 19), length=7, optional=False)
         m.tasks = Set(initialize=range(2))
-        m.h = IntervalVar(m.tasks, optional=True, length=(4,5), start=(1,2))
+        m.h = IntervalVar(m.tasks, optional=True, length=(4, 5), start=(1, 2))
 
         cpx_mod, var_map = WriterFactory('docplex_model').write(m)
 
@@ -54,15 +54,47 @@ class TestWriteModel(unittest.TestCase):
 
         for i in [0, 1]:
             self.assertTrue(variables[i].is_optional())
-            self.assertEqual(variables[i].get_start(), (1,2))
-            self.assertEqual(variables[i].get_length(), (4,5))
+            self.assertEqual(variables[i].get_start(), (1, 2))
+            self.assertEqual(variables[i].get_length(), (4, 5))
 
         self.assertIs(variables[2], var_map[m.i])
         self.assertIs(exprs[0][0], var_map[m.i])
         self.assertTrue(variables[2].is_present())
-        self.assertEqual(variables[2].get_start(), (2,4))
-        self.assertEqual(variables[2].get_end(), (5,19))
-        self.assertEqual(variables[2].get_length(), (7,7))
+        self.assertEqual(variables[2].get_start(), (2, 4))
+        self.assertEqual(variables[2].get_end(), (5, 19))
+        self.assertEqual(variables[2].get_length(), (7, 7))
+
+    def test_write_model_with_bool_expr_as_constraint(self):
+        # This tests our handling of a quirk with docplex that even some things
+        # that are boolean-valued can't be added to the model as constraints. We
+        # need to explicitly recognize them and add an "== True" right-hand
+        # side.
+        m = ConcreteModel()
+        m.i = IntervalVar([1, 2], optional=True)
+        m.x = Var(within={1, 2})
+        # This is a perfectly reasonable constraint in a context where x is some
+        # variable that decides what needs to be scheduled.
+        m.cons = LogicalConstraint(expr=m.i[m.x].is_present)
+
+        cpx_mod, var_map = WriterFactory('docplex_model').write(m)
+
+        variables = cpx_mod.get_all_variables()
+        self.assertEqual(len(variables), 3)
+        # The three variables plus the one constraint:
+        exprs = cpx_mod.get_all_expressions()
+        self.assertEqual(len(exprs), 4)
+
+        x = var_map[m.x]
+        i1 = var_map[m.i[1]]
+        i2 = var_map[m.i[2]]
+
+        self.assertIs(variables[0], x)
+        self.assertIs(variables[1], i2)
+        self.assertIs(variables[2], i1)
+
+        self.assertTrue(exprs[3][0].equals(
+            cp.element([cp.presence_of(i1), cp.presence_of(i2)],
+                       0 + 1 * (x - 1) // 1) == True))
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
 class TestSolveModel(unittest.TestCase):
@@ -75,7 +107,7 @@ class TestSolveModel(unittest.TestCase):
 
         m.read_story = IntervalVar(start=(15, 24), end=(0, 24), length=(2, 3))
         m.sweep_crumbs = IntervalVar(optional=True, length=1, end=(0, 24))
-        m.do_dishes = IntervalVar(optional=True, length=5, end=(0,24))
+        m.do_dishes = IntervalVar(optional=True, length=5, end=(0, 24))
 
         m.num_crumbs = Var(domain=Integers, bounds=(0, 100))
 

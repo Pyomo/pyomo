@@ -27,7 +27,7 @@ from pyomo.core.expr.relational_expr import NotEqualExpression
 from pyomo.environ import (
     ConcreteModel, RangeSet, Var, BooleanVar, Constraint, LogicalConstraint,
     PositiveIntegers, Binary, NonNegativeIntegers, NegativeIntegers,
-    NonPositiveIntegers, Integers, inequality, Expression, Reals, Set
+    NonPositiveIntegers, Integers, inequality, Expression, Reals, Set, Param
 )
 
 try:
@@ -38,14 +38,14 @@ except:
 
 class CommonTest(unittest.TestCase):
     def get_visitor(self):
-        docplex_model= cp.CpoModel()
+        docplex_model = cp.CpoModel()
         return LogicalToDoCplex(docplex_model, symbolic_solver_labels=True)
 
     def get_model(self):
         m = ConcreteModel()
         m.I = RangeSet(10)
         m.a = Var(m.I)
-        m.x = Var(within=PositiveIntegers, bounds=(6,8))
+        m.x = Var(within=PositiveIntegers, bounds=(6, 8))
         m.i = IntervalVar(optional=True)
         m.i2 = IntervalVar([1, 2], optional=False)
 
@@ -169,6 +169,20 @@ class TestCPExpressionWalker_AlgebraicExpressions(CommonTest):
             a[i] = visitor.var_map[id(m.a[i])]
 
         self.assertTrue(expr[1].equals(cp.max(a[i] for i in m.I)))
+
+    def test_expression_with_mutable_param(self):
+        m = ConcreteModel()
+        m.x = Var(domain=Integers, bounds=(2, 3))
+        m.p = Param(initialize=4, mutable=True)
+        e = m.p*m.x
+
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((e, e, 0))
+
+        self.assertIn(id(m.x), visitor.var_map)
+        x = visitor.var_map[id(m.x)]
+
+        self.assertTrue(expr[1].equals(4*x))
 
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
@@ -314,7 +328,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
         a3 = visitor.var_map[id(m.a[3])]
         a4 = visitor.var_map[id(m.a[4])]
 
-        self.assertTrue(expr[1].equals(cp.if_then(b, a3 !=  a4)))
+        self.assertTrue(expr[1].equals(cp.if_then(b, a3 != a4)))
 
     def test_exactly_expression(self):
         m = self.get_model()
@@ -383,7 +397,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
     def test_interval_var_is_present_indirection(self):
         m = self.get_model()
         m.a.domain = Integers
-        m.y = Var(domain=Integers, bounds=[1,2])
+        m.y = Var(domain=Integers, bounds=[1, 2])
 
         m.c = LogicalConstraint(expr=m.i2[m.y].is_present.implies(m.a[1] >= 7))
 
@@ -408,7 +422,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
 
     def test_is_present_indirection_and_length(self):
         m = self.get_model()
-        m.y = Var(domain=Integers, bounds=[1,2])
+        m.y = Var(domain=Integers, bounds=[1, 2])
 
         m.c = LogicalConstraint(
             expr=m.i2[m.y].is_present.land(m.i2[m.y].length >= 7))
@@ -434,7 +448,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
 
     def test_handle_getattr_lor(self):
         m = self.get_model()
-        m.y = Var(domain=Integers, bounds=(1,2))
+        m.y = Var(domain=Integers, bounds=(1, 2))
 
         e = m.i2[m.y].is_present.lor(~m.b)
 
@@ -459,7 +473,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
 
     def test_handle_getattr_xor(self):
         m = self.get_model()
-        m.y = Var(domain=Integers, bounds=(1,2))
+        m.y = Var(domain=Integers, bounds=(1, 2))
 
         e = m.i2[m.y].is_present.xor(m.b)
 
@@ -484,7 +498,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
 
     def test_handle_getattr_equivalent_to(self):
         m = self.get_model()
-        m.y = Var(domain=Integers, bounds=(1,2))
+        m.y = Var(domain=Integers, bounds=(1, 2))
 
         e = m.i2[m.y].is_present.equivalent_to(~m.b)
 
@@ -510,7 +524,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
     def test_logical_or_on_indirection(self):
         m = ConcreteModel()
         m.b = BooleanVar([2, 3, 4, 5])
-        m.x = Var(domain=Integers, bounds=(3,5))
+        m.x = Var(domain=Integers, bounds=(3, 5))
 
         e = m.b[m.x].lor(m.x == 5)
 
@@ -536,7 +550,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
         m = ConcreteModel()
         m.b = BooleanVar([2, 3, 4, 5])
         m.b[4].fix(False)
-        m.x = Var(domain=Integers, bounds=(3,5))
+        m.x = Var(domain=Integers, bounds=(3, 5))
 
         e = m.b[m.x].xor(m.x == 5)
 
@@ -666,7 +680,7 @@ class TestCPExpressionWalker_IntervalVars(CommonTest):
 
     def test_interval_var_fixed_start_and_end(self):
         m = ConcreteModel()
-        m.i = IntervalVar(start=(3,7), end=(6,10))
+        m.i = IntervalVar(start=(3, 7), end=(6, 10))
         m.i.start_time.fix(3)
         m.i.end_time.fix(6)
 
@@ -677,8 +691,8 @@ class TestCPExpressionWalker_IntervalVars(CommonTest):
         i = visitor.var_map[id(m.i)]
 
         self.assertFalse(i.is_optional())
-        self.assertEqual(i.get_start(), (3,3))
-        self.assertEqual(i.get_end(), (6,6))
+        self.assertEqual(i.get_start(), (3, 3))
+        self.assertEqual(i.get_end(), (6, 6))
 
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
@@ -807,7 +821,7 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
 
     def test_indirection_before_constraint(self):
         m = self.get_model()
-        m.y = Var(domain=Integers, bounds=[1,2])
+        m.y = Var(domain=Integers, bounds=[1, 2])
         m.c = LogicalConstraint(expr=m.i2[m.y].start_time.before(m.i.end_time,
                                                                  delay=3))
 
@@ -830,7 +844,7 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
 
     def test_indirection_after_constraint(self):
         m = self.get_model()
-        m.y = Var(domain=Integers, bounds=[1,2])
+        m.y = Var(domain=Integers, bounds=[1, 2])
         m.c = LogicalConstraint(expr=m.i2[m.y].start_time.after(m.i.end_time,
                                                                 delay=-2))
 
@@ -854,7 +868,7 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
 
     def test_indirection_at_constraint(self):
         m = self.get_model()
-        m.y = Var(domain=Integers, bounds=[1,2])
+        m.y = Var(domain=Integers, bounds=[1, 2])
         m.c = LogicalConstraint(expr=m.i2[m.y].start_time.at(m.i.end_time,
                                                              delay=4))
 
@@ -877,7 +891,7 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
 
     def test_before_indirection_constraint(self):
         m = self.get_model()
-        m.y = Var(domain=Integers, bounds=[1,2])
+        m.y = Var(domain=Integers, bounds=[1, 2])
         m.c = LogicalConstraint(expr=m.i.start_time.before(m.i2[m.y].end_time,
                                                            delay=-4))
 
@@ -895,12 +909,12 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
         i = visitor.var_map[id(m.i)]
 
         self.assertTrue(expr[1].equals(
-            cp.start_of(i) + (- 4) <= 
+            cp.start_of(i) + (- 4) <=
             cp.element([cp.end_of(i21), cp.end_of(i22)], 0 + 1 * (y-1) // 1)))
 
     def test_after_indirection_constraint(self):
         m = self.get_model()
-        m.y = Var(domain=Integers, bounds=[1,2])
+        m.y = Var(domain=Integers, bounds=[1, 2])
         m.c = LogicalConstraint(expr=m.i.start_time.after(m.i2[m.y].end_time))
 
         visitor = self.get_visitor()
@@ -922,7 +936,7 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
 
     def test_at_indirection_constraint(self):
         m = self.get_model()
-        m.y = Var(domain=Integers, bounds=[1,2])
+        m.y = Var(domain=Integers, bounds=[1, 2])
         m.c = LogicalConstraint(expr=m.i.start_time.at(m.i2[m.y].end_time,
                                                        delay=-6))
 
@@ -940,14 +954,14 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
         i = visitor.var_map[id(m.i)]
 
         self.assertTrue(expr[1].equals(
-            cp.start_of(i) + (- 6) == 
+            cp.start_of(i) + (- 6) ==
             cp.element([cp.end_of(i21), cp.end_of(i22)], 0 + 1 * (y-1) // 1)))
 
     def test_double_indirection_before_constraint(self):
         m = self.get_model()
         # add interval var x can index
-        m.i3 = IntervalVar([(1,3), (1,4), (1,5)], length=4, optional=True)
-        m.y = Var(domain=Integers, bounds=[1,2])
+        m.i3 = IntervalVar([(1, 3), (1, 4), (1, 5)], length=4, optional=True)
+        m.y = Var(domain=Integers, bounds=[1, 2])
         m.c = LogicalConstraint(
             expr=m.i3[1, m.x - 3].start_time.before(m.i2[m.y].end_time))
 
@@ -957,17 +971,17 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
         self.assertIn(id(m.y), visitor.var_map)
         self.assertIn(id(m.i2[1]), visitor.var_map)
         self.assertIn(id(m.i2[2]), visitor.var_map)
-        self.assertIn(id(m.i3[1,3]), visitor.var_map)
-        self.assertIn(id(m.i3[1,4]), visitor.var_map)
-        self.assertIn(id(m.i3[1,5]), visitor.var_map)
+        self.assertIn(id(m.i3[1, 3]), visitor.var_map)
+        self.assertIn(id(m.i3[1, 4]), visitor.var_map)
+        self.assertIn(id(m.i3[1, 5]), visitor.var_map)
 
         y = visitor.var_map[id(m.y)]
         x = visitor.var_map[id(m.x)]
         i21 = visitor.var_map[id(m.i2[1])]
         i22 = visitor.var_map[id(m.i2[2])]
-        i33 = visitor.var_map[id(m.i3[1,3])]
-        i34 = visitor.var_map[id(m.i3[1,4])]
-        i35 = visitor.var_map[id(m.i3[1,5])]
+        i33 = visitor.var_map[id(m.i3[1, 3])]
+        i34 = visitor.var_map[id(m.i3[1, 4])]
+        i35 = visitor.var_map[id(m.i3[1, 5])]
 
         self.assertTrue(expr[1].equals(
             cp.element([cp.start_of(i33), cp.start_of(i34), cp.start_of(i35)],
@@ -978,8 +992,8 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
     def test_double_indirection_after_constraint(self):
         m = self.get_model()
         # add interval var x can index
-        m.i3 = IntervalVar([(1,3), (1,4), (1,5)], length=4, optional=True)
-        m.y = Var(domain=Integers, bounds=[1,2])
+        m.i3 = IntervalVar([(1, 3), (1, 4), (1, 5)], length=4, optional=True)
+        m.y = Var(domain=Integers, bounds=[1, 2])
         m.c = LogicalConstraint(
             expr=m.i3[1, m.x - 3].start_time.after(m.i2[m.y].end_time))
 
@@ -989,17 +1003,17 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
         self.assertIn(id(m.y), visitor.var_map)
         self.assertIn(id(m.i2[1]), visitor.var_map)
         self.assertIn(id(m.i2[2]), visitor.var_map)
-        self.assertIn(id(m.i3[1,3]), visitor.var_map)
-        self.assertIn(id(m.i3[1,4]), visitor.var_map)
-        self.assertIn(id(m.i3[1,5]), visitor.var_map)
+        self.assertIn(id(m.i3[1, 3]), visitor.var_map)
+        self.assertIn(id(m.i3[1, 4]), visitor.var_map)
+        self.assertIn(id(m.i3[1, 5]), visitor.var_map)
 
         y = visitor.var_map[id(m.y)]
         x = visitor.var_map[id(m.x)]
         i21 = visitor.var_map[id(m.i2[1])]
         i22 = visitor.var_map[id(m.i2[2])]
-        i33 = visitor.var_map[id(m.i3[1,3])]
-        i34 = visitor.var_map[id(m.i3[1,4])]
-        i35 = visitor.var_map[id(m.i3[1,5])]
+        i33 = visitor.var_map[id(m.i3[1, 3])]
+        i34 = visitor.var_map[id(m.i3[1, 4])]
+        i35 = visitor.var_map[id(m.i3[1, 5])]
 
         self.assertTrue(expr[1].equals(
             cp.element([cp.end_of(i21), cp.end_of(i22)],
@@ -1010,8 +1024,8 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
     def test_double_indirection_at_constraint(self):
         m = self.get_model()
         # add interval var x can index
-        m.i3 = IntervalVar([(1,3), (1,4), (1,5)], length=4, optional=True)
-        m.y = Var(domain=Integers, bounds=[1,2])
+        m.i3 = IntervalVar([(1, 3), (1, 4), (1, 5)], length=4, optional=True)
+        m.y = Var(domain=Integers, bounds=[1, 2])
         m.c = LogicalConstraint(
             expr=m.i3[1, m.x - 3].start_time.at(m.i2[m.y].end_time))
 
@@ -1021,23 +1035,58 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
         self.assertIn(id(m.y), visitor.var_map)
         self.assertIn(id(m.i2[1]), visitor.var_map)
         self.assertIn(id(m.i2[2]), visitor.var_map)
-        self.assertIn(id(m.i3[1,3]), visitor.var_map)
-        self.assertIn(id(m.i3[1,4]), visitor.var_map)
-        self.assertIn(id(m.i3[1,5]), visitor.var_map)
+        self.assertIn(id(m.i3[1, 3]), visitor.var_map)
+        self.assertIn(id(m.i3[1, 4]), visitor.var_map)
+        self.assertIn(id(m.i3[1, 5]), visitor.var_map)
 
         y = visitor.var_map[id(m.y)]
         x = visitor.var_map[id(m.x)]
         i21 = visitor.var_map[id(m.i2[1])]
         i22 = visitor.var_map[id(m.i2[2])]
-        i33 = visitor.var_map[id(m.i3[1,3])]
-        i34 = visitor.var_map[id(m.i3[1,4])]
-        i35 = visitor.var_map[id(m.i3[1,5])]
+        i33 = visitor.var_map[id(m.i3[1, 3])]
+        i34 = visitor.var_map[id(m.i3[1, 4])]
+        i35 = visitor.var_map[id(m.i3[1, 5])]
 
         self.assertTrue(expr[1].equals(
             cp.element([cp.start_of(i33), cp.start_of(i34), cp.start_of(i35)],
                        0 + 1 * (x + (-3) - 3) // 1) ==
             cp.element([cp.end_of(i21), cp.end_of(i22)],
                        0 + 1 * (y - 1) // 1)))
+
+    def test_indirection_nonconstant_step_size(self):
+        m = ConcreteModel()
+        def param_rule(m, i):
+            return i + 1
+        m.p = Param([1, 3, 4], initialize=param_rule)
+        m.x = Var(within={1, 3, 4})
+        e = m.p[m.x]
+
+        visitor = self.get_visitor()
+        with self.assertRaisesRegex(
+                ValueError,
+                "Variable indirection 'p\[x\]' is over a discrete domain "
+                "without a constant step size. This is not supported."):
+            expr = visitor.walk_expression((e, e, 0))
+
+    def test_indirection_with_param(self):
+        m = ConcreteModel()
+        def param_rule(m, i):
+            return i + 1
+        m.p = Param([1, 3, 5], initialize=param_rule)
+        m.x = Var(within={1, 3, 5})
+        m.a = Var(domain=Integers, bounds=(0, 100))
+
+        e = m.p[m.x]/m.a
+        visitor = self.get_visitor()
+        expr = visitor.walk_expression((e, e, 0))
+
+        self.assertIn(id(m.x), visitor.var_map)
+        self.assertIn(id(m.a), visitor.var_map)
+        x = visitor.var_map[id(m.x)]
+        a = visitor.var_map[id(m.a)]
+
+        self.assertTrue(expr[1].equals(
+            cp.element([2, 4, 6], 0 + 1 * (x - 1) // 2)/a))
 
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
@@ -1262,7 +1311,7 @@ class TestCPExpressionWalker_Vars(CommonTest):
         y = visitor.var_map[id(m.y)]
 
         self.assertTrue(expr[1].equals(
-            cp.element([a[i] for i in range(1,8)],
+            cp.element([a[i] for i in range(1, 8)],
                        0 + 1 * (x + -1 * y - 1) // 1)))
 
     def test_indirection_fails_with_non_finite_index_domain(self):
@@ -1283,8 +1332,8 @@ class TestCPExpressionWalker_Vars(CommonTest):
     def test_indirection_invalid_index_domain(self):
         m = self.get_model()
         m.a.domain = Integers
-        m.a.bounds = (6,8)
-        m.y = Var(within=Integers, bounds=(0,10))
+        m.a.bounds = (6, 8)
+        m.y = Var(within=Integers, bounds=(0, 10))
 
         e = m.a[m.y]
 

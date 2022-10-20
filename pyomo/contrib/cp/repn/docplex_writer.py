@@ -35,12 +35,13 @@ from pyomo.contrib.cp.scheduling_expr.step_function_expressions import (
 
 from pyomo.core.base import (
     minimize, maximize, SortComponents, Block, Objective, Constraint, Var,
-    Param, BooleanVar, LogicalConstraint, Suffix
+    Param, BooleanVar, LogicalConstraint, Suffix, value
 )
 from pyomo.core.base.boolean_var import (
     ScalarBooleanVar, _GeneralBooleanVarData, IndexedBooleanVar
 )
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
+from pyomo.core.base.param import IndexedParam, ScalarParam
 from pyomo.core.base.var import ScalarVar, _GeneralVarData, IndexedVar
 import pyomo.core.expr.current as EXPR
 from pyomo.core.expr.logical_expr import (
@@ -70,9 +71,6 @@ logger = logging.getLogger('pyomo.contrib.cp')
 
 # These are things that don't need special handling:
 class _GENERAL(object): pass
-# TODO: do I need this??
-_GENERAL_LIST = _GENERAL
-
 # These are operations that need to be deferred sometimes, usually because of
 # indirection:
 class _START_TIME(object): pass
@@ -174,6 +172,11 @@ def _handle_getitem(visitor, node, *data):
             # ESJ: Have to use integer division here because otherwise, later,
             # when we construct the element constraint, docplex won't believe
             # the index is an integer expression.
+            if _step is None:
+                raise ValueError(
+                    "Variable indirection '%s' is over a discrete domain "
+                    "without a constant step size. This is not supported."
+                    % node)
             expr += mult * (arg[1] - _min) // _step
             # This could be (_max - _min) // _step + 1, but that assumes
             # that the set correctly collapsed the bounds and that the
@@ -280,7 +283,13 @@ def _before_indexed_boolean_var(visitor, child):
         visitor.var_map[id(v)] = cpx_var == 1
         visitor.pyomo_to_docplex[v] = cpx_var
         cpx_vars[i] = cpx_var == 1
-    return False, (_GENERAL_LIST, cpx_vars)
+    return False, (_GENERAL, cpx_vars)
+
+def _before_param(visitor, child):
+    return False, (_GENERAL, value(child))
+
+def _before_indexed_param(visitor, child):
+    return False, (_GENERAL, {idx: value(p) for idx, p in child.items()})
 
 def _create_docplex_var(pyomo_var, name=None):
     if pyomo_var.is_binary():
@@ -330,7 +339,7 @@ def _before_indexed_var(visitor, child):
         visitor.var_map[id(v)] = cpx_var
         visitor.pyomo_to_docplex[v] = cpx_var
         cpx_vars[i] = cpx_var
-    return False, (_GENERAL_LIST, cpx_vars)
+    return False, (_GENERAL, cpx_vars)
 
 def _handle_named_expression_node(visitor, node, expr):
     visitor._named_expressions[id(node)] = expr[1]
@@ -414,7 +423,7 @@ def _before_indexed_interval_var(visitor, child):
         visitor.var_map[id(v)] = cpx_interval_var
         visitor.pyomo_to_docplex[v] = cpx_interval_var
         cpx_vars[i] = cpx_interval_var
-    return False, (_GENERAL_LIST, cpx_vars)
+    return False, (_GENERAL, cpx_vars)
 
 def _before_interval_var_start_time(visitor, child):
     _id = id(child)
@@ -599,7 +608,7 @@ def _handle_or_node(visitor, node, *args):
 
 def _handle_xor_node(visitor, node, arg1, arg2):
     return (_GENERAL, cp.equal(cp.count([_get_bool_valued_expr(arg1),
-                                         _get_bool_valued_expr(arg2)], True),
+                                         _get_bool_valued_expr(arg2)], 1),
                                1))
 
 def _handle_not_node(visitor, node, arg):
@@ -615,17 +624,17 @@ def _handle_implication_node(visitor, node, arg1, arg2):
 
 def _handle_exactly_node(visitor, node, *args):
     return (_GENERAL, cp.equal(cp.count((_get_bool_valued_expr(arg) for arg in
-                                         args[1:]), True),
+                                         args[1:]), 1),
                                _get_int_valued_expr(args[0])))
 
 def _handle_at_most_node(visitor, node, *args):
     return (_GENERAL, cp.less_or_equal(cp.count((_get_bool_valued_expr(arg) for
-                                                 arg in args[1:]), True),
+                                                 arg in args[1:]), 1),
                                        _get_int_valued_expr(args[0])))
 
 def _handle_at_least_node(visitor, node, *args):
     return (_GENERAL, cp.greater_or_equal(cp.count((_get_bool_valued_expr(arg)
-                                                    for arg in args[1:]), True),
+                                                    for arg in args[1:]), 1),
                                           _get_int_valued_expr(args[0])))
 
 ## CallExpression handllers
@@ -671,13 +680,13 @@ def _handle_call(visitor, node, *args):
 
 if docplex_available:
     _before_handlers = {
-        (_START_TIME, _START_TIME) : cp.start_before_start,
+        (_START_TIME, _START_TIME): cp.start_before_start,
         (_START_TIME, _END_TIME): cp.start_before_end,
         (_END_TIME, _START_TIME): cp.end_before_start,
         (_END_TIME, _END_TIME): cp.end_before_end,
     }
     _at_handlers = {
-        (_START_TIME, _START_TIME) : cp.start_at_start,
+        (_START_TIME, _START_TIME): cp.start_at_start,
         (_START_TIME, _END_TIME): cp.start_at_end,
         (_END_TIME, _START_TIME): cp.end_at_start,
         (_END_TIME, _END_TIME): cp.end_at_end
@@ -685,8 +694,8 @@ if docplex_available:
     _time_point_handlers = {
         _START_TIME: cp.start_of,
         _END_TIME: cp.end_of,
-        _GENERAL: lambda x : x,
-        _ELEMENT_CONSTRAINT: lambda x : x,
+        _GENERAL: lambda x: x,
+        _ELEMENT_CONSTRAINT: lambda x: x,
     }
 
 def _handle_before_expression_node(visitor, node, time1, time2, delay):
@@ -697,7 +706,7 @@ def _handle_before_expression_node(visitor, node, time1, time2, delay):
         time2[0] in {_GENERAL, _ELEMENT_CONSTRAINT}):
         # we alredy know we can't use a start_before_start function or its ilk:
         # Just build the correct inequality.
-        return _handle_inequality_node( visitor, None, lhs, t2)
+        return _handle_inequality_node(visitor, None, lhs, t2)
 
     # If this turns out to be the root, we can use the second return, but we
     # also pass the args for the inequality expression in case we use this in a
@@ -713,7 +722,7 @@ def _handle_at_expression_node(visitor, node, time1, time2, delay):
         time2[0] in {_GENERAL, _ELEMENT_CONSTRAINT}):
         # we can't use a start_before_start function or its ilk: Just build the
         # correct inequality.
-        return _handle_equality_node( visitor, None, lhs, t2)
+        return _handle_equality_node(visitor, None, lhs, t2)
 
     return (_AT, _at_handlers[time1[0], time2[0]](time1[1], time2[1], delay[1]),
             (lhs, t2))
@@ -772,6 +781,8 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         CumulativeFunction: _before_cumulative_function,
         _GeneralExpressionData: _before_named_expression,
         ScalarExpression: _before_named_expression,
+        IndexedParam: _before_indexed_param,# Because of indirection
+        ScalarParam: _before_param
     }
 
     def __init__(self, cpx_model, symbolic_solver_labels=False):
@@ -909,7 +920,16 @@ class DocplexWriter(object):
                     descend_into=False,
                     sort=sorter):
                 expr = visitor.walk_expression((cons.expr, cons, 0))
-                cpx_model.add(expr[1])
+                if expr[0] is _ELEMENT_CONSTRAINT:
+                    # Make the expression into a docplex-approved boolean-valued
+                    # expression, if it turned out that the root of the
+                    # expression was just an element constraint. (This can
+                    # happen for something like a constraint that requires that
+                    # an interval var specified by indirection has to be
+                    # present.)
+                    cpx_model.add(expr[1] == True)
+                else:
+                    cpx_model.add(expr[1])
 
         # That's all, folks.
         return cpx_model, visitor.pyomo_to_docplex
@@ -1059,7 +1079,7 @@ class CPOptimizerSolver(object):
                         py_var.end_time.set_value(end, skip_validation=True)
                         py_var.length.set_value(end - start,
                                                 skip_validation=True)
-                elif py_var.ctype is Var:
+                elif py_var.ctype in {Var, BooleanVar}:
                     py_var.set_value(sol, skip_validation=True)
                 else:
                     raise DeveloperError(
