@@ -228,7 +228,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
         # [ESJ 9/22/22]: This isn't the greatest test because there's no direct
         # translation so how we choose to represent this could change.
         self.assertTrue(expr[1].equals(
-            cp.count([b, cp.less_or_equal(5, cp.start_of(i22))], True) == 1))
+            cp.count([b, cp.less_or_equal(5, cp.start_of(i22))], 1) == 1))
 
     def test_write_logical_not(self):
         m = self.get_model()
@@ -344,7 +344,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
             a[i] = visitor.var_map[id(m.a[i])]
 
         self.assertTrue(expr[1].equals(
-            cp.equal(cp.count([a[i] == 4 for i in m.I], True), 3)))
+            cp.equal(cp.count([a[i] == 4 for i in m.I], 1), 3)))
 
     def test_atleast_expression(self):
         m = self.get_model()
@@ -360,7 +360,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
             a[i] = visitor.var_map[id(m.a[i])]
 
         self.assertTrue(expr[1].equals(
-            cp.greater_or_equal(cp.count([a[i] == 4 for i in m.I], True), 3)))
+            cp.greater_or_equal(cp.count([a[i] == 4 for i in m.I], 1), 3)))
 
     def test_atmost_expression(self):
         m = self.get_model()
@@ -376,7 +376,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
             a[i] = visitor.var_map[id(m.a[i])]
 
         self.assertTrue(expr[1].equals(
-            cp.less_or_equal(cp.count([a[i] == 4 for i in m.I], True), 3)))
+            cp.less_or_equal(cp.count([a[i] == 4 for i in m.I], 1), 3)))
 
     def test_interval_var_is_present(self):
         m = self.get_model()
@@ -493,8 +493,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
         self.assertTrue(expr[1].equals(
             cp.equal(cp.count(
                 [cp.element([cp.presence_of(i21), cp.presence_of(i22)],
-                           0 + 1 * (y - 1) // 1) == True,
-                 b], True), 1)))
+                           0 + 1 * (y - 1) // 1) == True, b], 1), 1)))
 
     def test_handle_getattr_equivalent_to(self):
         m = self.get_model()
@@ -568,7 +567,7 @@ class TestCPExpressionWalker_LogicalExpressions(CommonTest):
         self.assertTrue(expr[1].equals(
             cp.equal(cp.count(
                 [cp.element([b3, False, b5], 0 + 1 * (x - 3) // 1) == True,
-                 cp.equal(x, 5)], True), 1)))
+                 cp.equal(x, 5)], 1), 1)))
 
     def test_using_precedence_expr_as_booolean_expr(self):
         m = self.get_model()
