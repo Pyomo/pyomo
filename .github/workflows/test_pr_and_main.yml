@@ -276,8 +276,6 @@ jobs:
                 || echo "WARNING: Gurobi is not available"
             python -m pip install --cache-dir cache/pip xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
-            python -m pip install --cache-dir cache/pip highspy \
-                || echo "WARNING: highspy is not available"
         fi
         python -c 'import sys; print("PYTHON_EXE=%s" \
             % (sys.executable,))' >> $GITHUB_ENV
@@ -543,6 +541,17 @@ jobs:
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
         echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
+
+    # this has to be done after Pyomo is installed because highspy 
+    # depends on pyomo's find_library function
+    - name: Install HiGHS
+      if matrix.PYENV == 'pip'
+      shell: bash
+      run: |
+        if test -z "${{matrix.slim}}"; then
+            python -m pip install --cache-dir cache/pip highspy \
+                || echo "WARNING: highspy is not available"
+        fi
 
     - name: Set up coverage tracking
       run: |
