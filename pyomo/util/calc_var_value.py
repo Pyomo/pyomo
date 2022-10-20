@@ -159,6 +159,7 @@ def calculate_variable_from_constraint(variable, constraint,
     variable.set_value(orig_initial_value, skip_validation=True)
     expr = body - upper
 
+    expr_deriv = None
     if diff_mode in {differentiate.Modes.sympy, differentiate.Modes.reverse_symbolic}:
         expr_deriv = differentiate(expr, wrt=variable,
                                    mode=diff_mode)
@@ -166,10 +167,15 @@ def calculate_variable_from_constraint(variable, constraint,
         if type(expr_deriv) in native_numeric_types and expr_deriv == 0:
             raise ValueError("Variable derivative == 0, cannot solve for variable")
 
-        if abs(value(expr_deriv)) < 1e-12:
-            raise RuntimeError(
-                'Initial value for variable results in a derivative value that is '
-                'very close to zero.\n\tPlease provide a different initial guess.')
+    if expr_deriv is None:
+        fp0 = differentiate(expr, wrt=variable, mode=diff_mode)
+    else:
+        fp0 = value(expr_deriv)
+
+    if abs(value(fp0)) < 1e-12:
+        raise RuntimeError(
+            'Initial value for variable results in a derivative value that is '
+            'very close to zero.\n\tPlease provide a different initial guess.')
 
     iter_left = iterlim
     fk = residual_1 - upper
@@ -196,11 +202,10 @@ def calculate_variable_from_constraint(variable, constraint,
                 "or enable the linesearch if you have not.")
             raise
 
-        if diff_mode in {differentiate.Modes.sympy, differentiate.Modes.reverse_symbolic}:
-            fpk = value(expr_deriv)
+        if expr_deriv is None:
+            fpk = differentiate(expr, wrt=variable, mode=diff_mode)
         else:
-            fpk = differentiate(expr, wrt=variable,
-                                mode=diff_mode)
+            fpk = value(expr_deriv)
 
         if abs(fpk) < 1e-12:
             raise RuntimeError(
