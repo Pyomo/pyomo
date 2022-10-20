@@ -109,7 +109,7 @@ class GDP_Enumeration_Solver(_GDPoptAlgorithm):
             config))
         self.num_discrete_solns = len(discrete_solns)
         for soln in discrete_solns:
-            # We will interrupt based on time limit of iteration limit:
+            # We will interrupt based on time limit or iteration limit:
             if (self.reached_time_limit(config) or 
                 self.reached_iteration_limit(config)):
                 break

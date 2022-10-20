@@ -340,7 +340,7 @@ def add_disj_not_on_block(m):
     return m
 
 def makeDisjunctionsOnIndexedBlock():
-    """Two disjunctions (one indexed an one not), each on a separate
+    """Two disjunctions (one indexed and one not), each on a separate
     BlockData of an IndexedBlock of length 2
     """
     m = ConcreteModel()
