@@ -1,6 +1,18 @@
+# -*- coding: utf-8 -*-
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#  ___________________________________________________________________________
 import sys
 import logging
 
+from pyomo.common.deprecation import deprecated
 from pyomo.core.expr.numvalue import native_types, native_logical_types
 from pyomo.core.expr.expr_common import _and, _or, _equiv, _inv, _xor, _impl
 from pyomo.core.pyomoobject import PyomoObject
@@ -40,10 +52,11 @@ def as_boolean(obj):
     # Generate errors
     #
     if obj.__class__ in native_types:
-        raise TypeError("Cannot treat the value '%s' as a logical constant" % str(obj))
+        raise TypeError(
+            f"Cannot treat the value '{obj}' as a logical constant")
     raise TypeError(
-        "Cannot treat the value '%s' as a logical constant because it has unknown "
-        "type '%s'" % (str(obj), type(obj).__name__))
+        "Cannot treat the value '%s' as a logical constant because it has "
+        "unknown type '%s'" % (str(obj), type(obj).__name__))
 
 
 class BooleanValue(PyomoObject):
@@ -52,32 +65,6 @@ class BooleanValue(PyomoObject):
     """
     __slots__ = ()
     __hash__ = None
-
-    def __getstate__(self):
-        _base = super(BooleanValue, self)
-        if hasattr(_base, '__getstate__'):
-            return _base.__getstate__()
-        else:
-            return {}
-
-    def __setstate__(self, state):
-        """
-        Restore a pickled state into this instance
-        Our model for setstate is for derived classes to modify
-        the state dictionary as control passes up the inheritance
-        hierarchy (using super() calls).  All assignment of state ->
-        object attributes is handled at the last class before 'object',
-        which may -- or may not (thanks to MRO) -- be here.
-        """
-        _base = super(BooleanValue, self)
-        if hasattr(_base, '__setstate__'):
-            return _base.__setstate__(state)
-        else:
-            for key, val in state.items():
-                # Note: per the Python data model docs, we explicitly
-                # set the attribute using object.__setattr__() instead
-                # of setting self.__dict__[key] = val.
-                object.__setattr__(self, key, val)
 
     def getname(self, fully_qualified=False, name_buffer=None):
         """
@@ -106,6 +93,8 @@ class BooleanValue(PyomoObject):
         """Return True if this is a non-constant value that has been fixed"""
         return False
 
+    @deprecated("is_relational() is deprecated in favor of "
+                "is_expression_type(ExpressionType.RELATIONAL)", version='TBD')
     def is_relational(self):
         """
         Return True if this Logical value represents a relational expression.
@@ -175,18 +164,17 @@ class BooleanValue(PyomoObject):
         Returns:
             A string representation for the expression tree.
         """
-        if compute_values and self.is_fixed():
+        if (compute_values and self.is_fixed()) or self.is_constant():
             try:
                 return str(self())
             except:
-                pass
-        if not self.is_constant():
-            if smap:
-                return smap.getSymbol(self, labeler)
-            elif labeler is not None:
-                return labeler(self)
-        return str(self)
-
+                pass # return str(self)
+        if smap:
+            return smap.getSymbol(self, labeler)
+        elif labeler is not None:
+            return labeler(self)
+        else:
+            return str(self)
 
 class BooleanConstant(BooleanValue):
     """An object that contains a constant Logical value.
@@ -201,12 +189,6 @@ class BooleanConstant(BooleanValue):
         if value not in native_logical_values:
             raise TypeError('Not a valid BooleanValue. Unable to create a logical constant')
         self.value = value
-
-    def __getstate__(self):
-        state = super(BooleanConstant, self).__getstate__()
-        for i in BooleanConstant.__slots__:
-            state[i] = getattr(self, i)
-        return state
 
     def is_constant(self):
         return True

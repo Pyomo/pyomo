@@ -22,7 +22,7 @@ from pyomo.environ import (
 from pyomo.core.expr.current import MonomialTermExpression
 from pyomo.core.expr.numvalue import NumericNDArray, as_numeric
 from pyomo.core.expr.compare import compare_expressions
-from pyomo.core.expr.logical_expr import InequalityExpression
+from pyomo.core.expr.relational_expr import InequalityExpression
 
 from pyomo.repn import generate_standard_repn
 

@@ -115,7 +115,8 @@ def _wrap_func(func, msg, logger, version, remove_in):
     @functools.wraps(func, assigned=(
         '__module__', '__name__', '__qualname__', '__annotations__'))
     def wrapper(*args, **kwargs):
-        deprecation_warning(message, logger)
+        cf = _find_calling_frame(1)
+        deprecation_warning(message, logger, calling_frame=cf)
         return func(*args, **kwargs)
 
     wrapper.__doc__ = 'DEPRECATED.\n\n'
@@ -184,11 +185,13 @@ def deprecation_warning(msg, logger=None, version=None,
             # function/method that called deprecation_warning
             cf = _find_calling_frame(1)
         if cf is not None:
-            logger = cf.f_globals.get('__package__', None)
+            logger = cf.f_globals.get('__name__', None)
             if logger is not None and not logger.startswith('pyomo'):
                 logger = None
         if logger is None:
             logger = 'pyomo'
+    if isinstance(logger, str):
+        logger = logging.getLogger(logger)
 
     msg = textwrap.fill(
         'DEPRECATED: %s' % (_default_msg(None, msg, version, remove_in),),
@@ -210,7 +213,7 @@ def deprecation_warning(msg, logger=None, version=None,
                 return
             deprecation_warning.emitted_warnings.add(msg)
 
-    logging.getLogger(logger).warning(msg)
+    logger.warning(msg)
 
 if in_testing_environment():
     deprecation_warning.emitted_warnings = None

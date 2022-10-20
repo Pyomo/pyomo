@@ -16,7 +16,8 @@ import types
 from math import fabs
 from weakref import ref as weakref_ref
 
-from pyomo.common.deprecation import RenamedClass,  deprecation_warning
+from pyomo.common.autoslots import AutoSlots
+from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name, NOTSET
@@ -33,7 +34,7 @@ from pyomo.core.base.numvalue import native_types
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
-
+from pyomo.core.expr.expr_common import ExpressionType
 
 logger = logging.getLogger('pyomo.gdp')
 
@@ -62,6 +63,8 @@ class AutoLinkedBinaryVar(ScalarVar):
     """
 
     INTEGER_TOLERANCE = 0.001
+
+    __autoslot_mappers__ = {'_associated_boolean': AutoSlots.weakref_mapper}
 
     def __init__(self, boolean_var=None):
         super().__init__(domain=Binary)
@@ -96,17 +99,6 @@ class AutoLinkedBinaryVar(ScalarVar):
         bool_var = self.get_associated_boolean()
         if bool_var.is_fixed():
             bool_var.unfix()
-
-    def __getstate__(self):
-        state = super().__getstate__()
-        if self._associated_boolean is not None:
-            state['_associated_boolean'] = self._associated_boolean()
-        return state
-
-    def __setstate__(self, state):
-        super().__setstate__(state)
-        if self._associated_boolean is not None:
-            self._associated_boolean = weakref_ref(self._associated_boolean)
 
 
 class AutoLinkedBooleanVar(ScalarBooleanVar):
@@ -434,7 +426,7 @@ _DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
 
 class _DisjunctionData(ActiveComponentData):
-    __slots__ = ('disjuncts','xor', '_algebraic_constraint')
+    __slots__ = ('disjuncts', 'xor', '_algebraic_constraint')
     _NoArgument = (0,)
 
     @property
@@ -458,15 +450,6 @@ class _DisjunctionData(ActiveComponentData):
         # transformed. None if it has not been transformed
         self._algebraic_constraint = None
 
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        result = super(_DisjunctionData, self).__getstate__()
-        for i in _DisjunctionData.__slots__:
-            result[i] = getattr(self, i)
-        return result
-
     def set_value(self, expr):
         for e in expr:
             # The user gave us a proper Disjunct block
@@ -488,33 +471,18 @@ class _DisjunctionData(ActiveComponentData):
                 e_iter = [e]
             for _tmpe in e_iter:
                 try:
-                    isexpr = _tmpe.is_expression_type()
+                    if _tmpe.is_expression_type():
+                        expressions.append(_tmpe)
+                        continue
                 except AttributeError:
-                    isexpr = False
-                if not isexpr or not _tmpe.is_relational():
-                    try:
-                        isvar = _tmpe.is_variable_type()
-                    except AttributeError:
-                        isvar = False
-                    if isvar and _tmpe.is_relational():
-                        expressions.append(_tmpe)
-                        continue
-                    try:
-                        isbool = _tmpe.is_logical_type()
-                    except AttributeError:
-                        isbool = False
-                    if isbool:
-                        expressions.append(_tmpe)
-                        continue
-                    msg = "\n\tin %s" % (type(e),) if e_iter is e else ""
-                    raise ValueError(
-                        "Unexpected term for Disjunction %s.\n"
-                        "\tExpected a Disjunct object, relational expression, "
-                        "or iterable of\n"
-                        "\trelational expressions but got %s%s"
-                        % (self.name, type(_tmpe), msg) )
-                else:
-                    expressions.append(_tmpe)
+                    pass
+                msg = "\n\tin %s" % (type(e),) if e_iter is e else ""
+                raise ValueError(
+                    "Unexpected term for Disjunction %s.\n"
+                    "\tExpected a Disjunct object, relational expression, "
+                    "or iterable of\n"
+                    "\trelational expressions but got %s%s"
+                    % (self.name, type(_tmpe), msg) )
 
             comp = self.parent_component()
             if comp._autodisjuncts is None:
@@ -531,10 +499,15 @@ class _DisjunctionData(ActiveComponentData):
             disjunct.constraint = c = ConstraintList()
             disjunct.propositions = p = LogicalConstraintList()
             for e in expressions:
-                if isinstance(e, BooleanValue):
+                if e.is_expression_type(ExpressionType.RELATIONAL):
+                    c.add(e)
+                elif e.is_expression_type(ExpressionType.LOGICAL):
                     p.add(e)
                 else:
-                    c.add(e)
+                    raise RuntimeError(
+                        "Unsupported expression type on Disjunct "
+                        f"{disjunct.name}: expected either relational or "
+                        f"logical expression, found {e.__class__.__name__}")
             self.disjuncts.append(disjunct)
 
 

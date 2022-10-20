@@ -26,6 +26,9 @@ from copy import deepcopy
 from pyomo.common.errors import ApplicationError
 from pyomo.common.modeling import unique_component_name
 
+from pyomo.common.timing import TicTocTimer
+from pyomo.contrib.pyros.util import TIC_TOC_SOLVE_TIME_ATTR
+
 
 def initial_construct_master(model_data):
     """
@@ -396,6 +399,8 @@ def minimize_dr_vars(model_data, config):
         solver = config.local_solver
 
     # === Solve the polishing model
+    timer = TicTocTimer()
+    timer.tic(msg=None)
     try:
         results = solver.solve(
             polishing_model,
@@ -409,6 +414,12 @@ def minimize_dr_vars(model_data, config):
             f"in iteration {model_data.iteration}"
         )
         raise
+    else:
+        setattr(
+            results.solver,
+            TIC_TOC_SOLVE_TIME_ATTR,
+            timer.toc(msg=None),
+        )
 
     # === Process solution by termination condition
     acceptable = {
@@ -551,7 +562,9 @@ def solver_call_master(model_data, config, solver, solve_data):
 
     higher_order_decision_rule_efficiency(config, model_data)
 
+    timer = TicTocTimer()
     for opt in backup_solvers:
+        timer.tic(msg=None)
         try:
             results = opt.solve(
                 nlp_model,
@@ -568,6 +581,12 @@ def solver_call_master(model_data, config, solver, solve_data):
                 f"optimize master problem in iteration {model_data.iteration}"
             )
             raise
+        else:
+            setattr(
+                results.solver,
+                TIC_TOC_SOLVE_TIME_ATTR,
+                timer.toc(msg=None),
+            )
 
         optimal_termination = check_optimal_termination(results)
         infeasible = results.solver.termination_condition == tc.infeasible

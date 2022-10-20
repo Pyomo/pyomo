@@ -34,7 +34,7 @@ valid_active_ctypes_minlp = {Block, Constraint, Objective, Suffix}
 _ftoa_precision_str = '%.17g'
 
 
-def ftoa(val):
+def ftoa(val, parenthesize_negative_values=False):
     if val is None:
         return val
     #
@@ -72,4 +72,7 @@ def ftoa(val):
         logger.warning(
             "Converting %s to string resulted in loss of precision" % val)
     #
-    return a[:i]
+    if parenthesize_negative_values and a[0] == '-':
+        return '(' + a[:i] + ')'
+    else:
+        return a[:i]

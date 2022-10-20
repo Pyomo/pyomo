@@ -5468,6 +5468,17 @@ class TestSetUtils(unittest.TestCase):
         a = RangeSet(ranges=(NR(0,10,3), NR(1,10,3), NR(2,10,3)))
         self.assertEqual(a.get_interval(), (0, 10, None))
 
+    def test_get_interval(self):
+        self.assertEqual(Any.get_interval(), (None, None, None))
+        a = UnindexedComponent_set
+        self.assertEqual(a.get_interval(), (None, None, None))
+        a = Set(initialize=['a'])
+        a.construct()
+        self.assertEqual(a.get_interval(), ('a', 'a', None))
+        a = Set(initialize=[1])
+        a.construct()
+        self.assertEqual(a.get_interval(), (1, 1, 0))
+
 
 class TestDeprecation(unittest.TestCase):
     def test_filter(self):

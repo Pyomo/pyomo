@@ -14,7 +14,8 @@ from pyomo.environ import (
     TransformationFactory, Constraint, ConcreteModel, Var, RangeSet, Objective, 
     maximize, SolverFactory, Any, Reference, LogicalConstraint)
 from pyomo.core.expr.logical_expr import (
-    EquivalenceExpression, NotExpression, AndExpression, ExactlyExpression)
+    EquivalenceExpression, NotExpression, AndExpression, ExactlyExpression
+)
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import GDP_Error, check_model_algebraic

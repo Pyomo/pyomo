@@ -19,13 +19,17 @@ from itertools import islice
 logger = logging.getLogger('pyomo.core')
 
 from math import isclose
-from pyomo.common.deprecation import deprecation_warning
+from pyomo.common.deprecation import deprecated, deprecation_warning
 
 from .expr_common import (
+    OperatorAssociativity,
+    ExpressionType,
+    clone_counter,
     _add, _sub, _mul, _div,
     _pow, _neg, _abs, _inplace,
     _unary
 )
+from .base import ExpressionBase
 from .numvalue import (
     NumericValue,
     native_types,
@@ -41,29 +45,6 @@ from .visitor import (
     evaluate_expression, expression_to_string, polynomial_degree,
     clone_expression, sizeof_expression, _expression_is_fixed
 )
-
-
-class clone_counter(object):
-    """ Context manager for counting cloning events.
-
-    This context manager counts the number of times that the
-    :func:`clone_expression <pyomo.core.expr.current.clone_expression>`
-    function is executed.
-    """
-
-    _count = 0
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        pass
-
-    @property
-    def count(self):
-        """A property that returns the clone count value.
-        """
-        return clone_counter._count
 
 
 class nonlinear_expression(object):
@@ -116,11 +97,11 @@ class linear_expression(object):
 #-------------------------------------------------------
 
 
-class ExpressionBase(NumericValue):
+class NumericExpression(ExpressionBase, NumericValue):
     """
     The base class for Pyomo expressions.
 
-    This class is used to define nodes in an expression
+    This class is used to define nodes in a numeric expression
     tree.
 
     Args:
@@ -132,231 +113,36 @@ class ExpressionBase(NumericValue):
     # data.  There are now accessor methods, so in most cases users
     # and developers should not directly access the _args_ data values.
     __slots__ =  ('_args_',)
+    EXPRESSION_SYSTEM = ExpressionType.NUMERIC
     PRECEDENCE = 0
 
     def __init__(self, args):
         self._args_ = args
 
     def nargs(self):
-        """
-        Returns the number of child nodes.
-
-        By default, Pyomo expressions represent binary operations
-        with two arguments.
-
-        Note:
-            This function does not simply compute the length of
-            :attr:`_args_` because some expression classes use
-            a subset of the :attr:`_args_` array.  Thus, it
-            is imperative that developers use this method!
-
-        Returns:
-            A nonnegative integer that is the number of child nodes.
-        """
+        # by default, Pyomo numeric operators are binary operators
         return 2
-
-    def arg(self, i):
-        """
-        Return the i-th child node.
-
-        Args:
-            i (int): Nonnegative index of the child that is returned.
-
-        Returns:
-            The i-th child node.
-        """
-        if i >= self.nargs():
-            raise KeyError("Invalid index for expression argument: %d" % i)
-        if i < 0:
-            return self._args_[self.nargs()+i]
-        return self._args_[i]
 
     @property
     def args(self):
         """
         Return the child nodes
 
-        Returns: Either a list or tuple (depending on the node storage
-            model) containing only the child nodes of this node
+        Returns
+        -------
+        list or tuple:
+            Sequence containing only the child nodes of this node.  The
+            return type depends on the node storage model.  Users are
+            not permitted to change the returned data (even for the case
+            of data returned as a list), as that breaks the promise of
+            tree immutability.
         """
-        return self._args_[:self.nargs()]
+        return self._args_
 
-
-    def __getstate__(self):
-        """
-        Pickle the expression object
-
-        Returns:
-            The pickled state.
-        """
-        state = super(ExpressionBase, self).__getstate__()
-        for i in ExpressionBase.__slots__:
-           state[i] = getattr(self,i)
-        return state
-
-    def __call__(self, exception=True):
-        """
-        Evaluate the value of the expression tree.
-
-        Args:
-            exception (bool): If :const:`False`, then
-                an exception raised while evaluating
-                is captured, and the value returned is
-                :const:`None`.  Default is :const:`True`.
-
-        Returns:
-            The value of the expression or :const:`None`.
-        """
-        return evaluate_expression(self, exception)
-
-    def __str__(self):
-        """
-        Returns a string description of the expression.
-
-        Note:
-            The value of ``pyomo.core.expr.expr_common.TO_STRING_VERBOSE``
-            is used to configure the execution of this method.
-            If this value is :const:`True`, then the string
-            representation is a nested function description of the expression.
-            The default is :const:`False`, which is an algebraic
-            description of the expression.
-
-        Returns:
-            A string.
-        """
-        return expression_to_string(self)
-
-    def to_string(self, verbose=None, labeler=None, smap=None,
-                  compute_values=False):
-        """
-        Return a string representation of the expression tree.
-
-        Args:
-            verbose (bool): If :const:`True`, then the the string
-                representation consists of nested functions.  Otherwise,
-                the string representation is an algebraic equation.
-                Defaults to :const:`False`.
-            labeler: An object that generates string labels for
-                variables in the expression tree.  Defaults to :const:`None`.
-            smap:  If specified, this
-                :class:`SymbolMap <pyomo.core.expr.symbol_map.SymbolMap>`
-                is used to cache labels for variables.
-            compute_values (bool): If :const:`True`, then
-                parameters and fixed variables are evaluated before the
-                expression string is generated.  Default is :const:`False`.
-
-        Returns:
-            A string representation for the expression tree.
-        """
-        return expression_to_string(self, verbose=verbose, labeler=labeler,
-                                    smap=smap, compute_values=compute_values)
-
-    def _precedence(self):
-        return ExpressionBase.PRECEDENCE
-
-    def _associativity(self):
-        """Return the associativity of this operator.
-
-        Returns 1 if this operator is left-to-right associative or -1 if
-        it is right-to-left associative.  Any other return value will be
-        interpreted as "not associative" (implying any arguments that
-        are at this operator's _precedence() will be enclosed in parens).
-        """
-        # Most operators in Python are left-to-right associative
-        return 1
-
-    def _to_string(self, values, verbose, smap, compute_values):    #pragma: no cover
-        """
-        Construct a string representation for this node, using the string
-        representations of its children.
-
-        This method is called by the :class:`_ToStringVisitor
-        <pyomo.core.expr.current._ToStringVisitor>` class.  It must
-        must be defined in subclasses.
-
-        Args:
-            values (list): The string representations of the children of this
-                node.
-            verbose (bool): If :const:`True`, then the the string
-                representation consists of nested functions.  Otherwise,
-                the string representation is an algebraic equation.
-            smap:  If specified, this :class:`SymbolMap
-                <pyomo.core.expr.symbol_map.SymbolMap>` is
-                used to cache labels for variables.
-            compute_values (bool): If :const:`True`, then
-                parameters and fixed variables are evaluated before the
-                expression string is generated.
-
-        Returns:
-            A string representation for this node.
-        """
-        raise NotImplementedError(
-            "Derived expression (%s) failed to implement _to_string()"
-            % ( str(self.__class__), ))
-
-    def getname(self, *args, **kwds):                       #pragma: no cover
-        """
-        Return the text name of a function associated with this expression object.
-
-        In general, no arguments are passed to this function.
-
-        Args:
-            *arg: a variable length list of arguments
-            **kwds: keyword arguments
-
-        Returns:
-            A string name for the function.
-        """
-        raise NotImplementedError("Derived expression (%s) failed to "\
-            "implement getname()" % ( str(self.__class__), ))
-
-    def clone(self, substitute=None):
-        """
-        Return a clone of the expression tree.
-
-        Note:
-            This method does not clone the leaves of the
-            tree, which are numeric constants and variables.
-            It only clones the interior nodes, and
-            expression leaf nodes like
-            :class:`_MutableLinearExpression<pyomo.core.expr.current._MutableLinearExpression>`.
-            However, named expressions are treated like
-            leaves, and they are not cloned.
-
-        Args:
-            substitute (dict): a dictionary that maps object ids to clone
-                objects generated earlier during the cloning process.
-
-        Returns:
-            A new expression tree.
-        """
-        return clone_expression(self, substitute=substitute)
-
-    def create_node_with_local_data(self, args, classtype=None):
-        """
-        Construct a node using given arguments.
-
-        This method provides a consistent interface for constructing a
-        node, which is used in tree visitor scripts.  In the simplest
-        case, this simply returns::
-
-            self.__class__(args)
-
-        But in general this creates an expression object using local
-        data as well as arguments that represent the child nodes.
-
-        Args:
-            args (list): A list of child nodes for the new expression
-                object
-
-        Returns:
-            A new expression object with the same type as the current
-            class.
-        """
-        if classtype is None:
-            classtype = self.__class__
-        return classtype(args)
-
+    @deprecated('The implicit recasting of a "not potentially variable" '
+                'expression node to a potentially variable one is no '
+                'longer supported (this violates that immutability '
+                'promise for Pyomo5 expression trees).', version='TBD')
     def create_potentially_variable_object(self):
         """
         Create a potentially variable version of this object.
@@ -374,105 +160,16 @@ class ExpressionBase(NumericValue):
         Returns:
             An object that is potentially variable.
         """
-        self.__class__ = self.__class__.__mro__[1]
+        if not self.is_potentially_variable():
+            logger.error(
+                'recasting a non-potentially variable expression to a '
+                'potentially variable one violates the immutability '
+                'promise for Pyomo5 expression trees.')
+            cls = list(self.__class__.__bases__)
+            cls.remove(NPV_Mixin)
+            assert len(cls) == 1
+            self.__class__ = cls[0]
         return self
-
-    def is_constant(self):
-        """Return True if this expression is an atomic constant
-
-        This method contrasts with the is_fixed() method.  This method
-        returns True if the expression is an atomic constant, that is it
-        is composed exclusively of constants and immutable parameters.
-        NumericValue objects returning is_constant() == True may be
-        simplified to their numeric value at any point without warning.
-
-        Note:  This defaults to False, but gets redefined in sub-classes.
-        """
-        return False
-
-    def is_fixed(self):
-        """
-        Return :const:`True` if this expression contains no free variables.
-
-        Returns:
-            A boolean.
-        """
-        return _expression_is_fixed(self)
-
-    def _is_fixed(self, values):
-        """
-        Compute whether this expression is fixed given
-        the fixed values of its children.
-
-        This method is called by the :class:`_IsFixedVisitor
-        <pyomo.core.expr.current._IsFixedVisitor>` class.  It can
-        be over-written by expression classes to customize this
-        logic.
-
-        Args:
-            values (list): A list of boolean values that indicate whether
-                the children of this expression are fixed
-
-        Returns:
-            A boolean that is :const:`True` if the fixed values of the
-            children are all :const:`True`.
-        """
-        return all(values)
-
-    def is_potentially_variable(self):
-        """
-        Return :const:`True` if this expression might represent
-        a variable expression.
-
-        This method returns :const:`True` when (a) the expression
-        tree contains one or more variables, or (b) the expression
-        tree contains a named expression. In both cases, the
-        expression cannot be treated as constant since (a) the variables
-        may not be fixed, or (b) the named expressions may be changed
-        at a later time to include non-fixed variables.
-
-        Returns:
-            A boolean.  Defaults to :const:`True` for expressions.
-        """
-        return True
-
-    def is_named_expression_type(self):
-        """
-        Return :const:`True` if this object is a named expression.
-
-        This method returns :const:`False` for this class, and it
-        is included in other classes within Pyomo that are not named
-        expressions, which allows for a check for named expressions
-        without evaluating the class type.
-
-        Returns:
-            A boolean.
-        """
-        return False
-
-    def is_expression_type(self):
-        """
-        Return :const:`True` if this object is an expression.
-
-        This method obviously returns :const:`True` for this class, but it
-        is included in other classes within Pyomo that are not expressions,
-        which allows for a check for expressions without
-        evaluating the class type.
-
-        Returns:
-            A boolean.
-        """
-        return True
-
-    def size(self):
-        """
-        Return the number of nodes in the expression tree.
-
-        Returns:
-            A nonnegative integer that is the number of interior and leaf
-            nodes in the expression tree.
-        """
-        return sizeof_expression(self)
 
     def polynomial_degree(self):
         """
@@ -504,37 +201,6 @@ class ExpressionBase(NumericValue):
         """
         return None
 
-    def _apply_operation(self, result):     #pragma: no cover
-        """
-        Compute the values of this node given the values of its children.
-
-        This method is called by the :class:`_EvaluationVisitor
-        <pyomo.core.expr.current._EvaluationVisitor>` class.  It must
-        be over-written by expression classes to customize this logic.
-
-        Note:
-            This method applies the logical operation of the
-            operator to the arguments.  It does *not* evaluate
-            the arguments in the process, but assumes that they
-            have been previously evaluated.  But noted that if
-            this class contains auxilliary data (e.g. like the
-            numeric coefficients in the :class:`LinearExpression
-            <pyomo.core.expr.current.LinearExpression>` class, then
-            those values *must* be evaluated as part of this
-            function call.  An uninitialized parameter value
-            encountered during the execution of this method is
-            considered an error.
-
-        Args:
-            values (list): A list of values that indicate the value
-                of the children expressions.
-
-        Returns:
-            A floating point value for this expression.
-        """
-        raise NotImplementedError("Derived expression (%s) failed to "\
-            "implement _apply_operation()" % ( str(self.__class__), ))
-
 
 class NPV_Mixin(object):
     __slots__ = ()
@@ -557,13 +223,17 @@ class NPV_Mixin(object):
         if npv_args:
             return super().create_node_with_local_data(args, None)
         else:
-            cls = list(self.__class__.__bases__)
-            cls.remove(NPV_Mixin)
-            assert len(cls) == 1
-            return super().create_node_with_local_data(args, cls[0])
+            return super().create_node_with_local_data(
+                args, self.potentially_variable_base_class())
+
+    def potentially_variable_base_class(self):
+        cls = list(self.__class__.__bases__)
+        cls.remove(NPV_Mixin)
+        assert len(cls) == 1
+        return cls[0]
 
 
-class NegationExpression(ExpressionBase):
+class NegationExpression(NumericExpression):
     """
     Negation expressions::
 
@@ -583,19 +253,16 @@ class NegationExpression(ExpressionBase):
     def _compute_polynomial_degree(self, result):
         return result[0]
 
-    def _precedence(self):
-        return NegationExpression.PRECEDENCE
-
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
-            return "{0}({1})".format(self.getname(), values[0])
+            return f"{self.getname()}({values[0]})"
         tmp = values[0]
         if tmp[0] == '-':
             i = 1
             while tmp[i] == ' ':
                 i += 1
             return tmp[i:]
-        return "- "+tmp
+        return "- " + tmp
 
     def _apply_operation(self, result):
         return -result[0]
@@ -605,7 +272,7 @@ class NPV_NegationExpression(NPV_Mixin, NegationExpression):
     __slots__ = ()
 
 
-class ExternalFunctionExpression(ExpressionBase):
+class ExternalFunctionExpression(NumericExpression):
     """
     External function expressions
 
@@ -634,12 +301,6 @@ class ExternalFunctionExpression(ExpressionBase):
             classtype = self.__class__
         return classtype(args, self._fcn)
 
-    def __getstate__(self):
-        state = super(ExternalFunctionExpression, self).__getstate__()
-        for i in ExternalFunctionExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
     def getname(self, *args, **kwds):           #pragma: no cover
         return self._fcn.getname(*args, **kwds)
 
@@ -649,8 +310,8 @@ class ExternalFunctionExpression(ExpressionBase):
     def _apply_operation(self, result):
         return self._fcn.evaluate( result )
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        return "{0}({1})".format(self.getname(), ", ".join(values))
+    def _to_string(self, values, verbose, smap):
+        return f"{self.getname()}({', '.join(values)})"
 
     def get_arg_units(self):
         """ Return the units for this external functions arguments """
@@ -664,7 +325,7 @@ class NPV_ExternalFunctionExpression(NPV_Mixin, ExternalFunctionExpression):
     __slots__ = ()
 
 
-class PowExpression(ExpressionBase):
+class PowExpression(NumericExpression):
     """
     Power expressions::
 
@@ -673,6 +334,12 @@ class PowExpression(ExpressionBase):
 
     __slots__ = ()
     PRECEDENCE = 2
+
+    # "**" is right-to-left associative in Python (so this should
+    # return -1), however, as this rule is not widely known and can
+    # confuse novice users, we will make our "**" operator
+    # non-associative (forcing parens)
+    ASSOCIATIVITY = OperatorAssociativity.NON_ASSOCIATIVE
 
     def _compute_polynomial_degree(self, result):
         # PowExpression is a tricky thing.  In general, a**b is
@@ -704,16 +371,6 @@ class PowExpression(ExpressionBase):
             return False
         return args[0] or value(self._args_[1]) == 0
 
-    def _precedence(self):
-        return PowExpression.PRECEDENCE
-
-    def _associativity(self):
-        # "**" is right-to-left associative in Python (so this should
-        # return -1), however, as this rule is not widely known and can
-        # confuse novice users, we will make our "**" operator
-        # non-associative (forcing parens)
-        return 0
-
     def _apply_operation(self, result):
         _l, _r = result
         return _l ** _r
@@ -721,17 +378,17 @@ class PowExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'pow'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
-        return "{0}**{1}".format(values[0], values[1])
+            return f"{self.getname()}({', '.join(values)})"
+        return f"{values[0]}**{values[1]}"
 
 
 class NPV_PowExpression(NPV_Mixin, PowExpression):
     __slots__ = ()
 
 
-class MaxExpression(ExpressionBase):
+class MaxExpression(NumericExpression):
     """
     Maximum expressions::
 
@@ -739,6 +396,9 @@ class MaxExpression(ExpressionBase):
     """
 
     __slots__ = ()
+
+    # This operator does not have an infix representation
+    PRECEDENCE = None
 
     def nargs(self):
         return len(self._args_)
@@ -749,19 +409,15 @@ class MaxExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'max'
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        return "%s(%s)" % (self.getname(), ', '.join(
-            arg[1:-1]
-            if (arg and arg[0] == '(' and arg[-1] == ')'
-                and _balanced_parens(arg[1:-1]))
-            else arg for arg in values))
+    def _to_string(self, values, verbose, smap):
+        return f"{self.getname()}({', '.join(values)})"
 
 
 class NPV_MaxExpression(NPV_Mixin, MaxExpression):
     __slots__ = ()
 
 
-class MinExpression(ExpressionBase):
+class MinExpression(NumericExpression):
     """
     Minimum expressions::
 
@@ -769,6 +425,9 @@ class MinExpression(ExpressionBase):
     """
 
     __slots__ = ()
+
+    # This operator does not have an infix representation
+    PRECEDENCE = None
 
     def nargs(self):
         return len(self._args_)
@@ -779,19 +438,15 @@ class MinExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'min'
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        return "%s(%s)" % (self.getname(), ', '.join(
-            arg[1:-1]
-            if (arg and arg[0] == '(' and arg[-1] == ')'
-                and _balanced_parens(arg[1:-1]))
-            else arg for arg in values))
+    def _to_string(self, values, verbose, smap):
+        return f"{self.getname()}({', '.join(values)})"
 
 
 class NPV_MinExpression(NPV_Mixin, MinExpression):
     __slots__ = ()
 
 
-class ProductExpression(ExpressionBase):
+class ProductExpression(NumericExpression):
     """
     Product expressions::
 
@@ -800,9 +455,6 @@ class ProductExpression(ExpressionBase):
 
     __slots__ = ()
     PRECEDENCE = 4
-
-    def _precedence(self):
-        return ProductExpression.PRECEDENCE
 
     def _compute_polynomial_degree(self, result):
         # NB: We can't use sum() here because None (non-polynomial)
@@ -832,14 +484,15 @@ class ProductExpression(ExpressionBase):
         _l, _r = result
         return _l * _r
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
+            return f"{self.getname()}({', '.join(values)})"
         if values[0] in self._to_string.one:
             return values[1]
         if values[0] in self._to_string.minus_one:
-            return "- {0}".format(values[1])
-        return "{0}*{1}".format(values[0],values[1])
+            return f"- {values[1]}"
+        return f"{values[0]}*{values[1]}"
+
     # Store these reference sets on the function for quick lookup
     _to_string.one = {"1", "1.0", "(1)", "(1.0)"}
     _to_string.minus_one = {"-1", "-1.0", "(-1)", "(-1.0)"}
@@ -873,7 +526,7 @@ class MonomialTermExpression(ProductExpression):
         return self.__class__(args)
 
 
-class DivisionExpression(ExpressionBase):
+class DivisionExpression(NumericExpression):
     """
     Division expressions::
 
@@ -881,12 +534,6 @@ class DivisionExpression(ExpressionBase):
     """
     __slots__ = ()
     PRECEDENCE = 4
-
-    def nargs(self):
-        return 2
-
-    def _precedence(self):
-        return DivisionExpression.PRECEDENCE
 
     def _compute_polynomial_degree(self, result):
         if result[1] == 0:
@@ -896,10 +543,10 @@ class DivisionExpression(ExpressionBase):
     def getname(self, *args, **kwds):
         return 'div'
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
-        return "{0}/{1}".format(values[0], values[1])
+            return f"{self.getname()}({', '.join(values)})"
+        return f"{values[0]}/{values[1]}"
 
     def _apply_operation(self, result):
         return result[0] / result[1]
@@ -909,27 +556,7 @@ class NPV_DivisionExpression(NPV_Mixin, DivisionExpression):
     __slots__ = ()
 
 
-class _LinearOperatorExpression(ExpressionBase):
-    """
-    An 'abstract' class that defines the polynomial degree for a simple
-    linear operator
-    """
-
-    __slots__ = ()
-
-    def _compute_polynomial_degree(self, result):
-        # NB: We can't use max() here because None (non-polynomial)
-        # overrides a numeric value (and max() just ignores it)
-        ans = 0
-        for x in result:
-            if x is None:
-                return None
-            elif ans < x:
-                ans = x
-        return ans
-
-
-class SumExpressionBase(_LinearOperatorExpression):
+class SumExpressionBase(NumericExpression):
     """
     A base class for simple summation of expressions
 
@@ -952,46 +579,37 @@ class SumExpressionBase(_LinearOperatorExpression):
     __slots__ = ()
     PRECEDENCE = 6
 
-    def _precedence(self):
-        return SumExpressionBase.PRECEDENCE
-
     def getname(self, *args, **kwds):
         return 'sum'
 
-
-class NPV_SumExpression(NPV_Mixin, SumExpressionBase):
-    __slots__ = ()
-
-    def create_potentially_variable_object(self):
-        return SumExpression( self._args_ )
-
     def _apply_operation(self, result):
-        l_, r_ = result
-        return l_ + r_
+        return sum(result)
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _compute_polynomial_degree(self, result):
+        # NB: We can't use max() here because None (non-polynomial)
+        # overrides a numeric value (and max() just ignores it)
+        ans = 0
+        for x in result:
+            if x is None:
+                return None
+            elif ans < x:
+                ans = x
+        return ans
+
+    def _to_string(self, values, verbose, smap):
         if verbose:
-            return "{0}({1}, {2})".format(self.getname(), values[0], values[1])
-        if values[1][0] == '-':
-            return "{0} {1}".format(values[0],values[1])
-        return "{0} + {1}".format(values[0],values[1])
+            return f"{self.getname()}({', '.join(values)})"
 
-    def create_node_with_local_data(self, args, classtype=None):
-        assert classtype is None
-        try:
-            npv_args = all(
-                type(arg) in native_types or not arg.is_potentially_variable()
-                for arg in args
-            )
-        except AttributeError:
-            # We can hit this during expression replacement when the new
-            # type is not a PyomoObject type, but is not in the
-            # native_types set.  We will play it safe and clear the NPV flag
-            npv_args = False
-        if npv_args:
-            return NPV_SumExpression(args)
-        else:
-            return SumExpression(args)
+        for i in range(1, len(values)):
+            val = values[i]
+            if val[0] == '-':
+                values[i] = ' - ' + val[1:].strip()
+            elif len(val) > 3 and val[:2] == '(-' and val[-1] == ')' \
+                 and _balanced_parens(val[1:-1]):
+                values[i] = ' - ' + val[2:-1].strip()
+            else:
+                values[i] = ' + ' + val
+        return ''.join(values)
 
 
 class SumExpression(SumExpressionBase):
@@ -1028,52 +646,47 @@ class SumExpression(SumExpressionBase):
     def nargs(self):
         return self._nargs
 
-    def _precedence(self):
-        return SumExpression.PRECEDENCE
-
-    def _apply_operation(self, result):
-        return sum(result)
+    @property
+    def args(self):
+        return self._args_[:self._nargs]
 
     def create_node_with_local_data(self, args, classtype=None):
         return super().create_node_with_local_data(list(args), classtype)
 
-    def __getstate__(self):
-        state = super(SumExpression, self).__getstate__()
-        for i in SumExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
 
-    def is_constant(self):
-        #
-        # In most normal contexts, a SumExpression is
-        # non-constant.  When Forming expressions, constant
-        # parameters are turned into numbers, which are
-        # simply added.  Mutable parameters, variables and
-        # expressions are not constant.
-        #
-        return False
+class NPV_SumExpression(NPV_Mixin, SumExpression):
+    __slots__ = ()
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def create_potentially_variable_object(self):
+        return SumExpression( self._args_ )
+
+    def _apply_operation(self, result):
+        l_, r_ = result
+        return l_ + r_
+
+    def _to_string(self, values, verbose, smap):
         if verbose:
-            tmp = [values[0]]
-            for i in range(1,len(values)):
-                tmp.append(", ")
-                tmp.append(values[i])
-            return "{0}({1})".format(self.getname(), "".join(tmp))
+            return f"{self.getname()}({', '.join(values)})"
+        if values[1][0] == '-':
+            return f"{values[0]} {values[1]}"
+        return f"{values[0]} + {values[1]}"
 
-        tmp = [values[0]]
-        for i in range(1,len(values)):
-            if values[i][0] == '-':
-                tmp.append(' - ')
-                tmp.append(values[i][1:].strip())
-            elif len(values[i]) > 3 and values[i][:2] == '(-' \
-                 and values[i][-1] == ')' and _balanced_parens(values[i][1:-1]):
-                tmp.append(' - ')
-                tmp.append(values[i][2:-1].strip())
-            else:
-                tmp.append(' + ')
-                tmp.append(values[i])
-        return ''.join(tmp)
+    def create_node_with_local_data(self, args, classtype=None):
+        assert classtype is None
+        try:
+            npv_args = all(
+                type(arg) in native_types or not arg.is_potentially_variable()
+                for arg in args
+            )
+        except AttributeError:
+            # We can hit this during expression replacement when the new
+            # type is not a PyomoObject type, but is not in the
+            # native_types set.  We will play it safe and clear the NPV flag
+            npv_args = False
+        if npv_args:
+            return NPV_SumExpression(args)
+        else:
+            return SumExpression(args)
 
 
 class _MutableSumExpression(SumExpression):
@@ -1102,7 +715,7 @@ class _MutableSumExpression(SumExpression):
         return self
 
 
-class Expr_ifExpression(ExpressionBase):
+class Expr_ifExpression(NumericExpression):
     """
     A logical if-then-else expression::
 
@@ -1114,6 +727,9 @@ class Expr_ifExpression(ExpressionBase):
         ELSE_ (expression): An expression that is used if :attr:`IF_` is false.
     """
     __slots__ = ('_if','_then','_else')
+
+    # This operator does not have an infix representation
+    PRECEDENCE = None
 
     # **NOTE**: This class evaluates the branching "_if" expression
     #           on a number of occasions. It is important that
@@ -1132,33 +748,18 @@ class Expr_ifExpression(ExpressionBase):
     def nargs(self):
         return 3
 
-    def __getstate__(self):
-        state = super(Expr_ifExpression, self).__getstate__()
-        for i in Expr_ifExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
     def getname(self, *args, **kwds):
         return "Expr_if"
 
     def _is_fixed(self, args):
         assert(len(args) == 3)
+        if args[1] and args[2]:
+            return True
         if args[0]: # self._if.is_fixed():
-            if args[1] and args[2]:
-                return True
             if value(self._if):
                 return args[1] # self._then.is_fixed()
             else:
                 return args[2] # self._else.is_fixed()
-        else:
-            return False
-
-    def is_constant(self):
-        if is_constant(self._if):
-            if value(self._if):
-                return is_constant(self._then)
-            else:
-                return is_constant(self._else)
         else:
             return False
 
@@ -1176,16 +777,16 @@ class Expr_ifExpression(ExpressionBase):
                 pass
         return None
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        return '{0}( ( {1} ), then=( {2} ), else=( {3} ) )'.\
-            format(self.getname(), self._if, self._then, self._else)
+    def _to_string(self, values, verbose, smap):
+        return f'{self.getname()}( ( {values[0]} ), then=( {values[1]} ), ' \
+            f'else=( {values[2]} ) )'
 
     def _apply_operation(self, result):
         _if, _then, _else = result
         return _then if _if else _else
 
 
-class UnaryFunctionExpression(ExpressionBase):
+class UnaryFunctionExpression(NumericExpression):
     """
     An expression object used to define intrinsic functions (e.g. sin, cos, tan).
 
@@ -1195,6 +796,9 @@ class UnaryFunctionExpression(ExpressionBase):
         fcn: The function that is used to evaluate this expression
     """
     __slots__ = ('_fcn', '_name')
+
+    # This operator does not have an infix representation
+    PRECEDENCE = None
 
     def __init__(self, args, name=None, fcn=None):
         if type(args) is not tuple:
@@ -1211,23 +815,11 @@ class UnaryFunctionExpression(ExpressionBase):
             classtype = self.__class__
         return classtype(args, self._name, self._fcn)
 
-    def __getstate__(self):
-        state = super(UnaryFunctionExpression, self).__getstate__()
-        for i in UnaryFunctionExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
     def getname(self, *args, **kwds):
         return self._name
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        if verbose:
-            return "{0}({1})".format(self.getname(), values[0])
-        if values[0] and values[0][0] == '(' and values[0][-1] == ')' \
-           and _balanced_parens(values[0][1:-1]):
-            return '{0}{1}'.format(self._name, values[0])
-        else:
-            return '{0}({1})'.format(self._name, values[0])
+    def _to_string(self, values, verbose, smap):
+        return f"{self.getname()}({', '.join(values)})"
 
     def _compute_polynomial_degree(self, result):
         if result[0] == 0:
@@ -1267,7 +859,7 @@ class NPV_AbsExpression(NPV_Mixin, AbsExpression):
     __slots__ = ()
 
 
-class LinearExpression(ExpressionBase):
+class LinearExpression(NumericExpression):
     """
     An expression object linear polynomials.
 
@@ -1360,13 +952,6 @@ class LinearExpression(ExpressionBase):
         self.linear_coefs = list(self.linear_coefs)
         self.linear_vars = list(self.linear_vars)
 
-    def _precedence(self):
-        return LinearExpression.PRECEDENCE
-
-    # __getstate__ is not needed, as while we are defining local slots,
-    # all the data in the slot is redundant to the information already
-    # being pickled through the base class _args_ attribute.
-
     def create_node_with_local_data(self, args, classtype=None):
         if classtype is not None:
             return classtype(args)
@@ -1392,20 +977,17 @@ class LinearExpression(ExpressionBase):
     def _compute_polynomial_degree(self, result):
         return 1 if not self.is_fixed() else 0
 
-    def is_constant(self):
-        return len(self.linear_vars) == 0
-
     def _is_fixed(self, values=None):
         return all(v.fixed for v in self.linear_vars)
 
     def is_fixed(self):
         return self._is_fixed()
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if not values:
             values = ['0']
         if verbose:
-            return "%s(%s)" % (self.getname(), ', '.join(values))
+            return f"{self.getname()}({', '.join(values)})"
 
         for i in range(1, len(values)):
             term = values[i]
@@ -1640,9 +1222,8 @@ def _process_arg(obj):
 
             raise TypeError(
                 "Attempting to use a non-numeric type (%s) in a "
-                "numeric context" % (obj,))
-
-    if obj.is_constant():
+                "numeric context." % (obj.__class__.__name__,))
+    elif obj.is_constant():
         # Resolve constants (e.g., immutable scalar Params & NumericConstants)
         return value(obj)
     return obj
@@ -1721,10 +1302,10 @@ def _generate_sum_expression(etype, _self, _other):
             _other.__class__ is _MutableSumExpression:
             return _other.add(_self)
         elif _other.__class__ in native_numeric_types:
+            if _other == 0:
+                return _self
             if _self.__class__ in native_numeric_types:
                 return _self + _other
-            elif _other == 0:
-                return _self
             if _self.is_potentially_variable():
                 return SumExpression([_self, _other])
             return NPV_SumExpression((_self, _other))

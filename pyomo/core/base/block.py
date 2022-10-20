@@ -26,7 +26,8 @@ from operator import itemgetter, attrgetter
 from io import StringIO
 from pyomo.common.pyomo_typing import overload
 
-from pyomo.common.collections import Mapping, OrderedDict
+from pyomo.common.autoslots import AutoSlots
+from pyomo.common.collections import Mapping
 from pyomo.common.deprecation import (
     deprecated, deprecation_warning, RenamedClass,
 )
@@ -333,7 +334,7 @@ class _BlockConstruction(object):
     data = {}
 
 
-class PseudoMap(object):
+class PseudoMap(AutoSlots.Mixin):
     """
     This class presents a "mock" dict interface to the internal
     _BlockData data structures.  We return this object to the
@@ -345,6 +346,10 @@ class PseudoMap(object):
     """
 
     __slots__ = ('_block', '_ctypes', '_active', '_sorted')
+
+    # If a writer cached a repn on this block, remove it when cloning
+    #  TODO: remove repn caching from the model
+    __autoslot_mappers = {'_repn': AutoSlots.encode_as_none}
 
     def __init__(self, block, ctype, active=None, sort=False):
         """
@@ -614,27 +619,6 @@ class _BlockData(ActiveComponentData):
         super(_BlockData, self).__setattr__('_ctypes', {})
         super(_BlockData, self).__setattr__('_decl', {})
         super(_BlockData, self).__setattr__('_decl_order', [])
-
-    def __getstate__(self):
-        # Note: _BlockData is NOT slot-ized, so we must pickle the
-        # entire __dict__.  However, we want the base class's
-        # __getstate__ to override our blanket approach here (i.e., it
-        # will handle the _component weakref), so we will call the base
-        # class's __getstate__ and allow it to overwrite the catch-all
-        # approach we use here.
-        ans = dict(self.__dict__)
-        ans.update(super(_BlockData, self).__getstate__())
-        # Note sure why we are deleting these...
-        if '_repn' in ans:
-            del ans['_repn']
-        return ans
-
-    #
-    # The base class __setstate__ is sufficient (assigning all the
-    # pickled attributes to the object is appropriate
-    #
-    # def __setstate__(self, state):
-    #    pass
 
     def __getattr__(self, val):
         if val in ModelComponentFactory:
@@ -1381,18 +1365,11 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # NonNegativeReals, etc) that are not "owned" by any blocks and
         # should be preserved as singletons.
         #
-        try:
+        with PauseGC():
             new_block = copy.deepcopy(
-                self, {
-                    '__block_scope__': {id(self): True, id(None): False},
-                    '__paranoid__': False,
-                    })
-        except:
-            new_block = copy.deepcopy(
-                self, {
-                    '__block_scope__': {id(self): True, id(None): False},
-                    '__paranoid__': True,
-                    })
+                self, dict(
+                    __block_scope__={id(self): True, id(None): False},
+                ))
 
         # We need to "detangle" the new block from the original block
         # hierarchy
@@ -2054,14 +2031,18 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         return filename, smap_id
 
     def _create_objects_for_deepcopy(self, memo, component_list):
-        super()._create_objects_for_deepcopy(memo, component_list)
-        # Blocks (and block-like things) need to pre-populate all
-        # Components / ComponentData objects to help prevent deepcopy()
-        # from violating the Python recursion limit.  This step is
-        # recursive; however, we do not expect "super deep" Pyomo block
-        # hierarchies, so should be okay.
-        for comp in self.component_objects(descend_into=False):
-            comp._create_objects_for_deepcopy(memo, component_list)
+        _new = self.__class__.__new__(self.__class__)
+        _ans = memo.setdefault(id(self), _new)
+        if _ans is _new:
+            component_list.append(self)
+            # Blocks (and block-like things) need to pre-populate all
+            # Components / ComponentData objects to help prevent
+            # deepcopy() from violating the Python recursion limit.
+            # This step is recursive; however, we do not expect "super
+            # deep" Pyomo block hierarchies, so should be okay.
+            for comp in self.component_map().values():
+                comp._create_objects_for_deepcopy(memo, component_list)
+        return _ans
 
 
 @ModelComponentFactory.register("A component that contains one or more model components.")
