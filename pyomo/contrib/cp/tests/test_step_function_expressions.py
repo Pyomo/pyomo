@@ -22,7 +22,7 @@ class CommonTests(unittest.TestCase):
         m = ConcreteModel()
         m.a = IntervalVar()
         m.b = IntervalVar()
-        m.c = IntervalVar([1,2])
+        m.c = IntervalVar([1, 2])
 
         return m
 
@@ -211,7 +211,7 @@ class TestSumStepFunctions(CommonTests):
     def test_python_sum_funct(self):
         # We allow adding to 0 so that sum() works as expected
         m = self.get_model()
-        expr = sum(Pulse(m.c[i], height=1) for i in [1,2])
+        expr = sum(Pulse(m.c[i], height=1) for i in [1, 2])
 
         self.assertIsInstance(expr, CumulativeFunction)
         self.assertEqual(len(expr.args), 2)
@@ -316,8 +316,8 @@ class TestSubtractStepFunctions(CommonTests):
 
     def test_subtract_pulses_in_place(self):
         m = self.get_model()
-        p1 = Pulse(m.a, height = 1)
-        p2 = Pulse(m.b, height = 3)
+        p1 = Pulse(m.a, height=1)
+        p2 = Pulse(m.b, height=3)
 
         expr = p1
         expr -= p2
@@ -331,8 +331,8 @@ class TestSubtractStepFunctions(CommonTests):
 
     def test_subtract_steps_in_place(self):
         m = self.get_model()
-        s1 = Step(m.a.start_time, height = 1)
-        s2 = Step(m.b.end_time, height = 3)
+        s1 = Step(m.a.start_time, height=1)
+        s2 = Step(m.b.end_time, height=3)
 
         expr = s1
         expr -= s2

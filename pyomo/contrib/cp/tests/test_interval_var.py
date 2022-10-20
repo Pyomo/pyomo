@@ -50,7 +50,7 @@ class TestScalarIntervalVar(unittest.TestCase):
 
     def test_start_and_end_bounds(self):
         m = ConcreteModel()
-        m.i = IntervalVar(start=(0,5))
+        m.i = IntervalVar(start=(0, 5))
         self.assertEqual(m.i.start_time.lower, 0)
         self.assertEqual(m.i.start_time.upper, 5)
 
@@ -71,7 +71,7 @@ class TestScalarIntervalVar(unittest.TestCase):
 
     def test_non_optional(self):
         m = ConcreteModel()
-        m.i = IntervalVar(length=2, end=(4,9), optional=False)
+        m.i = IntervalVar(length=2, end=(4, 9), optional=False)
 
         self.assertEqual(value(m.i.is_present), True)
         self.assertTrue(m.i.is_present.fixed)
@@ -172,8 +172,8 @@ class TestIndexedIntervalVar(unittest.TestCase):
         def optional_rule(m, i, j):
             return i % j == 0
         m.act = IntervalVar(m.idx, optional=optional_rule)
-        self.assertTrue(m.act[4,2].optional)
-        self.assertFalse(m.act[5,2].optional)
+        self.assertTrue(m.act[4, 2].optional)
+        self.assertFalse(m.act[5, 2].optional)
 
     def test_index_by_expr(self):
         m = ConcreteModel()
