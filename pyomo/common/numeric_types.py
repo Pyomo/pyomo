@@ -34,7 +34,7 @@ nonpyomo_leaf_types = set([])
 #: Python set used to identify numeric constants.  This set includes
 #: native Python types as well as numeric types from Python packages
 #: like numpy, which may be registered by users.
-native_numeric_types = set([ int, float, bool ])
+native_numeric_types = set([ int, float, bool, complex ])
 native_integer_types = set([ int, bool ])
 native_boolean_types = set([ int, bool, str, bytes ])
 native_logical_types = {bool, }

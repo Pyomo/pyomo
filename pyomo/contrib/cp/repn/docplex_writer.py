@@ -547,7 +547,7 @@ def _handle_monomial_expr(visitor, node, arg1, arg2):
 
 def _handle_sum_node(visitor, node, *args):
     return (_GENERAL, sum((_get_int_valued_expr(arg) for arg in args[1:]),
-                           start=_get_int_valued_expr(args[0])))
+                           _get_int_valued_expr(args[0])))
 
 def _handle_negation_node(visitor, node, arg1):
     return (_GENERAL, cp.times(-1, _get_int_valued_expr(arg1)))

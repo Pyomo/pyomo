@@ -35,13 +35,8 @@ def _get_discrete_problem_and_subproblem(solver, config):
 
     # create model to hold the subproblems: We create this first because
     # certain initialization strategies for the discrete problem need it.
-    subproblem = get_subproblem(original_model)
-    subproblem_util_block = subproblem.component(util_block.local_name)
-    save_initial_values(subproblem_util_block)
-    add_transformed_boolean_variable_list(subproblem_util_block)
-    subproblem_obj = next(subproblem.component_data_objects(
-        Objective, active=True, descend_into=True))
-    subproblem_util_block.obj = Expression(expr=subproblem_obj.expr)
+    subproblem, subproblem_util_block = get_subproblem(original_model,
+                                                       util_block)
 
     # create discrete problem--the MILP relaxation
     start = get_main_elapsed_time(solver.timing)
@@ -175,7 +170,7 @@ def add_transformed_boolean_variable_list(util_block):
     util_block.transformed_boolean_variable_list = [
         v.get_associated_binary() for v in util_block.boolean_variable_list]
 
-def get_subproblem(original_model):
+def get_subproblem(original_model, util_block):
     """Clone the original, and reclassify all the Disjuncts to Blocks.
     We'll also call logical_to_linear in case any of the indicator_vars are
     used in logical constraints and to make sure that the rest of the model is
@@ -210,7 +205,14 @@ def get_subproblem(original_model):
 
     TransformationFactory('core.logical_to_linear').apply_to(subproblem)
 
-    return subproblem
+    subproblem_util_block = subproblem.component(util_block.local_name)
+    save_initial_values(subproblem_util_block)
+    add_transformed_boolean_variable_list(subproblem_util_block)
+    subproblem_obj = next(subproblem.component_data_objects(
+        Objective, active=True, descend_into=True))
+    subproblem_util_block.obj = Expression(expr=subproblem_obj.expr)
+
+    return subproblem, subproblem_util_block
 
 def save_initial_values(subproblem_util_block):
     initial_values = subproblem_util_block.initial_var_values = ComponentMap()

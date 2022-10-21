@@ -24,7 +24,9 @@ from pyomo.contrib.gdpopt.create_oa_subproblems import (
     add_transformed_boolean_variable_list)
 from pyomo.contrib.gdpopt.config_options import (
     _add_nlp_solver_configs, _add_BB_configs, _add_mip_solver_configs,
-    _add_tolerance_configs)
+    _add_tolerance_configs, _add_nlp_solve_configs)
+from pyomo.contrib.gdpopt.nlp_initialization import (
+    restore_vars_to_original_values)
 from pyomo.contrib.gdpopt.util import (
     copy_var_list_values, SuppressInfeasibleWarning, get_main_elapsed_time)
 from pyomo.contrib.satsolver.satsolver import satisfiable
@@ -60,6 +62,8 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG, default_solver='ipopt')
+    _add_nlp_solve_configs(
+        CONFIG, default_nlp_init_method=restore_vars_to_original_values)
     _add_tolerance_configs(CONFIG)
     _add_BB_configs(CONFIG)
 
