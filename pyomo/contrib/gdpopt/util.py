@@ -68,6 +68,7 @@ class SuppressInfeasibleWarning(object):
     def __enter__(self):
         logger = logging.getLogger('pyomo.core')
         logger.addFilter(self.warning_filter)
+        return self
 
     def __exit__(self, exception_type, exception_value, traceback):
         logger = logging.getLogger('pyomo.core')
@@ -187,14 +188,91 @@ def fix_discrete_var(var, val, config):
         else:
             var.fix(val, skip_validation=True)
 
-class fix_discrete_problem_solution_in_subproblem(object):
+
+class fix_discrete_solution_in_subproblem(object):
+    def __init__(self, true_disjuncts, boolean_var_values, integer_var_values,
+                 subprob_util_block, config, solver):
+        self.True_disjuncts = true_disjuncts
+        self.boolean_var_values = boolean_var_values
+        self.discrete_var_values = integer_var_values
+        self.subprob_util_block = subprob_util_block
+        self.config = config
+
+    def __enter__(self):
+        # fix subproblem Blocks according to the discrete problem solution
+        fixed = []
+        for block in self.subprob_util_block.disjunct_list:
+            if block in self.True_disjuncts:
+                block.binary_indicator_var.fix(1)
+                fixed.append(block.name)
+            else:
+                block.deactivate()
+                block.binary_indicator_var.fix(0)
+        self.config.logger.debug("Fixed the following Disjuncts to 'True': %s"
+                            % ", ".join(fixed))
+
+        fixed_bools = []
+        for subprob_bool, val in zip(
+                self.subprob_util_block.non_indicator_boolean_variable_list,
+                self.boolean_var_values):
+            subprob_binary = subprob_bool.get_associated_binary()
+            if val:
+                subprob_binary.fix(1)
+            else:
+                subprob_binary.fix(0)
+            fixed_bools.append("%s = %s" % (subprob_bool.name, val))
+        self.config.logger.debug("Fixed the following Boolean variables: %s"
+                            % ", ".join(fixed_bools))
+
+        # Fix subproblem discrete variables according to the discrete problem
+        # solution
+        if self.config.force_subproblem_nlp:
+            fixed_discrete = []
+            for subprob_var, val in zip(
+                    self.subprob_util_block.discrete_variable_list,
+                    self.discrete_var_values):
+                fix_discrete_var(subprob_var, val, self.config)
+                fixed_discrete.append("%s = %s" % (subprob_var.name, val))
+            self.config.logger.debug("Fixed the following integer variables: "
+                                     "%s" % ", ".join(fixed_discrete))
+
+        # Call the subproblem initialization callback
+        self.config.subproblem_initialization_method(self.True_disjuncts,
+                                                     self.boolean_var_values,
+                                                     self.discrete_var_values,
+                                                     self.subprob_util_block)
+
+        return self
+
+    def __exit__(self, type, value, traceback):
+        # unfix all subproblem blocks
+        for block in self.subprob_util_block.disjunct_list:
+            block.activate()
+            block.binary_indicator_var.unfix()
+
+        # unfix all the formerly-Boolean variables
+        for bool_var in \
+            self.subprob_util_block.non_indicator_boolean_variable_list:
+            bool_var.get_associated_binary().unfix()
+
+        # unfix all discrete variables and restore them to their original values
+        if self.config.force_subproblem_nlp:
+            for subprob_var in self.subprob_util_block.discrete_variable_list:
+                subprob_var.fixed = False
+
+        # [ESJ 2/25/22] We don't need to reset the values of the continuous
+        # variables because we will initialize them based on the discrete
+        # problem solution before we solve again.
+
+
+class fix_discrete_problem_solution_in_subproblem(
+        fix_discrete_solution_in_subproblem):
     def __init__(self, discrete_prob_util_block, subproblem_util_block,
-                 solver, config, make_subproblem_continuous=True):
+                 solver, config):
         self.discrete_prob_util_block = discrete_prob_util_block
         self.subprob_util_block = subproblem_util_block
         self.solver = solver
         self.config = config
-        self.make_subprob_continuous = make_subproblem_continuous
 
     def __enter__(self):
         # fix subproblem Blocks according to the discrete problem solution
@@ -238,7 +316,7 @@ class fix_discrete_problem_solution_in_subproblem(object):
 
         # Fix subproblem discrete variables according to the discrete problem
         # solution
-        if self.make_subprob_continuous:
+        if self.config.force_subproblem_nlp:
             fixed_discrete = []
             for discrete_problem_var, subprob_var in zip(
                     self.discrete_prob_util_block.discrete_variable_list,
@@ -261,25 +339,7 @@ class fix_discrete_problem_solution_in_subproblem(object):
         self.config.subproblem_initialization_method(
             self.solver, self.subprob_util_block, self.discrete_prob_util_block)
 
-    def __exit__(self, type, value, traceback):
-        # unfix all subproblem blocks
-        for block in self.subprob_util_block.disjunct_list:
-            block.activate()
-            block.binary_indicator_var.unfix()
-
-        # unfix all the formerly-Boolean variables
-        for bool_var in \
-            self.subprob_util_block.non_indicator_boolean_variable_list:
-            bool_var.get_associated_binary().unfix()
-
-        # unfix all discrete variables and restore them to their original values
-        if self.make_subprob_continuous:
-            for subprob_var in self.subprob_util_block.discrete_variable_list:
-                subprob_var.fixed = False
-
-        # [ESJ 2/25/22] We don't need to reset the values of the continuous
-        # variables because we will initialize them based on the discrete
-        # problem solution before we solve again.
+        return self
 
 def is_feasible(model, config):
     """Checks to see if the algebraic model is feasible in its current state.

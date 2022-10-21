@@ -320,19 +320,9 @@ class TestGDPoptUnit(unittest.TestCase):
                  % (LOA_solvers,))
 class TestGDPopt(unittest.TestCase):
     """Tests for the GDPopt solver plugin."""
-    def make_infeasible_gdp_model(self):
-        m = ConcreteModel()
-        m.x = Var(bounds=(0, 2))
-        m.d = Disjunction(expr=[
-            [m.x ** 2 >= 3, m.x >= 3],
-            [m.x ** 2 <= -1, m.x <= -1]])
-        m.o = Objective(expr=m.x)
-
-        return m
-
     def test_infeasible_GDP(self):
         """Test for infeasible GDP."""
-        m = self.make_infeasible_gdp_model()
+        m = models.make_infeasible_gdp_model()
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.WARNING):
             results = SolverFactory('gdpopt.loa').solve(m,
@@ -366,7 +356,7 @@ class TestGDPopt(unittest.TestCase):
 
     def test_infeasible_gdp_max_binary(self):
         """Test that max binary initialization catches infeasible GDP too"""
-        m = self.make_infeasible_gdp_model()
+        m = models.make_infeasible_gdp_model()
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.contrib.gdpopt', logging.DEBUG):
             results = SolverFactory('gdpopt.loa').solve(
