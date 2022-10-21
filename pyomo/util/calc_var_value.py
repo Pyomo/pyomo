@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 
 def calculate_variable_from_constraint(variable, constraint,
                                        eps=1e-8, iterlim=1000,
-                                       linesearch=True, alpha_min=1e-8):
+                                       linesearch=True, alpha_min=1e-8,
+                                       diff_mode=differentiate.Modes.sympy):
     """Calculate the variable value given a specified equality constraint
 
     This function calculates the value of the specified variable
@@ -55,6 +56,8 @@ def calculate_variable_from_constraint(variable, constraint,
         [default=True]
     alpha_min: `float`
         The minimum fractional step to use in the linesearch [default=1e-8].
+    diff_mode: `pyomo.core.expr.calculus.derivatives.Modes`
+        The mode of differentiation
 
     Returns:
     --------
@@ -155,13 +158,21 @@ def calculate_variable_from_constraint(variable, constraint,
     # restore initial value
     variable.set_value(orig_initial_value, skip_validation=True)
     expr = body - upper
-    expr_deriv = differentiate(expr, wrt=variable,
-                               mode=differentiate.Modes.sympy)
 
-    if type(expr_deriv) in native_numeric_types and expr_deriv == 0:
-        raise ValueError("Variable derivative == 0, cannot solve for variable")
+    expr_deriv = None
+    if diff_mode in {differentiate.Modes.sympy, differentiate.Modes.reverse_symbolic}:
+        expr_deriv = differentiate(expr, wrt=variable,
+                                   mode=diff_mode)
 
-    if abs(value(expr_deriv)) < 1e-12:
+        if type(expr_deriv) in native_numeric_types and expr_deriv == 0:
+            raise ValueError("Variable derivative == 0, cannot solve for variable")
+
+    if expr_deriv is None:
+        fp0 = differentiate(expr, wrt=variable, mode=diff_mode)
+    else:
+        fp0 = value(expr_deriv)
+
+    if abs(value(fp0)) < 1e-12:
         raise RuntimeError(
             'Initial value for variable results in a derivative value that is '
             'very close to zero.\n\tPlease provide a different initial guess.')
@@ -190,7 +201,12 @@ def calculate_variable_from_constraint(variable, constraint,
                 "expression.\n\tPlease provide a different initial guess "
                 "or enable the linesearch if you have not.")
             raise
-        fpk = value(expr_deriv)
+
+        if expr_deriv is None:
+            fpk = differentiate(expr, wrt=variable, mode=diff_mode)
+        else:
+            fpk = value(expr_deriv)
+
         if abs(fpk) < 1e-12:
             raise RuntimeError(
                 "Newton's method encountered a derivative that was too "
