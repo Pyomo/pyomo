@@ -524,13 +524,11 @@ jobs:
     # this has to be done after Pyomo is installed because highspy 
     # depends on pyomo's find_library function
     - name: Install HiGHS
-      if: matrix.PYENV == 'pip'
+      if: ${{ ! matrix.slim }}
       shell: bash
       run: |
-        if test -z "${{matrix.slim}}"; then
-            python -m pip install --cache-dir cache/pip highspy \
-                || echo "WARNING: highspy is not available"
-        fi
+        python -m pip install --cache-dir cache/pip highspy \
+            || echo "WARNING: highspy is not available"
 
     - name: Set up coverage tracking
       run: |
