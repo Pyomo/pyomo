@@ -10,6 +10,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
+from pyomo.common.fileutils import Executable
 
 from pyomo.contrib.cp import IntervalVar, Pulse, Step, AlwaysIn
 from pyomo.contrib.cp.repn.docplex_writer import LogicalToDoCplex
@@ -26,6 +27,8 @@ try:
     docplex_available = True
 except:
     docplex_available = False
+
+cpoptimizer_available = Executable('cpoptimizer').available()
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
 class TestWriteModel(unittest.TestCase):
@@ -97,6 +100,7 @@ class TestWriteModel(unittest.TestCase):
                        0 + 1 * (x - 1) // 1) == True))
 
 @unittest.skipIf(not docplex_available, "docplex is not available")
+@unittest.skipIf(not cpoptimizer_available, "CP optimizer is not available")
 class TestSolveModel(unittest.TestCase):
     def test_solve_scheduling_problem(self):
         m = ConcreteModel()

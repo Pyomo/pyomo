@@ -19,6 +19,7 @@ from operator import attrgetter
 from pyomo.common import DeveloperError
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.collections import ComponentMap
+from pyomo.common.fileutils import Executable
 
 from pyomo.contrib.cp import IntervalVar
 from pyomo.contrib.cp.interval_var import (
@@ -994,7 +995,11 @@ class CPOptimizerSolver(object):
         pass
 
     def available(self, exception_flag=True):
-        return docplex_available
+        return Executable('cpoptimizer').available() and docplex_available
+
+    def license_is_valid(self):
+        # TODO: not sure how to check the CPLEX license?
+        True
 
     def solve(self, model, **kwds):
         """Solve the model.
