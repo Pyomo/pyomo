@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.dependencies import dill_available
 import pyomo.common.unittest as unittest
 from pyomo.common.deprecation import RenamedClass
 
@@ -1801,22 +1802,22 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # transformation blocks on the inner Disjuncts.
         self.assertIs(m.disjunct[1].innerdisjunct[0].transformation_block(),
                       disjunctBlocks[4])
-        self.assertIs(disjunctBlocks[4]._srcDisjunct(),
+        self.assertIs(disjunctBlocks[4]._src_disjunct(),
                       m.disjunct[1].innerdisjunct[0])
 
         self.assertIs(m.disjunct[1].innerdisjunct[1].transformation_block(),
                       disjunctBlocks[5])
-        self.assertIs(disjunctBlocks[5]._srcDisjunct(),
+        self.assertIs(disjunctBlocks[5]._src_disjunct(),
                       m.disjunct[1].innerdisjunct[1])
 
         self.assertIs(m.simpledisjunct.innerdisjunct0.transformation_block(),
                       disjunctBlocks[0])
-        self.assertIs(disjunctBlocks[0]._srcDisjunct(),
+        self.assertIs(disjunctBlocks[0]._src_disjunct(),
                       m.simpledisjunct.innerdisjunct0)
 
         self.assertIs(m.simpledisjunct.innerdisjunct1.transformation_block(),
                       disjunctBlocks[1])
-        self.assertIs(disjunctBlocks[1]._srcDisjunct(),
+        self.assertIs(disjunctBlocks[1]._src_disjunct(),
                       m.simpledisjunct.innerdisjunct1)
 
     def test_m_value_mappings(self):
@@ -2650,6 +2651,13 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         # of the Disjuncts
         m = models.makeBooleanVarsOnDisjuncts()
         ct.check_solution_obeys_logical_constraints(self, 'bigm', m)
+
+    def test_pickle(self):
+        ct.check_transformed_model_pickles(self, 'bigm')
+
+    @unittest.skipIf(not dill_available, "Dill is not available")
+    def test_dill_pickle(self):
+        ct.check_transformed_model_pickles_with_dill(self, 'bigm')
 
 if __name__ == '__main__':
     unittest.main()
