@@ -312,6 +312,7 @@ class _Initializer(object):
 
 
 class _DisjunctData(_BlockData):
+    __autoslot_mappers__ = {'_transformation_block': AutoSlots.weakref_mapper}
 
     _Block_reserved_words = set()
 
@@ -427,6 +428,7 @@ _DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
 class _DisjunctionData(ActiveComponentData):
     __slots__ = ('disjuncts', 'xor', '_algebraic_constraint')
+    __autoslot_mappers__ = {'_algebraic_constraint': AutoSlots.weakref_mapper}
     _NoArgument = (0,)
 
     @property
@@ -514,6 +516,7 @@ class _DisjunctionData(ActiveComponentData):
 @ModelComponentFactory.register("Disjunction expressions.")
 class Disjunction(ActiveIndexedComponent):
     _ComponentDataClass = _DisjunctionData
+    __autoslot_mappers__ = {'_algebraic_constraint': AutoSlots.weakref_mapper}
 
     def __new__(cls, *args, **kwds):
         if cls != Disjunction:

@@ -9,6 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import pickle
+from pyomo.common.dependencies import dill
 
 from pyomo.environ import (
     TransformationFactory, ConcreteModel, Constraint, Var, Objective,
@@ -486,7 +488,7 @@ def check_disjunct_mapping(self, transformation):
     # the disjuncts will always be transformed in the same order,
     # and d[0] goes first, so we can check in a loop.
     for i in [0,1]:
-        self.assertIs(disjBlock[i]._srcDisjunct(), m.d[i])
+        self.assertIs(disjBlock[i]._src_disjunct(), m.d[i])
         self.assertIs(trans.get_src_disjunct(disjBlock[i]), m.d[i])
 
 # targets
@@ -1666,3 +1668,38 @@ def check_solution_obeys_logical_constraints(self, transformation, m):
     self.assertEqual(results.solver.termination_condition,
                      TerminationCondition.optimal)
     self.assertAlmostEqual(value(m.x), 8)
+
+# test pickling transformed models
+
+def check_pprint_equal(self, m, unpickle):
+    # This is almost the same as in the diff_apply_to_and_create_using test but
+    # we don't have to transform in the middle or mess with seeds.
+    m_buf = StringIO()
+    m.pprint(ostream=m_buf)
+    m_output = m_buf.getvalue()
+
+    unpickle_buf = StringIO()
+    unpickle.pprint(ostream=unpickle_buf)
+    unpickle_output = unpickle_buf.getvalue()
+    self.assertMultiLineEqual(m_output, unpickle_output)
+
+def check_transformed_model_pickles(self, transformation):
+    # Do a model where we'll have to call logical_to_linear too.
+    m = models.makeLogicalConstraintsOnDisjuncts_NonlinearConvex()
+    trans = TransformationFactory('gdp.%s' % transformation)
+    trans.apply_to(m)
+
+    # pickle and unpickle the transformed model
+    unpickle = pickle.loads(pickle.dumps(m))
+
+    check_pprint_equal(self, m, unpickle)
+
+def check_transformed_model_pickles_with_dill(self, transformation):
+    m = models.makeLogicalConstraintsOnDisjuncts_NonlinearConvex()
+    trans = TransformationFactory('gdp.%s' % transformation)
+    trans.apply_to(m)
+
+    # pickle and unpickle the transformed model
+    unpickle = dill.loads(dill.dumps(m))
+
+    check_pprint_equal(self, m, unpickle)

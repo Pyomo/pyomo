@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.dependencies import dill_available
 import pyomo.common.unittest as unittest
 from pyomo.common.log import LoggingIntercept
 import logging
@@ -2212,3 +2213,10 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         # of the Disjuncts
         m = models.makeBooleanVarsOnDisjuncts()
         ct.check_solution_obeys_logical_constraints(self, 'hull', m)
+
+    def test_pickle(self):
+        ct.check_transformed_model_pickles(self, 'hull')
+
+    @unittest.skipIf(not dill_available, "Dill is not available")
+    def test_dill_pickle(self):
+        ct.check_transformed_model_pickles_with_dill(self, 'hull')
