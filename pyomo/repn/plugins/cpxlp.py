@@ -181,6 +181,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                               variable_symbol_dictionary,
                               is_objective,
                               column_order,
+                              file_determinism,
                               force_objective_constant=False):
 
         """
@@ -206,21 +207,18 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             for vardata in x.linear_vars:
                 self._referenced_variable_ids[id(vardata)] = vardata
 
-            if column_order is None:
-                #
-                # Order columns by dictionary names
-                #
-                names = [variable_symbol_dictionary[id(var)] for var in x.linear_vars]
-                    
-                for i, name in sorted(enumerate(names), key=lambda x: x[1]):
-                    output.append(linear_coef_string_template % (x.linear_coefs[i], name))
-            else:
-                #
-                # Order columns by the value of column_order[]
-                #
-                for i, var in sorted(enumerate(x.linear_vars), key=lambda x: column_order[x[1]]):
-                    name = variable_symbol_dictionary[id(var)]
-                    output.append(linear_coef_string_template % (x.linear_coefs[i], name))
+            names = [variable_symbol_dictionary[id(var)] for var in x.linear_vars]
+
+            term_iterator = zip(x.linear_coefs, names)
+
+            if column_order is not None:
+                term_iterator = sorted(term_iterator, key=lambda x: column_order[x[1]])
+            elif file_determinism > 0:
+                term_iterator = sorted(term_iterator, key=lambda x: x[1])
+
+            for coef, name in term_iterator:
+                output.append(linear_coef_string_template % (coef, name))
+
         #
         # Quadratic
         #
@@ -250,7 +248,11 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         quad.add(i)
                         names.append( (name1,name1) )
                     i += 1
-                for i, names_ in sorted(enumerate(names), key=lambda x: x[1]):
+
+                term_iterator = enumerate(names)
+                if file_determinism > 0:
+                    term_iterator = sorted(term_iterator, key=lambda x: x[1])
+                for i, names_ in term_iterator:
                     #
                     # Times 2 because LP format requires /2 for all the quadratic
                     # terms /of the objective only/.  Discovered the last bit thru
@@ -466,6 +468,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 variable_symbol_dictionary,
                 is_objective,
                 column_order,
+                file_determinism,
                 force_objective_constant=False):
             try:
                 return self._print_expr_canonical(
@@ -475,6 +478,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     variable_symbol_dictionary=variable_symbol_dictionary,
                     is_objective=is_objective,
                     column_order=column_order,
+                    file_determinism=file_determinism,
                     force_objective_constant=force_objective_constant)
             except KeyError as e:
                 _id = e.args[0]
@@ -586,6 +590,7 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     variable_symbol_dictionary,
                     True,
                     column_order,
+                    file_determinism,
                     force_objective_constant=force_objective_constant)
 
         if numObj == 0:
@@ -697,7 +702,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                     object_symbol_dictionary,
                     variable_symbol_dictionary,
                     False,
-                    column_order
+                    column_order,
+                    file_determinism
                 )
                 bound = constraint_data.lower
                 bound = _get_bound(bound) - offset
@@ -720,7 +726,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         object_symbol_dictionary,
                         variable_symbol_dictionary,
                         False,
-                        column_order
+                        column_order,
+                        file_determinism
                     )
                     bound = constraint_data.lower
                     bound = _get_bound(bound) - offset
@@ -744,7 +751,8 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         object_symbol_dictionary,
                         variable_symbol_dictionary,
                         False,
-                        column_order
+                        column_order,
+                        file_determinism
                     )
                     bound = constraint_data.upper
                     bound = _get_bound(bound) - offset
