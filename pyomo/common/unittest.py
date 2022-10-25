@@ -18,6 +18,7 @@
 
 import enum
 import logging
+import math
 import sys
 from io import StringIO
 
@@ -236,6 +237,8 @@ def _assertStructuredAlmostEqual(first, second,
                 return # PASS!
             if reltol is not None and diff / max(abs(f), abs(s)) <= reltol:
                 return # PASS!
+            if math.isnan(f) and math.isnan(s):
+                return # PASS! (we will treat NaN as equal)
         except:
             pass
 
