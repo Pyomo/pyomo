@@ -207,17 +207,25 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
             for vardata in x.linear_vars:
                 self._referenced_variable_ids[id(vardata)] = vardata
 
-            names = [variable_symbol_dictionary[id(var)] for var in x.linear_vars]
+            if column_order is None:
+                #
+                # Order columns by dictionary names
+                #
+                names = [variable_symbol_dictionary[id(var)] for var in x.linear_vars]
 
-            term_iterator = zip(x.linear_coefs, names)
+                term_iterator = zip(x.linear_coefs, names)
+                if file_determinism > 0:
+                    term_iterator = sorted(term_iterator, key=lambda x: x[1])
 
-            if column_order is not None:
-                term_iterator = sorted(term_iterator, key=lambda x: column_order[x[1]])
-            elif file_determinism > 0:
-                term_iterator = sorted(term_iterator, key=lambda x: x[1])
-
-            for coef, name in term_iterator:
-                output.append(linear_coef_string_template % (coef, name))
+                for coef, name in term_iterator:
+                    output.append(linear_coef_string_template % (coef, name))
+            else:
+                #
+                # Order columns by the value of column_order[]
+                #
+                for i, var in sorted(enumerate(x.linear_vars), key=lambda x: column_order[x[1]]):
+                    name = variable_symbol_dictionary[id(var)]
+                    output.append(linear_coef_string_template % (x.linear_coefs[i], name))
 
         #
         # Quadratic
