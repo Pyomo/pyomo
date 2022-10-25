@@ -81,8 +81,26 @@ attribute. For example:
 
 Installation
 ------------
+There are a few ways to install Appsi listed below.
+
+Option1:
+
+.. code-block::
+
+   pyomo build-extensions
+
+Option2:
 
 .. code-block::
 
    cd pyomo/contrib/appsi/
    python build.py
+
+Option3:
+
+.. code-block::
+
+   python
+   >>> from pyomo.contrib.appsi.build import build_appsi
+   >>> build_appsi()
+

@@ -542,6 +542,15 @@ jobs:
         echo ""
         echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
 
+    # this has to be done after Pyomo is installed because highspy 
+    # depends on pyomo's find_library function
+    - name: Install HiGHS
+      if: ${{ ! matrix.slim }}
+      shell: bash
+      run: |
+        $PYTHON_EXE -m pip install --cache-dir cache/pip highspy \
+            || echo "WARNING: highspy is not available"
+
     - name: Set up coverage tracking
       run: |
         if test "${{matrix.TARGET}}" == win; then
