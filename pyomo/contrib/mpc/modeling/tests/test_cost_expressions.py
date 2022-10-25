@@ -46,25 +46,29 @@ class TestTrackingCostConstantSetpoint(unittest.TestCase):
         m.v2 = pyo.Var(m.time, initialize={i: 2*i for i in m.time})
 
         setpoint_data = ScalarData({m.v1[:]: 3.0, m.v2[:]: 4.0})
-        m.tracking_expr = get_tracking_cost_from_constant_setpoint(
-            [m.v1, m.v2],
+        variables = [m.v1, m.v2]
+        m.var_set, m.tracking_expr = get_tracking_cost_from_constant_setpoint(
+            variables,
             m.time,
             setpoint_data,
         )
+        self.assertEqual(len(m.var_set), 2)
+        self.assertIn(0, m.var_set)
+        self.assertIn(1, m.var_set)
 
         var_sets = {
-            i: ComponentSet(identify_variables(m.tracking_expr[i]))
-            for i in m.time
+            (i, t): ComponentSet(identify_variables(m.tracking_expr[i, t]))
+            for i in m.var_set for t in m.time
         }
         for i in m.time:
-            self.assertIn(m.v1[i], var_sets[i])
-            self.assertIn(m.v2[i], var_sets[i])
-            pred_value = (1*i - 3)**2 + (2*i - 4)**2
-            self.assertEqual(pred_value, pyo.value(m.tracking_expr[i]))
-            pred_expr = (m.v1[i] - 3)**2 + (m.v2[i] - 4)**2
-            self.assertTrue(compare_expressions(
-                pred_expr, m.tracking_expr[i].expr
-            ))
+            for j in m.var_set:
+                self.assertIn(variables[j][i], var_sets[j, i])
+                pred_value = (1*i - 3)**2 if j == 0 else (2*i - 4)**2
+                self.assertEqual(pred_value, pyo.value(m.tracking_expr[j, i]))
+                pred_expr = (m.v1[i] - 3)**2 if j == 0 else (m.v2[i] - 4)**2
+                self.assertTrue(compare_expressions(
+                    pred_expr, m.tracking_expr[j, i].expr
+                ))
 
     def test_tracking_cost_with_weights(self):
         m = pyo.ConcreteModel()
@@ -74,26 +78,30 @@ class TestTrackingCostConstantSetpoint(unittest.TestCase):
 
         setpoint_data = ScalarData({m.v1[:]: 3.0, m.v2[:]: 4.0})
         weight_data = ScalarData({m.v1[:]: 0.1, m.v2[:]: 0.5})
-        m.tracking_expr = get_tracking_cost_from_constant_setpoint(
-            [m.v1, m.v2],
+        m.var_set = pyo.Set(initialize=[0, 1])
+        variables = [m.v1, m.v2]
+        new_set, m.tracking_expr = get_tracking_cost_from_constant_setpoint(
+            variables,
             m.time,
             setpoint_data,
             weight_data=weight_data,
+            variable_set=m.var_set,
         )
+        self.assertIs(new_set, m.var_set)
 
         var_sets = {
-            i: ComponentSet(identify_variables(m.tracking_expr[i]))
-            for i in m.time
+            (i, t): ComponentSet(identify_variables(m.tracking_expr[i, t]))
+            for i in m.var_set for t in m.time
         }
         for i in m.time:
-            self.assertIn(m.v1[i], var_sets[i])
-            self.assertIn(m.v2[i], var_sets[i])
-            pred_value = 0.1*(1*i - 3)**2 + 0.5*(2*i - 4)**2
-            self.assertAlmostEqual(pred_value, pyo.value(m.tracking_expr[i]))
-            pred_expr = 0.1*(m.v1[i] - 3)**2 + 0.5*(m.v2[i] - 4)**2
-            self.assertTrue(compare_expressions(
-                pred_expr, m.tracking_expr[i].expr
-            ))
+            for j in m.var_set:
+                self.assertIn(variables[j][i], var_sets[j, i])
+                pred_value = 0.1*(1*i - 3)**2 if j == 0 else 0.5*(2*i - 4)**2
+                self.assertAlmostEqual(pred_value, pyo.value(m.tracking_expr[j, i]))
+                pred_expr = 0.1*(m.v1[i] - 3)**2 if j == 0 else 0.5*(m.v2[i] - 4)**2
+                self.assertTrue(compare_expressions(
+                    pred_expr, m.tracking_expr[j, i].expr
+                ))
 
     def test_exceptions(self):
         m = pyo.ConcreteModel()
@@ -104,7 +112,7 @@ class TestTrackingCostConstantSetpoint(unittest.TestCase):
         setpoint_data = ScalarData({m.v1[:]: 3.0})
         weight_data = ScalarData({m.v2[:]: 0.1})
         with self.assertRaisesRegex(KeyError, "Setpoint data"):
-            m.tracking_expr = get_tracking_cost_from_constant_setpoint(
+            _, m.tracking_expr = get_tracking_cost_from_constant_setpoint(
                 [m.v1, m.v2],
                 m.time,
                 setpoint_data,
@@ -112,7 +120,7 @@ class TestTrackingCostConstantSetpoint(unittest.TestCase):
 
         setpoint_data = ScalarData({m.v1[:]: 3.0, m.v2[:]: 4.0})
         with self.assertRaisesRegex(KeyError, "Tracking weight"):
-            m.tracking_expr = get_tracking_cost_from_constant_setpoint(
+            _, m.tracking_expr = get_tracking_cost_from_constant_setpoint(
                 [m.v1, m.v2],
                 m.time,
                 setpoint_data,

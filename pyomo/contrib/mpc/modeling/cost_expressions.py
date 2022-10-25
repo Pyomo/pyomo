@@ -24,6 +24,7 @@
 from pyomo.common.collections import ComponentMap
 from pyomo.core.base.componentuid import ComponentUID
 from pyomo.core.base.expression import Expression
+from pyomo.core.base.set import Set
 
 from pyomo.contrib.mpc.data.series_data import get_indexed_cuid
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
@@ -39,9 +40,10 @@ def get_tracking_cost_from_constant_setpoint(
     time,
     setpoint_data,
     weight_data=None,
+    variable_set=None,
 ):
     """
-    This function returns a tracking cost expression for the given
+    This function returns a tracking cost IndexedExpression for the given
     time-indexed variables and associated setpoint data.
 
     Arguments
@@ -50,17 +52,22 @@ def get_tracking_cost_from_constant_setpoint(
         List of time-indexed variables to include in the tracking cost
         expression
     time: iterable
-        Set by which to index the tracking expression
+        Set of variable indices for which a cost expression will be
+        created
     setpoint_data: ScalarData, dict, or ComponentMap
         Maps variable names to setpoint values
     weight_data: ScalarData, dict, or ComponentMap
         Optional. Maps variable names to tracking cost weights. If not
         provided, weights of one are used.
+    variable_set: Set
+        Optional. A set of indices into the provided list of variables
+        by which the cost expression will be indexed.
 
     Returns
     -------
-    Pyomo Expression, indexed by time, containing the sum of weighted
-    squared difference between variables and setpoint values.
+    RangeSet that indexes the list of variables provided and an Expression
+    indexed by the RangeSet and time containing the cost term for each
+    variable at each point in time.
 
     """
     if weight_data is None:
@@ -69,6 +76,8 @@ def get_tracking_cost_from_constant_setpoint(
         weight_data = ScalarData(weight_data)
     if not isinstance(setpoint_data, ScalarData):
         setpoint_data = ScalarData(setpoint_data)
+    if variable_set is None:
+        variable_set = Set(initialize=range(len(variables)))
 
     # Make sure data have keys for each var
     for var in variables:
@@ -88,15 +97,15 @@ def get_tracking_cost_from_constant_setpoint(
     cuids = [get_indexed_cuid(var) for var in variables]
     setpoint_data = setpoint_data.get_data()
     weight_data = weight_data.get_data()
-    def tracking_rule(m, t):
-        return sum(
-            get_quadratic_tracking_cost_at_time(
-                var, t, setpoint_data[cuid], weight=weight_data[cuid]
-            )
-            for cuid, var in zip(cuids, variables)
+    def tracking_rule(m, i, t):
+        return get_quadratic_tracking_cost_at_time(
+            variables[i],
+            t,
+            setpoint_data[cuids[i]],
+            weight=weight_data[cuids[i]],
         )
-    tracking_expr = Expression(time, rule=tracking_rule)
-    return tracking_expr
+    tracking_expr = Expression(variable_set, time, rule=tracking_rule)
+    return variable_set, tracking_expr
 
 
 def get_tracking_cost_from_piecewise_constant_setpoint(
