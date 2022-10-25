@@ -348,32 +348,29 @@ class TestDynamicModelInterface(unittest.TestCase):
     def test_get_tracking_cost_from_constant_setpoint(self):
         m = self._make_model()
         interface = DynamicModelInterface(m, m.time)
-        setpoint_data = ScalarData({
-            m.var[:, "A"]: 1.0,
-            m.var[:, "B"]: 2.0,
-        })
-        weight_data = ScalarData({
-            m.var[:, "A"]: 10.0,
-            m.var[:, "B"]: 0.1,
-        })
+        setpoint_data = ScalarData({m.var[:, "A"]: 1.0, m.var[:, "B"]: 2.0})
+        weight_data = ScalarData({m.var[:, "A"]: 10.0, m.var[:, "B"]: 0.1})
 
-        m.tracking_cost = interface.get_tracking_cost_from_constant_setpoint(
-            setpoint_data,
-            weight_data=weight_data,
+        vset, tr_cost = interface.get_tracking_cost_from_constant_setpoint(
+            setpoint_data, weight_data=weight_data,
         )
+        m.var_set = vset
+        m.tracking_cost = tr_cost
         for t in m.time:
-            pred_expr = (
-                10.0*(m.var[t, "A"] - 1.0)**2
-                + 0.1*(m.var[t, "B"] - 2.0)**2
-            )
-            self.assertEqual(
-                pyo.value(pred_expr),
-                pyo.value(m.tracking_cost[t]),
-            )
-            self.assertTrue(compare_expressions(
-                pred_expr,
-                m.tracking_cost[t].expr,
-            ))
+            for i in m.var_set:
+                pred_expr = (
+                    10.0*(m.var[t, "A"] - 1.0)**2
+                    if i == 0 else
+                    0.1*(m.var[t, "B"] - 2.0)**2
+                )
+                self.assertEqual(
+                    pyo.value(pred_expr),
+                    pyo.value(m.tracking_cost[i, t]),
+                )
+                self.assertTrue(compare_expressions(
+                    pred_expr,
+                    m.tracking_cost[i, t].expr,
+                ))
 
     def test_get_tracking_cost_from_constant_setpoint_var_subset(self):
         m = self._make_model()
@@ -389,24 +386,29 @@ class TestDynamicModelInterface(unittest.TestCase):
             m.input[:]: 0.01,
         })
 
-        m.tracking_cost = interface.get_tracking_cost_from_constant_setpoint(
+        variables = [m.var[:, "A"], m.var[:, "B"]]
+        m.variable_set = pyo.Set(initialize=range(len(variables)))
+        new_set, tr_cost = interface.get_tracking_cost_from_constant_setpoint(
             setpoint_data,
-            variables=[m.var[:, "A"], m.var[:, "B"]],
+            variables=variables,
             weight_data=weight_data,
+            variable_set=m.variable_set,
         )
+        m.tracking_cost = tr_cost
+        self.assertIs(m.variable_set, new_set)
         for t in m.time:
-            pred_expr = (
-                10.0*(m.var[t, "A"] - 1.0)**2
-                + 0.1*(m.var[t, "B"] - 2.0)**2
-            )
-            self.assertEqual(
-                pyo.value(pred_expr),
-                pyo.value(m.tracking_cost[t]),
-            )
-            self.assertTrue(compare_expressions(
-                pred_expr,
-                m.tracking_cost[t].expr,
-            ))
+            for i in m.variable_set:
+                pred_expr = (
+                    10.0*(m.var[t, "A"] - 1.0)**2
+                    if i == 0 else
+                    + 0.1*(m.var[t, "B"] - 2.0)**2
+                )
+                self.assertEqual(
+                    pyo.value(pred_expr), pyo.value(m.tracking_cost[i, t])
+                )
+                self.assertTrue(compare_expressions(
+                    pred_expr, m.tracking_cost[i, t].expr
+                ))
 
 
 if __name__ == "__main__":

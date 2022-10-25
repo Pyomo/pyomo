@@ -348,8 +348,18 @@ class DynamicModelInterface(object):
             for i, t in enumerate(self.time):
                 var[t].set_value(new_values[i])
 
+    #
+    # TODO: We should be able to have a simple get_cost_expression method
+    # here which only requires setpoint_data, and decides which type of
+    # expression to build depending on the type of the setpoint.
+    #
     def get_tracking_cost_from_constant_setpoint(
-        self, setpoint_data, time=None, variables=None, weight_data=None
+        self,
+        setpoint_data,
+        time=None,
+        variables=None,
+        weight_data=None,
+        variable_set=None,
     ):
         """A method to get a quadratic tracking cost Expression
 
@@ -363,15 +373,18 @@ class DynamicModelInterface(object):
         variables: List of Pyomo VarData (optional)
             Subset of variables supplied in setpoint_data to use in the
             tracking cost. Default is to use all variables supplied.
-        weight_data: ScalarData
-            Holds the weights to use in the tracking cost for each
-            variable
+        weight_data: ScalarData (optional)
+            Holds the weights to use in the tracking cost for each variable
+        variable_set: Set (optional)
+            A set indexing the list of provided variables, if one already
+            exists. 
 
         Returns
         -------
         Expression
-            Expression indexed by provided time (set or points) containing
-            the weighted tracking cost at each point.
+            Expression indexed by indices into the the list of variables and
+            time containing the weighted tracking cost for each variable
+            at each point in time
 
         """
         if not isinstance(setpoint_data, ScalarData):
@@ -381,6 +394,8 @@ class DynamicModelInterface(object):
         if variables is None:
             # Use variables provided by the setpoint.
             # NOTE: Nondeterministic order in Python < 3.7
+            # Should these data structures use OrderedDicts internally
+            # to enforce an order here?
             variables = [
                 self.model.find_component(key)
                 for key in setpoint_data.get_data().keys()
@@ -394,7 +409,11 @@ class DynamicModelInterface(object):
                 ) for var in variables
             ]
         return get_tracking_cost_from_constant_setpoint(
-            variables, time, setpoint_data, weight_data=weight_data
+            variables,
+            time,
+            setpoint_data,
+            weight_data=weight_data,
+            variable_set=variable_set,
         )
 
     def get_piecewise_constant_constraints(
