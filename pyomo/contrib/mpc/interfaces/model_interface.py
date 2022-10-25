@@ -31,7 +31,7 @@ from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.modeling.cost_expressions import (
     get_tracking_cost_from_constant_setpoint,
 )
-from pyomo.contrib.mpc.modeling.input_constraints import (
+from pyomo.contrib.mpc.modeling.constraints import (
     get_piecewise_constant_constraints,
 )
 

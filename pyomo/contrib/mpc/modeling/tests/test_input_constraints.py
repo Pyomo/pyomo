@@ -25,7 +25,7 @@ import pyomo.common.unittest as unittest
 
 import pyomo.environ as pyo
 from pyomo.core.expr.compare import compare_expressions
-from pyomo.contrib.mpc.modeling.input_constraints import (
+from pyomo.contrib.mpc.modeling.constraints import (
     get_piecewise_constant_constraints,
 )
 
