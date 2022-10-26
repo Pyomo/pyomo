@@ -517,7 +517,7 @@ def substitute_template_expression(expr, substituter, *args, **kwargs):
 
     This is a general utility function for walking the expression tree
     and subtituting all occurances of IndexTemplate and
-    _GetItemExpression nodes.
+    GetItemExpression nodes.
 
     Args:
         substituter: method taking (expression, *args) and returning
@@ -590,7 +590,7 @@ class _GetItemIndexer(object):
 def substitute_getitem_with_param(expr, _map):
     """A simple substituter to replace _GetItem nodes with mutable Params.
 
-    This substituter will replace all _GetItemExpression nodes with a
+    This substituter will replace all GetItemExpression nodes with a
     new Param.  For example, this method will create expressions
     suitable for passing to DAE integrators
     """
@@ -610,7 +610,7 @@ def substitute_getitem_with_param(expr, _map):
 def substitute_template_with_value(expr):
     """A simple substituter to expand expression for current template
 
-    This substituter will replace all _GetItemExpression / IndexTemplate
+    This substituter will replace all GetItemExpression / IndexTemplate
     nodes with the actual _ComponentData based on the current value of
     the IndexTemplate(s)
 
