@@ -34,9 +34,9 @@ class TestExpressionData(unittest.TestCase):
         self.assertEqual(len(model.e), 1)
         self.assertEqual(model.e[1].expr, None)
         model.e.add(1,1)
-        self.assertEqual(model.e[1].expr(), 1)
+        self.assertEqual(model.e[1].expr, 1)
         model.e[1].expr += 2
-        self.assertEqual(model.e[1].expr(), 3)
+        self.assertEqual(model.e[1].expr, 3)
 
     def test_exprdata_get_set_value(self):
         model = ConcreteModel()
@@ -45,9 +45,9 @@ class TestExpressionData(unittest.TestCase):
         self.assertEqual(model.e[1].expr, None)
         model.e.add(1,1)
         model.e[1].expr = 1
-        self.assertEqual(model.e[1].expr(), 1)
+        self.assertEqual(model.e[1].expr, 1)
         model.e[1].expr += 2
-        self.assertEqual(model.e[1].expr(), 3)
+        self.assertEqual(model.e[1].expr, 3)
 
     # The copy method must be invoked on expression container to obtain
     # a shallow copy of the class, the underlying expression remains
@@ -332,7 +332,7 @@ class TestExpression(unittest.TestCase):
         a.set_value(5)
         self.assertEqual(len(a), 1)
         self.assertEqual(a(), 5)
-        self.assertEqual(a.expr(), 5)
+        self.assertEqual(a.expr, 5)
         self.assertEqual(a.is_constant(), False)
         self.assertEqual(a.is_fixed(), True)
 
@@ -870,9 +870,9 @@ E : Size=2, Index=E_index
         self.assertEqual(len(model.e), 1)
         self.assertEqual(model.e.expr, None)
         model.e.expr = 1
-        self.assertEqual(model.e.expr(), 1)
+        self.assertEqual(model.e.expr, 1)
         model.e.expr += 2
-        self.assertEqual(model.e.expr(), 3)
+        self.assertEqual(model.e.expr, 3)
 
     def test_singleton_get_set_value(self):
         model = ConcreteModel()
@@ -880,9 +880,9 @@ E : Size=2, Index=E_index
         self.assertEqual(len(model.e), 1)
         self.assertEqual(model.e.expr, None)
         model.e.expr = 1
-        self.assertEqual(model.e.expr(), 1)
+        self.assertEqual(model.e.expr, 1)
         model.e.expr += 2
-        self.assertEqual(model.e.expr(), 3)
+        self.assertEqual(model.e.expr, 3)
 
     def test_abstract_index(self):
         model = AbstractModel()
@@ -906,14 +906,14 @@ E : Size=2, Index=E_index
         for v in [e,1.0]:
             expr += v
         self.assertEqual(e.expr, 1)
-        self.assertEqual(expr(), 2)
+        self.assertEqual(expr, 2)
         # Make sure that using in-place operators on named expressions
         # do not create loops inthe expression tree (test #1890)
         m.x = Var()
         m.y = Var()
         m.e.expr = m.x
         m.e += m.y
-        self.assertTrue(compare_expressions(m.e.expr, m.x + m.y))
+        assertExpressionsEqual(self, m.e.expr, m.x + m.y)
 
     def test_isub(self):
         # make sure simple for loops that look like they
@@ -962,7 +962,7 @@ E : Size=2, Index=E_index
         for v in [e,2.0]:
             expr *= v
         self.assertEqual(e.expr, 3)
-        self.assertEqual(expr(), 6)
+        self.assertEqual(expr, 6)
         # Make sure that using in-place operators on named expressions
         # do not create loops inthe expression tree (test #1890)
         m.x = Var()
@@ -982,12 +982,12 @@ E : Size=2, Index=E_index
         for v in [2.0,1.0]:
             expr /= v
         self.assertEqual(e.expr, 3)
-        self.assertEqual(expr(), 1.5)
+        self.assertEqual(expr, 1.5)
         expr = e
         for v in [1.0,2.0]:
             expr /= v
         self.assertEqual(e.expr, 3)
-        self.assertEqual(expr(), 1.5)
+        self.assertEqual(expr, 1.5)
         # note that integer division does not occur within
         # Pyomo expressions
         m = ConcreteModel()
@@ -996,12 +996,12 @@ E : Size=2, Index=E_index
         for v in [2,1]:
             expr /= v
         self.assertEqual(e.expr, 3)
-        self.assertEqual(expr(), 1.5)
+        self.assertEqual(expr, 1.5)
         expr = e
         for v in [1,2]:
             expr /= v
         self.assertEqual(e.expr, 3)
-        self.assertEqual(expr(), 1.5)
+        self.assertEqual(expr, 1.5)
         # Make sure that using in-place operators on named expressions
         # do not create loops inthe expression tree (test #1890)
         m.x = Var()
@@ -1020,12 +1020,12 @@ E : Size=2, Index=E_index
         for v in [2.0,1.0]:
             expr **= v
         self.assertEqual(e.expr, 3)
-        self.assertEqual(expr(), 9)
+        self.assertEqual(expr, 9)
         expr = e
         for v in [1.0,2.0]:
             expr **= v
         self.assertEqual(e.expr, 3)
-        self.assertEqual(expr(), 9)
+        self.assertEqual(expr, 9)
         # Make sure that using in-place operators on named expressions
         # do not create loops inthe expression tree (test #1890)
         m.x = Var()

@@ -1748,44 +1748,45 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         m.q = Param(initialize=1)
 
         e = m.a * 0
-        self.assertIs(type(e), int)
-        self.assertEqual(e, 0)
+        assertExpressionsEqual(
+            self, e, MonomialTermExpression((0, m.a)),
+        )
 
         e = 0 * m.a
-        self.assertIs(type(e), int)
-        self.assertEqual(e, 0)
+        assertExpressionsEqual(
+            self, e, MonomialTermExpression((0, m.a)),
+        )
 
         e = m.a * m.p
-        self.assertIs(type(e), int)
-        self.assertEqual(e, 0)
+        assertExpressionsEqual(
+            self, e, MonomialTermExpression((0, m.a)),
+        )
 
         e = m.p * m.a
-        self.assertIs(type(e), int)
-        self.assertEqual(e, 0)
+        assertExpressionsEqual(
+            self, e, MonomialTermExpression((0, m.a)),
+        )
 
         #
         # Check that multiplying by one gives the original expression
         #
         e = m.a * 1
-        self.assertIs(type(e), type(m.a))
-        self.assertIs(e, m.a)
+        assertExpressionsEqual(self, e, m.a)
 
         e = 1 * m.a
-        self.assertIs(type(e), type(m.a))
-        self.assertIs(e, m.a)
+        assertExpressionsEqual(self, e, m.a)
 
         e = m.a * m.q
-        self.assertIs(type(e), type(m.a))
-        self.assertIs(e, m.a)
+        assertExpressionsEqual(self, e, m.a)
 
         e = m.q * m.a
-        self.assertIs(type(e), type(m.a))
-        self.assertIs(e, m.a)
+        assertExpressionsEqual(self, e, m.a)
 
         #
         # Check that numeric constants are simply muliplied out
         #
         e = NumericConstant(3) * NumericConstant(2)
+        assertExpressionsEqual(self, e, 6)
         self.assertIs(type(e), int)
         self.assertEqual(e, 6)
 
@@ -1950,24 +1951,19 @@ class TestGenerate_ProductExpression(unittest.TestCase):
         # Check that dividing zero by anything non-zero gives zero
         #
         e = 0 / m.a
-        self.assertIs(type(e), int)
-        self.assertAlmostEqual(e, 0.0)
+        assertExpressionsEqual(self, e, DivisionExpression((0, m.a)))
 
         #
         # Check that dividing by one 1 gives the original expression
         #
         e = m.a / 1
-        self.assertIs(type(e), type(m.a))
-        self.assertIs(e, m.a)
+        assertExpressionsEqual(self, e, m.a)
 
         #
         # Check the structure dividing 1 by an expression
         #
         e = 1 / m.a
-        self.assertIs(type(e), DivisionExpression)
-        self.assertEqual(e.nargs(), 2)
-        self.assertIs(e.arg(0), 1)
-        self.assertIs(e.arg(1), m.a)
+        assertExpressionsEqual(self, e, DivisionExpression((1, m.a)))
 
         #
         # Check the structure dividing 1 by an expression
@@ -3367,12 +3363,9 @@ class TestPolynomialDegree(unittest.TestCase):
         self.assertEqual(e.polynomial_degree(), 1)
 
         e = quicksum(1 for i in A)
-        self.assertIs(e.__class__, NPV_SumExpression)
+        self.assertIs(e.__class__, int)
         self.assertEqual(polynomial_degree(e), 0)
 
-        e = quicksum((1 for i in A), linear=True)
-        self.assertIs(e.__class__, NPV_SumExpression)
-        self.assertEqual(polynomial_degree(e), 0)
 
     def test_relational_ops(self):
         #
@@ -3814,84 +3807,154 @@ class TestSumExpression(unittest.TestCase):
     def tearDown(self):
         self.m = None
 
+    def test_deprecation(self):
+        with LoggingIntercept() as LOG:
+            e = quicksum((self.m.a[i] for i in self.m.a), linear=False)
+        self.assertRegex(
+            LOG.getvalue().replace('\n',' '),
+            r"DEPRECATED: The quicksum\(linear=...\) argument is deprecated "
+            r"and ignored.")
+        assertExpressionsEqual(
+            self,
+            e,
+            LinearExpression([
+                MonomialTermExpression((1, self.m.a[1])),
+                MonomialTermExpression((1, self.m.a[2])),
+                MonomialTermExpression((1, self.m.a[3])),
+                MonomialTermExpression((1, self.m.a[4])),
+                MonomialTermExpression((1, self.m.a[5])),
+            ])
+        )
+
     def test_summation1(self):
-        e = quicksum((self.m.a[i] for i in self.m.a), linear=False)
+        e = quicksum((self.m.a[i] for i in self.m.a))
         self.assertEqual( e(), 25 )
-        self.assertIs(type(e), SumExpression)
-        self.assertEqual( id(self.m.a[1]), id(e.arg(0)) )
-        self.assertEqual( id(self.m.a[2]), id(e.arg(1)) )
-        self.assertEqual(e.size(), 6)
-        #
-        e = quicksum(self.m.a[i] for i in self.m.a)
-        self.assertEqual( e(), 25 )
-        self.assertIs(type(e), LinearExpression)
+        assertExpressionsEqual(
+            self,
+            e,
+            LinearExpression([
+                MonomialTermExpression((1, self.m.a[1])),
+                MonomialTermExpression((1, self.m.a[2])),
+                MonomialTermExpression((1, self.m.a[3])),
+                MonomialTermExpression((1, self.m.a[4])),
+                MonomialTermExpression((1, self.m.a[5])),
+            ])
+        )
 
     def test_summation2(self):
-        e = quicksum((self.m.p[i]*self.m.a[i] for i in self.m.a), linear=False)
-        self.assertEqual( e(), 25 )
-        self.assertIs(type(e), SumExpression)
-        self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(1)) )
-        self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(1)) )
-        self.assertEqual(e.size(), 16)
-        #
         e = quicksum(self.m.p[i]*self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 25 )
-        self.assertIs(type(e), LinearExpression)
+        assertExpressionsEqual(
+            self,
+            e,
+            LinearExpression([
+                MonomialTermExpression((self.m.p[1], self.m.a[1])),
+                MonomialTermExpression((self.m.p[2], self.m.a[2])),
+                MonomialTermExpression((self.m.p[3], self.m.a[3])),
+                MonomialTermExpression((self.m.p[4], self.m.a[4])),
+                MonomialTermExpression((self.m.p[5], self.m.a[5])),
+            ])
+        )
 
     def test_summation3(self):
-        e = quicksum((self.m.q[i]*self.m.a[i] for i in self.m.a), linear=False)
-        self.assertEqual( e(), 75 )
-        self.assertIs(type(e), SumExpression)
-        self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(1)) )
-        self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(1)) )
-        self.assertEqual(e.size(), 16)
-        #
         e = quicksum(self.m.q[i]*self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 75 )
-        self.assertIs(type(e), LinearExpression)
+        assertExpressionsEqual(
+            self,
+            e,
+            LinearExpression([
+                MonomialTermExpression((3, self.m.a[1])),
+                MonomialTermExpression((3, self.m.a[2])),
+                MonomialTermExpression((3, self.m.a[3])),
+                MonomialTermExpression((3, self.m.a[4])),
+                MonomialTermExpression((3, self.m.a[5])),
+            ])
+        )
 
     def test_summation4(self):
         e = quicksum(self.m.a[i]*self.m.b[i] for i in self.m.a)
         self.assertEqual( e(), 250 )
-        self.assertIs(type(e), SumExpression)
-        self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(0)) )
-        self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(0)) )
-        self.assertEqual(e.size(), 16)
+        assertExpressionsEqual(
+            self,
+            e,
+            SumExpression([
+                ProductExpression((self.m.a[1], self.m.b[1])),
+                ProductExpression((self.m.a[2], self.m.b[2])),
+                ProductExpression((self.m.a[3], self.m.b[3])),
+                ProductExpression((self.m.a[4], self.m.b[4])),
+                ProductExpression((self.m.a[5], self.m.b[5])),
+            ])
+        )
 
     def test_summation5(self):
         e = quicksum(self.m.b[i]/self.m.a[i] for i in self.m.a)
         self.assertEqual( e(), 10 )
-        self.assertIs(type(e), SumExpression)
-        self.assertEqual(e.size(), 16)
+        assertExpressionsEqual(
+            self,
+            e,
+            SumExpression([
+                DivisionExpression((self.m.b[1], self.m.a[1])),
+                DivisionExpression((self.m.b[2], self.m.a[2])),
+                DivisionExpression((self.m.b[3], self.m.a[3])),
+                DivisionExpression((self.m.b[4], self.m.a[4])),
+                DivisionExpression((self.m.b[5], self.m.a[5])),
+            ])
+        )
 
     def test_summation6(self):
-        e = quicksum((self.m.a[i]/self.m.p[i] for i in self.m.a), linear=False)
-        self.assertEqual( e(), 25 )
-        self.assertIs(type(e), SumExpression)
-        self.assertEqual( id(self.m.a[1]), id(e.arg(0).arg(1)) )
-        self.assertEqual( id(self.m.a[2]), id(e.arg(1).arg(1)) )
-        self.assertEqual(e.size(), 26)
-        #
         e = quicksum(self.m.a[i]/self.m.p[i] for i in self.m.a)
         self.assertEqual( e(), 25 )
-        self.assertIs(type(e), LinearExpression)
+        assertExpressionsEqual(
+            self,
+            e,
+            LinearExpression([
+                MonomialTermExpression((
+                    NPV_DivisionExpression((1, self.m.p[1])),
+                    self.m.a[1],
+                )),
+                MonomialTermExpression((
+                    NPV_DivisionExpression((1, self.m.p[2])),
+                    self.m.a[2],
+                )),
+                MonomialTermExpression((
+                    NPV_DivisionExpression((1, self.m.p[3])),
+                    self.m.a[3],
+                )),
+                MonomialTermExpression((
+                    NPV_DivisionExpression((1, self.m.p[4])),
+                    self.m.a[4],
+                )),
+                MonomialTermExpression((
+                    NPV_DivisionExpression((1, self.m.p[5])),
+                    self.m.a[5],
+                )),
+            ])
+        )
 
     def test_summation7(self):
         e = quicksum((self.m.p[i]*self.m.q[i] for i in self.m.I), linear=False)
         self.assertEqual( e(), 15 )
-        self.assertIs(type(e), SumExpression)
-        self.assertEqual( e.nargs(), 5)
-        self.assertEqual(e.size(), 16)
-        #
-        e = quicksum(self.m.p[i]*self.m.q[i] for i in self.m.I)
-        self.assertEqual( e(), 15 )
-        self.assertIs(type(e), NPV_SumExpression)
+        assertExpressionsEqual(
+            self,
+            e,
+            NPV_SumExpression([
+                NPV_ProductExpression((self.m.p[1], 3)),
+                NPV_ProductExpression((self.m.p[2], 3)),
+                NPV_ProductExpression((self.m.p[3], 3)),
+                NPV_ProductExpression((self.m.p[4], 3)),
+                NPV_ProductExpression((self.m.p[5], 3)),
+            ])
+        )
 
     def test_quicksum_reject_noniterable(self):
         with LoggingIntercept() as LOG:
-            with self.assertRaisesRegex(TypeError, "'int' object is not iterable"):
+            with self.assertRaisesRegex(
+                    TypeError, "'int' object is not iterable"):
                 quicksum(1)
-        self.assertEqual(LOG.getvalue(), 'The argument `args` to quicksum() is not iterable!\n')
+        self.assertEqual(
+            LOG.getvalue(),
+            'The argument `args` to quicksum() is not iterable!\n'
+        )
 
     def test_quicksum_exception_exposure(self):
         ex0 = Exception()
@@ -4584,6 +4647,11 @@ class TestIsFixedIsConstant(unittest.TestCase):
 
         e = m.P[t+1] + 3
         self.assertEqual(e.is_constant(), False)
+        import pyomo.core.expr.numeric_expr as ne
+        print(ne._categorize_arg_types(m.P[t+1], 3))
+        print(e.to_string(verbose=True))
+        print(type(e), [type(_) for _ in e.args])
+        self.assertEqual(m.P[t+1].is_potentially_variable(), False)
         self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(e.is_fixed(), True)
 

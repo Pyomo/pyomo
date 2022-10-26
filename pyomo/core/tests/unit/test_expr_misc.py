@@ -19,7 +19,11 @@ currdir = dirname(abspath(__file__))+os.sep
 from filecmp import cmp
 import pyomo.common.unittest as unittest
 
-from pyomo.environ import AbstractModel, ConcreteModel, ConstraintList, Set, Param, Var, Constraint, Objective, sum_product, quicksum, sequence, prod
+from pyomo.environ import (
+    AbstractModel, ConcreteModel, ConstraintList, Set, Param, Var,
+    Constraint, Objective, sum_product, quicksum, sequence, prod,
+)
+from pyomo.core.expr.compare import assertExpressionsEqual
 
 def obj_rule(model):
     return sum(model.x[a] + model.y[a] for a in model.A)
@@ -162,14 +166,18 @@ class Test(unittest.TestCase):
         model.x = Var(model.A)
         expr = quicksum(model.x[i] for i in model.x)
         baseline = "x[1] + x[2] + x[3]"
-        self.assertEqual( str(expr), baseline )
+        assertExpressionsEqual(
+            self,
+            expr,
+            model.x[1] + model.x[2] + model.x[3],
+        )
 
     def test_sum3(self):
         model = ConcreteModel()
         model.A = Set(initialize=[1,2,3], doc='set A')
         model.x = Var(model.A)
         expr = quicksum(model.x)
-        self.assertEqual( expr, 6)
+        assertExpressionsEqual(self, expr, 6)
 
     def test_summation_error1(self):
         try:
