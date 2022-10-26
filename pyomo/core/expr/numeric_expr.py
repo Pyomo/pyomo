@@ -675,7 +675,8 @@ class LinearExpression(SumExpression):
     _allowable_linear_expr_arg_types = set([MonomialTermExpression])
     _cache = (None, None, None, None)
 
-    def __init__(self, args=None, constant=None, linear_coefs=None, linear_vars=None):
+    def __init__(self, args=None, constant=None, linear_coefs=None,
+                 linear_vars=None):
         """A linear expression of the form `const + sum_i(c_i*x_i).
 
         You can specify args OR (constant, linear_coefs, and
@@ -707,9 +708,16 @@ class LinearExpression(SumExpression):
             self._args_ = args
         else:
             self._args_ = []
-            if constant:
-                self._args_.append(constant)
-            if linear_vars:
+            if constant is not None:
+                # Filter 0, but only if it is a native type
+                if constant.__class__ not in native_types or constant:
+                    self._args_.append(constant)
+            if linear_vars is not None:
+                if (linear_coefs is None
+                    or len(linear_vars) != len(linear_coefs)):
+                    raise ValueError(
+                        f"linear_vars ({linear_vars}) is not compatible "
+                        f"with linear_coefs ({linear_coefs})")
                 self._args_.extend(map(
                     MonomialTermExpression, zip(linear_coefs, linear_vars)))
         self._nargs = len(self._args_)
