@@ -2878,6 +2878,10 @@ def _pow_npv_npv(a, b):
 def _pow_npv_param(a, b):
     if b.is_constant():
         b = b.value
+        if not b:
+            return 1
+        elif b == 1:
+            return a
     return NPV_PowExpression((a, b))
 
 def _pow_npv_other(a, b):
@@ -2928,6 +2932,10 @@ def _pow_other_npv(a, b):
 def _pow_other_param(a, b):
     if b.is_constant():
         b = b.value
+        if not b:
+            return 1
+        elif b == 1:
+            return a
     return PowExpression((a, b))
 
 def _pow_other_other(a, b):
@@ -2951,22 +2959,49 @@ _pow_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NATIVE): _pow_native_native,
         (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NPV): _pow_native_npv,
         (_EXPR_TYPE.NATIVE, _EXPR_TYPE.PARAM): _pow_native_param,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.VAR): _pow_native_other,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.MONOMIAL): _div_native_other,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.LINEAR): _div_native_other,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.SUM): _div_native_other,
         (_EXPR_TYPE.NATIVE, _EXPR_TYPE.OTHER): _pow_native_other,
 
         (_EXPR_TYPE.NPV, _EXPR_TYPE.NATIVE): _pow_npv_native,
         (_EXPR_TYPE.NPV, _EXPR_TYPE.NPV): _pow_npv_npv,
         (_EXPR_TYPE.NPV, _EXPR_TYPE.PARAM): _pow_npv_param,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.VAR): _pow_npv_other,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.MONOMIAL): _div_npv_other,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.LINEAR): _div_npv_other,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.SUM): _div_npv_other,
         (_EXPR_TYPE.NPV, _EXPR_TYPE.OTHER): _pow_npv_other,
 
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.NATIVE): _pow_param_native,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.NPV): _pow_param_npv,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.PARAM): _pow_param_param,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.VAR): _pow_param_other,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.MONOMIAL): _div_param_other,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.LINEAR): _div_param_other,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.SUM): _div_param_other,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.OTHER): _pow_param_other,
+
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.NATIVE): _pow_other_native,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.NPV): _pow_other_npv,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.PARAM): _pow_other_param,
+
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NATIVE): _pow_other_native,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NPV): _pow_other_npv,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.PARAM): _pow_other_param,
+
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NATIVE): _pow_other_native,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NPV): _pow_other_npv,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.PARAM): _pow_other_param,
+
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.NATIVE): _pow_other_native,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.NPV): _pow_other_npv,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.PARAM): _pow_other_param,
 
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.NATIVE): _pow_other_native,
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.NPV): _pow_other_npv,
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.PARAM): _pow_other_param,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.OTHER): _pow_other_other,
 })
 _pow_type_handler_mapping.update({
     (i, j): _pow_other_other
