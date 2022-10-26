@@ -15,9 +15,10 @@
 
 __all__ = ['sum_product', 'summation', 'dot_product', 'sequence', 'prod', 'quicksum', 'target_list']
 
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.core.expr.numvalue import native_numeric_types
 from pyomo.core.expr.numeric_expr import (
-    mutable_expression, nonlinear_expression
+    mutable_expression, nonlinear_expression, NPV_SumExpression
 )
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.var import Var
@@ -43,32 +44,31 @@ def prod(terms):
 
 
 def quicksum(args, start=0, linear=None):
-    """
-    A utility function to compute a sum of Pyomo expressions.
+    """A utility function to compute a sum of Pyomo expressions.
 
-    The behavior of :func:`quicksum` is similar to the builtin :func:`sum`
-    function, but this function generates a more compact Pyomo
-    expression.
+    The behavior of :func:`quicksum` is similar to the builtin
+    :func:`sum` function, but this function can avoid the generation and
+    disposal of intermediate objects, as thus is slightly more
+    performant.
 
-    Args:
-        args: A generator for terms in the sum.
+    Parameters
+    ----------
+    args: Iterable
+        A generator for terms in the sum.
 
-        start: A value that is initializes the sum.  If
-            this value is not a numeric constant, then the += 
-            operator is used to add terms to this object.
-            Defaults to zero.
+    start: Any
+        A value that is initializes the sum.  If this value is not a
+        numeric constant, then the += operator is used to add terms to
+        this object.  Defaults to 0.
 
-        linear: If :attr:`start` is not a numeric constant, then this 
-            option is ignored.  Otherwise, this value indicates
-            whether the terms in the sum are linear.  If the value
-            is :const:`False`, then the terms are
-            treated as nonlinear, and if :const:`True`, then
-            the terms are treated as linear.  Default is
-            :const:`None`, which indicates that the first term
-            in the :attr:`args` is used to determine this value.
+    linear: bool
+        DEPRECATED: the linearity of the resulting expression is
+        determined automatically.  This optin is ignored.
 
-    Returns:
-        The value of the sum, which may be a Pyomo expression object.
+    Returns
+    -------
+    The value of the sum, which may be a Pyomo expression object.
+
     """
 
     # Ensure that args is an iterator (this manages things like
@@ -79,21 +79,25 @@ def quicksum(args, start=0, linear=None):
         logger.error('The argument `args` to quicksum() is not iterable!')
         raise
 
+    if linear is not None:
+        deprecation_warning(
+            "The quicksum(linear=...) argument is deprecated and ignored.")
+
     #
     # If we're starting with a numeric value, then 
     # create a new nonlinear sum expression but 
     # return a static version to the user.
     #
-    if linear is False:
-        context = nonlinear_expression
-    else:
-        context = mutable_expression
-
     if start.__class__ in native_numeric_types:
-        with context() as e:
+        with mutable_expression() as e:
             e += start
             for arg in args:
                 e += arg
+        # Special case: reduce NPV sums of native types to a single
+        # constant
+        if e.__class__ is NPV_SumExpression and all(
+                arg.__class__ in native_numeric_types for arg in e.args):
+            return e()
         if e.nargs() > 1:
             return e
         elif not e.nargs():
