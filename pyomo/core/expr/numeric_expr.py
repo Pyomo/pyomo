@@ -813,8 +813,7 @@ class NPV_SumExpression(NPV_Mixin, SumExpression):
         return SumExpression( self._args_ )
 
     def _apply_operation(self, result):
-        l_, r_ = result
-        return l_ + r_
+        return sum(result)
 
     def _to_string(self, values, verbose, smap):
         if verbose:
