@@ -1012,7 +1012,7 @@ class ExpressionReplacementVisitor(StreamBasedExpressionVisitor):
             if data[2]:
                 return node._apply_operation(data[1])
             else:
-                return node.create_node_with_local_data(tuple(data[1]))
+                return node.create_node_with_local_data(data[1])
         return node
 
     @deprecated(
@@ -1323,19 +1323,6 @@ class _VariableVisitor(SimpleExpressionVisitor):
                 return
             self.seen.add(id(node))
             return node
-
-        if node.is_expression_type() and isinstance(node, LinearExpression):
-            if id(node) in self.seen:
-                return
-            self.seen.add(id(node))
-
-            def unique_vars_generator():
-                for var in node.linear_vars:
-                    if id(var) in self.seen:
-                        continue
-                    self.seen.add(id(var))
-                    yield var
-            return tuple(v for v in unique_vars_generator())
 
 
 def identify_variables(expr, include_fixed=True):

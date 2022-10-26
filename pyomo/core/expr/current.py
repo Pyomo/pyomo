@@ -73,12 +73,10 @@ if _mode == Mode.pyomo5_trees:
                                               LinearDecompositionError,
                                               _decompose_linear_terms,
                                               _process_arg,
-                                              _generate_sum_expression,
-                                              _generate_mul_expression,
-                                              _generate_other_expression,
-                                              _generate_intrinsic_function_expression,
                                               _balanced_parens,
-                                              NPV_expression_types)
+                                              NPV_expression_types,
+                                              _fcn_dispatcher,
+    )
     from pyomo.core.expr import logical_expr as _logical_expr
     from pyomo.core.expr.logical_expr import (native_logical_types, BooleanValue,
                                               BooleanConstant,
@@ -156,61 +154,61 @@ def Expr_if(IF=None, THEN=None, ELSE=None):
 # Python operators.
 #
 def ceil(arg):
-    return _generate_intrinsic_function_expression(arg, 'ceil', math.ceil)
+    return _fcn_dispatcher[arg.__class__](arg, 'ceil', math.ceil)
 
 def floor(arg):
-    return _generate_intrinsic_function_expression(arg, 'floor', math.floor)
+    return _fcn_dispatcher[arg.__class__](arg, 'floor', math.floor)
 
 # e ** x
 def exp(arg):
-    return _generate_intrinsic_function_expression(arg, 'exp', math.exp)
+    return _fcn_dispatcher[arg.__class__](arg, 'exp', math.exp)
 
 def log(arg):
-    return _generate_intrinsic_function_expression(arg, 'log', math.log)
+    return _fcn_dispatcher[arg.__class__](arg, 'log', math.log)
 
 def log10(arg):
-    return _generate_intrinsic_function_expression(arg, 'log10', math.log10)
+    return _fcn_dispatcher[arg.__class__](arg, 'log10', math.log10)
 
 # FIXME: this is nominally the same as x ** 0.5, but follows a different
 # path and produces a different NL file!
 def sqrt(arg):
-    return _generate_intrinsic_function_expression(arg, 'sqrt', math.sqrt)
-#    return _generate_expression(common._pow, arg, 0.5)
+    return _fcn_dispatcher[arg.__class__](arg, 'sqrt', math.sqrt)
+    # return _pow_dispatcher[arg.__class__, float](arg, 0.5)
 
 
 def sin(arg):
-    return _generate_intrinsic_function_expression(arg, 'sin', math.sin)
+    return _fcn_dispatcher[arg.__class__](arg, 'sin', math.sin)
 
 def cos(arg):
-    return _generate_intrinsic_function_expression(arg, 'cos', math.cos)
+    return _fcn_dispatcher[arg.__class__](arg, 'cos', math.cos)
 
 def tan(arg):
-    return _generate_intrinsic_function_expression(arg, 'tan', math.tan)
+    return _fcn_dispatcher[arg.__class__](arg, 'tan', math.tan)
 
 def sinh(arg):
-    return _generate_intrinsic_function_expression(arg, 'sinh', math.sinh)
+    return _fcn_dispatcher[arg.__class__](arg, 'sinh', math.sinh)
 
 def cosh(arg):
-    return _generate_intrinsic_function_expression(arg, 'cosh', math.cosh)
+    return _fcn_dispatcher[arg.__class__](arg, 'cosh', math.cosh)
 
 def tanh(arg):
-    return _generate_intrinsic_function_expression(arg, 'tanh', math.tanh)
+    return _fcn_dispatcher[arg.__class__](arg, 'tanh', math.tanh)
 
 
 def asin(arg):
-    return _generate_intrinsic_function_expression(arg, 'asin', math.asin)
+    return _fcn_dispatcher[arg.__class__](arg, 'asin', math.asin)
 
 def acos(arg):
-    return _generate_intrinsic_function_expression(arg, 'acos', math.acos)
+    return _fcn_dispatcher[arg.__class__](arg, 'acos', math.acos)
 
 def atan(arg):
-    return _generate_intrinsic_function_expression(arg, 'atan', math.atan)
+    return _fcn_dispatcher[arg.__class__](arg, 'atan', math.atan)
 
 def asinh(arg):
-    return _generate_intrinsic_function_expression(arg, 'asinh', math.asinh)
+    return _fcn_dispatcher[arg.__class__](arg, 'asinh', math.asinh)
 
 def acosh(arg):
-    return _generate_intrinsic_function_expression(arg, 'acosh', math.acosh)
+    return _fcn_dispatcher[arg.__class__](arg, 'acosh', math.acosh)
 
 def atanh(arg):
-    return _generate_intrinsic_function_expression(arg, 'atanh', math.atanh)
+    return _fcn_dispatcher[arg.__class__](arg, 'atanh', math.atanh)

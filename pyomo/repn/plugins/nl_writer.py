@@ -2154,23 +2154,27 @@ def _before_monomial(visitor, child):
 
 def _before_linear(visitor, child):
     # Because we are going to modify the LinearExpression in this
-    # walker, we need to make a copy of the LinearExpression from
-    # the original expression tree.
+    # walker, we need to make a copy of the arg list from the original
+    # expression tree.
     var_map = visitor.var_map
-    const = child.constant
+    const = 0
     linear = []
-    for v, c in zip(child.linear_vars, child.linear_coefs):
-        if c.__class__ not in native_types:
-            c = c()
-        if not c:
-            continue
-        elif v.fixed:
-            const += c * v()
+    for arg in child.args:
+        if arg.__class__ is MonomialTermExpression:
+            c, v = arg.args
+            if c.__class__ not in native_types:
+                c = c()
+            if v.fixed:
+                const += c * v.value
+            elif c:
+                _id = id(v)
+                if _id not in var_map:
+                    var_map[_id] = v
+                linear.append((_id, c))
+        elif arg.__class__ in native_types:
+            const += arg
         else:
-            _id = id(v)
-            if _id not in var_map:
-                var_map[_id] = v
-            linear.append((_id, c))
+            const += arg()
     return False, (_GENERAL, AMPLRepn(const, linear, None))
 
 def _before_named_expression(visitor, child):

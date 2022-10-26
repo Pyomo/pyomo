@@ -16,7 +16,9 @@
 __all__ = ['sum_product', 'summation', 'dot_product', 'sequence', 'prod', 'quicksum', 'target_list']
 
 from pyomo.core.expr.numvalue import native_numeric_types
-from pyomo.core.expr.numeric_expr import decompose_term
+from pyomo.core.expr.numeric_expr import (
+    mutable_expression, nonlinear_expression
+)
 from pyomo.core.expr import current as EXPR
 from pyomo.core.base.var import Var
 from pyomo.core.base.expression import Expression
@@ -69,7 +71,8 @@ def quicksum(args, start=0, linear=None):
         The value of the sum, which may be a Pyomo expression object.
     """
 
-    # Ensure that args is an iterator (this manages things like IndexedComponent_slice objects)
+    # Ensure that args is an iterator (this manages things like
+    # IndexedComponent_slice objects)
     try:
         args = iter(args)
     except:
@@ -81,60 +84,22 @@ def quicksum(args, start=0, linear=None):
     # create a new nonlinear sum expression but 
     # return a static version to the user.
     #
+    if linear is False:
+        context = nonlinear_expression
+    else:
+        context = mutable_expression
+
     if start.__class__ in native_numeric_types:
-        if linear is None:
-            #
-            # Get the first term, which we will test for linearity
-            #
-            first = next(args, None)
-            if first is None:
-                return start
-            #
-            # Check if the first term is linear, and if so return the terms
-            #
-            linear, terms = decompose_term(first)
-            #
-            # Right now Pyomo5 expressions can only handle single linear
-            # terms.
-            #
-            # Also, we treat linear expressions as nonlinear if the constant
-            # term is not a native numeric type.  Otherwise, large summation
-            # objects are created for the constant term.
-            #
-            if linear:
-                nvar=0
-                for term in terms:
-                    c,v = term
-                    if not v is None:
-                        nvar += 1
-                    elif not c.__class__ in native_numeric_types:
-                        linear = False
-                if nvar > 1:
-                    linear = False
-            start = start+first
-        if linear:
-            with EXPR.linear_expression() as e:
-                e += start
-                for arg in args:
-                    e += arg
-            # Return the constant term if the linear expression does not
-            # contain variables
-            #
-            # getattr() because the linear expression may not have ended
-            # up being linear (and e could be a SumExpression)
-            if not getattr(e, 'linear_vars', True):
-                return e.constant
+        with context() as e:
+            e += start
+            for arg in args:
+                e += arg
+        if e.nargs() > 1:
             return e
+        elif not e.nargs():
+            return 0
         else:
-            with EXPR.nonlinear_expression() as e:
-                e += start
-                for arg in args:
-                    e += arg
-            if e.nargs() == 0:
-                return 0
-            elif e.nargs() == 1:
-                return e.arg(0)
-            return e
+            return e.arg(0)
     #
     # Otherwise, use the context that is provided and return it.
     #
@@ -191,53 +156,30 @@ def sum_product(*args, **kwds):
         index = iarg.index_set()
 
     start = kwds.get("start", 0)
-    vars_ = []
-    params_ = []
-    for arg in args:
-        if isinstance(arg, Var):
-            vars_.append(arg)
-        else:
-            params_.append(arg)
-    nvars = len(vars_)
 
     if ndenom == 0:
         #
         # Sum of polynomial terms
         #
-        if start.__class__ in native_numeric_types:
-            if nvars == 1:
-                v = vars_[0]
-                if len(params_) == 0:
-                    with EXPR.linear_expression() as expr:
-                        expr += start
-                        for i in index:
-                            expr += v[i]
-                elif len(params_) == 1:    
-                    p = params_[0]
-                    with EXPR.linear_expression() as expr:
-                        expr += start
-                        for i in index:
-                            expr += p[i]*v[i]
-                else:
-                    with EXPR.linear_expression() as expr:
-                        expr += start
-                        for i in index:
-                            term = 1
-                            for p in params_:
-                                term *= p[i]
-                            expr += term * v[i]
-                return expr
-            #
-            with EXPR.nonlinear_expression() as expr:
-                expr += start
+        with mutable_expression() as expr:
+            expr += start
+            if nargs == 1:
+                arg1 = args[0]
                 for i in index:
-                    term = 1
-                    for arg in args:
-                        term *= arg[i]
-                    expr += term
+                    expr += arg1[i]
+            elif nargs == 2:
+                arg1, arg2 = args
+                for i in index:
+                    expr += arg1[i] * arg2[i]
+            else:
+                for i in index:
+                    expr += prod(arg[i] for arg in args)
+        if expr.nargs() > 1:
             return expr
-        #
-        return quicksum((prod(arg[i] for arg in args) for i in index), start)
+        elif not expr.nargs():
+            return 0
+        else:
+            return expr.arg(0)
     elif nargs == 0:
         #
         # Sum of reciprocals

@@ -29,8 +29,18 @@ class TestConvertToPrefixNotation(unittest.TestCase):
     def test_linear_expression(self):
         m = pe.ConcreteModel()
         m.x = pe.Var([1, 2, 3, 4])
-        e = LinearExpression(constant=3, linear_coefs=list(m.x.keys()), linear_vars=list(m.x.values()))
-        expected = [(LinearExpression, 9), 3, 1, 2, 3, 4, m.x[1], m.x[2], m.x[3], m.x[4]]
+        e = LinearExpression(
+            constant=3,
+            linear_coefs=list(m.x.keys()),
+            linear_vars=list(m.x.values())
+        )
+        expected = [
+            (LinearExpression, 5), 3, 
+            (MonomialTermExpression, 2), 1, m.x[1],
+            (MonomialTermExpression, 2), 2, m.x[2],
+            (MonomialTermExpression, 2), 3, m.x[3],
+            (MonomialTermExpression, 2), 4, m.x[4],
+        ]
         pn = convert_expression_to_prefix_notation(e)
         self.assertEqual(pn, expected)
 
@@ -136,12 +146,18 @@ class TestConvertToPrefixNotation(unittest.TestCase):
                     m.x,
                     0,
                     (EqualityExpression, 2),
-                    (SumExpression, 2),
+                    (LinearExpression, 2),
+                    (MonomialTermExpression, 2),
+                    1,
                     m.y,
+                    (MonomialTermExpression, 2),
+                    1,
                     m.x,
                     0,
                     (EqualityExpression, 2),
-                    (SumExpression, 2),
+                    (LinearExpression, 2),
+                    (MonomialTermExpression, 2),
+                    1,
                     m.y,
                     (MonomialTermExpression, 2),
                     -1,

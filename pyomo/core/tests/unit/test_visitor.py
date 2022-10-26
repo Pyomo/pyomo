@@ -47,7 +47,7 @@ from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.common.collections import ComponentSet
 from pyomo.common.log import LoggingIntercept
 from io import StringIO
-from pyomo.core.expr.compare import compare_expressions
+from pyomo.core.expr.compare import assertExpressionsEqual
 
 
 class TestExpressionUtilities(unittest.TestCase):
@@ -308,8 +308,8 @@ class WalkerTests(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(sin(M.x) + M.x*M.y + 3, e))
-        self.assertTrue(compare_expressions(sin(M.w[1]) + M.w[1]*M.w[2] + 3, f))
+        assertExpressionsEqual(self, sin(M.x) + M.x*M.y + 3, e)
+        assertExpressionsEqual(self, sin(M.w[1]) + M.w[1]*M.w[2] + 3, f)
 
     def test_replacement_walker2(self):
         M = ConcreteModel()
@@ -319,8 +319,8 @@ class WalkerTests(unittest.TestCase):
         e = M.x
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(M.x, e))
-        self.assertTrue(compare_expressions(M.w[1], f))
+        assertExpressionsEqual(self, M.x, e)
+        assertExpressionsEqual(self, M.w[1], f)
 
     def test_replacement_walker3(self):
         M = ConcreteModel()
@@ -331,8 +331,8 @@ class WalkerTests(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3 <= 0
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(sin(M.x) + M.x*M.y + 3  <=  0, e))
-        self.assertTrue(compare_expressions(sin(M.w[1]) + M.w[1]*M.w[2] + 3  <=  0, f))
+        assertExpressionsEqual(self, sin(M.x) + M.x*M.y + 3  <=  0, e)
+        assertExpressionsEqual(self, sin(M.w[1]) + M.w[1]*M.w[2] + 3  <=  0, f)
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -343,8 +343,10 @@ class WalkerTests(unittest.TestCase):
         e = inequality(0, sin(M.x) + M.x*M.y + 3, 1)
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(inequality(0, sin(M.x) + M.x*M.y + 3, 1), e))
-        self.assertTrue(compare_expressions(inequality(0, sin(M.w[1]) + M.w[1]*M.w[2] + 3, 1), f))
+        assertExpressionsEqual(
+            self, inequality(0, sin(M.x) + M.x*M.y + 3, 1), e)
+        assertExpressionsEqual(
+            self, inequality(0, sin(M.w[1]) + M.w[1]*M.w[2] + 3, 1), f)
 
     def test_replacement_walker0(self):
         M = ConcreteModel()
@@ -356,10 +358,16 @@ class WalkerTests(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                             linear_vars=[i for i in M.x.values()]), e))
-        self.assertTrue(compare_expressions(LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                             linear_vars=[i for i in M.w.values()]), f))
+        assertExpressionsEqual(
+            self,
+            LinearExpression(linear_coefs=[i for i in M.z.values()],
+                             linear_vars=[i for i in M.x.values()]),
+            e)
+        assertExpressionsEqual(
+            self,
+            LinearExpression(linear_coefs=[i for i in M.z.values()],
+                             linear_vars=[i for i in M.w.values()]),
+            f)
 
         del M.w
         del M.w_index
@@ -367,10 +375,15 @@ class WalkerTests(unittest.TestCase):
         e = 2*sum_product(M.z, M.x)
         walker = ReplacementWalkerTest1(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(2*LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                               linear_vars=[i for i in M.x.values()]), e))
-        self.assertTrue(compare_expressions(2*LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                               linear_vars=[i for i in M.w.values()]), f))
+        assertExpressionsEqual(
+            self,
+            2*LinearExpression(linear_coefs=[i for i in M.z.values()],
+                               linear_vars=[i for i in M.x.values()]),
+            e)
+        assertExpressionsEqual(
+            self, 2*LinearExpression(linear_coefs=[i for i in M.z.values()],
+                                     linear_vars=[i for i in M.w.values()]),
+            f)
 
     def test_replacement_linear_expression_with_constant(self):
         m = ConcreteModel()
@@ -381,16 +394,19 @@ class WalkerTests(unittest.TestCase):
         sub_map = dict()
         sub_map[id(m.x)] = 5
         e2 = replace_expressions(e, sub_map)
-        self.assertTrue(compare_expressions(e2, SumExpression([10, m.y])))
+        assertExpressionsEqual(
+            self, e2,
+            LinearExpression([10, MonomialTermExpression((1, m.y))])
+        )
 
         e = LinearExpression(linear_coefs=[2, 3], linear_vars=[m.x, m.y])
         sub_map = dict()
         sub_map[id(m.x)] = 5
         e2 = replace_expressions(e, sub_map)
-        self.assertTrue(compare_expressions(
-            e2,
-            LinearExpression(constant=10, linear_coefs=[3], linear_vars=[m.y])
-        ))
+        assertExpressionsEqual(
+            self, e2,
+            LinearExpression([10, MonomialTermExpression((3, m.y))])
+        )
 
     def test_replacement_linear_expression_with_nonlinear(self):
         m = ConcreteModel()
@@ -400,10 +416,10 @@ class WalkerTests(unittest.TestCase):
         sub_map = dict()
         sub_map[id(m.x)] = m.x**2
         e2 = replace_expressions(e, sub_map)
-        self.assertTrue(compare_expressions(
+        assertExpressionsEqual(self, 
             e2,
             SumExpression([2*m.x**2, 3*m.y])
-        ))
+        )
 
     def test_replace_expressions_with_monomial_term(self):
         M = ConcreteModel()
@@ -495,8 +511,8 @@ class WalkerTests2(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(sin(M.x) + M.x*M.y + 3, e))
-        self.assertTrue(compare_expressions(sin(2*M.w[1]) + 2*M.w[1]*(2*M.w[2]) + 3, f))
+        assertExpressionsEqual(self, sin(M.x) + M.x*M.y + 3, e)
+        assertExpressionsEqual(self, sin(2*M.w[1]) + 2*M.w[1]*(2*M.w[2]) + 3, f)
 
     def test_replacement_walker2(self):
         M = ConcreteModel()
@@ -506,8 +522,8 @@ class WalkerTests2(unittest.TestCase):
         e = M.x
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(M.x, e))
-        self.assertTrue(compare_expressions(2*M.w[1], f))
+        assertExpressionsEqual(self, M.x, e)
+        assertExpressionsEqual(self, 2*M.w[1], f)
 
     def test_replacement_walker3(self):
         M = ConcreteModel()
@@ -518,8 +534,9 @@ class WalkerTests2(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3 <= 0
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(sin(M.x) + M.x*M.y + 3  <=  0, e))
-        self.assertTrue(compare_expressions(sin(2*M.w[1]) + 2*M.w[1]*(2*M.w[2]) + 3  <=  0, f))
+        assertExpressionsEqual(self, sin(M.x) + M.x*M.y + 3  <=  0, e)
+        assertExpressionsEqual(
+            self, sin(2*M.w[1]) + 2*M.w[1]*(2*M.w[2]) + 3  <=  0, f)
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -530,8 +547,10 @@ class WalkerTests2(unittest.TestCase):
         e = inequality(0, sin(M.x) + M.x*M.y + 3, 1)
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(inequality(0  ,   sin(M.x) + M.x*M.y + 3  ,   1), e))
-        self.assertTrue(compare_expressions(inequality(0  ,   sin(2*M.w[1]) + 2*M.w[1]*(2*M.w[2]) + 3  ,   1), f))
+        assertExpressionsEqual(
+            self, inequality(0, sin(M.x) + M.x*M.y + 3, 1), e)
+        assertExpressionsEqual(
+            self, inequality(0, sin(2*M.w[1]) + 2*M.w[1]*(2*M.w[2]) + 3, 1), f)
 
     def test_replacement_walker5(self):
         M = ConcreteModel()
@@ -542,10 +561,13 @@ class WalkerTests2(unittest.TestCase):
         e = M.z*M.x
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(e.__class__ is MonomialTermExpression)
-        self.assertTrue(f.__class__ is ProductExpression)
-        self.assertTrue(compare_expressions(M.z*M.x, e))
-        self.assertTrue(compare_expressions(M.z*(2*M.w[1]), f))
+        assertExpressionsEqual(
+            self, e, MonomialTermExpression((M.z, M.x)))
+        assertExpressionsEqual(
+            self, f, MonomialTermExpression((
+                NPV_ProductExpression((M.z, 2)),
+                M.w[1]))
+        )
 
     def test_replacement_walker0(self):
         M = ConcreteModel()
@@ -557,16 +579,48 @@ class WalkerTests2(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                             linear_vars=[i for i in M.x.values()]), e))
-        self.assertTrue(compare_expressions(M.z[0]*(2*M.w[1]) + M.z[1]*(2*M.w[2]) + M.z[2]*(2*M.w[3]), f))
+        assertExpressionsEqual(
+            self, e,
+            LinearExpression(linear_coefs=[i for i in M.z.values()],
+                             linear_vars=[i for i in M.x.values()]),
+        )
+        assertExpressionsEqual(
+            self, f,
+            LinearExpression([
+                MonomialTermExpression((
+                    NPV_ProductExpression((M.z[0], 2)),
+                    M.w[1])),
+                MonomialTermExpression((
+                    NPV_ProductExpression((M.z[1], 2)),
+                    M.w[2])),
+                MonomialTermExpression((
+                    NPV_ProductExpression((M.z[2], 2)),
+                    M.w[3])),
+            ])
+        )
 
         e = 2*sum_product(M.z, M.x)
         walker = ReplacementWalkerTest2(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(2*LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                               linear_vars=[i for i in M.x.values()]), e))
-        self.assertTrue(compare_expressions(2*(M.z[0]*(2*M.w[4]) + M.z[1]*(2*M.w[5]) + M.z[2]*(2*M.w[6])), f))
+        assertExpressionsEqual(
+            self,
+            2*LinearExpression(linear_coefs=[i for i in M.z.values()],
+                               linear_vars=[i for i in M.x.values()]),
+            e)
+        assertExpressionsEqual(
+            self, f,
+            ProductExpression((2, LinearExpression([
+                MonomialTermExpression((
+                    NPV_ProductExpression((M.z[0], 2)),
+                    M.w[4])),
+                MonomialTermExpression((
+                    NPV_ProductExpression((M.z[1], 2)),
+                    M.w[5])),
+                MonomialTermExpression((
+                    NPV_ProductExpression((M.z[2], 2)),
+                    M.w[6])),
+            ]) ))
+        )
 
 #
 # Replace all mutable parameters with variables
@@ -603,8 +657,8 @@ class WalkerTests3(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(sin(M.x) + M.x*M.y + 3, e))
-        self.assertTrue(compare_expressions(sin(2*M.w[1]) + 2*M.w[1]*M.y + 3, f))
+        assertExpressionsEqual(self, sin(M.x) + M.x*M.y + 3, e)
+        assertExpressionsEqual(self, sin(2*M.w[1]) + 2*M.w[1]*M.y + 3, f)
 
     def test_replacement_walker2(self):
         M = ConcreteModel()
@@ -614,8 +668,8 @@ class WalkerTests3(unittest.TestCase):
         e = M.x
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(M.x, e))
-        self.assertTrue(compare_expressions(2*M.w[1], f))
+        assertExpressionsEqual(self, M.x, e)
+        assertExpressionsEqual(self, 2*M.w[1], f)
 
     def test_replacement_walker3(self):
         M = ConcreteModel()
@@ -626,8 +680,8 @@ class WalkerTests3(unittest.TestCase):
         e = sin(M.x) + M.x*M.y + 3 <= 0
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(sin(M.x) + M.x*M.y + 3  <=  0, e))
-        self.assertTrue(compare_expressions(sin(2*M.w[1]) + 2*M.w[1]*M.y + 3  <=  0, f))
+        assertExpressionsEqual(self, sin(M.x) + M.x*M.y + 3  <=  0, e)
+        assertExpressionsEqual(self, sin(2*M.w[1]) + 2*M.w[1]*M.y + 3  <=  0, f)
 
     def test_replacement_walker4(self):
         M = ConcreteModel()
@@ -638,8 +692,10 @@ class WalkerTests3(unittest.TestCase):
         e = inequality(0, sin(M.x) + M.x*M.y + 3, 1)
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(inequality(0, sin(M.x) + M.x*M.y + 3, 1), e))
-        self.assertTrue(compare_expressions(inequality(0, sin(2*M.w[1]) + 2*M.w[1]*M.y + 3, 1), f))
+        assertExpressionsEqual(
+            self, inequality(0, sin(M.x) + M.x*M.y + 3, 1), e)
+        assertExpressionsEqual(
+            self, inequality(0, sin(2*M.w[1]) + 2*M.w[1]*M.y + 3, 1), f)
 
     def test_replacement_walker5(self):
         M = ConcreteModel()
@@ -653,8 +709,8 @@ class WalkerTests3(unittest.TestCase):
         self.assertIs(e.__class__, MonomialTermExpression)
         self.assertIs(f.__class__, ProductExpression)
         self.assertTrue(f.arg(0).is_potentially_variable())
-        self.assertTrue(compare_expressions(M.z*M.x, e))
-        self.assertTrue(compare_expressions(2*M.w[1]*M.x, f))
+        assertExpressionsEqual(self, M.z*M.x, e)
+        assertExpressionsEqual(self, 2*M.w[1]*M.x, f)
 
     def test_replacement_walker6(self):
         M = ConcreteModel()
@@ -667,8 +723,9 @@ class WalkerTests3(unittest.TestCase):
         f = walker.dfs_postorder_stack(e)
         self.assertTrue(not e.is_potentially_variable())
         self.assertTrue(f.is_potentially_variable())
-        self.assertTrue(compare_expressions(M.z*2*3, e))
-        self.assertTrue(compare_expressions(ProductExpression([ProductExpression([2*M.w[1], 2]), 3]), f))
+        assertExpressionsEqual(self, M.z*2*3, e)
+        assertExpressionsEqual(
+            self, ProductExpression([ProductExpression([2*M.w[1], 2]), 3]), f)
 
     def test_replacement_walker7(self):
         M = ConcreteModel()
@@ -680,7 +737,11 @@ class WalkerTests3(unittest.TestCase):
         e = M.x*M.e
         self.assertTrue(e.arg(1).is_potentially_variable())
         self.assertTrue(not e.arg(1).arg(0).is_potentially_variable())
-        self.assertTrue(compare_expressions(ProductExpression([M.x, (NPV_ProductExpression([M.z, 2]))]), e, include_named_exprs=False))
+        assertExpressionsEqual(
+            self,
+            ProductExpression([M.x, (NPV_ProductExpression([M.z, 2]))]),
+            e,
+            include_named_exprs=False)
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
         self.assertTrue(e.__class__ is ProductExpression)
@@ -688,7 +749,11 @@ class WalkerTests3(unittest.TestCase):
         self.assertEqual(id(e), id(f))
         self.assertTrue(f.arg(1).is_potentially_variable())
         self.assertTrue(f.arg(1).arg(0).is_potentially_variable())
-        self.assertTrue(compare_expressions(M.x*ProductExpression([2*M.w[1], 2]), f, include_named_exprs=False))
+        assertExpressionsEqual(
+            self,
+            M.x*ProductExpression([2*M.w[1], 2]),
+            f,
+            include_named_exprs=False)
 
     def test_replacement_walker0(self):
         M = ConcreteModel()
@@ -700,16 +765,24 @@ class WalkerTests3(unittest.TestCase):
         self.assertIs(type(e), LinearExpression)
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                             linear_vars=[i for i in M.x.values()]), e))
-        self.assertTrue(compare_expressions(2*M.w[1]*M.x[0] + 2*M.w[2]*M.x[1] + 2*M.w[3]*M.x[2], f))
+        assertExpressionsEqual(
+            self,
+            LinearExpression(linear_coefs=[i for i in M.z.values()],
+                             linear_vars=[i for i in M.x.values()]),
+            e)
+        assertExpressionsEqual(
+            self, 2*M.w[1]*M.x[0] + 2*M.w[2]*M.x[1] + 2*M.w[3]*M.x[2], f)
 
         e = 2*sum_product(M.z, M.x)
         walker = ReplacementWalkerTest3(M)
         f = walker.dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(2*LinearExpression(linear_coefs=[i for i in M.z.values()],
-                                                               linear_vars=[i for i in M.x.values()]), e))
-        self.assertTrue(compare_expressions(2*(2*M.w[4]*M.x[0] + 2*M.w[5]*M.x[1] + 2*M.w[6]*M.x[2]), f))
+        assertExpressionsEqual(
+            self,
+            2*LinearExpression(linear_coefs=[i for i in M.z.values()],
+                               linear_vars=[i for i in M.x.values()]),
+            e)
+        assertExpressionsEqual(
+            self, 2*(2*M.w[4]*M.x[0] + 2*M.w[5]*M.x[1] + 2*M.w[6]*M.x[2]), f)
 
 
 #
@@ -733,8 +806,8 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
 
         e = sum(m.y[i] for i in m.y) == 0
         f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(m.y[1] + m.y[2] + m.y[3]  ==  0, e))
-        self.assertTrue(compare_expressions(m.y[1] + m.y[2] + m.y[3]  ==  0, f))
+        assertExpressionsEqual(self, m.y[1] + m.y[2] + m.y[3]  ==  0, e)
+        assertExpressionsEqual(self, m.y[1] + m.y[2] + m.y[3]  ==  0, f)
         self.assertIs(e, f)
 
     def test_replace(self):
@@ -744,14 +817,20 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
 
         e = m.y[1]*m.y[2] + m.y[2]*m.y[3]  ==  0
         f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(m.y[1]*m.y[2] + m.y[2]*m.y[3]  ==  0, e))
-        self.assertTrue(compare_expressions(SumExpression([SumExpression([m.y[1], m.y[2]]), SumExpression([m.y[2], m.y[3]])])  ==  0, f))
-        self.assertIs(type(f.arg(0)), SumExpression)
-        self.assertEqual(f.arg(0).nargs(), 2)
-        self.assertIs(type(f.arg(0).arg(0)), SumExpression)
-        self.assertEqual(f.arg(0).arg(0).nargs(), 2)
-        self.assertIs(type(f.arg(0).arg(1)), SumExpression)
-        self.assertEqual(f.arg(0).arg(1).nargs(), 2)
+        assertExpressionsEqual(self, m.y[1]*m.y[2] + m.y[2]*m.y[3]  ==  0, e)
+        assertExpressionsEqual(
+            self,
+            SumExpression([
+                LinearExpression([
+                    MonomialTermExpression((1, m.y[1])),
+                    MonomialTermExpression((1, m.y[2]))
+                ]),
+                LinearExpression([
+                    MonomialTermExpression((1, m.y[2])),
+                    MonomialTermExpression((1, m.y[3]))
+                ])
+            ]) == 0,
+            f)
 
     def test_replace_nested(self):
         m = ConcreteModel()
@@ -760,9 +839,10 @@ class WalkerTests_ReplaceInternal(unittest.TestCase):
 
         e = m.y[1]*m.y[2]*m.y[2]*m.y[3]  ==  0
         f = ReplacementWalker_ReplaceInternal().dfs_postorder_stack(e)
-        self.assertTrue(compare_expressions(m.y[1]*m.y[2]*m.y[2]*m.y[3]  ==  0, e))
-        self.assertTrue(compare_expressions(m.y[1] + m.y[2] + m.y[2] + m.y[3]  ==  0, f))
-        self.assertIs(type(f.arg(0)), SumExpression)
+        assertExpressionsEqual(self, m.y[1]*m.y[2]*m.y[2]*m.y[3]  ==  0, e)
+        assertExpressionsEqual(
+            self, m.y[1] + m.y[2] + m.y[2] + m.y[3]  ==  0, f)
+        self.assertIs(type(f.arg(0)), LinearExpression)
         self.assertEqual(f.arg(0).nargs(), 4)
 
 
@@ -778,8 +858,8 @@ class TestReplacementWithNPV(unittest.TestCase):
         e2 = replace_expressions(e1, {id(m.p1): m.p2})
         e3 = replace_expressions(e1, {id(m.p1): m.x})
 
-        self.assertTrue(compare_expressions(e2, m.p2 + 2))
-        self.assertTrue(compare_expressions(e3, m.x + 2))
+        assertExpressionsEqual(self, e2, m.p2 + 2)
+        assertExpressionsEqual(self, e3, SumExpression([m.x, 2]))
 
     def test_npv_negation(self):
         m = ConcreteModel()
@@ -791,8 +871,8 @@ class TestReplacementWithNPV(unittest.TestCase):
         e2 = replace_expressions(e1, {id(m.p1): m.p2})
         e3 = replace_expressions(e1, {id(m.p1): m.x})
 
-        self.assertTrue(compare_expressions(e2, -m.p2))
-        self.assertTrue(compare_expressions(e3, NegationExpression([m.x])))
+        assertExpressionsEqual(self, e2, -m.p2)
+        assertExpressionsEqual(self, e3, NegationExpression([m.x]))
 
     def test_npv_pow(self):
         m = ConcreteModel()
@@ -804,8 +884,8 @@ class TestReplacementWithNPV(unittest.TestCase):
         e2 = replace_expressions(e1, {id(m.p1): m.p2})
         e3 = replace_expressions(e1, {id(m.p1): m.x})
 
-        self.assertTrue(compare_expressions(e2, m.p2**3))
-        self.assertTrue(compare_expressions(e3, m.x**3))
+        assertExpressionsEqual(self, e2, m.p2**3)
+        assertExpressionsEqual(self, e3, m.x**3)
 
     def test_npv_product(self):
         m = ConcreteModel()
@@ -817,8 +897,8 @@ class TestReplacementWithNPV(unittest.TestCase):
         e2 = replace_expressions(e1, {id(m.p1): m.p2})
         e3 = replace_expressions(e1, {id(m.p1): m.x})
 
-        self.assertTrue(compare_expressions(e2, m.p2*3))
-        self.assertTrue(compare_expressions(e3, ProductExpression([m.x, 3])))
+        assertExpressionsEqual(self, e2, m.p2*3)
+        assertExpressionsEqual(self, e3, ProductExpression([m.x, 3]))
 
     def test_npv_div(self):
         m = ConcreteModel()
@@ -830,8 +910,8 @@ class TestReplacementWithNPV(unittest.TestCase):
         e2 = replace_expressions(e1, {id(m.p1): m.p2})
         e3 = replace_expressions(e1, {id(m.p1): m.x})
 
-        self.assertTrue(compare_expressions(e2, m.p2/3))
-        self.assertTrue(compare_expressions(e3, DivisionExpression([m.x, 3])))
+        assertExpressionsEqual(self, e2, m.p2/3)
+        assertExpressionsEqual(self, e3, DivisionExpression((m.x, 3)))
 
     def test_npv_unary(self):
         m = ConcreteModel()
@@ -843,8 +923,8 @@ class TestReplacementWithNPV(unittest.TestCase):
         e2 = replace_expressions(e1, {id(m.p1): m.p2})
         e3 = replace_expressions(e1, {id(m.p1): m.x})
 
-        self.assertTrue(compare_expressions(e2, sin(m.p2)))
-        self.assertTrue(compare_expressions(e3, sin(m.x)))
+        assertExpressionsEqual(self, e2, sin(m.p2))
+        assertExpressionsEqual(self, e3, sin(m.x))
 
     def test_npv_abs(self):
         m = ConcreteModel()
@@ -856,8 +936,8 @@ class TestReplacementWithNPV(unittest.TestCase):
         e2 = replace_expressions(e1, {id(m.p1): m.p2})
         e3 = replace_expressions(e1, {id(m.p1): m.x})
 
-        self.assertTrue(compare_expressions(e2, abs(m.p2)))
-        self.assertTrue(compare_expressions(e3, abs(m.x)))
+        assertExpressionsEqual(self, e2, abs(m.p2))
+        assertExpressionsEqual(self, e3, abs(m.x))
 
 
 class BaseStreamBasedVisitorTests(object):
@@ -866,7 +946,14 @@ class BaseStreamBasedVisitorTests(object):
         m.x = Var()
         m.y = Var()
         m.z = Var()
-        self.e = m.x**2 + m.y + m.z*(m.x+m.y)
+        # Note: we do not use the operator overloading to generate the
+        # expression so that the structure is constant even when we make
+        # adjustments to the expression generators
+        self.e = SumExpression([
+            PowExpression((m.x, 2)),
+            m.y,
+            ProductExpression((m.z, SumExpression([m.x, m.y])))
+        ])
 
     def test_bad_args(self):
         with self.assertRaisesRegex(

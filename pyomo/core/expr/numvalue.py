@@ -14,6 +14,7 @@ __all__ = ('value', 'is_constant', 'is_fixed', 'is_variable_type',
            'native_numeric_types', 'native_types', 'nonpyomo_leaf_types',
            'polynomial_degree')
 
+import collections
 import sys
 import logging
 
@@ -40,13 +41,15 @@ from pyomo.core.expr.expr_errors import TemplateExpressionError
 
 logger = logging.getLogger('pyomo.core')
 
-
-def _generate_sum_expression(etype, _self, _other):
-    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
-def _generate_mul_expression(etype, _self, _other):
-    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
-def _generate_other_expression(etype, _self, _other):
-    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
+# Stub in the dispatchers
+def _incomplete_import(*args):
+    raise RuntimeError("incomplete import of Pyomo expression system")
+_add_dispatcher = collections.defaultdict(_incomplete_import)
+_mul_dispatcher = collections.defaultdict(_incomplete_import)
+_div_dispatcher = collections.defaultdict(_incomplete_import)
+_pow_dispatcher = collections.defaultdict(_incomplete_import)
+_neg_dispatcher = collections.defaultdict(_incomplete_import)
+_abs_dispatcher = collections.defaultdict(_incomplete_import)
 def _generate_relational_expression(etype, lhs, rhs):
     raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
 
@@ -659,7 +662,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self + other
         """
-        return _generate_sum_expression(_add,self,other)
+        return _add_dispatcher[self.__class__, other.__class__](self, other)
 
     def __sub__(self,other):
         """
@@ -669,7 +672,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self - other
         """
-        return _generate_sum_expression(_sub,self,other)
+        return self.__add__(-other)
 
     def __mul__(self,other):
         """
@@ -679,7 +682,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self * other
         """
-        return _generate_mul_expression(_mul,self,other)
+        return _mul_dispatcher[self.__class__, other.__class__](self, other)
 
     def __div__(self,other):
         """
@@ -689,7 +692,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self / other
         """
-        return _generate_mul_expression(_div,self,other)
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
 
     def __truediv__(self,other):
         """
@@ -699,7 +702,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self / other
         """
-        return _generate_mul_expression(_div,self,other)
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
 
     def __pow__(self,other):
         """
@@ -709,7 +712,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self ** other
         """
-        return _generate_other_expression(_pow,self,other)
+        return _pow_dispatcher[self.__class__, other.__class__](self, other)
 
     def __radd__(self,other):
         """
@@ -719,7 +722,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             other + self
         """
-        return _generate_sum_expression(_radd,self,other)
+        return _add_dispatcher[other.__class__, self.__class__](other, self)
 
     def __rsub__(self,other):
         """
@@ -729,7 +732,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             other - self
         """
-        return _generate_sum_expression(_rsub,self,other)
+        return other + (-self)
 
     def __rmul__(self,other):
         """
@@ -741,7 +744,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
         when other is not a :class:`NumericValue <pyomo.core.expr.numvalue.NumericValue>` object.
         """
-        return _generate_mul_expression(_rmul,self,other)
+        return _mul_dispatcher[other.__class__, self.__class__](other, self)
 
     def __rdiv__(self,other):
         """Binary division
@@ -750,7 +753,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             other / self
         """
-        return _generate_mul_expression(_rdiv,self,other)
+        return _div_dispatcher[other.__class__, self.__class__](other, self)
 
     def __rtruediv__(self,other):
         """
@@ -760,7 +763,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             other / self
         """
-        return _generate_mul_expression(_rdiv,self,other)
+        return _div_dispatcher[other.__class__, self.__class__](other, self)
 
     def __rpow__(self,other):
         """
@@ -770,7 +773,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             other ** self
         """
-        return _generate_other_expression(_rpow,self,other)
+        return _pow_dispatcher[other.__class__, self.__class__](other, self)
 
     def __iadd__(self,other):
         """
@@ -780,7 +783,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self += other
         """
-        return _generate_sum_expression(_iadd,self,other)
+        return _add_dispatcher[self.__class__, other.__class__](self, other)
 
     def __isub__(self,other):
         """
@@ -790,7 +793,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self -= other
         """
-        return _generate_sum_expression(_isub,self,other)
+        return self.__iadd__(-other)
 
     def __imul__(self,other):
         """
@@ -800,7 +803,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self *= other
         """
-        return _generate_mul_expression(_imul,self,other)
+        return _mul_dispatcher[self.__class__, other.__class__](self, other)
 
     def __idiv__(self,other):
         """
@@ -810,7 +813,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self /= other
         """
-        return _generate_mul_expression(_idiv,self,other)
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
 
     def __itruediv__(self,other):
         """
@@ -820,7 +823,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self /= other
         """
-        return _generate_mul_expression(_idiv,self,other)
+        return _div_dispatcher[self.__class__, other.__class__](self, other)
 
     def __ipow__(self,other):
         """
@@ -830,7 +833,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             self **= other
         """
-        return _generate_other_expression(_ipow,self,other)
+        return _pow_dispatcher[self.__class__, other.__class__](self, other)
 
     def __neg__(self):
         """
@@ -840,7 +843,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             - self
         """
-        return _generate_sum_expression(_neg, self, None)
+        return _neg_dispatcher[self.__class__](self)
 
     def __pos__(self):
         """
@@ -859,7 +862,7 @@ explicitly resolving the numeric value using the Pyomo value() function.
 
             abs(self)
         """
-        return _generate_other_expression(_abs,self, None)
+        return _abs_dispatcher[self.__class__](self)
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         return NumericNDArray.__array_ufunc__(

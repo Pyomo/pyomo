@@ -26,6 +26,7 @@ from pyomo.environ import (ConcreteModel, Set, Objective,
                            inequality)
 
 import pyomo.core.expr.current as EXPR
+from pyomo.core.expr.compare import assertExpressionsEqual
 
 solvers = check_available_solvers('glpk')
 
@@ -88,12 +89,15 @@ class TestAddSlacks(unittest.TestCase):
         
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 5)
-        self.assertEqual(cons.body.nargs(), 2)
-
-        self.assertIs(cons.body.arg(0), m.x)
-        self.assertIs(cons.body.arg(1).__class__, EXPR.MonomialTermExpression)
-        self.assertEqual(cons.body.arg(1).arg(0), -1)
-        self.assertIs(cons.body.arg(1).arg(1), transBlock._slack_minus_rule1)
+        assertExpressionsEqual(
+            self,
+            cons.body,
+            EXPR.LinearExpression([
+                EXPR.MonomialTermExpression((1, m.x)),
+                EXPR.MonomialTermExpression((
+                    -1, transBlock._slack_minus_rule1)),
+            ])
+        )
         
     def checkRule3(self, m):
         # check all original variables still there:
@@ -103,10 +107,14 @@ class TestAddSlacks(unittest.TestCase):
         self.assertIsNone(cons.upper)
         self.assertEqual(cons.lower, 0.1)
         
-        self.assertEqual(cons.body.nargs(), 2)
-
-        self.assertIs(cons.body.arg(0), m.x)
-        self.assertIs(cons.body.arg(1), transBlock._slack_plus_rule3)
+        assertExpressionsEqual(
+            self,
+            cons.body,
+            EXPR.LinearExpression([
+                EXPR.MonomialTermExpression((1, m.x)),
+                EXPR.MonomialTermExpression((1, transBlock._slack_plus_rule3)),
+            ])
+        )
 
     def test_ub_constraint_modified(self):
         m = self.makeModel()
@@ -129,13 +137,16 @@ class TestAddSlacks(unittest.TestCase):
         self.assertEqual(cons.lower, 1)
         self.assertEqual(cons.upper, 3)
 
-        self.assertEqual(cons.body.nargs(), 3)
-
-        self.assertIs(cons.body.arg(0), m.y)
-        self.assertIs(cons.body.arg(1), transBlock._slack_plus_rule2)
-        self.assertIs(cons.body.arg(2).__class__, EXPR.MonomialTermExpression)
-        self.assertEqual(cons.body.arg(2).arg(0), -1)
-        self.assertIs(cons.body.arg(2).arg(1), transBlock._slack_minus_rule2)
+        assertExpressionsEqual(
+            self,
+            cons.body,
+            EXPR.LinearExpression([
+                EXPR.MonomialTermExpression((1, m.y)),
+                EXPR.MonomialTermExpression((1, transBlock._slack_plus_rule2)),
+                EXPR.MonomialTermExpression((
+                    -1, transBlock._slack_minus_rule2)),
+            ])
+        )
 
     def test_obj_deactivated(self):
         m = self.makeModel()
@@ -155,12 +166,16 @@ class TestAddSlacks(unittest.TestCase):
         self.assertIsInstance(obj, Objective)
         self.assertTrue(obj.active)
         
-        self.assertEqual(obj.expr.nargs(), 4)
-
-        self.assertIs(obj.expr.arg(0), transBlock._slack_minus_rule1)
-        self.assertIs(obj.expr.arg(1), transBlock._slack_plus_rule2)
-        self.assertIs(obj.expr.arg(2), transBlock._slack_minus_rule2)
-        self.assertIs(obj.expr.arg(3), transBlock._slack_plus_rule3)
+        assertExpressionsEqual(
+            self,
+            obj.expr,
+            EXPR.LinearExpression([
+                EXPR.MonomialTermExpression((1, transBlock._slack_minus_rule1)),
+                EXPR.MonomialTermExpression((1, transBlock._slack_plus_rule2)),
+                EXPR.MonomialTermExpression((1, transBlock._slack_minus_rule2)),
+                EXPR.MonomialTermExpression((1, transBlock._slack_plus_rule3)),
+            ])
+        )
 
     def test_badModel_err(self):
         model = ConcreteModel()
@@ -267,9 +282,14 @@ class TestAddSlacks(unittest.TestCase):
     def checkTargetsObj(self, m):
         transBlock = m._core_add_slack_variables
         obj = transBlock.component("_slack_objective")
-        self.assertEqual(obj.expr.nargs(), 2)
-        self.assertIs(obj.expr.arg(0), transBlock._slack_minus_rule1)
-        self.assertIs(obj.expr.arg(1), transBlock._slack_plus_rule3)
+        assertExpressionsEqual(
+            self,
+            obj.expr,
+            EXPR.LinearExpression([
+                EXPR.MonomialTermExpression((1, transBlock._slack_minus_rule1)),
+                EXPR.MonomialTermExpression((1, transBlock._slack_plus_rule3)),
+            ])
+        )
 
     def test_target_objective(self):
         m = self.makeModel()
@@ -378,15 +398,17 @@ class TestAddSlacks(unittest.TestCase):
         self.assertEqual(c.lower, 5)
         self.assertEqual(c.upper, 9)
 
-        self.assertEqual(c.body.nargs(), 4)
-
-        self.assertIs(c.body.arg(0), m.x)
-        self.assertIs(c.body.arg(1).arg(0), -2)
-        self.assertIs(c.body.arg(1).arg(1), m.y)
-        self.assertIs(c.body.arg(2), transBlock._slack_plus_rule4)
-        self.assertIs(c.body.arg(3).__class__, EXPR.MonomialTermExpression)
-        self.assertEqual(c.body.arg(3).arg(0), -1)
-        self.assertIs(c.body.arg(3).arg(1), transBlock._slack_minus_rule4)
+        assertExpressionsEqual(
+            self,
+            c.body,
+            EXPR.LinearExpression([
+                EXPR.MonomialTermExpression((1, m.x)),
+                EXPR.MonomialTermExpression((-2, m.y)),
+                EXPR.MonomialTermExpression((1, transBlock._slack_plus_rule4)),
+                EXPR.MonomialTermExpression((
+                    -1, transBlock._slack_minus_rule4)),
+            ])
+        )
 
     def test_transformed_constraint_scalar_body(self):
         m = self.makeModel()
@@ -475,13 +497,18 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         transBlock = m._core_add_slack_variables
         obj = transBlock.component("_slack_objective")
         self.assertIsInstance(obj, Objective)
-        self.assertEqual(obj.expr.nargs(), 3)
-        self.assertIs(obj.expr.arg(0), 
-                      transBlock.component("_slack_plus_rule1[1]"))
-        self.assertIs(obj.expr.arg(1), 
-                      transBlock.component("_slack_plus_rule1[2]"))
-        self.assertIs(obj.expr.arg(2), 
-                      transBlock.component("_slack_plus_rule1[3]"))
+        assertExpressionsEqual(
+            self,
+            obj.expr,
+            EXPR.LinearExpression([
+                EXPR.MonomialTermExpression((
+                    1, transBlock.component("_slack_plus_rule1[1]"))),
+                EXPR.MonomialTermExpression((
+                    1, transBlock.component("_slack_plus_rule1[2]"))),
+                EXPR.MonomialTermExpression((
+                    1, transBlock.component("_slack_plus_rule1[3]"))),
+            ])
+        )
 
     def test_indexedtarget_objective(self):
         m = self.makeModel()
@@ -506,13 +533,18 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         self.assertEqual(c.lower, 4)
         self.assertIsNone(c.upper)
 
-        self.assertEqual(c.body.nargs(), 2)
-        self.assertEqual(c.body.arg(0).arg(0), 2)
-        self.assertIs(c.body.arg(0).arg(1), m.x[i])
-        self.assertIs(
-            c.body.arg(1), 
-            m._core_add_slack_variables.component(
-                "_slack_plus_rule1[%s]" % i))
+        assertExpressionsEqual(
+            self,
+            c.body,
+            EXPR.LinearExpression([
+                EXPR.MonomialTermExpression((2, m.x[i])),
+                EXPR.MonomialTermExpression((
+                    1, 
+                    m._core_add_slack_variables.component(
+                        "_slack_plus_rule1[%s]" % i)
+                ))
+            ])
+        )
 
     def test_indexedtarget_targets_transformed(self):
         m = self.makeModel()

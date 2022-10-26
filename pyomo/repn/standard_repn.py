@@ -277,44 +277,19 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
         # The expression is linear
         #
         elif expr.__class__ is EXPR.LinearExpression:
+            linear_coefs = {}
+            C_ = 0
             if compute_values:
-                C_ = EXPR.evaluate_expression(expr.constant)
-            else:
-                C_ = expr.constant
-            if compute_values:
-                linear_coefs = {}
-                for c,v in zip(expr.linear_coefs, expr.linear_vars):
-                    if c.__class__ in native_numeric_types:
-                        cval = c
-                    elif c.is_expression_type():
-                        cval = EXPR.evaluate_expression(c)
-                    else:
-                        cval = value(c)
-                    if v.fixed:
-                        C_ += cval * v.value
-                    else:
+                for arg in expr.args:
+                    if arg.__class__ is EXPR.MonomialTermExpression:
+                        c, v = arg.args
+                        if c.__class__ not in native_numeric_types:
+                            c = EXPR.evaluate_expression(c)
+                        if v.fixed:
+                            C_ += c * v.value
+                            continue
                         id_ = id(v)
-                        if not id_ in idMap[None]:
-                            key = len(idMap) - 1
-                            idMap[None][id_] = key
-                            idMap[key] = v
-                        else:
-                            key = idMap[None][id_]
-                        if key in linear_coefs:
-                            linear_coefs[key] += cval
-                        else:
-                            linear_coefs[key] = cval
-                keys = list(linear_coefs.keys())
-                repn.linear_vars = tuple(idMap[key] for key in keys)
-                repn.linear_coefs = tuple(linear_coefs[key] for key in keys)
-            else:
-                linear_coefs = {}
-                for c,v in zip(expr.linear_coefs, expr.linear_vars):
-                    if v.fixed:
-                        C_ += c*v
-                    else:
-                        id_ = id(v)
-                        if not id_ in idMap[None]:
+                        if id_ not in idMap[None]:
                             key = len(idMap) - 1
                             idMap[None][id_] = key
                             idMap[key] = v
@@ -324,9 +299,30 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             linear_coefs[key] += c
                         else:
                             linear_coefs[key] = c
-                keys = list(linear_coefs.keys())
-                repn.linear_vars = tuple(idMap[key] for key in keys)
-                repn.linear_coefs = tuple(linear_coefs[key] for key in keys)
+                    elif arg.__class__ in native_numeric_types:
+                        C_ += arg
+                    else:
+                        C_ += EXPR.evaluate_expression(arg)
+            else: # compute_values == False
+                for arg in expr.args:
+                    if arg.__class__ is EXPR.MonomialTermExpression:
+                        c, v = arg.args
+                        id_ = id(v)
+                        if id_ not in idMap[None]:
+                            key = len(idMap) - 1
+                            idMap[None][id_] = key
+                            idMap[key] = v
+                        else:
+                            key = idMap[None][id_]
+                        if key in linear_coefs:
+                            linear_coefs[key] += c
+                        else:
+                            linear_coefs[key] = c
+                    else:
+                        C_ += arg
+            keys = list(linear_coefs.keys())
+            repn.linear_vars = tuple(idMap[key] for key in keys)
+            repn.linear_coefs = tuple(linear_coefs[key] for key in keys)
             repn.constant = C_
             return repn
 

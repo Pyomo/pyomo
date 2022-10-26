@@ -20,16 +20,11 @@ from .current import (
     NPV_AbsExpression, NumericValue,
     RangedExpression, InequalityExpression, EqualityExpression,
 )
+from .template_expr import GetItemExpression
 from typing import List
 from pyomo.common.errors import PyomoException
-
-
-def handle_linear_expression(node: LinearExpression, pn: List):
-    pn.append((type(node), 2*len(node.linear_vars) + 1))
-    pn.append(node.constant)
-    pn.extend(node.linear_coefs)
-    pn.extend(node.linear_vars)
-    return tuple()
+from pyomo.common.formatting import tostr
+from pyomo.common.numeric_types import native_types
 
 
 def handle_expression(node: ExpressionBase, pn: List):
@@ -54,7 +49,7 @@ def handle_external_function_expression(node: ExternalFunctionExpression, pn: Li
 
 
 handler = dict()
-handler[LinearExpression] = handle_linear_expression
+handler[LinearExpression] = handle_expression
 handler[SumExpression] = handle_expression
 handler[MonomialTermExpression] = handle_expression
 handler[ProductExpression] = handle_expression
@@ -76,6 +71,7 @@ handler[NPV_AbsExpression] = handle_unary_expression
 handler[RangedExpression] = handle_expression
 handler[InequalityExpression] = handle_expression
 handler[EqualityExpression] = handle_expression
+handler[GetItemExpression] = handle_expression
 
 
 class PrefixVisitor(StreamBasedExpressionVisitor):
@@ -185,3 +181,36 @@ def compare_expressions(expr1, expr2, include_named_exprs=True):
     except PyomoException:
         res = False
     return res
+
+def assertExpressionsEqual(self, a, b, include_named_exprs=True):
+    prefix_a = convert_expression_to_prefix_notation(a, include_named_exprs)
+    prefix_b = convert_expression_to_prefix_notation(b, include_named_exprs)
+    try:
+        self.assertEqual(len(prefix_a), len(prefix_b))
+        for _a, _b in zip(prefix_a, prefix_b):
+            self.assertIs(_a.__class__, _b.__class__)
+            self.assertEqual(_a, _b)
+    except (PyomoException, AssertionError):
+        self.fail(f"Expressions not equal:\n\t"
+                  f"{tostr(prefix_a)}\n\t!=\n\t{tostr(prefix_b)}")
+
+def assertExpressionsStructurallyEqual(self, a, b, include_named_exprs=True):
+    prefix_a = convert_expression_to_prefix_notation(a, include_named_exprs)
+    prefix_b = convert_expression_to_prefix_notation(b, include_named_exprs)
+    for prefix in (prefix_a, prefix_b):
+        for i, v in enumerate(prefix):
+            if type(v) in native_types:
+                continue
+            if type(v) is tuple:
+                if len(v) == 3:
+                    prefix[i] = v[:2] + (str(v[2]),)
+                continue
+            prefix[i] = str(v)
+    try:
+        self.assertEqual(len(prefix_a), len(prefix_b))
+        for _a, _b in zip(prefix_a, prefix_b):
+            self.assertIs(_a.__class__, _b.__class__)
+            self.assertEqual(_a, _b)
+    except PyomoException:
+        self.fail(f"Expressions not structurally equal:\n\t"
+                  f"{tostr(prefix_a)}\n\t!=\n\t{tostr(prefix_b)}")

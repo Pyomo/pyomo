@@ -11,8 +11,10 @@
 
 from __future__ import division
 
-import math
+import collections
+import enum
 import logging
+import math
 from operator import attrgetter
 from itertools import islice
 
@@ -25,9 +27,7 @@ from .expr_common import (
     OperatorAssociativity,
     ExpressionType,
     clone_counter,
-    _add, _sub, _mul, _div,
-    _pow, _neg, _abs, _inplace,
-    _unary
+    _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary
 )
 from .base import ExpressionBase
 from .numvalue import (
@@ -38,7 +38,7 @@ from .numvalue import (
     as_numeric,
     value,
     is_potentially_variable,
-    is_constant,
+    check_if_numeric_type,
 )
 
 from .visitor import (
@@ -47,47 +47,57 @@ from .visitor import (
 )
 
 
-class nonlinear_expression(object):
-    """ Context manager for mutable sums.
+class mutable_expression(object):
+    """Context manager for mutable sums.
 
-    This context manager is used to compute a sum while
-    treating the summation as a mutable object.
+    This context manager is used to compute a sum while treating the
+    summation as a mutable object.
+
     """
 
+    def __enter__(self):
+        self.e = _MutableNPVSumExpression([])
+        return self.e
+
+    def __exit__(self, *args):
+        if isinstance(self.e, _MutableSumExpression):
+            self.e.make_immutable()
+
+
+class nonlinear_expression(mutable_expression):
+    """Context manager for mutable nonlinear sums.
+
+    This context manager is used to compute a general nonlinear sum
+    while treating the summation as a mutable object.
+
+    Note
+    ----
+
+    The preferred context manager is :py:class:`mutable_expression`, as
+    the return type will be the most specific of
+    :py:class:`SumExpression`, :py:class:`LinearExpression`, or
+    :py:class:`NPV_SumExpression`.  This contest manager will *always*
+    return a :py:class:`SumExpression`.
+
+    """
     def __enter__(self):
         self.e = _MutableSumExpression([])
         return self.e
 
-    def __exit__(self, *args):
-        if self.e.__class__ == _MutableSumExpression:
-            self.e.__class__ = SumExpression
-
-
-class linear_expression(object):
-    """ Context manager for mutable linear sums.
+class linear_expression(mutable_expression):
+    """Context manager for mutable linear sums.
 
     This context manager is used to compute a linear sum while
     treating the summation as a mutable object.
+
+    Note
+    ----
+
+    The preferred context manager is :py:class:`mutable_expression`.
+    :py:class:`linear_expression` is an alias to
+    :py:class:`mutable_expression` provided for backwards compatibility.
+
     """
-
-    def __enter__(self):
-        """
-        The :class:`_MutableLinearExpression <pyomo.core.expr.current._MutableLinearExpression>`
-        class is the context that is used to to
-        hold the mutable linear sum.
-        """
-        self.e = _MutableLinearExpression()
-        return self.e
-
-    def __exit__(self, *args):
-        """
-        The context is changed to the
-        :class:`LinearExpression <pyomo.core.expr.current.LinearExpression>`
-        class to transform the context into a nonmutable
-        form.
-        """
-        if self.e.__class__ == _MutableLinearExpression:
-            self.e.__class__ = LinearExpression
 
 
 #-------------------------------------------------------
@@ -232,6 +242,15 @@ class NPV_Mixin(object):
         assert len(cls) == 1
         return cls[0]
 
+    #
+    # Special cases: unary operators on NPV expressions are NPV
+    #
+    def __neg__(self):
+        return NPV_NegationExpression((self,))
+
+    def __abs__(self):
+        return NPV_AbsExpression((self,))
+
 
 class NegationExpression(NumericExpression):
     """
@@ -267,9 +286,16 @@ class NegationExpression(NumericExpression):
     def _apply_operation(self, result):
         return -result[0]
 
+    def __neg__(self):
+        return self._args_[0]
+
 
 class NPV_NegationExpression(NPV_Mixin, NegationExpression):
     __slots__ = ()
+
+    # Because NPV also defines __neg__ we need to override it here, too
+    def __neg__(self):
+        return self._args_[0]
 
 
 class ExternalFunctionExpression(NumericExpression):
@@ -556,28 +582,39 @@ class NPV_DivisionExpression(NPV_Mixin, DivisionExpression):
     __slots__ = ()
 
 
-class SumExpressionBase(NumericExpression):
+class SumExpression(NumericExpression):
     """
-    A base class for simple summation of expressions
+    Sum expression::
 
-    The class hierarchy for summation is different than for other
-    expression types.  For example, ProductExpression defines
-    the class for representing binary products, and sub-classes are
-    specializations of that class.
+        x + y + ...
 
-    By contrast, the SumExpressionBase is not directly used to
-    represent expressions.  Rather, this base class provides
-    commonly used methods and data.  The reason is that some
-    subclasses of SumExpressionBase are binary while others
-    are n-ary.
+    This node represents an "n-ary" sum expression over at least 2 arguments.
 
-    Thus, developers will need to treat checks for summation
-    classes differently, depending on whether the binary/n-ary
-    operations are different.
+    Args:
+        args (list): Children nodes
+
     """
 
-    __slots__ = ()
+    __slots__ = ('_nargs',)
     PRECEDENCE = 6
+
+    def __init__(self, args):
+        self._args_ = args
+        self._nargs = len(args)
+
+    def nargs(self):
+        return self._nargs
+
+    @property
+    def args(self):
+        if len(self._args_) == self._nargs:
+            return self._args_
+        else:
+            return self._args_[:self._nargs]
+
+    def create_node_with_local_data(self, args, classtype=None):
+        # TODO: do we need to copy the args list here?
+        return super().create_node_with_local_data(list(args), classtype)
 
     def getname(self, *args, **kwds):
         return 'sum'
@@ -611,47 +648,154 @@ class SumExpressionBase(NumericExpression):
                 values[i] = ' + ' + val
         return ''.join(values)
 
+    def add(self, new_arg):
+        self += new_arg
+        return self
 
-class SumExpression(SumExpressionBase):
-    """
-    Sum expression::
 
-        x + y
+# TODO: deprecate this class name
+SumExpressionBase = SumExpression
+
+
+class LinearExpression(SumExpression):
+    """An expression object for linear polynomials.
+
+    This is a derived :py:class`SumExpression` that guarantees all
+    arguments are either not potentially variable (e.g., native types,
+    Params, or NPV expressions) OR :py:class:`MonomialTermExpression`
+    objects.
 
     Args:
-        args (list): Children nodes
+        args (tuple): Children nodes
+
     """
-    __slots__ = ('_nargs','_shared_args')
+    __slots__ = ()
+
     PRECEDENCE = 6
+    _allowable_linear_expr_arg_types = set([MonomialTermExpression])
+    _cache = (None, None, None, None)
 
-    def __init__(self, args):
-        self._args_ = args
-        self._shared_args = False
-        self._nargs = len(self._args_)
+    def __init__(self, args=None, constant=None, linear_coefs=None, linear_vars=None):
+        """A linear expression of the form `const + sum_i(c_i*x_i).
 
-    def add(self, new_arg):
-        if new_arg.__class__ in native_numeric_types and new_arg == 0:
-            return self
-        # Clone 'self', because SumExpression are immutable
-        self._shared_args = True
-        self = self.__class__(self._args_)
-        #
-        if new_arg.__class__ is SumExpression or new_arg.__class__ is _MutableSumExpression:
-            self._args_.extend( islice(new_arg._args_, new_arg._nargs) )
-        elif not new_arg is None:
-            self._args_.append(new_arg)
+        You can specify args OR (constant, linear_coefs, and
+        linear_vars).  If args is provided, it should be a list that
+        contains the constant, followed by a series of
+        :py:class:`MonomialTermExpression` objects. Alternatively, you
+        can specify the constant, the list of linear_coefs and the list
+        of linear_vars separately. Note that these lists are NOT copied.
+
+        """
+        # I am not sure why LinearExpression allows omitting args, but
+        # it does.  If they are provided, they should be the (non-zero)
+        # constant followed by MonomialTermExpressions.
+        if args:
+            if any(arg is not None for arg in
+                   (constant, linear_coefs, linear_vars)):
+                raise ValueError("Cannot specify both args and any of "
+                                 "{constant, linear_coefs, or linear_vars}")
+            # if len(args) > 1 and (args[1].__class__ in native_types
+            #                       or not args[1].is_potentially_variable()):
+            #     deprecation_warning(
+            #         "LinearExpression has been updated to expect args= to "
+            #         "be a constant followed by MonomialTermExpressions.  "
+            #         "The older format (`[const, coefficient_1, ..., "
+            #         "variable_1, ...]`) is deprecated.", version='6.2')
+            #     args = args[:1] + list(map(
+            #         MonomialTermExpression,
+            #         zip(args[1:1+len(args)//2], args[1+len(args)//2:])))
+            self._args_ = args
+        else:
+            self._args_ = []
+            if constant:
+                self._args_.append(constant)
+            if linear_vars:
+                self._args_.extend(map(
+                    MonomialTermExpression, zip(linear_coefs, linear_vars)))
         self._nargs = len(self._args_)
-        return self
 
     def nargs(self):
         return self._nargs
 
+    def _build_cache(self):
+        const = 0
+        coef = []
+        var = []
+        for arg in self.args:
+            if arg.__class__ is MonomialTermExpression:
+                coef.append(arg._args_[0])
+                var.append(arg._args_[1])
+            else:
+                const += arg
+        LinearExpression._cache = (self, const, coef, var)
+
     @property
-    def args(self):
-        return self._args_[:self._nargs]
+    def constant(self):
+        if LinearExpression._cache[0] is not self:
+            self._build_cache()
+        return LinearExpression._cache[1]
+
+    @property
+    def linear_coefs(self):
+        if LinearExpression._cache[0] is not self:
+            self._build_cache()
+        return LinearExpression._cache[2]
+
+    @property
+    def linear_vars(self):
+        if LinearExpression._cache[0] is not self:
+            self._build_cache()
+        return LinearExpression._cache[3]
 
     def create_node_with_local_data(self, args, classtype=None):
-        return super().create_node_with_local_data(list(args), classtype)
+        if classtype is not None:
+            return classtype(args)
+        else:
+            for arg in args:
+                if arg.__class__ in self._allowable_linear_expr_arg_types:
+                    # 99% of the time, the arg type hasn't changed
+                    continue
+                elif arg.__class__ in native_numeric_types:
+                    # native numbers are OK (that's part of the constant)
+                    pass
+                elif not arg.is_potentially_variable():
+                    # NPV expressions are OK
+                    pass
+                elif arg.is_variable_type():
+                    # vars are OK, but need to be mapped to monomial terms
+                    args[i] = MonomialTermExpression((1, arg))
+                    continue
+                else:
+                    # For anything else, convert this to a general sum
+                    return SumExpression(args)
+                # We get here for new types (likely NPV types) --
+                # remember them for when they show up again
+                self._allowable_linear_expr_arg_types.add(arg.__class__)
+            return self.__class__(args)
+
+    def getname(self, *args, **kwds):
+        return 'sum'
+
+    def _to_string(self, values, verbose, smap):
+        if not values:
+            values = ['0']
+        if verbose:
+            return f"{self.getname()}({', '.join(values)})"
+
+        for i in range(1, len(values)):
+            term = values[i]
+            if term[0] not in '+-':
+                values[i] = '+ ' + term
+            elif term[1] != ' ':
+                values[i] = term[0] + ' ' + term[1:]
+        return ' '.join(values)
+
+
+class NPV_SumExpression(NPV_Mixin, SumExpression):
+    __slots__ = ()
+
+    def is_constant(self):
+        return all(arg.__class__ in native_numeric_types for arg in self.args)
 
 
 class NPV_SumExpression(NPV_Mixin, SumExpression):
@@ -700,19 +844,32 @@ class _MutableSumExpression(SumExpression):
 
     __slots__ = ()
 
-    def add(self, new_arg):
-        if new_arg.__class__ in native_numeric_types and new_arg == 0:
-            return self
-        # Do not clone 'self', because _MutableSumExpression are mutable
-        #self._shared_args = True
-        #self = self.__class__(list(self.args))
-        #
-        if new_arg.__class__ is SumExpression or new_arg.__class__ is _MutableSumExpression:
-            self._args_.extend( islice(new_arg._args_, new_arg._nargs) )
-        elif not new_arg is None:
-            self._args_.append(new_arg)
-        self._nargs = len(self._args_)
-        return self
+    def make_immutable(self):
+        self.__class__ = SumExpression
+
+    def __iadd__(self, other):
+        return _iadd_mutablesum_dispatcher[other.__class__](self, other)
+
+
+class _MutableLinearExpression(_MutableSumExpression):
+    __slots__ = ()
+
+    def make_immutable(self):
+        self.__class__ = LinearExpression
+
+    def __iadd__(self, other):
+        return _iadd_mutablelinear_dispatcher[other.__class__](self, other)
+
+
+class _MutableNPVSumExpression(_MutableLinearExpression):
+    __slots__ = ()
+
+    def make_immutable(self):
+        self.__class__ = NPV_SumExpression
+
+    def __iadd__(self, other):
+        return _iadd_mutablenpvsum_dispatcher[other.__class__](self, other)
+
 
 
 class Expr_ifExpression(NumericExpression):
@@ -801,8 +958,6 @@ class UnaryFunctionExpression(NumericExpression):
     PRECEDENCE = None
 
     def __init__(self, args, name=None, fcn=None):
-        if type(args) is not tuple:
-            args = (args,)
         self._args_ = args
         self._name = name
         self._fcn = fcn
@@ -859,264 +1014,15 @@ class NPV_AbsExpression(NPV_Mixin, AbsExpression):
     __slots__ = ()
 
 
-class LinearExpression(NumericExpression):
-    """
-    An expression object linear polynomials.
-
-    Args:
-        args (tuple): Children nodes
-    """
-    __slots__ = (
-        'constant',          # The constant term
-        'linear_coefs',      # Linear coefficients
-        'linear_vars',       # Linear variables
-        '_args_cache_',
-    )
-
-    PRECEDENCE = 6
-
-    def __init__(self, args=None, constant=None, linear_coefs=None, linear_vars=None):
-        """A linear expression of the form `const + sum_i(c_i*x_i).
-
-        You can specify args OR (constant, linear_coefs, and
-        linear_vars).  If args is provided, it should be a list that
-        contains the constant, followed by a series of
-        :py:class:`MonomialTermExpression` objects. Alternatively, you
-        can specify the constant, the list of linear_coeffs and the list
-        of linear_vars separately. Note that these lists are NOT copied.
-
-        """
-        # I am not sure why LinearExpression allows omitting args, but
-        # it does.  If they are provided, they should be the (non-zero)
-        # constant followed by MonomialTermExpressions.
-        if args:
-            if any(arg is not None for arg in
-                   (constant, linear_coefs, linear_vars)):
-                raise ValueError("Cannot specify both args and any of "
-                                 "{constant, linear_coeffs, or linear_vars}")
-            if len(args) > 1 and (args[1].__class__ in native_types
-                                  or not args[1].is_potentially_variable()):
-                deprecation_warning(
-                    "LinearExpression has been updated to expect args= to "
-                    "be a constant followed by MonomialTermExpressions.  "
-                    "The older format (`[const, coefficient_1, ..., "
-                    "variable_1, ...]`) is deprecated.", version='6.2')
-                args = args[:1] + list(map(
-                    MonomialTermExpression,
-                    zip(args[1:1+len(args)//2], args[1+len(args)//2:])))
-            self._args_ = args
-        else:
-            self.constant = constant if constant is not None else 0
-            self.linear_coefs = linear_coefs if linear_coefs else []
-            self.linear_vars = linear_vars if linear_vars else []
-            self._args_cache_ = []
-
-    def nargs(self):
-        return len(self.linear_vars) + (
-            0 if (self.constant is None
-                  or (self.constant.__class__ in native_numeric_types
-                      and not self.constant)) else 1
-        )
-
-    @property
-    def _args_(self):
-        nargs = self.nargs()
-        if len(self._args_cache_) != nargs:
-            if len(self.linear_vars) == nargs:
-                self._args_cache_ = []
-            else:
-                self._args_cache_ = [self.constant]
-            self._args_cache_.extend(
-                map(MonomialTermExpression,
-                    zip(self.linear_coefs, self.linear_vars)))
-        elif len(self.linear_vars) != nargs:
-            self._args_cache_[0] = self.constant
-        return self._args_cache_
-
-    @_args_.setter
-    def _args_(self, value):
-        self._args_cache_ = list(value)
-        if not self._args_cache_:
-            self.constant = 0
-            self.linear_coefs = []
-            self.linear_vars = []
-            return
-        if self._args_cache_[0].__class__ is not MonomialTermExpression:
-            self.constant = value[0]
-            first_var = 1
-        else:
-            self.constant = 0
-            first_var = 0
-        self.linear_coefs, self.linear_vars = zip(
-            *map(attrgetter('args'), value[first_var:]))
-        self.linear_coefs = list(self.linear_coefs)
-        self.linear_vars = list(self.linear_vars)
-
-    def create_node_with_local_data(self, args, classtype=None):
-        if classtype is not None:
-            return classtype(args)
-        else:
-            const = 0
-            new_args = []
-            for arg in args:
-                if arg.__class__ is MonomialTermExpression:
-                    new_args.append(arg)
-                elif arg.__class__ in native_types or arg.is_constant():
-                    const += arg
-                else:
-                    return SumExpression(args)
-            if not new_args:
-                return const
-            if const:
-                new_args.insert(0, const)
-            return self.__class__(new_args)
-
-    def getname(self, *args, **kwds):
-        return 'sum'
-
-    def _compute_polynomial_degree(self, result):
-        return 1 if not self.is_fixed() else 0
-
-    def _is_fixed(self, values=None):
-        return all(v.fixed for v in self.linear_vars)
-
-    def is_fixed(self):
-        return self._is_fixed()
-
-    def _to_string(self, values, verbose, smap):
-        if not values:
-            values = ['0']
-        if verbose:
-            return f"{self.getname()}({', '.join(values)})"
-
-        for i in range(1, len(values)):
-            term = values[i]
-            if term[0] not in '+-':
-                values[i] = '+ ' + term
-            elif term[1] != ' ':
-                values[i] = term[0] + ' ' + term[1:]
-        return ' '.join(values)
-
-    def is_potentially_variable(self):
-        return len(self.linear_vars) > 0
-
-    def _apply_operation(self, result):
-        return sum(result)
-
-    #@profile
-    def _combine_expr(self, etype, _other):
-        if etype == _add or etype == _sub or etype == -_add or etype == -_sub:
-            #
-            # if etype == _sub,  then _MutableLinearExpression - VAL
-            # if etype == -_sub, then VAL - _MutableLinearExpression
-            #
-            if etype == _sub:
-                omult = -1
-            else:
-                omult = 1
-            if etype == -_sub:
-                self.constant *= -1
-                for i,c in enumerate(self.linear_coefs):
-                    self.linear_coefs[i] = -c
-
-            if _other.__class__ in native_numeric_types or not _other.is_potentially_variable():
-                self.constant = self.constant + omult * _other
-            #
-            # WEH - These seem like uncommon cases, so I think we should defer processing them
-            #       until _decompose_linear_terms
-            #
-            #elif _other.__class__ is _MutableLinearExpression:
-            #    self.constant = self.constant + omult * _other.constant
-            #    for c,v in zip(_other.linear_coefs, _other.linear_vars):
-            #        self.linear_coefs.append(omult*c)
-            #        self.linear_vars.append(v)
-            #elif _other.__class__ is SumExpression or _other.__class__ is _MutableSumExpression:
-            #    for e in _other._args_:
-            #        for c,v in _decompose_linear_terms(e, multiplier=omult):
-            #            if v is None:
-            #                self.constant += c
-            #            else:
-            #                self.linear_coefs.append(c)
-            #                self.linear_vars.append(v)
-            else:
-                for c,v in _decompose_linear_terms(_other, multiplier=omult):
-                    if v is None:
-                        self.constant += c
-                    else:
-                        self.linear_coefs.append(c)
-                        self.linear_vars.append(v)
-
-        elif etype == _mul or etype == -_mul:
-            if _other.__class__ in native_numeric_types:
-                multiplier = _other
-            elif _other.is_potentially_variable():
-                if len(self.linear_vars) > 0:
-                    raise ValueError("Cannot multiply a linear expression with a variable expression")
-                #
-                # The linear expression is a constant, so re-initialize it with
-                # a single term that multiplies the expression by the constant value.
-                #
-                c_ = self.constant
-                self.constant = 0
-                for c,v in _decompose_linear_terms(_other):
-                    if v is None:
-                        self.constant = c*c_
-                    else:
-                        self.linear_vars.append(v)
-                        self.linear_coefs.append(c*c_)
-                return self
-            else:
-                multiplier = _other
-
-            if multiplier.__class__ in native_numeric_types and multiplier == 0:
-                self.constant = 0
-                self.linear_vars = []
-                self.linear_coefs = []
-            else:
-                self.constant *= multiplier
-                for i,c in enumerate(self.linear_coefs):
-                    self.linear_coefs[i] = c*multiplier
-
-        elif etype == _div:
-            if _other.__class__ in native_numeric_types:
-                divisor = _other
-            elif _other.is_potentially_variable():
-                raise ValueError("Unallowed operation on linear expression: division with a variable RHS")
-            else:
-                divisor = _other
-            self.constant /= divisor
-            for i,c in enumerate(self.linear_coefs):
-                self.linear_coefs[i] = c/divisor
-
-        elif etype == -_div:
-            if self.is_potentially_variable():
-                raise ValueError("Unallowed operation on linear expression: division with a variable RHS")
-            return _other / self.constant
-
-        elif etype == _neg:
-            self.constant *= -1
-            for i,c in enumerate(self.linear_coefs):
-                self.linear_coefs[i] = - c
-
-        else:
-            raise ValueError("Unallowed operation on mutable linear expression: %d" % etype)    #pragma: no cover
-
-        return self
-
-
-class _MutableLinearExpression(LinearExpression):
-    __slots__ = ()
-
-
-#-------------------------------------------------------
+#-----------------------------------------------------------------
 #
-# Functions used to generate expressions
+# Functions for decomposing a linear expression into linear terms
 #
-#-------------------------------------------------------
+#-----------------------------------------------------------------
+
 
 def decompose_term(expr):
-    """
-    A function that returns a tuple consisting of (1) a flag indicated
+    """A function that returns a tuple consisting of (1) a flag indicated
     whether the expression is linear, and (2) a list of tuples that
     represents the terms in the linear expression.
 
@@ -1124,18 +1030,19 @@ def decompose_term(expr):
         expr (expression): The root node of an expression tree
 
     Returns:
-        A tuple with the form ``(flag, list)``.  If :attr:`flag` is :const:`False`, then
-        a nonlinear term has been found, and :const:`list` is :const:`None`.
-        Otherwise, :const:`list` is a list of tuples: ``(coef, value)``.
-        If :attr:`value` is :const:`None`, then this
-        represents a constant term with value :attr:`coef`.  Otherwise,
-        :attr:`value` is a variable object, and :attr:`coef` is the
-        numeric coefficient.
+        A tuple with the form ``(flag, list)``.  If :attr:`flag` is
+        :const:`False`, then a nonlinear term has been found, and
+        :const:`list` is :const:`None`.  Otherwise, :const:`list` is a
+        list of tuples: ``(coef, value)``.  If :attr:`value` is
+        :const:`None`, then this represents a constant term with value
+        :attr:`coef`.  Otherwise, :attr:`value` is a variable object,
+        and :attr:`coef` is the numeric coefficient.
+
     """
     if expr.__class__ in nonpyomo_leaf_types or not expr.is_potentially_variable():
-        return True, [(expr,None)]
+        return True, [(expr, None)]
     elif expr.is_variable_type():
-        return True, [(1,expr)]
+        return True, [(1, expr)]
     else:
         try:
             terms = [t_ for t_ in _decompose_linear_terms(expr)]
@@ -1143,10 +1050,9 @@ def decompose_term(expr):
         except LinearDecompositionError:
             return False, None
 
-class LinearDecompositionError(Exception):
 
-    def __init__(self, message):
-        super(LinearDecompositionError, self).__init__(message)
+class LinearDecompositionError(Exception):
+    pass
 
 
 def _decompose_linear_terms(expr, multiplier=1):
@@ -1167,42 +1073,119 @@ def _decompose_linear_terms(expr, multiplier=1):
     Raises:
         :class:`LinearDecompositionError` if a nonlinear term is encountered.
     """
-    if expr.__class__ in native_numeric_types or not expr.is_potentially_variable():
-        yield (multiplier*expr,None)
+    if (expr.__class__ in native_numeric_types
+        or not expr.is_potentially_variable()
+    ):
+        yield (multiplier*expr, None)
     elif expr.is_variable_type():
-        yield (multiplier,expr)
+        yield (multiplier, expr)
     elif expr.__class__ is MonomialTermExpression:
         yield (multiplier*expr._args_[0], expr._args_[1])
     elif expr.__class__ is ProductExpression:
-        if expr._args_[0].__class__ in native_numeric_types or not expr._args_[0].is_potentially_variable():
-            yield from _decompose_linear_terms(expr._args_[1], multiplier*expr._args_[0])
-        elif expr._args_[1].__class__ in native_numeric_types or not expr._args_[1].is_potentially_variable():
-            yield from _decompose_linear_terms(expr._args_[0], multiplier*expr._args_[1])
+        if (expr._args_[0].__class__ in native_numeric_types
+            or not expr._args_[0].is_potentially_variable()
+        ):
+            yield from _decompose_linear_terms(
+                expr._args_[1], multiplier*expr._args_[0])
+        elif (expr._args_[1].__class__ in native_numeric_types
+              or not expr._args_[1].is_potentially_variable()
+        ):
+            yield from _decompose_linear_terms(
+                expr._args_[0], multiplier*expr._args_[1])
         else:
-            raise LinearDecompositionError("Quadratic terms exist in a product expression.")
+            raise LinearDecompositionError(
+                "Quadratic terms exist in a product expression.")
     elif expr.__class__ is DivisionExpression:
-        if expr._args_[1].__class__ in native_numeric_types or not expr._args_[1].is_potentially_variable():
-            yield from _decompose_linear_terms(expr._args_[0], multiplier/expr._args_[1])
+        if (expr._args_[1].__class__ in native_numeric_types
+            or not expr._args_[1].is_potentially_variable()
+        ):
+            yield from _decompose_linear_terms(
+                expr._args_[0], multiplier/expr._args_[1])
         else:
-            raise LinearDecompositionError("Unexpected nonlinear term (division)")
-    elif expr.__class__ is SumExpression or expr.__class__ is _MutableSumExpression:
+            raise LinearDecompositionError(
+                "Unexpected nonlinear term (division)")
+    elif isinstance(expr, SumExpression):
         for arg in expr.args:
             yield from _decompose_linear_terms(arg, multiplier)
     elif expr.__class__ is NegationExpression:
         yield from _decompose_linear_terms(expr._args_[0], -multiplier)
-    elif expr.__class__ is LinearExpression or expr.__class__ is _MutableLinearExpression:
-        if not (expr.constant.__class__ in native_numeric_types and expr.constant == 0):
-            yield (multiplier*expr.constant,None)
-        if len(expr.linear_coefs) > 0:
-            for c,v in zip(expr.linear_coefs, expr.linear_vars):
-                yield (multiplier*c,v)
     else:
-        raise LinearDecompositionError("Unexpected nonlinear term")   #pragma: no cover
+        raise LinearDecompositionError("Unexpected nonlinear term")
+
+
+#-------------------------------------------------------
+#
+# Functions used to generate expressions
+#
+#-------------------------------------------------------
+
+
+class _EXPR_TYPE(enum.Enum):
+    MUTABLE = -2
+    ASBINARY = -1
+    INVALID = 0
+    NATIVE = 1
+    NPV = 2
+    PARAM = 3
+    VAR = 4
+    MONOMIAL = 5
+    LINEAR = 6
+    SUM = 7
+    OTHER = 8
+
+def _categorize_arg_types(*args):
+    types = []
+    for arg in args:
+        if arg.__class__ in native_numeric_types:
+            types.append(_EXPR_TYPE.NATIVE)
+            continue
+        try:
+            if not arg.is_numeric_type():
+                if hasattr(arg, 'as_binary'):
+                    types.append(_EXPR_TYPE.AS_BINARY)
+                else:
+                    types.append(_EXPR_TYPE.INVALID)
+                continue
+        except AttributeError:
+            if check_if_numeric_type(arg):
+                types.append(_EXPR_TYPE.NATIVE)
+            else:
+                types.append(_EXPR_TYPE.INVALID)
+            continue
+        if arg.is_expression_type():
+            # Note: because sum expressions may be NPV depending on
+            # their arguments, we need to filter out those types first
+            if not arg.is_potentially_variable():
+                types.append(_EXPR_TYPE.NPV)
+            elif isinstance(arg, _MutableSumExpression):
+                types.append(_EXPR_TYPE.MUTABLE)
+            elif arg.__class__ is MonomialTermExpression:
+                types.append(_EXPR_TYPE.MONOMIAL)
+            elif isinstance(arg, LinearExpression):
+                types.append(_EXPR_TYPE.LINEAR)
+            elif isinstance(arg, SumExpression):
+                types.append(_EXPR_TYPE.SUM)
+            else:
+                types.append(_EXPR_TYPE.OTHER)
+        else:
+            if not arg.is_potentially_variable():
+                types.append(_EXPR_TYPE.PARAM)
+            elif arg.is_variable_type():
+                types.append(_EXPR_TYPE.VAR)
+            else:
+                types.append(_EXPR_TYPE.OTHER)
+    return tuple(types)
 
 
 def _process_arg(obj):
     # Note: caller is responsible for filtering out native types and
-    # expressions.
+    # expressions
+    if obj.__class__ in native_numeric_types:
+        return obj
+    if not hasattr(obj, 'is_numeric_type'):
+        # We will assume that anything implementing is_numeric_type is
+        # implementing the PyomoObject API
+        return NotImplemented
     if not obj.is_numeric_type():
         if hasattr(obj, 'as_binary'):
             # We assume non-numeric types that have an as_binary method
@@ -1229,348 +1212,1866 @@ def _process_arg(obj):
     return obj
 
 
-#@profile
-def _generate_sum_expression(etype, _self, _other):
 
-    if etype > _inplace:
-        etype -= _inplace
+def _invalid(*args):
+    return NotImplemented
 
-    if _self.__class__ is _MutableLinearExpression:
-        try:
-            if etype >= _unary:
-                return _self._combine_expr(etype, None)
-            if _other.__class__ is not _MutableLinearExpression:
-                if not (_other.__class__ in native_types or _other.is_expression_type()):
-                    _other = _process_arg(_other)
-            return _self._combine_expr(etype, _other)
-        except LinearDecompositionError:
-            pass
-    elif _other.__class__ is _MutableLinearExpression:
-        try:
-            if not (_self.__class__ in native_types or _self.is_expression_type()):
-                _self = _process_arg(_self)
-            return _other._combine_expr(-etype, _self)
-        except LinearDecompositionError:
-            pass
-
-    #
-    # A mutable sum is used as a context manager, so we don't
-    # need to process it to see if it's entangled.
-    #
-    if not (_self.__class__ in native_types or _self.is_expression_type()):
-        _self = _process_arg(_self)
-
-    if etype == _neg:
-        if _self.__class__ in native_numeric_types:
-            return - _self
-        elif _self.__class__ is MonomialTermExpression:
-            tmp = _self._args_[0]
-            if tmp.__class__ in native_numeric_types:
-                return MonomialTermExpression((-tmp, _self._args_[1]))
-            else:
-                return MonomialTermExpression((NPV_NegationExpression((tmp,)), _self._args_[1]))
-        elif _self.is_variable_type():
-            return MonomialTermExpression((-1, _self))
-        elif _self.is_potentially_variable():
-            return NegationExpression((_self,))
-        else:
-            if _self.__class__ is NPV_NegationExpression:
-                return _self._args_[0]
-            return NPV_NegationExpression((_self,))
-
-    if not (_other.__class__ in native_types or _other.is_expression_type()):
-        _other = _process_arg(_other)
-
-    if etype < 0:
-        #
-        # This may seem obvious, but if we are performing an
-        # "R"-operation (i.e. reverse operation), then simply reverse
-        # self and other.  This is legitimate as we are generating a
-        # completely new expression here.
-        #
-        etype *= -1
-        _self, _other = _other, _self
-
-    if etype == _add:
-        #
-        # x + y
-        #
-        if (_self.__class__ is SumExpression and not _self._shared_args) or \
-           _self.__class__ is _MutableSumExpression:
-            return _self.add(_other)
-        elif (_other.__class__ is SumExpression and not _other._shared_args) or \
-            _other.__class__ is _MutableSumExpression:
-            return _other.add(_self)
-        elif _other.__class__ in native_numeric_types:
-            if _other == 0:
-                return _self
-            if _self.__class__ in native_numeric_types:
-                return _self + _other
-            if _self.is_potentially_variable():
-                return SumExpression([_self, _other])
-            return NPV_SumExpression((_self, _other))
-        elif _self.__class__ in native_numeric_types:
-            if _self == 0:
-                return _other
-            if _other.is_potentially_variable():
-                #return _LinearSumExpression((_self, _other))
-                return SumExpression([_self, _other])
-            return NPV_SumExpression((_self, _other))
-        elif _other.is_potentially_variable():
-            #return _LinearSumExpression((_self, _other))
-            return SumExpression([_self, _other])
-        elif _self.is_potentially_variable():
-            #return _LinearSumExpression((_other, _self))
-            #return SumExpression([_other, _self])
-            return SumExpression([_self, _other])
-        else:
-            return NPV_SumExpression((_self, _other))
-
-    elif etype == _sub:
-        #
-        # x - y
-        #
-        if (_self.__class__ is SumExpression and not _self._shared_args) or \
-           _self.__class__ is _MutableSumExpression:
-            return _self.add(-_other)
-        elif _other.__class__ in native_numeric_types:
-            if _self.__class__ in native_numeric_types:
-                return _self - _other
-            elif _other == 0:
-                return _self
-            if _self.is_potentially_variable():
-                return SumExpression([_self, -_other])
-            return NPV_SumExpression((_self, -_other))
-        elif _self.__class__ in native_numeric_types:
-            if _self == 0:
-                if _other.__class__ is MonomialTermExpression:
-                    tmp = _other._args_[0]
-                    if tmp.__class__ in native_numeric_types:
-                        return MonomialTermExpression((-tmp, _other._args_[1]))
-                    return MonomialTermExpression((NPV_NegationExpression((_other._args_[0],)), _other._args_[1]))
-                elif _other.is_variable_type():
-                    return MonomialTermExpression((-1, _other))
-                elif _other.is_potentially_variable():
-                    return NegationExpression((_other,))
-                return NPV_NegationExpression((_other,))
-            elif _other.__class__ is MonomialTermExpression:
-                return SumExpression([_self, MonomialTermExpression((-_other._args_[0], _other._args_[1]))])
-            elif _other.is_variable_type():
-                return SumExpression([_self, MonomialTermExpression((-1,_other))])
-            elif _other.is_potentially_variable():
-                return SumExpression([_self, NegationExpression((_other,))])
-            return NPV_SumExpression((_self, NPV_NegationExpression((_other,))))
-        elif _other.__class__ is MonomialTermExpression:
-            return SumExpression([_self, MonomialTermExpression((-_other._args_[0], _other._args_[1]))])
-        elif _other.is_variable_type():
-            return SumExpression([_self, MonomialTermExpression((-1,_other))])
-        elif _other.is_potentially_variable():
-            return SumExpression([_self, NegationExpression((_other,))])
-        elif _self.is_potentially_variable():
-            return SumExpression([_self, NPV_NegationExpression((_other,))])
-        else:
-            return NPV_SumExpression((_self, NPV_NegationExpression((_other,))))
-
-    raise RuntimeError("Unknown expression type '%s'" % etype)      #pragma: no cover
-
-#@profile
-def _generate_mul_expression(etype, _self, _other):
-
-    if etype > _inplace:
-        etype -= _inplace
-
-    if _self.__class__ is _MutableLinearExpression:
-        try:
-            if _other.__class__ is not _MutableLinearExpression:
-                if not (_other.__class__ in native_types or _other.is_expression_type()):
-                    _other = _process_arg(_other)
-            return _self._combine_expr(etype, _other)
-        except LinearDecompositionError:
-            pass
-    elif _other.__class__ is _MutableLinearExpression:
-        try:
-            if not (_self.__class__ in native_types or _self.is_expression_type()):
-                _self = _process_arg(_self)
-            return _other._combine_expr(-etype, _self)
-        except LinearDecompositionError:
-            pass
-
-    #
-    # A mutable sum is used as a context manager, so we don't
-    # need to process it to see if it's entangled.
-    #
-    if not (_self.__class__ in native_types or _self.is_expression_type()):
-        _self = _process_arg(_self)
-
-    if not (_other.__class__ in native_types or _other.is_expression_type()):
-        _other = _process_arg(_other)
-
-    if etype < 0:
-        #
-        # This may seem obvious, but if we are performing an
-        # "R"-operation (i.e. reverse operation), then simply reverse
-        # self and other.  This is legitimate as we are generating a
-        # completely new expression here.
-        #
-        etype *= -1
-        _self, _other = _other, _self
-
-    if etype == _mul:
-        #
-        # x * y
-        #
-        if _other.__class__ in native_numeric_types:
-            if _self.__class__ in native_numeric_types:
-                return _self * _other
-            elif _other == 0:
-                return 0
-            elif _other == 1:
-                return _self
-            if _self.is_variable_type():
-                return MonomialTermExpression((_other, _self))
-            elif _self.__class__ is MonomialTermExpression:
-                tmp = _self._args_[0]
-                if tmp.__class__ in native_numeric_types:
-                    return MonomialTermExpression((_other*tmp, _self._args_[1]))
-                else:
-                    return MonomialTermExpression((NPV_ProductExpression((_other,tmp)), _self._args_[1]))
-            elif _self.is_potentially_variable():
-                return ProductExpression((_self, _other))
-            return NPV_ProductExpression((_self, _other))
-        elif _self.__class__ in native_numeric_types:
-            if _self == 0:
-                return 0
-            elif _self == 1:
-                return _other
-            if _other.is_variable_type():
-                return MonomialTermExpression((_self, _other))
-            elif _other.__class__ is MonomialTermExpression:
-                tmp = _other._args_[0]
-                if tmp.__class__ in native_numeric_types:
-                    return MonomialTermExpression((_self*tmp, _other._args_[1]))
-                else:
-                    return MonomialTermExpression((NPV_ProductExpression((_self,tmp)), _other._args_[1]))
-            elif _other.is_potentially_variable():
-                return ProductExpression((_self, _other))
-            return NPV_ProductExpression((_self, _other))
-        elif _other.is_variable_type():
-            if _self.is_potentially_variable():
-                return ProductExpression((_self, _other))
-            return MonomialTermExpression((_self, _other))
-        elif _other.is_potentially_variable():
-            return ProductExpression((_self, _other))
-        elif _self.is_variable_type():
-            return MonomialTermExpression((_other, _self))
-        elif _self.is_potentially_variable():
-            return ProductExpression((_self, _other))
-        else:
-            return NPV_ProductExpression((_self, _other))
-
-    elif etype == _div:
-        #
-        # x / y
-        #
-        if _other.__class__ in native_numeric_types:
-            if _other == 1:
-                return _self
-            elif not _other:
-                raise ZeroDivisionError()
-            elif _self.__class__ in native_numeric_types:
-                return _self / _other
-            if _self.is_variable_type():
-                return MonomialTermExpression((1/_other, _self))
-            elif _self.__class__ is MonomialTermExpression:
-                return MonomialTermExpression((_self._args_[0]/_other, _self._args_[1]))
-            elif _self.is_potentially_variable():
-                return DivisionExpression((_self, _other))
-            return NPV_DivisionExpression((_self, _other))
-        elif _self.__class__ in native_numeric_types:
-            if _self == 0:
-                return 0
-            elif _other.is_potentially_variable():
-                return DivisionExpression((_self, _other))
-            return NPV_DivisionExpression((_self, _other))
-        elif _other.is_potentially_variable():
-            return DivisionExpression((_self, _other))
-        elif _self.is_potentially_variable():
-            if _self.is_variable_type():
-                return MonomialTermExpression((NPV_DivisionExpression((1, _other)), _self))
-            return DivisionExpression((_self, _other))
-        else:
-            return NPV_DivisionExpression((_self, _other))
-
-    raise RuntimeError("Unknown expression type '%s'" % etype)      #pragma: no cover
-
-
-#@profile
-def _generate_other_expression(etype, _self, _other):
-
-    if etype > _inplace:
-        etype -= _inplace
-
-    #
-    # A mutable sum is used as a context manager, so we don't
-    # need to process it to see if it's entangled.
-    #
-    if not (_self.__class__ in native_types or _self.is_expression_type()):
-        _self = _process_arg(_self)
-
-    #
-    # abs(x)
-    #
-    if etype == _abs:
-        if _self.__class__ in native_numeric_types:
-            return abs(_self)
-        elif _self.is_potentially_variable():
-            return AbsExpression(_self)
-        else:
-            return NPV_AbsExpression(_self)
-
-    if not (_other.__class__ in native_types or _other.is_expression_type()):
-        _other = _process_arg(_other)
-
-    if etype < 0:
-        #
-        # This may seem obvious, but if we are performing an
-        # "R"-operation (i.e. reverse operation), then simply reverse
-        # self and other.  This is legitimate as we are generating a
-        # completely new expression here.
-        #
-        etype *= -1
-        _self, _other = _other, _self
-
-    if etype == _pow:
-        if _other.__class__ in native_numeric_types:
-            if _other == 1:
-                return _self
-            elif not _other:
-                return 1
-            elif _self.__class__ in native_numeric_types:
-                return _self ** _other
-            elif _self.is_potentially_variable():
-                return PowExpression((_self, _other))
-            return NPV_PowExpression((_self, _other))
-        elif _self.__class__ in native_numeric_types:
-            if _other.is_potentially_variable():
-                return PowExpression((_self, _other))
-            return NPV_PowExpression((_self, _other))
-        elif _self.is_potentially_variable() or _other.is_potentially_variable():
-            return PowExpression((_self, _other))
-        else:
-            return NPV_PowExpression((_self, _other))
-
-    raise RuntimeError("Unknown expression type '%s'" % etype)      #pragma: no cover
-
-def _generate_intrinsic_function_expression(arg, name, fcn):
-    if not (arg.__class__ in native_types or arg.is_expression_type()):
-        arg = _process_arg(arg)
-
-    if arg.__class__ in native_types:
-        return fcn(arg)
-    elif arg.is_potentially_variable():
-        return UnaryFunctionExpression(arg, name, fcn)
+def _recast_mutable(expr):
+    expr.make_immutable()
+    if expr._nargs > 1:
+        return expr
+    elif not expr._nargs:
+        return 0
     else:
-        return NPV_UnaryFunctionExpression(arg, name, fcn)
+        return expr._args_[0]
+
+def _unary_op_dispatcher_type_mapping(dispatcher, updates):
+    #
+    # Special case (wrapping) operators
+    #
+    def _asbinary(a):
+        a = a.as_binary()
+        return dispatcher[a.__class__](a)
+
+    def _mutable(a):
+        a = _recast_mutable(a)
+        return dispatcher[a.__class__](a)
+
+    mapping = {
+        _EXPR_TYPE.ASBINARY: _asbinary,
+        _EXPR_TYPE.MUTABLE: _mutable,
+        _EXPR_TYPE.INVALID: _invalid,
+    }
+
+    mapping.update(updates)
+    return mapping
+
+def _binary_op_dispatcher_type_mapping(dispatcher, updates):
+    #
+    # Special case (wrapping) operators
+    #
+    def _any_asbinary(a, b):
+        a = a.as_binary()
+        return dispatcher[a.__class__, b.__class__](a, b)
+
+    def _asbinary_any(a, b):
+        b = b.as_binary()
+        return dispatcher[a.__class__, b.__class__](a, b)
+
+    def _asbinary_asbinary(a, b):
+        a = a.as_binary()
+        b = b.as_binary()
+        return dispatcher[a.__class__, b.__class__](a, b)
+
+    def _any_mutable(a, b):
+        b = _recast_mutable(b)
+        return dispatcher[a.__class__, b.__class__](a, b)
+
+    def _mutable_any(a, b):
+        a = _recast_mutable(a)
+        return dispatcher[a.__class__, b.__class__](a, b)
+
+    def _mutable_mutable(a, b):
+        a = _recast_mutable(a)
+        b = _recast_mutable(b)
+        return dispatcher[a.__class__, b.__class__](a, b)
+
+    mapping = {}
+    mapping.update({(i, _EXPR_TYPE.ASBINARY): _any_asbinary for i in _EXPR_TYPE})
+    mapping.update({(_EXPR_TYPE.ASBINARY, i): _asbinary_any for i in _EXPR_TYPE})
+    mapping[_EXPR_TYPE.ASBINARY, _EXPR_TYPE.ASBINARY] = _asbinary_asbinary
+
+    mapping.update({(i, _EXPR_TYPE.MUTABLE): _any_mutable for i in _EXPR_TYPE})
+    mapping.update({(_EXPR_TYPE.MUTABLE, i): _mutable_any for i in _EXPR_TYPE})
+    mapping[_EXPR_TYPE.MUTABLE, _EXPR_TYPE.MUTABLE] = _mutable_mutable
+
+    mapping.update({(i, _EXPR_TYPE.INVALID): _invalid for i in _EXPR_TYPE})
+    mapping.update({(_EXPR_TYPE.INVALID, i): _invalid for i in _EXPR_TYPE})
+
+    mapping.update(updates)
+    return mapping
+
+#
+# ADD: NATIVE handlers
+#
+
+def _add_native_native(a, b):
+    # This can be hit because of the asbinary / mutable wrapper handlers.
+    return a + b
+
+def _add_native_npv(a, b):
+    if not a:
+        return b
+    return NPV_SumExpression([a, b])
+
+def _add_native_param(a, b):
+    if not a:
+        return b
+    if b.is_constant():
+        return a + b.value
+    return NPV_SumExpression([a, b])
+
+def _add_native_var(a, b):
+    if not a:
+        return b
+    return LinearExpression([a, MonomialTermExpression((1, b))])
+
+def _add_native_monomial(a, b):
+    if not a:
+        return b
+    return LinearExpression([a, b])
+
+def _add_native_linear(a, b):
+    if not a:
+        return b
+    args = b.args
+    args.append(a)
+    return b.__class__(args)
+
+def _add_native_sum(a, b):
+    if not a:
+        return b
+    args = b.args
+    args.append(a)
+    return b.__class__(args)
+
+def _add_native_other(a, b):
+    if not a:
+        return b
+    return SumExpression([a, b])
+
+#
+# ADD: NPV handlers
+#
+
+def _add_npv_native(a, b):
+    if not b:
+        return a
+    return NPV_SumExpression([a, b])
+
+def _add_npv_npv(a, b):
+    return NPV_SumExpression([a, b])
+
+def _add_npv_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if not b:
+            return a
+    return NPV_SumExpression([a, b])
+
+def _add_npv_var(a, b):
+    return LinearExpression([a, MonomialTermExpression((1, b))])
+
+def _add_npv_monomial(a, b):
+    return LinearExpression([a, b])
+
+def _add_npv_linear(a, b):
+    args = b.args
+    args.append(a)
+    return b.__class__(args)
+
+def _add_npv_sum(a, b):
+    args = b.args
+    args.append(a)
+    return b.__class__(args)
+
+def _add_npv_other(a, b):
+    return SumExpression([a, b])
+
+#
+# ADD: PARAM handlers
+#
+
+def _add_param_native(a, b):
+    if a.is_constant():
+        return a.value + b
+    if not b:
+        return a
+    return NPV_SumExpression([a, b])
+
+def _add_param_npv(a, b):
+    if a.is_constant():
+        a = a.value
+        return a + b
+    return NPV_SumExpression([a, b])
+
+def _add_param_param(a, b):
+    if a.is_constant():
+        a = a.value
+        if not a:
+            return b
+        elif b.is_constant():
+            return a + b.value
+    elif b.is_constant():
+        b = b.value
+        if not b:
+            return a
+    return NPV_SumExpression([a, b])
+
+def _add_param_var(a, b):
+    if a.is_constant():
+        a = a.value
+        if not a:
+            return b
+    return LinearExpression([a, MonomialTermExpression((1, b))])
+
+def _add_param_monomial(a, b):
+    if a.is_constant():
+        a = a.value
+        if not a:
+            return b
+    return LinearExpression([a, b])
+
+def _add_param_linear(a, b):
+    if a.is_constant():
+        a = a.value
+        if not a:
+            return b
+    args = b.args
+    args.append(a)
+    return b.__class__(args)
+
+def _add_param_sum(a, b):
+    if a.is_constant():
+        a = value(a)
+        if not a:
+            return b
+    args = b.args
+    args.append(a)
+    return b.__class__(args)
+
+def _add_param_other(a, b):
+    if a.is_constant():
+        a = a.value
+        if not a:
+            return b
+    return SumExpression([a, b])
+
+#
+# ADD: VAR handlers
+#
+
+def _add_var_native(a, b):
+    if not b:
+        return a
+    return LinearExpression([MonomialTermExpression((1, a)), b])
+
+def _add_var_npv(a, b):
+    return LinearExpression([MonomialTermExpression((1, a)), b])
+
+def _add_var_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if not b:
+            return a
+    return LinearExpression([MonomialTermExpression((1, a)), b])
+
+def _add_var_var(a, b):
+    return LinearExpression([
+        MonomialTermExpression((1, a)), MonomialTermExpression((1, b))])
+
+def _add_var_monomial(a, b):
+    return LinearExpression([MonomialTermExpression((1, a)), b])
+
+def _add_var_linear(a, b):
+    args = b.args
+    args.append(MonomialTermExpression((1, a)))
+    return b.__class__(args)
+
+def _add_var_sum(a, b):
+    args = b.args
+    args.append(a)
+    return b.__class__(args)
+
+def _add_var_other(a, b):
+    return SumExpression([a, b])
+
+#
+# ADD: MONOMIAL handlers
+#
+
+def _add_monomial_native(a, b):
+    if not b:
+        return a
+    return LinearExpression([a, b])
+
+def _add_monomial_npv(a, b):
+    return LinearExpression([a, b])
+
+def _add_monomial_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if not b:
+            return a
+    return LinearExpression([a, b])
+
+def _add_monomial_var(a, b):
+    return LinearExpression([a, MonomialTermExpression((1, b))])
+
+def _add_monomial_monomial(a, b):
+    return LinearExpression([a, b])
+
+def _add_monomial_linear(a, b):
+    args = b.args
+    args.append(a)
+    return b.__class__(args)
+
+def _add_monomial_sum(a, b):
+    args = b.args
+    args.append(a)
+    return b.__class__(args)
+
+def _add_monomial_other(a, b):
+    return SumExpression([a, b])
+
+#
+# ADD: LINEAR handlers
+#
+
+def _add_linear_native(a, b):
+    if not b:
+        return a
+    args = a.args
+    args.append(b)
+    return a.__class__(args)
+
+def _add_linear_npv(a, b):
+    args = a.args
+    args.append(b)
+    return a.__class__(args)
+
+def _add_linear_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if not b:
+            return a
+    args = a.args
+    args.append(b)
+    return a.__class__(args)
+
+def _add_linear_var(a, b):
+    args = a.args
+    args.append(MonomialTermExpression((1, b)))
+    return a.__class__(args)
+
+def _add_linear_monomial(a, b):
+    args = a.args
+    args.append(b)
+    return a.__class__(args)
+
+def _add_linear_linear(a, b):
+    args = a.args
+    args.extend(b.args)
+    return a.__class__(args)
+
+def _add_linear_sum(a, b):
+    args = b.args
+    args.append(a)
+    return b.__class__(args)
+
+def _add_linear_other(a, b):
+    return SumExpression([a, b])
+
+#
+# ADD: SUM handlers
+#
+
+def _add_sum_native(a, b):
+    if not b:
+        return a
+    args = a.args
+    args.append(b)
+    return a.__class__(args)
+
+def _add_sum_npv(a, b):
+    args = a.args
+    args.append(b)
+    return a.__class__(args)
+
+def _add_sum_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if not b:
+            return a
+    args = a.args
+    args.append(b)
+    return a.__class__(args)
+
+def _add_sum_var(a, b):
+    args = a.args
+    args.append(b)
+    return a.__class__(args)
+
+def _add_sum_monomial(a, b):
+    args = a.args
+    args.append(b)
+    return a.__class__(args)
+
+def _add_sum_linear(a, b):
+    args = a.args
+    args.append(b)
+    return a.__class__(args)
+
+def _add_sum_sum(a, b):
+    args = a.args
+    args.extend(b.args)
+    return a.__class__(args)
+
+def _add_sum_other(a, b):
+    args = a.args
+    args.append(b)
+    return a.__class__(args)
+
+#
+# ADD: OTHER handlers
+#
+
+def _add_other_native(a, b):
+    if not b:
+        return a
+    return SumExpression([a, b])
+
+def _add_other_npv(a, b):
+    return SumExpression([a, b])
+
+def _add_other_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if not b:
+            return a
+    return SumExpression([a, b])
+
+def _add_other_var(a, b):
+    return SumExpression([a, b])
+
+def _add_other_monomial(a, b):
+    logger.error(str((a.__class__, b.__class__)))
+    return SumExpression([a, b])
+
+def _add_other_linear(a, b):
+    return SumExpression([a, b])
+
+def _add_other_sum(a, b):
+    args = b.args
+    args.append(a)
+    return b.__class__(args)
+
+def _add_other_other(a, b):
+    return SumExpression([a, b])
+
+def _register_new_add_handler(a, b):
+    types = _categorize_arg_types(a, b)
+    # Retrieve the appropriate handler, record it in the main
+    # _add_dispatcher dict (so this method is not called a second time for
+    # these types)
+    _add_dispatcher[a.__class__, b.__class__] \
+        = handler = _add_type_handler_mapping[types]
+    # Call the appropriate handler
+    return handler(a, b)
+
+_add_dispatcher = collections.defaultdict(lambda: _register_new_add_handler)
+
+_add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
+    _add_dispatcher, {
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NATIVE): _add_native_native,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NPV): _add_native_npv,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.PARAM): _add_native_param,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.VAR): _add_native_var,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.MONOMIAL): _add_native_monomial,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.LINEAR): _add_native_linear,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.SUM): _add_native_sum,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.OTHER): _add_native_other,
+
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.NATIVE): _add_npv_native,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.NPV): _add_npv_npv,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.PARAM): _add_npv_param,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.VAR): _add_npv_var,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.MONOMIAL): _add_npv_monomial,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.LINEAR): _add_npv_linear,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.SUM): _add_npv_sum,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.OTHER): _add_npv_other,
+
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NATIVE): _add_param_native,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NPV): _add_param_npv,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.PARAM): _add_param_param,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.VAR): _add_param_var,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.MONOMIAL): _add_param_monomial,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.LINEAR): _add_param_linear,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.SUM): _add_param_sum,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.OTHER): _add_param_other,
+    
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.NATIVE): _add_var_native,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.NPV): _add_var_npv,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.PARAM): _add_var_param,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.VAR): _add_var_var,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.MONOMIAL): _add_var_monomial,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.LINEAR): _add_var_linear,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.SUM): _add_var_sum,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.OTHER): _add_var_other,
+    
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NATIVE): _add_monomial_native,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NPV): _add_monomial_npv,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.PARAM): _add_monomial_param,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.VAR): _add_monomial_var,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.MONOMIAL): _add_monomial_monomial,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.LINEAR): _add_monomial_linear,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.SUM): _add_monomial_sum,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.OTHER): _add_monomial_other,
+    
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NATIVE): _add_linear_native,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NPV): _add_linear_npv,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.PARAM): _add_linear_param,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.VAR): _add_linear_var,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.MONOMIAL): _add_linear_monomial,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.LINEAR): _add_linear_linear,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.SUM): _add_linear_sum,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.OTHER): _add_linear_other,
+    
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.NATIVE): _add_sum_native,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.NPV): _add_sum_npv,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.PARAM): _add_sum_param,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.VAR): _add_sum_var,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.MONOMIAL): _add_sum_monomial,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.LINEAR): _add_sum_linear,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.SUM): _add_sum_sum,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.OTHER): _add_sum_other,
+    
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NATIVE): _add_other_native,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NPV): _add_other_npv,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.PARAM): _add_other_param,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.VAR): _add_other_var,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.MONOMIAL): _add_other_monomial,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.LINEAR): _add_other_linear,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.SUM): _add_other_sum,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.OTHER): _add_other_other,
+})
+
+#
+# MUTABLENPVSUM __iadd__ handlers
+#
+
+def _iadd_mutablenpvsum_asbinary(a, b):
+    b = b.as_binary()
+    return _iadd_mutablenpvsum_dispatcher[b.__class__](a, b)
+
+def _iadd_mutablenpvsum_mutable(a, b):
+    b = _recast_mutable(b)
+    return _iadd_mutablenpvsum_dispatcher[b.__class__](a, b)
+
+def _iadd_mutablenpvsum_native(a, b):
+    if not b:
+        return a
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablenpvsum_npv(a, b):
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablenpvsum_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if not b:
+            return a
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablenpvsum_var(a, b):
+    a.__class__ = _MutableLinearExpression
+    return _iadd_mutablelinear_var(a, b)
+
+def _iadd_mutablenpvsum_monomial(a, b):
+    a.__class__ = _MutableLinearExpression
+    return _iadd_mutablelinear_monomial(a, b)
+
+def _iadd_mutablenpvsum_linear(a, b):
+    a.__class__ = _MutableLinearExpression
+    return _iadd_mutablelinear_linear(a, b)
+
+def _iadd_mutablenpvsum_sum(a, b):
+    a.__class__ = _MutableSumExpression
+    return _iadd_mutablesum_sum(a, b)
+
+def _iadd_mutablenpvsum_other(a, b):
+    a.__class__ = _MutableSumExpression
+    return _iadd_mutablesum_other(a, b)
+
+_iadd_mutablenpvsum_type_handler_mapping = {
+    _EXPR_TYPE.INVALID: _invalid,
+    _EXPR_TYPE.ASBINARY: _iadd_mutablenpvsum_asbinary,
+    _EXPR_TYPE.MUTABLE: _iadd_mutablenpvsum_mutable,
+    _EXPR_TYPE.NATIVE: _iadd_mutablenpvsum_native,
+    _EXPR_TYPE.NPV: _iadd_mutablenpvsum_npv,
+    _EXPR_TYPE.PARAM: _iadd_mutablenpvsum_param,
+    _EXPR_TYPE.VAR: _iadd_mutablenpvsum_var,
+    _EXPR_TYPE.MONOMIAL: _iadd_mutablenpvsum_monomial,
+    _EXPR_TYPE.LINEAR: _iadd_mutablenpvsum_linear,
+    _EXPR_TYPE.SUM: _iadd_mutablenpvsum_sum,
+    _EXPR_TYPE.OTHER: _iadd_mutablenpvsum_other,
+}
+
+def _register_new_iadd_mutablenpvsum_handler(a, b):
+    types = _categorize_arg_types(b)
+    # Retrieve the appropriate handler, record it in the main
+    # _iadd_mutablenpvsum_dispatcher dict (so this method is not called a second time for
+    # these types)
+    _iadd_mutablenpvsum_dispatcher[b.__class__] \
+        = handler = _iadd_mutablenpvsum_type_handler_mapping[types[0]]
+    # Call the appropriate handler
+    return handler(a, b)
+
+_iadd_mutablenpvsum_dispatcher = collections.defaultdict(
+    lambda: _register_new_iadd_mutablenpvsum_handler)
+
+
+#
+# MUTABLELINEAR __iadd__ handlers
+#
+
+def _iadd_mutablelinear_asbinary(a, b):
+    b = b.as_binary()
+    return _iadd_mutablelinear_dispatcher[b.__class__](a, b)
+
+def _iadd_mutablelinear_mutable(a, b):
+    b = _recast_mutable(b)
+    return _iadd_mutablelinear_dispatcher[b.__class__](a, b)
+
+def _iadd_mutablelinear_native(a, b):
+    if not b:
+        return a
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablelinear_npv(a, b):
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablelinear_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if not b:
+            return a
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablelinear_var(a, b):
+    a._args_.append(MonomialTermExpression((1, b)))
+    a._nargs += 1
+    return a
+
+def _iadd_mutablelinear_monomial(a, b):
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablelinear_linear(a, b):
+    a._args_.extend(b.args)
+    a._nargs += b.nargs()
+    return a
+
+def _iadd_mutablelinear_sum(a, b):
+    a.__class__ = _MutableSumExpression
+    return _iadd_mutablesum_sum(a, b)
+
+def _iadd_mutablelinear_other(a, b):
+    a.__class__ = _MutableSumExpression
+    return _iadd_mutablesum_other(a, b)
+
+_iadd_mutablelinear_type_handler_mapping = {
+    _EXPR_TYPE.INVALID: _invalid,
+    _EXPR_TYPE.ASBINARY: _iadd_mutablelinear_asbinary,
+    _EXPR_TYPE.MUTABLE: _iadd_mutablelinear_mutable,
+    _EXPR_TYPE.NATIVE: _iadd_mutablelinear_native,
+    _EXPR_TYPE.NPV: _iadd_mutablelinear_npv,
+    _EXPR_TYPE.PARAM: _iadd_mutablelinear_param,
+    _EXPR_TYPE.VAR: _iadd_mutablelinear_var,
+    _EXPR_TYPE.MONOMIAL: _iadd_mutablelinear_monomial,
+    _EXPR_TYPE.LINEAR: _iadd_mutablelinear_linear,
+    _EXPR_TYPE.SUM: _iadd_mutablelinear_sum,
+    _EXPR_TYPE.OTHER: _iadd_mutablelinear_other,
+}
+
+def _register_new_iadd_mutablelinear_handler(a, b):
+    types = _categorize_arg_types(b)
+    # Retrieve the appropriate handler, record it in the main
+    # _iadd_mutablelinear_dispatcher dict (so this method is not called a second time for
+    # these types)
+    _iadd_mutablelinear_dispatcher[b.__class__] \
+        = handler = _iadd_mutablelinear_type_handler_mapping[types[0]]
+    # Call the appropriate handler
+    return handler(a, b)
+
+_iadd_mutablelinear_dispatcher = collections.defaultdict(
+    lambda: _register_new_iadd_mutablelinear_handler)
+
+
+#
+# MUTABLESUM __iadd__ handlers
+#
+
+def _iadd_mutablesum_asbinary(a, b):
+    b = b.as_binary()
+    return _iadd_mutablesum_dispatcher[b.__class__](a, b)
+
+def _iadd_mutablesum_mutable(a, b):
+    b = _recast_mutable(b)
+    return _iadd_mutablesum_dispatcher[b.__class__](a, b)
+
+def _iadd_mutablesum_native(a, b):
+    if not b:
+        return a
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablesum_npv(a, b):
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablesum_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if not b:
+            return a
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablesum_var(a, b):
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablesum_monomial(a, b):
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablesum_linear(a, b):
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+def _iadd_mutablesum_sum(a, b):
+    a._args_.extend(b.args)
+    a._nargs += b.nargs()
+    return a
+
+def _iadd_mutablesum_other(a, b):
+    a._args_.append(b)
+    a._nargs += 1
+    return a
+
+_iadd_mutablesum_type_handler_mapping = {
+    _EXPR_TYPE.INVALID: _invalid,
+    _EXPR_TYPE.ASBINARY: _iadd_mutablesum_asbinary,
+    _EXPR_TYPE.MUTABLE: _iadd_mutablesum_mutable,
+    _EXPR_TYPE.NATIVE: _iadd_mutablesum_native,
+    _EXPR_TYPE.NPV: _iadd_mutablesum_npv,
+    _EXPR_TYPE.PARAM: _iadd_mutablesum_param,
+    _EXPR_TYPE.VAR: _iadd_mutablesum_var,
+    _EXPR_TYPE.MONOMIAL: _iadd_mutablesum_monomial,
+    _EXPR_TYPE.LINEAR: _iadd_mutablesum_linear,
+    _EXPR_TYPE.SUM: _iadd_mutablesum_sum,
+    _EXPR_TYPE.OTHER: _iadd_mutablesum_other,
+}
+
+def _register_new_iadd_mutablesum_handler(a, b):
+    types = _categorize_arg_types(b)
+    # Retrieve the appropriate handler, record it in the main
+    # _iadd_mutablesum_dispatcher dict (so this method is not called a
+    # second time for these types)
+    _iadd_mutablesum_dispatcher[b.__class__] \
+        = handler = _iadd_mutablesum_type_handler_mapping[types[0]]
+    # Call the appropriate handler
+    return handler(a, b)
+
+_iadd_mutablesum_dispatcher = collections.defaultdict(
+    lambda: _register_new_iadd_mutablesum_handler)
+
+
+#
+# NEGATION handlers
+#
+
+def _neg_native(a):
+    # This can be hit because of the asbinary / mutable wrapper handlers.
+    return -a
+
+def _neg_npv(a):
+    # This can be hit because of the asbinary / mutable wrapper handlers.
+    return -a
+
+def _neg_param(a):
+    if a.is_constant():
+        return -(a.value)
+    return NPV_NegationExpression((a,))
+
+def _neg_var(a):
+    return MonomialTermExpression((-1, a))
+
+def _neg_monomial(a):
+    args = a.args
+    return MonomialTermExpression((-args[0], args[1]))
+
+def _neg_sum(a):
+    if not a.nargs():
+        return 0
+    #return LinearExpression([-arg for arg in a.args])
+    return NegationExpression((a,))
+
+def _neg_other(a):
+    return NegationExpression((a,))
+
+
+def _register_new_neg_handler(a):
+    types = _categorize_arg_types(a)
+    # Retrieve the appropriate handler, record it in the main
+    # _neg_dispatcher dict (so this method is not called a second time for
+    # these types)
+    _neg_dispatcher[a.__class__] \
+        = handler = _neg_type_handler_mapping[types[0]]
+    # Call the appropriate handler
+    return handler(a)
+
+_neg_dispatcher = collections.defaultdict(lambda: _register_new_neg_handler)
+
+_neg_type_handler_mapping = _unary_op_dispatcher_type_mapping(
+    _neg_dispatcher, {
+        _EXPR_TYPE.NATIVE: _neg_native,
+        _EXPR_TYPE.NPV: _neg_npv,
+        _EXPR_TYPE.PARAM: _neg_param,
+        _EXPR_TYPE.VAR: _neg_var,
+        _EXPR_TYPE.MONOMIAL: _neg_monomial,
+        _EXPR_TYPE.LINEAR: _neg_sum,
+        _EXPR_TYPE.SUM: _neg_sum,
+        _EXPR_TYPE.OTHER: _neg_other,
+})
+
+
+#
+# MUL: NATIVE handlers
+#
+
+def _mul_native_native(a, b):
+    # This can be hit because of the asbinary / mutable wrapper handlers.
+    return a * b
+
+def _mul_native_npv(a, b):
+    if a == 1:
+        return b
+    return NPV_ProductExpression((a, b))
+
+def _mul_native_param(a, b):
+    if a == 1:
+        return b
+    if b.is_constant():
+        return a * b.value
+    return NPV_ProductExpression((a, b))
+
+def _mul_native_var(a, b):
+    if a == 1:
+        return b
+    return MonomialTermExpression((a, b))
+
+def _mul_native_monomial(a, b):
+    if a == 1:
+        return b
+    return MonomialTermExpression((a * b._args_[0], b._args_[1]))
+
+def _mul_native_linear(a, b):
+    if a == 1:
+        return b
+    return ProductExpression((a, b))
+
+def _mul_native_sum(a, b):
+    if a == 1:
+        return b
+    return ProductExpression((a, b))
+
+def _mul_native_other(a, b):
+    if a == 1:
+        return b
+    return ProductExpression((a, b))
+
+#
+# MUL: NPV handlers
+#
+
+def _mul_npv_native(a, b):
+    if b == 1:
+        return a
+    return NPV_ProductExpression((a, b))
+
+def _mul_npv_npv(a, b):
+    return NPV_ProductExpression((a, b))
+
+def _mul_npv_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return NPV_ProductExpression((a, b))
+
+def _mul_npv_var(a, b):
+    return MonomialTermExpression((a, b))
+
+def _mul_npv_monomial(a, b):
+    return MonomialTermExpression((
+        NPV_ProductExpression((a, b._args_[0])), b._args_[1]))
+
+def _mul_npv_linear(a, b):
+    return ProductExpression((a, b))
+
+def _mul_npv_sum(a, b):
+    return ProductExpression((a, b))
+
+def _mul_npv_other(a, b):
+    return ProductExpression((a, b))
+
+#
+# MUL: PARAM handlers
+#
+
+def _mul_param_native(a, b):
+    if a.is_constant():
+        return a.value * b
+    if b == 1:
+        return a
+    return NPV_ProductExpression((a, b))
+
+def _mul_param_npv(a, b):
+    if a.is_constant():
+        a = a.value
+    return NPV_ProductExpression((a, b))
+
+def _mul_param_param(a, b):
+    if a.is_constant():
+        a = a.value
+        if a == 1:
+            return b
+        elif b.is_constant():
+            return a * b.value
+    elif b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return NPV_ProductExpression((a, b))
+
+def _mul_param_var(a, b):
+    if a.is_constant():
+        a = a.value
+        if a == 1:
+            return b
+    return MonomialTermExpression((a, b))
+
+def _mul_param_monomial(a, b):
+    if a.is_constant():
+        a = a.value
+        if a == 1:
+            return b
+    return MonomialTermExpression((a * b._args_[0], b._args_[1]))
+
+def _mul_param_linear(a, b):
+    if a.is_constant():
+        a = a.value
+        if a == 1:
+            return b
+    return ProductExpression((a, b))
+
+def _mul_param_sum(a, b):
+    if a.is_constant():
+        a = value(a)
+        if a == 1:
+            return b
+    return ProductExpression((a, b))
+
+def _mul_param_other(a, b):
+    if a.is_constant():
+        a = a.value
+        if a == 1:
+            return b
+    return ProductExpression((a, b))
+
+#
+# MUL: VAR handlers
+#
+
+def _mul_var_native(a, b):
+    if b == 1:
+        return a
+    return MonomialTermExpression((b, a))
+
+def _mul_var_npv(a, b):
+    return MonomialTermExpression((b, a))
+
+def _mul_var_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return MonomialTermExpression((b, a))
+
+def _mul_var_var(a, b):
+    return ProductExpression((a, b))
+
+def _mul_var_monomial(a, b):
+    return ProductExpression((a, b))
+
+def _mul_var_linear(a, b):
+    return ProductExpression((a, b))
+
+def _mul_var_sum(a, b):
+    return ProductExpression((a, b))
+
+def _mul_var_other(a, b):
+    return ProductExpression((a, b))
+
+#
+# MUL: MONOMIAL handlers
+#
+
+def _mul_monomial_native(a, b):
+    if b == 1:
+        return a
+    return MonomialTermExpression((a._args_[0] * b, a._args_[1]))
+
+def _mul_monomial_npv(a, b):
+    return MonomialTermExpression((
+        NPV_ProductExpression((a._args_[0], b)), a._args_[1]))
+
+def _mul_monomial_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return MonomialTermExpression((a._args_[0] * b, a._args_[1]))
+
+def _mul_monomial_var(a, b):
+    return ProductExpression((a, b))
+
+def _mul_monomial_monomial(a, b):
+    return ProductExpression((a, b))
+
+def _mul_monomial_linear(a, b):
+    return ProductExpression((a, b))
+
+def _mul_monomial_sum(a, b):
+    return ProductExpression((a, b))
+
+def _mul_monomial_other(a, b):
+    return ProductExpression((a, b))
+
+#
+# MUL: LINEAR handlers
+#
+
+def _mul_linear_native(a, b):
+    if b == 1:
+        return a
+    return ProductExpression((a, b))
+
+def _mul_linear_npv(a, b):
+    return ProductExpression((a, b))
+
+def _mul_linear_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return ProductExpression((a, b))
+
+def _mul_linear_var(a, b):
+    return ProductExpression((a, b))
+
+def _mul_linear_monomial(a, b):
+    return ProductExpression((a, b))
+
+def _mul_linear_linear(a, b):
+    return ProductExpression((a, b))
+
+def _mul_linear_sum(a, b):
+    return ProductExpression((a, b))
+
+def _mul_linear_other(a, b):
+    return ProductExpression((a, b))
+
+#
+# MUL: SUM handlers
+#
+
+def _mul_sum_native(a, b):
+    if b == 1:
+        return a
+    return ProductExpression((a, b))
+
+def _mul_sum_npv(a, b):
+    return ProductExpression((a, b))
+
+def _mul_sum_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return ProductExpression((a, b))
+
+def _mul_sum_var(a, b):
+    return ProductExpression((a, b))
+
+def _mul_sum_monomial(a, b):
+    return ProductExpression((a, b))
+
+def _mul_sum_linear(a, b):
+    return ProductExpression((a, b))
+
+def _mul_sum_sum(a, b):
+    return ProductExpression((a, b))
+
+def _mul_sum_other(a, b):
+    return ProductExpression((a, b))
+
+#
+# MUL: OTHER handlers
+#
+
+def _mul_other_native(a, b):
+    if b == 1:
+        return a
+    return ProductExpression((a, b))
+
+def _mul_other_npv(a, b):
+    return ProductExpression((a, b))
+
+def _mul_other_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return ProductExpression((a, b))
+
+def _mul_other_var(a, b):
+    return ProductExpression((a, b))
+
+def _mul_other_monomial(a, b):
+    return ProductExpression((a, b))
+
+def _mul_other_linear(a, b):
+    return ProductExpression((a, b))
+
+def _mul_other_sum(a, b):
+    return ProductExpression((a, b))
+
+def _mul_other_other(a, b):
+    return ProductExpression((a, b))
+
+
+def _register_new_mul_handler(a, b):
+    types = _categorize_arg_types(a, b)
+    # Retrieve the appropriate handler, record it in the main
+    # _mul_dispatcher dict (so this method is not called a second time for
+    # these types)
+    _mul_dispatcher[a.__class__, b.__class__] \
+        = handler = _mul_type_handler_mapping[types]
+    # Call the appropriate handler
+    return handler(a, b)
+
+_mul_dispatcher = collections.defaultdict(lambda: _register_new_mul_handler)
+
+_mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
+    _mul_dispatcher, {
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NATIVE): _mul_native_native,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NPV): _mul_native_npv,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.PARAM): _mul_native_param,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.VAR): _mul_native_var,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.MONOMIAL): _mul_native_monomial,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.LINEAR): _mul_native_linear,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.SUM): _mul_native_sum,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.OTHER): _mul_native_other,
+    
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.NATIVE): _mul_npv_native,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.NPV): _mul_npv_npv,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.PARAM): _mul_npv_param,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.VAR): _mul_npv_var,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.MONOMIAL): _mul_npv_monomial,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.LINEAR): _mul_npv_linear,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.SUM): _mul_npv_sum,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.OTHER): _mul_npv_other,
+    
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NATIVE): _mul_param_native,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NPV): _mul_param_npv,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.PARAM): _mul_param_param,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.VAR): _mul_param_var,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.MONOMIAL): _mul_param_monomial,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.LINEAR): _mul_param_linear,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.SUM): _mul_param_sum,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.OTHER): _mul_param_other,
+    
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.NATIVE): _mul_var_native,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.NPV): _mul_var_npv,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.PARAM): _mul_var_param,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.VAR): _mul_var_var,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.MONOMIAL): _mul_var_monomial,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.LINEAR): _mul_var_linear,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.SUM): _mul_var_sum,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.OTHER): _mul_var_other,
+    
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NATIVE): _mul_monomial_native,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NPV): _mul_monomial_npv,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.PARAM): _mul_monomial_param,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.VAR): _mul_monomial_var,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.MONOMIAL): _mul_monomial_monomial,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.LINEAR): _mul_monomial_linear,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.SUM): _mul_monomial_sum,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.OTHER): _mul_monomial_other,
+    
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NATIVE): _mul_linear_native,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NPV): _mul_linear_npv,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.PARAM): _mul_linear_param,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.VAR): _mul_linear_var,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.MONOMIAL): _mul_linear_monomial,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.LINEAR): _mul_linear_linear,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.SUM): _mul_linear_sum,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.OTHER): _mul_linear_other,
+    
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.NATIVE): _mul_sum_native,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.NPV): _mul_sum_npv,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.PARAM): _mul_sum_param,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.VAR): _mul_sum_var,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.MONOMIAL): _mul_sum_monomial,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.LINEAR): _mul_sum_linear,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.SUM): _mul_sum_sum,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.OTHER): _mul_sum_other,
+    
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NATIVE): _mul_other_native,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NPV): _mul_other_npv,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.PARAM): _mul_other_param,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.VAR): _mul_other_var,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.MONOMIAL): _mul_other_monomial,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.LINEAR): _mul_other_linear,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.SUM): _mul_other_sum,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.OTHER): _mul_other_other,
+})
+
+
+#
+# DIV: NATIVE handlers
+#
+
+def _div_native_native(a, b):
+    # This can be hit because of the asbinary / mutable wrapper handlers.
+    return a / b
+
+def _div_native_npv(a, b):
+    return NPV_DivisionExpression((a, b))
+
+def _div_native_param(a, b):
+    if b.is_constant():
+        return a / b.value
+    return NPV_DivisionExpression((a, b))
+
+def _div_native_var(a, b):
+    return DivisionExpression((a, b))
+
+def _div_native_monomial(a, b):
+    return DivisionExpression((a, b))
+
+def _div_native_linear(a, b):
+    return DivisionExpression((a, b))
+
+def _div_native_sum(a, b):
+    return DivisionExpression((a, b))
+
+def _div_native_other(a, b):
+    return DivisionExpression((a, b))
+
+#
+# DIV: NPV handlers
+#
+
+def _div_npv_native(a, b):
+    if b == 1:
+        return a
+    return NPV_DivisionExpression((a, b))
+
+def _div_npv_npv(a, b):
+    return NPV_DivisionExpression((a, b))
+
+def _div_npv_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return NPV_DivisionExpression((a, b))
+
+def _div_npv_var(a, b):
+    return DivisionExpression((a, b))
+
+def _div_npv_monomial(a, b):
+    return DivisionExpression((a, b))
+
+def _div_npv_linear(a, b):
+    return DivisionExpression((a, b))
+
+def _div_npv_sum(a, b):
+    return DivisionExpression((a, b))
+
+def _div_npv_other(a, b):
+    return DivisionExpression((a, b))
+
+#
+# DIV: PARAM handlers
+#
+
+def _div_param_native(a, b):
+    if a.is_constant():
+        return a.value / b
+    if b == 1:
+        return a
+    return NPV_DivisionExpression((a, b))
+
+def _div_param_npv(a, b):
+    if a.is_constant():
+        a = a.value
+    return NPV_DivisionExpression((a, b))
+
+def _div_param_param(a, b):
+    if a.is_constant():
+        a = a.value
+        if b.is_constant():
+            return a / b.value
+    elif b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return NPV_DivisionExpression((a, b))
+
+def _div_param_var(a, b):
+    if a.is_constant():
+        a = a.value
+    return DivisionExpression((a, b))
+
+def _div_param_monomial(a, b):
+    if a.is_constant():
+        a = a.value
+    return DivisionExpression((a, b))
+
+def _div_param_linear(a, b):
+    if a.is_constant():
+        a = a.value
+    return DivisionExpression((a, b))
+
+def _div_param_sum(a, b):
+    if a.is_constant():
+        a = value(a)
+    return DivisionExpression((a, b))
+
+def _div_param_other(a, b):
+    if a.is_constant():
+        a = a.value
+    return DivisionExpression((a, b))
+
+#
+# DIV: VAR handlers
+#
+
+def _div_var_native(a, b):
+    if b == 1:
+        return a
+    return MonomialTermExpression((1/b, a))
+
+def _div_var_npv(a, b):
+    return MonomialTermExpression((NPV_DivisionExpression((1, b)), a))
+
+def _div_var_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return MonomialTermExpression((NPV_DivisionExpression((1, b)), a))
+
+def _div_var_var(a, b):
+    return DivisionExpression((a, b))
+
+def _div_var_monomial(a, b):
+    return DivisionExpression((a, b))
+
+def _div_var_linear(a, b):
+    return DivisionExpression((a, b))
+
+def _div_var_sum(a, b):
+    return DivisionExpression((a, b))
+
+def _div_var_other(a, b):
+    return DivisionExpression((a, b))
+
+#
+# DIV: MONOMIAL handlers
+#
+
+def _div_monomial_native(a, b):
+    if b == 1:
+        return a
+    return MonomialTermExpression((a._args_[0]/b, a._args_[1]))
+
+def _div_monomial_npv(a, b):
+    return MonomialTermExpression((
+        NPV_DivisionExpression((a._args_[0], b)), a._args_[1]))
+
+def _div_monomial_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return MonomialTermExpression((
+        NPV_DivisionExpression((a._args_[0], b)), a._args_[1]))
+
+def _div_monomial_var(a, b):
+    return DivisionExpression((a, b))
+
+def _div_monomial_monomial(a, b):
+    return DivisionExpression((a, b))
+
+def _div_monomial_linear(a, b):
+    return DivisionExpression((a, b))
+
+def _div_monomial_sum(a, b):
+    return DivisionExpression((a, b))
+
+def _div_monomial_other(a, b):
+    return DivisionExpression((a, b))
+
+#
+# DIV: LINEAR handlers
+#
+
+def _div_linear_native(a, b):
+    if b == 1:
+        return a
+    return DivisionExpression((a, b))
+
+def _div_linear_npv(a, b):
+    return DivisionExpression((a, b))
+
+def _div_linear_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return DivisionExpression((a, b))
+
+def _div_linear_var(a, b):
+    return DivisionExpression((a, b))
+
+def _div_linear_monomial(a, b):
+    return DivisionExpression((a, b))
+
+def _div_linear_linear(a, b):
+    return DivisionExpression((a, b))
+
+def _div_linear_sum(a, b):
+    return DivisionExpression((a, b))
+
+def _div_linear_other(a, b):
+    return DivisionExpression((a, b))
+
+#
+# DIV: SUM handlers
+#
+
+def _div_sum_native(a, b):
+    if b == 1:
+        return a
+    return DivisionExpression((a, b))
+
+def _div_sum_npv(a, b):
+    return DivisionExpression((a, b))
+
+def _div_sum_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return DivisionExpression((a, b))
+
+def _div_sum_var(a, b):
+    return DivisionExpression((a, b))
+
+def _div_sum_monomial(a, b):
+    return DivisionExpression((a, b))
+
+def _div_sum_linear(a, b):
+    return DivisionExpression((a, b))
+
+def _div_sum_sum(a, b):
+    return DivisionExpression((a, b))
+
+def _div_sum_other(a, b):
+    return DivisionExpression((a, b))
+
+#
+# DIV: OTHER handlers
+#
+
+def _div_other_native(a, b):
+    if b == 1:
+        return a
+    return DivisionExpression((a, b))
+
+def _div_other_npv(a, b):
+    return DivisionExpression((a, b))
+
+def _div_other_param(a, b):
+    if b.is_constant():
+        b = b.value
+        if b == 1:
+            return a
+    return DivisionExpression((a, b))
+
+def _div_other_var(a, b):
+    return DivisionExpression((a, b))
+
+def _div_other_monomial(a, b):
+    return DivisionExpression((a, b))
+
+def _div_other_linear(a, b):
+    return DivisionExpression((a, b))
+
+def _div_other_sum(a, b):
+    return DivisionExpression((a, b))
+
+def _div_other_other(a, b):
+    return DivisionExpression((a, b))
+
+
+def _register_new_div_handler(a, b):
+    types = _categorize_arg_types(a, b)
+    # Retrieve the appropriate handler, record it in the main
+    # _div_dispatcher dict (so this method is not called a second time for
+    # these types)
+    _div_dispatcher[a.__class__, b.__class__] \
+        = handler = _div_type_handler_mapping[types]
+    # Call the appropriate handler
+    return handler(a, b)
+
+_div_dispatcher = collections.defaultdict(lambda: _register_new_div_handler)
+
+_div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
+    _div_dispatcher, {
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NATIVE): _div_native_native,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NPV): _div_native_npv,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.PARAM): _div_native_param,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.VAR): _div_native_var,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.MONOMIAL): _div_native_monomial,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.LINEAR): _div_native_linear,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.SUM): _div_native_sum,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.OTHER): _div_native_other,
+    
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.NATIVE): _div_npv_native,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.NPV): _div_npv_npv,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.PARAM): _div_npv_param,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.VAR): _div_npv_var,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.MONOMIAL): _div_npv_monomial,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.LINEAR): _div_npv_linear,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.SUM): _div_npv_sum,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.OTHER): _div_npv_other,
+    
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NATIVE): _div_param_native,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NPV): _div_param_npv,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.PARAM): _div_param_param,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.VAR): _div_param_var,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.MONOMIAL): _div_param_monomial,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.LINEAR): _div_param_linear,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.SUM): _div_param_sum,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.OTHER): _div_param_other,
+    
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.NATIVE): _div_var_native,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.NPV): _div_var_npv,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.PARAM): _div_var_param,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.VAR): _div_var_var,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.MONOMIAL): _div_var_monomial,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.LINEAR): _div_var_linear,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.SUM): _div_var_sum,
+        (_EXPR_TYPE.VAR, _EXPR_TYPE.OTHER): _div_var_other,
+    
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NATIVE): _div_monomial_native,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NPV): _div_monomial_npv,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.PARAM): _div_monomial_param,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.VAR): _div_monomial_var,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.MONOMIAL): _div_monomial_monomial,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.LINEAR): _div_monomial_linear,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.SUM): _div_monomial_sum,
+        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.OTHER): _div_monomial_other,
+    
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NATIVE): _div_linear_native,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NPV): _div_linear_npv,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.PARAM): _div_linear_param,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.VAR): _div_linear_var,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.MONOMIAL): _div_linear_monomial,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.LINEAR): _div_linear_linear,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.SUM): _div_linear_sum,
+        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.OTHER): _div_linear_other,
+    
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.NATIVE): _div_sum_native,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.NPV): _div_sum_npv,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.PARAM): _div_sum_param,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.VAR): _div_sum_var,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.MONOMIAL): _div_sum_monomial,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.LINEAR): _div_sum_linear,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.SUM): _div_sum_sum,
+        (_EXPR_TYPE.SUM, _EXPR_TYPE.OTHER): _div_sum_other,
+    
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NATIVE): _div_other_native,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NPV): _div_other_npv,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.PARAM): _div_other_param,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.VAR): _div_other_var,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.MONOMIAL): _div_other_monomial,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.LINEAR): _div_other_linear,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.SUM): _div_other_sum,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.OTHER): _div_other_other,
+})
+    
+
+#
+# POW handlers
+#
+
+def _pow_native_native(a, b):
+    # This can be hit because of the asbinary / mutable wrapper handlers.
+    return a**b
+
+def _pow_native_npv(a, b):
+    return NPV_PowExpression((a, b))
+
+def _pow_native_param(a, b):
+    if b.is_constant():
+        return a**(b.value)
+    return NPV_PowExpression((a, b))
+
+def _pow_native_other(a, b):
+    return PowExpression((a, b))
+
+
+def _pow_npv_native(a, b):
+    if not b:
+        return 1
+    elif b == 1:
+        return a
+    return NPV_PowExpression((a, b))
+
+def _pow_npv_npv(a, b):
+    return NPV_PowExpression((a, b))
+
+def _pow_npv_param(a, b):
+    if b.is_constant():
+        b = b.value
+    return NPV_PowExpression((a, b))
+
+def _pow_npv_other(a, b):
+    return PowExpression((a, b))
+
+
+def _pow_param_native(a, b):
+    if not b:
+        return 1
+    elif b == 1:
+        return a
+    if a.is_constant():
+        return a.value ** b
+    return NPV_PowExpression((a, b))
+
+def _pow_param_npv(a, b):
+    return NPV_PowExpression((a, b))
+
+def _pow_param_param(a, b):
+    if a.is_constant():
+        a = a.value
+        if b.is_constant():
+            return a ** b.value
+    elif b.is_constant():
+        b = b.value
+        if not b:
+            return 1
+        elif b == 1:
+            return a
+    return NPV_PowExpression((a, b))
+
+def _pow_param_other(a, b):
+    if a.is_constant():
+        a = a.value
+    return PowExpression((a, b))
+
+
+def _pow_other_native(a, b):
+    if not b:
+        return 1
+    elif b == 1:
+        return a
+    return PowExpression((a, b))
+
+def _pow_other_npv(a, b):
+    return PowExpression((a, b))
+
+def _pow_other_param(a, b):
+    if b.is_constant():
+        b = b.value
+    return PowExpression((a, b))
+
+def _pow_other_other(a, b):
+    return PowExpression((a, b))
+
+
+def _register_new_pow_handler(a, b):
+    types = _categorize_arg_types(a, b)
+    # Retrieve the appropriate handler, record it in the main
+    # _pow_dispatcher dict (so this method is not called a second time for
+    # these types)
+    _pow_dispatcher[a.__class__, b.__class__] \
+        = handler = _pow_type_handler_mapping[types]
+    # Call the appropriate handler
+    return handler(a, b)
+
+_pow_dispatcher = collections.defaultdict(lambda: _register_new_pow_handler)
+
+_pow_type_handler_mapping = _binary_op_dispatcher_type_mapping(
+    _pow_dispatcher, {
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NATIVE): _pow_native_native,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NPV): _pow_native_npv,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.PARAM): _pow_native_param,
+        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.OTHER): _pow_native_other,
+
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.NATIVE): _pow_npv_native,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.NPV): _pow_npv_npv,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.PARAM): _pow_npv_param,
+        (_EXPR_TYPE.NPV, _EXPR_TYPE.OTHER): _pow_npv_other,
+
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NATIVE): _pow_param_native,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NPV): _pow_param_npv,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.PARAM): _pow_param_param,
+        (_EXPR_TYPE.PARAM, _EXPR_TYPE.OTHER): _pow_param_other,
+
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NATIVE): _pow_other_native,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NPV): _pow_other_npv,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.PARAM): _pow_other_param,
+        (_EXPR_TYPE.OTHER, _EXPR_TYPE.OTHER): _pow_other_other,
+})
+_pow_type_handler_mapping.update({
+    (i, j): _pow_other_other
+    for i in _EXPR_TYPE for j in _EXPR_TYPE
+    if (i,j) not in _pow_type_handler_mapping
+})
+
+
+#
+# ABS handlers
+#
+
+def _abs_native(a):
+    # This can be hit because of the asbinary / mutable wrapper handlers.
+    return abs(a)
+
+def _abs_npv(a):
+    # This can be hit because of the asbinary / mutable wrapper handlers.
+    return NPV_AbsExpression((a,))
+
+def _abs_param(a):
+    if a.is_constant():
+        return abs(a.value)
+    return NPV_AbsExpression((a,))
+
+def _abs_other(a):
+    return AbsExpression((a,))
+
+
+def _register_new_abs_handler(a):
+    types = _categorize_arg_types(a)
+    # Retrieve the appropriate handler, record it in the main
+    # _abs_dispatcher dict (so this method is not called a second time for
+    # these types)
+    _abs_dispatcher[a.__class__] \
+        = handler = _abs_type_handler_mapping[types[0]]
+    # Call the appropriate handler
+    return handler(a)
+
+_abs_dispatcher = collections.defaultdict(lambda: _register_new_abs_handler)
+
+_abs_type_handler_mapping = _unary_op_dispatcher_type_mapping(
+    _abs_dispatcher, {
+        _EXPR_TYPE.NATIVE: _abs_native,
+        _EXPR_TYPE.NPV: _abs_npv,
+        _EXPR_TYPE.PARAM: _abs_param,
+        _EXPR_TYPE.VAR: _abs_other,
+        _EXPR_TYPE.MONOMIAL: _abs_other,
+        _EXPR_TYPE.LINEAR: _abs_other,
+        _EXPR_TYPE.SUM: _abs_other,
+        _EXPR_TYPE.OTHER: _abs_other,
+    })
+
+
+#
+# INTRINSIC FUNCTION handlers
+#
+
+def _fcn_asbinary(a, name, fcn):
+    a = a.as_binary()
+    return _fcn_dispatcher[a.__class__](a, name, fcn)
+
+def _fcn_mutable(a, name, fcn):
+    a = _recast_mutable(a)
+    return _fcn_dispatcher[a.__class__](a, name, fcn)
+
+def _fcn_native(a, name, fcn):
+    # This can be hit because of the asbinary / mutable wrapper handlers.
+    return fcn(a)
+
+def _fcn_npv(a, name, fcn):
+    # This can be hit because of the asbinary / mutable wrapper handlers.
+    return NPV_UnaryFunctionExpression((a,), name, fcn)
+
+def _fcn_param(a, name, fcn):
+    if a.is_constant():
+        return fcn(a.value)
+    return NPV_UnaryFunctionExpression((a,), name, fcn)
+
+def _fcn_other(a, name, fcn):
+    return UnaryFunctionExpression((a,), name, fcn)
+
+
+def _register_new_fcn_dispatcher(a, name, fcn):
+    types = _categorize_arg_types(a)
+    # Retrieve the appropriate handler, record it in the main
+    # _fcn_dispatcher dict (so this method is not called a second time for
+    # these types)
+    _fcn_dispatcher[a.__class__] \
+        = handler = _fcn_type_handler_mapping[types[0]]
+    # Call the appropriate handler
+    return handler(a, name, fcn)
+
+_fcn_dispatcher = collections.defaultdict(lambda: _register_new_fcn_dispatcher)
+
+_fcn_type_handler_mapping = {
+    _EXPR_TYPE.ASBINARY: _fcn_asbinary,
+    _EXPR_TYPE.MUTABLE: _fcn_mutable,
+    _EXPR_TYPE.INVALID: _invalid,
+    _EXPR_TYPE.NATIVE: _fcn_native,
+    _EXPR_TYPE.NPV: _fcn_npv,
+    _EXPR_TYPE.PARAM: _fcn_param,
+    _EXPR_TYPE.VAR: _fcn_other,
+    _EXPR_TYPE.MONOMIAL: _fcn_other,
+    _EXPR_TYPE.LINEAR: _fcn_other,
+    _EXPR_TYPE.SUM: _fcn_other,
+    _EXPR_TYPE.OTHER: _fcn_other,
+}
+
+
+
+
 
 def _balanced_parens(arg):
     """Verify the string argument contains balanced parentheses.
@@ -1599,13 +3100,18 @@ def _balanced_parens(arg):
     return _parenCount == 0
 
 
-NPV_expression_types = set(
-   [NPV_NegationExpression,
+# TODO: this is fragile (and not currently used anywhere).  It should be
+# deprecated / removed.
+NPV_expression_types = set([
+    NPV_NegationExpression,
     NPV_ExternalFunctionExpression,
     NPV_PowExpression,
+    NPV_MinExpression,
+    NPV_MaxExpression,
     NPV_ProductExpression,
     NPV_DivisionExpression,
     NPV_SumExpression,
     NPV_UnaryFunctionExpression,
-    NPV_AbsExpression])
+    NPV_AbsExpression
+])
 

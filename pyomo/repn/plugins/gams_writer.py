@@ -153,6 +153,14 @@ class ToGamsVisitor(EXPR._ToStringVisitor):
         return ftoa(const, True) + '*' + self.smap.getSymbol(var)
 
     def _linear_to_string(self, node):
+        values = [
+            self._monomial_to_string(arg)
+            if (arg.__class__ is EXPR.MonomialTermExpression
+                and not arg.arg(1).is_fixed())
+            else ftoa(arg)
+            for arg in node.args
+        ]
+        return node._to_string(values, False, self.smap)
         iter_ = iter(node.args)
         values = []
         if node.constant:

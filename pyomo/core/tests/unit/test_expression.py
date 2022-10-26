@@ -16,13 +16,14 @@ from pyomo.core.expr import expr_common
 
 
 import pyomo.common.unittest as unittest
+import pyomo.core.expr.current as EXPR
 
 from pyomo.environ import (
     ConcreteModel, AbstractModel, Expression, Var, Set, Param, Objective,
     value, sum_product,
 )
 from pyomo.core.base.expression import _GeneralExpressionData
-from pyomo.core.expr.compare import compare_expressions
+from pyomo.core.expr.compare import compare_expressions, assertExpressionsEqual
 from pyomo.common.tee import capture_output
 
 class TestExpressionData(unittest.TestCase):
@@ -718,10 +719,10 @@ E : Size=2
 
         output = \
 """\
-sum(prod(e{sum(x, 2)}, pow(x, 2)), E[1]{sum(pow(x, 2), 1)})
+sum(prod(e{sum(mon(1, x), 2)}, pow(x, 2)), E[1]{sum(pow(x, 2), 1)})
 e : Size=1, Index=None
     Key  : Expression
-    None : sum(x, 2)
+    None : sum(mon(1, x), 2)
 E : Size=2, Index=E_index
     Key : Expression
       1 : sum(pow(x, 2), 1)
@@ -936,6 +937,14 @@ E : Size=2, Index=E_index
         m.y = Var()
         m.e.expr = m.x
         m.e -= m.y
+        assertExpressionsEqual(
+            self,
+            m.e.expr,
+            EXPR.LinearExpression([
+                EXPR.MonomialTermExpression((1, m.x)),
+                EXPR.MonomialTermExpression((-1, m.y)),
+            ])
+        )
         self.assertTrue(compare_expressions(m.e.expr, m.x - m.y))
 
     def test_imul(self):

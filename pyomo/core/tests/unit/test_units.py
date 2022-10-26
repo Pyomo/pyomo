@@ -249,8 +249,8 @@ class TestPyomoUnit(unittest.TestCase):
         self._get_check_units_fail(inequality(3.0*kg, 4.0*kg, 5.0*m), uc, EXPR.RangedExpression)
 
         # test SumExpression, NPV_SumExpression
-        self._get_check_units_ok(3.0*model.x*kg + 1.0*model.y*kg + 3.65*model.z*kg, uc, 'kg', EXPR.SumExpression)
-        self._get_check_units_fail(3.0*model.x*kg + 1.0*model.y*m + 3.65*model.z*kg, uc, EXPR.SumExpression)
+        self._get_check_units_ok(3.0*model.x*kg + 1.0*model.y*kg + 3.65*model.z*kg, uc, 'kg', EXPR.LinearExpression)
+        self._get_check_units_fail(3.0*model.x*kg + 1.0*model.y*m + 3.65*model.z*kg, uc, EXPR.LinearExpression)
 
         self._get_check_units_ok(3.0*kg + 1.0*kg + 2.0*kg, uc, 'kg', EXPR.NPV_SumExpression)
         self._get_check_units_fail(3.0*kg + 1.0*kg + 2.0*m, uc, EXPR.NPV_SumExpression)
