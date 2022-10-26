@@ -2007,7 +2007,7 @@ def _neg_native(a):
 
 def _neg_npv(a):
     # This can be hit because of the asbinary / mutable wrapper handlers.
-    return -a
+    return NPV_NegationExpression((a,))
 
 def _neg_param(a):
     if a.is_constant():
