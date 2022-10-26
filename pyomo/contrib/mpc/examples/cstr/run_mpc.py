@@ -21,10 +21,12 @@ from pyomo.contrib.mpc.examples.cstr.model import (
 def get_steady_state_data(target, tee=False):
     m = create_instance(dynamic=False)
     interface = mpc.DynamicModelInterface(m, m.time)
-    m.tracking_cost = interface.get_tracking_cost_from_constant_setpoint(
+    var_set, tr_cost = interface.get_tracking_cost_from_constant_setpoint(
         target
     )
-    m.objective = pyo.Objective(expr=m.tracking_cost[0])
+    m.target_set = var_set
+    m.tracking_cost = tr_cost
+    m.objective = pyo.Objective(expr=sum(m.tracking_cost[:, 0]))
     m.flow_in[:].unfix()
     solver = pyo.SolverFactory("ipopt")
     solver.solve(m, tee=tee)
@@ -60,13 +62,15 @@ def run_cstr_mpc(
     # Add objective to controller model
     #
     setpoint_variables = [m_controller.conc[:, "A"], m_controller.conc[:, "B"]]
-    tr_cost = controller_interface.get_tracking_cost_from_constant_setpoint(
+    vset, tr_cost = controller_interface.get_tracking_cost_from_constant_setpoint(
         setpoint_data,
         variables=setpoint_variables,
     )
+    m_controller.setpoint_set = vset
     m_controller.tracking_cost = tr_cost
     m_controller.objective = pyo.Objective(expr=sum(
-        m_controller.tracking_cost[t]
+        m_controller.tracking_cost[i, t]
+        for i in m_controller.setpoint_set
         for t in m_controller.time if t != m_controller.time.first()
     ))
 
