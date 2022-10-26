@@ -20,9 +20,9 @@ import pyomo.common.unittest as unittest
 import random
 
 from pyomo.opt import check_available_solvers
-from pyomo.environ import (ConcreteModel, Set, Objective, 
+from pyomo.environ import (ConcreteModel, Set, Objective,
                            Constraint, Var, Block, Param,
-                           NonNegativeReals, TransformationFactory, ComponentUID, 
+                           NonNegativeReals, TransformationFactory, ComponentUID,
                            inequality)
 
 import pyomo.core.expr.current as EXPR
@@ -66,7 +66,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(m)
         xblock = m.component("_core_add_slack_variables")
-        
+
         # should have new variables on new block
         self.assertIsInstance(xblock.component("_slack_minus_rule1"), Var)
         self.assertFalse(hasattr(xblock, "_slack_plus_rule1"))
@@ -86,7 +86,7 @@ class TestAddSlacks(unittest.TestCase):
         # check all original variables still there:
         cons = m.rule1
         transBlock = m.component("_core_add_slack_variables")
-        
+
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 5)
         assertExpressionsEqual(
@@ -98,7 +98,7 @@ class TestAddSlacks(unittest.TestCase):
                     -1, transBlock._slack_minus_rule1)),
             ])
         )
-        
+
     def checkRule3(self, m):
         # check all original variables still there:
         cons = m.rule3
@@ -106,7 +106,7 @@ class TestAddSlacks(unittest.TestCase):
 
         self.assertIsNone(cons.upper)
         self.assertEqual(cons.lower, 0.1)
-        
+
         assertExpressionsEqual(
             self,
             cons.body,
@@ -125,7 +125,7 @@ class TestAddSlacks(unittest.TestCase):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(m)
         self.checkRule3(m)
-        
+
     def test_both_bounds_constraint_modified(self):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(m)
@@ -133,7 +133,7 @@ class TestAddSlacks(unittest.TestCase):
         # check all original variables still there:
         cons = m.rule2
         transBlock = m.component("_core_add_slack_variables")
-        
+
         self.assertEqual(cons.lower, 1)
         self.assertEqual(cons.upper, 3)
 
@@ -158,14 +158,14 @@ class TestAddSlacks(unittest.TestCase):
     def test_new_obj_created(self):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(m)
-        
+
         transBlock = m.component("_core_add_slack_variables")
 
         # active objective should minimize sum of slacks
         obj = transBlock.component("_slack_objective")
         self.assertIsInstance(obj, Objective)
         self.assertTrue(obj.active)
-        
+
         assertExpressionsEqual(
             self,
             obj.expr,
@@ -182,16 +182,16 @@ class TestAddSlacks(unittest.TestCase):
         model.x = Var(within=NonNegativeReals)
         model.rule1 = Constraint(expr=inequality(6, model.x, 5))
         self.assertRaisesRegex(
-            RuntimeError, 
-            "Lower bound exceeds upper bound in constraint rule1*", 
-            TransformationFactory('core.add_slack_variables').apply_to, 
+            RuntimeError,
+            "Lower bound exceeds upper bound in constraint rule1*",
+            TransformationFactory('core.add_slack_variables').apply_to,
             model)
 
     def test_leave_deactivated_constraints(self):
         m = self.makeModel()
         m.rule2.deactivate()
         TransformationFactory('core.add_slack_variables').apply_to(m)
-        
+
         cons = m.rule2
         self.assertFalse(cons.active)
         self.assertEqual(cons.lower, 1)
@@ -216,9 +216,9 @@ class TestAddSlacks(unittest.TestCase):
     def test_only_targets_have_slack_vars(self):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
-            m, 
+            m,
             targets=[m.rule1, m.rule3])
-        
+
         transBlock = m.component("_core_add_slack_variables")
         # check that we only made slack vars for targets
         self.checkTargetSlackVars(transBlock)
@@ -226,13 +226,13 @@ class TestAddSlacks(unittest.TestCase):
     def test_only_targets_have_slack_vars_create_using(self):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
-            m, 
+            m,
             targets=[m.rule1, m.rule3])
 
         transBlock = m2.component("_core_add_slack_variables")
         # check that we only made slack vars for targets
         self.checkTargetSlackVars(transBlock)
-        
+
     def checkNonTargetCons(self, m):
         cons = m.rule2
         self.assertEqual(cons.lower, 1)
@@ -243,23 +243,23 @@ class TestAddSlacks(unittest.TestCase):
     def test_nontarget_constraint_same(self):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
-            m, 
+            m,
             targets=[m.rule1, m.rule3])
-        
+
         self.checkNonTargetCons(m)
 
     def test_nontarget_constraint_same_create_using(self):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
-            m, 
+            m,
             targets=[m.rule1, m.rule3])
-        
+
         self.checkNonTargetCons(m2)
 
     def test_target_constraints_transformed(self):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
-            m, 
+            m,
             targets=[m.rule1, m.rule3])
 
         self.checkRule1(m)
@@ -268,7 +268,7 @@ class TestAddSlacks(unittest.TestCase):
     def test_target_constraints_transformed_create_using(self):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
-            m, 
+            m,
             targets=[m.rule1, m.rule3])
 
         self.checkRule1(m2)
@@ -294,7 +294,7 @@ class TestAddSlacks(unittest.TestCase):
     def test_target_objective(self):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
-            m, 
+            m,
             targets=[m.rule1, m.rule3])
 
         self.assertFalse(m.obj.active)
@@ -303,7 +303,7 @@ class TestAddSlacks(unittest.TestCase):
     def test_target_objective_create_using(self):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
-            m, 
+            m,
             targets=[m.rule1, m.rule3])
 
         self.assertFalse(m2.obj.active)
@@ -355,7 +355,7 @@ class TestAddSlacks(unittest.TestCase):
                                  "core.add_slack_variables transformation. "
                                  "Specify\ntargets as a Constraint or list of "
                                  "Constraints.*")
-        
+
         # make sure that it still worked though
         self.checkNonTargetCons(m)
         self.checkRule3(m)
@@ -417,7 +417,7 @@ class TestAddSlacks(unittest.TestCase):
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
             targets=[m.rule4])
-        
+
         transBlock = m._core_add_slack_variables
         c = m.rule4
         self.assertIsNone(c.lower)
@@ -427,7 +427,7 @@ class TestAddSlacks(unittest.TestCase):
         self.assertIs(c.body.arg(1).__class__, EXPR.MonomialTermExpression)
         self.assertEqual(c.body.arg(1).arg(0), -1)
         self.assertIs(c.body.arg(1).arg(1), transBlock._slack_minus_rule4)
-       
+
 
 class TestAddSlacks_IndexedConstraints(unittest.TestCase):
 
@@ -443,7 +443,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m.rule2 = Constraint(expr=m.y <= 6)
         m.obj = Objective(expr=sum(m.x[s] for s in m.S) - m.y)
         return m
-    
+
     def checkSlackVars_indexedtarget(self, transBlock):
         self.assertIsInstance(transBlock.component("_slack_plus_rule1[1]"), Var)
         self.assertIsInstance(transBlock.component("_slack_plus_rule1[2]"), Var)
@@ -461,7 +461,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         # slack variables. They could... But I don't know if it matters much?
         # They are named sensibly either way... Dunno.
         self.checkSlackVars_indexedtarget(transBlock)
-    
+
     def test_indexedtarget_only_create_slackvars_for_targets_create_using(self):
         m = self.makeModel()
         m2 = TransformationFactory('core.add_slack_variables').create_using(
@@ -470,13 +470,13 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
 
         transBlock = m2.component("_core_add_slack_variables")
         self.checkSlackVars_indexedtarget(transBlock)
-        
+
     def checkRule2(self, m):
         cons = m.rule2
         self.assertEqual(cons.upper, 6)
         self.assertIsNone(cons.lower)
         self.assertIs(cons.body, m.y)
-        
+
     def test_indexedtarget_nontarget_same(self):
         m = self.makeModel()
         TransformationFactory('core.add_slack_variables').apply_to(
@@ -515,7 +515,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
             targets=[m.rule1])
-        
+
         self.assertFalse(m.obj.active)
         self.checkTargetObj(m)
 
@@ -524,10 +524,10 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m,
             targets=[m.rule1])
-        
+
         self.assertFalse(m2.obj.active)
         self.checkTargetObj(m2)
-        
+
     def checkTransformedRule1(self, m, i):
         c = m.rule1[i]
         self.assertEqual(c.lower, 4)
@@ -539,7 +539,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
             EXPR.LinearExpression([
                 EXPR.MonomialTermExpression((2, m.x[i])),
                 EXPR.MonomialTermExpression((
-                    1, 
+                    1,
                     m._core_add_slack_variables.component(
                         "_slack_plus_rule1[%s]" % i)
                 ))
@@ -551,7 +551,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
             targets=[m.rule1])
-        
+
         for i in [1,2,3]:
             self.checkTransformedRule1(m, i)
 
@@ -560,7 +560,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m,
             targets=m.rule1)
-        
+
         for i in [1,2,3]:
             self.checkTransformedRule1(m2, i)
 
@@ -600,7 +600,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         TransformationFactory('core.add_slack_variables').apply_to(
             m,
             targets=[m.rule1[2]])
-        
+
         self.checkUntransformedRule1(m, 1)
         self.checkUntransformedRule1(m, 3)
         self.checkRule2(m)
@@ -610,7 +610,7 @@ class TestAddSlacks_IndexedConstraints(unittest.TestCase):
         m2 = TransformationFactory('core.add_slack_variables').create_using(
             m,
             targets=[m.rule1[2]])
-        
+
         self.checkUntransformedRule1(m2, 1)
         self.checkUntransformedRule1(m2, 3)
         self.checkRule2(m2)

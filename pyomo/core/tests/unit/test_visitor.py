@@ -26,7 +26,7 @@ from pyomo.core.expr.numvalue import (
     native_types, nonpyomo_leaf_types, NumericConstant,
 )
 from pyomo.core.expr.numeric_expr import (
-    SumExpression, ProductExpression, 
+    SumExpression, ProductExpression,
     MonomialTermExpression, LinearExpression,
     NPV_SumExpression, NPV_ProductExpression, NegationExpression,
     NPV_NegationExpression, PowExpression, NPV_PowExpression,
@@ -416,7 +416,7 @@ class WalkerTests(unittest.TestCase):
         sub_map = dict()
         sub_map[id(m.x)] = m.x**2
         e2 = replace_expressions(e, sub_map)
-        assertExpressionsEqual(self, 
+        assertExpressionsEqual(self,
             e2,
             SumExpression([2*m.x**2, 3*m.y])
         )
@@ -1357,7 +1357,7 @@ class BaseStreamBasedVisitorTests(object):
             ans.append("Finalize")
         walker = StreamBasedExpressionVisitor(
             initializeWalker=initialize,
-            enterNode=enter, exitNode=exit, beforeChild=before, 
+            enterNode=enter, exitNode=exit, beforeChild=before,
             acceptChildResult=accept, afterChild=after, finalizeResult=finalize)
         self.assertIsNone( self.walk(walker, self.e) )
         self.assertEqual("\n".join(ans),"""Initialize

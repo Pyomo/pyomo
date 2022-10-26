@@ -1699,7 +1699,7 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.LINEAR): _add_param_linear,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.SUM): _add_param_sum,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.OTHER): _add_param_other,
-    
+
         (_EXPR_TYPE.VAR, _EXPR_TYPE.NATIVE): _add_var_native,
         (_EXPR_TYPE.VAR, _EXPR_TYPE.NPV): _add_var_npv,
         (_EXPR_TYPE.VAR, _EXPR_TYPE.PARAM): _add_var_param,
@@ -1708,7 +1708,7 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.VAR, _EXPR_TYPE.LINEAR): _add_var_linear,
         (_EXPR_TYPE.VAR, _EXPR_TYPE.SUM): _add_var_sum,
         (_EXPR_TYPE.VAR, _EXPR_TYPE.OTHER): _add_var_other,
-    
+
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NATIVE): _add_monomial_native,
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NPV): _add_monomial_npv,
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.PARAM): _add_monomial_param,
@@ -1717,7 +1717,7 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.LINEAR): _add_monomial_linear,
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.SUM): _add_monomial_sum,
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.OTHER): _add_monomial_other,
-    
+
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NATIVE): _add_linear_native,
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NPV): _add_linear_npv,
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.PARAM): _add_linear_param,
@@ -1726,7 +1726,7 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.LINEAR): _add_linear_linear,
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.SUM): _add_linear_sum,
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.OTHER): _add_linear_other,
-    
+
         (_EXPR_TYPE.SUM, _EXPR_TYPE.NATIVE): _add_sum_native,
         (_EXPR_TYPE.SUM, _EXPR_TYPE.NPV): _add_sum_npv,
         (_EXPR_TYPE.SUM, _EXPR_TYPE.PARAM): _add_sum_param,
@@ -1735,7 +1735,7 @@ _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.SUM, _EXPR_TYPE.LINEAR): _add_sum_linear,
         (_EXPR_TYPE.SUM, _EXPR_TYPE.SUM): _add_sum_sum,
         (_EXPR_TYPE.SUM, _EXPR_TYPE.OTHER): _add_sum_other,
-    
+
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.NATIVE): _add_other_native,
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.NPV): _add_other_npv,
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.PARAM): _add_other_param,
@@ -2394,7 +2394,7 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.NATIVE, _EXPR_TYPE.LINEAR): _mul_native_linear,
         (_EXPR_TYPE.NATIVE, _EXPR_TYPE.SUM): _mul_native_sum,
         (_EXPR_TYPE.NATIVE, _EXPR_TYPE.OTHER): _mul_native_other,
-    
+
         (_EXPR_TYPE.NPV, _EXPR_TYPE.NATIVE): _mul_npv_native,
         (_EXPR_TYPE.NPV, _EXPR_TYPE.NPV): _mul_npv_npv,
         (_EXPR_TYPE.NPV, _EXPR_TYPE.PARAM): _mul_npv_param,
@@ -2403,7 +2403,7 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.NPV, _EXPR_TYPE.LINEAR): _mul_npv_linear,
         (_EXPR_TYPE.NPV, _EXPR_TYPE.SUM): _mul_npv_sum,
         (_EXPR_TYPE.NPV, _EXPR_TYPE.OTHER): _mul_npv_other,
-    
+
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.NATIVE): _mul_param_native,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.NPV): _mul_param_npv,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.PARAM): _mul_param_param,
@@ -2412,7 +2412,7 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.LINEAR): _mul_param_linear,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.SUM): _mul_param_sum,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.OTHER): _mul_param_other,
-    
+
         (_EXPR_TYPE.VAR, _EXPR_TYPE.NATIVE): _mul_var_native,
         (_EXPR_TYPE.VAR, _EXPR_TYPE.NPV): _mul_var_npv,
         (_EXPR_TYPE.VAR, _EXPR_TYPE.PARAM): _mul_var_param,
@@ -2421,7 +2421,7 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.VAR, _EXPR_TYPE.LINEAR): _mul_var_linear,
         (_EXPR_TYPE.VAR, _EXPR_TYPE.SUM): _mul_var_sum,
         (_EXPR_TYPE.VAR, _EXPR_TYPE.OTHER): _mul_var_other,
-    
+
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NATIVE): _mul_monomial_native,
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NPV): _mul_monomial_npv,
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.PARAM): _mul_monomial_param,
@@ -2430,7 +2430,7 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.LINEAR): _mul_monomial_linear,
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.SUM): _mul_monomial_sum,
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.OTHER): _mul_monomial_other,
-    
+
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NATIVE): _mul_linear_native,
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NPV): _mul_linear_npv,
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.PARAM): _mul_linear_param,
@@ -2439,7 +2439,7 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.LINEAR): _mul_linear_linear,
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.SUM): _mul_linear_sum,
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.OTHER): _mul_linear_other,
-    
+
         (_EXPR_TYPE.SUM, _EXPR_TYPE.NATIVE): _mul_sum_native,
         (_EXPR_TYPE.SUM, _EXPR_TYPE.NPV): _mul_sum_npv,
         (_EXPR_TYPE.SUM, _EXPR_TYPE.PARAM): _mul_sum_param,
@@ -2448,7 +2448,7 @@ _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.SUM, _EXPR_TYPE.LINEAR): _mul_sum_linear,
         (_EXPR_TYPE.SUM, _EXPR_TYPE.SUM): _mul_sum_sum,
         (_EXPR_TYPE.SUM, _EXPR_TYPE.OTHER): _mul_sum_other,
-    
+
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.NATIVE): _mul_other_native,
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.NPV): _mul_other_npv,
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.PARAM): _mul_other_param,
@@ -2772,7 +2772,7 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.NATIVE, _EXPR_TYPE.LINEAR): _div_native_linear,
         (_EXPR_TYPE.NATIVE, _EXPR_TYPE.SUM): _div_native_sum,
         (_EXPR_TYPE.NATIVE, _EXPR_TYPE.OTHER): _div_native_other,
-    
+
         (_EXPR_TYPE.NPV, _EXPR_TYPE.NATIVE): _div_npv_native,
         (_EXPR_TYPE.NPV, _EXPR_TYPE.NPV): _div_npv_npv,
         (_EXPR_TYPE.NPV, _EXPR_TYPE.PARAM): _div_npv_param,
@@ -2781,7 +2781,7 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.NPV, _EXPR_TYPE.LINEAR): _div_npv_linear,
         (_EXPR_TYPE.NPV, _EXPR_TYPE.SUM): _div_npv_sum,
         (_EXPR_TYPE.NPV, _EXPR_TYPE.OTHER): _div_npv_other,
-    
+
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.NATIVE): _div_param_native,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.NPV): _div_param_npv,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.PARAM): _div_param_param,
@@ -2790,7 +2790,7 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.LINEAR): _div_param_linear,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.SUM): _div_param_sum,
         (_EXPR_TYPE.PARAM, _EXPR_TYPE.OTHER): _div_param_other,
-    
+
         (_EXPR_TYPE.VAR, _EXPR_TYPE.NATIVE): _div_var_native,
         (_EXPR_TYPE.VAR, _EXPR_TYPE.NPV): _div_var_npv,
         (_EXPR_TYPE.VAR, _EXPR_TYPE.PARAM): _div_var_param,
@@ -2799,7 +2799,7 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.VAR, _EXPR_TYPE.LINEAR): _div_var_linear,
         (_EXPR_TYPE.VAR, _EXPR_TYPE.SUM): _div_var_sum,
         (_EXPR_TYPE.VAR, _EXPR_TYPE.OTHER): _div_var_other,
-    
+
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NATIVE): _div_monomial_native,
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NPV): _div_monomial_npv,
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.PARAM): _div_monomial_param,
@@ -2808,7 +2808,7 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.LINEAR): _div_monomial_linear,
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.SUM): _div_monomial_sum,
         (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.OTHER): _div_monomial_other,
-    
+
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NATIVE): _div_linear_native,
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NPV): _div_linear_npv,
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.PARAM): _div_linear_param,
@@ -2817,7 +2817,7 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.LINEAR): _div_linear_linear,
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.SUM): _div_linear_sum,
         (_EXPR_TYPE.LINEAR, _EXPR_TYPE.OTHER): _div_linear_other,
-    
+
         (_EXPR_TYPE.SUM, _EXPR_TYPE.NATIVE): _div_sum_native,
         (_EXPR_TYPE.SUM, _EXPR_TYPE.NPV): _div_sum_npv,
         (_EXPR_TYPE.SUM, _EXPR_TYPE.PARAM): _div_sum_param,
@@ -2826,7 +2826,7 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.SUM, _EXPR_TYPE.LINEAR): _div_sum_linear,
         (_EXPR_TYPE.SUM, _EXPR_TYPE.SUM): _div_sum_sum,
         (_EXPR_TYPE.SUM, _EXPR_TYPE.OTHER): _div_sum_other,
-    
+
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.NATIVE): _div_other_native,
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.NPV): _div_other_npv,
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.PARAM): _div_other_param,
@@ -2836,7 +2836,7 @@ _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.SUM): _div_other_sum,
         (_EXPR_TYPE.OTHER, _EXPR_TYPE.OTHER): _div_other_other,
 })
-    
+
 
 #
 # POW handlers

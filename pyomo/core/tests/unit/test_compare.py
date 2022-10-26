@@ -35,7 +35,7 @@ class TestConvertToPrefixNotation(unittest.TestCase):
             linear_vars=list(m.x.values())
         )
         expected = [
-            (LinearExpression, 5), 3, 
+            (LinearExpression, 5), 3,
             (MonomialTermExpression, 2), 1, m.x[1],
             (MonomialTermExpression, 2), 2, m.x[2],
             (MonomialTermExpression, 2), 3, m.x[3],
