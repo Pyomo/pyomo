@@ -73,6 +73,11 @@ class TestPyomoUnittest(unittest.TestCase):
         with self.assertRaisesRegex(self.failureException, '10 !~= 10.01'):
             self.assertStructuredAlmostEqual(10, 10.01, delta=1e-3)
 
+    def test_assertStructuredAlmostEqual_nan(self):
+        a = float('nan')
+        b = float('nan')
+        self.assertStructuredAlmostEqual(a, b)
+
     def test_assertStructuredAlmostEqual_errorChecking(self):
         with self.assertRaisesRegex(
                 ValueError, "Cannot specify more than one of "
