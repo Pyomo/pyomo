@@ -12,3 +12,4 @@ Solvers
    appsi.solvers.ipopt
    appsi.solvers.cplex
    appsi.solvers.cbc
+   appsi.solvers.highs
