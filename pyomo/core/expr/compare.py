@@ -211,6 +211,6 @@ def assertExpressionsStructurallyEqual(self, a, b, include_named_exprs=True):
         for _a, _b in zip(prefix_a, prefix_b):
             self.assertIs(_a.__class__, _b.__class__)
             self.assertEqual(_a, _b)
-    except PyomoException:
+    except (PyomoException, AssertionError):
         self.fail(f"Expressions not structurally equal:\n\t"
                   f"{tostr(prefix_a)}\n\t!=\n\t{tostr(prefix_b)}")
