@@ -659,7 +659,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
         test if ContinuousSet elements are returned correctly from theta_est()
         '''
         obj, theta, return_vals = self.pest_df.theta_est(return_values=['time'])
-        self.assertAlmostEqual(return_vals['time'].loc[18],2.368, places=3)
+        self.assertAlmostEqual(return_vals['time'].loc[0][18],2.368, places=3)
     
     def test_return_continuous_set_multiple_datasets(self):
         '''
