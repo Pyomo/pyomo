@@ -396,7 +396,6 @@ class MultipleBigMTransformation(Transformation):
         scratch_blocks = {}
         Ms = {}
         all_vars = list(self._get_all_var_objects(obj))
-        del_later = []
         for disjunct, other_disjunct in itertools.product(obj.disjuncts,
                                                           obj.disjuncts):
             if ((disjunct is other_disjunct) or (not disjunct.active) or 
@@ -405,9 +404,6 @@ class MultipleBigMTransformation(Transformation):
             if id(other_disjunct) in scratch_blocks:
                 scratch = scratch_blocks[id(other_disjunct)]
             else:
-                # TODO: there's no point in scratch being a Block since I need
-                # to put references on the Disjunct itself. Should just make it
-                # the objective.
                 scratch = scratch_blocks[id(other_disjunct)] = Block()
                 other_disjunct.add_component(
                     unique_component_name(other_disjunct, "scratch"), scratch)
@@ -420,9 +416,8 @@ class MultipleBigMTransformation(Transformation):
                 # being solved, we won't need this!
                 for v in all_vars:
                     ref = Reference(v)
-                    del_later.append(ref)
-                    other_disjunct.add_component(
-                        unique_component_name(other_disjunct, v.name), ref)
+                    scratch.add_component(
+                        unique_component_name(scratch, v.name), ref)
 
             for constraint in disjunct.component_data_objects(
                     Constraint,
@@ -462,7 +457,5 @@ class MultipleBigMTransformation(Transformation):
         # clean up the scratch blocks
         for blk in scratch_blocks.values():
             blk.parent_block().del_component(blk)
-        for ref in del_later:
-            ref.parent_block().del_component(ref)
 
         return Ms
