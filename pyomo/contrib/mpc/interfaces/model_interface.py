@@ -29,7 +29,7 @@ from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.interval_data import IntervalData
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.modeling.cost_expressions import (
-    get_tracking_cost_from_constant_setpoint,
+    get_penalty_from_constant_target,
 )
 from pyomo.contrib.mpc.modeling.constraints import (
     get_piecewise_constant_constraints,
@@ -353,7 +353,7 @@ class DynamicModelInterface(object):
     # here which only requires setpoint_data, and decides which type of
     # expression to build depending on the type of the setpoint.
     #
-    def get_tracking_cost_from_constant_setpoint(
+    def get_penalty_from_constant_target(
         self,
         setpoint_data,
         time=None,
@@ -408,7 +408,7 @@ class DynamicModelInterface(object):
                     get_indexed_cuid(var, (self.time,))
                 ) for var in variables
             ]
-        return get_tracking_cost_from_constant_setpoint(
+        return get_penalty_from_constant_target(
             variables,
             time,
             setpoint_data,

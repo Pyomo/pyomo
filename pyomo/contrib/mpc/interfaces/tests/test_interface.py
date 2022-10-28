@@ -345,13 +345,13 @@ class TestDynamicModelInterface(unittest.TestCase):
         self.assertEqual(m.var[t, "B"].value, 1.2)
         self.assertEqual(m.input[t].value, 0.8)
 
-    def test_get_tracking_cost_from_constant_setpoint(self):
+    def test_get_penalty_from_constant_target(self):
         m = self._make_model()
         interface = DynamicModelInterface(m, m.time)
         setpoint_data = ScalarData({m.var[:, "A"]: 1.0, m.var[:, "B"]: 2.0})
         weight_data = ScalarData({m.var[:, "A"]: 10.0, m.var[:, "B"]: 0.1})
 
-        vset, tr_cost = interface.get_tracking_cost_from_constant_setpoint(
+        vset, tr_cost = interface.get_penalty_from_constant_target(
             setpoint_data, weight_data=weight_data,
         )
         m.var_set = vset
@@ -372,7 +372,7 @@ class TestDynamicModelInterface(unittest.TestCase):
                     m.tracking_cost[i, t].expr,
                 ))
 
-    def test_get_tracking_cost_from_constant_setpoint_var_subset(self):
+    def test_get_penalty_from_constant_target_var_subset(self):
         m = self._make_model()
         interface = DynamicModelInterface(m, m.time)
         setpoint_data = ScalarData({
@@ -388,7 +388,7 @@ class TestDynamicModelInterface(unittest.TestCase):
 
         variables = [m.var[:, "A"], m.var[:, "B"]]
         m.variable_set = pyo.Set(initialize=range(len(variables)))
-        new_set, tr_cost = interface.get_tracking_cost_from_constant_setpoint(
+        new_set, tr_cost = interface.get_penalty_from_constant_target(
             setpoint_data,
             variables=variables,
             weight_data=weight_data,
