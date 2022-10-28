@@ -39,13 +39,13 @@ from pyomo.repn import generate_standard_repn
 from weakref import ref as weakref_ref
 
 @TransformationFactory.register(
-    'gdp.mbigm', 
+    'gdp.mbigm',
     doc="Relax disjunctive model using big-M terms specific to each disjunct")
 class MultipleBigMTransformation(Transformation):
     """
-    Implements the multiple big-M transformation from [1]. Note that this 
+    Implements the multiple big-M transformation from [1]. Note that this
     transformation is no different than the big-M transformation for two-
-    term disjunctions, but that it may provide a tighter relaxation for 
+    term disjunctions, but that it may provide a tighter relaxation for
     models containing some disjunctions with three or more terms.
 
 
@@ -75,7 +75,7 @@ class MultipleBigMTransformation(Transformation):
         "unfixed.",
         doc="""
         This is only relevant when the transformation will be calculating M
-        values. If True, the transformation will calculate M values assuming 
+        values. If True, the transformation will calculate M values assuming
         that fixed variables will always be fixed to their current values. This
         means that if a fixed variable is unfixed after transformation, the
         transformed model is potentially no longer valid. By default, the
@@ -95,8 +95,8 @@ class MultipleBigMTransformation(Transformation):
         domain=_to_dict,
         description="Big-M values to use while relaxing constraints",
         doc="""
-        A user-specified dict or ComponentMap mapping tuples of Constraints 
-        and Disjuncts to Big-M values valid for relaxing the constraint if 
+        A user-specified dict or ComponentMap mapping tuples of Constraints
+        and Disjuncts to Big-M values valid for relaxing the constraint if
         the Disjunct is chosen.
 
         Note: Unlike in the bigm transformation, we require the keys in this
@@ -115,9 +115,9 @@ class MultipleBigMTransformation(Transformation):
 
         [l_1 <= x <= u_1] v [l_2 <= x <= u_2] v ... v [l_K <= x <= u_K],
 
-        instead of applying the rote transformation that would create 2*K 
+        instead of applying the rote transformation that would create 2*K
         different constraints in the relaxation, we can write two constraints:
-        
+
         x >= l_1*y_1 + l_2*y_2 + ... + l_K*y_k
         x <= u_1*y_1 + u_2*y_2 + ... + u_K*y_K.
 
@@ -177,7 +177,7 @@ class MultipleBigMTransformation(Transformation):
         knownBlocks = {}
         if targets is None:
             targets = (instance, )
-            
+
         # We will transform from leaf to root, but we have to transform a
         # Disjunction at a time because, more similarly to hull than bigm, we
         # need information from the other Disjuncts in the Disjunction.
@@ -265,7 +265,7 @@ class MultipleBigMTransformation(Transformation):
     def _get_disjunct_relaxation_block(self, disjunct, transBlock):
         if disjunct.transformation_block is not None:
             return disjunct.transformation_block()
-        
+
         # create a relaxation block for this disjunct
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
@@ -282,7 +282,7 @@ class MultipleBigMTransformation(Transformation):
         # add mappings to source disjunct (so we'll know we've relaxed)
         disjunct._transformation_block = weakref_ref(relaxationBlock)
         relaxationBlock._srcDisjunct = weakref_ref(disjunct)
-        
+
         return relaxationBlock
 
     def _transform_disjunct(self, obj, transBlock, all_disjuncts, Ms):
@@ -402,7 +402,7 @@ class MultipleBigMTransformation(Transformation):
             for c_new in transformed:
                 constraintMap['srcConstraints'][c_new] = [c]
             constraintMap['transformedConstraints'][c] = transformed
-        
+
         # deactivate now that we have transformed
         c.deactivate()
 
@@ -500,19 +500,29 @@ class MultipleBigMTransformation(Transformation):
                 relaxationBlock._constraintMap['srcConstraints'][
                     transformed[idx, 'lb']] = []
                 for (c, disj) in lower_bound_constraints_by_var[v]:
-                    relaxationBlock._constraintMap[
-                        'transformedConstraints'][c] = transformed[idx, 'lb']
                     relaxationBlock._constraintMap['srcConstraints'][
                         transformed[idx, 'lb']].append(c)
+                    # TODO: This is ridiculous: Should just store the mapping on
+                    # the Disjunction's transformation block for this one.
+                    disj.transformation_block()._constraintMap[
+                        'transformedConstraints'][c] = [transformed[idx, 'lb']]
             if len(upper_dict) > 0:
                 transformed.add((idx, 'ub'), v <= upper_rhs)
                 relaxationBlock._constraintMap['srcConstraints'][
                     transformed[idx, 'ub']] = []
                 for (c, disj) in upper_bound_constraints_by_var[v]:
-                    relaxationBlock._constraintMap[
-                        'transformedConstraints'][c] = transformed[idx, 'ub']
                     relaxationBlock._constraintMap['srcConstraints'][
                         transformed[idx, 'ub']].append(c)
+                    # might alredy be here if it had an upper bound
+                    if c in disj.transformation_block()._constraintMap[
+                            'transformedConstraints']:
+                        disj.transformation_block()._constraintMap[
+                            'transformedConstraints'][c].append(
+                                transformed[idx, 'ub'])
+                    else:
+                        disj.transformation_block()._constraintMap[
+                            'transformedConstraints'][c] = [transformed[idx,
+                                                                        'ub']]
 
         return transformed_constraints
 
@@ -578,7 +588,7 @@ class MultipleBigMTransformation(Transformation):
         all_vars = list(self._get_all_var_objects(obj))
         for disjunct, other_disjunct in itertools.product(obj.disjuncts,
                                                           obj.disjuncts):
-            if ((disjunct is other_disjunct) or (not disjunct.active) or 
+            if ((disjunct is other_disjunct) or (not disjunct.active) or
                 (not other_disjunct.active)):
                 continue
             if id(other_disjunct) in scratch_blocks:
@@ -607,7 +617,7 @@ class MultipleBigMTransformation(Transformation):
                 # First check args
                 if (constraint, other_disjunct) in arg_Ms:
                     (lower_M, upper_M) = self._tupleize_Ms(
-                        arg_Ms[constraint, other_disjunct], constraint, 
+                        arg_Ms[constraint, other_disjunct], constraint,
                         other_disjunct)
                 else:
                     (lower_M, upper_M) = (None, None)
@@ -620,7 +630,7 @@ class MultipleBigMTransformation(Transformation):
                     for m_values in suffix_list:
                         if (constraint, other_disjunct) in m_values:
                             (l, u) = self._tupleize_Ms(
-                                m_values[constraint, other_disjunct], 
+                                m_values[constraint, other_disjunct],
                                 constraint, other_disjunct)
                             if l is not None:
                                 lower_M = l
@@ -636,8 +646,8 @@ class MultipleBigMTransformation(Transformation):
                                 "Unsuccessful solve to calculate M value to "
                                 "relax constraint '%s' on Disjunct '%s' when "
                                 "Disjunct '%s' is selected." % (
-                                    constraint.name, 
-                                    disjunct.name, 
+                                    constraint.name,
+                                    disjunct.name,
                                     other_disjunct.name))
                         lower_M = value(scratch.obj.expr)
                 if constraint.upper is not None and upper_M is None:
@@ -645,7 +655,7 @@ class MultipleBigMTransformation(Transformation):
                     for m_values in suffix_list:
                         if (constraint, other_disjunct) in m_values:
                             (l, u) = self._tupleize_Ms(
-                                m_values[constraint, other_disjunct], 
+                                m_values[constraint, other_disjunct],
                                 constraint, other_disjunct)
                             if u is not None:
                                 upper_M = u
@@ -661,8 +671,8 @@ class MultipleBigMTransformation(Transformation):
                                 "Unsuccessful solve to calculate M value to "
                                 "relax constraint '%s' on Disjunct '%s' when "
                                 "Disjunct '%s' is selected." % (
-                                    constraint.name, 
-                                    disjunct.name, 
+                                    constraint.name,
+                                    disjunct.name,
                                     other_disjunct.name))
                         upper_M = value(scratch.obj.expr)
                 arg_Ms[constraint, other_disjunct] = (lower_M, upper_M)
@@ -682,7 +692,7 @@ class MultipleBigMTransformation(Transformation):
             if cons.lower is not None and cons.upper is not None:
                 raise GDP_Error(
                     "Constraint '%s' has both lower and upper values, but only "
-                    "one M value is specified for Disjunct '%s'." % 
+                    "one M value is specified for Disjunct '%s'." %
                     (cons.name, disjunct.name))
             if cons.lower is not None:
                 return (M, None)
@@ -729,10 +739,10 @@ class MultipleBigMTransformation(Transformation):
                                                                       disj]
 
     def get_all_M_values(self, model):
-        """Returns a dictionary mapping each constraint, disjunct pair (where 
-        the constraint is on a disjunct and the disjunct is in the same 
-        disjunction as that disjunct) to a tuple: (lower_M_value, 
-        upper_M_value), where either can be None if the constraint does not 
+        """Returns a dictionary mapping each constraint, disjunct pair (where
+        the constraint is on a disjunct and the disjunct is in the same
+        disjunction as that disjunct) to a tuple: (lower_M_value,
+        upper_M_value), where either can be None if the constraint does not
         have a lower or upper bound (respectively).
 
         Parameters
@@ -741,9 +751,9 @@ class MultipleBigMTransformation(Transformation):
         """
         all_ms = {}
         for disjunction in model.component_data_objects(
-                Disjunction, 
-                active=None, 
-                descend_into=(Block, Disjunct), 
+                Disjunction,
+                active=None,
+                descend_into=(Block, Disjunct),
                 sort=SortComponents.deterministic):
             if disjunction.algebraic_constraint is not None:
                 transBlock = disjunction.algebraic_constraint().parent_block()
