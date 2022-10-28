@@ -32,7 +32,8 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
     is_child_of, get_src_disjunction, get_src_constraint, get_gdp_tree,
     get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
-     _warn_for_active_disjunct, preprocess_targets, _to_dict)
+     _warn_for_active_disjunct, preprocess_targets, _to_dict,
+    _get_bigm_suffix_list)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
@@ -163,24 +164,6 @@ class BigM_Transformation(Transformation):
         }
         self._generate_debug_messages = False
         self._transformation_blocks = {}
-
-    def _get_bigm_suffix_list(self, block, stopping_block=None):
-        # Note that you can only specify suffixes on BlockData objects or
-        # ScalarBlocks. Though it is possible at this point to stick them
-        # on whatever components you want, we won't pick them up.
-        suffix_list = []
-
-        # go searching above block in the tree, stop when we hit stopping_block
-        # (This is so that we can search on each Disjunct once, but get any
-        # information between a constraint and its Disjunct while transforming
-        # the constraint).
-        while block is not stopping_block:
-            bigm = block.component('BigM')
-            if type(bigm) is Suffix:
-                suffix_list.append(bigm)
-            block = block.parent_block()
-
-        return suffix_list
 
     def _get_bigm_arg_list(self, bigm_args, block):
         # Gather what we know about blocks from args exactly once. We'll still
@@ -375,7 +358,7 @@ class BigM_Transformation(Transformation):
         root = root_disjunct.parent_block() if root_disjunct is not None else \
                obj.parent_block()
         transBlock = self._add_transformation_block(root)
-        suffix_list = self._get_bigm_suffix_list(obj)
+        suffix_list = _get_bigm_suffix_list(obj)
         arg_list = self._get_bigm_arg_list(bigM, obj)
 
         # add reference to original disjunct on transformation block
@@ -542,7 +525,7 @@ class BigM_Transformation(Transformation):
             if (M[0] is None and c.lower is not None) or \
                (M[1] is None and c.upper is not None):
                 # first get anything parent to c but below disjunct
-                suffix_list = self._get_bigm_suffix_list(
+                suffix_list = _get_bigm_suffix_list(
                     c.parent_block(),
                     stopping_block=disjunct)
                 # prepend that to what we already collected for the disjunct.

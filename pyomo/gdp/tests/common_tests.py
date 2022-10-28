@@ -41,7 +41,7 @@ def check_linear_coef(self, repn, var, coef):
         if v is var:
             var_id = i
     self.assertIsNotNone(var_id)
-    self.assertEqual(repn.linear_coefs[var_id], coef)
+    self.assertAlmostEqual(repn.linear_coefs[var_id], coef)
 
 def check_squared_term_coef(self, repn, var, coef):
     var_id = None

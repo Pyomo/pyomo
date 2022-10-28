@@ -15,7 +15,7 @@ from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.component import _ComponentBase
 from pyomo.core import (
-    Block, TraversalStrategy, SortComponents, LogicalConstraint, value)
+    Block, Suffix, TraversalStrategy, SortComponents, LogicalConstraint, value)
 from pyomo.core.base.block import _BlockData
 from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
 from pyomo.opt import TerminationCondition, SolverStatus
@@ -291,8 +291,8 @@ def get_gdp_tree(targets, instance, knownBlocks):
 def preprocess_targets(targets, instance, knownBlocks, gdp_tree=None):
     if gdp_tree is None:
         gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
-    # this is for bigm and hull: We need to transform from the leaves up, so we
-    # want a reverse of a topological sort: no parent can come before its child.
+    # this is for bigm: We need to transform from the leaves up, so we want a
+    # reverse of a topological sort: no parent can come before its child.
     return gdp_tree.reverse_topological_sort()
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
@@ -557,3 +557,23 @@ def _disjunct_on_active_block(disjunct):
             parent_block = parent_block.parent_block()
             continue
     return True
+
+def _get_bigm_suffix_list(block, stopping_block=None):
+    # Note that you can only specify suffixes on BlockData objects or
+    # ScalarBlocks. Though it is possible at this point to stick them
+    # on whatever components you want, we won't pick them up.
+    suffix_list = []
+
+    # go searching above block in the tree, stop when we hit stopping_block
+    # (This is so that we can search on each Disjunct once, but get any
+    # information between a constraint and its Disjunct while transforming
+    # the constraint).
+    while block is not None:
+        bigm = block.component('BigM')
+        if type(bigm) is Suffix:
+            suffix_list.append(bigm)
+        if block is stopping_block:
+            break
+        block = block.parent_block()
+
+    return suffix_list
