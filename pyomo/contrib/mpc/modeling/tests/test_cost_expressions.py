@@ -28,9 +28,9 @@ from pyomo.common.collections import ComponentSet
 from pyomo.core.expr.visitor import identify_variables
 from pyomo.core.expr.compare import compare_expressions
 from pyomo.contrib.mpc.modeling.cost_expressions import (
-    get_tracking_cost_from_constant_setpoint,
-    get_tracking_cost_from_piecewise_constant_setpoint,
-    get_tracking_cost_from_time_varying_setpoint,
+    get_penalty_from_constant_target,
+    get_penalty_from_piecewise_constant_target,
+    get_penalty_from_time_varying_target,
 )
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
@@ -39,7 +39,7 @@ from pyomo.contrib.mpc.data.interval_data import IntervalData
 
 class TestTrackingCostConstantSetpoint(unittest.TestCase):
 
-    def test_tracking_cost_no_weights(self):
+    def test_penalty_no_weights(self):
         m = pyo.ConcreteModel()
         m.time = pyo.Set(initialize=[1, 2, 3])
         m.v1 = pyo.Var(m.time, initialize={i: 1*i for i in m.time})
@@ -47,7 +47,7 @@ class TestTrackingCostConstantSetpoint(unittest.TestCase):
 
         setpoint_data = ScalarData({m.v1[:]: 3.0, m.v2[:]: 4.0})
         variables = [m.v1, m.v2]
-        m.var_set, m.tracking_expr = get_tracking_cost_from_constant_setpoint(
+        m.var_set, m.tracking_expr = get_penalty_from_constant_target(
             variables,
             m.time,
             setpoint_data,
@@ -70,7 +70,7 @@ class TestTrackingCostConstantSetpoint(unittest.TestCase):
                     pred_expr, m.tracking_expr[j, i].expr
                 ))
 
-    def test_tracking_cost_with_weights(self):
+    def test_penalty_with_weights(self):
         m = pyo.ConcreteModel()
         m.time = pyo.Set(initialize=[1, 2, 3])
         m.v1 = pyo.Var(m.time, initialize={i: 1*i for i in m.time})
@@ -80,7 +80,7 @@ class TestTrackingCostConstantSetpoint(unittest.TestCase):
         weight_data = ScalarData({m.v1[:]: 0.1, m.v2[:]: 0.5})
         m.var_set = pyo.Set(initialize=[0, 1])
         variables = [m.v1, m.v2]
-        new_set, m.tracking_expr = get_tracking_cost_from_constant_setpoint(
+        new_set, m.tracking_expr = get_penalty_from_constant_target(
             variables,
             m.time,
             setpoint_data,
@@ -112,7 +112,7 @@ class TestTrackingCostConstantSetpoint(unittest.TestCase):
         setpoint_data = ScalarData({m.v1[:]: 3.0})
         weight_data = ScalarData({m.v2[:]: 0.1})
         with self.assertRaisesRegex(KeyError, "Setpoint data"):
-            _, m.tracking_expr = get_tracking_cost_from_constant_setpoint(
+            _, m.tracking_expr = get_penalty_from_constant_target(
                 [m.v1, m.v2],
                 m.time,
                 setpoint_data,
@@ -120,12 +120,37 @@ class TestTrackingCostConstantSetpoint(unittest.TestCase):
 
         setpoint_data = ScalarData({m.v1[:]: 3.0, m.v2[:]: 4.0})
         with self.assertRaisesRegex(KeyError, "Tracking weight"):
-            _, m.tracking_expr = get_tracking_cost_from_constant_setpoint(
+            _, m.tracking_expr = get_penalty_from_constant_target(
                 [m.v1, m.v2],
                 m.time,
                 setpoint_data,
                 weight_data=weight_data,
             )
+
+    def test_add_set_after_expr(self):
+        # A small gotcha that may come up. This is known behavior
+        # due to Pyomo's "implicit set" addition.
+        m = pyo.ConcreteModel()
+        m.time = pyo.Set(initialize=[1, 2, 3])
+        m.v1 = pyo.Var(m.time, initialize={i: 1*i for i in m.time})
+        m.v2 = pyo.Var(m.time, initialize={i: 2*i for i in m.time})
+
+        setpoint_data = ScalarData({m.v1[:]: 3.0, m.v2[:]: 4.0})
+        weight_data = ScalarData({m.v1[:]: 0.1, m.v2[:]: 0.5})
+        m.var_set = pyo.Set(initialize=[0, 1])
+        variables = [m.v1, m.v2]
+        new_set, tr_expr = get_penalty_from_constant_target(
+            variables,
+            m.time,
+            setpoint_data,
+            weight_data=weight_data,
+            variable_set=m.var_set,
+        )
+        m.tracking_expr = tr_expr # new_set gets added and assigned a name
+        msg = "Attempting to re-assign"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            # attempting to add the same component twice
+            m.variable_set = new_set
 
 
 class TestTrackingCostPiecewiseSetpoint(unittest.TestCase):
@@ -141,7 +166,7 @@ class TestTrackingCostPiecewiseSetpoint(unittest.TestCase):
         )
         return m
 
-    def test_piecewise_tracking_cost_no_weights(self):
+    def test_piecewise_penalty_no_weights(self):
         m = self._make_model(n_time_points=5)
 
         variables = [
@@ -152,23 +177,32 @@ class TestTrackingCostPiecewiseSetpoint(unittest.TestCase):
             {m.var[:, "A"]: [2.0, 2.5], m.var[:, "B"]: [3.0, 3.5]},
             [(0, 2), (2, 4)],
         )
-        m.tracking_cost = get_tracking_cost_from_piecewise_constant_setpoint(
+        m.var_set, m.tracking_cost = get_penalty_from_piecewise_constant_target(
             variables,
             m.time,
             setpoint_data,
         )
         for i in m.time:
-            if i <= 2:
-                pred_expr = (m.var[i, "A"] - 2.0)**2 + (m.var[i, "B"] - 3.0)**2
-            else:
-                pred_expr = (m.var[i, "A"] - 2.5)**2 + (m.var[i, "B"] - 3.5)**2
-            pred_value = pyo.value(pred_expr)
-            self.assertEqual(pred_value, pyo.value(m.tracking_cost[i]))
-            self.assertTrue(compare_expressions(
-                pred_expr, m.tracking_cost[i].expr
-            ))
+            for j in m.var_set:
+                if i <= 2:
+                    pred_expr = (
+                        (m.var[i, "A"] - 2.0)**2
+                        if j == 0 else
+                        (m.var[i, "B"] - 3.0)**2
+                    )
+                else:
+                    pred_expr = (
+                        (m.var[i, "A"] - 2.5)**2
+                        if j == 0 else
+                        (m.var[i, "B"] - 3.5)**2
+                    )
+                pred_value = pyo.value(pred_expr)
+                self.assertEqual(pred_value, pyo.value(m.tracking_cost[j, i]))
+                self.assertTrue(compare_expressions(
+                    pred_expr, m.tracking_cost[j, i].expr
+                ))
 
-    def test_piecewise_tracking_cost_with_weights(self):
+    def test_piecewise_penalty_with_weights(self):
         m = self._make_model(n_time_points=5)
 
         variables = [
@@ -183,30 +217,33 @@ class TestTrackingCostPiecewiseSetpoint(unittest.TestCase):
             pyo.ComponentUID(m.var[:, "A"]): 10.0,
             pyo.ComponentUID(m.var[:, "B"]): 0.1,
         }
-        m.tracking_cost = get_tracking_cost_from_piecewise_constant_setpoint(
+        m.var_set, m.tracking_cost = get_penalty_from_piecewise_constant_target(
             variables,
             m.time,
             setpoint_data,
             weight_data=weight_data,
         )
         for i in m.time:
-            if i <= 2:
-                pred_expr = (
-                    10.0*(m.var[i, "A"] - 2.0)**2
-                    + 0.1*(m.var[i, "B"] - 3.0)**2
-                )
-            else:
-                pred_expr = (
-                    10.0*(m.var[i, "A"] - 2.5)**2
-                    + 0.1*(m.var[i, "B"] - 3.5)**2
-                )
-            pred_value = pyo.value(pred_expr)
-            self.assertEqual(pred_value, pyo.value(m.tracking_cost[i]))
-            self.assertTrue(compare_expressions(
-                pred_expr, m.tracking_cost[i].expr
-            ))
+            for j in m.var_set:
+                if i <= 2:
+                    pred_expr = (
+                        10.0*(m.var[i, "A"] - 2.0)**2
+                        if j == 0 else
+                        0.1*(m.var[i, "B"] - 3.0)**2
+                    )
+                else:
+                    pred_expr = (
+                        10.0*(m.var[i, "A"] - 2.5)**2
+                        if j == 0 else
+                        0.1*(m.var[i, "B"] - 3.5)**2
+                    )
+                pred_value = pyo.value(pred_expr)
+                self.assertEqual(pred_value, pyo.value(m.tracking_cost[j, i]))
+                self.assertTrue(compare_expressions(
+                    pred_expr, m.tracking_cost[j, i].expr
+                ))
 
-    def test_piecewise_tracking_cost_exceptions(self):
+    def test_piecewise_penalty_exceptions(self):
         m = self._make_model(n_time_points=5)
 
         variables = [
@@ -222,7 +259,7 @@ class TestTrackingCostPiecewiseSetpoint(unittest.TestCase):
         }
         msg = "Setpoint data does not contain"
         with self.assertRaisesRegex(KeyError, msg):
-            tr_cost = get_tracking_cost_from_piecewise_constant_setpoint(
+            tr_cost = get_penalty_from_piecewise_constant_target(
                 variables,
                 m.time,
                 setpoint_data,
@@ -238,7 +275,7 @@ class TestTrackingCostPiecewiseSetpoint(unittest.TestCase):
         }
         msg = "Tracking weight does not contain"
         with self.assertRaisesRegex(KeyError, msg):
-            tr_cost = get_tracking_cost_from_piecewise_constant_setpoint(
+            tr_cost = get_penalty_from_piecewise_constant_target(
                 variables,
                 m.time,
                 setpoint_data,
@@ -271,21 +308,23 @@ class TestTrackingCostVaryingSetpoint(unittest.TestCase):
             {m.var[:, "A"]: A_setpoint, m.var[:, "B"]: B_setpoint},
             m.time,
         )
-        m.tracking_cost = get_tracking_cost_from_time_varying_setpoint(
+        m.var_set, m.tracking_cost = get_penalty_from_time_varying_target(
             variables,
             m.time,
             setpoint_data,
         )
         for i, t in enumerate(m.time):
-            pred_expr = (
-                (m.var[t, "A"] - A_setpoint[i])**2
-                + (m.var[t, "B"] - B_setpoint[i])**2
-            )
-            pred_value = pyo.value(pred_expr)
-            self.assertEqual(pred_value, pyo.value(m.tracking_cost[t]))
-            self.assertTrue(compare_expressions(
-                pred_expr, m.tracking_cost[t].expr
-            ))
+            for j in m.var_set:
+                pred_expr = (
+                    (m.var[t, "A"] - A_setpoint[i])**2
+                    if j == 0 else
+                    (m.var[t, "B"] - B_setpoint[i])**2
+                )
+                pred_value = pyo.value(pred_expr)
+                self.assertEqual(pred_value, pyo.value(m.tracking_cost[j, t]))
+                self.assertTrue(compare_expressions(
+                    pred_expr, m.tracking_cost[j, t].expr
+                ))
 
     def test_varying_setpoint_with_weights(self):
         m = self._make_model(n_time_points=5)
@@ -303,22 +342,24 @@ class TestTrackingCostVaryingSetpoint(unittest.TestCase):
             pyo.ComponentUID(m.var[:, "A"]): 10.0,
             pyo.ComponentUID(m.var[:, "B"]): 0.1,
         }
-        m.tracking_cost = get_tracking_cost_from_time_varying_setpoint(
+        m.var_set, m.tracking_cost = get_penalty_from_time_varying_target(
             variables,
             m.time,
             setpoint_data,
             weight_data=weight_data,
         )
         for i, t in enumerate(m.time):
-            pred_expr = (
-                10.0*(m.var[t, "A"] - A_setpoint[i])**2
-                + 0.1*(m.var[t, "B"] - B_setpoint[i])**2
-            )
-            pred_value = pyo.value(pred_expr)
-            self.assertEqual(pred_value, pyo.value(m.tracking_cost[t]))
-            self.assertTrue(compare_expressions(
-                pred_expr, m.tracking_cost[t].expr
-            ))
+            for j in m.var_set:
+                pred_expr = (
+                    10.0*(m.var[t, "A"] - A_setpoint[i])**2
+                    if j == 0 else
+                    0.1*(m.var[t, "B"] - B_setpoint[i])**2
+                )
+                pred_value = pyo.value(pred_expr)
+                self.assertEqual(pred_value, pyo.value(m.tracking_cost[j, t]))
+                self.assertTrue(compare_expressions(
+                    pred_expr, m.tracking_cost[j, t].expr
+                ))
 
     def test_varying_setpoint_exceptions(self):
         m = self._make_model(n_time_points=5)
@@ -340,7 +381,7 @@ class TestTrackingCostVaryingSetpoint(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, msg):
             # Time-varying setpoint specifies different time points
             # from our time set.
-            tr_cost = get_tracking_cost_from_time_varying_setpoint(
+            var_set, tr_cost = get_penalty_from_time_varying_target(
                 variables,
                 m.time,
                 setpoint_data,
@@ -350,7 +391,7 @@ class TestTrackingCostVaryingSetpoint(unittest.TestCase):
         setpoint_data = TimeSeriesData({m.var[:, "A"]: A_setpoint}, m.time)
         msg = "Setpoint data does not contain"
         with self.assertRaisesRegex(KeyError, msg):
-            tr_cost = get_tracking_cost_from_time_varying_setpoint(
+            var_set, tr_cost = get_penalty_from_time_varying_target(
                 variables,
                 m.time,
                 setpoint_data,
@@ -366,7 +407,7 @@ class TestTrackingCostVaryingSetpoint(unittest.TestCase):
         }
         msg = "Tracking weight does not contain"
         with self.assertRaisesRegex(KeyError, msg):
-            tr_cost = get_tracking_cost_from_time_varying_setpoint(
+            tr_cost = get_penalty_from_time_varying_target(
                 variables,
                 m.time,
                 setpoint_data,
