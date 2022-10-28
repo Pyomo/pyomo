@@ -88,6 +88,10 @@ def get_penalty_at_time(
     target_data,
     weight_data=None,
 ):
+    """Returns an Expression penalizing the deviation of the specified
+    variables from the specified target
+
+    """
     terminal_penalty = Expression(
         expr=sum(get_penalty_expressions_at_time(
             variables, time, t, target_data, weight_data
