@@ -309,6 +309,9 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                 for arg in expr.args:
                     if arg.__class__ is EXPR.MonomialTermExpression:
                         c, v = arg.args
+                        if v.fixed:
+                            C_ += c * v
+                            continue
                         id_ = id(v)
                         if id_ not in idMap[None]:
                             key = len(idMap) - 1
