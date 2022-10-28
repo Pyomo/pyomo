@@ -179,6 +179,8 @@ class StandardRepn(object):
         for i,v in lvars:
             c = self.linear_coefs[i]
             if c.__class__ in native_numeric_types:
+                if not c:
+                    pass
                 if isclose_const(c, 1.0):
                     expr += v
                 elif isclose_const(c, -1.0):
@@ -320,7 +322,8 @@ def generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False,
                             linear_coefs[key] = c
                     else:
                         C_ += arg
-            keys = list(linear_coefs.keys())
+
+            keys = list(k for k,v in linear_coefs.items() if v.__class__ not in native_numeric_types or v)
             repn.linear_vars = tuple(idMap[key] for key in keys)
             repn.linear_coefs = tuple(linear_coefs[key] for key in keys)
             repn.constant = C_
@@ -406,7 +409,7 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
     for e_ in itertools.islice(exp._args_, exp.nargs()):
         if e_.__class__ is EXPR.MonomialTermExpression:
             lhs, v = e_._args_
-            if compute_values and not lhs.__class__ in native_numeric_types:
+            if compute_values and lhs.__class__ not in native_numeric_types:
                 lhs = value(lhs)
             if v.fixed:
                 if compute_values:
@@ -459,8 +462,8 @@ def _collect_sum(exp, multiplier, idMap, compute_values, verbose, quadratic):
             ans.constant += res_.constant
             if not (res_.nonl.__class__ in native_numeric_types and res_.nonl == 0):
                 nonl.append(res_.nonl)
-            for i in res_.linear:
-                ans.linear[i] = ans.linear.get(i,0) + res_.linear[i]
+            for i, v in res_.linear.items():
+                ans.linear[i] = ans.linear.get(i,0) + v
             if quadratic:
                 for i in res_.quadratic:
                     ans.quadratic[i] = ans.quadratic.get(i, 0) + res_.quadratic[i]
@@ -546,7 +549,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     lhs = _collect_standard_repn(exp._args_[0], 1, idMap,
                                   compute_values, verbose, quadratic)
-    lhs_nonl_None = lhs.nonl.__class__ in native_numeric_types and lhs.nonl == 0
+    lhs_nonl_None = lhs.nonl.__class__ in native_numeric_types and not lhs.nonl
     #
     # LHS is potentially variable, but it turns out to be a constant
     # because the variables were fixed.
@@ -568,7 +571,7 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
     #
     rhs = _collect_standard_repn(exp._args_[1], 1, idMap,
                                   compute_values, verbose, quadratic)
-    rhs_nonl_None = rhs.nonl.__class__ in native_numeric_types and rhs.nonl == 0
+    rhs_nonl_None = rhs.nonl.__class__ in native_numeric_types and not rhs.nonl
     #
     # If RHS is zero, then return an empty results
     #
@@ -619,11 +622,16 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
                 else:
                     ans.quadratic[ndx] = multiplier*lcoef*rcoef
         # TODO - Use quicksum here?
-        el_linear = multiplier*sum(coef*idMap[key] for key, coef in lhs.linear.items())
-        er_linear = multiplier*sum(coef*idMap[key] for key, coef in rhs.linear.items())
-        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in lhs.quadratic.items())
-        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in rhs.quadratic.items())
-        ans.nonl += el_linear*er_quadratic + el_quadratic*er_linear
+        el_linear = multiplier*sum(coef*idMap[key] for key, coef in lhs.linear.items() if coef)
+        er_linear = multiplier*sum(coef*idMap[key] for key, coef in rhs.linear.items() if coef)
+        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in lhs.quadratic.items() if coef)
+        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in rhs.quadratic.items() if coef)
+        if ((el_linear.__class__ not in native_numeric_types or el_linear)
+            and (er_quadratic.__class__ not in native_numeric_types or er_quadratic)):
+            ans.nonl += el_linear*er_quadratic
+        if ((er_linear.__class__ not in native_numeric_types or er_linear)
+            and (el_quadratic.__class__ not in native_numeric_types or el_quadratic)):
+            ans.nonl += er_linear*el_quadratic
 
     return ans
 
@@ -956,16 +964,15 @@ def _generate_standard_repn(expr, idMap=None, compute_values=True, verbose=False
     #
     v = []
     c = []
-    for key in ans.linear:
-        val = ans.linear[key]
+    for key, val in ans.linear.items():
         if val.__class__ in native_numeric_types:
-            if val == 0:
+            if not val:
                 continue
         elif val.is_constant():         # TODO: coverage?
             if value(val) == 0:
                 continue
         v.append(idMap[key])
-        c.append(ans.linear[key])
+        c.append(val)
     repn.linear_vars = tuple(v)
     repn.linear_coefs = tuple(c)
 
