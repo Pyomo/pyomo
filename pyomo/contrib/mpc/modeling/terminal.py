@@ -35,6 +35,10 @@ def get_quadratic_penalty_at_time(var, t, target, weight=None):
     return weight * (var[t] - target)**2
 
 
+#
+# TODO: These penalty expressions should be indexed by a set of variable
+# indices
+#
 def get_penalty_expressions_at_time(
     variables,
     time,
