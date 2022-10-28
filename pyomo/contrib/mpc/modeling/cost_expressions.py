@@ -34,8 +34,13 @@ from pyomo.contrib.mpc.data.convert import (
     interval_to_series,
 )
 
-
-def get_tracking_cost_from_constant_setpoint(
+#
+# TODO: These functions should be renamed to reflect the fact that
+# they are not necessarily tracking nor setpoints.
+# They should also be adjusted to return a set indexing the variables
+# as well.
+#
+def get_penalty_from_constant_target(
     variables,
     time,
     setpoint_data,
@@ -65,9 +70,10 @@ def get_tracking_cost_from_constant_setpoint(
 
     Returns
     -------
-    RangeSet that indexes the list of variables provided and an Expression
-    indexed by the RangeSet and time containing the cost term for each
-    variable at each point in time.
+    Set, Expression
+        RangeSet that indexes the list of variables provided and an Expression
+        indexed by the RangeSet and time containing the cost term for each
+        variable at each point in time.
 
     """
     if weight_data is None:
@@ -98,7 +104,7 @@ def get_tracking_cost_from_constant_setpoint(
     setpoint_data = setpoint_data.get_data()
     weight_data = weight_data.get_data()
     def tracking_rule(m, i, t):
-        return get_quadratic_tracking_cost_at_time(
+        return get_quadratic_penalty_at_time(
             variables[i],
             t,
             setpoint_data[cuids[i]],
@@ -108,15 +114,18 @@ def get_tracking_cost_from_constant_setpoint(
     return variable_set, tracking_expr
 
 
-def get_tracking_cost_from_piecewise_constant_setpoint(
+def get_penalty_from_piecewise_constant_target(
     variables,
     time,
     setpoint_data,
     weight_data=None,
+    variable_set=None,
     tolerance=0.0,
     prefer_left=True,
 ):
-    """
+    """Returns an IndexedExpression penalizing deviation between
+    the specified variables and piecewise constant target data.
+
     Arguments
     ---------
     variables: List of Pyomo variables
@@ -137,11 +146,13 @@ def get_tracking_cost_from_piecewise_constant_setpoint(
 
     Returns
     -------
-    Expression
+    Set, Expression
         Pyomo Expression, indexed by time, for the total weighted
         tracking cost with respect to the provided setpoint.
 
     """
+    if variable_set is None:
+        variable_set = Set(initialize=range(len(variables)))
     if isinstance(setpoint_data, IntervalData):
         setpoint_time_series = interval_to_series(
             setpoint_data,
@@ -151,19 +162,23 @@ def get_tracking_cost_from_piecewise_constant_setpoint(
         )
     else:
         setpoint_time_series = IntervalData(*setpoint_data)
-    tracking_cost = get_tracking_cost_from_time_varying_setpoint(
-        variables, time, setpoint_time_series, weight_data=weight_data
+    var_set, tracking_cost = get_penalty_from_time_varying_target(
+        variables,
+        time,
+        setpoint_time_series,
+        weight_data=weight_data,
+        variable_set=variable_set,
     )
-    return tracking_cost
+    return var_set, tracking_cost
 
 
-def get_quadratic_tracking_cost_at_time(var, t, setpoint, weight=None):
+def get_quadratic_penalty_at_time(var, t, setpoint, weight=None):
     if weight is None:
         weight = 1.0
     return weight * (var[t] - setpoint)**2
 
 
-def _get_tracking_cost_expressions_from_time_varying_setpoint(
+def _get_penalty_expressions_from_time_varying_target(
     variables,
     time,
     setpoint_data,
@@ -211,7 +226,7 @@ def _get_tracking_cost_expressions_from_time_varying_setpoint(
     ]
     tracking_costs = [
         {
-            t: get_quadratic_tracking_cost_at_time(
+            t: get_quadratic_penalty_at_time(
                 var, t, setpoints[j][i], weights[j]
             ) for i, t in enumerate(time)
         } for j, var in enumerate(variables)
@@ -219,13 +234,16 @@ def _get_tracking_cost_expressions_from_time_varying_setpoint(
     return tracking_costs
 
 
-def get_tracking_cost_from_time_varying_setpoint(
+def get_penalty_from_time_varying_target(
     variables,
     time,
     setpoint_data,
     weight_data=None,
+    variable_set=None,
 ):
-    """
+    """Constructs a penalty expression for the specified variables and
+    specified time-varying target data.
+
     Arguments
     ---------
     variables: List of Pyomo variables
@@ -236,22 +254,28 @@ def get_tracking_cost_from_time_varying_setpoint(
         Holds the trajectory values that will be used as a setpoint
     weight_data: ScalarData (optional)
         Weights for variables. Default is all ones.
+    variable_set: Set (optional)
+        Set indexing the list of provided variables, if one exists already.
 
     Returns
     -------
-    Expression
-        Pyomo Expression, indexed by time, for the total weighted
-        tracking cost with respect to the provided setpoint.
+    Set, Expression
+        Set indexing the list of provided variables and Expression, indexed
+        by the variable set and time, for the total weighted penalty with
+        respect to the provided setpoint.
 
     """
+    if variable_set is None:
+        variable_set = Set(initialize=range(len(variables)))
+
     # This is a list of dictionaries, one for each variable and each
     # mapping each time point to the quadratic weighted tracking cost term
     # at that time point.
-    tracking_costs = _get_tracking_cost_expressions_from_time_varying_setpoint(
+    tracking_costs = _get_penalty_expressions_from_time_varying_target(
         variables, time, setpoint_data, weight_data=weight_data
     )
 
-    def tracking_rule(m, t):
-        return sum(cost[t] for cost in tracking_costs)
-    tracking_cost = Expression(time, rule=tracking_rule)
-    return tracking_cost
+    def tracking_rule(m, i, t):
+        return tracking_costs[i][t]
+    tracking_cost = Expression(variable_set, time, rule=tracking_rule)
+    return variable_set, tracking_cost
