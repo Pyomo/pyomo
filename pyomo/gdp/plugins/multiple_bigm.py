@@ -234,15 +234,17 @@ class MultipleBigMTransformation(Transformation):
 
         # First handle the bound constraints if we are dealing with them
         # separately
+        active_disjuncts = [disj for disj in obj.disjuncts if disj.active]
         transformed_constraints = set()
         if self._config.tighten_bound_constraints:
             transformed_constraints = self._transform_bound_constraints(
-                obj.disjuncts, transBlock, arg_Ms)
+                active_disjuncts, transBlock, arg_Ms)
 
         # Collect any Ms specified in Suffixes living above the Disjunction
         suffix_Ms = _get_bigm_suffix_list(obj.parent_block())
         Ms = transBlock.calculated_missing_m_values = self.\
-             _calculate_missing_M_values(obj, arg_Ms, suffix_Ms, transBlock)
+             _calculate_missing_M_values(active_disjuncts, arg_Ms, suffix_Ms,
+                                         transBlock)
 
         # Now we can deactivate the constraints we deferred, so that we don't
         # re-transform them
@@ -250,9 +252,9 @@ class MultipleBigMTransformation(Transformation):
             cons.deactivate()
 
         or_expr = 0
-        for disjunct in obj.disjuncts:
+        for disjunct in active_disjuncts:
             or_expr += disjunct.indicator_var.get_associated_binary()
-            self._transform_disjunct(disjunct, transBlock, obj.disjuncts, Ms)
+            self._transform_disjunct(disjunct, transBlock, active_disjuncts, Ms)
         rhs = 1 if parent_disjunct is None else \
               parent_disjunct.binary_indicator_var
         algebraic_constraint.add(index, (or_expr, rhs))
@@ -285,23 +287,20 @@ class MultipleBigMTransformation(Transformation):
 
         return relaxationBlock
 
-    def _transform_disjunct(self, obj, transBlock, all_disjuncts, Ms):
-        # We're not using the preprocessed list here, so this could be
-        # inactive. We've already done the error checking in preprocessing, so
-        # we just skip it here.
-        if not obj.active:
-            return
+    def _transform_disjunct(self, obj, transBlock, active_disjuncts, Ms):
+        # We've already filtered out deactivated disjuncts, so we know obj is
+        # active.
 
         # Make a relaxation block if we haven't already.
         relaxationBlock = self._get_disjunct_relaxation_block(obj, transBlock)
 
         # Transform everything on the disjunct
-        self._transform_block_components(obj, all_disjuncts, Ms)
+        self._transform_block_components(obj, active_disjuncts, Ms)
 
         # deactivate disjunct so writers can be happy
         obj._deactivate_without_fixing_indicator()
 
-    def _transform_block_components(self, disjunct, all_disjuncts, Ms):
+    def _transform_block_components(self, disjunct, active_disjuncts, Ms):
         # We don't know where all the BooleanVars are used, so if there are any
         # that logical_to_linear didn't transform, we need to do it now
         for boolean in disjunct.component_data_objects(BooleanVar,
@@ -344,12 +343,12 @@ class MultipleBigMTransformation(Transformation):
             # obj is what we are transforming, we pass disjunct
             # through so that we will have access to the indicator
             # variables down the line.
-            handler(obj, disjunct, all_disjuncts, Ms)
+            handler(obj, disjunct, active_disjuncts, Ms)
 
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, Ms):
         _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
 
-    def _transform_constraint(self, obj, disjunct, all_disjuncts, Ms):
+    def _transform_constraint(self, obj, disjunct, active_disjuncts, Ms):
         # we will put a new transformed constraint on the relaxation block.
         relaxationBlock = disjunct._transformation_block()
         constraintMap = relaxationBlock._constraintMap
@@ -382,7 +381,7 @@ class MultipleBigMTransformation(Transformation):
             if c.lower is not None:
                 rhs = sum(Ms[c,
                              disj][0]*disj.indicator_var.get_associated_binary()
-                          for disj in all_disjuncts if disj is not disjunct)
+                          for disj in active_disjuncts if disj is not disjunct)
                 if obj.is_indexed():
                     newConstraint.add((i, 'lb'), c.body - c.lower >= rhs)
                     transformed.append(newConstraint[i, 'lb'])
@@ -393,7 +392,7 @@ class MultipleBigMTransformation(Transformation):
             if c.upper is not None:
                 rhs = sum(Ms[c,
                              disj][1]*disj.indicator_var.get_associated_binary()
-                          for disj in all_disjuncts if disj is not disjunct)
+                          for disj in active_disjuncts if disj is not disjunct)
                 if obj.is_indexed():
                     transformed.append(newConstraint[i, 'ub'])
                 else:
@@ -406,15 +405,13 @@ class MultipleBigMTransformation(Transformation):
         # deactivate now that we have transformed
         c.deactivate()
 
-    def _transform_bound_constraints(self, all_disjuncts, transBlock, Ms):
+    def _transform_bound_constraints(self, active_disjuncts, transBlock, Ms):
         # first we're just going to find all of them
         bounds_cons = ComponentMap()
         lower_bound_constraints_by_var = ComponentMap()
         upper_bound_constraints_by_var = ComponentMap()
         transformed_constraints = set()
-        for disj in all_disjuncts:
-            if not disj.active:
-                continue
+        for disj in active_disjuncts:
             for c in disj.component_data_objects(
                     Constraint, active=True,
                     descend_into=Block,
@@ -466,9 +463,7 @@ class MultipleBigMTransformation(Transformation):
                 bounds_cons.items()):
             lower_rhs = 0
             upper_rhs = 0
-            for disj in all_disjuncts:
-                if not disj.active:
-                    continue
+            for disj in active_disjuncts:
                 relaxationBlock = self._get_disjunct_relaxation_block(
                     disj, transBlock)
                 if len(lower_dict) > 0:
@@ -564,13 +559,11 @@ class MultipleBigMTransformation(Transformation):
 
         return orC
 
-    def _get_all_var_objects(self, disjunction):
+    def _get_all_var_objects(self, active_disjuncts):
         # This is actually a general utility for getting all Vars that appear in
         # active Disjuncts in a Disjunction.
         seen = set()
-        for disj in disjunction.disjuncts:
-            if not disj.active:
-                continue
+        for disj in active_disjuncts:
             for constraint in disj.component_data_objects(
                     Constraint,
                     active=True,
@@ -583,13 +576,13 @@ class MultipleBigMTransformation(Transformation):
                         seen.add(id(var))
                         yield var
 
-    def _calculate_missing_M_values(self, obj, arg_Ms, suffix_Ms, transBlock):
+    def _calculate_missing_M_values(self, active_disjuncts, arg_Ms, suffix_Ms,
+                                    transBlock):
         scratch_blocks = {}
-        all_vars = list(self._get_all_var_objects(obj))
-        for disjunct, other_disjunct in itertools.product(obj.disjuncts,
-                                                          obj.disjuncts):
-            if ((disjunct is other_disjunct) or (not disjunct.active) or
-                (not other_disjunct.active)):
+        all_vars = list(self._get_all_var_objects(active_disjuncts))
+        for disjunct, other_disjunct in itertools.product(active_disjuncts,
+                                                          active_disjuncts):
+            if (disjunct is other_disjunct):
                 continue
             if id(other_disjunct) in scratch_blocks:
                 scratch = scratch_blocks[id(other_disjunct)]

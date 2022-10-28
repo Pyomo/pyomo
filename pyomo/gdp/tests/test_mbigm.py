@@ -19,12 +19,14 @@ from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.tests.common_tests import check_linear_coef
 from pyomo.repn import generate_standard_repn
 
+gurobi_available = SolverFactory('gurobi').available()
+
 class LinearModelDecisionTreeExample(unittest.TestCase):
     def make_model(self):
         m = ConcreteModel()
         m.x1 = Var(bounds=(-10, 10))
         m.x2 = Var(bounds=(-20, 20))
-        m.d = Var()
+        m.d = Var(bounds=(-1000, 1000))
 
         m.d1 = Disjunct()
         m.d1.x1_bounds = Constraint(expr=(0.5, m.x1, 2))
@@ -42,7 +44,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         m.d3.func = Constraint(expr=m.x1 - 5*m.x2 - 3 == m.d)
 
         m.disjunction = Disjunction(expr=[m.d1, m.d2, m.d3])
-        
+
         return m
 
     def get_Ms(self, m):
@@ -97,7 +99,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         lower = cons[0]
         self.check_untightened_bounds_constraint(lower, m.x1, m.d1,
                                                  m.disjunction, {m.d2: 0.65,
-                                                                 m.d3: 2}, 
+                                                                 m.d3: 2},
                                                  lower=0.5)
         upper = cons[1]
         self.check_untightened_bounds_constraint(upper, m.x1, m.d1,
@@ -110,7 +112,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         lower = cons[0]
         self.check_untightened_bounds_constraint(lower, m.x2, m.d1,
                                                  m.disjunction, {m.d2: 3,
-                                                                 m.d3: 0.55}, 
+                                                                 m.d3: 0.55},
                                                  lower=0.75)
         upper = cons[1]
         self.check_untightened_bounds_constraint(upper, m.x2, m.d1,
@@ -123,7 +125,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         lower = cons[0]
         self.check_untightened_bounds_constraint(lower, m.x1, m.d2,
                                                  m.disjunction, {m.d1: 0.5,
-                                                                 m.d3: 2}, 
+                                                                 m.d3: 2},
                                                  lower=0.65)
         upper = cons[1]
         self.check_untightened_bounds_constraint(upper, m.x1, m.d2,
@@ -136,7 +138,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         lower = cons[0]
         self.check_untightened_bounds_constraint(lower, m.x2, m.d2,
                                                  m.disjunction, {m.d1: 0.75,
-                                                                 m.d3: 0.55}, 
+                                                                 m.d3: 0.55},
                                                  lower=3)
         upper = cons[1]
         self.check_untightened_bounds_constraint(upper, m.x2, m.d2,
@@ -149,7 +151,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         lower = cons[0]
         self.check_untightened_bounds_constraint(lower, m.x1, m.d3,
                                                  m.disjunction, {m.d1: 0.5,
-                                                                 m.d2: 0.65}, 
+                                                                 m.d2: 0.65},
                                                  lower=2)
         upper = cons[1]
         self.check_untightened_bounds_constraint(upper, m.x1, m.d3,
@@ -162,7 +164,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         lower = cons[0]
         self.check_untightened_bounds_constraint(lower, m.x2, m.d3,
                                                  m.disjunction, {m.d1: 0.75,
-                                                                 m.d2: 3}, 
+                                                                 m.d2: 3},
                                                  lower=0.55)
         upper = cons[1]
         self.check_untightened_bounds_constraint(upper, m.x2, m.d3,
@@ -269,8 +271,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         check_linear_coef(self, repn, m.d2.binary_indicator_var, -Ms[m.d3.func,
                                                                      m.d2][1])
 
-    @unittest.skipUnless(SolverFactory('gurobi').available(),
-                         "Gurobi is not available")
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_calculated_Ms_correct(self):
         # Calculating all the Ms is expensive, so we just do it in this one test
         # and then specify them for the others
@@ -292,13 +293,63 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.check_all_untightened_bounds_constraints(m, mbm)
         self.check_linear_func_constraints(m, mbm)
 
+    def check_pretty_bound_constraints(self, cons, var, bounds, lb):
+        self.assertEqual(value(cons.upper), 0)
+        self.assertIsNone(cons.lower)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(len(repn.linear_vars), len(bounds) + 1)
+        self.assertEqual(repn.constant, 0)
+        if lb:
+            check_linear_coef(self, repn, var, -1)
+            for disj, bnd in bounds.items():
+                check_linear_coef(self, repn, disj.binary_indicator_var, bnd)
+        else:
+            check_linear_coef(self, repn, var, 1)
+            for disj, bnd in bounds.items():
+                check_linear_coef(self, repn, disj.binary_indicator_var, -bnd)
+
     def test_bounds_constraints_correct(self):
         m = self.make_model()
 
-        TransformationFactory('gdp.mbigm').apply_to(
-            m,
-            bigM=self.get_Ms(m),
-            tighten_bound_constraints=True)
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m, bigM=self.get_Ms(m), tighten_bound_constraints=True)
+
+        # Check that all the constraints are mapped to the same transformed
+        # constraints.
+        cons = mbm.get_transformed_constraints(m.d1.x1_bounds)
+        self.assertEqual(len(cons), 2)
+        same = mbm.get_transformed_constraints(m.d2.x1_bounds)
+        self.assertEqual(len(same), 2)
+        self.assertIs(same[0], cons[0])
+        self.assertIs(same[1], cons[1])
+        sameagain = mbm.get_transformed_constraints(m.d3.x1_bounds)
+        self.assertEqual(len(sameagain), 2)
+        self.assertIs(sameagain[0], cons[0])
+        self.assertIs(sameagain[1], cons[1])
+
+        self.check_pretty_bound_constraints(cons[0], m.x1, {m.d1: 0.5, m.d2:
+                                                            0.65, m.d3: 2},
+                                            lb=True)
+        self.check_pretty_bound_constraints(cons[1], m.x1, {m.d1: 2, m.d2: 3,
+                                                            m.d3: 10}, lb=False)
+
+        cons = mbm.get_transformed_constraints(m.d1.x2_bounds)
+        self.assertEqual(len(cons), 2)
+        same = mbm.get_transformed_constraints(m.d2.x2_bounds)
+        self.assertEqual(len(same), 2)
+        self.assertIs(same[0], cons[0])
+        self.assertIs(same[1], cons[1])
+        sameagain = mbm.get_transformed_constraints(m.d3.x2_bounds)
+        self.assertEqual(len(sameagain), 2)
+        self.assertIs(sameagain[0], cons[0])
+        self.assertIs(sameagain[1], cons[1])
+
+        self.check_pretty_bound_constraints(cons[0], m.x2, {m.d1: 0.75, m.d2: 3,
+                                                            m.d3: 0.55},
+                                            lb=True)
+        self.check_pretty_bound_constraints(cons[1], m.x2, {m.d1: 3, m.d2: 10,
+                                                            m.d3: 1}, lb=False)
 
     def test_Ms_specified_as_args_honored(self):
         m = self.make_model()
@@ -366,3 +417,68 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
     #                                              m.disjunction, {m.d1: 3,
     #                                                              m.d3: 110},
     #                                              upper=10)
+
+    def add_fourth_disjunct(self, m):
+        m.disjunction.deactivate()
+
+        # Add a disjunct
+        m.d4 = Disjunct()
+        m.d4.x1_ub = Constraint(expr=m.x1 <= 8)
+        m.d4.x2_lb = Constraint(expr=m.x2 >= -5)
+
+        # Make a four-term disjunction
+        m.disjunction2 = Disjunction(expr=[m.d1, m.d2, m.d3, m.d4])
+
+    def test_deactivated_disjunct(self):
+        m = self.make_model()
+        # Add a new thing and deactivate it
+        self.add_fourth_disjunct(m)
+        m.d4.deactivate()
+
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m, bigM=self.get_Ms(m))
+
+        # we don't transform d1
+        self.assertIsNone(m.d4.transformation_block)
+        # and everything else is the same
+        self.check_linear_func_constraints(m, mbm)
+        self.check_all_untightened_bounds_constraints(m, mbm)
+
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_var_bounds_substituted_for_missing_bound_constraints(self):
+        m = self.make_model()
+        # Add a new thing and deactivate it
+        self.add_fourth_disjunct(m)
+
+        mbm = TransformationFactory('gdp.mbigm')
+        # only calculate the ones we don't know yet
+        mbm.apply_to(m, bigM=self.get_Ms(m), tighten_bound_constraints=True)
+
+        # check that the bounds constraints are right
+        # for x1:
+        cons = mbm.get_transformed_constraints(m.d1.x1_bounds)
+        self.assertEqual(len(cons), 2)
+        sameish = mbm.get_transformed_constraints(m.d4.x1_ub)
+        self.assertEqual(len(sameish), 1)
+        self.assertIs(sameish[0], cons[1])
+
+        self.check_pretty_bound_constraints(cons[1], m.x1, {m.d1: 2, m.d2: 3,
+                                                            m.d3: 10, m.d4: 8},
+                                            lb=False)
+        self.check_pretty_bound_constraints(cons[0], m.x1, {m.d1: 0.5, m.d2:
+                                                            0.65, m.d3: 2, m.d4:
+                                                            -10}, lb=True)
+
+        # and for x2:
+        cons = mbm.get_transformed_constraints(m.d1.x2_bounds)
+        self.assertEqual(len(cons), 2)
+        sameish = mbm.get_transformed_constraints(m.d4.x2_lb)
+        self.assertEqual(len(sameish), 1)
+        self.assertIs(sameish[0], cons[0])
+
+        self.check_pretty_bound_constraints(cons[1], m.x2, {m.d1: 3, m.d2: 10,
+                                                            m.d3: 1, m.d4: 20},
+                                            lb=False)
+        self.check_pretty_bound_constraints(cons[0], m.x2, {m.d1: 0.75, m.d2: 3,
+                                                            m.d3: 0.55, m.d4:
+                                                            -5}, lb=True)
