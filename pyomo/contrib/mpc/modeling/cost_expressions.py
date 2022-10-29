@@ -306,4 +306,4 @@ def get_penalty_from_target(
         tolerance = 0.0 if tolerance is None else tolerance
         prefer_left = True if prefer_left is None else prefer_left
         kwds.update(prefer_left=prefer_left, tolerance=tolerance)
-        return get_penalty_from_piecewise_constant_setpoint(*args, **kwds)
+        return get_penalty_from_piecewise_constant_target(*args, **kwds)
