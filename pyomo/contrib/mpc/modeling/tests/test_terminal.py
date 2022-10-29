@@ -62,15 +62,17 @@ class TestTerminalPenalty(unittest.TestCase):
             pyo.ComponentUID(m.input[:]): 0.2,
         }
         tp = 1
-        m.penalty = get_penalty_at_time(
-            variables, m.time, tp, target, weight_data=weight_data,
+        m.var_set, m.penalty = get_penalty_at_time(
+            variables, tp, target, weight_data=weight_data,
         )
-        pred_expr = (
-            10.0*(m.var[tp, "A"] - 4.4)**2
-            + 0.2*(m.input[tp] - 5.5)**2
-        )
-        self.assertEqual(pyo.value(pred_expr), pyo.value(m.penalty.expr))
-        self.assertTrue(compare_expressions(pred_expr, m.penalty.expr))
+        for i in m.var_set:
+            pred_expr = (
+                10.0*(m.var[tp, "A"] - 4.4)**2
+                if i == 0 else
+                0.2*(m.input[tp] - 5.5)**2
+            )
+            self.assertEqual(pyo.value(pred_expr), pyo.value(m.penalty[i].expr))
+            self.assertTrue(compare_expressions(pred_expr, m.penalty[i].expr))
 
     def test_get_terminal_penalty(self):
         m = self._make_model()
@@ -84,17 +86,19 @@ class TestTerminalPenalty(unittest.TestCase):
             pyo.ComponentUID(m.var[:, "A"]): 10.0,
             pyo.ComponentUID(m.input[:]): 0.2,
         }
-        m.penalty = get_terminal_penalty(
+        m.var_set, m.penalty = get_terminal_penalty(
             variables, m.time, target, weight_data=weight_data,
         )
 
-        tf = m.time.last()
-        pred_expr = (
-            10.0*(m.var[tf, "A"] - 4.4)**2
-            + 0.2*(m.input[tf] - 5.5)**2
-        )
-        self.assertEqual(pyo.value(pred_expr), pyo.value(m.penalty.expr))
-        self.assertTrue(compare_expressions(pred_expr, m.penalty.expr))
+        for i in m.var_set:
+            tf = m.time.last()
+            pred_expr = (
+                10.0*(m.var[tf, "A"] - 4.4)**2
+                if i == 0 else
+                0.2*(m.input[tf] - 5.5)**2
+            )
+            self.assertEqual(pyo.value(pred_expr), pyo.value(m.penalty[i].expr))
+            self.assertTrue(compare_expressions(pred_expr, m.penalty[i].expr))
 
 
 if __name__ == "__main__":
