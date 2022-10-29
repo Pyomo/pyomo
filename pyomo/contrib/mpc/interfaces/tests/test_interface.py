@@ -351,7 +351,7 @@ class TestDynamicModelInterface(unittest.TestCase):
         setpoint_data = ScalarData({m.var[:, "A"]: 1.0, m.var[:, "B"]: 2.0})
         weight_data = ScalarData({m.var[:, "A"]: 10.0, m.var[:, "B"]: 0.1})
 
-        vset, tr_cost = interface.get_penalty_from_constant_target(
+        vset, tr_cost = interface.get_penalty_from_target(
             setpoint_data, weight_data=weight_data,
         )
         m.var_set = vset
@@ -388,7 +388,8 @@ class TestDynamicModelInterface(unittest.TestCase):
 
         variables = [m.var[:, "A"], m.var[:, "B"]]
         m.variable_set = pyo.Set(initialize=range(len(variables)))
-        new_set, tr_cost = interface.get_penalty_from_constant_target(
+        #new_set, tr_cost = interface.get_penalty_from_constant_target(
+        new_set, tr_cost = interface.get_penalty_from_target(
             setpoint_data,
             variables=variables,
             weight_data=weight_data,

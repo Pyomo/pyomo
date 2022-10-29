@@ -28,8 +28,10 @@ from pyomo.contrib.mpc.data.dynamic_data_base import _is_iterable
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.interval_data import IntervalData
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
+from pyomo.contrib.mpc.data.convert import _process_to_dynamic_data
 from pyomo.contrib.mpc.modeling.cost_expressions import (
     get_penalty_from_constant_target,
+    get_penalty_from_target,
 )
 from pyomo.contrib.mpc.modeling.constraints import (
     get_piecewise_constant_constraints,
@@ -348,26 +350,24 @@ class DynamicModelInterface(object):
             for i, t in enumerate(self.time):
                 var[t].set_value(new_values[i])
 
-    #
-    # TODO: We should be able to have a simple get_cost_expression method
-    # here which only requires setpoint_data, and decides which type of
-    # expression to build depending on the type of the setpoint.
-    #
-    def get_penalty_from_constant_target(
+    def get_penalty_from_target(
         self,
-        setpoint_data,
+        target_data,
         time=None,
         variables=None,
         weight_data=None,
         variable_set=None,
+        tolerance=None,
+        prefer_left=None,
     ):
-        """A method to get a quadratic tracking cost Expression
+        """A method to get a quadratic penalty expression from a provided
+        setpoint data structure
 
         Parameters
         ----------
-        setpoint_data: ScalarData
-            Holds setpoint values for variables
-        time: Iterable (optional)
+        target_data: ScalarData, TimeSeriesData, or IntervalData
+            Holds target values for variables
+        time: Set (optional)
             Points at which to apply the tracking cost. Default will use
             the model's time set.
         variables: List of Pyomo VarData (optional)
@@ -378,6 +378,15 @@ class DynamicModelInterface(object):
         variable_set: Set (optional)
             A set indexing the list of provided variables, if one already
             exists. 
+        tolerance: Float (optional)
+            Tolerance for checking inclusion in an interval. Only may be
+            provided if IntervalData is provided for target_data. In this
+            case the default is 0.0.
+        prefer_left: Bool (optional)
+            Flag indicating whether the left end point of intervals should
+            be preferred over the right end point. Only may be provided if
+            IntervalData is provided for target_data. In this case the
+            default is False.
 
         Returns
         -------
@@ -387,33 +396,33 @@ class DynamicModelInterface(object):
             at each point in time
 
         """
-        if not isinstance(setpoint_data, ScalarData):
-            setpoint_data = ScalarData(setpoint_data)
         if time is None:
             time = self.time
+        target_data = _process_to_dynamic_data(target_data)
         if variables is None:
             # Use variables provided by the setpoint.
-            # NOTE: Nondeterministic order in Python < 3.7
+            # NOTE: Nondeterministic order in non-C Python < 3.7
             # Should these data structures use OrderedDicts internally
             # to enforce an order here?
             variables = [
                 self.model.find_component(key)
-                for key in setpoint_data.get_data().keys()
+                for key in target_data.get_data().keys()
             ]
         else:
             # Variables were provided. These could be anything. Process them
             # to get time-indexed variables on the model.
             variables = [
-                self.model.find_component(
-                    get_indexed_cuid(var, (self.time,))
-                ) for var in variables
+                self.model.find_component(get_indexed_cuid(var, (self.time,)))
+                for var in variables
             ]
-        return get_penalty_from_constant_target(
+        return get_penalty_from_target(
             variables,
             time,
-            setpoint_data,
+            target_data,
             weight_data=weight_data,
             variable_set=variable_set,
+            tolerance=tolerance,
+            prefer_left=prefer_left,
         )
 
     def get_piecewise_constant_constraints(

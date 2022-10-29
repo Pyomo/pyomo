@@ -21,9 +21,7 @@ from pyomo.contrib.mpc.examples.cstr.model import (
 def get_steady_state_data(target, tee=False):
     m = create_instance(dynamic=False)
     interface = mpc.DynamicModelInterface(m, m.time)
-    var_set, tr_cost = interface.get_penalty_from_constant_target(
-        target
-    )
+    var_set, tr_cost = interface.get_penalty_from_target(target)
     m.target_set = var_set
     m.tracking_cost = tr_cost
     m.objective = pyo.Objective(expr=sum(m.tracking_cost[:, 0]))
@@ -62,7 +60,7 @@ def run_cstr_mpc(
     # Add objective to controller model
     #
     setpoint_variables = [m_controller.conc[:, "A"], m_controller.conc[:, "B"]]
-    vset, tr_cost = controller_interface.get_penalty_from_constant_target(
+    vset, tr_cost = controller_interface.get_penalty_from_target(
         setpoint_data,
         variables=setpoint_variables,
     )
