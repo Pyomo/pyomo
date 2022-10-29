@@ -32,6 +32,7 @@ from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.interval_data import IntervalData
 from pyomo.contrib.mpc.data.convert import (
     interval_to_series,
+    _process_to_dynamic_data,
 )
 
 
@@ -274,3 +275,35 @@ def get_penalty_from_time_varying_target(
         return tracking_costs[i][t]
     tracking_cost = Expression(variable_set, time, rule=tracking_rule)
     return variable_set, tracking_cost
+
+
+def get_penalty_from_target(
+    variables,
+    time,
+    setpoint_data,
+    weight_data=None,
+    variable_set=None,
+    tolerance=None,
+    prefer_left=None,
+):
+    setpoint_data = _process_to_dynamic_data(setpoint_data)
+    args = (variables, time, setpoint_data)
+    kwds = {"weight_data": weight_data, "variable_set": variable_set}
+    def _error_if_used(tolerance, prefer_left):
+        if tolerance is not None or prefer_left is not None:
+            raise RuntimeError(
+                "tolerance and prefer_left arguments can only be used if"
+                " IntervalData-compatible setpoint is provided. Got"
+                " tolerance=%s, prefer_left=%s" % (tolerance, prefer_left)
+            )
+    if isinstance(setpoint_data, ScalarData):
+        _error_if_used(tolerance, prefer_left)
+        return get_penalty_from_constant_target(*args, **kwds)
+    elif isinstance(setpoint_data, TimeSeriesData):
+        _error_if_used(tolerance, prefer_left)
+        return get_penalty_from_time_varying_target(*args, **kwds)
+    elif isinstance(setpoint_data, IntervalData):
+        tolerance = 0.0 if tolerance is None else tolerance
+        prefer_left = True if prefer_left is None else prefer_left
+        kwds.update(prefer_left=prefer_left, tolerance=tolerance)
+        return get_penalty_from_piecewise_constant_setpoint(*args, **kwds)
