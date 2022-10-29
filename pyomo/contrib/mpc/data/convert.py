@@ -69,7 +69,7 @@ def _process_to_dynamic_data(data, time_set=None):
             raise TypeError(
                 "Second entry of data tuple must be a non-empty iterable of"
                 " scalars (time points) or length-two tuples (intervals)."
-                " Got %s" % data[1]
+                " Got %s" % str(data[1])
             )
 
 
