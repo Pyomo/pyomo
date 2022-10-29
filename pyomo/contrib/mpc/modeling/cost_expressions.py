@@ -34,12 +34,7 @@ from pyomo.contrib.mpc.data.convert import (
     interval_to_series,
 )
 
-#
-# TODO: These functions should be renamed to reflect the fact that
-# they are not necessarily tracking nor setpoints.
-# They should also be adjusted to return a set indexing the variables
-# as well.
-#
+
 def get_penalty_from_constant_target(
     variables,
     time,
