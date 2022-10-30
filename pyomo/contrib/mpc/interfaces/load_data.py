@@ -32,6 +32,7 @@ def load_data_from_scalar(data, model, time):
 
     """
     data = data.get_data()
+    t_iter = time if _is_iterable(time) else (time,)
     for cuid, val in data.items():
         var = model.find_component(cuid)
         if var is None:
@@ -39,9 +40,11 @@ def load_data_from_scalar(data, model, time):
         # TODO: Time points should probably use find_nearest_index
         # This will have to happen in the calling function, as data
         # doesn't have a list of time points to check.
-        t_iter = time if _is_iterable(time) else (time,)
-        for t in t_iter:
-            var[t].set_value(val)
+        if var.is_indexed():
+            for t in t_iter:
+                var[t].set_value(val)
+        else:
+            var.set_value(val)
 
 
 def load_data_from_series(data, model, time, tolerance=0.0):

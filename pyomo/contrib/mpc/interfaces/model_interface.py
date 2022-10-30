@@ -192,104 +192,41 @@ class DynamicModelInterface(object):
         """
         if time_points is None:
             time_points = self.time
-        if isinstance(data, IntervalData):
-            # Set default arguments to load from interval
-            if prefer_left is None:
-                prefer_left = True
-            if exclude_left_endpoint is None:
-                exclude_left_endpoint = prefer_left
-            if exclude_right_endpoint is None:
-                exclude_right_endpoint = not prefer_left
+        data = _process_to_dynamic_data(data, time_set=self.time)
+        def _error_if_used(prefer_left, excl_left, excl_right, dtype):
+            if any(a is not None for a in (prefer_left, excl_left, excl_right)):
+                raise RuntimeError(
+                    "prefer_left, exclude_left_endpoint, and exclude_right_endpoint"
+                    " can only be set if data is IntervalData-compatible. Got"
+                    " prefer_left=%s, exclude_left_endpoint=%s, and"
+                    " exclude_right_endpoint=%s while loading data of type %s"
+                    % (prefer_left, excl_left, excl_right, dtype)
+                )
+        excl_left = exclude_left_endpoint
+        excl_right = exclude_right_endpoint
+        if isinstance(data, ScalarData):
+            # This covers the case of non-time-indexed variables
+            # as keys.
+            _error_if_used(prefer_left, excl_left, excl_right, type(data))
+            load_data_from_scalar(data, self.model, time_points)
+        elif isinstance(data, TimeSeriesData):
+            _error_if_used(prefer_left, excl_left, excl_right, type(data))
+            load_data_from_series(
+                data, self.model, time_points, tolerance=tolerance
+            )
+        elif isinstance(data, IntervalData):
+            prefer_left = True if prefer_left is None else prefer_left
+            excl_left = prefer_left if excl_left is None else excl_left
+            excl_right = (not prefer_left) if excl_right is None else excl_right
             load_data_from_interval(
                 data,
                 self.model,
                 time_points,
                 tolerance=tolerance,
                 prefer_left=prefer_left,
-                exclude_left_endpoint=exclude_left_endpoint,
-                exclude_right_endpoint=exclude_right_endpoint,
+                exclude_left_endpoint=excl_left,
+                exclude_right_endpoint=excl_right,
             )
-            return
-
-        # Make sure these arguments are not set for non-interval data.
-        if prefer_left is not None:
-            raise RuntimeError(
-                "Invalid argument prefer_left with data type %s"
-                % IntervalData
-            )
-        if exclude_left_endpoint is not None:
-            raise RuntimeError(
-                "Invalid argument exclude_left_endpoint with data type %s"
-                % IntervalData
-            )
-        if exclude_right_endpoint is not None:
-            raise RuntimeError(
-                "Invalid argument exclude_right_endpoint with data type %s"
-                % IntervalData
-            )
-
-        if isinstance(data, ScalarData):
-            load_data_from_scalar(data, self.model, time_points)
-        elif isinstance(data, TimeSeriesData):
-            load_data_from_series(data, self.model, time_points, tolerance=tolerance)
-        else:
-            # Attempt to load data by assuming it is a map from something
-            # find_component-compatible to values.
-            for cuid, vals in data.items():
-                var = self.model.find_component(cuid)
-                if var.is_indexed():
-                    # Assume we are indexed by time.
-                    if not _is_iterable(vals):
-                        # Load value into all time points
-                        for t in time_points:
-                            var[t].set_value(vals)
-                    else:
-                        # Load values into corresponding time points
-                        if len(time_points) != len(vals):
-                            raise RuntimeError(
-                                "Cannot load a different number of values"
-                                " than we have time points"
-                            )
-                        for i, t in enumerate(time_points):
-                            var[t].set_value(vals[i])
-                else:
-                    # Assume vals is a scalar
-                    var.set_value(vals)
-
-    def load_scalar_data(self, data):
-        """
-        Expects a dict mapping CUIDs (or strings) to values. Keys can
-        correspond to time-indexed or non-time-indexed variables.
-        """
-        #for cuid, val in data.items():
-        #    var = self.model.find_component(cuid)
-        #    var_iter = (var,) if not var.is_indexed() else var.values()
-        #    for var in var_iter:
-        #        var.set_value(val)
-        self.load_data(data)
-
-    def load_data_at_time(self, data, time_points=None):
-        """
-        Expects a dict mapping CUIDs to values, except this time
-        we assume that the variables are indexed. Should this be
-        combined with the above method (which could then check
-        if the variable is indexed).
-        """
-        #if time_points is None:
-        #    time_points = self.time
-        #else:
-        #    time_points = list(_to_iterable(time_points))
-        #if isinstance(data, ScalarData):
-        #    data = data.get_data()
-        #else:
-        #    # This processes keys in the incoming data dictionary
-        #    # so they don't necessarily have to be CUIDs.
-        #    data = ScalarData(data, time_set=self.time).get_data()
-        #for cuid, val in data.items():
-        #    var = self.model.find_component(cuid)
-        #    for t in time_points:
-        #        var[t].set_value(val)
-        self.load_data(data, time_points=time_points)
 
     def copy_values_at_time(self, source_time=None, target_time=None):
         """
@@ -399,7 +336,7 @@ class DynamicModelInterface(object):
         """
         if time is None:
             time = self.time
-        target_data = _process_to_dynamic_data(target_data)
+        target_data = _process_to_dynamic_data(target_data, time_set=self.time)
         if variables is None:
             # Use variables provided by the setpoint.
             # NOTE: Nondeterministic order in non-C Python < 3.7

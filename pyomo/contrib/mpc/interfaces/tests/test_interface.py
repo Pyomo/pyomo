@@ -16,6 +16,7 @@ from pyomo.core.expr.compare import compare_expressions
 from pyomo.contrib.mpc.interfaces.model_interface import DynamicModelInterface
 from pyomo.contrib.mpc.data.series_data import TimeSeriesData
 from pyomo.contrib.mpc.data.scalar_data import ScalarData
+from pyomo.contrib.mpc.data.interval_data import IntervalData
 
 
 class TestDynamicModelInterface(unittest.TestCase):
@@ -126,17 +127,20 @@ class TestDynamicModelInterface(unittest.TestCase):
         self.assertEqual(data, pred_data)
 
     def test_load_scalar_data(self):
+        # load_scalar_data has been removed. Instead we simply call
+        # load_data
         m = self._make_model()
         interface = DynamicModelInterface(m, m.time)
         data = {pyo.ComponentUID(m.scalar): 6.0}
-        interface.load_scalar_data(data)
+        interface.load_data(data)
         self.assertEqual(m.scalar.value, 6.0)
 
     def test_load_data_at_time_all(self):
+        # NOTE: load_data_at_time has been deprecated
         m = self._make_model()
         interface = DynamicModelInterface(m, m.time)
         data = ScalarData({m.var[:, "A"]: 5.5, m.input[:]: 6.6})
-        interface.load_data_at_time(data)
+        interface.load_data(data)
 
         B_data = [m.var[t, "B"].value for t in m.time]
         # var[:,B] has not been changed
@@ -147,6 +151,7 @@ class TestDynamicModelInterface(unittest.TestCase):
             self.assertEqual(m.input[t].value, 6.6)
 
     def test_load_data_at_time_subset(self):
+        # NOTE: load_data_at_time has been deprecated
         m = self._make_model()
         interface = DynamicModelInterface(m, m.time)
 
@@ -156,7 +161,7 @@ class TestDynamicModelInterface(unittest.TestCase):
         data = ScalarData({m.var[:, "A"]: 5.5, m.input[:]: 6.6})
         time_points = [1, 2]
         time_set = set(time_points)
-        interface.load_data_at_time(data, time_points=[1, 2])
+        interface.load_data(data, time_points=[1, 2])
 
         B_data = [m.var[t, "B"].value for t in m.time]
         # var[:,B] has not been changed
@@ -190,7 +195,9 @@ class TestDynamicModelInterface(unittest.TestCase):
         interface = DynamicModelInterface(m, m.time)
         data_list = [2, 3, 4]
         data = {pyo.ComponentUID(m.input): data_list}
-        interface.load_data(data)
+        # Need to provided data to load_data that can be interpreted
+        # as a TimeSeriesData
+        interface.load_data((data, m.time))
         for i, t in enumerate(m.time):
             self.assertEqual(m.input[t].value, data_list[i])
 
@@ -270,6 +277,76 @@ class TestDynamicModelInterface(unittest.TestCase):
         for i, t in enumerate(m.time):
             self.assertEqual(m.var[t, "A"].value, new_A[i])
             self.assertEqual(m.input[t].value, new_input[i])
+
+    def test_load_data_from_TimeSeriesData_tuple(self):
+        m = self._make_model()
+        interface = DynamicModelInterface(m, m.time)
+        new_A = [1.0, 2.0, 3.0]
+        new_input = [4.0, 5.0, 6.0]
+        data = ({m.var[:, "A"]: new_A, m.input[:]: new_input}, m.time)
+        interface.load_data(data)
+
+        B_data = [m.var[t, "B"].value for t in m.time]
+        # var[:,B] has not been changed
+        self.assertEqual(B_data, [1.0, 1.1, 1.2])
+
+        for i, t in enumerate(m.time):
+            self.assertEqual(m.var[t, "A"].value, new_A[i])
+            self.assertEqual(m.input[t].value, new_input[i])
+
+    def test_load_data_from_IntervalData(self):
+        m = self._make_model(5)
+        interface = DynamicModelInterface(m, m.time)
+        new_A = [-1.1, -1.2, -1.3]
+        new_input = [3.0, 2.9, 2.8]
+        data = IntervalData(
+            {m.var[:, "A"]: new_A, m.input[:]: new_input},
+            [(0.0, 0.0), (0.0, 2.0), (2.0, 4.0)],
+        )
+        interface.load_data(data)
+        B_data = [m.var[t, "B"].value for t in m.time]
+        self.assertEqual(B_data, [1.0, 1.1, 1.2, 1.3, 1.4])
+        for t in m.time:
+            if t == 0:
+                idx = 0
+            elif t <= 2.0:
+                idx = 1
+            elif t <= 4.0:
+                idx = 2
+            self.assertEqual(m.var[t, "A"].value, new_A[idx])
+            self.assertEqual(m.input[t].value, new_input[idx])
+
+    def test_load_data_from_IntervalData_tuple(self):
+        m = self._make_model(5)
+        interface = DynamicModelInterface(m, m.time)
+        new_A = [-1.1, -1.2, -1.3]
+        new_input = [3.0, 2.9, 2.8]
+        data = (
+            {m.var[:, "A"]: new_A, m.input[:]: new_input},
+            [(0.0, 0.0), (0.0, 2.0), (2.0, 4.0)],
+        )
+        interface.load_data(data)
+        B_data = [m.var[t, "B"].value for t in m.time]
+        self.assertEqual(B_data, [1.0, 1.1, 1.2, 1.3, 1.4])
+        for t in m.time:
+            if t == 0:
+                idx = 0
+            elif t <= 2.0:
+                idx = 1
+            elif t <= 4.0:
+                idx = 2
+            self.assertEqual(m.var[t, "A"].value, new_A[idx])
+            self.assertEqual(m.input[t].value, new_input[idx])
+
+    def test_load_data_bad_arg(self):
+        m = self._make_model()
+        interface = DynamicModelInterface(m, m.time)
+        new_A = [1.0, 2.0, 3.0]
+        new_input = [4.0, 5.0, 6.0]
+        data = ({m.var[:, "A"]: new_A, m.input[:]: new_input}, m.time)
+        msg = "can only be set if data is IntervalData-compatible"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            interface.load_data(data, prefer_left=True)
 
     def test_copy_values_at_time_default(self):
         m = self._make_model()
