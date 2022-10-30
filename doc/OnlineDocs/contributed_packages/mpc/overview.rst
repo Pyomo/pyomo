@@ -189,9 +189,7 @@ a tracking cost expression.
    >>> setpoint = ScalarData(
    ...     {m.var[:, "A"]: 0.5, m.var[:, "B"]: 2.0}
    ... )
-   >>> tr_cost = helper.get_tracking_cost_from_constant_setpoint(
-   ...     setpoint
-   ... )
+   >>> tr_cost = helper.get_penalty_from_target(setpoint)
    >>> m.tracking_cost = tr_cost
    >>> m.tracking_cost.pprint()
    tracking_cost : Size=3, Index=time
