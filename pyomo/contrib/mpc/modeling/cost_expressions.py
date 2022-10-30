@@ -329,18 +329,19 @@ def get_penalty_from_target(
     setpoint_data = _process_to_dynamic_data(setpoint_data)
     args = (variables, time, setpoint_data)
     kwds = dict(weight_data=weight_data, variable_set=variable_set)
-    def _error_if_used(tolerance, prefer_left):
+    def _error_if_used(tolerance, prefer_left, sp_type):
         if tolerance is not None or prefer_left is not None:
             raise RuntimeError(
                 "tolerance and prefer_left arguments can only be used if"
                 " IntervalData-compatible setpoint is provided. Got"
-                " tolerance=%s, prefer_left=%s" % (tolerance, prefer_left)
+                " tolerance=%s, prefer_left=%s when using %s as a target."
+                % (tolerance, prefer_left, sp_type)
             )
     if isinstance(setpoint_data, ScalarData):
-        _error_if_used(tolerance, prefer_left)
+        _error_if_used(tolerance, prefer_left, type(setpoint_data))
         return get_penalty_from_constant_target(*args, **kwds)
     elif isinstance(setpoint_data, TimeSeriesData):
-        _error_if_used(tolerance, prefer_left)
+        _error_if_used(tolerance, prefer_left, type(setpoint_data))
         return get_penalty_from_time_varying_target(*args, **kwds)
     elif isinstance(setpoint_data, IntervalData):
         tolerance = 0.0 if tolerance is None else tolerance
