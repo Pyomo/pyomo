@@ -454,6 +454,31 @@ class TestGetPenaltyFromTarget(unittest.TestCase):
                     pyo.value(m.penalty[i, t]),
                 )
 
+    def test_constant_setpoint_with_ScalarData(self):
+        m = self._make_model()
+        setpoint = ScalarData({m.var[:, "A"]: 0.3, m.var[:, "B"]: 0.4})
+        variables = [
+            pyo.Reference(m.var[:, "B"]), pyo.Reference(m.var[:, "A"])
+        ]
+        m.var_set, m.penalty = get_penalty_from_target(
+            variables, m.time, setpoint
+        )
+        pred_expr = {
+            (i, t): (
+                (m.var[t, "B"] - 0.4)**2
+                if i == 0 else (m.var[t, "A"] - 0.3)**2
+            ) for i, t in m.var_set * m.time
+        }
+        for t in m.time:
+            for i in m.var_set:
+                self.assertTrue(compare_expressions(
+                    pred_expr[i, t], m.penalty[i, t].expr
+                ))
+                self.assertEqual(
+                    pyo.value(pred_expr[i, t]),
+                    pyo.value(m.penalty[i, t]),
+                )
+
     def test_varying_setpoint(self):
         m = self._make_model(n_time_points=5)
         A_target = [0.4, 0.6, 0.1, 0.0, 1.1]
