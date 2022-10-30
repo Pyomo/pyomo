@@ -390,10 +390,11 @@ class DynamicModelInterface(object):
 
         Returns
         -------
-        Expression
-            Expression indexed by indices into the the list of variables and
-            time containing the weighted tracking cost for each variable
-            at each point in time
+        Set, Expression
+            Set indexing the list of variables to be penalized, and
+            Expression indexed by this set and time. This Expression contains
+            the weighted tracking cost for each variable at each point in
+            time.
 
         """
         if time is None:
