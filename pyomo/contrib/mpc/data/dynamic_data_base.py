@@ -45,7 +45,7 @@ class _DynamicDataBase(object):
     A base class for storing data associated with time-indexed variables.
 
     """
-    
+
     def __init__(self, data, time_set=None, context=None):
         """
         Processes keys of the data dict.
