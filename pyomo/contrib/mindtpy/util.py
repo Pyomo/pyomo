@@ -15,7 +15,7 @@ from contextlib import contextmanager
 import logging
 from pyomo.common.collections import ComponentMap, Bunch, ComponentSet
 from pyomo.core import (Block, Constraint, VarList,
-                        Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
+                        Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory, value)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
@@ -32,6 +32,7 @@ from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from pyomo.solvers.plugins.solvers.gurobi_persistent import GurobiPersistent
 import math
+from pyomo.common.deprecation import deprecation_warning
 
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]
@@ -1285,3 +1286,28 @@ def create_utility_block(model, name, solve_data):
     yield
     if created_util_block:
         model.del_component(name)
+
+
+def copy_var_list_values(from_list, to_list, config,
+                         skip_stale=False, skip_fixed=True,
+                         ignore_integrality=False):
+    """Copy variable values from one list to another.
+
+    Rounds to Binary/Integer if necessary
+    Sets to zero for NonNegativeReals if necessary
+    """
+    if ignore_integrality:
+        deprecation_warning("The 'ignore_integrality' argument no longer "
+                            "has any functionality.", version="6.4.2")
+
+    if len(from_list) != len(to_list):
+        raise ValueError('The lengths of from_list and to_list do not match.')
+
+    for v_from, v_to in zip(from_list, to_list):
+        if v_from.name != v_to.name:
+            raise ValueError('The name of the two variables is not the same.')
+        if skip_stale and v_from.stale:
+            continue  # Skip stale variable values.
+        if skip_fixed and v_to.is_fixed():
+            continue  # Skip fixed variables.
+        v_to.set_value(value(v_from, exception=False), skip_validation=True)
