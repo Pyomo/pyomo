@@ -13,6 +13,7 @@
 from pyomo.common.dependencies import (
     numpy as np, numpy_available,
     pandas as pd, pandas_available,
+    scipy_available,
 )
 
 import pyomo.common.unittest as unittest
@@ -29,6 +30,7 @@ class TestReactorExample(unittest.TestCase):
         #reactor_kinetics.main()
     
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not scipy_available, "scipy is not available")
     def test_reactor_compute_FIM(self):
         from pyomo.contrib.doe.example import reactor_compute_FIM
         reactor_compute_FIM.main()
@@ -39,6 +41,7 @@ class TestReactorExample(unittest.TestCase):
         reactor_optimize_doe.main()
         
     @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
+    @unittest.skipIf(not pandas_available, "pandas is not available")
     def test_reactor_grid_search(self):
         from pyomo.contrib.doe.example import reactor_grid_search
         reactor_grid_search.main()

@@ -11,7 +11,6 @@
 
 import pyomo.contrib.doe.fim_doe as doe
 import numpy as np
-import pandas as pd
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
 
