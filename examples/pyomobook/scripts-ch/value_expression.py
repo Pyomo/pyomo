@@ -6,7 +6,7 @@ model.u = pyo.Var(initialize=2.0)
 # unexpected expression instead of value
 a = model.u - 1
 print(a)       # "u - 1"
-print(type(a)) # <class 'pyomo.core.expr.numeric_expr.SumExpression'>
+print(type(a)) # <class 'pyomo.core.expr.numeric_expr.LinearExpression'>
 
 # correct way to access the value
 b = pyo.value(model.u) - 1
