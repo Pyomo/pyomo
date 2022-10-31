@@ -23,7 +23,8 @@ def _raise_invalid_cuid(cuid, model):
 
 
 def load_data_from_scalar(data, model, time):
-    """
+    """A function to load ScalarData into a model
+
     Arguments
     ---------
     data: ScalarData
@@ -48,7 +49,8 @@ def load_data_from_scalar(data, model, time):
 
 
 def load_data_from_series(data, model, time, tolerance=0.0):
-    """
+    """A function to load TimeSeriesData into a model
+
     Arguments
     ---------
     data: TimeSeriesData
@@ -66,7 +68,7 @@ def load_data_from_series(data, model, time, tolerance=0.0):
             raise RuntimeError("Time point %s not found time set" % t)
     if len(time_list) != len(data.get_time_points()):
         raise RuntimeError(
-            "TimeSeriesData object and model must must have same number"
+            "TimeSeriesData object and model must have same number"
             " of time points to load data from series"
         )
     data = data.get_data()

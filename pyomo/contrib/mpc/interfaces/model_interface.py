@@ -125,7 +125,7 @@ class DynamicModelInterface(object):
 
     def get_data_at_time(self, time=None, include_expr=False):
         """
-        Gets data at a single time point or set of time point. Note that
+        Gets data at a single time point or set of time points. Note that
         the returned type changes depending on whether a scalar or iterable
         is supplied.
 

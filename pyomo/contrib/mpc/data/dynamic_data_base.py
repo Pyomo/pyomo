@@ -137,7 +137,7 @@ class _DynamicDataBase(object):
 
     def extract_variables(self, variables, context=None, copy_values=False):
         """
-        Return a new object that only keep data values for the variables
+        Return a new object that only keeps data values for the variables
         specified.
 
         """
