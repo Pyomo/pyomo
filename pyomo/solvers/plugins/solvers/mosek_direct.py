@@ -125,13 +125,12 @@ class MOSEKDirect(DirectSolver):
         Runs a check for a valid MOSEK license. Returns False if MOSEK fails
         to run on a trivial test case.
         """
-        try:
-            import mosek
-        except ImportError:
+        if not mosek_available:
             return False
         try:
-            mosek.Env().checkoutlicense(mosek.feature.pton)
-            mosek.Env().checkinlicense(mosek.feature.pton)
+            with mosek.Env() as env:
+                env.checkoutlicense(mosek.feature.pton)
+                env.checkinlicense(mosek.feature.pton)
         except mosek.Error:
             return False
         return True
