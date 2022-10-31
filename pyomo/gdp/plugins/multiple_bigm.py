@@ -394,6 +394,7 @@ class MultipleBigMTransformation(Transformation):
                              disj][1]*disj.indicator_var.get_associated_binary()
                           for disj in active_disjuncts if disj is not disjunct)
                 if obj.is_indexed():
+                    newConstraint.add((i, 'ub'), c.body - c.upper <= rhs)
                     transformed.append(newConstraint[i, 'ub'])
                 else:
                     newConstraint.add('ub', c.body - c.upper <= rhs)
@@ -719,17 +720,6 @@ class MultipleBigMTransformation(Transformation):
     @wraps(get_transformed_constraints)
     def get_transformed_constraints(self, srcConstraint):
         return get_transformed_constraints(srcConstraint)
-
-    def get_M_values(self, model, cons, disj):
-        """
-        TODO
-        """
-        if disj.transformation_block is None:
-            raise GDP_Error(
-                "Disjunct '%s' is not transformed, so the M value requested "
-                "has not been calculated." % disj.name)
-        return disj.transformation_block().parent_block()._mbm_values[cons,
-                                                                      disj]
 
     def get_all_M_values(self, model):
         """Returns a dictionary mapping each constraint, disjunct pair (where
