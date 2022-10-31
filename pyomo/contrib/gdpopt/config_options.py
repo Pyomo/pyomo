@@ -23,7 +23,8 @@ _supported_algorithms = {
     'LOA': ('gdpopt.loa', 'Logic-based Outer Approximation'),
     'GLOA': ('gdpopt.gloa', 'Global Logic-based Outer Approximation'),
     'LBB': ('gdpopt.lbb', 'Logic-based Branch and Bound'),
-    'RIC': ('gdpopt.ric', 'Relaxation with Integer Cuts')
+    'RIC': ('gdpopt.ric', 'Relaxation with Integer Cuts'),
+    'enumerate': ('gdpopt.enumerate', 'Enumeration of discrete solutions'),
 }
 
 def _strategy_deprecation(strategy):
@@ -73,7 +74,135 @@ def _add_common_configs(CONFIG):
         domain=a_logger
     ))
 
+def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
+    # All of these config options are expected if the algorithm solves NLP
+    # subproblems.
+    CONFIG.declare("integer_tolerance", ConfigValue(
+        default=1E-5,
+        description="Tolerance on integral values."
+    ))
+    CONFIG.declare("constraint_tolerance", ConfigValue(
+        default=1E-6,
+        description="""
+        Tolerance on constraint satisfaction.
+
+        Increasing this tolerance corresponds to being more conservative in
+        declaring the model or an NLP subproblem to be infeasible.
+        """
+    ))
+    CONFIG.declare("variable_tolerance", ConfigValue(
+        default=1E-8,
+        description="Tolerance on variable bounds."
+    ))
+    CONFIG.declare("subproblem_initialization_method", ConfigValue(
+        default=default_nlp_init_method,
+        description=""""
+        callback to specify custom routines to initialize the
+        (MI)NLP subproblems.""",
+        doc="""
+        Callback to specify custom routines for initializing the (MI)NLP
+        subproblems. This method is called after the discrete problem solution
+        is fixed in the subproblem and before the subproblem is solved (or
+        pre-solved).
+
+        For algorithms with a discrete problem relaxation:
+        This method accepts three arguments: the solver object, the subproblem
+        GDPopt utility block and the discrete problem GDPopt utility block. The
+        discrete problem contains the most recent discrete problem solution.
+
+        For algorithms without a discrete problem relaxation:
+        This method accepts four arguments: the list of Disjuncts that are
+        currently fixed as being active, a list of values for the non-indicator
+        BooleanVars (empty if force_nlp_subproblem=False), and a list of
+        values for the integer vars (also empty if force_nlp_subproblem=False),
+        and last the subproblem GDPopt utility block.
+
+        The return of this method will be unused: The method should directly
+        set the value of the variables on the subproblem
+        """
+    ))
+    CONFIG.declare("call_before_subproblem_solve", ConfigValue(
+        default=_DoNothing,
+        description="callback hook before calling the subproblem solver",
+        doc="""
+        Callback called right before the (MI)NLP subproblem is solved.
+        Takes three arguments: The solver object, the subproblem and the
+        GDPopt utility block on the subproblem.
+
+        Note that unless you are *very* confident in what you are doing, the
+        subproblem should not be modified in this callback: it should be used
+        to interrogate the problem only.
+
+        To initialize the problem before it is solved, please specify a method
+        in the 'subproblem_initialization_method' argument.
+        """
+    ))
+    CONFIG.declare("call_after_subproblem_solve", ConfigValue(
+        default=_DoNothing,
+        description="""
+        callback hook after a solution of the
+        "nonlinear subproblem""",
+        doc="""
+        Callback called right after the (MI)NLP subproblem is solved.
+        Takes three arguments: The solver object, the subproblem, and the
+        GDPopt utility block on the subproblem.
+
+        Note that unless you are *very* confident in what you are doing, the
+        subproblem should not be modified in this callback: it should be used
+        to interrogate the problem only.
+        """
+    ))
+    CONFIG.declare("call_after_subproblem_feasible", ConfigValue(
+        default=_DoNothing,
+        description="""
+        callback hook after feasible solution of
+        the nonlinear subproblem""",
+        doc="""
+        Callback called right after the (MI)NLP subproblem is solved,
+        if it was feasible. Takes three arguments: The solver object, the
+        subproblem and the GDPopt utility block on the subproblem.
+
+        Note that unless you are *very* confident in what you are doing, the
+        subproblem should not be modified in this callback: it should be used
+        to interrogate the problem only.
+        """
+    ))
+    CONFIG.declare("force_subproblem_nlp", ConfigValue(
+        default=False,
+        description="""Force subproblems to be NLP, even if discrete variables
+        exist."""
+    ))
+    CONFIG.declare("subproblem_presolve", ConfigValue(
+        default=True,
+        description="""
+        Flag to enable or disable subproblem presolve.
+        Default=True.""",
+        domain=bool
+    ))
+    CONFIG.declare("tighten_nlp_var_bounds", ConfigValue(
+        default=False,
+        description="""
+        Whether or not to do feasibility-based bounds tightening
+        on the variables in the NLP subproblem before solving it.""",
+        domain=bool
+    ))
+    CONFIG.declare("round_discrete_vars", ConfigValue(
+        default=True,
+        description="""Flag to round subproblem discrete variable values to the
+        nearest integer. Rounding is done before fixing disjuncts."""
+    ))
+    CONFIG.declare("max_fbbt_iterations", ConfigValue(
+        default=3,
+        description="""
+        Maximum number of feasibility-based bounds tightening
+        iterations to do during NLP subproblem preprocessing.""",
+        domain=PositiveInt
+    ))
+
 def _add_oa_configs(CONFIG):
+    _add_nlp_solve_configs(
+        CONFIG, default_nlp_init_method=restore_vars_to_original_values)
+
     CONFIG.declare("init_strategy", ConfigValue(
         default=None,
         domain=_init_strategy_deprecation,
@@ -147,107 +276,11 @@ def _add_oa_configs(CONFIG):
         description="DEPRECATED: Please use "
         "'call_after_discrete_problem_solve'",
     ))
-    CONFIG.declare("subproblem_initialization_method", ConfigValue(
-        default=restore_vars_to_original_values, # Historical default
-        description=""""
-        callback to specify custom routines to initialize the
-        (MI)NLP subproblems.""",
-        doc="""
-        Callback to specify custom routines for initializing the (MI)NLP
-        subproblems. This method is called after the discrete problem solution
-        is fixed in the subproblem and before the subproblem is solved (or
-        pre-solved).
-
-        Accepts three arguments: the solver object, the subproblem GDPopt
-        utility block and the discrete problem GDPopt utility block. The
-        discrete problem contains the most recent discrete problem solution.
-
-        The return of this method will be unused: The method should directly
-        set the value of the variables on the subproblem
-        """
-    ))
-    CONFIG.declare("call_before_subproblem_solve", ConfigValue(
-        default=_DoNothing,
-        description="callback hook before calling the subproblem solver",
-        doc="""
-        Callback called right before the (MI)NLP subproblem is solved.
-        Takes three arguments: The solver object, the subproblem and the
-        GDPopt utility block on the subproblem.
-
-        Note that unless you are *very* confident in what you are doing, the
-        subproblem should not be modified in this callback: it should be used
-        to interrogate the problem only.
-
-        To initialize the problem before it is solved, please specify a method
-        in the 'subproblem_initialization_method' argument.
-        """
-    ))
-    CONFIG.declare("call_after_subproblem_solve", ConfigValue(
-        default=_DoNothing,
-        description="""
-        callback hook after a solution of the
-        "nonlinear subproblem""",
-        doc="""
-        Callback called right after the (MI)NLP subproblem is solved.
-        Takes three arguments: The solver object, the subproblem, and the
-        GDPopt utility block on the subproblem.
-
-        Note that unless you are *very* confident in what you are doing, the
-        subproblem should not be modified in this callback: it should be used
-        to interrogate the problem only.
-        """
-    ))
-    CONFIG.declare("call_after_subproblem_feasible", ConfigValue(
-        default=_DoNothing,
-        description="""
-        callback hook after feasible solution of
-        the nonlinear subproblem""",
-        doc="""
-        Callback called right after the (MI)NLP subproblem is solved,
-        if it was feasible. Takes three arguments: The solver object, the
-        subproblem and the GDPopt utility block on the subproblem.
-
-        Note that unless you are *very* confident in what you are doing, the
-        subproblem should not be modified in this callback: it should be used
-        to interrogate the problem only.
-        """
-    ))
-    CONFIG.declare("round_discrete_vars", ConfigValue(
-        default=True,
-        description="""Flag to round subproblem discrete variable values to the
-        nearest integer. Rounding is done before fixing disjuncts."""
-    ))
-    CONFIG.declare("force_subproblem_nlp", ConfigValue(
-        default=False,
-        description="""Force subproblems to be NLP, even if discrete variables
-        exist."""
-    ))
     CONFIG.declare("mip_presolve", ConfigValue(
         default=True,
         description="""
         Flag to enable or disable GDPopt MIP presolve.
         Default=True.""",
-        domain=bool
-    ))
-    CONFIG.declare("subproblem_presolve", ConfigValue(
-        default=True,
-        description="""
-        Flag to enable or disable subproblem presolve.
-        Default=True.""",
-        domain=bool
-    ))
-    CONFIG.declare("max_fbbt_iterations", ConfigValue(
-        default=3,
-        description="""
-        Maximum number of feasibility-based bounds tightening
-        iterations to do during NLP subproblem preprocessing.""",
-        domain=PositiveInt
-    ))
-    CONFIG.declare("tighten_nlp_var_bounds", ConfigValue(
-        default=False,
-        description="""
-        Whether or not to do feasibility-based bounds tightening
-        on the variables in the NLP subproblem before solving it.""",
         domain=bool
     ))
     CONFIG.declare("calc_disjunctive_bounds", ConfigValue(
@@ -281,7 +314,6 @@ def _add_BB_configs(CONFIG):
         When True, GDPopt-LBB will solve a local MINLP at each node."""
     ))
 
-
 def _add_mip_solver_configs(CONFIG):
     CONFIG.declare("mip_solver", ConfigValue(
         default="gurobi",
@@ -294,7 +326,6 @@ def _add_mip_solver_configs(CONFIG):
         description="""
         Keyword arguments to send to the MILP subsolver solve() invocation""",
         implicit=True))
-
 
 def _add_nlp_solver_configs(CONFIG, default_solver):
     CONFIG.declare("nlp_solver", ConfigValue(
@@ -330,13 +361,6 @@ def _add_nlp_solver_configs(CONFIG, default_solver):
         Keyword arguments to send to the local MINLP subsolver solve()
         invocation""",
         implicit=True))
-
-
-def _add_tolerance_configs(CONFIG):
-    CONFIG.declare("bound_tolerance", ConfigValue(
-        default=1E-6, domain=NonNegativeFloat,
-        description="Tolerance for bound convergence."
-    ))
     CONFIG.declare("small_dual_tolerance", ConfigValue(
         default=1E-8,
         description="""
@@ -344,23 +368,10 @@ def _add_tolerance_configs(CONFIG):
         cause problems. Exclude all duals smaller in absolue value than the
         following."""
     ))
-    CONFIG.declare("integer_tolerance", ConfigValue(
-        default=1E-5,
-        description="Tolerance on integral values."
-    ))
-    CONFIG.declare("constraint_tolerance", ConfigValue(
-        default=1E-6,
-        description="""
-        Tolerance on constraint satisfaction.
 
-        Increasing this tolerance corresponds to being more conservative in
-        declaring the model or an NLP subproblem to be infeasible.
-        """
+
+def _add_tolerance_configs(CONFIG):
+    CONFIG.declare("bound_tolerance", ConfigValue(
+        default=1E-6, domain=NonNegativeFloat,
+        description="Tolerance for bound convergence."
     ))
-    CONFIG.declare("variable_tolerance", ConfigValue(
-        default=1E-8,
-        description="Tolerance on variable bounds."
-    ))
-    CONFIG.declare("zero_tolerance", ConfigValue(
-        default=1E-15,
-        description="Tolerance on variable equal to zero."))
