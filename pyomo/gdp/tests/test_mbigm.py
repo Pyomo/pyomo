@@ -310,6 +310,46 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.check_all_untightened_bounds_constraints(m, mbm)
         self.check_linear_func_constraints(m, mbm)
 
+    def test_mappings_between_original_and_transformed_components(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m, bigM=self.get_Ms(m))
+
+        d1_block = m.d1.transformation_block()
+        self.assertIs(mbm.get_src_disjunct(d1_block), m.d1)
+        d2_block = m.d2.transformation_block()
+        self.assertIs(mbm.get_src_disjunct(d2_block), m.d2)
+        d3_block = m.d3.transformation_block()
+        self.assertIs(mbm.get_src_disjunct(d3_block), m.d3)
+
+        for disj in [m.d1, m.d2, m.d3]:
+            for comp in ['x1_bounds', 'x2_bounds', 'func']:
+                original_cons = disj.component(comp)
+                transformed = mbm.get_transformed_constraints(original_cons)
+                for cons in transformed:
+                    self.assertIn(original_cons,
+                                  mbm.get_src_constraints(cons))
+
+    def test_algebraic_constraints(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m, bigM=self.get_Ms(m))
+
+        self.assertIsNotNone(m.disjunction.algebraic_constraint)
+        xor = m.disjunction.algebraic_constraint()
+        self.assertIs(mbm.get_src_disjunction(xor), m.disjunction)
+
+        self.assertEqual(value(xor.lower), 1)
+        self.assertEqual(value(xor.upper), 1)
+        repn = generate_standard_repn(xor.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(value(repn.constant), 0)
+        self.assertEqual(len(repn.linear_vars), 3)
+        check_linear_coef(self, repn, m.d1.binary_indicator_var, 1)
+        check_linear_coef(self, repn, m.d2.binary_indicator_var, 1)
+        check_linear_coef(self, repn, m.d3.binary_indicator_var, 1)
+        check_obj_in_active_tree(self, xor)
+
     def check_pretty_bound_constraints(self, cons, var, bounds, lb):
         self.assertEqual(value(cons.upper), 0)
         self.assertIsNone(cons.lower)
