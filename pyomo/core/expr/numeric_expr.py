@@ -1652,7 +1652,6 @@ def _add_other_var(a, b):
     return SumExpression([a, b])
 
 def _add_other_monomial(a, b):
-    logger.error(str((a.__class__, b.__class__)))
     return SumExpression([a, b])
 
 def _add_other_linear(a, b):
