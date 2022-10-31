@@ -43,7 +43,9 @@ def _get_penalty_expressions_at_time(
     weight_data=None,
     time_set=None,
 ):
-    """
+    """A private helper function to process data and construct penalty
+    expressions
+
     """
     if weight_data is None:
         weight_data = ScalarData(ComponentMap((var, 1.0) for var in variables))
