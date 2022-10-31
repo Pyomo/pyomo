@@ -577,3 +577,27 @@ def _get_bigm_suffix_list(block, stopping_block=None):
         block = block.parent_block()
 
     return suffix_list
+
+def _convert_M_to_tuple(M, constraint, disjunct=None):
+    if not isinstance(M, (tuple, list)):
+        if M is None:
+            M = (None, None)
+        else:
+            try:
+                M = (-M, M)
+            except:
+                logger.error("Error converting scalar M-value %s "
+                             "to (-M,M).  Is %s not a numeric type?"
+                             % (M, type(M)))
+                raise
+    if len(M) != 2:
+        constraint_name = constraint.name
+        if disjunct is not None:
+            constraint_name += " relative to Disjunct %s" % disjunct.name
+        raise GDP_Error("Big-M %s for constraint %s is not of "
+                        "length two. "
+                        "Expected either a single value or "
+                        "tuple or list of length two for M."
+                        % (str(M), constraint_name))
+
+    return M

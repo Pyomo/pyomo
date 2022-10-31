@@ -29,8 +29,9 @@ from pyomo.core.util import target_list
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
-    _get_bigm_suffix_list, get_gdp_tree, get_src_constraint, get_src_disjunct,
-    get_src_disjunction, get_transformed_constraints, _to_dict
+    _convert_M_to_tuple, _get_bigm_suffix_list, get_gdp_tree,
+    get_src_constraint, get_src_disjunct, get_src_disjunction,
+    get_transformed_constraints, _to_dict
 )
 from pyomo.network import Port
 from pyomo.opt import SolverFactory, TerminationCondition
@@ -610,7 +611,7 @@ class MultipleBigMTransformation(Transformation):
                     sort=SortComponents.deterministic):
                 # First check args
                 if (constraint, other_disjunct) in arg_Ms:
-                    (lower_M, upper_M) = self._tupleize_Ms(
+                    (lower_M, upper_M) = _convert_M_to_tuple(
                         arg_Ms[constraint, other_disjunct], constraint,
                         other_disjunct)
                 else:
@@ -623,7 +624,7 @@ class MultipleBigMTransformation(Transformation):
                     # Go looking at suffixes
                     for m_values in suffix_list:
                         if (constraint, other_disjunct) in m_values:
-                            (l, u) = self._tupleize_Ms(
+                            (l, u) = _convert_M_to_tuple(
                                 m_values[constraint, other_disjunct],
                                 constraint, other_disjunct)
                             if l is not None:
@@ -648,7 +649,7 @@ class MultipleBigMTransformation(Transformation):
                     # Go looking at suffixes
                     for m_values in suffix_list:
                         if (constraint, other_disjunct) in m_values:
-                            (l, u) = self._tupleize_Ms(
+                            (l, u) = _convert_M_to_tuple(
                                 m_values[constraint, other_disjunct],
                                 constraint, other_disjunct)
                             if u is not None:
@@ -678,29 +679,6 @@ class MultipleBigMTransformation(Transformation):
             blk.parent_block().del_component(blk)
 
         return arg_Ms
-
-    def _tupleize_Ms(self, M, cons, disjunct):
-        # This is nearly identical to bigm's _convert_M_to_tuple function, but
-        # really don't like the (-M, M) thing--seems scary in this context.
-        if not isinstance(M, (tuple, list)):
-            if cons.lower is not None and cons.upper is not None:
-                raise GDP_Error(
-                    "Constraint '%s' has both lower and upper values, but only "
-                    "one M value is specified for Disjunct '%s'." %
-                    (cons.name, disjunct.name))
-            if cons.lower is not None:
-                return (M, None)
-            if cons.upper is not None:
-                return (None, M)
-        elif len(M) == 2:
-            return M
-        else:
-            raise GDP_Error("Big-M %s for constraint '%s' corresponding to "
-                            "Disjunct '%s' is not of "
-                            "length two. "
-                            "Expected either a single value or "
-                            "tuple or list of length two for M."
-                            % (str(M), cons.name, disjunct.name))
 
     # These are all functions to retrieve transformed components from
     # original ones and vice versa.

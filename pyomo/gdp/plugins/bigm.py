@@ -33,7 +33,7 @@ from pyomo.gdp.util import (
     is_child_of, get_src_disjunction, get_src_constraint, get_gdp_tree,
     get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
      _warn_for_active_disjunct, preprocess_targets, _to_dict,
-    _get_bigm_suffix_list)
+    _get_bigm_suffix_list, _convert_M_to_tuple)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
@@ -452,27 +452,6 @@ class BigM_Transformation(Transformation):
                 'transformedConstraints': ComponentMap()}
         return transBlock._constraintMap
 
-    def _convert_M_to_tuple(self, M, constraint_name):
-        if not isinstance(M, (tuple, list)):
-            if M is None:
-                M = (None, None)
-            else:
-                try:
-                    M = (-M, M)
-                except:
-                    logger.error("Error converting scalar M-value %s "
-                                 "to (-M,M).  Is %s not a numeric type?"
-                                 % (M, type(M)))
-                    raise
-        if len(M) != 2:
-            raise GDP_Error("Big-M %s for constraint %s is not of "
-                            "length two. "
-                            "Expected either a single value or "
-                            "tuple or list of length two for M."
-                            % (str(M), constraint_name))
-
-        return M
-
     def _transform_constraint(self, obj, disjunct, bigMargs, arg_list,
                               disjunct_suffix_list):
         # add constraint to the transformation block, we'll transform it there.
@@ -595,8 +574,8 @@ class BigM_Transformation(Transformation):
             c.deactivate()
 
     def _process_M_value(self, m, lower, upper, need_lower, need_upper, src,
-                         key, constraint_name, from_args=False):
-        m = self._convert_M_to_tuple(m, constraint_name)
+                         key, constraint, from_args=False):
+        m = _convert_M_to_tuple(m, constraint)
         if need_lower and m[0] is not None:
             if from_args:
                 self.used_args[key] = m
@@ -620,7 +599,6 @@ class BigM_Transformation(Transformation):
         # None
         need_lower = constraint.lower is not None
         need_upper = constraint.upper is not None
-        constraint_name = constraint.getname(fully_qualified=True)
 
         # check for the constraint itself and its container
         parent = constraint.parent_component()
@@ -632,7 +610,7 @@ class BigM_Transformation(Transformation):
                                                              need_upper,
                                                              bigMargs,
                                                              constraint,
-                                                             constraint_name,
+                                                             constraint,
                                                              from_args=True)
             if not need_lower and not need_upper:
                 return lower, upper
@@ -643,7 +621,7 @@ class BigM_Transformation(Transformation):
                                                              need_lower,
                                                              need_upper,
                                                              bigMargs, parent,
-                                                             constraint_name,
+                                                             constraint,
                                                              from_args=True)
             if not need_lower and not need_upper:
                 return lower, upper
@@ -656,7 +634,7 @@ class BigM_Transformation(Transformation):
                  need_upper) = self._process_M_value( val, lower, upper,
                                                       need_lower, need_upper,
                                                       bigMargs, block,
-                                                      constraint_name,
+                                                      constraint,
                                                       from_args=True)
                 if not need_lower and not need_upper:
                     return lower, upper
@@ -669,7 +647,7 @@ class BigM_Transformation(Transformation):
                                                              need_lower,
                                                              need_upper,
                                                              bigMargs, None,
-                                                             constraint_name,
+                                                             constraint,
                                                              from_args=True)
             if not need_lower and not need_upper:
                 return lower, upper
@@ -681,7 +659,6 @@ class BigM_Transformation(Transformation):
         # looking for half the answer.
         need_lower = constraint.lower is not None and lower[0] is None
         need_upper = constraint.upper is not None and upper[0] is None
-        constraint_name = constraint.getname(fully_qualified=True)
         M = None
         # first we check if the constraint or its parent is a key in any of the
         # suffix lists
@@ -693,7 +670,7 @@ class BigM_Transformation(Transformation):
                  need_upper) = self._process_M_value(M, lower, upper,
                                                      need_lower, need_upper,
                                                      bigm, constraint,
-                                                     constraint_name)
+                                                     constraint)
                 if not need_lower and not need_upper:
                     return lower, upper
 
@@ -706,7 +683,7 @@ class BigM_Transformation(Transformation):
                  need_upper) = self._process_M_value(M, lower, upper,
                                                      need_lower, need_upper,
                                                      bigm, parent,
-                                                     constraint_name)
+                                                     constraint)
                 if not need_lower and not need_upper:
                     return lower, upper
 
@@ -721,7 +698,7 @@ class BigM_Transformation(Transformation):
                      need_upper) = self._process_M_value(M, lower, upper,
                                                          need_lower, need_upper,
                                                          bigm, None,
-                                                         constraint_name)
+                                                         constraint)
                 if not need_lower and not need_upper:
                     return lower, upper
         return lower, upper
