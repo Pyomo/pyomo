@@ -17,7 +17,9 @@ from pyomo.environ import (TransformationFactory, Block, Set, Constraint, Var,
                            RealSet, ComponentMap, value, log, ConcreteModel,
                            Any, Suffix, SolverFactory, RangeSet, Param,
                            Objective, TerminationCondition, Reference)
+from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.core.expr.sympy_tools import sympy_available
+import pyomo.core.expr.current as EXPR
 from pyomo.repn import generate_standard_repn
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
@@ -124,17 +126,63 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # This is a weak test, but as good as any to ensure that the
         # substitution was done correctly
         EPS_1 = 1-EPS
-        self.assertEqual(
-            str(cons.body),
-            "(%s*d[0].binary_indicator_var + %s)*("
-            "_pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]."
-            "disaggregatedVars.x"
-            "/(%s*d[0].binary_indicator_var + %s) + "
-            "(_pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]."
-            "disaggregatedVars.y/"
-            "(%s*d[0].binary_indicator_var + %s))**2) - "
-            "14.0*d[0].binary_indicator_var"
-            % (EPS_1, EPS, EPS_1, EPS, EPS_1, EPS))
+        _disj = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts[0]
+        assertExpressionsEqual(
+            self,
+            cons.body,
+            EXPR.SumExpression([
+                EXPR.ProductExpression((
+                    EXPR.LinearExpression([
+                        EXPR.MonomialTermExpression((
+                            EPS_1,
+                            m.d[0].binary_indicator_var,
+                        )),
+                        EPS,
+                    ]),
+                    EXPR.SumExpression([
+                        EXPR.DivisionExpression((
+                            _disj.disaggregatedVars.x,
+                            EXPR.LinearExpression([
+                                EXPR.MonomialTermExpression((
+                                    EPS_1,
+                                    m.d[0].binary_indicator_var,
+                                )),
+                                EPS,
+                            ]),
+                        )),
+                        EXPR.PowExpression((
+                            EXPR.DivisionExpression((
+                                _disj.disaggregatedVars.y,
+                                EXPR.LinearExpression([
+                                    EXPR.MonomialTermExpression((
+                                        EPS_1,
+                                        m.d[0].binary_indicator_var,
+                                    )),
+                                    EPS,
+                                ]),
+                            )),
+                            2,
+                        )),
+                    ]),
+                )),
+                EXPR.NegationExpression((
+                    EXPR.ProductExpression((
+                        0.0,
+                        EXPR.LinearExpression([
+                            1,
+                            EXPR.MonomialTermExpression((
+                                -1,
+                                m.d[0].binary_indicator_var,
+                            )),
+                        ])
+                    )),
+                )),
+                EXPR.MonomialTermExpression((
+                    -14.0,
+                    m.d[0].binary_indicator_var,
+                ))
+            ])
+        )
 
     def test_transformed_constraints_linear(self):
         m = models.makeTwoTermDisj_Nonlinear()
