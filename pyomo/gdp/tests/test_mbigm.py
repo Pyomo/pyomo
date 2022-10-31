@@ -9,9 +9,11 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from io import StringIO
 from os.path import join, normpath
 
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
+from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (
@@ -514,8 +516,29 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.add_fourth_disjunct(m)
 
         mbm = TransformationFactory('gdp.mbigm')
-        # only calculate the ones we don't know yet
-        mbm.apply_to(m, bigM=self.get_Ms(m), tighten_bound_constraints=True)
+        # We will ignore the specified M values for the bounds constraints, but
+        # issue a warning about what was unnecessary.
+        out = StringIO()
+        with LoggingIntercept(out, 'pyomo.gdp.mbigm'):
+            mbm.apply_to(m, bigM=self.get_Ms(m), tighten_bound_constraints=True)
+
+        warnings = out.getvalue()
+        self.assertIn("Unused arguments in the bigM map! "
+                      "These arguments were not used by the "
+                      "transformation:", warnings)
+        for (cons, disj) in [(m.d1.x1_bounds, m.d2),
+                             (m.d1.x2_bounds, m.d2),
+                             (m.d1.x1_bounds, m.d3),
+                             (m.d1.x2_bounds, m.d3),
+                             (m.d2.x1_bounds, m.d1),
+                             (m.d2.x2_bounds, m.d1),
+                             (m.d2.x1_bounds, m.d3),
+                             (m.d2.x2_bounds, m.d3),
+                             (m.d3.x1_bounds, m.d1),
+                             (m.d3.x2_bounds, m.d1),
+                             (m.d3.x1_bounds, m.d2),
+                             (m.d3.x2_bounds, m.d2)]:
+            self.assertIn("(%s, %s)" % (cons.name, disj.name), warnings)
 
         # check that the bounds constraints are right
         # for x1:
