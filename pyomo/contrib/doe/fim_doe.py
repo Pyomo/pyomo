@@ -482,9 +482,10 @@ class DesignOfExperiments:
             m = self.__add_objective(m)
 
             # solve problem with DOF then
-            if self.verbose:
-                print('First solve with given objective:')
-            result_doe1 = self.__solve_doe(m, fix=True)
+            ## TODO: make this first solve a toggle that can be shut down
+            #if self.verbose:
+            #    print('First solve with given objective:')
+            #result_doe1 = self.__solve_doe(m, fix=True)
 
             if self.verbose:
                 print('Second solve with given objective:')
