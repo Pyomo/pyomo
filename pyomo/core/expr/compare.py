@@ -161,9 +161,7 @@ def convert_expression_to_prefix_notation(expr, include_named_exprs=True):
 
 
 def compare_expressions(expr1, expr2, include_named_exprs=True):
-    """
-    Returns True if 2 expression trees are identical. Returns False
-    otherwise.
+    """Returns True if 2 expression trees are identical, False otherwise.
 
     Parameters
     ----------
@@ -172,9 +170,10 @@ def compare_expressions(expr1, expr2, include_named_exprs=True):
     expr2: NumericValue
         A Pyomo Var, Param, or expression
     include_named_exprs: bool
-        If False, then named expressions will be ignored. In other words, this function
-        will return True if one expression has a named expression and the other does not
-        as long as the rest of the expression trees are identical.
+        If False, then named expressions will be ignored. In other
+        words, this function will return True if one expression has a
+        named expression and the other does not as long as the rest of
+        the expression trees are identical.
 
     Returns
     -------
@@ -182,8 +181,10 @@ def compare_expressions(expr1, expr2, include_named_exprs=True):
         A bool indicating whether or not the expressions are identical.
 
     """
-    pn1 = convert_expression_to_prefix_notation(expr1, include_named_exprs=include_named_exprs)
-    pn2 = convert_expression_to_prefix_notation(expr2, include_named_exprs=include_named_exprs)
+    pn1 = convert_expression_to_prefix_notation(
+        expr1, include_named_exprs=include_named_exprs)
+    pn2 = convert_expression_to_prefix_notation(
+        expr2, include_named_exprs=include_named_exprs)
     try:
         res = pn1 == pn2
     except PyomoException:
@@ -227,7 +228,7 @@ def assertExpressionsStructurallyEqual(test, a, b, include_named_exprs=True):
 
     This converts the expressions `a` and `b` into prefix notation and
     then compares the resulting lists.  Operators and (non-native type)
-    leaf nodes in the prefix epresentation are converted to strings
+    leaf nodes in the prefix representation are converted to strings
     before comparing (so that things like variables can be compared
     across clones or pickles)
 
@@ -253,9 +254,18 @@ def assertExpressionsStructurallyEqual(test, a, b, include_named_exprs=True):
             if type(v) in native_types:
                 continue
             if type(v) is tuple:
+                # This is an expression node.  Most expression nodes are
+                # 2-tuples (node type, nargs), but some are 3-tuples
+                # with supplemental data.  The biggest problem is
+                # external functions, where the third element is the
+                # external function.  We need to convert that to a
+                # string to support "structural" comparisons.
                 if len(v) == 3:
                     prefix[i] = v[:2] + (str(v[2]),)
                 continue
+            # This should be a leaf node (Var, mutable Param, etc.).
+            # Convert to string to support "structural" comparison
+            # (e.g., across clones)
             prefix[i] = str(v)
     try:
         test.assertEqual(len(prefix_a), len(prefix_b))
