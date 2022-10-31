@@ -17,9 +17,9 @@ from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
 
 from pyomo.core import (
-    Block, BooleanVar, Connector, Constraint, Expression, ExternalFunction,
-    maximize, minimize, NonNegativeIntegers, Objective, Param, RangeSet, Set,
-    SetOf, SortComponents, Suffix, value, Var
+    Binary, Block, BooleanVar, Connector, Constraint, Expression,
+    ExternalFunction, maximize, minimize, NonNegativeIntegers, Objective,
+    Param, RangeSet, Set, SetOf, SortComponents, Suffix, value, Var
 )
 from pyomo.core.base import Reference, Transformation, TransformationFactory
 from pyomo.core.base.boolean_var import (
@@ -366,12 +366,6 @@ class MultipleBigMTransformation(Transformation):
         else:
             newConstraint = Constraint(transBlock.lbub)
         relaxationBlock.add_component(name, newConstraint)
-        # # add mapping of original constraint to transformed constraint
-        # if obj.is_indexed():
-        #     constraintMap['transformedConstraints'][obj] = newConstraint
-        # # add mapping of transformed constraint container back to original
-        # # constraint container (or ScalarConstraint)
-        # constraintMap['srcConstraints'][newConstraint] = obj
 
         for i in sorted(obj.keys()):
             c = obj[i]
