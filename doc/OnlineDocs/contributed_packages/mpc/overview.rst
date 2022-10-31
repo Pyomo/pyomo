@@ -83,12 +83,13 @@ we may want to store or serialize this data in a form that is agnostic
 of any particular ``ConcreteModel`` object.
 We can now generate our data structure as:
 
-.. code:: python
+.. doctest::
 
    >>> data = {
    ...    pyo.ComponentUID(var.referent): list(var[:].value)
    ...    for var in dae_vars
    ... }
+   >>> data
    {var[*,A]: [1.0, 1.0, 1.0], var[*,B]: [1.0, 1.0, 1.0]}
 
 This is the structure of the underlying dictionary in the ``TimeSeriesData``
