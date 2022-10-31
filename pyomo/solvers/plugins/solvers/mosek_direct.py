@@ -185,7 +185,7 @@ class MOSEKDirect(DirectSolver):
         self._whichsol = getattr(mosek.soltype, kwds.pop(
             'soltype', 'bas'))
         try:
-            self._solver_model = self._mosek.Env().Task()
+            self._solver_model = self._mosek_env.Task()
         except:
             err_msg = sys.exc_info()[1]
             logger.error("MOSEK task creation failed. "
