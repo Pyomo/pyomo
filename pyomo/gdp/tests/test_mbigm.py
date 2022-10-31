@@ -9,11 +9,15 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from os.path import join, normpath
+
+from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 import pyomo.common.unittest as unittest
 
 from pyomo.environ import (
-    ConcreteModel, Constraint, NonNegativeIntegers,  SolverFactory, Suffix,
-    TransformationFactory, value, Var
+    BooleanVar, ConcreteModel, Constraint, LogicalConstraint,
+    NonNegativeIntegers, SolverFactory, Suffix, TransformationFactory,
+    value, Var
 )
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.tests.common_tests import (
@@ -21,6 +25,7 @@ from pyomo.gdp.tests.common_tests import (
 from pyomo.repn import generate_standard_repn
 
 gurobi_available = SolverFactory('gurobi').available()
+exdir = normpath(join(PYOMO_ROOT_DIR, 'examples', 'gdp'))
 
 class LinearModelDecisionTreeExample(unittest.TestCase):
     def make_model(self):
@@ -504,7 +509,8 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_var_bounds_substituted_for_missing_bound_constraints(self):
         m = self.make_model()
-        # Add a new thing and deactivate it
+        # Add a new thing with conttraints that don't give both bounds on x1 and
+        # x2
         self.add_fourth_disjunct(m)
 
         mbm = TransformationFactory('gdp.mbigm')
@@ -613,10 +619,33 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
                           m.d1.disjunction[1].disjuncts[0].binary_indicator_var,
                           0.2)
 
+    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
+    def test_logical_constraints_on_disjuncts(self):
+        m = self.make_model()
+        m.d1.Y = BooleanVar()
+        m.d1.Z = BooleanVar()
+        # include an unused boolean var because it's our job to move this out of
+        # what will be deactivated.
+        m.d1.W = BooleanVar()
+        m.d1.logical = LogicalConstraint(expr=m.d1.Y.implies(m.d1.Z))
 
-# TODO:
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m, bigM=self.get_Ms(m))
 
-# test logical constraints on disjuncts
-# strip packing would be a good integration test?
-# test user-specified M values for bounds constraints: Maybe we should override and just warn that we're doing that. Because if the user knows a tighter M, they should change the bound. If not, then honoring their wishes is dumb.
-# Need to think through how to mix and match transformations at constraint level, even... Especially with this and bigm it very much makes sense to mix them.
+        transformed = mbm.get_transformed_constraints(
+            m.d1.logic_to_linear.transformed_constraints[1])
+        self.assertEqual(len(transformed), 1)
+        y = m.d1.Y.get_associated_binary()
+        z = m.d1.Z.get_associated_binary()
+        c = transformed[0]
+        check_obj_in_active_tree(self, c)
+        self.assertIsNone(c.lower)
+        self.assertEqual(value(c.upper), 0)
+        repn = generate_standard_repn(c.body)
+        self.assertTrue(repn.is_linear())
+        self.assertEqual(repn.constant, 0)
+        self.assertEqual(len(repn.linear_vars), 4)
+        check_linear_coef(self, repn, y, 1)
+        check_linear_coef(self, repn, z, -1)
+        check_linear_coef(self, repn, m.d2.binary_indicator_var, -1)
+        check_linear_coef(self, repn, m.d3.binary_indicator_var, -1)

@@ -11,6 +11,7 @@
 
 from functools import wraps
 import itertools
+import logging
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigBlock, ConfigValue
@@ -31,13 +32,15 @@ from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.util import (
     _convert_M_to_tuple, _get_bigm_suffix_list, get_gdp_tree,
     get_src_constraint, get_src_disjunct, get_src_disjunction,
-    get_transformed_constraints, _to_dict
+    get_transformed_constraints, _to_dict, _warn_for_unused_bigM_args
 )
 from pyomo.network import Port
 from pyomo.opt import SolverFactory, TerminationCondition
 from pyomo.repn import generate_standard_repn
 
 from weakref import ref as weakref_ref
+
+logger = logging.getLogger('pyomo.gdp.mbigm')
 
 @TransformationFactory.register(
     'gdp.mbigm',
@@ -125,6 +128,10 @@ class MultipleBigMTransformation(Transformation):
         This relaxation is tighter (that is, it implies the 2*K constraints),
         and has fewer constraints. This option is a flag to tell the mbigm
         transformation to detect this structure and handle it specially.
+
+        Note that we do not use user-specified M values for these contraints
+        when this flag is set to True: If tighter bounds exist then they
+        they should be put in the constraints.
         """
     ))
 
@@ -159,9 +166,11 @@ class MultipleBigMTransformation(Transformation):
         self._transformation_blocks = {}
 
     def _apply_to(self, instance, **kwds):
+        self.used_args = ComponentMap()
         try:
             self._apply_to_impl(instance, **kwds)
         finally:
+            self.used_args.clear()
             self._transformation_blocks.clear()
 
     def _apply_to_impl(self, instance, **kwds):
@@ -197,6 +206,10 @@ class MultipleBigMTransformation(Transformation):
                 self._transform_disjunctionData(
                     t, t.index(), parent_disjunct=gdp_tree.parent(t),
                     root_disjunct=gdp_tree.root_disjunct(t))
+
+        # issue warnings about anything that was in the bigM args dict that we
+        # didn't use
+        _warn_for_unused_bigM_args(self._config.bigM, self.used_args, logger)
 
     def _transform_disjunctionData(self, obj, index, parent_disjunct,
                                    root_disjunct):
@@ -418,25 +431,17 @@ class MultipleBigMTransformation(Transformation):
                     v = repn.linear_vars[0]
                     if v not in bounds_cons:
                         bounds_cons[v] = [{}, {}]
-                    # Check for a user-specified M value
-                    if (c, disj) in Ms:
-                        M = Ms[c, disj]
-                    else:
-                        M = [None, None]
+                    M = [None, None]
                     if c.lower is not None:
-                        if M[0] is None:
-                            m = (c.lower - repn.constant)/repn.linear_coefs[0]
-                            M[0] = m
-                        bounds_cons[v][0][disj] = m
+                        M[0] = (c.lower - repn.constant)/repn.linear_coefs[0]
+                        bounds_cons[v][0][disj] = M[0]
                         if v in lower_bound_constraints_by_var:
                             lower_bound_constraints_by_var[v].add((c, disj))
                         else:
                             lower_bound_constraints_by_var[v] = {(c, disj)}
                     if c.upper is not None:
-                        if M[1] is None:
-                            m = (c.upper - repn.constant)/repn.linear_coefs[0]
-                            M[1] = m
-                        bounds_cons[v][1][disj] = m
+                        M[1] = (c.upper - repn.constant)/repn.linear_coefs[0]
+                        bounds_cons[v][1][disj] = M[1]
                         # Add the M values to the dictionary
                         transBlock._mbm_values[c, disj] = M
                         if v in upper_bound_constraints_by_var:
@@ -465,6 +470,7 @@ class MultipleBigMTransformation(Transformation):
                 if len(lower_dict) > 0:
                     M = lower_dict.get(disj, None)
                     if M is None:
+                        # substitute the lower bound if it has one
                         M = v.lb
                     if M is None:
                         raise GDP_Error(
@@ -477,6 +483,7 @@ class MultipleBigMTransformation(Transformation):
                 if len(upper_dict) > 0:
                     M = upper_dict.get(disj, None)
                     if M is None:
+                        # substitute the upper bound if it has one
                         M = v.ub
                     if M is None:
                         raise GDP_Error(
@@ -608,6 +615,8 @@ class MultipleBigMTransformation(Transformation):
                     (lower_M, upper_M) = _convert_M_to_tuple(
                         arg_Ms[constraint, other_disjunct], constraint,
                         other_disjunct)
+                    self.used_args[constraint, other_disjunct] = (lower_M,
+                                                                  upper_M)
                 else:
                     (lower_M, upper_M) = (None, None)
                 # Then check Suffixes

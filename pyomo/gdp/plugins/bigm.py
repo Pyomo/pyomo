@@ -33,7 +33,7 @@ from pyomo.gdp.util import (
     is_child_of, get_src_disjunction, get_src_constraint, get_gdp_tree,
     get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
      _warn_for_active_disjunct, preprocess_targets, _to_dict,
-    _get_bigm_suffix_list, _convert_M_to_tuple)
+    _get_bigm_suffix_list, _convert_M_to_tuple, _warn_for_unused_bigM_args)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
@@ -262,19 +262,7 @@ class BigM_Transformation(Transformation):
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use
-        if bigM is not None:
-            unused_args = ComponentSet(bigM.keys()) - \
-                          ComponentSet(self.used_args.keys())
-            if len(unused_args) > 0:
-                warning_msg = ("Unused arguments in the bigM map! "
-                               "These arguments were not used by the "
-                               "transformation:\n")
-                for component in unused_args:
-                    if hasattr(component, 'name'):
-                        warning_msg += "\t%s\n" % component.name
-                    else:
-                        warning_msg += "\t%s\n" % component
-                logger.warning(warning_msg)
+        _warn_for_unused_bigM_args(bigM, self.used_args, logger)
 
     def _add_transformation_block(self, to_block):
         if to_block in self._transformation_blocks:
