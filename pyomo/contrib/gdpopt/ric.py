@@ -40,9 +40,6 @@ class GDP_RIC_Solver(_GDPoptAlgorithm, _OAAlgorithmMixIn):
     constraints, as well as logical conditions. For non-convex problems, RIC
     will not be exact unless the NLP subproblems are solved globally.
     """
-    def _log_citation(self, config):
-        pass
-
     CONFIG = _GDPoptAlgorithm.CONFIG()
     _add_mip_solver_configs(CONFIG)
     _add_nlp_solver_configs(CONFIG, default_solver='ipopt')

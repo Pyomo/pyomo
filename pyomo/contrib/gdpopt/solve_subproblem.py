@@ -15,6 +15,8 @@ from pyomo.common.errors import InfeasibleConstraintException, DeveloperError
 from pyomo.contrib import appsi
 from pyomo.contrib.appsi.cmodel import cmodel_available
 from pyomo.contrib.fbbt.fbbt import fbbt
+from pyomo.contrib.gdpopt.solve_discrete_problem import (
+    distinguish_mip_infeasible_or_unbounded)
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning,
                                        is_feasible, get_main_elapsed_time)
 from pyomo.core import Constraint, TransformationFactory, Objective, Block
@@ -136,7 +138,11 @@ def solve_linear_subproblem(subproblem, config, timing):
     subprob_terminate_cond = results.solver.termination_condition
     if subprob_terminate_cond is tc.optimal:
         return tc.optimal
-    elif subprob_terminate_cond is tc.infeasible:
+    elif subprob_terminate_cond is tc.infeasibleOrUnbounded:
+        (results,
+         subprob_terminate_cond) = distinguish_mip_infeasible_or_unbounded(
+             subproblem, config)
+    if subprob_terminate_cond is tc.infeasible:
         config.logger.debug('MILP subproblem was infeasible.')
         return tc.infeasible
     elif subprob_terminate_cond is tc.unbounded:
@@ -224,20 +230,18 @@ class preprocess_subproblem(object):
 
         try:
             # First do FBBT
-            if cmodel_available:
-                # [ESJ 8/16/22] We can do this when #2491 is resolved. For now,
-                # we'll just use contrib.fbbt.
-                pass
-                # # use the appsi fbbt implementation since we can
-                # it = appsi.fbbt.IntervalTightener()
-                # it.config.integer_tol = self.config.integer_tolerance
-                # it.config.feasibility_tol = self.config.constraint_tolerance
-                # it.config.max_iter = self.config.max_fbbt_iterations
-                # it.perform_fbbt(m)
-            else:
-                fbbt(m, integer_tol=self.config.integer_tolerance,
-                     feasibility_tol=self.config.constraint_tolerance,
-                     max_iter=self.config.max_fbbt_iterations)
+            # When #2574 is resolved, we can do the below. For now
+            # we'll use contrib.fbbt
+            # if cmodel_available:
+            #     # use the appsi fbbt implementation since we can
+            #     it = appsi.fbbt.IntervalTightener()
+            #     it.config.integer_tol = self.config.integer_tolerance
+            #     it.config.feasibility_tol = self.config.constraint_tolerance
+            #     it.config.max_iter = self.config.max_fbbt_iterations
+            #     it.perform_fbbt(m)
+            fbbt(m, integer_tol=self.config.integer_tolerance,
+                 feasibility_tol=self.config.constraint_tolerance,
+                 max_iter=self.config.max_fbbt_iterations)
             xfrm = TransformationFactory
             # Now that we've tightened bounds, see if any variables are fixed
             # because their lb is equal to the ub (within tolerance)

@@ -9,14 +9,17 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-
-from pyomo.environ import ConcreteModel, Var, Objective, Constraint, maximize, Expression, log10
+import pyomo.environ as pyo
+from pyomo.environ import (
+    ConcreteModel, Var, Objective, Constraint, maximize, Expression, log10,
+)
 from pyomo.opt import SolverFactory, TerminationCondition
 
 from pyomo.solvers.plugins.solvers.GAMS import (
     GAMSShell, GAMSDirect, gdxcc_available
 )
 import pyomo.common.unittest as unittest
+from pyomo.common.tempfiles import TempfileManager
 from pyomo.common.tee import capture_output
 import os, shutil
 from tempfile import mkdtemp
@@ -318,6 +321,27 @@ class GAMSTests(unittest.TestCase):
         with SolverFactory("gams", solver_io="gms") as opt:
             self.assertIsNotNone(opt.version())
 
+    @unittest.skipIf(not gamsgms_available,
+                     "The 'gams' executable is not available")
+    def test_dat_parser(self):
+        # This tests issue 2571
+        m = pyo.ConcreteModel()
+        m.S = pyo.Set(initialize=list(range(5)))
+        m.a_long_var_name = pyo.Var(m.S, bounds=(0, 1), initialize=1)
+        m.obj = pyo.Objective(
+            expr=2000 * pyo.summation(m.a_long_var_name), sense=pyo.maximize)
+        solver = pyo.SolverFactory("gams:conopt")
+        res = solver.solve(
+            m, symbolic_solver_labels=True, load_solutions=False,
+            io_options={'put_results_format': 'dat'})
+        self.assertEqual(res.solution[0].Objective['obj']['Value'], 10000)
+        for i in range(5):
+            self.assertEqual(
+                res.solution[0].Variable[f'a_long_var_name_{i}_']['Value'],
+                1
+            )
+
+
 class GAMSLogfileTestBase(unittest.TestCase):
     def setUp(self):
         """Set up model and temporary directory."""
@@ -395,6 +419,23 @@ class GAMSLogfileGmsTests(GAMSLogfileTestBase):
         self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=True)
 
+    def test_logfile_relative(self):
+        cwd = os.getcwd()
+        with TempfileManager:
+            tmpdir = TempfileManager.create_tempdir()
+            os.chdir(tmpdir)
+            try:
+                self.logfile = 'test-gams.log'
+                with SolverFactory("gams", solver_io="gms") as opt:
+                    with capture_output() as output:
+                        opt.solve(self.m, logfile=self.logfile)
+                self._check_stdout(output.getvalue(), exists=False)
+                self._check_logfile(exists=True)
+                self.assertTrue(
+                    os.path.exists(os.path.join(tmpdir, self.logfile)))
+            finally:
+                os.chdir(cwd)
+
     def test_tee_and_logfile(self):
         with SolverFactory("gams", solver_io="gms") as opt:
             with capture_output() as output:
@@ -433,6 +474,22 @@ class GAMSLogfilePyTests(GAMSLogfileTestBase):
         self._check_stdout(output.getvalue(), exists=False)
         self._check_logfile(exists=True)
 
+    def test_logfile_relative(self):
+        cwd = os.getcwd()
+        with TempfileManager:
+            tmpdir = TempfileManager.create_tempdir()
+            os.chdir(tmpdir)
+            try:
+                self.logfile = 'test-gams.log'
+                with SolverFactory("gams", solver_io="python") as opt:
+                    with capture_output() as output:
+                        opt.solve(self.m, logfile=self.logfile)
+                self._check_stdout(output.getvalue(), exists=False)
+                self._check_logfile(exists=True)
+                self.assertTrue(
+                    os.path.exists(os.path.join(tmpdir, self.logfile)))
+            finally:
+                os.chdir(cwd)
     def test_tee_and_logfile(self):
         with SolverFactory("gams", solver_io="python") as opt:
             with capture_output() as output:
