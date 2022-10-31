@@ -16,6 +16,7 @@ import itertools
 import operator
 import pyomo.core.base.var
 import pyomo.core.base.constraint
+from pyomo.common.dependencies import attempt_import
 from pyomo.common.tempfiles import TempfileManager
 from pyomo.core import is_fixed, value, minimize, maximize
 from pyomo.core.base.suffix import Suffix
@@ -37,6 +38,8 @@ logger = logging.getLogger('pyomo.solvers')
 inf = float('inf')
 
 from itertools import accumulate, filterfalse
+
+mosek, mosek_available = attempt_import('mosek')
 
 
 class DegreeError(ValueError):
@@ -91,10 +94,9 @@ class MOSEKDirect(DirectSolver):
         self._pyomo_cone_to_solver_cone_map = dict()
         self._solver_cone_to_pyomo_cone_map = ComponentMap()
         self._name = None
+        self._mosek_env = None
         try:
-            import mosek
-            self._mosek = mosek
-            self._mosek_env = self._mosek.Env()
+            self._mosek_env = mosek.Env()
             self._python_api_exists = True
             self._version = self._mosek_env.getversion()
             self._name = "MOSEK " + ".".join(str(i) for i in self._version)
@@ -142,7 +144,7 @@ class MOSEKDirect(DirectSolver):
                 sys.stdout.write(msg)
                 sys.stdout.flush()
             self._solver_model.set_Stream(
-                self._mosek.streamtype.log, _process_stream)
+                mosek.streamtype.log, _process_stream)
 
         if self._keepfiles:
             logger.info("Solver log file: {}".format(self._log_file))
@@ -152,7 +154,7 @@ class MOSEKDirect(DirectSolver):
                 param = key.split('.')
                 if param[0] == 'mosek':
                     param.pop(0)
-                param = getattr(self._mosek, param[0])(param[1])
+                param = getattr(mosek, param[0])(param[1])
                 if 'sparam' in key.split('.'):
                     self._solver_model.putstrparam(param, option)
                 elif 'dparam' in key.split('.'):
@@ -162,15 +164,15 @@ class MOSEKDirect(DirectSolver):
                         option = option.split('.')
                         if option[0] == 'mosek':
                             option.pop('mosek')
-                        option = getattr(self._mosek, option[0])(option[1])
+                        option = getattr(mosek, option[0])(option[1])
                     else:
                         self._solver_model.putintparam(param, option)
             except (TypeError, AttributeError):
                 raise
         try:
             self._termcode = self._solver_model.optimize()
-            self._solver_model.solutionsummary(self._mosek.streamtype.msg)
-        except self._mosek.Error as e:
+            self._solver_model.solutionsummary(mosek.streamtype.msg)
+        except mosek.Error as e:
             logger.error(e)
             raise
         return Bunch(rc=None, log=None)
@@ -180,7 +182,7 @@ class MOSEKDirect(DirectSolver):
         super(MOSEKDirect, self)._set_instance(model, kwds)
         self._pyomo_cone_to_solver_cone_map = dict()
         self._solver_cone_to_pyomo_cone_map = ComponentMap()
-        self._whichsol = getattr(self._mosek.soltype, kwds.pop(
+        self._whichsol = getattr(mosek.soltype, kwds.pop(
             'soltype', 'bas'))
         try:
             self._solver_model = self._mosek.Env().Task()
@@ -194,24 +196,24 @@ class MOSEKDirect(DirectSolver):
     def _get_cone_data(self, con):
         cone_type, cone_param, cone_members = None, 0, None
         if isinstance(con, quadratic):
-            cone_type = self._mosek.conetype.quad
+            cone_type = mosek.conetype.quad
             cone_members = [con.r] + list(con.x)
         elif isinstance(con, rotated_quadratic):
-            cone_type = self._mosek.conetype.rquad
+            cone_type = mosek.conetype.rquad
             cone_members = [con.r1, con.r2] + list(con.x)
         elif self._version[0] >= 9:
             if isinstance(con, primal_exponential):
-                cone_type = self._mosek.conetype.pexp
+                cone_type = mosek.conetype.pexp
                 cone_members = [con.r, con.x1, con.x2]
             elif isinstance(con, primal_power):
-                cone_type = self._mosek.conetype.ppow
+                cone_type = mosek.conetype.ppow
                 cone_param = value(con.alpha)
                 cone_members = [con.r1, con.r2] + list(con.x)
             elif isinstance(con, dual_exponential):
-                cone_type = self._mosek.conetype.dexp
+                cone_type = mosek.conetype.dexp
                 cone_members = [con.r, con.x1, con.x2]
             elif isinstance(con, dual_power):
-                cone_type = self._mosek.conetype.dpow
+                cone_type = mosek.conetype.dpow
                 cone_param = value(con.alpha)
                 cone_members = [con.r1, con.r2] + list(con.x)
         return(cone_type, cone_param, ComponentSet(cone_members))
@@ -256,20 +258,20 @@ class MOSEKDirect(DirectSolver):
 
     def _mosek_vartype_from_var(self, var):
         if var.is_integer():
-            return self._mosek.variabletype.type_int
-        return self._mosek.variabletype.type_cont
+            return mosek.variabletype.type_int
+        return mosek.variabletype.type_cont
 
     def _mosek_bounds(self, lb, ub, fixed_bool):
         if fixed_bool:
-            return self._mosek.boundkey.fx
+            return mosek.boundkey.fx
         if lb == -inf:
             if ub == inf:
-                return self._mosek.boundkey.fr
+                return mosek.boundkey.fr
             else:
-                return self._mosek.boundkey.up
+                return mosek.boundkey.up
         elif ub == inf:
-            return self._mosek.boundkey.lo
-        return self._mosek.boundkey.ra
+            return mosek.boundkey.lo
+        return mosek.boundkey.ra
 
     def _add_var(self, var):
         self._add_vars((var,))
@@ -401,9 +403,9 @@ class MOSEKDirect(DirectSolver):
             raise ValueError('Cannot add inactive objective to solver.')
 
         if obj.sense == minimize:
-            self._solver_model.putobjsense(self._mosek.objsense.minimize)
+            self._solver_model.putobjsense(mosek.objsense.minimize)
         elif obj.sense == maximize:
-            self._solver_model.putobjsense(self._mosek.objsense.maximize)
+            self._solver_model.putobjsense(mosek.objsense.maximize)
         else:
             raise ValueError("Objective sense not recognized.")
 
@@ -493,13 +495,12 @@ class MOSEKDirect(DirectSolver):
                     + suffix)
 
         msk_task = self._solver_model
-        msk = self._mosek
 
-        itr_soltypes = [msk.problemtype.qo, msk.problemtype.qcqo,
-                        msk.problemtype.conic]
+        itr_soltypes = [mosek.problemtype.qo, mosek.problemtype.qcqo,
+                        mosek.problemtype.conic]
 
         if (msk_task.getnumintvar() >= 1):
-            self._whichsol = msk.soltype.itg
+            self._whichsol = mosek.soltype.itg
             if extract_reduced_costs:
                 logger.warning("Cannot get reduced costs for MIP.")
             if extract_duals:
@@ -507,7 +508,7 @@ class MOSEKDirect(DirectSolver):
             extract_reduced_costs = False
             extract_duals = False
         elif (msk_task.getprobtype() in itr_soltypes):
-            self._whichsol = msk.soltype.itr
+            self._whichsol = mosek.soltype.itr
 
         whichsol = self._whichsol
         sol_status = msk_task.getsolsta(whichsol)
@@ -518,76 +519,76 @@ class MOSEKDirect(DirectSolver):
 
         self.results.solver.name = self._name
         self.results.solver.wallclock_time = msk_task.getdouinf(
-            msk.dinfitem.optimizer_time)
+            mosek.dinfitem.optimizer_time)
 
         SOLSTA_MAP = {
-            msk.solsta.unknown: 'unknown',
-            msk.solsta.optimal: 'optimal',
-            msk.solsta.prim_and_dual_feas: 'pd_feas',
-            msk.solsta.prim_feas: 'p_feas',
-            msk.solsta.dual_feas: 'd_feas',
-            msk.solsta.prim_infeas_cer: 'p_infeas',
-            msk.solsta.dual_infeas_cer: 'd_infeas',
-            msk.solsta.prim_illposed_cer: 'p_illposed',
-            msk.solsta.dual_illposed_cer: 'd_illposed',
-            msk.solsta.integer_optimal: 'optimal'
+            mosek.solsta.unknown: 'unknown',
+            mosek.solsta.optimal: 'optimal',
+            mosek.solsta.prim_and_dual_feas: 'pd_feas',
+            mosek.solsta.prim_feas: 'p_feas',
+            mosek.solsta.dual_feas: 'd_feas',
+            mosek.solsta.prim_infeas_cer: 'p_infeas',
+            mosek.solsta.dual_infeas_cer: 'd_infeas',
+            mosek.solsta.prim_illposed_cer: 'p_illposed',
+            mosek.solsta.dual_illposed_cer: 'd_illposed',
+            mosek.solsta.integer_optimal: 'optimal'
         }
         PROSTA_MAP = {
-            msk.prosta.unknown: 'unknown',
-            msk.prosta.prim_and_dual_feas: 'pd_feas',
-            msk.prosta.prim_feas: 'p_feas',
-            msk.prosta.dual_feas: 'd_feas',
-            msk.prosta.prim_infeas: 'p_infeas',
-            msk.prosta.dual_infeas: 'd_infeas',
-            msk.prosta.prim_and_dual_infeas: 'pd_infeas',
-            msk.prosta.ill_posed: 'illposed',
-            msk.prosta.prim_infeas_or_unbounded: 'p_inf_unb'
+            mosek.prosta.unknown: 'unknown',
+            mosek.prosta.prim_and_dual_feas: 'pd_feas',
+            mosek.prosta.prim_feas: 'p_feas',
+            mosek.prosta.dual_feas: 'd_feas',
+            mosek.prosta.prim_infeas: 'p_infeas',
+            mosek.prosta.dual_infeas: 'd_infeas',
+            mosek.prosta.prim_and_dual_infeas: 'pd_infeas',
+            mosek.prosta.ill_posed: 'illposed',
+            mosek.prosta.prim_infeas_or_unbounded: 'p_inf_unb'
         }
 
         if self._version[0] < 9:
             SOLSTA_OLD = {
-                msk.solsta.near_optimal: 'optimal',
-                msk.solsta.near_integer_optimal: 'optimal',
-                msk.solsta.near_prim_feas: 'p_feas',
-                msk.solsta.near_dual_feas: 'd_feas',
-                msk.solsta.near_prim_and_dual_feas: 'pd_feas',
-                msk.solsta.near_prim_infeas_cer: 'p_infeas',
-                msk.solsta.near_dual_infeas_cer: 'd_infeas'
+                mosek.solsta.near_optimal: 'optimal',
+                mosek.solsta.near_integer_optimal: 'optimal',
+                mosek.solsta.near_prim_feas: 'p_feas',
+                mosek.solsta.near_dual_feas: 'd_feas',
+                mosek.solsta.near_prim_and_dual_feas: 'pd_feas',
+                mosek.solsta.near_prim_infeas_cer: 'p_infeas',
+                mosek.solsta.near_dual_infeas_cer: 'd_infeas'
             }
             PROSTA_OLD = {
-                msk.prosta.near_prim_and_dual_feas: 'pd_feas',
-                msk.prosta.near_prim_feas: 'p_feas',
-                msk.prosta.near_dual_feas: 'd_feas'
+                mosek.prosta.near_prim_and_dual_feas: 'pd_feas',
+                mosek.prosta.near_prim_feas: 'p_feas',
+                mosek.prosta.near_dual_feas: 'd_feas'
             }
             SOLSTA_MAP.update(SOLSTA_OLD)
             PROSTA_MAP.update(PROSTA_OLD)
 
-        if self._termcode == msk.rescode.ok:
+        if self._termcode == mosek.rescode.ok:
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_message = ""
 
-        elif self._termcode == msk.rescode.trm_max_iterations:
+        elif self._termcode == mosek.rescode.trm_max_iterations:
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_message = "Optimizer terminated at the maximum number of iterations."
             self.results.solver.termination_condition = TerminationCondition.maxIterations
             soln.status = SolutionStatus.stoppedByLimit
 
-        elif self._termcode == msk.rescode.trm_max_time:
+        elif self._termcode == mosek.rescode.trm_max_time:
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_message = "Optimizer terminated at the maximum amount of time."
             self.results.solver.termination_condition = TerminationCondition.maxTimeLimit
             soln.status = SolutionStatus.stoppedByLimit
 
-        elif self._termcode == msk.rescode.trm_user_callback:
+        elif self._termcode == mosek.rescode.trm_user_callback:
             self.results.solver.status = SolverStatus.aborted
             self.results.solver.termination_message = "Optimizer terminated due to the return of the "\
                 "user-defined callback function."
             self.results.solver.termination_condition = TerminationCondition.userInterrupt
             soln.status = SolutionStatus.unknown
 
-        elif self._termcode in [msk.rescode.trm_mio_num_relaxs,
-                                msk.rescode.trm_mio_num_branches,
-                                msk.rescode.trm_num_max_num_int_solutions]:
+        elif self._termcode in [mosek.rescode.trm_mio_num_relaxs,
+                                mosek.rescode.trm_mio_num_branches,
+                                mosek.rescode.trm_num_max_num_int_solutions]:
             self.results.solver.status = SolverStatus.ok
             self.results.solver.termination_message = "The mixed-integer optimizer terminated as the maximum number "\
                 "of relaxations/branches/feasible solutions was reached."
@@ -675,9 +676,9 @@ class MOSEKDirect(DirectSolver):
 
         self.results.problem.name = msk_task.gettaskname()
 
-        if msk_task.getobjsense() == msk.objsense.minimize:
+        if msk_task.getobjsense() == mosek.objsense.minimize:
             self.results.problem.sense = minimize
-        elif msk_task.getobjsense() == msk.objsense.maximize:
+        elif msk_task.getobjsense() == mosek.objsense.maximize:
             self.results.problem.sense = maximize
         else:
             raise RuntimeError(
@@ -688,40 +689,40 @@ class MOSEKDirect(DirectSolver):
 
         if msk_task.getnumintvar() == 0:
             try:
-                if msk_task.getobjsense() == msk.objsense.minimize:
+                if msk_task.getobjsense() == mosek.objsense.minimize:
                     self.results.problem.upper_bound = msk_task.getprimalobj(
                         whichsol)
                     self.results.problem.lower_bound = msk_task.getdualobj(
                         whichsol)
-                elif msk_task.getobjsense() == msk.objsense.maximize:
+                elif msk_task.getobjsense() == mosek.objsense.maximize:
                     self.results.problem.upper_bound = msk_task.getprimalobj(
                         whichsol)
                     self.results.problem.lower_bound = msk_task.getdualobj(
                         whichsol)
 
-            except (msk.MosekException, AttributeError):
+            except (mosek.MosekException, AttributeError):
                 pass
-        elif msk_task.getobjsense() == msk.objsense.minimize:  # minimizing
+        elif msk_task.getobjsense() == mosek.objsense.minimize:  # minimizing
             try:
                 self.results.problem.upper_bound = msk_task.getprimalobj(
                     whichsol)
-            except (msk.MosekException, AttributeError):
+            except (mosek.MosekException, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = msk_task.getdouinf(
-                    msk.dinfitem.mio_obj_bound)
-            except (msk.MosekException, AttributeError):
+                    mosek.dinfitem.mio_obj_bound)
+            except (mosek.MosekException, AttributeError):
                 pass
-        elif msk_task.getobjsense() == msk.objsense.maximize:  # maximizing
+        elif msk_task.getobjsense() == mosek.objsense.maximize:  # maximizing
             try:
                 self.results.problem.upper_bound = msk_task.getdouinf(
-                    msk.dinfitem.mio_obj_bound)
-            except (msk.MosekException, AttributeError):
+                    mosek.dinfitem.mio_obj_bound)
+            except (mosek.MosekException, AttributeError):
                 pass
             try:
                 self.results.problem.lower_bound = msk_task.getprimalobj(
                     whichsol)
-            except (msk.MosekException, AttributeError):
+            except (mosek.MosekException, AttributeError):
                 pass
         else:
             raise RuntimeError(
@@ -809,9 +810,9 @@ class MOSEKDirect(DirectSolver):
 
                         bk, lb, ub = msk_task.getconbound(con)
 
-                        if bk in [msk.boundkey.fx, msk.boundkey.ra, msk.boundkey.up]:
+                        if bk in [mosek.boundkey.fx, mosek.boundkey.ra, mosek.boundkey.up]:
                             Us = ub - Ax[con]
-                        if bk in [msk.boundkey.fx, msk.boundkey.ra, msk.boundkey.lo]:
+                        if bk in [mosek.boundkey.fx, mosek.boundkey.ra, mosek.boundkey.lo]:
                             Ls = Ax[con] - lb
 
                         if Us > Ls:
@@ -847,7 +848,7 @@ class MOSEKDirect(DirectSolver):
     def _warm_start(self):
         for pyomo_var, mosek_var in self._pyomo_var_to_solver_var_map.items():
             if pyomo_var.value is not None:
-                for solType in self._mosek.soltype.values:
+                for solType in mosek.soltype.values:
                     self._solver_model.putxxslice(
                         solType, mosek_var, mosek_var + 1, [(pyomo_var.value)])
 
@@ -953,7 +954,6 @@ class MOSEKDirect(DirectSolver):
         con_map = self._pyomo_con_to_solver_con_map
         reverse_con_map = self._solver_con_to_pyomo_con_map
         slack = self._pyomo_model.slack
-        msk = self._mosek
 
         if cons_to_load is None:
             mosek_cons_to_load = range(self._solver_model.getnumcon())
@@ -969,9 +969,9 @@ class MOSEKDirect(DirectSolver):
 
             bk, lb, ub = self._solver_model.getconbound(con)
 
-            if bk in [msk.boundkey.fx, msk.boundkey.ra, msk.boundkey.up]:
+            if bk in [mosek.boundkey.fx, mosek.boundkey.ra, mosek.boundkey.up]:
                 Us = ub - Ax[con]
-            if bk in [msk.boundkey.fx, msk.boundkey.ra, msk.boundkey.lo]:
+            if bk in [mosek.boundkey.fx, mosek.boundkey.ra, mosek.boundkey.lo]:
                 Ls = Ax[con] - lb
 
             if Us > Ls:
