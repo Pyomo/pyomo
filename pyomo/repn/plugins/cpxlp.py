@@ -552,7 +552,10 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                 if gen_obj_repn == False:
                     repn = block_repn[objective_data]
                 else:
-                    repn = generate_standard_repn(objective_data.expr)
+                    repn = generate_standard_repn(
+                        objective_data.expr,
+                        quadratic=supports_quadratic_objective,
+                    )
                     if gen_obj_repn:
                         block_repn[objective_data] = repn
 
@@ -637,7 +640,10 @@ class ProblemWriter_cpxlp(AbstractProblemWriter):
                         if constraint_data._linear_canonical_form:
                             repn = constraint_data.canonical_form()
                         else:
-                            repn = generate_standard_repn(constraint_data.body)
+                            repn = generate_standard_repn(
+                                constraint_data.body,
+                                quadratic=supports_quadratic_constraint,
+                            )
                         if gen_con_repn:
                             block_repn[constraint_data] = repn
 
