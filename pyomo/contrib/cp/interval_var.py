@@ -47,14 +47,14 @@ class IntervalVarTimePoint(ScalarVar):
 class IntervalVarStartTime(IntervalVarTimePoint):
     """This class defines a single variable denoting a start time point
     of an IntervalVar"""
-    def __init__(self, component=None):
+    def __init__(self):
         super().__init__(domain=Integers, ctype=IntervalVarStartTime)
 
 
 class IntervalVarEndTime(IntervalVarTimePoint):
     """This class defines a single variable denoting an end time point
     of an IntervalVar"""
-    def __init__(self, component=None):
+    def __init__(self):
         super().__init__(domain=Integers, ctype=IntervalVarEndTime)
 
 
@@ -64,7 +64,7 @@ class IntervalVarLength(ScalarVar):
 
     __slots__ = ()
 
-    def __init__(self, component=None):
+    def __init__(self):
         super().__init__(domain=Integers, ctype=IntervalVarLength)
 
     def get_associated_interval_var(self):
@@ -77,7 +77,7 @@ class IntervalVarPresence(ScalarBooleanVar):
 
     __slots__ = ()
 
-    def __init__(self, component=None):
+    def __init__(self):
         super().__init__(ctype = IntervalVarPresence)
 
     def get_associated_interval_var(self):
