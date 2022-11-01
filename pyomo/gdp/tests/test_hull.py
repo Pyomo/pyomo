@@ -442,7 +442,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
         # check that we used the bounds on the local variable as if they are
         # global. Which means checking the bounds constraints...
-        y_disagg = m.disj2.transformation_block().disaggregatedVars.component(
+        y_disagg = m.disj2.transformation_block.disaggregatedVars.component(
             "disj2.y")
         cons = hull.get_var_bounds_constraint(y_disagg)
         lb = cons['lb']
@@ -471,10 +471,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         disj1y = hull.get_disaggregated_var(m.disj2.y, m.disj1)
         disj2y = hull.get_disaggregated_var(m.disj2.y, m.disj2)
         self.assertIs(disj1y,
-                      m.disj1._transformation_block().parent_block().\
+                      m.disj1.transformation_block.parent_block().\
                       _disaggregatedVars[0])
         self.assertIs(disj2y,
-                      m.disj2._transformation_block().disaggregatedVars.\
+                      m.disj2.transformation_block.disaggregatedVars.\
                       component("disj2.y"))
         self.assertIs(hull.get_src_var(disj1y), m.disj2.y)
         self.assertIs(hull.get_src_var(disj2y), m.disj2.y)
@@ -513,7 +513,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # check that all the variables are disaggregated
         # disj1 has both x and y
         disj = m.disj1
-        transBlock = disj.transformation_block()
+        transBlock = disj.transformation_block
         varBlock = transBlock.disaggregatedVars
         self.assertEqual(len([v for v in
                               varBlock.component_data_objects(Var)]), 2)
@@ -527,7 +527,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIs(hull.get_src_var(y), m.disj1.y)
         # disj2 and disj4 have just y
         for disj in [m.disj2, m.disj4]:
-            transBlock = disj.transformation_block()
+            transBlock = disj.transformation_block
             varBlock = transBlock.disaggregatedVars
             self.assertEqual(len([v for v in
                                   varBlock.component_data_objects(Var)]), 1)
@@ -537,7 +537,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             self.assertIs(hull.get_src_var(y), m.disj1.y)
         # disj3 has just x
         disj = m.disj3
-        transBlock = disj.transformation_block()
+        transBlock = disj.transformation_block
         varBlock = transBlock.disaggregatedVars
         self.assertEqual(len([v for v in
                               varBlock.component_data_objects(Var)]), 1)
@@ -564,7 +564,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
     def check_name_collision_disaggregated_vars(self, m, disj):
         hull = TransformationFactory('gdp.hull')
-        transBlock = disj.transformation_block()
+        transBlock = disj.transformation_block
         varBlock = transBlock.disaggregatedVars
         self.assertEqual(len([v for v in
                               varBlock.component_data_objects(Var)]), 2)
@@ -763,14 +763,14 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # simpledisj2.c[1] is a <= constraint
         self.assertEqual(len(transformed), 1)
         self.assertIs(transformed[0],
-                      m.b.simpledisj2.transformation_block().\
+                      m.b.simpledisj2.transformation_block.\
                       component("b.simpledisj2.c")[(1,'ub')])
 
         transformed = hull.get_transformed_constraints(m.b.simpledisj2.c[2])
         # simpledisj2.c[2] is a <= constraint
         self.assertEqual(len(transformed), 1)
         self.assertIs(transformed[0],
-                      m.b.simpledisj2.transformation_block().\
+                      m.b.simpledisj2.transformation_block.\
                       component("b.simpledisj2.c")[(2,'ub')])
 
 
@@ -952,7 +952,7 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(len(transBlock1.relaxedDisjuncts), 4)
 
         firstTerm2 = transBlock1.relaxedDisjuncts[0]
-        self.assertIs(firstTerm2, m.firstTerm[2].transformation_block())
+        self.assertIs(firstTerm2, m.firstTerm[2].transformation_block)
         self.assertIsInstance(firstTerm2.disaggregatedVars.component("x"), Var)
         self.assertIsInstance(firstTerm2.component("firstTerm[2].cons"),
                               Constraint)
@@ -962,7 +962,7 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(len(firstTerm2.component("x_bounds")), 2)
 
         secondTerm2 = transBlock1.relaxedDisjuncts[1]
-        self.assertIs(secondTerm2, m.secondTerm[2].transformation_block())
+        self.assertIs(secondTerm2, m.secondTerm[2].transformation_block)
         self.assertIsInstance(secondTerm2.disaggregatedVars.component("x"), Var)
         self.assertIsInstance(secondTerm2.component("secondTerm[2].cons"),
                               Constraint)
@@ -971,7 +971,7 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(len(secondTerm2.component("x_bounds")), 2)
 
         firstTerm1 = transBlock1.relaxedDisjuncts[2]
-        self.assertIs(firstTerm1, m.firstTerm[1].transformation_block())
+        self.assertIs(firstTerm1, m.firstTerm[1].transformation_block)
         self.assertIsInstance(firstTerm1.disaggregatedVars.component("x"), Var)
         self.assertTrue(firstTerm1.disaggregatedVars.x.is_fixed())
         self.assertEqual(value(firstTerm1.disaggregatedVars.x), 0)
@@ -983,7 +983,7 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(len(firstTerm1.component("x_bounds")), 2)
 
         secondTerm1 = transBlock1.relaxedDisjuncts[3]
-        self.assertIs(secondTerm1, m.secondTerm[1].transformation_block())
+        self.assertIs(secondTerm1, m.secondTerm[1].transformation_block)
         self.assertIsInstance(secondTerm1.disaggregatedVars.component("x"), Var)
         self.assertIsInstance(secondTerm1.component("secondTerm[1].cons"),
                               Constraint)
@@ -1409,7 +1409,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
 
         disj1 = disjBlocks[0]
         self.assertTrue(disj1.active)
-        self.assertIs(disj1, m.d1.transformation_block())
+        self.assertIs(disj1, m.d1.transformation_block)
         self.assertIs(m.d1, hull.get_src_disjunct(disj1))
         # check the disaggregated x is here
         self.assertIsInstance(disj1.disaggregatedVars.x, Var)
@@ -1431,7 +1431,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
 
         disj2 = disjBlocks[1]
         self.assertTrue(disj2.active)
-        self.assertIs(disj2, m.d2.transformation_block())
+        self.assertIs(disj2, m.d2.transformation_block)
         self.assertIs(m.d2, hull.get_src_disjunct(disj2))
         # disaggregated var
         x2 = disj2.disaggregatedVars.x
@@ -1453,7 +1453,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
 
         disj3 = disjBlocks[2]
         self.assertTrue(disj3.active)
-        self.assertIs(disj3, m.d1.d3.transformation_block())
+        self.assertIs(disj3, m.d1.d3.transformation_block)
         self.assertIs(m.d1.d3, hull.get_src_disjunct(disj3))
         # disaggregated var
         x3 = disj3.disaggregatedVars.x
@@ -1474,7 +1474,7 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
 
         disj4 = disjBlocks[3]
         self.assertTrue(disj4.active)
-        self.assertIs(disj4, m.d1.d4.transformation_block())
+        self.assertIs(disj4, m.d1.d4.transformation_block)
         self.assertIs(m.d1.d4, hull.get_src_disjunct(disj4))
         # disaggregated var
         x4 = disj4.disaggregatedVars.x
@@ -1651,7 +1651,7 @@ class TestSpecialCases(unittest.TestCase):
         m = hull.create_using(model)
         self.assertEqual(m.d2.z.lb, -9)
         self.assertEqual(m.d2.z.ub, -7)
-        z_disaggregated = m.d2.transformation_block().disaggregatedVars.\
+        z_disaggregated = m.d2.transformation_block.disaggregatedVars.\
                           component("d2.z")
         self.assertIsInstance(z_disaggregated, Var)
         self.assertIs(z_disaggregated,
@@ -1669,7 +1669,7 @@ class TestSpecialCases(unittest.TestCase):
         # it is its own disaggregated variable
         self.assertIs(hull.get_disaggregated_var(m.d2.z, m.d2), m.d2.z)
         # it does not exist on the transformation block
-        self.assertIsNone(m.d2.transformation_block().disaggregatedVars.\
+        self.assertIsNone(m.d2.transformation_block.disaggregatedVars.\
                           component("z"))
 
 class UntransformableObjectsOnDisjunct(unittest.TestCase):
@@ -1838,7 +1838,7 @@ class TestErrors(unittest.TestCase):
                 r".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
                 r"disaggregatedVars.w",
                 hull.get_disaggregation_constraint,
-                m.d[1].transformation_block().disaggregatedVars.w,
+                m.d[1].transformation_block.disaggregatedVars.w,
                 m.disjunction)
         self.assertRegex(log.getvalue(), ".*It doesn't appear that "
                          r"'_pyomo_gdp_hull_reformulation."
@@ -1864,7 +1864,7 @@ class TestErrors(unittest.TestCase):
                 r".*_pyomo_gdp_hull_reformulation.relaxedDisjuncts\[1\]."
                 r"disaggregatedVars.w",
                 hull.get_disaggregated_var,
-                m.d[1].transformation_block().disaggregatedVars.w,
+                m.d[1].transformation_block.disaggregatedVars.w,
                 m.d[1])
         self.assertRegex(log.getvalue(),
                          r".*It does not appear "
@@ -1923,7 +1923,7 @@ class BlocksOnDisjuncts(unittest.TestCase):
         hull = TransformationFactory('gdp.hull')
         hull.apply_to(m)
 
-        transBlock = m.disj1.transformation_block()
+        transBlock = m.disj1.transformation_block
         self.assertIsInstance(transBlock.component("disj1.b.any_index"),
                               Constraint)
         self.assertIsInstance(transBlock.component("disj1.'b.any_index'"),
@@ -1956,9 +1956,9 @@ class BlocksOnDisjuncts(unittest.TestCase):
         self.assertIs(hull.get_disaggregated_var(m.x, m.disj1), m.x)
         self.assertEqual(m.x.lb, 0)
         self.assertEqual(m.x.ub, 5)
-        self.assertIsNone(m.disj1.transformation_block().disaggregatedVars.\
+        self.assertIsNone(m.disj1.transformation_block.disaggregatedVars.\
                           component("x"))
-        self.assertIsInstance(m.disj1.transformation_block().disaggregatedVars.\
+        self.assertIsInstance(m.disj1.transformation_block.disaggregatedVars.\
                               component("y"), Var)
 
     # this doesn't require the block, I'm just coopting this test to make sure
@@ -2023,7 +2023,7 @@ class DisaggregatingFixedVars(unittest.TestCase):
         hull = TransformationFactory('gdp.hull')
         hull.apply_to(m)
         # check that we did indeed disaggregate x
-        transBlock = m.d[1]._transformation_block()
+        transBlock = m.d[1].transformation_block
         self.assertIsInstance(transBlock.disaggregatedVars.component("x"), Var)
         self.assertIs(hull.get_disaggregated_var(m.x, m.d[1]),
                       transBlock.disaggregatedVars.x)
@@ -2035,7 +2035,7 @@ class DisaggregatingFixedVars(unittest.TestCase):
         hull = TransformationFactory('gdp.hull')
         hull.apply_to(m, assume_fixed_vars_permanent=True)
         # check that we didn't disaggregate x
-        transBlock = m.d[1]._transformation_block()
+        transBlock = m.d[1].transformation_block
         self.assertIsNone(transBlock.disaggregatedVars.component("x"))
 
 class NameDeprecationTest(unittest.TestCase):

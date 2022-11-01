@@ -21,7 +21,7 @@ class _TransformedDisjunctData(_BlockData):
 
     @property
     def src_disjunct(self):
-        return self._src_disjunct
+        return None if self._src_disjunct is None else self._src_disjunct()
 
     def __init__(self, component):
         _BlockData.__init__(self, component)

@@ -878,9 +878,9 @@ class BigM_Transformation(Transformation):
                 Disjunct,
                 active=None,
                 descend_into=(Block, Disjunct)):
+            transBlock = disj.transformation_block
             # First check if it was transformed at all.
-            if disj.transformation_block is not None:
-                transBlock = disj.transformation_block()
+            if transBlock is not None:
                 # If it was transformed with BigM, we get the M values.
                 if hasattr(transBlock, 'bigm_src'):
                     for cons in transBlock.bigm_src:

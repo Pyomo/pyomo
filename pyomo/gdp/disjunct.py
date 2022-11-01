@@ -318,7 +318,8 @@ class _DisjunctData(_BlockData):
 
     @property
     def transformation_block(self):
-        return self._transformation_block
+        return None if self._transformation_block is None else \
+            self._transformation_block()
 
     def __init__(self, component):
         _BlockData.__init__(self, component)
