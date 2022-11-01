@@ -466,7 +466,6 @@ class TestDynamicModelInterface(unittest.TestCase):
 
         variables = [m.var[:, "A"], m.var[:, "B"]]
         m.variable_set = pyo.Set(initialize=range(len(variables)))
-        #new_set, tr_cost = interface.get_penalty_from_constant_target(
         new_set, tr_cost = interface.get_penalty_from_target(
             setpoint_data,
             variables=variables,
