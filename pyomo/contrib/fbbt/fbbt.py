@@ -460,7 +460,7 @@ _prop_bnds_leaf_to_root_map[numeric_expr.SumExpression] = _prop_bnds_leaf_to_roo
 _prop_bnds_leaf_to_root_map[numeric_expr.MonomialTermExpression] = _prop_bnds_leaf_to_root_ProductExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.LinearExpression] = _prop_bnds_leaf_to_root_LinearExpression
+_prop_bnds_leaf_to_root_map[numeric_expr.LinearExpression] = _prop_bnds_leaf_to_root_SumExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.AbsExpression] = _prop_bnds_leaf_to_root_abs
 
 _prop_bnds_leaf_to_root_map[numeric_expr.NPV_ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
@@ -1064,7 +1064,7 @@ _prop_bnds_root_to_leaf_map[numeric_expr.SumExpression] = _prop_bnds_root_to_lea
 _prop_bnds_root_to_leaf_map[numeric_expr.MonomialTermExpression] = _prop_bnds_root_to_leaf_ProductExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.LinearExpression] = _prop_bnds_root_to_leaf_LinearExpression
+_prop_bnds_root_to_leaf_map[numeric_expr.LinearExpression] = _prop_bnds_root_to_leaf_SumExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.AbsExpression] = _prop_bnds_root_to_leaf_abs
 
 _prop_bnds_root_to_leaf_map[numeric_expr.NPV_ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
@@ -1146,17 +1146,6 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
                 if lb - self.feasibility_tol > ub:
                     raise InfeasibleConstraintException('Variable has a lower bound which is larger than its upper bound: {0}'.format(str(node)))
             self.bnds_dict[node] = (lb, ub)
-            return True, None
-
-        if node.__class__ is numeric_expr.LinearExpression:
-            const_val = value(node.constant)
-            self.bnds_dict[node.constant] = (const_val, const_val)
-            for coef in node.linear_coefs:
-                coef_val = value(coef)
-                self.bnds_dict[coef] = (coef_val, coef_val)
-            for v in node.linear_vars:
-                self.visiting_potential_leaf(v)
-            _prop_bnds_leaf_to_root_LinearExpression(node, self.bnds_dict, self.feasibility_tol)
             return True, None
 
         if not node.is_expression_type():
@@ -1253,12 +1242,6 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
                 node.setlb(lb)
             if ub != interval.inf:
                 node.setub(ub)
-            return True, None
-
-        if node.__class__ is numeric_expr.LinearExpression:
-            _prop_bnds_root_to_leaf_LinearExpression(node, self.bnds_dict, self.feasibility_tol)
-            for v in node.linear_vars:
-                self.visiting_potential_leaf(v)
             return True, None
 
         if not node.is_expression_type():
