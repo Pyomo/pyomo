@@ -534,7 +534,11 @@ class Estimator(object):
 
             if len(return_values) > 0:
                 var_values = []
-                for exp_i in self.ef_instance.component_objects(Block, descend_into=False):
+                if len(scen_names) > 1:  # mutliple scenarios
+                    block_objects = self.ef_instance.component_objects(Block, descend_into=False)
+                else:  # single scenario
+                    block_objects = [self.ef_instance]
+                for exp_i in block_objects:
                     vals = {}
                     for var in return_values:
                         exp_i_var = exp_i.find_component(str(var))
