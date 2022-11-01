@@ -21,10 +21,10 @@ logger = logging.getLogger('pyomo.common')
 # These URLs were retrieved from
 #     https://ampl.com/resources/extended-function-library/
 urlmap = {
-    'linux':   'https://old.ampl.com/dl/open/amplgsl/amplgsl-linux%s.zip',
-    'windows': 'https://old.ampl.com/dl/open/amplgsl/amplgsl-win%s.zip',
-    'cygwin':  'https://old.ampl.com/dl/open/amplgsl/amplgsl-win%s.zip',
-    'darwin':  'https://old.ampl.com/dl/open/amplgsl/amplgsl-osx.zip'
+    'linux':   'https://ampl.com/dl/open/amplgsl/amplgsl-linux%s.zip',
+    'windows': 'https://ampl.com/dl/open/amplgsl/amplgsl-win%s.zip',
+    'cygwin':  'https://ampl.com/dl/open/amplgsl/amplgsl-win%s.zip',
+    'darwin':  'https://ampl.com/dl/open/amplgsl/amplgsl-osx.zip'
 }
 
 def find_GSL():

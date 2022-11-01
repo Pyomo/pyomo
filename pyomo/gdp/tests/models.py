@@ -132,10 +132,10 @@ def makeTwoTermDisj_IndexedConstraints_BoundedVars():
     return m
 
 def localVar():
-    """Two-term disjunction which declares a local variable y on one of the 
+    """Two-term disjunction which declares a local variable y on one of the
     disjuncts, which is used in the objective function as well.
 
-    Used to test that we will treat y as global in the transformations, 
+    Used to test that we will treat y as global in the transformations,
     despite where it is declared.
     """
     # y appears in a global constraint and a single disjunct.
@@ -153,6 +153,17 @@ def localVar():
 
     # This makes y global actually... But in disguise.
     m.objective = Objective(expr=m.x + m.disj2.y)
+    return m
+
+
+def make_infeasible_gdp_model():
+    m = ConcreteModel()
+    m.x = Var(bounds=(0, 2))
+    m.d = Disjunction(expr=[
+        [m.x ** 2 >= 3, m.x >= 3],
+        [m.x ** 2 <= -1, m.x <= -1]])
+    m.o = Objective(expr=m.x)
+
     return m
 
 
@@ -329,7 +340,7 @@ def add_disj_not_on_block(m):
     return m
 
 def makeDisjunctionsOnIndexedBlock():
-    """Two disjunctions (one indexed an one not), each on a separate 
+    """Two disjunctions (one indexed and one not), each on a separate
     BlockData of an IndexedBlock of length 2
     """
     m = ConcreteModel()
@@ -373,7 +384,7 @@ def makeDisjunctionsOnIndexedBlock():
 
 
 def makeTwoTermDisj_BlockOnDisj():
-    """SimpleDisjunction where one of the Disjuncts contains three different 
+    """SimpleDisjunction where one of the Disjuncts contains three different
     blocks: two simple and one indexed"""
     m = ConcreteModel()
     m.x = Var(bounds=(0, 1000))
@@ -399,10 +410,10 @@ def makeTwoTermDisj_BlockOnDisj():
 def makeNestedDisjunctions():
     """Three-term SimpleDisjunction built from two IndexedDisjuncts and one
     SimpleDisjunct. The SimpleDisjunct and one of the DisjunctDatas each
-    contain a nested SimpleDisjunction (the disjuncts of which are declared 
+    contain a nested SimpleDisjunction (the disjuncts of which are declared
     on the same disjunct as the disjunction).
 
-    (makeNestedDisjunctions_NestedDisjuncts is a much simpler model. All 
+    (makeNestedDisjunctions_NestedDisjuncts is a much simpler model. All
     this adds is that it has a nested disjunction on a DisjunctData as well
     as on a SimpleDisjunct. So mostly it exists for historical reasons.)
     """
@@ -514,7 +525,7 @@ def makeTwoSimpleDisjunctions():
 
 
 def makeDisjunctInMultipleDisjunctions():
-    """This is not a transformable model! Two SimpleDisjunctions which have 
+    """This is not a transformable model! Two SimpleDisjunctions which have
     a shared disjunct.
     """
     m = ConcreteModel()
@@ -543,7 +554,7 @@ def makeDisjunctInMultipleDisjunctions():
 
 
 def makeDuplicatedNestedDisjunction():
-    """Not a transformable model (because of disjuncts shared between 
+    """Not a transformable model (because of disjuncts shared between
     disjunctions): A SimpleDisjunction where one of the disjuncts contains
     two SimpleDisjunctions with the same Disjuncts.
     """
@@ -570,9 +581,9 @@ def makeDuplicatedNestedDisjunction():
     m.disjunction = Disjunction(expr=[m.outerdisjunct[0],
                                       m.outerdisjunct[1]])
     return m
-   
+
 def makeDisjunctWithRangeSet():
-    """Two-term SimpleDisjunction where one of the disjuncts contains a 
+    """Two-term SimpleDisjunction where one of the disjuncts contains a
     RangeSet"""
     m = ConcreteModel()
     m.x = Var(bounds=(0, 1))
@@ -629,13 +640,13 @@ def grossmann_twoDisj():
     m.disjunct3 = Disjunct()
     m.disjunct3.constraintx = Constraint(expr=inequality(1, m.x, 2.5))
     m.disjunct3.constrainty = Constraint(expr=inequality(6.5, m.y, 8))
-    
+
     m.disjunct4 = Disjunct()
     m.disjunct4.constraintx = Constraint(expr=inequality(9, m.x, 11))
     m.disjunct4.constrainty = Constraint(expr=inequality(2, m.y, 3.5))
 
     m.disjunction2 = Disjunction(expr=[m.disjunct3, m.disjunct4])
-    
+
     return m
 
 def twoDisj_twoCircles_easy():
@@ -649,7 +660,7 @@ def twoDisj_twoCircles_easy():
     m.lower_circle.cons = Constraint(expr=(m.x - 4)**2 + (m.y - 2)**2 <= 2)
 
     m.disjunction = Disjunction(expr=[m.upper_circle, m.lower_circle])
-    
+
     m.obj = Objective(expr=m.x + m.y, sense=maximize)
     return m
 
@@ -669,8 +680,8 @@ def fourCircles():
     return m
 
 def makeDisjunctWithExpression():
-    """Two-term SimpleDisjunction where one of the disjuncts contains an 
-    Expression. This is used to make sure that we correctly handle types we 
+    """Two-term SimpleDisjunction where one of the disjuncts contains an
+    Expression. This is used to make sure that we correctly handle types we
     hit in disjunct.component_objects(active=True)"""
     m = ConcreteModel()
     m.x = Var(bounds=(0, 1))
@@ -684,7 +695,7 @@ def makeDisjunctWithExpression():
 def makeDisjunctionOfDisjunctDatas():
     """Two SimpleDisjunctions, where each are disjunctions of DisjunctDatas.
     This adds nothing to makeTwoSimpleDisjunctions but exists for convenience
-    because it has the same mathematical meaning as 
+    because it has the same mathematical meaning as
     makeAnyIndexedDisjunctionOfDisjunctDatas
     """
     m = ConcreteModel()
@@ -699,18 +710,18 @@ def makeDisjunctionOfDisjunctDatas():
     m.secondTerm = Disjunct(m.idx)
     m.secondTerm[1].cons = Constraint(expr=m.x >= 2)
     m.secondTerm[2].cons = Constraint(expr=m.x >= 3)
-    
+
     m.disjunction = Disjunction(expr=[m.firstTerm[1], m.secondTerm[1]])
     m.disjunction2 = Disjunction(expr=[m.firstTerm[2], m.secondTerm[2]])
     return m
 
 def makeAnyIndexedDisjunctionOfDisjunctDatas():
     """An IndexedDisjunction indexed by Any, with two two-term DisjunctionDatas
-    build from DisjunctDatas. Identical mathematically to 
+    build from DisjunctDatas. Identical mathematically to
     makeDisjunctionOfDisjunctDatas.
 
     Used to test that the right things happen for a case where soemone
-    implements an algorithm which iteratively generates disjuncts and 
+    implements an algorithm which iteratively generates disjuncts and
     retransforms"""
     m = ConcreteModel()
     m.x = Var(bounds=(-100, 100))
@@ -724,7 +735,7 @@ def makeAnyIndexedDisjunctionOfDisjunctDatas():
     m.secondTerm = Disjunct(m.idx)
     m.secondTerm[1].cons = Constraint(expr=m.x >= 2)
     m.secondTerm[2].cons = Constraint(expr=m.x >= 3)
-    
+
     m.disjunction = Disjunction(Any)
     m.disjunction[1] = [m.firstTerm[1], m.secondTerm[1]]
     m.disjunction[2] = [m.firstTerm[2], m.secondTerm[2]]
@@ -796,9 +807,9 @@ def makeExpandedNetworkDisjunction(minimize=True):
     return m
 
 def makeThreeTermDisjunctionWithOneVarInOneDisjunct():
-    """This is to make sure hull doesn't create more disaggregated variables 
-    than it needs to: Here, x only appears in the first Disjunct, so we only 
-    need two copies: one as usual for that disjunct and then one other that is 
+    """This is to make sure hull doesn't create more disaggregated variables
+    than it needs to: Here, x only appears in the first Disjunct, so we only
+    need two copies: one as usual for that disjunct and then one other that is
     free if either of the second two Disjuncts is active and 0 otherwise.
     """
     m = ConcreteModel()
@@ -817,7 +828,7 @@ def makeThreeTermDisjunctionWithOneVarInOneDisjunct():
     return m
 
 def makeNestedNonlinearModel():
-    """This is actually a disjunction between two points, but it's written 
+    """This is actually a disjunction between two points, but it's written
     as a nested disjunction over four circles!"""
     m = ConcreteModel()
     m.x = Var(bounds=(-10, 10))
@@ -856,7 +867,7 @@ def makeBetweenStepsPaperExample():
     return m
 
 def makeBetweenStepsPaperExample_DeclareVarOnDisjunct():
-    """Exactly the same model as above, but declaring the Disjuncts explicitly 
+    """Exactly the same model as above, but declaring the Disjuncts explicitly
     and declaring the variables on one of them.
     """
     m = ConcreteModel()
@@ -874,17 +885,17 @@ def makeBetweenStepsPaperExample_DeclareVarOnDisjunct():
     return m
 
 def makeBetweenStepsPaperExample_Nested():
-    """Mathematically, this is really dumb, but I am nesting this model on 
+    """Mathematically, this is really dumb, but I am nesting this model on
     itself because it makes writing tests simpler (I can recycle.)"""
     m = makeBetweenStepsPaperExample_DeclareVarOnDisjunct()
     m.disj2.disjunction = Disjunction(
         expr=[[sum(m.disj1.x[i]**2 for i in m.I) <= 1],
               [sum((3 - m.disj1.x[i])**2 for i in m.I) <= 1]])
-    
+
     return m
 
 def instantiate_hierarchical_nested_model(m):
-    """helper function to instantiate a nested version of the model with 
+    """helper function to instantiate a nested version of the model with
     the Disjuncts and Disjunctions on blocks"""
     m.disj1 = Disjunct()
     m.disjunct_block.disj2 = Disjunct()
@@ -898,7 +909,7 @@ def instantiate_hierarchical_nested_model(m):
         expr=[m.disj1, m.disjunct_block.disj2])
 
 def makeHierarchicalNested_DeclOrderMatchesInstantationOrder():
-    """Here, we put the disjunctive components on Blocks, but we do it in the 
+    """Here, we put the disjunctive components on Blocks, but we do it in the
     same order that we declared the blocks, that is, on each block, decl order
     matches instantiation order."""
     m = ConcreteModel()
@@ -911,9 +922,9 @@ def makeHierarchicalNested_DeclOrderMatchesInstantationOrder():
     return m
 
 def makeHierarchicalNested_DeclOrderOppositeInstantationOrder():
-    """Here, we declare the Blocks in the opposite order. This means that 
-    decl order will be *opposite* instantiation order, which means that we 
-    can break our targets preprocessing without even using targets if we 
+    """Here, we declare the Blocks in the opposite order. This means that
+    decl order will be *opposite* instantiation order, which means that we
+    can break our targets preprocessing without even using targets if we
     are not correctly identifying what is nested in what!"""
     m = ConcreteModel()
     m.I = RangeSet(1,4)
@@ -925,7 +936,7 @@ def makeHierarchicalNested_DeclOrderOppositeInstantationOrder():
     return m
 
 def makeNonQuadraticNonlinearGDP():
-    """We use this in testing between steps--Needed non-quadratic and not 
+    """We use this in testing between steps--Needed non-quadratic and not
     additively separable constraint expressions on a Disjunct."""
     m = ConcreteModel()
     m.I = RangeSet(1,4)

@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.modeling import NOTSET
 from pyomo.core.expr import current as EXPR
 from pyomo.core.kernel.base import (
     ICategorizedObject, _abstract_readwrite_property,
@@ -162,8 +163,8 @@ class noclone(IIdentityExpression):
     """
     __slots__ = ("_expr",)
 
-    def __new__(cls, expr):
-        if isinstance(expr, NumericValue):
+    def __new__(cls, expr=NOTSET):
+        if expr is NOTSET or isinstance(expr, NumericValue):
             return super(noclone, cls).__new__(cls)
         else:
             return expr

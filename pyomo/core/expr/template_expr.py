@@ -296,12 +296,6 @@ class TemplateSumExpression(NumericExpression):
     def create_node_with_local_data(self, args):
         return self.__class__(args, self._iters)
 
-    def __getstate__(self):
-        state = super(TemplateSumExpression, self).__getstate__()
-        for i in TemplateSumExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
     def getname(self, *args, **kwds):
         return "SUM"
 
@@ -369,19 +363,10 @@ class IndexTemplate(NumericValue):
         self._id = _id
         self._lock = None
 
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        state = super(IndexTemplate, self).__getstate__()
-        for i in IndexTemplate.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
     def __deepcopy__(self, memo):
-        # Because we leverage deepcopy for expression cloning, we need
-        # to see if this is a clone operation and *not* copy the
-        # template.
+        # Because we leverage deepcopy for expression/component cloning,
+        # we need to see if this is a Component.clone() operation and
+        # *not* copy the template.
         #
         # TODO: JDS: We should consider converting the IndexTemplate to
         # a proper Component: that way it could leverage the normal
@@ -393,9 +378,7 @@ class IndexTemplate(NumericValue):
         #
         # "Normal" deepcopying outside the context of pyomo.
         #
-        ans = memo[id(self)] = self.__class__.__new__(self.__class__)
-        ans.__setstate__(copy.deepcopy(self.__getstate__(), memo))
-        return ans
+        return super().__deepcopy__(memo)
 
     # Note: because NONE of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.

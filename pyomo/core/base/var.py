@@ -22,6 +22,7 @@ from pyomo.common.deprecation import RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
+
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.numeric_expr import NPV_MaxExpression, NPV_MinExpression
 from pyomo.core.expr.numvalue import (
@@ -288,6 +289,7 @@ class _GeneralVarData(_VarData):
     """
 
     __slots__ = ('_value', '_lb', '_ub', '_domain', '_fixed', '_stale')
+    __autoslot_mappers__ = {'_stale': StaleFlagManager.stale_mapper}
 
     def __init__(self, component=None):
         #
@@ -324,20 +326,6 @@ class _GeneralVarData(_VarData):
         self._stale = src._stale
         self._index = src._index
         return self
-
-    def __getstate__(self):
-        state = super(_GeneralVarData, self).__getstate__()
-        for i in _GeneralVarData.__slots__:
-            state[i] = getattr(self, i)
-        state['_stale'] = StaleFlagManager.is_stale(self._stale)
-        return state
-
-    def __setstate__(self, state):
-        if state.pop('_stale', True):
-            state['_stale'] = 0
-        else:
-            state['_stale'] = StaleFlagManager.get_flag(0)
-        super().__setstate__(state)
 
     #
     # Abstract Interface
@@ -865,13 +853,6 @@ class ScalarVar(_GeneralVarData, Var):
         _GeneralVarData.__init__(self, component=self)
         Var.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
-
-    # Since this class derives from Component and Component.__getstate__
-    # just packs up the entire __dict__ into the state dict, we do not
-    # need to define the __getstate__ or __setstate__ methods.
-    # We just defer to the super() get/set state.  Since all of our
-    # get/set state methods rely on super() to traverse the MRO, this
-    # will automatically pick up both the Component and Data base classes.
 
 
 @disable_methods(_VARDATA_API)

@@ -39,18 +39,6 @@ class RelationalExpression(ExpressionBase, BooleanValue):
     def __init__(self, args):
         self._args_ = args
 
-    def __getstate__(self):
-        """
-        Pickle the expression object
-
-        Returns:
-            The pickled state.
-        """
-        state = super().__getstate__()
-        for i in RelationalExpression.__slots__:
-           state[i] = getattr(self,i)
-        return state
-
     def __bool__(self):
         if self.is_constant():
             return bool(self())
@@ -199,12 +187,6 @@ class RangedExpression(RelationalExpression):
     def create_node_with_local_data(self, args):
         return self.__class__(args, self._strict)
 
-    def __getstate__(self):
-        state = super(RangedExpression, self).__getstate__()
-        for i in RangedExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
     def _apply_operation(self, result):
         _l, _b, _r = result
         if not self._strict[0]:
@@ -253,12 +235,6 @@ class InequalityExpression(RelationalExpression):
 
     def create_node_with_local_data(self, args):
         return self.__class__(args, self._strict)
-
-    def __getstate__(self):
-        state = super(InequalityExpression, self).__getstate__()
-        for i in InequalityExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
 
     def _apply_operation(self, result):
         _l, _r = result
