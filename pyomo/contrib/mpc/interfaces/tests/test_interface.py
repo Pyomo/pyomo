@@ -195,7 +195,7 @@ class TestDynamicModelInterface(unittest.TestCase):
         interface = DynamicModelInterface(m, m.time)
         data_list = [2, 3, 4]
         data = {pyo.ComponentUID(m.input): data_list}
-        # Need to provided data to load_data that can be interpreted
+        # Need to provide data to load_data that can be interpreted
         # as a TimeSeriesData
         interface.load_data((data, m.time))
         for i, t in enumerate(m.time):
