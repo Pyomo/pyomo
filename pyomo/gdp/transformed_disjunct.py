@@ -31,27 +31,6 @@ class _TransformedDisjunctData(_BlockData):
 class _TransformedDisjunct(Block):
     _ComponentDataClass = _TransformedDisjunctData
 
-    def __new__(cls, *args, **kwds):
-        if cls != _TransformedDisjunct:
-            return super(_TransformedDisjunct, cls).__new__(cls)
-        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
-            return _ScalarTransformedDisjunct.__new__(
-                _ScalarTransformedDisjunct)
-        else:
-            return _IndexedTransformedDisjunct.__new__(
-                _IndexedTransformedDisjunct)
-
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('ctype', Block)
         Block.__init__(self, *args, **kwargs)
-
-class _ScalarTransformedDisjunct(_TransformedDisjunctData,
-                                 _TransformedDisjunct):
-    def __init__(self, *args, **kwds):
-        _TransformedDisjunctData.__init__(self, self)
-        _TransformedDisjunct.__init__(self, *args, **kwds)
-        self._data[None] = self
-        self._index = UnindexedComponent_index
-
-class _IndexedTransformedDisjunct(_TransformedDisjunct):
-    pass
