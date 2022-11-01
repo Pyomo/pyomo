@@ -157,7 +157,8 @@ class TestDisableMethods(unittest.TestCase):
                 RuntimeError, "Cannot custom_pmsg _abstract_simple "
                 "'foo' before it has been constructed"):
             x.h
-        with self.assertRaisesRegex(AttributeError, "can't set attribute"):
+        with self.assertRaisesRegex(
+                AttributeError, "(can't set attribute)|(object has no setter)"):
             x.h = 1
 
         self.assertEqual(x.construct(), 'construct')
