@@ -23,6 +23,7 @@ from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.core import (
     Block, Constraint, minimize, Objective, Reals, Reference,
     TransformationFactory, value, Var)
+from pyomo.core.expr.numvalue import native_types
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import _parent_disjunct
 from pyomo.opt import SolverFactory
@@ -81,7 +82,8 @@ def solve_continuous_problem(m, config):
     if (any(c.body.polynomial_degree() not in (1, 0) for c in
             m.component_data_objects(Constraint, active=True,
                                      descend_into=Block))
-        or obj.expr.polynomial_degree() not in (1, 0)):
+        or (type(obj.expr) not in native_types and
+            obj.expr.polynomial_degree() not in (1, 0))):
         logger.info("Your model is an NLP (nonlinear program). "
                     "Using NLP solver %s to solve." % config.nlp_solver)
         results = SolverFactory(config.nlp_solver).solve(
