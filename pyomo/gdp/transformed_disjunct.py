@@ -11,7 +11,9 @@
 
 from pyomo.common.autoslots import AutoSlots
 from pyomo.core.base.block import _BlockData, Block
-from pyomo.core.base.global_set import UnindexedComponent_index
+from pyomo.core.base.global_set import (
+    UnindexedComponent_index, UnindexedComponent_set
+)
 
 class _TransformedDisjunctData(_BlockData):
     __slots__ = ('_src_disjunct',)
@@ -32,7 +34,7 @@ class _TransformedDisjunct(Block):
     def __new__(cls, *args, **kwds):
         if cls != _TransformedDisjunct:
             return super(_TransformedDisjunct, cls).__new__(cls)
-        if args == ():
+        if not args or (args[0] is UnindexedComponent_set and len(args) == 1):
             return _ScalarTransformedDisjunct.__new__(
                 _ScalarTransformedDisjunct)
         else:
