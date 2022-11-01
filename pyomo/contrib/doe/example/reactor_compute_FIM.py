@@ -16,9 +16,11 @@ from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_me
 
 def main():
     # Create model function
+    ## TODO: use create_model directly
     createmod = create_model
 
     # discretization by Pyomo.DAE
+    ## TODO: directly use 
     disc = disc_for_measure
 
     # Control time set [h]

@@ -87,6 +87,7 @@ class doe_object_Tester(unittest.TestCase):
         self.assertAlmostEqual(result.FIM[0][2], -70.238140, places=3)
         
         ### Test direct_kaug mode
+        ## TODO: check k_aug available
         exp2 = generate_exp(t_control, 5, [570, 300, 300, 300, 300, 300, 300, 300, 300])
         
         doe_object2 = DesignOfExperiments(parameter_dict, dv_pass,

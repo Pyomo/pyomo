@@ -54,17 +54,22 @@ def main():
         dv_dict_overall = {'CA0': {0: CA0},'T': T_con_initial}
         return dv_dict_overall
     
-    # empty prior
-    prior_all = np.zeros((4,4))
-    prior_pass=np.asarray(prior_all)
+    # prior
+    #exp1 = generate_exp(t_control, 3, [500, 300, 300, 300, 300, 300, 300, 300, 300])
+
+    #prior = pd.read_csv('./example/fim_5_300_500_scale.csv')
+    exp1 = generate_exp(t_control, 5, [500, 300, 300, 300, 300, 300, 300, 300, 300])
+
+    # add a prior information (scaled FIM with T=500 and T=300 experiments)
+    prior = np.asarray([[  28.67892806 ,   5.41249739 , -81.73674601 , -24.02377324],
+          [   5.41249739 ,  26.40935036 , -12.41816477 , -139.23992532],
+          [ -81.73674601 , -12.41816477 , 240.46276004 ,  58.76422806],
+          [ -24.02377324 , -139.23992532 ,  58.76422806 , 767.25584508]])
 
 
-    # Define experiments
-    exp1 = generate_exp(t_control, 3, [300, 300, 300, 300, 300, 300, 300, 300, 300])
-    
     doe_object = doe.DesignOfExperiments(parameter_dict, dv_pass,
                                  measure_class, createmod,
-                                prior_FIM=prior_pass, discretize_model=disc, args=[True])
+                                prior_FIM=prior, discretize_model=disc, args=[True])
 
     square_result, optimize_result= doe_object.optimize_doe(exp1, if_optimize=True, if_Cholesky=True, 
                                                          scale_nominal_param_value=True, objective_option='det', 

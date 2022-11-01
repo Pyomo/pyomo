@@ -409,6 +409,7 @@ This function solves twice: It solves the square version of the MBDoE problem fi
     ...                                                         objective_option='det',
     ...                                                         L_initial=None) # doctest: +SKIP
     >>> # === Analyze results===
+    # TODO: single print statments with multiple lines.
     >>> print('This optimization is solved with status:', optimize_result.status) # doctest: +SKIP
     >>> print('The result FIM is:', optimize_result.FIM) # doctest: +SKIP
     >>> print('Four design criteria log10() value:') # doctest: +SKIP
