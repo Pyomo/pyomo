@@ -24,6 +24,7 @@ from pyomo.core.base.expression import _GeneralExpressionData, ScalarExpression
 import logging
 from pyomo.common.errors import InfeasibleConstraintException, PyomoException
 from pyomo.common.config import ConfigBlock, ConfigValue, In, NonNegativeFloat, NonNegativeInt
+from pyomo.common.numeric_types import native_types
 
 logger = logging.getLogger(__name__)
 
@@ -444,7 +445,10 @@ def _prop_bnds_leaf_to_root_GeneralExpression(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    expr_lb, expr_ub = bnds_dict[node.expr]
+    if node.expr.__class__ in native_types:
+        expr_lb = expr_up = node.expr
+    else:
+        expr_lb, expr_ub = bnds_dict[node.expr]
     bnds_dict[node] = (expr_lb, expr_ub)
 
 
@@ -1047,8 +1051,9 @@ def _prop_bnds_root_to_leaf_GeneralExpression(node, bnds_dict, feasibility_tol):
         region is removed due to floating point arithmetic and to prevent math domain errors (a larger value
         is more conservative).
     """
-    expr_lb, expr_ub = bnds_dict[node]
-    bnds_dict[node.expr] = (expr_lb, expr_ub)
+    if node.expr.__class__ not in native_types:
+        expr_lb, expr_ub = bnds_dict[node]
+        bnds_dict[node.expr] = (expr_lb, expr_ub)
 
 
 _prop_bnds_root_to_leaf_map = dict()
