@@ -150,7 +150,8 @@ class TestDisableMethods(unittest.TestCase):
                 RuntimeError, "Cannot access property 'g' on _abstract_simple "
                 "'foo' before it has been constructed"):
             x.g
-        with self.assertRaisesRegex(AttributeError, "can't set attribute"):
+        with self.assertRaisesRegex(
+                AttributeError, "(can't set attribute)|(object has no setter)"):
             x.g = 1
         with self.assertRaisesRegex(
                 RuntimeError, "Cannot custom_pmsg _abstract_simple "
