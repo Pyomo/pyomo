@@ -182,8 +182,6 @@ class IntervalVar(Block):
 
 class ScalarIntervalVar(IntervalVarData, IntervalVar):
     def __init__(self, *args, **kwds):
-        # TODO: John, it really does fail without this, in _BlockData's
-        # implementation of __getattr__
         self._suppress_ctypes = set()
 
         IntervalVarData.__init__(self, self)
