@@ -363,7 +363,7 @@ class DesignOfExperiments:
 
     def optimize_doe(self,  design_values, if_optimize=True, objective_option='det',
                      jac_involved_measurement=None,
-                     scale_nominal_param_value=False, scale_constant_value=1, optimize_opt=None, if_Cholesky=False, L_LB = 1E-10, L_initial=None,
+                     scale_nominal_param_value=False, scale_constant_value=1, optimize_opt=None, if_Cholesky=False, L_LB = 1E-7, L_initial=None,
                      jac_initial=None, fim_initial=None,
                      formula='central', step=0.001, check=True):
         """Optimize DOE problem with design variables being the decisions.

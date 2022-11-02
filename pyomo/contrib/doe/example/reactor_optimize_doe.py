@@ -58,7 +58,7 @@ def main():
     #exp1 = generate_exp(t_control, 3, [500, 300, 300, 300, 300, 300, 300, 300, 300])
 
     #prior = pd.read_csv('./example/fim_5_300_500_scale.csv')
-    exp1 = generate_exp(t_control, 5, [500, 300, 300, 300, 300, 300, 300, 300, 300])
+    exp1 = generate_exp(t_control, 3, [500, 300, 300, 300, 300, 300, 300, 300, 300])
 
     # add a prior information (scaled FIM with T=500 and T=300 experiments)
     prior = np.asarray([[  28.67892806 ,   5.41249739 , -81.73674601 , -24.02377324],
