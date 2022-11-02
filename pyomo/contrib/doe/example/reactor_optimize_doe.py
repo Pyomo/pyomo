@@ -73,7 +73,7 @@ def main():
 
     square_result, optimize_result= doe_object.optimize_doe(exp1, if_optimize=True, if_Cholesky=True, 
                                                          scale_nominal_param_value=True, objective_option='det', 
-                                                         L_initial=None)
+                                                         L_initial=np.linalg.cholesky(prior))
     
     
 if __name__ == "__main__":
