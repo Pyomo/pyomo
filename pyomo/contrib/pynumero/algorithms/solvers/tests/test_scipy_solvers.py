@@ -17,11 +17,6 @@ if not scipy_available:
     raise unittest.SkipTest("SciPy is needed to test the SciPy solvers")
 
 from pyomo.contrib.pynumero.asl import AmplInterface
-if not AmplInterface.available():
-    raise unittest.SkipTest(
-        "Pynumero needs the ASL extension to run SciPy solver tests"
-    )
-
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     SquareNlpSolverBase,
@@ -45,7 +40,6 @@ def make_simple_model():
     return m, nlp
 
 
-@unittest.skipUnless(scipy_available, "SciPy is not available")
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestSquareSolverBase(unittest.TestCase):
 
@@ -74,7 +68,6 @@ class TestSquareSolverBase(unittest.TestCase):
         solver = SquareNlpSolverBase(nlp)
 
 
-@unittest.skipUnless(scipy_available, "SciPy is not available")
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestFsolveNLP(unittest.TestCase):
 
@@ -122,7 +115,6 @@ class TestFsolveNLP(unittest.TestCase):
             x, info, ier, msg = solver.solve()
 
 
-@unittest.skipUnless(scipy_available, "SciPy is not available")
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestPyomoScipySolver(unittest.TestCase):
 
@@ -137,7 +129,6 @@ class TestPyomoScipySolver(unittest.TestCase):
         self.assertEqual(sp_version, solver.version())
 
 
-@unittest.skipUnless(scipy_available, "SciPy is not available")
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestFsolvePyomo(unittest.TestCase):
 
@@ -207,7 +198,6 @@ class TestFsolvePyomo(unittest.TestCase):
             res = solver.solve(m)
 
 
-@unittest.skipUnless(scipy_available, "SciPy is not available")
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestRootNLP(unittest.TestCase):
 
@@ -230,7 +220,6 @@ class TestRootNLP(unittest.TestCase):
         )
 
 
-@unittest.skipUnless(scipy_available, "SciPy is not available")
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestRootPyomo(unittest.TestCase):
 
