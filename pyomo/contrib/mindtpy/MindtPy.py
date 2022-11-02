@@ -167,7 +167,7 @@ class MindtPySolver(object):
                               )
             # The epigraph constraint is very "flat" for branching rules.
             # If ROA/RLP-NLP is activated and the original objective function is linear, we will use the original objective for the main mip.
-            if MindtPy.objective_list[0].expr.polynomial_degree() in solve_data.mip_objective_polynomial_degree and config.add_regularization is not None:
+            if MindtPy.objective_list[0].polynomial_degree() in solve_data.mip_objective_polynomial_degree and config.add_regularization is not None:
                 MindtPy.objective_list[0].activate()
                 MindtPy.objective_constr.deactivate()
                 MindtPy.objective.deactivate()

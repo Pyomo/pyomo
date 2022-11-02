@@ -625,10 +625,24 @@ def _collect_prod(exp, multiplier, idMap, compute_values, verbose, quadratic):
                 else:
                     ans.quadratic[ndx] = multiplier*lcoef*rcoef
         # TODO - Use quicksum here?
-        el_linear = multiplier*sum(coef*idMap[key] for key, coef in lhs.linear.items() if coef)
-        er_linear = multiplier*sum(coef*idMap[key] for key, coef in rhs.linear.items() if coef)
-        el_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in lhs.quadratic.items() if coef)
-        er_quadratic = multiplier*sum(coef*idMap[key[0]]*idMap[key[1]] for key, coef in rhs.quadratic.items() if coef)
+        el_linear = multiplier*sum(
+            coef*idMap[key] for key, coef in lhs.linear.items()
+            if coef.__class__ not in native_numeric_types or coef
+        )
+        er_linear = multiplier*sum(
+            coef*idMap[key] for key, coef in rhs.linear.items()
+            if coef.__class__ not in native_numeric_types or coef
+        )
+        el_quadratic = multiplier*sum(
+            coef*idMap[key[0]]*idMap[key[1]]
+            for key, coef in lhs.quadratic.items()
+            if coef.__class__ not in native_numeric_types or coef
+        )
+        er_quadratic = multiplier*sum(
+            coef*idMap[key[0]]*idMap[key[1]]
+            for key, coef in rhs.quadratic.items()
+            if coef.__class__ not in native_numeric_types or coef
+        )
         if ((el_linear.__class__ not in native_numeric_types or el_linear)
             and (er_quadratic.__class__ not in native_numeric_types or er_quadratic)):
             ans.nonl += el_linear*er_quadratic

@@ -106,6 +106,8 @@ class _ExpressionData(NumericValue):
 
     def polynomial_degree(self):
         """A tuple of subexpressions involved in this expressions operation."""
+        if self.expr.__class__ in native_types:
+            return 0
         return self.expr.polynomial_degree()
 
     def _compute_polynomial_degree(self, result):

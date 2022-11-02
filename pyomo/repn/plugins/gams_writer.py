@@ -615,7 +615,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 % (len(obj)))
         obj = obj[0]
         if linear:
-            if obj.expr.polynomial_degree() not in linear_degree:
+            if obj.polynomial_degree() not in linear_degree:
                 linear = False
         obj_expr_str, obj_discontinuous = expression_to_string(
             obj.expr, tc, smap=symbolMap,

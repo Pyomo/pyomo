@@ -67,7 +67,7 @@ def model_is_valid(solve_data, config):
         config.logger.info('Problem has no discrete decisions.')
         obj = next(m.component_data_objects(ctype=Objective, active=True))
         if (any(c.body.polynomial_degree() not in solve_data.mip_constraint_polynomial_degree for c in MindtPy.constraint_list) or
-                obj.expr.polynomial_degree() not in solve_data.mip_objective_polynomial_degree):
+                obj.polynomial_degree() not in solve_data.mip_objective_polynomial_degree):
             config.logger.info(
                 'Your model is a NLP (nonlinear program). '
                 'Using NLP solver %s to solve.' % config.nlp_solver)
@@ -625,7 +625,7 @@ def set_up_solve_data(model, config):
 
     # if the objective function is a constant, dual bound constraint is not added.
     obj = next(model.component_data_objects(ctype=Objective, active=True))
-    if obj.expr.polynomial_degree() == 0:
+    if obj.polynomial_degree() == 0:
         config.use_dual_bound = False
 
     if config.use_fbbt:
@@ -1146,7 +1146,7 @@ def process_objective(solve_data, config, move_objective=False,
     solve_data.objective_sense = main_obj.sense
 
     # Move the objective to the constraints if it is nonlinear or move_objective is True.
-    if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or move_objective:
+    if main_obj.polynomial_degree() not in obj_handleable_polynomial_degree or move_objective:
         if move_objective:
             config.logger.info("Moving objective to constraint set.")
         else:
@@ -1154,7 +1154,7 @@ def process_objective(solve_data, config, move_objective=False,
                 "Objective is nonlinear. Moving it to constraint set.")
         util_blk.objective_value = VarList(domain=Reals, initialize=0)
         util_blk.objective_constr = ConstraintList()
-        if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
+        if main_obj.polynomial_degree() not in obj_handleable_polynomial_degree and partition_nonlinear_terms and main_obj.expr.__class__ is EXPR.SumExpression:
             repn = generate_standard_repn(main_obj.expr, quadratic=2 in obj_handleable_polynomial_degree)
             # the following code will also work if linear_subexpr is a constant.
             linear_subexpr = repn.constant + sum(coef*var for coef, var in zip(repn.linear_coefs, repn.linear_vars)) \
@@ -1173,7 +1173,7 @@ def process_objective(solve_data, config, move_objective=False,
         main_obj.deactivate()
         util_blk.objective = Objective(expr=sum(util_blk.objective_value[:]), sense=main_obj.sense)
 
-        if main_obj.expr.polynomial_degree() not in obj_handleable_polynomial_degree or \
+        if main_obj.polynomial_degree() not in obj_handleable_polynomial_degree or \
            (move_objective and update_var_con_list):
             util_blk.variable_list.extend(util_blk.objective_value[:])
             util_blk.continuous_variable_list.extend(util_blk.objective_value[:])
