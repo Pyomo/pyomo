@@ -5,7 +5,7 @@ parameterized, param_available = attempt_import('parameterized')
 parameterized = parameterized.parameterized
 from pyomo.contrib.appsi.base import TerminationCondition, Results, PersistentSolver
 from pyomo.contrib.appsi.cmodel import cmodel_available
-from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc
+from pyomo.contrib.appsi.solvers import Gurobi, Ipopt, Cplex, Cbc, Highs
 from typing import Type
 from pyomo.core.expr.numeric_expr import LinearExpression
 import os
@@ -17,8 +17,8 @@ from pyomo import gdp
 if not param_available:
     raise unittest.SkipTest('Parameterized is not available.')
 
-all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex), ('cbc', Cbc)]
-mip_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('cbc', Cbc)]
+all_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex), ('cbc', Cbc), ('highs', Highs)]
+mip_solvers = [('gurobi', Gurobi), ('cplex', Cplex), ('cbc', Cbc), ('highs', Highs)]
 nlp_solvers = [('ipopt', Ipopt)]
 qcp_solvers = [('gurobi', Gurobi), ('ipopt', Ipopt), ('cplex', Cplex)]
 miqcqp_solvers = [('gurobi', Gurobi), ('cplex', Cplex)]
@@ -399,6 +399,13 @@ class TestSolvers(unittest.TestCase):
         self.assertAlmostEqual(m.x.value, None)
         self.assertAlmostEqual(m.y.value, None)
         self.assertTrue(res.best_feasible_objective is None)
+
+        with self.assertRaisesRegex(RuntimeError, '.*does not currently have a valid solution.*'):
+            res.solution_loader.load_vars()
+        with self.assertRaisesRegex(RuntimeError, '.*does not currently have valid duals.*'):
+            res.solution_loader.get_duals()
+        with self.assertRaisesRegex(RuntimeError, '.*does not currently have valid reduced costs.*'):
+            res.solution_loader.get_reduced_costs()
 
     @parameterized.expand(input=all_solvers)
     def test_duals(self, name: str, opt_class: Type[PersistentSolver]):

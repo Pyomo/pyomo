@@ -20,8 +20,11 @@ from .current import (
     NPV_AbsExpression, NumericValue,
     RangedExpression, InequalityExpression, EqualityExpression,
 )
+from .template_expr import GetItemExpression
 from typing import List
 from pyomo.common.errors import PyomoException
+from pyomo.common.formatting import tostr
+from pyomo.common.numeric_types import native_types
 
 
 def handle_linear_expression(node: LinearExpression, pn: List):
@@ -76,6 +79,7 @@ handler[NPV_AbsExpression] = handle_unary_expression
 handler[RangedExpression] = handle_expression
 handler[InequalityExpression] = handle_expression
 handler[EqualityExpression] = handle_expression
+handler[GetItemExpression] = handle_expression
 
 
 class PrefixVisitor(StreamBasedExpressionVisitor):
@@ -157,9 +161,7 @@ def convert_expression_to_prefix_notation(expr, include_named_exprs=True):
 
 
 def compare_expressions(expr1, expr2, include_named_exprs=True):
-    """
-    Returns True if 2 expression trees are identical. Returns False
-    otherwise.
+    """Returns True if 2 expression trees are identical, False otherwise.
 
     Parameters
     ----------
@@ -168,9 +170,10 @@ def compare_expressions(expr1, expr2, include_named_exprs=True):
     expr2: NumericValue
         A Pyomo Var, Param, or expression
     include_named_exprs: bool
-        If False, then named expressions will be ignored. In other words, this function
-        will return True if one expression has a named expression and the other does not
-        as long as the rest of the expression trees are identical.
+        If False, then named expressions will be ignored. In other
+        words, this function will return True if one expression has a
+        named expression and the other does not as long as the rest of
+        the expression trees are identical.
 
     Returns
     -------
@@ -178,10 +181,97 @@ def compare_expressions(expr1, expr2, include_named_exprs=True):
         A bool indicating whether or not the expressions are identical.
 
     """
-    pn1 = convert_expression_to_prefix_notation(expr1, include_named_exprs=include_named_exprs)
-    pn2 = convert_expression_to_prefix_notation(expr2, include_named_exprs=include_named_exprs)
+    pn1 = convert_expression_to_prefix_notation(
+        expr1, include_named_exprs=include_named_exprs)
+    pn2 = convert_expression_to_prefix_notation(
+        expr2, include_named_exprs=include_named_exprs)
     try:
         res = pn1 == pn2
     except PyomoException:
         res = False
     return res
+
+
+def assertExpressionsEqual(test, a, b, include_named_exprs=True):
+    """unittest-based assertion for comparing expressions
+
+    This converts the expressions `a` and `b` into prefix notation and
+    then compares the resulting lists.
+
+    Parameters
+    ----------
+    test: unittest.TestCase
+        The unittest `TestCase` class that is performing the test.
+
+    a: ExpressionBase or native type
+
+    b: ExpressionBase or native type
+
+    include_named_exprs: bool
+       If True (the default), the comparison expands all named
+       expressions when generating the prefix notation
+    """
+    prefix_a = convert_expression_to_prefix_notation(a, include_named_exprs)
+    prefix_b = convert_expression_to_prefix_notation(b, include_named_exprs)
+    try:
+        test.assertEqual(len(prefix_a), len(prefix_b))
+        for _a, _b in zip(prefix_a, prefix_b):
+            test.assertIs(_a.__class__, _b.__class__)
+            test.assertEqual(_a, _b)
+    except (PyomoException, AssertionError):
+        test.fail(f"Expressions not equal:\n\t"
+                  f"{tostr(prefix_a)}\n\t!=\n\t{tostr(prefix_b)}")
+
+
+def assertExpressionsStructurallyEqual(test, a, b, include_named_exprs=True):
+    """unittest-based assertion for comparing expressions
+
+    This converts the expressions `a` and `b` into prefix notation and
+    then compares the resulting lists.  Operators and (non-native type)
+    leaf nodes in the prefix representation are converted to strings
+    before comparing (so that things like variables can be compared
+    across clones or pickles)
+
+    Parameters
+    ----------
+    test: unittest.TestCase
+        The unittest `TestCase` class that is performing the test.
+
+    a: ExpressionBase or native type
+
+    b: ExpressionBase or native type
+
+    include_named_exprs: bool
+       If True (the default), the comparison expands all named
+       expressions when generating the prefix notation
+
+    """
+    prefix_a = convert_expression_to_prefix_notation(a, include_named_exprs)
+    prefix_b = convert_expression_to_prefix_notation(b, include_named_exprs)
+    # Convert leaf nodes and operators to their string equivalents
+    for prefix in (prefix_a, prefix_b):
+        for i, v in enumerate(prefix):
+            if type(v) in native_types:
+                continue
+            if type(v) is tuple:
+                # This is an expression node.  Most expression nodes are
+                # 2-tuples (node type, nargs), but some are 3-tuples
+                # with supplemental data.  The biggest problem is
+                # external functions, where the third element is the
+                # external function.  We need to convert that to a
+                # string to support "structural" comparisons.
+                if len(v) == 3:
+                    prefix[i] = v[:2] + (str(v[2]),)
+                continue
+            # This should be a leaf node (Var, mutable Param, etc.).
+            # Convert to string to support "structural" comparison
+            # (e.g., across clones)
+            prefix[i] = str(v)
+    try:
+        test.assertEqual(len(prefix_a), len(prefix_b))
+        for _a, _b in zip(prefix_a, prefix_b):
+            test.assertIs(_a.__class__, _b.__class__)
+            test.assertEqual(_a, _b)
+    except (PyomoException, AssertionError):
+        test.fail(f"Expressions not structurally equal:\n\t"
+                  f"{tostr(prefix_a)}\n\t!=\n\t{tostr(prefix_b)}")

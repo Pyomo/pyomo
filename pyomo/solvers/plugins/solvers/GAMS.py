@@ -261,6 +261,12 @@ class GAMSDirect(_GAMSSolver):
 
         initial_time = time.time()
 
+        # Because GAMS changes the CWD when running the solver, we need
+        # to convert user-provided file names to absolute paths
+        # (relative to the current directory)
+        if logfile is not None:
+            logfile = os.path.abspath(logfile)
+
         ####################################################################
         # Presolve
         ####################################################################
@@ -734,6 +740,12 @@ class GAMSShell(_GAMSSolver):
         # Pass remaining keywords to writer, which will handle
         # any unrecognized arguments
         initial_time = time.time()
+
+        # Because GAMS changes the CWD when running the solver, we need
+        # to convert user-provided file names to absolute paths
+        # (relative to the current directory)
+        if logfile is not None:
+            logfile = os.path.abspath(logfile)
 
         ####################################################################
         # Presolve
