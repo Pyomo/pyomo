@@ -172,6 +172,11 @@ class MOSEKDirect(DirectSolver):
             self._termcode = self._solver_model.optimize()
             self._solver_model.solutionsummary(mosek.streamtype.msg)
         except mosek.Error as e:
+            # MOSEK is not good about releasing licenses when an
+            # exception is raised during optimize().  We will explicitly
+            # release all licenses to prevent (among other things) a
+            # "license leak" during testing with expected failures.
+            self._mosek_env.checkinall()
             logger.error(e)
             raise
         return Bunch(rc=None, log=None)

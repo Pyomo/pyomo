@@ -820,8 +820,8 @@ class CuttingPlane_Transformation(Transformation):
                                                         descend_into=(Disjunct,
                                                                       Block)):
             for disjunct in disjunction.disjuncts:
-                if disjunct.transformation_block is not None:
-                    transBlock = disjunct.transformation_block()
+                transBlock = disjunct.transformation_block
+                if transBlock is not None:
                     for v in transBlock.disaggregatedVars.\
                         component_data_objects(Var):
                         disaggregatedVars.add(v)
