@@ -16,6 +16,7 @@ import pyomo.environ as pyo
 if not scipy_available:
     raise unittest.SkipTest("SciPy is needed to test the SciPy solvers")
 
+from pyomo.contrib.pynumero.asl import AmplInterface
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     SquareNlpSolverBase,
@@ -39,7 +40,7 @@ def make_simple_model():
     return m, nlp
 
 
-@unittest.skipUnless(scipy_available, "SciPy is not available")
+@unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestSquareSolverBase(unittest.TestCase):
 
     def test_not_implemented_solve(self):
@@ -67,7 +68,7 @@ class TestSquareSolverBase(unittest.TestCase):
         solver = SquareNlpSolverBase(nlp)
 
 
-@unittest.skipUnless(scipy_available, "SciPy is not available")
+@unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestFsolveNLP(unittest.TestCase):
 
     def test_solve_simple_nlp(self):
@@ -114,7 +115,7 @@ class TestFsolveNLP(unittest.TestCase):
             x, info, ier, msg = solver.solve()
 
 
-@unittest.skipUnless(scipy_available, "SciPy is not available")
+@unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestPyomoScipySolver(unittest.TestCase):
 
     def test_available_and_version(self):
@@ -128,7 +129,7 @@ class TestPyomoScipySolver(unittest.TestCase):
         self.assertEqual(sp_version, solver.version())
 
 
-@unittest.skipUnless(scipy_available, "SciPy is not available")
+@unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestFsolvePyomo(unittest.TestCase):
 
     def test_available_and_version(self):
@@ -197,7 +198,7 @@ class TestFsolvePyomo(unittest.TestCase):
             res = solver.solve(m)
 
 
-@unittest.skipUnless(scipy_available, "SciPy is not available")
+@unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestRootNLP(unittest.TestCase):
 
     def test_solve_simple_nlp(self):
@@ -219,7 +220,7 @@ class TestRootNLP(unittest.TestCase):
         )
 
 
-@unittest.skipUnless(scipy_available, "SciPy is not available")
+@unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestRootPyomo(unittest.TestCase):
 
     def test_available_and_version(self):
