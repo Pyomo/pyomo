@@ -33,18 +33,18 @@ class TestPulse(CommonTests):
                 "The 'interval_var' argument for a 'Pulse' must "
                 "be an 'IntervalVar'.\n"
                 "Received: <class 'float'>"):
-            thing = Pulse(1.2, height=4)
+            thing = Pulse(interval_var=1.2, height=4)
 
     def test_create_pulse_with_scalar_interval_var(self):
         m = self.get_model()
-        p = Pulse(m.a, 1)
+        p = Pulse(interval_var=m.a, height=1)
 
         self.assertIsInstance(p, Pulse)
         self.assertEqual(str(p), "Pulse(a, height=1)")
 
     def test_create_pulse_with_interval_var_data(self):
         m = self.get_model()
-        p = Pulse(m.c[2], 2)
+        p = Pulse(interval_var=m.c[2], height=2)
         self.assertIsInstance(p, Pulse)
         self.assertEqual(str(p), "Pulse(c[2], height=2)")
 
@@ -64,11 +64,11 @@ class TestStep(CommonTests):
 class TestSumStepFunctions(CommonTests):
     def test_sum_step_and_pulse(self):
         m = self.get_model()
-        expr = Step(m.a.start_time, height=4) + Pulse(m.b, height=-1)
+        expr = Step(m.a.start_time, height=4) + Pulse((m.b, -1))
 
         self.assertIsInstance(expr, CumulativeFunction)
-        self.assertEqual(len(expr.args), 2)
         self.assertEqual(expr.nargs(), 2)
+        self.assertEqual(len(expr.args), 2)
         self.assertIsInstance(expr.args[0], StepAtStart)
         self.assertIsInstance(expr.args[1], Pulse)
 
@@ -77,7 +77,7 @@ class TestSumStepFunctions(CommonTests):
 
     def test_args_clone_correctly(self):
         m = self.get_model()
-        expr = Step(m.a.start_time, height=4) + Pulse(m.b, height=-1)
+        expr = Step(m.a.start_time, height=4) + Pulse((m.b, -1))
         expr2 = expr + Step(m.b.end_time, height=4)
 
         self.assertIsInstance(expr2, CumulativeFunction)
@@ -89,7 +89,7 @@ class TestSumStepFunctions(CommonTests):
 
         # This will force expr to clone its arguments because it did the
         # appending trick to make expr2.
-        expr3 = expr + Pulse(m.b, height=-5)
+        expr3 = expr + Pulse(interval_var=m.b, height=-5)
 
         self.assertIsInstance(expr3, CumulativeFunction)
         self.assertEqual(len(expr3.args), 3)
@@ -103,7 +103,7 @@ class TestSumStepFunctions(CommonTests):
         s1 = Step(m.a.start_time, height=1)
         s2 = Step(m.b.end_time, height=1)
         s3 = Step(m.b.start_time, height=2)
-        p = Pulse(m.b, height=3)
+        p = Pulse(interval_var=m.b, height=3)
 
         e1 = s1 + s2
         e2 = e1 + s3
@@ -129,8 +129,8 @@ class TestSumStepFunctions(CommonTests):
 
     def test_sum_two_pulses(self):
         m = self.get_model()
-        m.p1 = Pulse(m.a, height=3)
-        m.p2 = Pulse(m.b, height=-2)
+        m.p1 = Pulse(interval_var=m.a, height=3)
+        m.p2 = Pulse(interval_var=m.b, height=-2)
 
         expr = m.p1 + m.p2
 
@@ -142,7 +142,8 @@ class TestSumStepFunctions(CommonTests):
 
     def test_sum_in_place(self):
         m = self.get_model()
-        expr = Step(m.a.start_time, height=4) + Pulse(m.b, height=-1)
+        expr = Step(m.a.start_time, height=4) + Pulse(interval_var=m.b,
+                                                      height=-1)
         expr += Step(0, 1)
 
         self.assertEqual(len(expr.args), 3)
@@ -159,13 +160,15 @@ class TestSumStepFunctions(CommonTests):
         s1 = Step(m.a.end_time, height=2)
         expr = s1
 
+        # Just a step function
         self.assertIsInstance(expr, StepAtEnd)
-        self.assertEqual(len(expr.args), 1)
-        self.assertEqual(expr.nargs(), 1)
+        self.assertEqual(len(expr.args), 2)
+        self.assertEqual(expr.nargs(), 2)
 
         s2 = Step(m.b.end_time, height=3)
         expr += s2
 
+        # becomes a cumulative function
         self.assertIsInstance(expr, CumulativeFunction)
         self.assertEqual(len(expr.args), 2)
         self.assertEqual(expr.nargs(), 2)
@@ -174,14 +177,14 @@ class TestSumStepFunctions(CommonTests):
 
     def test_sum_pulses_in_place(self):
         m = self.get_model()
-        p1 = Pulse(m.a, height=2)
+        p1 = Pulse(interval_var=m.a, height=2)
         expr = p1
 
         self.assertIsInstance(expr, Pulse)
-        self.assertEqual(len(expr.args), 1)
-        self.assertEqual(expr.nargs(), 1)
+        self.assertEqual(len(expr.args), 2)
+        self.assertEqual(expr.nargs(), 2)
 
-        p2 = Pulse(m.b, height=3)
+        p2 = Pulse(interval_var=m.b, height=3)
         expr += p2
 
         self.assertIsInstance(expr, CumulativeFunction)
@@ -211,7 +214,7 @@ class TestSumStepFunctions(CommonTests):
     def test_python_sum_funct(self):
         # We allow adding to 0 so that sum() works as expected
         m = self.get_model()
-        expr = sum(Pulse(m.c[i], height=1) for i in [1, 2])
+        expr = sum(Pulse(interval_var=m.c[i], height=1) for i in [1, 2])
 
         self.assertIsInstance(expr, CumulativeFunction)
         self.assertEqual(len(expr.args), 2)
@@ -238,7 +241,7 @@ class TestSubtractStepFunctions(CommonTests):
         m = self.get_model()
         s1 = Step(m.a.end_time, height=2)
         s2 = Step(m.b.start_time, height=5)
-        p = Pulse(m.a, height=3)
+        p = Pulse(interval_var=m.a, height=3)
 
         expr = s1 - s2 - p
 
@@ -255,7 +258,7 @@ class TestSubtractStepFunctions(CommonTests):
         m = self.get_model()
         s1 = Step(m.a.end_time, height=2)
         s2 = Step(m.b.start_time, height=5)
-        p = Pulse(m.a, height=3)
+        p = Pulse(interval_var=m.a, height=3)
 
         expr = s1 + s2 - p
         self.assertIsInstance(expr, CumulativeFunction)
@@ -268,8 +271,8 @@ class TestSubtractStepFunctions(CommonTests):
 
     def test_args_clone_correctly(self):
         m = self.get_model()
-        m.p1 = Pulse(m.a, height=3)
-        m.p2 = Pulse(m.b, height=4)
+        m.p1 = Pulse(interval_var=m.a, height=3)
+        m.p2 = Pulse(interval_var=m.b, height=4)
         m.s = Step(m.a.start_time, height=-1)
 
         expr1 = m.p1 - m.p2
@@ -288,8 +291,8 @@ class TestSubtractStepFunctions(CommonTests):
 
     def test_args_clone_correctly_in_place(self):
         m = self.get_model()
-        m.p1 = Pulse(m.a, height=3)
-        m.p2 = Pulse(m.b, height=4)
+        m.p1 = Pulse(interval_var=m.a, height=3)
+        m.p2 = Pulse(interval_var=m.b, height=4)
         m.s = Step(m.a.start_time, height=-1)
 
         expr1 = m.p1 - m.p2
@@ -316,8 +319,8 @@ class TestSubtractStepFunctions(CommonTests):
 
     def test_subtract_pulses_in_place(self):
         m = self.get_model()
-        p1 = Pulse(m.a, height=1)
-        p2 = Pulse(m.b, height=3)
+        p1 = Pulse(interval_var=m.a, height=1)
+        p2 = Pulse(interval_var=m.b, height=3)
 
         expr = p1
         expr -= p2
@@ -346,8 +349,8 @@ class TestSubtractStepFunctions(CommonTests):
 
     def test_subtract_from_cumul_func_in_place(self):
         m = self.get_model()
-        m.p1 = Pulse(m.a, height=5)
-        m.p2 = Pulse(m.b, height=-3)
+        m.p1 = Pulse(interval_var=m.a, height=5)
+        m.p2 = Pulse(interval_var=m.b, height=-3)
         m.s = Step(m.b.end_time, height=5)
 
         expr = m.p1 + m.s
@@ -384,21 +387,22 @@ class TestSubtractStepFunctions(CommonTests):
 class TestAlwaysIn(CommonTests):
     def test_always_in(self):
         m = self.get_model()
-        f = Pulse(m.a, height=3) + Step(m.b.start_time, height=2) - \
+        f = Pulse(interval_var=m.a, height=3) + \
+            Step(m.b.start_time, height=2) - \
             Step(m.a.end_time, height=-1)
 
-        m.c = LogicalConstraint(expr=f.within((0, 3), (0, 10)))
-        self.assertIsInstance(m.c.expr, AlwaysIn)
+        m.cons = LogicalConstraint(expr=f.within((0, 3), (0, 10)))
+        self.assertIsInstance(m.cons.expr, AlwaysIn)
 
-        self.assertEqual(m.c.expr.nargs(), 5)
-        self.assertEqual(len(m.c.expr.args), 5)
-        self.assertIs(m.c.expr.args[0], f)
-        self.assertEqual(m.c.expr.args[1], 0)
-        self.assertEqual(m.c.expr.args[2], 3)
-        self.assertEqual(m.c.expr.args[3], 0)
-        self.assertEqual(m.c.expr.args[4], 10)
+        self.assertEqual(m.cons.expr.nargs(), 5)
+        self.assertEqual(len(m.cons.expr.args), 5)
+        self.assertIs(m.cons.expr.args[0], f)
+        self.assertEqual(m.cons.expr.args[1], 0)
+        self.assertEqual(m.cons.expr.args[2], 3)
+        self.assertEqual(m.cons.expr.args[3], 0)
+        self.assertEqual(m.cons.expr.args[4], 10)
         self.assertEqual(
-            str(m.c.expr),
+            str(m.cons.expr),
             "(Pulse(a, height=3) + Step(b.start_time, height=2) - "
             "Step(a.end_time, height=-1)).within(bounds=(0, 3), "
             "times=(0, 10))")

@@ -12,39 +12,89 @@
 from pyomo.contrib.cp.interval_var import (
     IntervalVar, IntervalVarData, IntervalVarStartTime, IntervalVarEndTime)
 from pyomo.core.base.component import Component
+from pyomo.core.expr.base import ExpressionBase
 from pyomo.core.expr.logical_expr import BooleanExpression
-from pyomo.core.pyomoobject import PyomoObject
+
+def _sum_two_units(_self, _other):
+    return CumulativeFunction([_self, _other])
+
+def _sum_cumul_and_unit(_cumul, _unit):
+    if _cumul.nargs() == len(_cumul._args_):
+        # we can just append to the cumul list
+        _cumul._args_.append(_unit)
+        return CumulativeFunction(_cumul._args_, nargs=len(_cumul._args_))
+    else:
+        return CumulativeFunction(_cumul.args + [_unit])
+
+def _sum_unit_and_cumul(_unit, _cumul):
+    # Nothing to be done: we need to make a new one because we can't prepend to
+    # the list of args.
+    return CumulativeFunction([_unit] + _cumul.args)
+
+def _sum_cumuls(_self, _other):
+    if _self.nargs() == len(_self._args_):
+        _self._args_.extend(_other.args)
+        return CumulativeFunction(_self._args_, nargs=len(_self._args_))
+    else:
+        # we have to clone the list of _args_
+        return CumulativeFunction(_self.args + _other.args)
+
+def _subtract_two_units(_self, _other):
+    return CumulativeFunction([_self, NegatedStepFunction((_other,))])
+
+def _subtract_cumul_and_unit(_cumul, _unit):
+    if _cumul.nargs() == len(_cumul._args_):
+        # we can just append to the cumul list
+        _cumul._args_.append(NegatedStepFunction((_unit,)))
+        return CumulativeFunction(_cumul._args_, nargs=len(_cumul._args_))
+    else:
+        return CumulativeFunction(_cumul.args + [NegatedStepFunction((_unit,))])
+
+def _subtract_unit_and_cumul(_unit, _cumul):
+    # Nothing to be done: we need to make a new one because we can't prepend to
+    # the list of args.
+    return CumulativeFunction([_unit] + [NegatedStepFunction((a,)) for a in
+                                         _cumul.args])
+
+def _subtract_cumuls(_self, _other):
+    if _self.nargs() == len(_self._args_):
+        _self._args_.extend([NegatedStepFunction((a,)) for a in _other.args])
+        return CumulativeFunction(_self._args_, nargs=len(_self._args_))
+    else:
+        # we have to clone the list of _args_
+        return CumulativeFunction(_self.args + [NegatedStepFunction((a,)) for a
+                                                in _other.args])
 
 def _generate_sum_expression(_self, _other):
-    # We check both because we call this function for the reverse operation as
-    # well.
-    if isinstance(_other, StepFunction) and isinstance(_self, StepFunction):
-        if _self.nargs() == len(_self._args_):
-            _self._args_.extend(_other.args)
-            return CumulativeFunction(_self._args_, nargs=len(_self._args_))
-        else:
-            # we have to clone the list of _args_
-            return CumulativeFunction(_self.args + _other.args)
-    else:
-        raise TypeError("Cannot add object of class %s to object of class "
-                        "%s" % (_other.__class__, _self.__class__))
+    if isinstance(_self, CumulativeFunction):
+        if isinstance(_other, CumulativeFunction):
+            return _sum_cumuls(_self, _other)
+        elif isinstance(_other, StepFunction):
+            return _sum_cumul_and_unit(_self, _other)
+    elif isinstance(_self, StepFunction):
+        if isinstance(_other, CumulativeFunction):
+            return _sum_unit_and_cumul(_self, _other)
+        elif isinstance(_other, StepFunction):
+            return _sum_two_units(_self, _other)
+    raise TypeError("Cannot add object of class %s to object of "
+                    "class %s" % (_other.__class__, _self.__class__))
 
 def _generate_difference_expression(_self, _other):
-    # We check both because we call this function for the reverse operation as
-    # well.
-    if isinstance(_other, StepFunction) and isinstance(_self, StepFunction):
-        if _self.nargs() == len(_self._args_):
-            _self._args_.extend([NegatedStepFunction(a) for a in _other.args])
-            return CumulativeFunction(_self._args_, nargs=len(_self._args_))
-        else:
-            # we have to clone the list of _args_
-            return CumulativeFunction(_self.args + [NegatedStepFunction(a) for a
-                                                    in _other.args])
-    else:
-        raise TypeError("Cannot subtract object of class %s from object of "
-                        "class %s" % (_other.__class__, _self.__class__))
+    if isinstance(_self, CumulativeFunction):
+        if isinstance(_other, CumulativeFunction):
+            return _subtract_cumuls(_self, _other)
+        elif isinstance(_other, StepFunction):
+            return _subtract_cumul_and_unit(_self, _other)
+    elif isinstance(_self, StepFunction):
+        if isinstance(_other, CumulativeFunction):
+            return _subtract_unit_and_cumul(_self, _other)
+        elif isinstance(_other, StepFunction):
+            return _subtract_two_units(_self, _other)
+    raise TypeError("Cannot subtract object of class %s from object of "
+                    "class %s" % (_other.__class__, _self.__class__))
 
-class StepFunction(PyomoObject):
+
+class StepFunction(ExpressionBase):
     """
     The base class for the step function expression system.
     """
@@ -73,18 +123,12 @@ class StepFunction(PyomoObject):
         return _generate_difference_expression(self, other)
 
     def within(self, bounds, times):
-        return AlwaysIn(self, bounds, times)
-
-    def nargs(self):
-        raise NotImplementedError(
-            f"Derived expression ({self.__class__}) failed to "
-            "implement nargs()")
+        return AlwaysIn(cumul_func=self, bounds=bounds, times=times)
 
     @property
     def args(self):
         return self._args_[:self.nargs()]
 
-    # TODO: do we need clone?
 
 class Pulse(StepFunction):
     """
@@ -102,9 +146,18 @@ class Pulse(StepFunction):
     """
 
     __slots__ = ('_args_')
-    def __init__(self, interval_var, height):
-        self._args_ = [self, interval_var, height]
+    def __init__(self, args=None, interval_var=None, height=None):
+        if args:
+            if any(arg is not None for arg in (interval_var, height)):
+                raise ValueError("Cannot specify both args and any of "
+                                 "{interval_var, height}")
+            # Make sure this is a list because we may add to it if this is
+            # summed with other StepFunctions
+            self._args_ = [arg for arg in args]
+        else:
+            self._args_ = [interval_var, height]
 
+        interval_var = self._args_[0]
         if not isinstance(interval_var, IntervalVarData) or \
            interval_var.ctype is not IntervalVar:
             raise TypeError("The 'interval_var' argument for a 'Pulse' must "
@@ -113,26 +166,17 @@ class Pulse(StepFunction):
 
     @property
     def _interval_var(self):
-        return self._args_[1]
+        return self._args_[0]
 
     @property
     def _height(self):
-        return self._args_[2]
-
-    def __iadd__(self, other):
-        # We can't really do this in place because we have to change type.
-        return CumulativeFunction([self] + other.args)
-
-    def __isub__(self, other):
-        # Have to change type
-        return CumulativeFunction([self] + [NegatedStepFunction(a) for a in
-                                            other.args])
+        return self._args_[1]
 
     def nargs(self):
-        return 1
+        return 2
 
-    def __str__(self):
-        return "Pulse(%s, height=%s)" % (self._interval_var.name, self._height)
+    def _to_string(self, values, verbose, smap):
+        return "Pulse(%s, height=%s)" % (values[0], values[1])
 
 
 class Step(StepFunction):
@@ -151,11 +195,11 @@ class Step(StepFunction):
 
     def __new__(cls, time, height):
         if isinstance(time, int):
-            return StepAt(time, height)
+            return StepAt((time, height))
         elif time.ctype is IntervalVarStartTime:
-            return StepAtStart(time.get_associated_interval_var(), height)
+            return StepAtStart((time.get_associated_interval_var(), height))
         elif time.ctype is IntervalVarEndTime:
-            return StepAtEnd(time.get_associated_interval_var(), height)
+            return StepAtEnd((time.get_associated_interval_var(), height))
         else:
             raise TypeError("The 'time' argument for a 'Step' must be either "
                             "an 'IntervalVarTimePoint' (for example, the "
@@ -164,31 +208,26 @@ class Step(StepFunction):
                             "Received: %s" % type(time))
 
 class StepBase(StepFunction):
-    def __init__(self, time, height):
-        self._args_ = [self, time, height]
+    __slots__ = ('_args_')
+
+    def __init__(self, args):
+        # Make sure this is a list because we may add to it if this is summed
+        # with otther StepFunctions
+        self._args_ = [arg for arg in args]
 
     @property
     def _time(self):
-        return self._args_[1]
+        return self._args_[0]
 
     @property
     def _height(self):
-        return self._args_[2]
-
-    def __iadd__(self, other):
-        # We can't really do this in place because we have to change type.
-        return CumulativeFunction([self] + other.args)
-
-    def __isub__(self, other):
-        # Have to change type
-        return CumulativeFunction([self] + [NegatedStepFunction(a) for a in
-                                            other.args])
+        return self._args_[1]
 
     def nargs(self):
-        return 1
+        return 2
 
-    def __str__(self):
-        return "Step(%s, height=%s)" % (str(self._time), self._height)
+    def _to_string(self, values, verbose, smap):
+        return "Step(%s, height=%s)" % (values[0], values[1])
 
 
 class StepAt(StepBase):
@@ -196,15 +235,13 @@ class StepAt(StepBase):
 
 
 class StepAtStart(StepBase):
-    def __str__(self):
-        return "Step(%s, height=%s)" % (str(self._time.start_time),
-                                        self._height)
+    def _to_string(self, values, verbose, smap):
+        return "Step(%s, height=%s)" % (self._time.start_time, values[1])
 
 
 class StepAtEnd(StepBase):
-    def __str__(self):
-        return "Step(%s, height=%s)" % (str(self._time.end_time),
-                                        self._height)
+    def _to_string(self, values, verbose, smap):
+        return "Step(%s, height=%s)" % (self._time.end_time, values[1])
 
 
 class CumulativeFunction(StepFunction):
@@ -215,8 +252,12 @@ class CumulativeFunction(StepFunction):
     Args:
         args (list or tuple): Child elementary step functions of this node
     """
+    __slots__ = ('_args_', '_nargs')
+
     def __init__(self, args, nargs=None):
-        self._args_ = args
+        # We make sure args are a list because we might add to them later, if
+        # this is summed with another cumulative function.
+        self._args_ = [arg for arg in args]
         if nargs is None:
             self._nargs = len(args)
         else:
@@ -225,7 +266,7 @@ class CumulativeFunction(StepFunction):
     def nargs(self):
         return self._nargs
 
-    def __str__(self):
+    def _to_string(self, values, verbose, smap):
         s = ""
         for i, arg in enumerate(self.args):
             if isinstance(arg, NegatedStepFunction):
@@ -244,14 +285,16 @@ class NegatedStepFunction(StepFunction):
     Args:
        arg (Step or Pulse): Child elementary step function of this node
     """
-    def __init__(self, arg):
-        self._args_ = [arg]
+    __slots__ = ('_args_')
+
+    def __init__(self, args):
+        self._args_ = args
 
     def nargs(self):
         return 1
 
-    def __str__(self):
-        return "- %s" % str(self._args_[0])
+    def _to_string(self, values, verbose, smap):
+        return "- %s" % values[0]
 
 
 class AlwaysIn(BooleanExpression):
@@ -268,8 +311,14 @@ class AlwaysIn(BooleanExpression):
             which to enforce the bounds on the values of the cumulative
             function.
     """
-    def __init__(self, cumul_func, bounds, times):
-        self._args_ = (cumul_func, bounds[0], bounds[1], times[0], times[1])
+    def __init__(self, args=None, cumul_func=None, bounds=None, times=None):
+        if args:
+            if any(arg is not None for arg in {cumul_func, bounds, times}):
+                raise ValueError("Cannot specify both args and any of "
+                                 "{cumul_func, bounds, times}")
+            self._args_ = args
+        else:
+            self._args_ = (cumul_func, bounds[0], bounds[1], times[0], times[1])
 
     def nargs(self):
         return 5

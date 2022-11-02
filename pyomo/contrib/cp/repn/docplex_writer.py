@@ -492,7 +492,7 @@ def _handle_negated_step_function_node(visitor, node):
 _step_function_handles[
     NegatedStepFunction] = _handle_negated_step_function_node,
 
-def _before_cumulative_function(visitor, node):
+def _handle_cumulative_function(visitor, node):
     expr = 0
     for arg in node.args:
         if arg.__class__ is NegatedStepFunction:
@@ -501,6 +501,9 @@ def _before_cumulative_function(visitor, node):
             expr += _step_function_handles[arg.__class__](visitor, arg)
 
     return False, (_GENERAL, expr)
+
+_step_function_handles[CumulativeFunction] = _handle_cumulative_function
+step_func_expression_types = _step_function_handles.keys()
 
 ##
 # Algebraic expressions
@@ -779,7 +782,6 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         ScalarBooleanVar: _before_boolean_var,
         _GeneralBooleanVarData: _before_boolean_var,
         IndexedBooleanVar: _before_indexed_boolean_var,
-        CumulativeFunction: _before_cumulative_function,
         _GeneralExpressionData: _before_named_expression,
         ScalarExpression: _before_named_expression,
         IndexedParam: _before_indexed_param,# Because of indirection
@@ -806,6 +808,9 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         # Return native types
         if child.__class__ in EXPR.native_types:
             return False, (_GENERAL, child)
+
+        if child.__class__ in step_func_expression_types:
+            return _step_function_handles[child.__class__](self, child)
 
         # Convert Vars Logical vars to docplex equivalents
         if not child.is_expression_type() or child.is_named_expression_type():

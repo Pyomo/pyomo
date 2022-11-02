@@ -125,13 +125,14 @@ class TestSolveModel(unittest.TestCase):
         m.sweep_after = LogicalConstraint(expr=m.sweep_crumbs.start_time.after(
             m.eat_cookie[1].end_time))
 
-        m.mice_occupied = sum(Pulse(m.eat_cookie[i], 1) for i in range(2)) + \
+        m.mice_occupied = sum(Pulse((m.eat_cookie[i], 1)) for i in range(2)) + \
                           Step(m.read_story.start_time, 1) + \
-                          Pulse(m.sweep_crumbs, 1) - Pulse(m.do_dishes, 1)
+                          Pulse((m.sweep_crumbs, 1)) - Pulse((m.do_dishes, 1))
 
         # Must keep exactly one mouse occupied for a 25-hour day
         m.treat_your_mouse_well = LogicalConstraint(
-            expr=AlwaysIn(m.mice_occupied, (1, 1), (0, 24)))
+            expr=AlwaysIn(cumul_func=m.mice_occupied, bounds=(1, 1),
+                          times=(0, 24)))
 
         results = SolverFactory('cp_optimizer').solve(
             m,

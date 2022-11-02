@@ -1092,7 +1092,7 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
 class TestCPExpressionWalker_CumulFuncExpressions(CommonTest):
     def test_always_in(self):
         m = self.get_model()
-        f = Pulse(m.i, height=3) + Step(m.i2[1].start_time, height=2) - \
+        f = Pulse((m.i, 3)) + Step(m.i2[1].start_time, height=2) - \
             Step(m.i2[2].end_time, height=-1) + Step(3, height=4)
         m.c = LogicalConstraint(expr=f.within((0, 3), (0, 10)))
         visitor = self.get_visitor()
