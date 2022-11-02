@@ -26,6 +26,7 @@ from pyomo.core import (
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
     clone_without_expression_components, is_child_of, get_src_disjunction,
     get_src_constraint, get_transformed_constraints,
@@ -309,7 +310,7 @@ class Hull_Reformulation(Transformation):
         transBlock = Block()
         instance.add_component(transBlockName, transBlock)
         self._transformation_blocks[instance] = transBlock
-        transBlock.relaxedDisjuncts = Block(NonNegativeIntegers)
+        transBlock.relaxedDisjuncts = _TransformedDisjunct(NonNegativeIntegers)
         transBlock.lbub = Set(initialize = ['lb','ub','eq'])
         # Map between disaggregated variables and their
         # originals
@@ -599,7 +600,7 @@ class Hull_Reformulation(Transformation):
 
         # add mappings to source disjunct (so we'll know we've relaxed)
         obj._transformation_block = weakref_ref(relaxationBlock)
-        relaxationBlock._srcDisjunct = weakref_ref(obj)
+        relaxationBlock._src_disjunct = weakref_ref(obj)
 
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
