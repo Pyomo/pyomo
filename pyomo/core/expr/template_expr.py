@@ -198,7 +198,7 @@ class GetAttrExpression(NumericExpression):
 
 class CallExpression(NumericExpression):
     """
-    Expression to call :func:`__getattr__` on the base object.
+    Expression to call :func:`__call__` on the base object.
     """
     __slots__ = ('_kwds',)
     PRECEDENCE = None
