@@ -9,23 +9,9 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core.expr.base import ExpressionBase
-from pyomo.core.expr.boolean_value import BooleanValue
+from pyomo.core.expr.logical_expr import BooleanExpression
 
-class BeforeExpression(ExpressionBase, BooleanValue):
-    """
-    Base class for all precedence expressions.
-
-    args:
-        args (tuple): child nodes of type IntervalVar
-        delay: A (possibly negative) integer value representing the number of
-               time periods delay in the precedence relationship
-    """
-
-    def __init__(self, args):
-        # We expect args = (before, after, delay)
-        self._args_ = args
-
+class PrecedenceExpression(BooleanExpression):
     def nargs(self):
         return 3
 
@@ -33,16 +19,7 @@ class BeforeExpression(ExpressionBase, BooleanValue):
     def delay(self):
         return self._args_[2]
 
-    @property
-    def args(self):
-        """
-        Return the child nodes
-
-        Returns: Tuple containing the child nodes of this node
-        """
-        return self._args_
-
-    def _to_string(self, values, verbose, smap):
+    def _to_string_impl(self, values, relation):
         delay = int(values[2])
         if delay == 0:
             first = values[0]
@@ -50,45 +27,32 @@ class BeforeExpression(ExpressionBase, BooleanValue):
             first = "%s + %s" % (values[0], delay)
         else:
             first = "%s - %s" % (values[0], abs(delay))
-        return "%s <= %s" % (first, values[1])
+        return "%s %s %s" % (first, relation, values[1])
 
 
-class AtExpression(ExpressionBase, BooleanValue):
+class BeforeExpression(PrecedenceExpression):
     """
     Base class for all precedence expressions.
 
     args:
-        args (tuple): child nodes of type IntervalVar
+        args (tuple): child nodes of type IntervalVar. We expect them to be
+                      (time_that_comes_before, time_that_comes_after, delay).
         delay: A (possibly negative) integer value representing the number of
                time periods delay in the precedence relationship
     """
-
-    def __init__(self, args):
-        # We expect args = (first_time, second_time, delay)
-        self._args_ = args
-
-    def nargs(self):
-        return 3
-
-    @property
-    def delay(self):
-        return self._args_[2]
-
-    @property
-    def args(self):
-        """
-        Return the child nodes
-
-        Returns: Tuple containing the child nodes of this node
-        """
-        return self._args_
-
     def _to_string(self, values, verbose, smap):
-        delay = int(values[2])#self.delay
-        if delay == 0:
-            first = values[0]
-        elif delay > 0:
-            first = "%s + %s" % (values[0], delay)
-        else:
-            first = "%s - %s" % (values[0], abs(delay))
-        return "%s == %s" % (first, values[1])
+        return self._to_string_impl(values, "<=")
+
+
+class AtExpression(PrecedenceExpression):
+    """
+    Base class for all precedence expressions.
+
+    args:
+        args (tuple): child nodes of type IntervalVar. We expect them to be
+                      (first_time, second_time, delay).
+        delay: A (possibly negative) integer value representing the number of
+               time periods delay in the precedence relationship
+    """
+    def _to_string(self, values, verbose, smap):
+        return self._to_string_impl(values, "==")
