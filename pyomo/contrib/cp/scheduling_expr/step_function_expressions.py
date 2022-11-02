@@ -231,15 +231,19 @@ class StepBase(StepFunction):
 
 
 class StepAt(StepBase):
-    pass
+    __slots__ = ()
 
 
 class StepAtStart(StepBase):
+    __slots__ = ()
+
     def _to_string(self, values, verbose, smap):
         return "Step(%s, height=%s)" % (self._time.start_time, values[1])
 
 
 class StepAtEnd(StepBase):
+    __slots__ = ()
+
     def _to_string(self, values, verbose, smap):
         return "Step(%s, height=%s)" % (self._time.end_time, values[1])
 
@@ -311,6 +315,8 @@ class AlwaysIn(BooleanExpression):
             which to enforce the bounds on the values of the cumulative
             function.
     """
+    __slots__ = ()
+
     def __init__(self, args=None, cumul_func=None, bounds=None, times=None):
         if args:
             if any(arg is not None for arg in {cumul_func, bounds, times}):
