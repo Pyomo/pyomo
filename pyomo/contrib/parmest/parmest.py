@@ -534,7 +534,7 @@ class Estimator(object):
 
             if len(return_values) > 0:
                 var_values = []
-                if len(scen_names) > 1:  # mutliple scenarios
+                if len(scen_names) > 1:  # multiple scenarios
                     block_objects = self.ef_instance.component_objects(Block, descend_into=False)
                 else:  # single scenario
                     block_objects = [self.ef_instance]
@@ -546,7 +546,7 @@ class Estimator(object):
                             continue
                         # if value to return is ContinuousSet
                         if type(exp_i_var) == ContinuousSet:
-                            temp = [pyo.value(_) for _ in exp_i_var]
+                            temp = list(exp_i_var)
                         else:
                             temp = [pyo.value(_) for _ in exp_i_var.values()]
                         if len(temp) == 1:
