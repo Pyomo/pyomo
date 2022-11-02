@@ -22,8 +22,9 @@ class BeforeExpression(ExpressionBase, BooleanValue):
                time periods delay in the precedence relationship
     """
 
-    def __init__(self, before, after, delay):
-        self._args_ = (before, after, delay)
+    def __init__(self, args):
+        # We expect args = (before, after, delay)
+        self._args_ = args
 
     def nargs(self):
         return 3
@@ -62,8 +63,9 @@ class AtExpression(ExpressionBase, BooleanValue):
                time periods delay in the precedence relationship
     """
 
-    def __init__(self, first, second, delay):
-        self._args_ = (first, second, delay)
+    def __init__(self, args):
+        # We expect args = (first_time, second_time, delay)
+        self._args_ = args
 
     def nargs(self):
         return 3
@@ -90,4 +92,3 @@ class AtExpression(ExpressionBase, BooleanValue):
         else:
             first = "%s - %s" % (values[0], abs(delay))
         return "%s == %s" % (first, values[1])
-

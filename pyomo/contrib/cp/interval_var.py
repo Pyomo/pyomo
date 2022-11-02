@@ -35,13 +35,13 @@ class IntervalVarTimePoint(ScalarVar):
         return self.parent_block()
 
     def before(self, time, delay=0):
-        return BeforeExpression(self, time, delay)
+        return BeforeExpression((self, time, delay))
 
     def after(self, time, delay=0):
-        return BeforeExpression(time, self, delay)
+        return BeforeExpression((time, self, delay))
 
     def at(self, time, delay=0):
-        return AtExpression(self, time, delay)
+        return AtExpression((self, time, delay))
 
 
 class IntervalVarStartTime(IntervalVarTimePoint):
