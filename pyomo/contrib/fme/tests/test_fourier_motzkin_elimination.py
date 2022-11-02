@@ -23,6 +23,7 @@ from pyomo.core import (Var, Constraint, Param, ConcreteModel, NonNegativeReals,
                         Binary, value, Block, Objective)
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.current import log
+from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.gdp import Disjunction, Disjunct
 from pyomo.repn.standard_repn import generate_standard_repn
 from pyomo.opt import SolverFactory, check_available_solvers
@@ -592,58 +593,30 @@ class TestFourierMotzkinElimination(unittest.TestCase):
         # 0 <= y <= 3
         cons = constraints[5]
         self.assertEqual(value(cons.lower), 0)
-        self.assertIs(cons.body, m.y)
+        assertExpressionsEqual(self, cons.body, m.y)
         cons = constraints[6]
         self.assertEqual(value(cons.lower), -3)
-        body = generate_standard_repn(cons.body)
-        self.assertTrue(body.is_linear())
-        self.assertEqual(len(body.linear_vars), 1)
-        self.assertIs(body.linear_vars[0], m.y)
-        self.assertEqual(body.linear_coefs[0], -1)
+        assertExpressionsEqual(self, cons.body, -m.y)
 
         # z <= y**2 + 3
         cons = constraints[2]
         self.assertEqual(value(cons.lower), -3)
-        body = generate_standard_repn(cons.body)
-        self.assertTrue(body.is_quadratic())
-        self.assertEqual(len(body.linear_vars), 1)
-        self.assertIs(body.linear_vars[0], m.z)
-        self.assertEqual(body.linear_coefs[0], -1)
-        self.assertEqual(len(body.quadratic_vars), 1)
-        self.assertEqual(body.quadratic_coefs[0], 1)
-        self.assertIs(body.quadratic_vars[0][0], m.y)
-        self.assertIs(body.quadratic_vars[0][1], m.y)
+        assertExpressionsEqual(self, cons.body, -m.z + m.y**2)
 
         # z <= 6
         cons = constraints[4]
         self.assertEqual(cons.lower, -6)
-        body = generate_standard_repn(cons.body)
-        self.assertTrue(body.is_linear())
-        self.assertEqual(len(body.linear_vars), 1)
-        self.assertEqual(body.linear_coefs[0], -1)
-        self.assertIs(body.linear_vars[0], m.z)
+        assertExpressionsEqual(self, cons.body, -m.z)
 
         # 0 <= ln(y+ 1)
         cons = constraints[1]
         self.assertEqual(value(cons.lower), 0)
-        body = generate_standard_repn(cons.body)
-        self.assertTrue(body.is_nonlinear())
-        self.assertFalse(body.is_quadratic())
-        self.assertEqual(len(body.linear_vars), 0)
-        self.assertEqual(body.nonlinear_expr.name, 'log')
-        self.assertEqual(len(body.nonlinear_expr.args[0].args), 2)
-        self.assertIs(body.nonlinear_expr.args[0].args[0], m.y)
-        self.assertEqual(body.nonlinear_expr.args[0].args[1], 1)
+        assertExpressionsEqual(self, cons.body, log(m.y + 1))
 
         # 0 <= y**2
         cons = constraints[3]
         self.assertEqual(value(cons.lower), 0)
-        body = generate_standard_repn(cons.body)
-        self.assertTrue(body.is_quadratic())
-        self.assertEqual(len(body.quadratic_vars), 1)
-        self.assertEqual(body.quadratic_coefs[0], 1)
-        self.assertIs(body.quadratic_vars[0][0], m.y)
-        self.assertIs(body.quadratic_vars[0][1], m.y)
+        assertExpressionsEqual(self, cons.body, m.y**2)
 
         # check constraints valid for a selection of points (this is nonconvex,
         # but anyway...)
