@@ -204,7 +204,7 @@ def _handle_getitem(visitor, node, *data):
             # disallowing it from being selected
     try:
         return (_ELEMENT_CONSTRAINT, cp.element(elements, expr))
-    except:
+    except AssertionError:
         return (_DEFERRED_ELEMENT_CONSTRAINT, (elements, expr))
 
 _element_constraint_attr_handler = {
@@ -217,6 +217,12 @@ _element_constraint_attr_handler = {
     'xor': _XOR,
     'equivalent_to': _EQUIVALENT_TO,
 }
+_deferred_element_getattr_dispatcher = {
+    'start_time': cp.start_of,
+    'end_time': cp.end_of,
+    'length': cp.length_of,
+    'is_present': cp.presence_of,
+}
 
 def _handle_getattr(visitor, node, obj, attr):
     # We either end up here because we do not yet know the list of variables to
@@ -227,21 +233,13 @@ def _handle_getattr(visitor, node, obj, attr):
         # then obj[1] is a list of cp thingies that we need to get the attr on,
         # and then at the end we need to make the element constraint we couldn't
         # make before.
-        objects = obj[1][0]
-        ans = []
-        for o in objects:
-            if attr[1] == 'start_time':
-                ans.append(cp.start_of(o))
-            elif attr[1] == 'end_time':
-                ans.append(cp.end_of(o))
-            elif attr[1] == 'length':
-                ans.append(cp.length_of(o))
-            elif attr[1] == 'is_present':
-                ans.append(cp.presence_of(o))
-            else:
-                raise RuntimeError(
-                    "Unrecognized attrribute in GetAttrExpression: "
-                    "%s. Found for object: %s" % (attr[1], o))
+        try:
+            ans = list(map(_deferred_element_getattr_dispatcher[attr[1]],
+                           obj[1][0]))
+        except KeyError:
+            logger.error("Unrecognized attrribute in GetAttrExpression: "
+                         "%s." % (attr[1], o))
+            raise
         return (_ELEMENT_CONSTRAINT, cp.element(array=ans, index=obj[1][1]))
     elif obj[0] is _ELEMENT_CONSTRAINT:
         try:
