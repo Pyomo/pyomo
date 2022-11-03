@@ -527,7 +527,7 @@ def _get_bool_valued_expr(arg):
         # idiosyncracies.
         return arg[1] == True
     elif arg[0] is _BEFORE:
-        # We're using a start-before-start or it's ilk in a boolean-valued
+        # We're using a start-before-start or its ilk in a boolean-valued
         # context. docplex doesn't believe these things are boolean-valued, so
         # we have to convert to the inequality version:
         (lhs, rhs) = arg[2]
@@ -999,8 +999,7 @@ class CPOptimizerSolver(object):
         return Executable('cpoptimizer').available() and docplex_available
 
     def license_is_valid(self):
-        # TODO: not sure how to check the CPLEX license?
-        True
+        return self.available()
 
     def solve(self, model, **kwds):
         """Solve the model.
