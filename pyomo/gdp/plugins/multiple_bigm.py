@@ -222,20 +222,28 @@ class MultipleBigMTransformation(Transformation):
                             "Disjunction '%s' with OR constraint.  "
                             "Must be an XOR!" % obj.name)
 
-        # Create or fetch the transformation block
+        # Create or fetch the transformation block: Note that we must put
+        # transformed constraints on the parent Disjunct if this is nested
+        # because, unlike in regular bigM, the constraints are not fully relaxed
+        # when the exactly-one constraint is not enforced. (For example, in this
+        # model: [1 <= x <= 3, [1 <= y <= 5] v [6 <= y <= 10]] v [5 <= x <= 10,
+        # 15 <= y <= 20])
+        transBlock = self._add_transformation_block(obj.parent_block())
+
+        # We do want to put the XOR on the parent model, though
         if root_disjunct is not None:
             # We want to put all the transformed things on the root
             # Disjunct's parent's block so that they do not get
             # re-transformed
-            transBlock = self._add_transformation_block(
+            xor_transBlock = self._add_transformation_block(
                 root_disjunct.parent_block())
         else:
             # This isn't nested--just put it on the parent block.
-            transBlock = self._add_transformation_block(obj.parent_block())
+            xor_transBlock = transBlock
 
         # Get the (possibly indexed) algebraic constraint for this disjunction
         algebraic_constraint = self._add_exactly_one_constraint(
-            obj.parent_component(), transBlock)
+            obj.parent_component(), xor_transBlock)
 
         # Just because it's unlikely this is what someone meant to do...
         if len(obj.disjuncts) == 0:
@@ -435,6 +443,10 @@ class MultipleBigMTransformation(Transformation):
                     M = [None, None]
                     if c.lower is not None:
                         M[0] = (c.lower - repn.constant)/repn.linear_coefs[0]
+                        if disj in bounds_cons[v][0]:
+                            # this is a redundant bound, we need to keep the
+                            # better one
+                            M[0] = max(M[0], bounds_cons[v][0][disj])
                         bounds_cons[v][0][disj] = M[0]
                         if v in lower_bound_constraints_by_var:
                             lower_bound_constraints_by_var[v].add((c, disj))
@@ -442,13 +454,17 @@ class MultipleBigMTransformation(Transformation):
                             lower_bound_constraints_by_var[v] = {(c, disj)}
                     if c.upper is not None:
                         M[1] = (c.upper - repn.constant)/repn.linear_coefs[0]
+                        if disj in bounds_cons[v][1]:
+                            # this is a redundant bound, we need to keep the
+                            # better one
+                            M[1] = min(M[1], bounds_cons[v][1][disj])
                         bounds_cons[v][1][disj] = M[1]
-                        # Add the M values to the dictionary
-                        transBlock._mbm_values[c, disj] = M
                         if v in upper_bound_constraints_by_var:
                             upper_bound_constraints_by_var[v].add((c, disj))
                         else:
                             upper_bound_constraints_by_var[v] = {(c, disj)}
+                    # Add the M values to the dictionary
+                    transBlock._mbm_values[c, disj] = M
 
                     # We can't deactivate yet because we will still be solving
                     # this Disjunct when we calculate M values for non-bounds
