@@ -207,7 +207,7 @@ def _handle_getitem(visitor, node, *data):
     except AssertionError:
         return (_DEFERRED_ELEMENT_CONSTRAINT, (elements, expr))
 
-_element_constraint_attr_handler = {
+_element_constraint_attr_dispatcher = {
     'before': _DEFERRED_BEFORE,
     'after': _DEFERRED_AFTER,
     'at': _DEFERRED_AT,
@@ -243,14 +243,14 @@ def _handle_getattr(visitor, node, obj, attr):
         return (_ELEMENT_CONSTRAINT, cp.element(array=ans, index=obj[1][1]))
     elif obj[0] is _ELEMENT_CONSTRAINT:
         try:
-            return (_element_constraint_attr_handler[attr[1]], obj)
+            return (_element_constraint_attr_dispatcher[attr[1]], obj)
         except KeyError:
             logger.error("Unrecognized attribute in GetAttrExpression:"
                          "%s. Found for object: %s" % (attr[1], obj[1]))
             raise
     else:
         raise DeveloperError("Unrecognized argument type '%s' to getattr "
-                             "handler." % obj[0])
+                             "dispatcher." % obj[0])
 
 def _before_boolean_var(visitor, child):
     _id = id(child)
@@ -639,31 +639,31 @@ def _handle_at_least_node(visitor, node, *args):
 
 ## CallExpression handllers
 
-def _before_call_handler(visitor, node, *args):
+def _before_call_dispatcher(visitor, node, *args):
     if len(args) == 2:
         return _handle_inequality_node(visitor, node, args[0], args[1])
     else: # a delay is also specified
         lhs = _handle_sum_node(visitor, node, args[0], args[2])
         return _handle_inequality_node(visitor, node, lhs, args[1])
 
-def _after_call_handler(visitor, node, *args):
+def _after_call_dispatcher(visitor, node, *args):
     if len(args) == 2:
         return _handle_inequality_node(visitor, node, args[1], args[0])
     else: # delay is also specified
         lhs = _handle_sum_node(visitor, node, args[1], args[2])
         return _handle_inequality_node(visitor, node, lhs, args[0])
 
-def _at_call_handler(visitor, node, *args):
+def _at_call_dispatcher(visitor, node, *args):
     if len(args) == 2:
         return _handle_equality_node(visitor, node, args[0], args[1])
     else: # a delay is also specified
         rhs = _handle_sum_node(visitor, node, args[1], args[2])
         return _handle_equality_node(visitor, node, args[0], rhs)
 
-_call_handlers = {
-    _DEFERRED_BEFORE: _before_call_handler,
-    _DEFERRED_AFTER: _after_call_handler,
-    _DEFERRED_AT: _at_call_handler,
+_call_dispatchers = {
+    _DEFERRED_BEFORE: _before_call_dispatcher,
+    _DEFERRED_AFTER: _after_call_dispatcher,
+    _DEFERRED_AT: _at_call_dispatcher,
     _IMPLIES: _handle_implication_node,
     _LAND: _handle_and_node,
     _LOR: _handle_or_node,
@@ -672,26 +672,26 @@ _call_handlers = {
 }
 
 def _handle_call(visitor, node, *args):
-    return _call_handlers[args[0][0]](visitor, node, args[0][1], *args[1:])
+    return _call_dispatchers[args[0][0]](visitor, node, args[0][1], *args[1:])
 
 ##
 # Scheduling
 ##
 
 if docplex_available:
-    _before_handlers = {
+    _before_dispatchers = {
         (_START_TIME, _START_TIME): cp.start_before_start,
         (_START_TIME, _END_TIME): cp.start_before_end,
         (_END_TIME, _START_TIME): cp.end_before_start,
         (_END_TIME, _END_TIME): cp.end_before_end,
     }
-    _at_handlers = {
+    _at_dispatchers = {
         (_START_TIME, _START_TIME): cp.start_at_start,
         (_START_TIME, _END_TIME): cp.start_at_end,
         (_END_TIME, _START_TIME): cp.end_at_start,
         (_END_TIME, _END_TIME): cp.end_at_end
     }
-    _time_point_handlers = {
+    _time_point_dispatchers = {
         _START_TIME: cp.start_of,
         _END_TIME: cp.end_of,
         _GENERAL: lambda x: x,
@@ -699,8 +699,8 @@ if docplex_available:
     }
 
 def _handle_before_expression_node(visitor, node, time1, time2, delay):
-    t1 = (_GENERAL, _time_point_handlers[time1[0]](time1[1]))
-    t2 = (_GENERAL, _time_point_handlers[time2[0]](time2[1]))
+    t1 = (_GENERAL, _time_point_dispatchers[time1[0]](time1[1]))
+    t2 = (_GENERAL, _time_point_dispatchers[time2[0]](time2[1]))
     lhs = _handle_sum_node(visitor, None, t1, delay)
     if (time1[0] in {_GENERAL, _ELEMENT_CONSTRAINT} or
         time2[0] in {_GENERAL, _ELEMENT_CONSTRAINT}):
@@ -711,12 +711,12 @@ def _handle_before_expression_node(visitor, node, time1, time2, delay):
     # If this turns out to be the root, we can use the second return, but we
     # also pass the args for the inequality expression in case we use this in a
     # boolean-valued context.
-    return (_BEFORE, _before_handlers[time1[0], time2[0]](time1[1], time2[1],
+    return (_BEFORE, _before_dispatchers[time1[0], time2[0]](time1[1], time2[1],
                                                           delay[1]), (lhs, t2))
 
 def _handle_at_expression_node(visitor, node, time1, time2, delay):
-    t1 = (_GENERAL, _time_point_handlers[time1[0]](time1[1]))
-    t2 = (_GENERAL, _time_point_handlers[time2[0]](time2[1]))
+    t1 = (_GENERAL, _time_point_dispatchers[time1[0]](time1[1]))
+    t2 = (_GENERAL, _time_point_dispatchers[time2[0]](time2[1]))
     lhs = _handle_sum_node(visitor, None, t1, delay)
     if (time1[0] in {_GENERAL, _ELEMENT_CONSTRAINT} or
         time2[0] in {_GENERAL, _ELEMENT_CONSTRAINT}):
@@ -724,8 +724,8 @@ def _handle_at_expression_node(visitor, node, time1, time2, delay):
         # correct inequality.
         return _handle_equality_node(visitor, None, lhs, t2)
 
-    return (_AT, _at_handlers[time1[0], time2[0]](time1[1], time2[1], delay[1]),
-            (lhs, t2))
+    return (_AT, _at_dispatchers[time1[0], time2[0]](time1[1], time2[1],
+                                                     delay[1]), (lhs, t2))
 
 def _handle_always_in_node(visitor, node, cumul_func, lb, ub, start, end):
     return (_GENERAL, cp.always_in(cumul_func[1], interval=(start[1], end[1]),
