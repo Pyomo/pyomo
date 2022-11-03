@@ -961,6 +961,7 @@ class CPOptimizerSolver(object):
     def __init__(self, **kwds):
         self.config = self.CONFIG()
         self.config.set_value(kwds)
+        self._unrestricted_license = None
         if docplex_available:
             self._solve_status_map = {
                 cp.SOLVE_STATUS_UNKNOWN: TerminationCondition.unknown,
@@ -999,7 +1000,18 @@ class CPOptimizerSolver(object):
         return Executable('cpoptimizer').available() and docplex_available
 
     def license_is_valid(self):
-        return self.available()
+        if CPOptimizerSolver._unrestricted_license is None:
+            # Note: 140*log_2(140) == 998.1 fits in CE,
+            #     141*log_2(141) == 1006.7 does not
+            x = cp.integer_var_list(141, 1, 141, "X")
+            m = cp.CpoModel()
+            m.add(cp.all_diff(x))
+            try:
+                m.solve()
+                CPOptimizerSolver._unrestricted_license = True
+            except docplex.cp.solver.solver.CpoSolverException:
+                CPOptimizerSolver._unrestricted_license = False
+        return CPOptimizerSolver._unrestricted_license
 
     def solve(self, model, **kwds):
         """Solve the model.
