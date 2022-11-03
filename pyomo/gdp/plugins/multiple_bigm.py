@@ -29,6 +29,7 @@ import pyomo.core.expr.current as EXPR
 from pyomo.core.util import target_list
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
     _convert_M_to_tuple, _get_bigm_suffix_list, get_gdp_tree,
     get_src_constraint, get_src_disjunct, get_src_disjunction,
@@ -280,7 +281,7 @@ class MultipleBigMTransformation(Transformation):
 
     def _get_disjunct_relaxation_block(self, disjunct, transBlock):
         if disjunct.transformation_block is not None:
-            return disjunct.transformation_block()
+            return disjunct.transformation_block
 
         # create a relaxation block for this disjunct
         relaxedDisjuncts = transBlock.relaxedDisjuncts
@@ -297,7 +298,7 @@ class MultipleBigMTransformation(Transformation):
 
         # add mappings to source disjunct (so we'll know we've relaxed)
         disjunct._transformation_block = weakref_ref(relaxationBlock)
-        relaxationBlock._srcDisjunct = weakref_ref(disjunct)
+        relaxationBlock._src_disjunct = weakref_ref(disjunct)
 
         return relaxationBlock
 
@@ -500,7 +501,7 @@ class MultipleBigMTransformation(Transformation):
                 for (c, disj) in lower_bound_constraints_by_var[v]:
                     relaxationBlock._constraintMap['srcConstraints'][
                         transformed[idx, 'lb']].append(c)
-                    disj.transformation_block()._constraintMap[
+                    disj.transformation_block._constraintMap[
                         'transformedConstraints'][c] = [transformed[idx, 'lb']]
             if len(upper_dict) > 0:
                 transformed.add((idx, 'ub'), v <= upper_rhs)
@@ -510,13 +511,13 @@ class MultipleBigMTransformation(Transformation):
                     relaxationBlock._constraintMap['srcConstraints'][
                         transformed[idx, 'ub']].append(c)
                     # might alredy be here if it had an upper bound
-                    if c in disj.transformation_block()._constraintMap[
+                    if c in disj.transformation_block._constraintMap[
                             'transformedConstraints']:
-                        disj.transformation_block()._constraintMap[
+                        disj.transformation_block._constraintMap[
                             'transformedConstraints'][c].append(
                                 transformed[idx, 'ub'])
                     else:
-                        disj.transformation_block()._constraintMap[
+                        disj.transformation_block._constraintMap[
                             'transformedConstraints'][c] = [transformed[idx,
                                                                         'ub']]
 
@@ -534,7 +535,7 @@ class MultipleBigMTransformation(Transformation):
         transBlock = Block()
         block.add_component(transBlockName, transBlock)
         self._transformation_blocks[block] = transBlock
-        transBlock.relaxedDisjuncts = Block(NonNegativeIntegers)
+        transBlock.relaxedDisjuncts = _TransformedDisjunct(NonNegativeIntegers)
         transBlock.lbub = Set(initialize = ['lb','ub'])
 
         # Will store M values as we transform

@@ -11,6 +11,7 @@
 
 from io import StringIO
 from os.path import join, normpath
+import pickle
 
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.common.log import LoggingIntercept
@@ -23,7 +24,7 @@ from pyomo.environ import (
 )
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.tests.common_tests import (
-    check_linear_coef, check_obj_in_active_tree)
+    check_linear_coef, check_obj_in_active_tree, check_pprint_equal)
 from pyomo.repn import generate_standard_repn
 
 gurobi_available = SolverFactory('gurobi').available()
@@ -317,16 +318,25 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.check_all_untightened_bounds_constraints(m, mbm)
         self.check_linear_func_constraints(m, mbm)
 
+    def test_pickle_transformed_model(self):
+        m = self.make_model()
+        TransformationFactory('gdp.mbigm').apply_to(m, bigM=self.get_Ms(m))
+
+        # pickle and unpickle the transformed model
+        unpickle = pickle.loads(pickle.dumps(m))
+
+        check_pprint_equal(self, m, unpickle)
+
     def test_mappings_between_original_and_transformed_components(self):
         m = self.make_model()
         mbm = TransformationFactory('gdp.mbigm')
         mbm.apply_to(m, bigM=self.get_Ms(m))
 
-        d1_block = m.d1.transformation_block()
+        d1_block = m.d1.transformation_block
         self.assertIs(mbm.get_src_disjunct(d1_block), m.d1)
-        d2_block = m.d2.transformation_block()
+        d2_block = m.d2.transformation_block
         self.assertIs(mbm.get_src_disjunct(d2_block), m.d2)
-        d3_block = m.d3.transformation_block()
+        d3_block = m.d3.transformation_block
         self.assertIs(mbm.get_src_disjunct(d3_block), m.d3)
 
         for disj in [m.d1, m.d2, m.d3]:
