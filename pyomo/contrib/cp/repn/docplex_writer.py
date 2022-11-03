@@ -216,12 +216,13 @@ _element_constraint_attr_dispatcher = {
     'xor': _XOR,
     'equivalent_to': _EQUIVALENT_TO,
 }
-_deferred_element_getattr_dispatcher = {
-    'start_time': cp.start_of,
-    'end_time': cp.end_of,
-    'length': cp.length_of,
-    'is_present': cp.presence_of,
-}
+if docplex_available:
+    _deferred_element_getattr_dispatcher = {
+        'start_time': cp.start_of,
+        'end_time': cp.end_of,
+        'length': cp.length_of,
+        'is_present': cp.presence_of,
+    }
 
 def _handle_getattr(visitor, node, obj, attr):
     # We either end up here because we do not yet know the list of variables to
