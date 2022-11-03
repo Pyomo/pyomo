@@ -371,12 +371,12 @@ def get_src_disjunct(transBlock):
     transBlock: _BlockData which is in the relaxedDisjuncts IndexedBlock
                 on a transformation block.
     """
-    if not hasattr(transBlock, "_srcDisjunct") or \
-       type(transBlock._srcDisjunct) is not weakref_ref:
+    if not hasattr(transBlock, "_src_disjunct") or \
+       type(transBlock._src_disjunct) is not weakref_ref:
         raise GDP_Error("Block '%s' doesn't appear to be a transformation "
                         "block for a disjunct. No source disjunct found."
                         % transBlock.name)
-    return transBlock._srcDisjunct()
+    return transBlock._src_disjunct()
 
 def get_src_constraint(transformedConstraint):
     """Return the original Constraint whose transformed counterpart is
