@@ -207,6 +207,17 @@ def _handle_getitem(visitor, node, *data):
     except:
         return (_DEFERRED_ELEMENT_CONSTRAINT, (elements, expr))
 
+_element_constraint_attr_handler = {
+    'before': _DEFERRED_BEFORE,
+    'after': _DEFERRED_AFTER,
+    'at': _DEFERRED_AT,
+    'implies': _IMPLIES,
+    'land': _LAND,
+    'lor': _LOR,
+    'xor': _XOR,
+    'equivalent_to': _EQUIVALENT_TO,
+}
+
 def _handle_getattr(visitor, node, obj, attr):
     # We either end up here because we do not yet know the list of variables to
     # make an element constraint (the first case) or because we are asking for
@@ -233,25 +244,12 @@ def _handle_getattr(visitor, node, obj, attr):
                     "%s. Found for object: %s" % (attr[1], o))
         return (_ELEMENT_CONSTRAINT, cp.element(array=ans, index=obj[1][1]))
     elif obj[0] is _ELEMENT_CONSTRAINT:
-        if attr[1] == 'before':
-            return (_DEFERRED_BEFORE, obj)
-        elif attr[1] == 'after':
-            return (_DEFERRED_AFTER, obj)
-        elif attr[1] == 'at':
-            return (_DEFERRED_AT, obj)
-        elif attr[1] == 'implies':
-            return (_IMPLIES, obj)
-        elif attr[1] == 'land':
-            return (_LAND, obj)
-        elif attr[1] == 'lor':
-            return (_LOR, obj)
-        elif attr[1] == 'xor':
-            return (_XOR, obj)
-        elif attr[1] == 'equivalent_to':
-            return (_EQUIVALENT_TO, obj)
-        else:
-            raise RuntimeError("Unrecognized attribute in GetAttrExpression:"
-                               "%s. Found for object: %s" % (attr[1], obj[1]))
+        try:
+            return (_element_constraint_attr_handler[attr[1]], obj)
+        except KeyError:
+            logger.error("Unrecognized attribute in GetAttrExpression:"
+                         "%s. Found for object: %s" % (attr[1], obj[1]))
+            raise
     else:
         raise DeveloperError("Unrecognized argument type '%s' to getattr "
                              "handler." % obj[0])
