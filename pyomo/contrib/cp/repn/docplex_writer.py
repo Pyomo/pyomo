@@ -57,7 +57,6 @@ from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor, identify_variables
 )
 from pyomo.core.base.set import SetProduct
-from pyomo.repn.plugins.nl_writer import categorize_valid_components
 from pyomo.opt import (
     WriterFactory, SolverFactory, TerminationCondition, SolverResults
 )
@@ -820,6 +819,25 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
     finalizeResult = None
 
 
+def collect_valid_components(model, active=True, sort=None, valid=set(),
+                             targets=set()):
+    assert active in (True, None)
+    unrecognized = {}
+    components = {k: [] for k in targets}
+    for obj in model.component_data_objects(active=True, descend_into=True,
+                                            sort=sort):
+        ctype = obj.ctype
+        if ctype in components:
+            components[ctype].append(obj)
+        elif ctype not in valid:
+            if ctype not in unrecognized:
+                unrecognized[ctype] = [obj]
+            else:
+                unrecognized[ctype].append(obj)
+
+    return components, unrecognized
+
+
 @WriterFactory.register(
     'docplex_model', 'Generate the corresponding docplex model object')
 class DocplexWriter(object):
@@ -836,11 +854,10 @@ class DocplexWriter(object):
     def write(self, model, **options):
         config = options.pop('config', self.config)(options)
 
-        sorter = SortComponents.deterministic
-        component_map, unknown = categorize_valid_components(
+        components, unknown = collect_valid_components(
             model,
             active=True,
-            sort=sorter,
+            sort=SortComponents.deterministic,
             valid={
                 Block, Objective, Constraint, Var, Param, BooleanVar,
                 LogicalConstraint, Suffix,
@@ -864,74 +881,57 @@ class DocplexWriter(object):
             cpx_model,
             symbolic_solver_labels=config.symbolic_solver_labels)
 
-        active_objs = []
-        for block in component_map[Objective]:
-            for obj in block.component_data_objects(Objective,
-                                                    sort=sorter,
-                                                    active=True,
-                                                    descend_into=False):
-                active_objs.append(obj)
-                # [ESJ 09/29/22]: TODO: I think that CP Optimizer can support
-                # multiple objectives. We should generalize this later, but for
-                # now I don't much care.
-                if len(active_objs) > 1:
-                    raise ValueError(
-                        "More than one active objective defined for "
-                        "input model '%s': Cannot write to docplex."
-                        % model.name)
-                obj_expr = visitor.walk_expression((obj.expr, obj, 0))
-                if obj.sense is minimize:
-                    cpx_model.add(cp.minimize(obj_expr[1]))
-                else:
-                    cpx_model.add(cp.maximize(obj_expr[1]))
+
+        active_objs = components[Objective]
+        # [ESJ 09/29/22]: TODO: I think that CP Optimizer can support
+        # multiple objectives. We should generalize this later, but for
+        # now I don't much care.
+        if len(active_objs) > 1:
+            raise ValueError(
+                "More than one active objective defined for "
+                "input model '%s': Cannot write to docplex."
+                % model.name)
+        elif len(active_objs) == 1:
+            obj = active_objs[0]
+            obj_expr = visitor.walk_expression((obj.expr, obj, 0))
+            if obj.sense is minimize:
+                cpx_model.add(cp.minimize(obj_expr[1]))
+            else:
+                cpx_model.add(cp.maximize(obj_expr[1]))
 
         # No objective is fine too, this is CP afterall...
 
         # Write algebraic constraints
-        for block in component_map[Constraint]:
-            for cons in block.component_data_objects(
-                    Constraint,
-                    active=True,
-                    descend_into=False,
-                    sort=sorter):
-                expr = visitor.walk_expression((cons.body, cons, 0))
-                if cons.lower is not None and cons.upper is not None:
-                    cpx_model.add(cp.range(expr[1], lb=cons.lb, ub=cons.ub))
-                elif cons.lower is not None:
-                    cpx_model.add(cons.lb <= expr[1])
-                elif cons.upper is not None:
-                    cpx_model.add(cons.ub >= expr[1])
+        for cons in components[Constraint]:
+            expr = visitor.walk_expression((cons.body, cons, 0))
+            if cons.lower is not None and cons.upper is not None:
+                cpx_model.add(cp.range(expr[1], lb=cons.lb, ub=cons.ub))
+            elif cons.lower is not None:
+                cpx_model.add(cons.lb <= expr[1])
+            elif cons.upper is not None:
+                cpx_model.add(cons.ub >= expr[1])
 
         # Write interval vars (these are secretly constraints if they have to be
         # scheduled)
-        for block in component_map[IntervalVar]:
-            for var in block.component_data_objects(
-                    IntervalVar,
-                    descend_into=False,
-                    sort=sorter):
-                # we just walk it so it gets added to the model. Note that
-                # adding it again here would add it for a second time, so that's
-                # why we don't.
-                visitor.walk_expression((var, var, 0))
+        for var in components[IntervalVar]:
+            # we just walk it so it gets added to the model. Note that
+            # adding it again here would add it for a second time, so that's
+            # why we don't.
+            visitor.walk_expression((var, var, 0))
 
         # Write logical constraints
-        for block in component_map[LogicalConstraint]:
-            for cons in block.component_data_objects(
-                    LogicalConstraint,
-                    active=True,
-                    descend_into=False,
-                    sort=sorter):
-                expr = visitor.walk_expression((cons.expr, cons, 0))
-                if expr[0] is _ELEMENT_CONSTRAINT:
-                    # Make the expression into a docplex-approved boolean-valued
-                    # expression, if it turned out that the root of the
-                    # expression was just an element constraint. (This can
-                    # happen for something like a constraint that requires that
-                    # an interval var specified by indirection has to be
-                    # present.)
-                    cpx_model.add(expr[1] == True)
-                else:
-                    cpx_model.add(expr[1])
+        for cons in components[LogicalConstraint]:
+            expr = visitor.walk_expression((cons.expr, cons, 0))
+            if expr[0] is _ELEMENT_CONSTRAINT:
+                # Make the expression into a docplex-approved boolean-valued
+                # expression, if it turned out that the root of the
+                # expression was just an element constraint. (This can
+                # happen for something like a constraint that requires that
+                # an interval var specified by indirection has to be
+                # present.)
+                cpx_model.add(expr[1] == True)
+            else:
+                cpx_model.add(expr[1])
 
         # That's all, folks.
         return cpx_model, visitor.pyomo_to_docplex
