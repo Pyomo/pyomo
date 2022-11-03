@@ -521,7 +521,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_var_bounds_substituted_for_missing_bound_constraints(self):
         m = self.make_model()
-        # Add a new thing with conttraints that don't give both bounds on x1 and
+        # Add a new thing with constraints that don't give both bounds on x1 and
         # x2
         self.add_fourth_disjunct(m)
 
