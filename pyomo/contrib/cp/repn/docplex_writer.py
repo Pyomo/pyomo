@@ -238,7 +238,7 @@ def _handle_getattr(visitor, node, obj, attr):
                            obj[1][0]))
         except KeyError:
             logger.error("Unrecognized attrribute in GetAttrExpression: "
-                         "%s." % (attr[1], o))
+                         "%s." % attr[1])
             raise
         return (_ELEMENT_CONSTRAINT, cp.element(array=ans, index=obj[1][1]))
     elif obj[0] is _ELEMENT_CONSTRAINT:
