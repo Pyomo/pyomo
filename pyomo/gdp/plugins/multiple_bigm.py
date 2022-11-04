@@ -54,10 +54,9 @@ class MultipleBigMTransformation(Transformation):
     term disjunctions, but that it may provide a tighter relaxation for
     models containing some disjunctions with three or more terms.
 
-
     [1] Francisco Trespalaios and Ignacio E. Grossmann, "Improved Big-M
         reformulation for generalized disjunctive programs," Computers and
-        Chemical Engineering, vol. 76, 2015, pp. 98-103
+        Chemical Engineering, vol. 76, 2015, pp. 98-103.
     """
 
     CONFIG = ConfigBlock('gdp.mbigm')
@@ -127,13 +126,19 @@ class MultipleBigMTransformation(Transformation):
         x >= l_1*y_1 + l_2*y_2 + ... + l_K*y_k
         x <= u_1*y_1 + u_2*y_2 + ... + u_K*y_K.
 
-        This relaxation is tighter (that is, it implies the 2*K constraints),
-        and has fewer constraints. This option is a flag to tell the mbigm
-        transformation to detect this structure and handle it specially.
+        This relaxation is as tight and has fewer constraints. This option is
+        a flag to tell the mbigm transformation to detect this structure and
+        handle it specially. Note that this is a special case of the 'Hybrid
+        Big-M Formulation' from [2] that takes advantage of the common left-
+        hand side matrix for disjunctive constraints that bound a single
+        variable.
 
         Note that we do not use user-specified M values for these contraints
         when this flag is set to True: If tighter bounds exist then they
         they should be put in the constraints.
+
+        [2] Juan Pablo Vielma, "Mixed Integer Linear Programming Formluation
+            Techniques," SIAM Review, vol. 57, no. 1, 2015, pp. 3-57.
         """
     ))
 
