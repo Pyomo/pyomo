@@ -475,18 +475,8 @@ def _handle_pulse_node(visitor, node):
     cpx_var = _get_docplex_interval_var(visitor, node._interval_var)
     return cp.pulse(cpx_var, node._height)
 
-_step_function_handles = {
-    StepAt: _handle_step_at_node,
-    StepAtStart: _handle_step_at_start_node,
-    StepAtEnd: _handle_step_at_end_node,
-    Pulse: _handle_pulse_node,
-}
-
 def _handle_negated_step_function_node(visitor, node):
     return _step_function_handles[node.args[0].__class__](visitor, node.args[0])
-
-_step_function_handles[
-    NegatedStepFunction] = _handle_negated_step_function_node,
 
 def _handle_cumulative_function(visitor, node):
     expr = 0
@@ -498,7 +488,14 @@ def _handle_cumulative_function(visitor, node):
 
     return False, (_GENERAL, expr)
 
-_step_function_handles[CumulativeFunction] = _handle_cumulative_function
+_step_function_handles = {
+    StepAt: _handle_step_at_node,
+    StepAtStart: _handle_step_at_start_node,
+    StepAtEnd: _handle_step_at_end_node,
+    Pulse: _handle_pulse_node,
+    CumulativeFunction: _handle_cumulative_function,
+    NegatedStepFunction: _handle_negated_step_function_node,
+}
 step_func_expression_types = _step_function_handles.keys()
 
 ##
