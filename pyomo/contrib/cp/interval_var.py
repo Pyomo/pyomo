@@ -141,7 +141,7 @@ class IntervalVar(Block):
     def __new__(cls, *args, **kwds):
         if cls != IntervalVar:
             return super(IntervalVar, cls).__new__(cls)
-        if args == ():
+        if not args or (args[0] is UnindexedComponent_set and len(args)==1):
             return ScalarIntervalVar.__new__(ScalarIntervalVar)
         else:
             return IndexedIntervalVar.__new__(IndexedIntervalVar)
