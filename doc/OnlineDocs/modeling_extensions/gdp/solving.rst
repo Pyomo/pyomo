@@ -99,7 +99,11 @@ For example, to apply the transformation and store the M values, use:
 
     mbigm = TransformationFactory('gdp.mbigm')
     mbigm.apply_to(model)
-    M_values = mbigm.get_all_M_values()
+
+    # These can be stored...
+    M_values = mbigm.get_all_M_values(model)
+    # ...so that in future runs, you can write:
+    mbigm.apply_to(m, bigM=M_values)
 
 From the Pyomo command line, include the ``--transform pyomo.gdp.mbigm`` option.
 
