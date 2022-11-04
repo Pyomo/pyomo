@@ -1063,7 +1063,7 @@ class TestCPExpressionWalker_PrecedenceExpressions(CommonTest):
         visitor = self.get_visitor()
         with self.assertRaisesRegex(
                 ValueError,
-                "Variable indirection 'p\[x\]' is over a discrete domain "
+                r"Variable indirection 'p\[x\]' is over a discrete domain "
                 "without a constant step size. This is not supported."):
             expr = visitor.walk_expression((e, e, 0))
 
@@ -1153,7 +1153,7 @@ class TestCPExpressionWalker_Vars(CommonTest):
         with self.assertRaisesRegex(
                 ValueError,
                 "The LogicalToDoCplex writer can only support integer- or "
-                "Boolean-valued variables. Cannot write Var 'a\[1\]' with "
+                r"Boolean-valued variables. Cannot write Var 'a\[1\]' with "
                 "domain 'Reals'"):
             expr = visitor.walk_expression((m.c.expr, m.c, 0))
 
@@ -1324,7 +1324,7 @@ class TestCPExpressionWalker_Vars(CommonTest):
         visitor = self.get_visitor()
         with self.assertRaisesRegex(
                 ValueError,
-                "Variable indirection 'a\[x\]' contains argument 'x', "
+                r"Variable indirection 'a\[x\]' contains argument 'x', "
                 "which is not restricted to a finite discrete domain"):
             expr = visitor.walk_expression((m.c.body, m.c, 0))
 
@@ -1339,7 +1339,7 @@ class TestCPExpressionWalker_Vars(CommonTest):
         visitor = self.get_visitor()
         with self.assertRaisesRegex(
                 ValueError,
-                "Variable indirection 'a\[y\]' permits an index '0' "
+                r"Variable indirection 'a\[y\]' permits an index '0' "
                 "that is not a valid key."):
             expr = visitor.walk_expression((e, e, 0))
 

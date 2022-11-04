@@ -54,8 +54,8 @@ class TestStep(CommonTests):
         with self.assertRaisesRegex(
                 TypeError,
                 "The 'time' argument for a 'Step' must be either "
-                "an 'IntervalVarTimePoint' \(for example, the "
-                "'start_time' or 'end_time' of an IntervalVar\) or "
+                r"an 'IntervalVarTimePoint' \(for example, the "
+                r"'start_time' or 'end_time' of an IntervalVar\) or "
                 "an integer time point in the time horizon.\n"
                 "Received: "
                 "<class 'pyomo.contrib.cp.interval_var.ScalarIntervalVar'>"):
