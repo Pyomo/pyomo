@@ -22,7 +22,7 @@ from pyomo.environ import (
     NonNegativeIntegers, SolverFactory, Suffix, TransformationFactory,
     value, Var
 )
-from pyomo.gdp import Disjunct, Disjunction
+from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.tests.common_tests import (
     check_linear_coef, check_obj_in_active_tree, check_pprint_equal)
 from pyomo.repn import generate_standard_repn
@@ -602,78 +602,16 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
                                                             m.d3: 0.55, m.d4:
                                                             -5}, lb=True)
 
-    @unittest.skipUnless(gurobi_available, "Gurobi is not available")
-    def test_nested_gdp(self):
-        # We'll just put another disjunction on one of our disjuncts to test
-        # this. There is little that is special here--we transform from leaf to
-        # root, so the child Disjuncts do not interfere in the calculation of
-        # the M values for their parents. However, their transformed constraints
-        # are placed above the parent, so note that this means that for certain
-        # models, it would be beneficial to flatten the model before using this
-        # transformation, if the children *do* provide insight into the bounds
-        # of the parent. (One could use them and in the subproblems and then
-        # move them up, but that means the M-value subproblems would be
-        # MI(N)LPs, which is a downside.)
+    def test_nested_gdp_error(self):
         m = self.make_model()
-
-        # add a disjunction
-        m.d1.disjunction=Disjunction(NonNegativeIntegers)
-        m.d1.disjunction[1] = [m.x1 + m.x2 <= 2, m.x1 + m.x2 == 2.2]
-
-        mbm = TransformationFactory('gdp.mbigm')
-        # transform, and use the M values we know, only calculating for the
-        # nested stuff.
-        mbm.apply_to(m, bigM=self.get_Ms(m))
-
-        # Check that all the parent-Disjunction stuff is as expected
-        self.check_linear_func_constraints(m, mbm)
-        self.check_all_untightened_bounds_constraints(m, mbm)
-
-        # Check the inner Disjunction
-        cons = mbm.get_transformed_constraints(
-            m.d1.disjunction[1].disjuncts[0].constraint[1])
-        self.assertEqual(len(cons), 1)
-        c = cons[0]
-        check_obj_in_active_tree(self, c)
-        self.assertIsNone(c.lower)
-        self.assertEqual(value(c.upper), 0)
-        repn = generate_standard_repn(c.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(value(repn.constant), -2)
-        self.assertEqual(len(repn.linear_vars), 3)
-        check_linear_coef(self, repn, m.x1, 1)
-        check_linear_coef(self, repn, m.x2, 1)
-        check_linear_coef(self, repn,
-                          m.d1.disjunction[1].disjuncts[1].binary_indicator_var,
-                          -0.2)
-
-        cons = mbm.get_transformed_constraints(
-            m.d1.disjunction[1].disjuncts[1].constraint[1])
-        self.assertEqual(len(cons), 2)
-        l = cons[0]
-        check_obj_in_active_tree(self, l)
-        self.assertIsNone(l.lower)
-        self.assertEqual(value(l.upper), 0)
-        repn = generate_standard_repn(l.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(value(repn.constant), 2.2)
-        check_linear_coef(self, repn, m.x1, -1)
-        check_linear_coef(self, repn, m.x2, -1)
-        check_linear_coef(self, repn,
-                          m.d1.disjunction[1].disjuncts[0].binary_indicator_var,
-                          -32.2)
-        u = cons[1]
-        check_obj_in_active_tree(self, u)
-        self.assertIsNone(u.lower)
-        self.assertEqual(value(u.upper), 0)
-        repn = generate_standard_repn(u.body)
-        self.assertTrue(repn.is_linear())
-        self.assertEqual(value(repn.constant), -2.2)
-        check_linear_coef(self, repn, m.x1, 1)
-        check_linear_coef(self, repn, m.x2, 1)
-        check_linear_coef(self, repn,
-                          m.d1.disjunction[1].disjuncts[0].binary_indicator_var,
-                          0.2)
+        m.d1.disjunction = Disjunction(expr=[m.x1 >= 5, m.x1 <= 4])
+        with self.assertRaisesRegex(
+                GDP_Error,
+                "Found nested Disjunction 'd1.disjunction'. The multiple bigm "
+                "transformation does not support nested GDPs. "
+                "Please flatten the model before calling the "
+                "transformation"):
+            TransformationFactory('gdp.mbigm').apply_to(m)
 
     @unittest.skipUnless(gurobi_available, "Gurobi is not available")
     def test_logical_constraints_on_disjuncts(self):

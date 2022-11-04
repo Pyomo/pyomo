@@ -33,7 +33,8 @@ from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
     _convert_M_to_tuple, _get_bigm_suffix_list, get_gdp_tree,
     get_src_constraint, get_src_disjunct, get_src_disjunction,
-    get_transformed_constraints, _to_dict, _warn_for_unused_bigM_args
+    get_transformed_constraints, _to_dict, _warn_for_active_disjunct,
+    _warn_for_unused_bigM_args
 )
 from pyomo.network import Port
 from pyomo.opt import SolverFactory, TerminationCondition
@@ -189,8 +190,10 @@ class MultipleBigMTransformation(Transformation):
         if targets is None:
             targets = (instance, )
 
-        # We will transform from leaf to root, but we have to transform a
-        # Disjunction at a time because, more similarly to hull than bigm, we
+        # We don't allow nested, so it doesn't much matter which way we sort
+        # this. But transforming from leaf to root makes the error checking for
+        # complaining about nested smoother, so we do that. We have to transform
+        # a Disjunction at a time because, more similarly to hull than bigm, we
         # need information from the other Disjuncts in the Disjunction.
         gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
         preprocessed_targets = gdp_tree.reverse_topological_sort()
@@ -214,6 +217,20 @@ class MultipleBigMTransformation(Transformation):
 
     def _transform_disjunctionData(self, obj, index, parent_disjunct,
                                    root_disjunct):
+        if root_disjunct is not None:
+            # We do not support nested because, unlike in regular bigM, the
+            # constraints are not fully relaxed when the exactly-one constraint
+            # is not enforced. (For example, in this model: [1 <= x <= 3, [1 <=
+            # y <= 5] v [6 <= y <= 10]] v [5 <= x <= 10, 15 <= y <= 20]), we
+            # would need to put the relaxed inner-disjunction constraints on the
+            # parent Disjunct and process them again. This means the order in
+            # which we transformed Disjuncts would change the calculated M
+            # values. This is crazy, so we skip it.
+            raise GDP_Error("Found nested Disjunction '%s'. The multiple bigm "
+                            "transformation does not support nested GDPs. "
+                            "Please flatten the model before calling the "
+                            "transformation" % obj.name)
+
         if not obj.xor:
             # This transformation assumes it can relax constraints assuming that
             # another Disjunct is chosen. If it could be possible to choose both
@@ -222,28 +239,14 @@ class MultipleBigMTransformation(Transformation):
                             "Disjunction '%s' with OR constraint.  "
                             "Must be an XOR!" % obj.name)
 
-        # Create or fetch the transformation block: Note that we must put
-        # transformed constraints on the parent Disjunct if this is nested
-        # because, unlike in regular bigM, the constraints are not fully relaxed
-        # when the exactly-one constraint is not enforced. (For example, in this
-        # model: [1 <= x <= 3, [1 <= y <= 5] v [6 <= y <= 10]] v [5 <= x <= 10,
-        # 15 <= y <= 20])
+        # Create or fetch the transformation block. We do not support nested
+        # GDPs, so this is just the parent block, which we know is not a
+        # Disjunct.
         transBlock = self._add_transformation_block(obj.parent_block())
-
-        # We do want to put the XOR on the parent model, though
-        if root_disjunct is not None:
-            # We want to put all the transformed things on the root
-            # Disjunct's parent's block so that they do not get
-            # re-transformed
-            xor_transBlock = self._add_transformation_block(
-                root_disjunct.parent_block())
-        else:
-            # This isn't nested--just put it on the parent block.
-            xor_transBlock = transBlock
 
         # Get the (possibly indexed) algebraic constraint for this disjunction
         algebraic_constraint = self._add_exactly_one_constraint(
-            obj.parent_component(), xor_transBlock)
+            obj.parent_component(), transBlock)
 
         # Just because it's unlikely this is what someone meant to do...
         if len(obj.disjuncts) == 0:
@@ -368,7 +371,8 @@ class MultipleBigMTransformation(Transformation):
             # variables down the line.
             handler(obj, disjunct, active_disjuncts, Ms)
 
-    def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, Ms):
+    def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct,
+                                  active_disjuncts, Ms):
         _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
 
     def _transform_constraint(self, obj, disjunct, active_disjuncts, Ms):
