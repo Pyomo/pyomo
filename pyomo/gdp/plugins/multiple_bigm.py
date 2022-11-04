@@ -270,7 +270,7 @@ class MultipleBigMTransformation(Transformation):
         suffix_Ms = _get_bigm_suffix_list(obj.parent_block())
         Ms = transBlock.calculated_missing_m_values = self.\
              _calculate_missing_M_values(active_disjuncts, arg_Ms, suffix_Ms,
-                                         transBlock)
+                                         transBlock, transformed_constraints)
 
         # Now we can deactivate the constraints we deferred, so that we don't
         # re-transform them
@@ -599,7 +599,7 @@ class MultipleBigMTransformation(Transformation):
                         yield var
 
     def _calculate_missing_M_values(self, active_disjuncts, arg_Ms, suffix_Ms,
-                                    transBlock):
+                                    transBlock, transformed_constraints):
         scratch_blocks = {}
         all_vars = list(self._get_all_var_objects(active_disjuncts))
         for disjunct, other_disjunct in itertools.product(active_disjuncts,
@@ -629,6 +629,8 @@ class MultipleBigMTransformation(Transformation):
                     active=True,
                     descend_into=Block,
                     sort=SortComponents.deterministic):
+                if constraint in transformed_constraints:
+                    continue
                 # First check args
                 if (constraint, other_disjunct) in arg_Ms:
                     (lower_M, upper_M) = _convert_M_to_tuple(

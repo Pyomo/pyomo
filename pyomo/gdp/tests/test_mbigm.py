@@ -430,7 +430,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
 
         m.d1.bogus_x1_bounds = Constraint(expr=(0.25, m.x1, 2.25))
         mbm = TransformationFactory('gdp.mbigm')
-        mbm.apply_to(m, reduce_bound_constraints=True)
+        mbm.apply_to(m, reduce_bound_constraints=True, bigM=self.get_Ms(m))
 
         cons = mbm.get_transformed_constraints(m.d1.x1_bounds)
         self.assertEqual(len(cons), 2)
