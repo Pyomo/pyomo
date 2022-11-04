@@ -958,7 +958,7 @@ class CPOptimizerSolver(object):
         description="Dictionary of solver options."
     ))
 
-    self._unrestricted_license = None
+    _unrestricted_license = None
 
     def __init__(self, **kwds):
         self.config = self.CONFIG()
