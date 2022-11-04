@@ -91,6 +91,19 @@ class TestScalarIntervalVar(unittest.TestCase):
         self.assertFalse(m.i.is_present.fixed)
         self.assertTrue(m.i.optional)
 
+        # Now set to False
+        m.i.optional = False
+        self.assertEqual(value(m.i.is_present), True)
+        self.assertTrue(m.i.is_present.fixed)
+        self.assertFalse(m.i.optional)
+
+    def test_is_present_fixed_False(self):
+        m = ConcreteModel()
+        m.i = IntervalVar(optional=True)
+
+        m.i.is_present.fix(False)
+        self.assertTrue(m.i.optional)
+
 class TestIndexedIntervalVar(unittest.TestCase):
     def test_initialize_with_no_data(self):
         m = ConcreteModel()

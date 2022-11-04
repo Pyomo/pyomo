@@ -15,7 +15,7 @@ from pyomo.contrib.cp.scheduling_expr.precedence_expressions import (
     BeforeExpression, AtExpression
 )
 
-from pyomo.core import Integers
+from pyomo.core import Integers, value
 from pyomo.core.base import Any, ScalarVar, ScalarBooleanVar
 from pyomo.core.base.block import _BlockData, Block
 from pyomo.core.base.component import ModelComponentFactory
@@ -104,7 +104,8 @@ class IntervalVarData(_BlockData):
         # We only store this information in one place, but it's kind of annoying
         # to have to check if the BooleanVar is fixed, so this way you can ask
         # the IntervalVar directly.
-        return not self.is_present.fixed
+        return (not self.is_present.fixed or (self.is_present.fixed and not
+                                              value(self.is_present)))
 
     @optional.setter
     def optional(self, val):
