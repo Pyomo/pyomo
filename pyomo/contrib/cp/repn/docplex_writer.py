@@ -11,6 +11,7 @@
 
 from pyomo.common.dependencies import attempt_import
 cp, docplex_available = attempt_import('docplex.cp.model')
+cp_solver, docplex_available = attempt_import('docplex.cp.solver')
 
 import itertools
 import logging
@@ -1010,7 +1011,7 @@ class CPOptimizerSolver(object):
             try:
                 m.solve()
                 CPOptimizerSolver._unrestricted_license = True
-            except docplex.cp.solver.solver.CpoSolverException:
+            except cp_solver.solver.CpoSolverException:
                 CPOptimizerSolver._unrestricted_license = False
         return CPOptimizerSolver._unrestricted_license
 
