@@ -387,7 +387,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         m = self.make_model()
 
         mbm = TransformationFactory('gdp.mbigm')
-        mbm.apply_to(m, bigM=self.get_Ms(m), tighten_bound_constraints=True)
+        mbm.apply_to(m, bigM=self.get_Ms(m), reduce_bound_constraints=True)
 
         # Check that all the constraints are mapped to the same transformed
         # constraints.
@@ -430,7 +430,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
 
         m.d1.bogus_x1_bounds = Constraint(expr=(0.25, m.x1, 2.25))
         mbm = TransformationFactory('gdp.mbigm')
-        mbm.apply_to(m, tighten_bound_constraints=True)
+        mbm.apply_to(m, reduce_bound_constraints=True)
 
         cons = mbm.get_transformed_constraints(m.d1.x1_bounds)
         self.assertEqual(len(cons), 2)
@@ -553,7 +553,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         # issue a warning about what was unnecessary.
         out = StringIO()
         with LoggingIntercept(out, 'pyomo.gdp.mbigm'):
-            mbm.apply_to(m, bigM=self.get_Ms(m), tighten_bound_constraints=True)
+            mbm.apply_to(m, bigM=self.get_Ms(m), reduce_bound_constraints=True)
 
         warnings = out.getvalue()
         self.assertIn("Unused arguments in the bigM map! "

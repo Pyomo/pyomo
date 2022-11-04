@@ -110,7 +110,7 @@ class MultipleBigMTransformation(Transformation):
         to avoid ambiguity.
         """
     ))
-    CONFIG.declare('tighten_bound_constraints', ConfigValue(
+    CONFIG.declare('reduce_bound_constraints', ConfigValue(
         default=False,
         domain=bool,
         description="Flag indicating whether or not to handle disjunctive "
@@ -262,7 +262,7 @@ class MultipleBigMTransformation(Transformation):
         # separately
         active_disjuncts = [disj for disj in obj.disjuncts if disj.active]
         transformed_constraints = set()
-        if self._config.tighten_bound_constraints:
+        if self._config.reduce_bound_constraints:
             transformed_constraints = self._transform_bound_constraints(
                 active_disjuncts, transBlock, arg_Ms)
 
