@@ -1285,12 +1285,7 @@ class ConfigBase(object):
         # can allocate the state dictionary.  If it is not, then we call
         # the super-class's __getstate__ (since that class is NOT
         # 'object').
-        _base = super()
-        if hasattr(_base, '__getstate__'):
-            state = _base.__getstate__()
-        else:
-            state = {}
-        state.update((key, getattr(self, key)) for key in ConfigBase.__slots__)
+        state = {key: getattr(self, key) for key in ConfigBase.__slots__}
         state['_domain'] = _picklable(state['_domain'], self)
         state['_parent'] = None
         return state

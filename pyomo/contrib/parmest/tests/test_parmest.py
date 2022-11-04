@@ -636,6 +636,10 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.pest_df = parmest.Estimator(ABC_model, [data_df], theta_names)
         self.pest_dict = parmest.Estimator(ABC_model, [data_dict], theta_names)
 
+        # Estimator object with multiple scenarios
+        self.pest_df_multiple = parmest.Estimator(ABC_model, [data_df,data_df], theta_names)
+        self.pest_dict_multiple = parmest.Estimator(ABC_model, [data_dict,data_dict], theta_names)
+
         # Create an instance of the model
         self.m_df = ABC_model(data_df)
         self.m_dict = ABC_model(data_dict)
@@ -649,6 +653,24 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertAlmostEqual(obj1, obj2, places=6)
         self.assertAlmostEqual(theta1['k1'], theta2['k1'], places=6)
         self.assertAlmostEqual(theta1['k2'], theta2['k2'], places=6)
+    
+    def test_return_continuous_set(self):
+        '''
+        test if ContinuousSet elements are returned correctly from theta_est()
+        '''
+        obj1, theta1, return_vals1 = self.pest_df.theta_est(return_values=['time'])
+        obj2, theta2, return_vals2 = self.pest_dict.theta_est(return_values=['time'])
+        self.assertAlmostEqual(return_vals1['time'].loc[0][18],2.368, places=3)
+        self.assertAlmostEqual(return_vals2['time'].loc[0][18],2.368, places=3)
+    
+    def test_return_continuous_set_multiple_datasets(self):
+        '''
+        test if ContinuousSet elements are returned correctly from theta_est()
+        '''
+        obj1, theta1, return_vals1 = self.pest_df_multiple.theta_est(return_values=['time'])
+        obj2, theta2, return_vals2 = self.pest_dict_multiple.theta_est(return_values=['time'])
+        self.assertAlmostEqual(return_vals1['time'].loc[1][18],2.368, places=3)
+        self.assertAlmostEqual(return_vals2['time'].loc[1][18],2.368, places=3)
 
     def test_covariance(self):
 
@@ -677,8 +699,7 @@ class TestReactorDesign_DAE(unittest.TestCase):
         self.assertTrue(cov.loc['k1', 'k1'] > 0)
         self.assertTrue(cov.loc['k2', 'k2'] > 0)
         self.assertAlmostEqual(cov_diff, 0, places=6)
-
-
+        
 @unittest.skipIf(not parmest.parmest_available,
                  "Cannot test parmest: required dependencies are missing")
 @unittest.skipIf(not ipopt_available, "The 'ipopt' command is not available")
