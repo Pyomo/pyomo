@@ -31,23 +31,23 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: ['3.10']
+        python: ['3.11']
         other: [""]
         category: [""]
 
         include:
         - os: ubuntu-latest
-          python: '3.10'
+          python: '3.11'
           TARGET: linux
           PYENV: pip
 
         - os: macos-latest
-          python: 3.8
+          python: '3.10'
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
-          python: 3.7
+          python: 3.9
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
@@ -78,7 +78,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.8
+          python: '3.10'
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
