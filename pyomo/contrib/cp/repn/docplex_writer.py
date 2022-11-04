@@ -695,12 +695,14 @@ if docplex_available:
         _ELEMENT_CONSTRAINT: lambda x: x,
     }
 
+_non_precedence_types = {_GENERAL, _ELEMENT_CONSTRAINT}
+
 def _handle_before_expression_node(visitor, node, time1, time2, delay):
     t1 = (_GENERAL, _time_point_dispatchers[time1[0]](time1[1]))
     t2 = (_GENERAL, _time_point_dispatchers[time2[0]](time2[1]))
     lhs = _handle_sum_node(visitor, None, t1, delay)
-    if (time1[0] in {_GENERAL, _ELEMENT_CONSTRAINT} or
-        time2[0] in {_GENERAL, _ELEMENT_CONSTRAINT}):
+    if (time1[0] in _non_precedence_types or
+        time2[0] in _non_precedence_types):
         # we alredy know we can't use a start_before_start function or its ilk:
         # Just build the correct inequality.
         return _handle_inequality_node(visitor, None, lhs, t2)
@@ -715,8 +717,8 @@ def _handle_at_expression_node(visitor, node, time1, time2, delay):
     t1 = (_GENERAL, _time_point_dispatchers[time1[0]](time1[1]))
     t2 = (_GENERAL, _time_point_dispatchers[time2[0]](time2[1]))
     lhs = _handle_sum_node(visitor, None, t1, delay)
-    if (time1[0] in {_GENERAL, _ELEMENT_CONSTRAINT} or
-        time2[0] in {_GENERAL, _ELEMENT_CONSTRAINT}):
+    if (time1[0] in _non_precedence_types or
+        time2[0] in _non_precedence_types):
         # we can't use a start_before_start function or its ilk: Just build the
         # correct inequality.
         return _handle_equality_node(visitor, None, lhs, t2)
