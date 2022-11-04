@@ -958,10 +958,11 @@ class CPOptimizerSolver(object):
         description="Dictionary of solver options."
     ))
 
+    self._unrestricted_license = None
+
     def __init__(self, **kwds):
         self.config = self.CONFIG()
         self.config.set_value(kwds)
-        self._unrestricted_license = None
         if docplex_available:
             self._solve_status_map = {
                 cp.SOLVE_STATUS_UNKNOWN: TerminationCondition.unknown,
