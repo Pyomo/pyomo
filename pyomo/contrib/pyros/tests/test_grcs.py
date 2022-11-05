@@ -1001,27 +1001,31 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         budget_rhs_vec = [1, 3]
 
         # check attributes are as expected
-        bu_set = BudgetSet(budget_mat, budget_rhs_vec)
-        np.testing.assert_allclose(
-            budget_mat,
-            bu_set.budget_membership_mat,
-            err_msg="BudgetSet budget_membership_mat not as expected",
-        )
-        np.testing.assert_allclose(
-            budget_rhs_vec,
-            bu_set.budget_rhs_vec,
-            err_msg="BudgetSet budget_rhs_vec not as expected",
-        )
+        buset = BudgetSet(budget_mat, budget_rhs_vec)
+
+        np.testing.assert_allclose(budget_mat, buset.budget_membership_mat)
+        np.testing.assert_allclose(budget_rhs_vec, buset.budget_rhs_vec)
         np.testing.assert_allclose(
             [[1, 0, 1], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0, 0, -1]],
-            bu_set.coefficients_mat,
-            err_msg="BudgetSet coefficients_mat not as expected",
+            buset.coefficients_mat,
         )
+        np.testing.assert_allclose([1, 3, 0, 0, 0], buset.rhs_vec)
+
+        # update the set
+        buset.budget_membership_mat = [[1, 1, 0], [0, 0, 1]]
+        buset.budget_rhs_vec= [3, 4]
+
+        # check updates work
         np.testing.assert_allclose(
-            [1, 3, 0, 0, 0],
-            bu_set.rhs_vec,
-            err_msg="BudgetSet rhs_vec not as expected",
+            [[1, 1, 0], [0, 0, 1]],
+            buset.budget_membership_mat,
         )
+        np.testing.assert_allclose([3, 4], buset.budget_rhs_vec)
+        np.testing.assert_allclose(
+            [[1, 1, 0], [0, 0, 1], [-1, 0, 0], [0, -1, 0], [0, 0, -1]],
+            buset.coefficients_mat,
+        )
+        np.testing.assert_allclose([3, 4, 0, 0, 0], buset.rhs_vec)
 
     def test_error_on_budget_set_dim_change(self):
         """
