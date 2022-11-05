@@ -798,11 +798,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 output_file.write("\nput results;")
                 output_file.write("\nput 'SYMBOL  :  LEVEL  :  MARGINAL' /;")
                 for var in var_list:
-                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;" % (var, var, var))
+                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;"
+                                      % (var, var, var))
                 for con in constraint_names:
-                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;" % (con, con, con))
-                output_file.write("\nput GAMS_OBJECTIVE GAMS_OBJECTIVE.l "
-                                  "GAMS_OBJECTIVE.m;\n")
+                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;"
+                                      % (con, con, con))
+                output_file.write("\nput GAMS_OBJECTIVE ' ' GAMS_OBJECTIVE.l "
+                                  "' ' GAMS_OBJECTIVE.m;\n")
 
                 statresults = put_results + 'stat.dat'
                 output_file.write("\nfile statresults /'%s'/;" % statresults)
