@@ -1287,27 +1287,3 @@ def create_utility_block(model, name, solve_data):
     if created_util_block:
         model.del_component(name)
 
-
-def copy_var_list_values(from_list, to_list, config,
-                         skip_stale=False, skip_fixed=True,
-                         ignore_integrality=False):
-    """Copy variable values from one list to another.
-
-    Rounds to Binary/Integer if necessary
-    Sets to zero for NonNegativeReals if necessary
-    """
-    if ignore_integrality:
-        deprecation_warning("The 'ignore_integrality' argument no longer "
-                            "has any functionality.", version="6.4.2")
-
-    if len(from_list) != len(to_list):
-        raise ValueError('The lengths of from_list and to_list do not match.')
-
-    for v_from, v_to in zip(from_list, to_list):
-        if v_from.name != v_to.name:
-            raise ValueError('The name of the two variables is not the same.')
-        if skip_stale and v_from.stale:
-            continue  # Skip stale variable values.
-        if skip_fixed and v_to.is_fixed():
-            continue  # Skip fixed variables.
-        v_to.set_value(value(v_from, exception=False), skip_validation=True)

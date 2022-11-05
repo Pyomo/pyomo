@@ -12,12 +12,12 @@
 from pyomo.core import (minimize, Constraint, TransformationFactory, value)
 from pyomo.core.base.constraint import ConstraintList
 from pyomo.opt import SolverFactory, SolutionStatus, SolverResults, SolverStatus
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, time_code, get_main_elapsed_time
+from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, copy_var_list_values, time_code, get_main_elapsed_time
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_subproblem_optimal
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function, set_solver_options
 from pyomo.contrib.mindtpy.mip_solve import solve_main
-from pyomo.contrib.mindtpy.util import generate_norm1_norm_constraint, copy_var_list_values
+from pyomo.contrib.mindtpy.util import generate_norm1_norm_constraint
 
 
 def fp_converged(solve_data, config, discrete_only=True):

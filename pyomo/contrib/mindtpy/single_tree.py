@@ -21,8 +21,8 @@ from pyomo.repn import generate_standard_repn
 from pyomo.core.expr import current as EXPR
 import pyomo.environ as pyo
 from math import copysign
-from pyomo.contrib.mindtpy.util import get_integer_solution, update_dual_bound, update_primal_bound, copy_var_list_values
-from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
+from pyomo.contrib.mindtpy.util import get_integer_solution, update_dual_bound, update_primal_bound
+from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem, handle_nlp_subproblem_tc
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import Constraint, minimize, value, maximize

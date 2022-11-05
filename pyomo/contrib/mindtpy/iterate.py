@@ -11,14 +11,14 @@
 
 """Iteration loop for MindtPy."""
 from __future__ import division
-from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, update_suboptimal_dual_bound, copy_var_list_values_from_solution_pool, copy_var_list_values
+from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, update_suboptimal_dual_bound, copy_var_list_values_from_solution_pool
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 
 from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, handle_main_infeasible, handle_main_other_conditions, handle_regularization_main_tc
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_nlp_subproblem_tc
 from pyomo.core import minimize, maximize
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code, copy_var_list_values
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 from pyomo.common.dependencies import attempt_import
