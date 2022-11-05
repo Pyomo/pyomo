@@ -170,7 +170,7 @@ def is_ragged(arr, arr_types=None):
     if not all(entries_are_seqs):
         return True
 
-    entries_ragged = [is_ragged(entry for entry in arr)]
+    entries_ragged = [is_ragged(entry) for entry in arr]
     if any(entries_ragged):
         return True
     else:
