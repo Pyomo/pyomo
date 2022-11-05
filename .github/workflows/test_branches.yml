@@ -31,23 +31,23 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: ['3.10']
+        python: ['3.11']
         other: [""]
         category: [""]
 
         include:
         - os: ubuntu-latest
-          python: '3.10'
+          python: '3.11'
           TARGET: linux
           PYENV: pip
 
         - os: macos-latest
-          python: 3.8
+          python: '3.10'
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
-          python: 3.7
+          python: 3.9
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
@@ -78,7 +78,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.8
+          python: '3.10'
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
@@ -520,6 +520,15 @@ jobs:
         echo "Set custom PYOMO_CONFIG_DIR"
         echo ""
         echo "PYOMO_CONFIG_DIR=${GITHUB_WORKSPACE}/config" >> $GITHUB_ENV
+
+    # this has to be done after Pyomo is installed because highspy 
+    # depends on pyomo's find_library function
+    - name: Install HiGHS
+      if: ${{ ! matrix.slim }}
+      shell: bash
+      run: |
+        $PYTHON_EXE -m pip install --cache-dir cache/pip highspy \
+            || echo "WARNING: highspy is not available"
 
     - name: Set up coverage tracking
       run: |

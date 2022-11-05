@@ -191,6 +191,13 @@ def _add_nlp_solve_configs(CONFIG, default_nlp_init_method):
         description="""Flag to round subproblem discrete variable values to the
         nearest integer. Rounding is done before fixing disjuncts."""
     ))
+    CONFIG.declare("max_fbbt_iterations", ConfigValue(
+        default=3,
+        description="""
+        Maximum number of feasibility-based bounds tightening
+        iterations to do during NLP subproblem preprocessing.""",
+        domain=PositiveInt
+    ))
 
 def _add_oa_configs(CONFIG):
     _add_nlp_solve_configs(
@@ -275,13 +282,6 @@ def _add_oa_configs(CONFIG):
         Flag to enable or disable GDPopt MIP presolve.
         Default=True.""",
         domain=bool
-    ))
-    CONFIG.declare("max_fbbt_iterations", ConfigValue(
-        default=3,
-        description="""
-        Maximum number of feasibility-based bounds tightening
-        iterations to do during NLP subproblem preprocessing.""",
-        domain=PositiveInt
     ))
     CONFIG.declare("calc_disjunctive_bounds", ConfigValue(
         default=False,
