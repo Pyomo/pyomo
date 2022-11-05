@@ -678,6 +678,11 @@ def set_up_solve_data(model, config):
     solve_data.primal_bound_improved = False
     solve_data.dual_bound_improved = False
 
+    # Store the initial model state as the best solution found. If we
+    # find no better solution, then we will restore from this copy.
+    solve_data.best_solution_found = None
+    solve_data.best_solution_found_time = None
+
     if config.nlp_solver == 'ipopt':
         if not hasattr(solve_data.working_model, 'ipopt_zL_out'):
             solve_data.working_model.ipopt_zL_out = Suffix(
@@ -1081,6 +1086,8 @@ def setup_results_object(results, model, config):
     res.solver.system_time = None
     res.solver.wallclock_time = None
     res.solver.termination_message = None
+    # Record solver name
+    res.solver.name = 'MindtPy' + str(config.strategy)
 
     num_of = build_model_size_report(model)
 

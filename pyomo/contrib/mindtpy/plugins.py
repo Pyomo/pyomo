@@ -10,5 +10,8 @@
 #  ___________________________________________________________________________
 
 def load():
-    # import pyomo.contrib.mindtpy.MindtPy
+    import pyomo.contrib.mindtpy.MindtPy
     import pyomo.contrib.mindtpy.outer_approximation
+    import pyomo.contrib.mindtpy.extended_cutting_plane
+    import pyomo.contrib.mindtpy.global_outer_approximation
+    import pyomo.contrib.mindtpy.feasibility_pump_new

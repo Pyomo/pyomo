@@ -52,12 +52,11 @@
 - Add support for cplex_persistent solver.
 - Fix bug in OA cut expression in cut_generation.py.
 
-TODO: mindtpy rewrite
+TODO: work well.
 """
 from __future__ import division
 import logging
-from pyomo.contrib.gdpopt.util import (copy_var_list_values, 
-                                       time_code, lower_logger_level_to)
+from pyomo.contrib.gdpopt.util import (copy_var_list_values, time_code, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
 from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger, get_primal_integral, get_dual_integral, setup_results_object, process_objective, create_utility_block
@@ -68,16 +67,16 @@ from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_conf
 from pyomo.common.config import add_docstring_list
 from pyomo.util.vars_from_expressions import get_vars_from_components
 from algorithm_base_class import _MindtPyAlgorithm
-from feasibility_pump_new import MindtPy_FP_Solver
-
+from pyomo.contrib.mindtpy.util import get_integer_solution
+from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
+from pyomo.opt import TerminationCondition as tc
 
 __version__ = (0, 1, 0)
 
-
 @SolverFactory.register(
-    'mindtpy.oa',
+    'mindtpy.ecp',
     doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo')
-class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
+class MindtPy_OA_Solver(_MindtPyAlgorithm):
     """
     Decomposition solver for Mixed-Integer Nonlinear Programming (MINLP) problems.
 
@@ -140,6 +139,7 @@ class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
                 apply_to(self.working_model)
 
         self.create_utility_block(self.working_model, 'MindtPy_utils')
+
         with time_code(self.timing, 'total', is_main_timer=True), \
                 lower_logger_level_to(config.logger, new_logging_level):
             config.logger.info(
@@ -170,22 +170,9 @@ class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
                                    partition_nonlinear_terms=config.partition_obj_nonlinear_terms,
                                    obj_handleable_polynomial_degree=self.mip_objective_polynomial_degree,
                                    constr_handleable_polynomial_degree=self.mip_constraint_polynomial_degree)
-            # The epigraph constraint is very "flat" for branching rules.
-            # If ROA/RLP-NLP is activated and the original objective function is linear, we will use the original objective for the main mip.
-            if MindtPy.objective_list[0].expr.polynomial_degree() in self.mip_objective_polynomial_degree and config.add_regularization is not None:
-                MindtPy.objective_list[0].activate()
-                MindtPy.objective_constr.deactivate()
-                MindtPy.objective.deactivate()
 
             # Save model initial values.
-            self.initial_var_values = list(
-                v.value for v in MindtPy.variable_list)
-
-            # TODO: if the MindtPy solver is defined once and called several times to solve models. The following two lines are necessary. It seems that the solver class will not be init every time call.
-            # For example, if we remove the following two lines. test_RLPNLP_L1 will fail.
-            self.best_solution_found = None
-            self.best_solution_found_time = None
-
+            self.initial_var_values = list(v.value for v in MindtPy.variable_list)
 
             # Initialize the main problem
             with time_code(self.timing, 'initialization'):
@@ -201,6 +188,7 @@ class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
             
             # Update result
             self.update_result()
+
             config.logger.info(' {:<25}:   {:>7.4f} '.format(
                 'Primal-dual gap integral', self.results.solver.primal_dual_gap_integral))
 
@@ -209,6 +197,60 @@ class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
                     (1 if config.init_strategy == 'rNLP' else 0)
 
         return self.results
+
+
+    def MindtPy_iteration_loop(self, config):
+        """Main loop for MindtPy Algorithms.
+
+        This is the outermost function for the algorithms in this package; this function controls the progression of
+        solving the model.
+
+        Parameters
+        ----------
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+
+        Raises
+        ------
+        ValueError
+            The strategy value is not correct or not included.
+        """
+        last_iter_cuts = False
+        while self.mip_iter < config.iteration_limit:
+
+            self.mip_subiter = 0
+            # solve MILP main problem
+            main_mip, main_mip_results = self.solve_main(config)
+            if main_mip_results is not None:
+                if not config.single_tree:
+                    if main_mip_results.solver.termination_condition is tc.optimal:
+                        self.handle_main_optimal(main_mip, config)
+                    elif main_mip_results.solver.termination_condition is tc.infeasible:
+                        self.handle_main_infeasible(main_mip, config)
+                        last_iter_cuts = True
+                        break
+                    else:
+                        self.handle_main_other_conditions(
+                            main_mip, main_mip_results, config)
+                    # Call the MILP post-solve callback
+                    with time_code(self.timing, 'Call after main solve'):
+                        config.call_after_main_solve(main_mip)
+            else:
+                config.logger.info('Algorithm should terminate here.')
+                break
+
+            if self.algorithm_should_terminate(config, check_cycling=True):
+                last_iter_cuts = False
+                break
+
+            add_ecp_cuts(self.mip, self.jacobians, config, self.timing)
+
+        # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
+        # we correct it after the iteration.
+        if (config.add_no_good_cuts or config.use_tabu_list) and not self.should_terminate:
+            self.fix_dual_bound(config, last_iter_cuts)
+        config.logger.info(
+            ' ===============================================================================================')
 
     #
     # Support 'with' statements.

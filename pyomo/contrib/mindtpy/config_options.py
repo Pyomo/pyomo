@@ -3,7 +3,31 @@ import logging
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, In, PositiveFloat, PositiveInt, NonNegativeInt)
 from pyomo.contrib.gdpopt.util import _DoNothing, a_logger
+from pyomo.common.deprecation import deprecation_warning
 
+_supported_algorithms = {
+    'OA': ('mindtpy.oa', 'Outer Approximation'),
+    'ECP': ('mindtpy.ecp', 'Extended Cutting Plane'),
+    'GOA': ('mindtpy.goa', 'Global Outer Approximation'),
+    'FP': ('mindtpy.fp', 'Feasibility Pump')
+}
+
+def _strategy_deprecation(strategy):
+    deprecation_warning("The argument 'strategy' has been deprecated "
+                        "in favor of 'algorithm.'", version="6.4.2")
+    return In(_supported_algorithms)(strategy)
+
+def _get_algorithm_config():
+    CONFIG = ConfigBlock("MindtPyAlgorithm")
+    CONFIG.declare("strategy", ConfigValue(
+        default=None, domain=_strategy_deprecation,
+        description="DEPRECATED: Please use 'algorithm' instead."
+    ))
+    CONFIG.declare("algorithm", ConfigValue(
+        default=None, domain=In(_supported_algorithms),
+        description="Algorithm to use."
+    ))
+    return CONFIG
 
 def _get_MindtPy_config():
     """Set up the configurations for MindtPy.
@@ -537,6 +561,7 @@ def check_config(config):
             config.add_no_good_cuts = True
             config.use_tabu_list = False
     elif config.strategy == 'FP':  # feasibility pump alone
+        # feasibility pump alone will lead to iteration_limit = 0, important!
         config.init_strategy = 'FP'
         config.iteration_limit = 0
     if config.init_strategy == 'FP':
@@ -585,3 +610,6 @@ def check_config(config):
         if config.mip_solver in {'gurobi', 'appsi_gurobi'} or \
             config.mip_regularization_solver in {'gurobi', 'appsi_gurobi'}:
             raise ValueError("GUROBI can not provide duals for mixed-integer problems.")
+
+    if config.init_strategy == 'FP' or config.add_regularization is not None:
+        config.move_objective = True
