@@ -1114,11 +1114,116 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for BudgetSet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for BudgetSet")
 
+
 class testCardinalityUncertaintySetClass(unittest.TestCase):
     '''
     Cardinality uncertainty sets. Required inputs are origin, positive_deviation, gamma.
     Because Cardinality adds cassi vars to model, must pass model to set_as_constraint()
     '''
+
+    def test_normal_cardinality_construction_and_update(self):
+        """
+        Test CardinalitySet constructor and setter work normally
+        when bounds are appropriate.
+        """
+        # valid inputs
+        cset = CardinalitySet(
+            origin=[0, 0],
+            positive_deviation=[1, 3],
+            gamma=2,
+        )
+
+        # check attributes are as expected
+        np.testing.assert_allclose(cset.origin, [0, 0])
+        np.testing.assert_allclose(cset.positive_deviation, [1, 3])
+        np.testing.assert_allclose(cset.gamma, 2)
+        self.assertEqual(cset.dim, 2)
+
+        # update the set
+        cset.origin = [1, 2]
+        cset.positive_deviation = [3, 0]
+        cset.gamma = 0.5
+
+        # check updates work
+        np.testing.assert_allclose(cset.origin, [1, 2])
+        np.testing.assert_allclose(cset.positive_deviation, [3, 0])
+        np.testing.assert_allclose(cset.gamma, 0.5)
+
+    def test_error_on_neg_positive_deviation(self):
+        """
+        Cardinality set positive deviation attribute should
+        contain nonnegative numerical entries.
+
+        Check ValueError raised if any negative entries provided.
+        """
+        origin = [0, 0]
+        positive_deviation = [1, -2]  # invalid
+        gamma = 2
+
+        exc_str = (
+            r"Entry -2 of attribute 'positive_deviation' is negative "
+            r"value"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset = CardinalitySet(origin, positive_deviation, gamma)
+
+        # construct a valid cardinality set
+        cset = CardinalitySet(origin, [1, 1], gamma)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.positive_deviation = positive_deviation
+
+    def test_error_on_invalid_gamma(self):
+        """
+        Cardinality set gamma attribute should be a float-like
+        between 0 and the set dimension.
+
+        Check ValueError raised if gamma attribute is set
+        to an invalid value.
+        """
+        origin = [0, 0]
+        positive_deviation = [1, 1]
+        gamma = 3  # should be invalid
+
+        exc_str = (
+            r".*attribute 'gamma' must be a real number "
+            r"between 0 and dimension 2 \(provided value 3\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            CardinalitySet(origin, positive_deviation, gamma)
+
+        # construct a valid cardinality set
+        cset = CardinalitySet(origin, positive_deviation, gamma=2)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.gamma = gamma
+
+    def test_error_on_cardinality_set_dim_change(self):
+        """
+        Dimension is considered immutable.
+        Test ValueError raised when attempting to alter the
+        set dimension (i.e. number of entries of `origin`).
+        """
+        # construct a valid cardinality set
+        cset = CardinalitySet(
+            origin=[0, 0],
+            positive_deviation=[1, 1],
+            gamma=2,
+        )
+
+        exc_str = r"Attempting to set.*dimension 2 to value of dimension 3"
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.origin = [0, 0, 0]
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.positive_deviation = [1, 1, 1]
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_uncertainty_set_with_correct_params(self):
@@ -1227,10 +1332,209 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for CardinalitySet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for CardinalitySet")
 
+
 class testBoxUncertaintySetClass(unittest.TestCase):
-    '''
-    Box uncertainty sets. Required input is bounds list.
-    '''
+    """
+    Unit tests for the box uncertainty set (BoxSet).
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test BoxSet constructor and setter work normally
+        when bounds are appropriate.
+        """
+        bounds = [[1, 2], [3, 4]]
+        bset = BoxSet(bounds=bounds)
+        np.testing.assert_allclose(
+            bounds,
+            bset.bounds,
+            err_msg="BoxSet bounds not as expected",
+        )
+
+        # check bounds update
+        new_bounds = [[3, 4], [5, 6]]
+        bset.bounds = new_bounds
+        np.testing.assert_allclose(
+            new_bounds,
+            bset.bounds,
+            err_msg="BoxSet bounds not as expected",
+        )
+
+    def test_error_on_box_set_dim_change(self):
+        """
+        BoxSet dimension is considered immutable.
+        Test ValueError raised when attempting to alter the
+        box set dimension (i.e. number of rows of `bounds`).
+        """
+        bounds = [[1, 2], [3, 4]]
+        bset = BoxSet(bounds=bounds)  # 2-dimensional set
+
+        exc_str = r"Attempting to set.*dimension 2 to a value of dimension 3"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bset.bounds = [[1, 2], [3, 4], [5, 6]]
+
+    def test_error_on_lb_exceeds_ub(self):
+        """
+        Test exception raised when an LB exceeds a UB.
+        """
+        bad_bounds = [[1, 2], [4, 3]]
+
+        exc_str = r"Lower bound 4 exceeds upper bound 3"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BoxSet(bad_bounds)
+
+        # construct a valid box set
+        bset = BoxSet([[1, 2], [3, 4]])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bset.bounds = bad_bounds
+
+    def test_error_on_ragged_bounds_array(self):
+        """
+        Test ValueError raised on attempting to set BoxSet bounds
+        to a ragged array.
+
+        This test also validates `uncertainty_sets.is_ragged` for all
+        pre-defined array-like attributes of all set-types, as the
+        `is_ragged` method is used throughout.
+        """
+        # example ragged arrays
+        ragged_arrays = (
+            [[1, 2], 3],            # list and int in same sequence
+            [[1, 2], [3, [4, 5]]],  # 2nd row ragged (list and int)
+            [[1, 2], [3]],          # variable row lengths
+        )
+
+        # construct valid box set
+        bset = BoxSet(bounds=[[1, 2], [3, 4]])
+
+        # exception message should match this regex
+        exc_str = r"Argument `bounds` should not be a ragged array-like.*"
+        for ragged_arr in ragged_arrays:
+            # assert error on construction
+            with self.assertRaisesRegex(ValueError, exc_str):
+                BoxSet(bounds=ragged_arr)
+
+            # assert error on update
+            with self.assertRaisesRegex(ValueError, exc_str):
+                bset.bounds = ragged_arr
+
+    def test_error_on_invalid_bounds_shape(self):
+        """
+        Test ValueError raised when attempting to set
+        Box set bounds to array of incorrect shape
+        (should be a 2-D array with 2 columns).
+        """
+        # 3d array
+        three_d_arr = [[[1, 2], [3, 4], [5, 6]]]
+        exc_str = (
+            r"Argument `bounds` must be a 2-dimensional.*"
+            r"\(detected 3 dimensions.*\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BoxSet(three_d_arr)
+
+        # construct valid box set
+        bset = BoxSet([[1, 2], [3, 4], [5, 6]])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bset.bounds = three_d_arr
+
+    def test_error_on_wrong_number_columns(self):
+        """
+        BoxSet bounds should be a 2D array-like with 2 columns.
+        ValueError raised if number columns wrong
+        """
+        three_col_arr = [[1, 2, 3], [4, 5, 6]]
+        exc_str = (
+            r"Attribute 'bounds' should be of shape \(\.{3},2\), "
+            r"but detected shape \(\.{3},3\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BoxSet(three_col_arr)
+
+        # construct a valid box set
+        bset = BoxSet([[1, 2], [3, 4]])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bset.bounds = three_col_arr
+
+    def test_error_on_empty_last_dimension(self):
+        """
+        Check ValueError raised when last dimension of BoxSet bounds is
+        empty.
+        """
+        empty_2d_arr = [[], [], []]
+        exc_str = (
+            r"Last dimension of argument `bounds` must be non-empty "
+            r"\(detected shape \(3, 0\)\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BoxSet(bounds=empty_2d_arr)
+
+        # create a valid box set
+        bset = BoxSet([[1, 2], [3, 4]])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bset.bounds = empty_2d_arr
+
+    def test_error_on_non_numeric_bounds(self):
+        """
+        Test that ValueError is raised if box set bounds
+        are set to array-like with entries of a non-numeric
+        type (such as int, float).
+        """
+        # invalid bounds (contains an entry type str)
+        new_bounds = [[1, "test"], [3, 2]]
+
+        exc_str = (
+            r"Entry 'test' of the argument `bounds` "
+            r"is not a valid numeric type \(provided type 'str'\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(TypeError, exc_str):
+            BoxSet(new_bounds)
+
+        # construct a valid box set
+        bset = BoxSet(bounds=[[1, 2], [3, 4]])
+
+        # assert error on update
+        with self.assertRaisesRegex(TypeError, exc_str):
+            bset.bounds = new_bounds
+
+    def test_error_on_bounds_with_nan_or_inf(self):
+        """
+        Box set bounds set to array-like with inf or nan.
+        """
+        # construct a valid box set
+        bset = BoxSet(bounds=[[1, 2], [3, 4]])
+
+        for val_str in ["inf", "nan"]:
+            bad_bounds = [[1, float(val_str)], [2, 3]]
+            exc_str = (
+                fr"Entry '{val_str}' of the argument `bounds` "
+                fr"is not a finite numeric value"
+            )
+            # assert error on construction
+            with self.assertRaisesRegex(ValueError, exc_str):
+                BoxSet(bad_bounds)
+
+            # assert error on update
+            with self.assertRaisesRegex(ValueError, exc_str):
+                bset.bounds = bad_bounds
 
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -1318,6 +1622,48 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
     '''
     Discrete uncertainty sets. Required inputis a scenarios list.
     '''
+
+    def test_normal_discrete_set_construction_and_update(self):
+        """
+        Test DiscreteScenarioSet constructor and setter work normally
+        when scenarios are appropriate.
+        """
+        scenarios = [[0, 0, 0], [1, 2, 3]]
+
+        # normal construction should work
+        dset = DiscreteScenarioSet(scenarios)
+
+        # check scenarios added appropriately
+        np.testing.assert_allclose(
+            scenarios,
+            dset.scenarios,
+            err_msg="BoxSet bounds not as expected",
+        )
+
+        # check scenarios updated appropriately
+        new_scenarios = [[0, 1, 2], [1, 2, 0], [3, 5, 4]]
+        dset.scenarios = new_scenarios
+        np.testing.assert_allclose(
+            new_scenarios,
+            dset.scenarios,
+            err_msg="BoxSet bounds not as expected",
+        )
+
+    def test_error_on_discrete_set_dim_change(self):
+        """
+        Test ValueError raised when attempting to update
+        DiscreteScenarioSet dimension.
+        """
+        scenarios = [[1, 2], [3, 4]]
+        dset = DiscreteScenarioSet(scenarios)  # 2-dimensional set
+
+        exc_str = (
+            r".*must have 2 columns.* to match set dimension "
+            r"\(provided.*with 3 columns\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            dset.scenarios = [[1, 2, 3], [4, 5, 6]]
+
 
     def test_uncertainty_set_with_correct_params(self):
         '''
