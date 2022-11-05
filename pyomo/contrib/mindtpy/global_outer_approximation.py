@@ -56,24 +56,16 @@ TODO: work well.
 """
 from __future__ import division
 import logging
-from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to)
-from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
-from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
-from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger, get_primal_integral, get_dual_integral, setup_results_object, process_objective, create_utility_block
-from pyomo.core import (Block, ConstraintList, NonNegativeReals,
-                        Var, VarList, TransformationFactory, RangeSet, minimize, Constraint, Objective)
+from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to
+from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, get_integer_solution, copy_var_list_values_from_solution_pool
+from pyomo.core import TransformationFactory, maximize
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
-from pyomo.common.config import add_docstring_list
-from pyomo.util.vars_from_expressions import get_vars_from_components
 from algorithm_base_class import _MindtPyAlgorithm
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, update_suboptimal_dual_bound, copy_var_list_values_from_solution_pool, add_feas_slacks, add_var_bound, epigraph_reformulation
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from operator import itemgetter
-from pyomo.core import minimize, maximize, Objective, VarList, Reals, ConstraintList, Constraint, Block, TransformationFactory
 
-# TODO：测试过了，没有问题
 __version__ = (0, 1, 0)
 
 

@@ -56,17 +56,11 @@ TODO: mindtpy rewrite
 """
 from __future__ import division
 import logging
-from pyomo.contrib.gdpopt.util import (copy_var_list_values, 
-                                       time_code, lower_logger_level_to)
-from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
-from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
-from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger, get_primal_integral, get_dual_integral, setup_results_object, process_objective, create_utility_block
-from pyomo.core import (Block, ConstraintList, NonNegativeReals,
-                        Var, VarList, TransformationFactory, RangeSet, minimize, Constraint, Objective)
+from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to)
+from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object
+from pyomo.core import TransformationFactory
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
-from pyomo.common.config import add_docstring_list
-from pyomo.util.vars_from_expressions import get_vars_from_components
 from algorithm_base_class import _MindtPyAlgorithm
 from feasibility_pump_new import MindtPy_FP_Solver
 
