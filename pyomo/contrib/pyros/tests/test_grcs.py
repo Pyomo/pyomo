@@ -1989,6 +1989,158 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
     FactorModelSet uncertainty sets. Required inputs are psi_matrix, number_of_factors, origin and beta.
     '''
 
+    def test_normal_factor_model_construction_and_update(self):
+        """
+        Test FactorModelSet constructor and setter work normally
+        when attribute values are appropriate.
+        """
+        # valid inputs
+        fset = FactorModelSet(
+            origin=[0, 0, 1],
+            number_of_factors=2,
+            psi_mat=[[1, 2], [0, 1], [1, 0]],
+            beta=0.1,
+        )
+
+        # check attributes are as expected
+        np.testing.assert_allclose(fset.origin, [0, 0, 1])
+        np.testing.assert_allclose(fset.psi_mat, [[1, 2], [0, 1], [1, 0]])
+        np.testing.assert_allclose(fset.number_of_factors, 2)
+        np.testing.assert_allclose(fset.beta, 0.1)
+        self.assertEqual(fset.dim, 3)
+
+        # update the set
+        fset.origin = [1, 1, 0]
+        fset.psi_mat = [[1, 0], [0, 1], [1, 1]]
+        fset.beta = 0.5
+
+        # check updates work
+        np.testing.assert_allclose(fset.origin, [1, 1, 0])
+        np.testing.assert_allclose(fset.psi_mat, [[1, 0], [0, 1], [1, 1]])
+        np.testing.assert_allclose(fset.beta, 0.5)
+
+    def test_error_on_factor_model_set_dim_change(self):
+        """
+        Test ValueError raised when attempting to change FactorModelSet
+        dimension (by changing number of entries in origin
+        or number of rows of psi_mat).
+        """
+        origin = [0, 0, 0]
+        number_of_factors = 2
+        psi_mat = [[1, 0], [0, 1], [1, 1]]
+        beta = 0.5
+
+        # construct factor model set
+        fset = FactorModelSet(origin, number_of_factors, psi_mat, beta)
+
+        # assert error on psi mat update
+        exc_str = (
+            r"should be of shape \(3, 2\) to match.*dimensions "
+            r"\(provided shape \(2, 2\)\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            fset.psi_mat = [[1, 0], [1, 2]]
+
+        # assert error on origin update
+        exc_str = (
+            r"Attempting.*factor model set of dimension 3 "
+            r"to value of dimension 2"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            fset.origin = [1, 3]
+
+    def test_error_on_factor_model_set_dim_change(self):
+        """
+        Cardinality set positive deviation attribute should
+        contain nonnegative numerical entries.
+
+        Check ValueError raised if any negative entries provided.
+        """
+        origin = [0, 0, 0]
+        number_of_factors = 2
+        psi_mat = [[1, 0], [0, 1], [1, 1]]
+        beta = 0.5
+
+        # construct factor model set
+        fset = FactorModelSet(origin, number_of_factors, psi_mat, beta)
+
+        exc_str = (
+            r"should be of shape \(3, 2\) to match.*dimensions "
+            r"\(provided shape \(2, 2\)\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            fset.psi_mat = [[1, 0], [1, 2]]
+
+        exc_str = (
+            r".*'origin' of factor model set of dimension 3 "
+            r"to value of dimension 2"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            fset.origin = [1, 1]
+
+    def test_error_on_invalid_number_of_factors(self):
+        """
+        Test ValueError raised if number of factors
+        is negative int, or AttributeError
+        if attempting to update (should be immutable).
+        """
+        exc_str = (
+            r".*'number_of_factors' must be a positive int "
+            r"\(provided value -1\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            FactorModelSet(
+                origin=[0],
+                number_of_factors=-1,
+                psi_mat=[[1, 1]],
+                beta=0.1,
+            )
+
+        fset = FactorModelSet(
+            origin=[0],
+            number_of_factors=2,
+            psi_mat=[[1, 1]],
+            beta=0.1,
+        )
+
+        exc_str = r".*'number_of_factors' is immutable"
+        with self.assertRaisesRegex(AttributeError, exc_str):
+            fset.number_of_factors = 3
+
+    def test_error_on_invalid_beta(self):
+        """
+        Test ValueError raised if beta is invalid (exceeds 1 or
+        is negative)
+        """
+        origin = [0, 0, 0]
+        number_of_factors = 2
+        psi_mat = [[1, 0], [0, 1], [1, 1]]
+        neg_beta = -0.5
+        big_beta = 1.5
+
+        # assert error on construction
+        neg_exc_str = (
+            r".*must be a real number between 0 and 1.*"
+            r"\(provided value -0.5\)"
+        )
+        big_exc_str = (
+            r".*must be a real number between 0 and 1.*"
+            r"\(provided value 1.5\)"
+        )
+        with self.assertRaisesRegex(ValueError, neg_exc_str):
+            FactorModelSet(origin, number_of_factors, psi_mat, neg_beta)
+        with self.assertRaisesRegex(ValueError, big_exc_str):
+            FactorModelSet(origin, number_of_factors, psi_mat, big_beta)
+
+        # create a valid factor model set
+        fset = FactorModelSet(origin, number_of_factors, psi_mat, 1)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, neg_exc_str):
+            fset.beta = neg_beta
+        with self.assertRaisesRegex(ValueError, big_exc_str):
+            fset.beta = big_beta
+
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_uncertainty_set_with_correct_params(self):
         '''

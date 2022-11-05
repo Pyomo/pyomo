@@ -110,6 +110,8 @@ def validate_arg_type(
         if valid_type_desc is not None:
             type_phrase = f"not {valid_type_desc}"
         else:
+            if not isinstance(valid_types, Iterable):
+                valid_types = [valid_types]
             valid_type_str = ", ".join(dtype.__name__ for dtype in valid_types)
             type_phrase = f"not of any of the valid types ({valid_type_str})"
 
@@ -1616,7 +1618,7 @@ class FactorModelSet(UncertaintySet):
         if hasattr(self, "_origin"):
             if val_arr.size != self.dim:
                 raise ValueError(
-                    "Attempting to set attribute 'origin' of cardinality "
+                    "Attempting to set attribute 'origin' of factor model "
                     f"set of dimension {self.dim} "
                     f"to value of dimension {val_arr.size}"
                 )
@@ -1642,10 +1644,10 @@ class FactorModelSet(UncertaintySet):
             raise AttributeError("Attribute 'number_of_factors' is immutable")
         else:
             # validate type and value
-            validate_arg_type("number_of_factors", val, int)
+            validate_arg_type("number_of_factors", val, Integral)
             if val < 1:
                 raise ValueError(
-                    "Attribute 'number_of_factors' must be a positive int"
+                    "Attribute 'number_of_factors' must be a positive int "
                     f"(provided value {val})"
                 )
         self._number_of_factors = val
