@@ -988,8 +988,172 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
 
 class testBudgetUncertaintySetClass(unittest.TestCase):
     '''
-    Budget uncertainty sets. Required inputs are matrix budget_membership_mat, rhs_vec.
+    Budget uncertainty sets.
+    Required inputs are matrix budget_membership_mat, rhs_vec.
     '''
+
+    def test_normal_budget_construction_and_update(self):
+        """
+        Test BudgetSet constructor and attribute setters work
+        appropriately.
+        """
+        budget_mat = [[1, 0, 1], [0, 1, 0]]
+        budget_rhs_vec = [1, 3]
+
+        # check attributes are as expected
+        bu_set = BudgetSet(budget_mat, budget_rhs_vec)
+        np.testing.assert_allclose(
+            budget_mat,
+            bu_set.budget_membership_mat,
+            err_msg="BudgetSet budget_membership_mat not as expected",
+        )
+        np.testing.assert_allclose(
+            budget_rhs_vec,
+            bu_set.budget_rhs_vec,
+            err_msg="BudgetSet budget_rhs_vec not as expected",
+        )
+        np.testing.assert_allclose(
+            [[1, 0, 1], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0, 0, -1]],
+            bu_set.coefficients_mat,
+            err_msg="BudgetSet coefficients_mat not as expected",
+        )
+        np.testing.assert_allclose(
+            [1, 3, 0, 0, 0],
+            bu_set.rhs_vec,
+            err_msg="BudgetSet rhs_vec not as expected",
+        )
+
+    def test_error_on_budget_set_dim_change(self):
+        """
+        BudgetSet dimension is considered immutable.
+        Test ValueError raised when attempting to alter the
+        box set dimension (i.e. number of rows of `bounds`).
+        """
+        budget_mat = [[1, 0, 1], [0, 1, 0]]
+        budget_rhs_vec = [1, 3]
+        bu_set = BudgetSet(budget_mat, budget_rhs_vec)
+
+        exc_str = (
+            r".*must have 3 columns to match set dimension "
+            r"\(provided.*1 columns\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bu_set.budget_membership_mat = [[1], [1]]
+
+    def test_error_on_budget_member_mat_row_change(self):
+        """
+        Number of rows of budget membership mat is immutable.
+        Hence, size of budget_rhs_vec is also immutable.
+        """
+        budget_mat = [[1, 0, 1], [0, 1, 0]]
+        budget_rhs_vec = [1, 3]
+        bu_set = BudgetSet(budget_mat, budget_rhs_vec)
+
+        exc_str = (
+            r".*must have 2 rows to match shape of attribute 'budget_rhs_vec' "
+            r"\(provided.*1 rows\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bu_set.budget_membership_mat = [[1, 0, 1]]
+
+        exc_str = (
+            r".*must have 2 entries to match shape of attribute "
+            r"'budget_membership_mat' \(provided.*1 entries\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bu_set.budget_rhs_vec = [1]
+
+    def test_error_on_neg_budget_rhs_vec_entry(self):
+        """
+        Test ValueError raised if budget RHS vec has entry
+        with negative value entry.
+        """
+        budget_mat = [[1, 0, 1], [1, 1, 0]]
+        neg_val_rhs_vec = [1, -1]
+
+        exc_str = (
+            r"Entry -1 of.*'budget_rhs_vec' is negative*"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BudgetSet(budget_mat, neg_val_rhs_vec)
+
+        # construct a valid budget set
+        buset = BudgetSet(budget_mat, [1, 1])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            buset.budget_rhs_vec = neg_val_rhs_vec
+
+    def test_error_on_non_bool_budget_mat_entry(self):
+        """
+        Test ValueError raised if budget membership mat has
+        entry which is not a 0-1 value.
+        """
+        invalid_budget_mat = [[1, 0, 1], [1, 1, 0.1]]
+        budget_rhs_vec = [1, 1]
+
+        exc_str = (
+            r"Attempting.*entries.*not 0-1 values \(example: 0.1\).*"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BudgetSet(invalid_budget_mat, budget_rhs_vec)
+
+        # construct a valid budget set
+        buset = BudgetSet([[1, 0, 1], [1, 1, 0]], budget_rhs_vec)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            buset.budget_membership_mat = invalid_budget_mat
+
+    def test_error_on_budget_mat_all_zero_rows(self):
+        """
+        Test ValueError raised if budget membership mat
+        has a row with all zeros.
+        """
+        invalid_row_mat = [[0, 0, 0], [1, 1, 1], [0, 0, 0]]
+        budget_rhs_vec = [1, 1, 2]
+
+        exc_str = (
+            r".*all entries zero in rows at indexes: 0, 2.*"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BudgetSet(invalid_row_mat, budget_rhs_vec)
+
+        # construct a valid budget set
+        buset = BudgetSet([[1, 0, 1], [1, 1, 0], [1, 1, 1]], budget_rhs_vec)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            buset.budget_membership_mat = invalid_row_mat
+
+    def test_error_on_budget_mat_all_zero_columns(self):
+        """
+        Test ValueError raised if budget membership mat
+        has a column with all zeros.
+        """
+        invalid_col_mat = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
+        budget_rhs_vec = [1, 1, 2]
+
+        exc_str = (
+            r".*all entries zero in columns at indexes: 0, 1.*"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BudgetSet(invalid_col_mat, budget_rhs_vec)
+
+        # construct a valid budget set
+        buset = BudgetSet([[1, 0, 1], [1, 1, 0], [1, 1, 1]], budget_rhs_vec)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            buset.budget_membership_mat = invalid_col_mat
 
     def test_uncertainty_set_with_correct_params(self):
         '''

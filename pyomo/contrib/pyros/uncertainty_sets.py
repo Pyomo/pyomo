@@ -1299,7 +1299,7 @@ class BudgetSet(UncertaintySet):
         Each row corresponds to a single budget constraint,
         and defines which uncertain parameters
         (which dimensions) participate in that row's constraint.
-    rhs_vec : (N,) array_like
+    rhs_vec : (M,) array_like
         Right-hand side values for the budget constraints.
     """
 
@@ -1390,21 +1390,40 @@ class BudgetSet(UncertaintySet):
                     f"(provided {lhs_coeffs_arr.shape[0]} rows)"
                 )
 
-        # validate entry values
-        for row in lhs_coeffs_arr:
-            if np.allclose(row, 0):
-                raise ValueError(
-                   "Each row of argument `budget_membership_mat` should "
-                   "have at least one nonzero entry"
-                )
+        # ensure all entries are 0-1 values
+        uniq_entries = np.unique(lhs_coeffs_arr)
+        non_bool_entries = uniq_entries[
+            (uniq_entries != 0) & (uniq_entries != 1)
+        ]
+        if non_bool_entries.size > 0:
+            raise ValueError(
+                "Attempting to set attribute `budget_membership_mat` to value "
+                "containing entries that are not 0-1 values "
+                f"(example: {non_bool_entries[0]}). "
+                "Ensure all entries are of value 0 or 1"
+            )
 
-            for entry in row:
-                if not np.any(np.isclose(entry, [0, 1])):
-                    raise ValueError(
-                        f"Entry {entry} of argument `budget_membership_mat`"
-                        " is not 0 or 1"
-                    )
+        # check no row is all zeros
+        rows_with_zero_sums = np.nonzero(lhs_coeffs_arr.sum(axis=1) == 0)[0]
+        if rows_with_zero_sums.size > 0:
+            row_str = ", ".join(str(val) for val in rows_with_zero_sums)
+            raise ValueError(
+                "Attempting to set attribute `budget_membership_mat` to value "
+                f"with all entries zero in rows at indexes: {row_str}. "
+                "Ensure each row and column has at least one nonzero entry"
+            )
 
+        # check no column is all zeros
+        cols_with_zero_sums = np.nonzero(lhs_coeffs_arr.sum(axis=0) == 0)[0]
+        if cols_with_zero_sums.size > 0:
+            col_str = ", ".join(str(val) for val in cols_with_zero_sums)
+            raise ValueError(
+                "Attempting to set attribute `budget_membership_mat` to value "
+                f"with all entries zero in columns at indexes: {col_str}. "
+                "Ensure each row and column has at least one nonzero entry"
+            )
+
+        # matrix is valid; update
         self._budget_membership_mat = lhs_coeffs_arr
 
     @property
@@ -1443,8 +1462,8 @@ class BudgetSet(UncertaintySet):
         for entry in rhs_vec_arr:
             if entry < 0:
                 raise ValueError(
-                    f"Entry {entry} of argument 'rhs_vec' is negative. "
-                    "Ensure all entries are nonnegative"
+                    f"Entry {entry} of attribute 'budget_rhs_vec' is "
+                    "negative. Ensure all entries are nonnegative"
                 )
 
         self._budget_rhs_vec = rhs_vec_arr
@@ -1476,15 +1495,10 @@ class BudgetSet(UncertaintySet):
             the uncertain parameter bounds for the corresponding set
             dimension.
         """
-        membership_mat = np.asarray(self.coefficients_mat)
-        rhs_vec = self.rhs_vec
-        parameter_bounds = []
-        for i in range(membership_mat.shape[1]):
-            col = column(membership_mat, i)
-            ub = min(list(col[j] * rhs_vec[j] for j in range(len(rhs_vec))))
-            lb = 0
-            parameter_bounds.append((lb, ub))
-        return parameter_bounds
+        return [
+            (0, min(self.budget_rhs_vec[col == 1]))
+            for col in self.budget_membership_mat.T
+        ]
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
