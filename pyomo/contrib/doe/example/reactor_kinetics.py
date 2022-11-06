@@ -7,6 +7,19 @@
 #  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
+#
+#  Pyomo.DOE was produced under the DOE Carbon Capture Simulation 
+#  Initiative (CCSI), and is copyright (c) 2022 by the software owners: 
+#  TRIAD, LLNS, BERKELEY LAB, PNNL, UT-Battelle, LLC, NOTRE
+#  DAME, PITT, UT Austin, TOLEDO, WVU, et al. All rights reserved.
+# 
+#  NOTICE. This Software was developed under funding from the 
+#  U.S. Department of Energy and the U.S. Government consequently retains 
+#  certain rights. As such, the U.S. Government has been granted for itself
+#  and others acting on its behalf a paid-up, nonexclusive, irrevocable, 
+#  worldwide license in the Software to reproduce, distribute copies to the 
+#  public, prepare derivative works, and perform publicly and display
+#  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
 import pyomo.environ as pyo
