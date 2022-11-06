@@ -276,9 +276,9 @@ class Gurobi(PersistentBase, PersistentSolver):
                 gurobipy.disposeDefaultEnv()
 
     def __del__(self):
-        self._num_instances -= 1
-        if self._num_instances == 0:
-            if not python_is_shutting_down():
+        if not python_is_shutting_down():
+            self._num_instances -= 1
+            if self._num_instances == 0:
                 self.release_license()
 
     def version(self):
