@@ -34,10 +34,11 @@ from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
 import time
 import pickle
 from itertools import permutations, product
+import logging
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation, get_dsdp
 
 class Measurements:
-    def __init__(self, measurement_index_time, variance=None, ind_string='_index_', verbose=False):
+    def __init__(self, measurement_index_time, variance=None, ind_string='_index_'):
         """This class stores measurements' information
 
         Parameters
@@ -55,8 +56,6 @@ class Measurements:
         ind_string:
             a ''string'', used to flatten the name of variables and extra index. Default is '_index_'.
             For e.g., for {'C':{'CA': 10, 'CB': 1, 'CC': 2}}, the reformulated name is 'C_index_CA'.
-        verbose:
-            if True, print statements. 
         """
         self.measurement_all_info = measurement_index_time
         self.ind_string = ind_string
@@ -68,9 +67,6 @@ class Measurements:
         self.__generate_variance(self.flatten_measure_name, variance, self.name_and_index)
         self.__generate_flatten_timeset(self.measurement_all_info, self.flatten_measure_name, self.name_and_index)
         self.__model_measure_name()
-        if verbose:
-            print('All measurements are flattened.')
-            print('Flatten measurement name:', self.flatten_measure_name)
 
         # generate the overall measurement time points set, including the measurement time for all measurements
         flatten_timepoint = list(self.flatten_measure_timeset.values())
@@ -341,8 +337,8 @@ class DesignOfExperiments:
 
         # if print statements
         self.verbose = verbose
-
-
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(level=logging.WARN)
         
     def __check_inputs(self, check_mode=False):
         """Check if inputs are consistent
@@ -360,12 +356,6 @@ class DesignOfExperiments:
         if self.prior_FIM is not None:
             if not (np.shape(self.prior_FIM)[0] == np.shape(self.prior_FIM)[1]):
                 raise ValueError('Found wrong prior information matrix shape.')
-
-        if self.scale_nominal_param_value:
-            print('Sensitivity information is scaled by its corresponding parameter nominal value.')
-
-        if (self.scale_constant_value != 1):
-            print('Sensitivity information is scaled by constant ', self.scale_constant_value, ' times itself.')
 
         if check_mode:
             if self.mode not in ['simultaneous_finite', 'sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug']:
@@ -493,14 +483,7 @@ class DesignOfExperiments:
 
             m = self.__add_objective(m)
 
-            # solve problem with DOF then
-            ## TODO: make this first solve a toggle that can be shut down
-            #if self.verbose:
-            #    print('First solve with given objective:')
-            #result_doe1 = self.__solve_doe(m, fix=True)
-
-            if self.verbose:
-                print('Second solve with given objective:')
+            self.logger.info('Solve with given objective:')
             time0_solve2 = time.time()
             result_doe = self.__solve_doe(m, fix=False)
             time1_solve2 = time.time()
@@ -520,9 +503,8 @@ class DesignOfExperiments:
             # record optimization time
             analysis_optimize.solve_time = time_solve2
             analysis_optimize.total_time = time1-time0
-            if self.verbose:
-                print('Total solve time with simultaneous_finite mode (Wall clock) [s]:', time_solve1 + time_solve2)
-                print('Total wall clock time [s]:', time1-time0)
+            self.logger.info('Total solve time with simultaneous_finite mode (Wall clock) [s]:', time_solve1 + time_solve2)
+            self.logger.info('Total wall clock time [s]:', time1-time0)
 
             return analysis_square, analysis_optimize
 
@@ -531,9 +513,8 @@ class DesignOfExperiments:
             time1 = time.time()
             # record square problem time
             analysis_square.total_time = time1-time0
-            if self.verbose:
-                print('Total solve time with simultaneous_finite mode (Wall clock) [s]:', time_solve1)
-                print('Total wall clock time [s]:', time1 - time0)
+            self.logger.info('Total solve time with simultaneous_finite mode (Wall clock) [s]:', time_solve1)
+            self.logger.info('Total wall clock time [s]:', time1 - time0)
 
             return analysis_square
 
@@ -704,10 +685,9 @@ class DesignOfExperiments:
             jac = self.__finite_calculation(output_record, scena_gen)
 
             time11 = time.time()
-            if self.verbose:
-                print('Build time with sequential_finite mode [s]:', sum(time_allbuild))
-                print('Solve time with sequential_finite mode [s]:', sum(time_allsolve))
-                print('Total wall clock time [s]:', time11-time00)
+            self.logger.info('Build time with sequential_finite mode [s]:', sum(time_allbuild))
+            self.logger.info('Solve time with sequential_finite mode [s]:', sum(time_allsolve))
+            self.logger.info('Total wall clock time [s]:', time11-time00)
 
             # return all models formed
             self.models = models
@@ -857,9 +837,6 @@ class DesignOfExperiments:
                 # store extracted measurements
                 all_perturb_measure.append(perturb_mea)
                 all_base_measure.append(base_mea)
-                if self.verbose:
-                    print(all_perturb_measure)
-                    print(all_base_measure)
 
             # After collecting outputs from all scenarios, calculate sensitivity
             for count, para in enumerate(self.param_name):
@@ -884,10 +861,9 @@ class DesignOfExperiments:
                                     prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
         time11 = time.time()
-        if self.verbose:
-            print('Build time with sequential_sipopt or kaug mode [s]:', sum(time_allbuild))
-            print('Solve time with sequential_sipopt or kaug mode [s]:', sum(time_allsolve))
-            print('Total wall clock time [s]:', time11-time00)
+        self.logger.info('Build time with sequential_sipopt or kaug mode [s]:', sum(time_allbuild))
+        self.logger.info('Solve time with sequential_sipopt or kaug mode [s]:', sum(time_allsolve))
+        self.logger.info('Total wall clock time [s]:', time11-time00)
 
         self.jac = jac
         FIM_analysis.build_time = sum(time_allbuild)
@@ -926,12 +902,9 @@ class DesignOfExperiments:
         for j in self.flatten_measure_name:
             for no_t, tt in enumerate(self.flatten_measure_timeset[j]):
                 if tt not in t_all:
-                    print('A measurement time point not measured by this model: ', tt)
+                    self.logger.warning('A measurement time point not measured by this model: ', tt)
                 else:
                     measurement_accurate_time[j][no_t] = t_all[t_all.index(tt)]
-
-        if self.verbose:
-            print('After practice:', measurement_accurate_time)
 
         # set ub and lb to parameters
         for par in self.param_name:
@@ -976,8 +949,7 @@ class DesignOfExperiments:
                     # get right line of dsdp
                     dsdp_extract.append(dsdp_array[kaug_no])
                 except:
-                    if self.verbose:
-                        print('The variable is fixed:', measurement_name)
+                    self.logger.debug('The variable is fixed:', measurement_name)
                     # for fixed variables, the sensitivity are a zero vector
                     dsdp_extract.append(zero_sens)
             else:
@@ -1001,10 +973,9 @@ class DesignOfExperiments:
                     jac[par].append(dsdp_extract[d][p]*self.scale_constant_value)
 
         time11 = time.time()
-        if self.verbose:
-            print('Build time with direct kaug mode [s]:', time_build)
-            print('Solve time with direct kaug mode [s]:', time_solve)
-            print('Total wall clock time [s]:', time11-time00)
+        self.logger.info('Build time with direct kaug mode [s]:', time_build)
+        self.logger.info('Solve time with direct kaug mode [s]:', time_solve)
+        self.logger.info('Total wall clock time [s]:', time11-time00)
             
         # check if another prior experiment FIM is provided other than the user-specified one
         if self.specified_prior is None:
@@ -1085,75 +1056,6 @@ class DesignOfExperiments:
         
         return jac
 
-    def generate_sequential_experiments(self, design_values_set, mode='sequential_finite', tee_option=False,
-                       scale_nominal_param_value=False, scale_constant_value=1,
-                       formula='central', step=0.001):
-        """
-        Run a series of experiments sequentially, and use the FIM from one experiment as the prior information for the next experiment
-        Parameters:
-        -----------
-        design_values_set: a list of experiments, each element is one design_values dictionary
-        mode: use mode='sequential_finite', 'sequential_sipopt', 'sequential_kaug', 'direct_kaug'.
-        tee_option: if solver console output is printed
-        scale_nominal_param_value: if True, the parameters are scaled by its own nominal value in param_init
-        scale_constant_value: how many orders of magnitudes the Jacobian value is scaled by. Use when the Jac or FIM value is too small
-        formula: choose from 'central', 'forward', 'backward', None
-        step: Sensitivity perturbation step size, a fraction between [0,1]. default is 0.001
-
-        Returns:
-        --------
-        result_obj_list: a list of the result summary objects of every experiment
-        fim_list: a list of the FIM of every experiment
-        """
-        # how many exps to run in a row
-        self.no_exp = len(design_values_set)
-        self.design_values_set = design_values_set
-        self.formula = formula
-        self.mode = mode
-        self.scale_nominal_param_value = scale_nominal_param_value
-        self.scale_constant_value = scale_constant_value
-        # Set the Objective Function to 0 helps solve square problem quickly
-        self.objective_option = 'zero'
-
-        # calculate how much the FIM element is scaled by a constant number
-        self.fim_scale_constant_value = self.scale_constant_value ** 2
-
-        self.__check_inputs(check_mode=True)
-
-        # store all results object list
-        result_object_list = []
-        # store all FIM
-        fim_list = []
-        # loop over experiments
-        for i in range(self.no_exp):
-            if self.verbose:
-                print('========This is the No.', i, ' experiment.========')
-                print('Design variables:', self.design_values_set[i])
-
-            # call compute_FIM to get FIM
-            if i==0:
-                prior_in_use = self.prior_FIM
-            else:
-                prior_in_use = fim_list[i-1]
-
-            # run the experiment with compute_FIM
-            result_iter = self.compute_FIM(self.design_values_set[i], mode=self.mode, specified_prior=prior_in_use,
-                                           tee_opt=tee_option,
-                                           scale_nominal_param_value=self.scale_nominal_param_value,
-                                           formula=formula, step=step)
-
-            if (self.mode == 'simultaneous_finite'):
-                result_iter.extract_FIM(self.m, self.design_timeset, self.square_result, self.objective_option, add_fim=True)
-
-            elif (self.mode in ['sequential_finite', 'sequential_sipopt', 'sequential_kaug']):
-                result_iter.calculate_FIM(self.jac, self.design_values)
-
-            # attach these results to the store list
-            result_object_list.append(result_iter)
-            fim_list.append(result_iter.FIM)
-
-        return result_object_list, fim_list
-
     def run_grid_search(self, design_values, design_ranges, design_dimension_names, 
                     design_control_time, mode='sequential_finite', tee_option=False, 
                     scale_nominal_param_value=False, scale_constant_value=1, store_name= None, read_name=None,
@@ -1228,8 +1130,6 @@ class DesignOfExperiments:
         total_count = 1
         for i in range(grid_dimension):
             total_count *= len(design_ranges[i])
-        if self.verbose:
-            print(total_count, ' design vectors will be searched.')
 
         # generate combinations of design variable values to go over
         search_design_set = product(*design_ranges)
@@ -1248,9 +1148,8 @@ class DesignOfExperiments:
                 for v, value in enumerate(design_control_time[i]):
                     design_iter[design_dimension_names[i]][value] = list(design_set_iter)[i]
 
-            if self.verbose:
-                print('=======This is the ', count+1, 'th iteration=======')
-                print('Design variable values of this iteration:', design_iter)
+            self.logger.info('=======This is the ', count+1, 'th iteration=======')
+            self.logger.debug('Design variable values of this iteration:', design_iter)
 
             # generate store name
             if store_name is None:
@@ -1281,21 +1180,20 @@ class DesignOfExperiments:
 
                 t_now = time.time()
 
-                if self.verbose:
-                    # give run information at each iteration
-                    print('This is the ', count+1, ' run out of ', total_count, 'run.')
-                    print('The code has run %.04f seconds.'% (t_now-t_enumeration_begin))
-                    print('Estimated remaining time: %.4f seconds' % ((t_now-t_enumeration_begin)/(count+1)*(total_count-count-1)))
+                # give run information at each iteration
+                self.logger.info('This is the ', count+1, ' run out of ', total_count, 'run.')
+                self.logger.info('The code has run %.04f seconds.'% (t_now-t_enumeration_begin))
+                self.logger.info('Estimated remaining time: %.4f seconds' % ((t_now-t_enumeration_begin)/(count+1)*(total_count-count-1)))
 
 
                 # the combined result object are organized as a dictionary, keys are a tuple of the design variable values, values are a result object
                 result_combine[tuple(design_set_iter)] = result_iter
 
             except:
-                print(':::::::::::ERROR: Cannot converge this run.::::::::::::')
+                self.logger.warning(':::::::::::ERROR: Cannot converge this run.::::::::::::')
                 count += 1
                 failed_count += 1
-                print('failed count:', failed_count)
+                self.logger.warning('failed count:', failed_count)
                 result_combine[tuple(design_set_iter)] = None
 
         # For user's access
@@ -1305,10 +1203,9 @@ class DesignOfExperiments:
         figure_draw_object = Grid_Search_Result(design_ranges, design_dimension_names, design_control_time, result_combine, store_optimality_name=filename)
 
         t_enumeration_stop = time.time()
-        if self.verbose:
-            print('Overall model building time [s]:', sum(build_time_store))
-            print('Overall model solve time [s]:', sum(solve_time_store))
-            print('Overall wall clock time [s]:', t_enumeration_stop - t_enumeration_begin)
+        self.logger.info('Overall model building time [s]:', sum(build_time_store))
+        self.logger.info('Overall model solve time [s]:', sum(solve_time_store))
+        self.logger.info('Overall wall clock time [s]:', t_enumeration_stop - t_enumeration_begin)
 
         return figure_draw_object
 
@@ -1657,16 +1554,13 @@ class DesignOfExperiments:
         param_perturb_names = self.param_name.copy()
         for x, xname in enumerate(self.param_name):
             param_perturb_names[x] = xname+'_pert'
-        if self.verbose:
-            print('perturb names are:', param_perturb_names)
 
         self.perturb_names = param_perturb_names
-        if self.verbose:
-            print('Perturbation parameters are set:')
+
         for change in range(len(self.perturb_names)):
             setattr(m, self.perturb_names[change], Param(m.scena, initialize=param_backward[change]))
-            if self.verbose:
-                print(self.perturb_names[change], ': ', getattr(m, self.perturb_names[change])[0])
+            
+            self.logger.debug(self.perturb_names[change], ': ', getattr(m, self.perturb_names[change])[0])
         return m
 
     def __sgn(self,p):
@@ -1943,7 +1837,6 @@ class Scenario_data:
         for p, para in enumerate(self.para_names):
             scena_p = {}
             for n in self.scena_keys:
-                # print(self.scena[n][para])
                 scena_p[n] = self.scena[n][para]
 
             # a dictionary of scenarios and its corresponding parameter values
@@ -1967,7 +1860,6 @@ class Scenario_data:
         scenario_dict['eps-abs'] = eps_abs
         scenario_dict['scena-name'] = self.scena_keys
 
-        # print('Return scenario dict as:', scenario_dict)
         return scenario_dict
 
 
@@ -2016,6 +1908,9 @@ class FIM_result:
         self.fim_scale_constant_value = scale_constant_value ** 2
         self.max_condition_number = max_condition_number
         self.verbose = verbose
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(level=logging.WARN)
+
 
     def calculate_FIM(self, dv_values, result=None):
         """Calculate FIM from Jacobian information. This is for grid search (combined models) results
@@ -2045,14 +1940,13 @@ class FIM_result:
         if (self.prior_FIM is not None):
             try:
                 fim = fim + self.prior_FIM
-                print('Existed information has been added.')
+                self.logger.info('Existed information has been added.')
             except:
                 raise ValueError('Check the shape of prior FIM')
 
         if np.linalg.cond(fim) > self.max_condition_number:
-            print("Warning: FIM is near singular.")
-            print('The condition number is:', np.linalg.cond(fim), ';')
-            print('A condition number bigger than ', self.max_condition_number, ' is considered near singular.')
+            self.logger.info("Warning: FIM is near singular. The condition number is:", np.linalg.cond(fim), ';')
+            self.logger.info('A condition number bigger than ', self.max_condition_number, ' is considered near singular.')
 
         # call private methods
         self.__print_FIM_info(fim, dv_set=dv_values)
@@ -2099,8 +1993,6 @@ class FIM_result:
         jaco_3D = self.__jac_reform_3D(self.jacobian_info)
 
         involved_flatten_index = measurement_subset.flatten_measure_name
-        if self.verbose:
-            print('involved flatten name:', involved_flatten_index)
 
         # reorganize the jacobian subset with the same form of the jacobian
         # loop over parameters
@@ -2109,7 +2001,6 @@ class FIM_result:
             # loop over flatten measurements
             for n, nam in enumerate(involved_flatten_index):
                 if nam in self.flatten_all_measure:
-                    #print('get :', nam)
                     n_all_measure = self.flatten_all_measure.index(nam)
                     # loop over time
                     for d in range(len(jaco_3D[n_all_measure, p, :])):
@@ -2135,9 +2026,6 @@ class FIM_result:
             for m, mname in enumerate(self.flatten_all_measure):
                 Qr_list.append(jac_3Darray[m, :, :])
                 var_list.append(self.measure_object.flatten_variance[mname])
-            #print(type(Qr_list[0]))
-            #print(Qr_list[0])
-            #print(var_list)
 
             return Qr_list, var_list
         else:
@@ -2182,15 +2070,8 @@ class FIM_result:
 
         self.dv_info = FIM_dv_info
 
-        if self.verbose:
-            print('FIM:', self.FIM)
-
-            print('Trace:', self.trace)
-            print('Determinant:', self.det)
-            print('Condition number:', self.cond)
-            print('Minimal eigen value:', self.min_eig)
-            print('Eigen values:', self.eig_vals)
-            print('Eigen vectors:', self.eig_vecs)
+        self.logger.info('FIM: {}; \n Trace: {}; \n Determinant: {};'.format(self.FIM, self.trace, self.det)) 
+        self.logger.info('Condition number: {}; \n Min eigenvalue: {}.'.format(self.cond, self.min_eig))
 
     def __solution_info(self, m, dv_set):
         """
@@ -2211,14 +2092,11 @@ class FIM_result:
             -[design variable name]: a list of design variable solution
         """
         self.obj_value = value(m.obj)
-        print('Model objective:', self.obj_value)
 
         if self.obj == 'det':
             self.obj_det = np.exp(value(m.obj)) / (self.fim_scale_constant_value) ** (len(self.para_name))
-            print('Objective(determinant) is:', self.obj_det)
         elif self.obj == 'trace':
             self.obj_trace = np.exp(value(m.obj)) / (self.fim_scale_constant_value)
-            print('Objective(trace) is:', self.obj_trace)
 
         dv_names = list(dv_set.keys())
         dv_times = list(dv_set.values())
@@ -2235,8 +2113,6 @@ class FIM_result:
                 sol.append(value(newvar))
 
             solution[dname] = sol
-            if self.verbose:
-                print('Solution of ', dname, ' :', solution[dname])
         self.solution = solution
 
     def __store_FIM(self):
@@ -2257,18 +2133,14 @@ class FIM_result:
             ~['square']: a string of square result solver status
             -['doe']: a string of doe result solver status
         """
-        print('======problem solver output======')
 
         if (self.result.solver.status == SolverStatus.ok) and (
                 self.result.solver.termination_condition == TerminationCondition.optimal):
             self.status = 'converged'
-            print('converged')
         elif (self.result.solver.termination_condition == TerminationCondition.infeasible):
             self.status = 'infeasible'
-            print('infeasible solution')
         else:
             self.status = self.result.solver.status
-            print('solver status:', self.result.solver.status)
 
 
 class Grid_Search_Result:
@@ -2318,10 +2190,7 @@ class Grid_Search_Result:
 
         # loop over deign value combinations
         for design_set_iter in search_design_set:
-            if self.verbose:
-                print('Design variable: ', self.design_names)
-                print('Value          : ', design_set_iter)
-
+            
             # locate this grid in the dictionary of combined results
             result_object_asdict = {k:v for k,v in self.FIM_result_list.items() if k==design_set_iter}
             # an result object is identified by a tuple of the design variable value it uses
@@ -2346,9 +2215,7 @@ class Grid_Search_Result:
             # this is because it can be errornous when we extract values from a dataframe with two columns having the same name
             if i in column_names:
                 count += 1
-                i_original = i
                 i = i+str(count+1)
-                print('Reminder: the ', count+1, 'th design variable ', i_original, ' is renamed as ', i, '.')
             column_names.append(i)
 
         # Each design criteria has a column to store values
@@ -2400,8 +2267,6 @@ class Grid_Search_Result:
 
         # generate a combination of logic sentences to filter the results of the DOF needed.
         if len(self.fixed_design_names) != 0:
-            if self.verbose:
-                print( self.fixed_design_names, 'is/are fixed.')
             filter = ''
             for i in range(len(self.fixed_design_names)):
                 filter += '(self.store_all_results_dataframe['
@@ -2422,13 +2287,9 @@ class Grid_Search_Result:
 
         # if one design variable name is given as DOF, draw 1D sensitivity curve
         if (len(sensitivity_dimension) == 1):
-            if self.verbose:
-                print('1D sensitivity curve is plotted with ', self.sensitivity_dimension[0], '.')
             self.__curve1D(title_text, xlabel_text, font_axes=16, font_tick=14, log_scale=True)
         # if two design variable names are given as DOF, draw 2D heatmaps
         elif (len(sensitivity_dimension) == 2):
-            if self.verbose:
-                print('2D heatmap is plotted with ', self.sensitivity_dimension, '.')
             self.__heatmap(title_text, xlabel_text, ylabel_text, font_axes=16, font_tick=14, log_scale=True)
 
 
