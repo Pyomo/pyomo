@@ -193,6 +193,118 @@ class TestSumStepFunctions(CommonTests):
         self.assertIs(expr.args[0], p1)
         self.assertIs(expr.args[1], p2)
 
+    def test_sum_step_and_cumul_func(self):
+        m = self.get_model()
+        s1 = Step(m.a.start_time, height=4)
+        p1 = Step(m.a.start_time, height=4)
+        cumul = s1 + p1
+        s = Step(m.a.end_time, height=3)
+        expr = s + cumul
+
+        self.assertIsInstance(expr, CumulativeFunction)
+        self.assertEqual(expr.nargs(), 3)
+        self.assertIs(expr.args[0], s)
+        self.assertIs(expr.args[1], s1)
+        self.assertIs(expr.args[2], p1)
+
+    def test_subtract_cumul_from_pulse(self):
+        m = self.get_model()
+        p1 = Pulse(interval_var=m.a, height=2)
+        s1 = Step(m.a.start_time, height=4)
+        p2 = Pulse(interval_var=m.b, height=3)
+        cumul = s1 - p2
+        expr = p1 - cumul
+
+        self.assertIsInstance(expr, CumulativeFunction)
+        self.assertEqual(expr.nargs(), 3)
+        self.assertIs(expr.args[0], p1)
+        self.assertIsInstance(expr.args[1], NegatedStepFunction)
+        self.assertIs(expr.args[1].args[0], s1)
+        self.assertIsInstance(expr.args[2], NegatedStepFunction)
+        self.assertIsInstance(expr.args[2].args[0], NegatedStepFunction)
+        self.assertIs(expr.args[2].args[0].args[0], p2)
+
+    def test_subtract_two_cumul_functions(self):
+        m = self.get_model()
+        p1 = Pulse(interval_var=m.a, height=2)
+        s1 = Step(m.a.start_time, height=4)
+        p2 = Pulse(interval_var=m.b, height=3)
+        p3 = Pulse(interval_var=m.a, height=-4)
+        cumul1 = s1 - p2
+        cumul2 = p2 + p3
+        expr = cumul1 - cumul2
+
+        self.assertIsInstance(expr, CumulativeFunction)
+        self.assertEqual(expr.nargs(), 4)
+        self.assertIs(expr.args[0], s1)
+        self.assertIsInstance(expr.args[1], NegatedStepFunction)
+        self.assertIs(expr.args[1].args[0], p2)
+        self.assertIsInstance(expr.args[2], NegatedStepFunction)
+        self.assertIs(expr.args[2].args[0], p2)
+        self.assertIsInstance(expr.args[3], NegatedStepFunction)
+        self.assertIs(expr.args[3].args[0], p3)
+
+    def test_subtract_two_cumul_functions_requiring_cloning(self):
+        m = self.get_model()
+        p1 = Pulse(interval_var=m.a, height=2)
+        s1 = Step(m.a.start_time, height=4)
+        p2 = Pulse(interval_var=m.b, height=3)
+        p3 = Pulse(interval_var=m.a, height=-4)
+        cumul1 = s1 - p2
+        # This will append to the args of cumul1, and then we'll have to clone
+        # them when we make expr
+        aux = cumul1 + Step(0, 4)
+        cumul2 = p2 + p3
+        expr = cumul1 - cumul2
+
+        self.assertIsInstance(expr, CumulativeFunction)
+        self.assertEqual(expr.nargs(), 4)
+        self.assertIs(expr.args[0], s1)
+        self.assertIsInstance(expr.args[1], NegatedStepFunction)
+        self.assertIs(expr.args[1].args[0], p2)
+        self.assertIsInstance(expr.args[2], NegatedStepFunction)
+        self.assertIs(expr.args[2].args[0], p2)
+        self.assertIsInstance(expr.args[3], NegatedStepFunction)
+        self.assertIs(expr.args[3].args[0], p3)
+
+    def test_sum_two_cumul_funcs(self):
+        m = self.get_model()
+        s1 = Step(m.a.start_time, height=4)
+        p1 = Step(m.a.start_time, height=4)
+        cumul1 = s1 + p1
+        s2 = Step(m.a.end_time, height=3)
+        s3 = Step(0, height=34)
+        cumul2 = s2 + s3
+        expr = cumul1 + cumul2
+
+        self.assertIsInstance(expr, CumulativeFunction)
+        self.assertEqual(expr.nargs(), 4)
+        self.assertIs(expr.args[0], s1)
+        self.assertIs(expr.args[1], p1)
+        self.assertIs(expr.args[2], s2)
+        self.assertIs(expr.args[3], s3)
+
+    def test_sum_two_cumul_funcs_requring_cloning_args(self):
+        m = self.get_model()
+        s1 = Step(m.a.start_time, height=4)
+        p1 = Step(m.a.start_time, height=4)
+        cumul1 = s1 + p1
+        # This one will extend cumul1, so we'll have to clone it when we build
+        # expr
+        aux = cumul1 + Step(5, 4)
+
+        s2 = Step(m.a.end_time, height=3)
+        s3 = Step(0, height=34)
+        cumul2 = s2 + s3
+        expr = cumul1 + cumul2
+
+        self.assertIsInstance(expr, CumulativeFunction)
+        self.assertEqual(expr.nargs(), 4)
+        self.assertIs(expr.args[0], s1)
+        self.assertIs(expr.args[1], p1)
+        self.assertIs(expr.args[2], s2)
+        self.assertIs(expr.args[3], s3)
+
     def test_cannot_add_constant(self):
         m = self.get_model()
         with self.assertRaisesRegex(

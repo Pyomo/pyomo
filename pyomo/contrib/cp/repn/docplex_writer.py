@@ -57,6 +57,7 @@ from pyomo.core.expr.template_expr import CallExpression
 from pyomo.core.expr.visitor import (
     StreamBasedExpressionVisitor, identify_variables
 )
+from pyomo.core.base import Set, RangeSet
 from pyomo.core.base.set import SetProduct
 from pyomo.opt import (
     WriterFactory, SolverFactory, TerminationCondition, SolverResults
@@ -64,7 +65,6 @@ from pyomo.opt import (
 
 ### FIXME: Remove the following as soon as non-active components no
 ### longer report active==True
-from pyomo.core.base import Set, RangeSet
 from pyomo.network import Port
 ###
 
