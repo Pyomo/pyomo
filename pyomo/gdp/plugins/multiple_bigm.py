@@ -31,10 +31,9 @@ from pyomo.core.util import target_list
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
-    _convert_M_to_tuple, _get_bigm_suffix_list, get_gdp_tree,
-    get_src_constraint, get_src_disjunct, get_src_disjunction,
-    get_transformed_constraints, _to_dict, _warn_for_active_disjunct,
-    _warn_for_unused_bigM_args
+    _convert_M_to_tuple, get_gdp_tree, get_src_constraint, get_src_disjunct,
+    get_src_disjunction, get_transformed_constraints, _to_dict,
+    _warn_for_active_disjunct, _warn_for_unused_bigM_args
 )
 from pyomo.network import Port
 from pyomo.opt import SolverFactory, TerminationCondition
@@ -155,7 +154,7 @@ class MultipleBigMTransformation(Transformation):
             BooleanVar:  False,
             Connector:   False,
             Expression:  False,
-            Suffix:      False,
+            Suffix:      self._warn_for_active_suffix,
             Param:       False,
             Set:         False,
             SetOf:       False,
@@ -271,11 +270,9 @@ class MultipleBigMTransformation(Transformation):
             transformed_constraints = self._transform_bound_constraints(
                 active_disjuncts, transBlock, arg_Ms)
 
-        # Collect any Ms specified in Suffixes living above the Disjunction
-        suffix_Ms = _get_bigm_suffix_list(obj.parent_block())
         Ms = transBlock.calculated_missing_m_values = self.\
-             _calculate_missing_M_values(active_disjuncts, arg_Ms, suffix_Ms,
-                                         transBlock, transformed_constraints)
+             _calculate_missing_M_values(active_disjuncts, arg_Ms, transBlock,
+                                         transformed_constraints)
 
         # Now we can deactivate the constraints we deferred, so that we don't
         # re-transform them
@@ -379,6 +376,11 @@ class MultipleBigMTransformation(Transformation):
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct,
                                   active_disjuncts, Ms):
         _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
+
+    def _warn_for_active_suffix(self, obj, disjunct, active_disjuncts, Ms):
+        raise GDP_Error("Found active Suffix '{0}' on Disjunct '{1}'. "
+                        "The multiple bigM transformation does not currently "
+                        "support Suffixes.".format(obj.name, disjunct.name))
 
     def _transform_constraint(self, obj, disjunct, active_disjuncts, Ms):
         # we will put a new transformed constraint on the relaxation block.
@@ -603,8 +605,8 @@ class MultipleBigMTransformation(Transformation):
                         seen.add(id(var))
                         yield var
 
-    def _calculate_missing_M_values(self, active_disjuncts, arg_Ms, suffix_Ms,
-                                    transBlock, transformed_constraints):
+    def _calculate_missing_M_values(self, active_disjuncts, arg_Ms, transBlock,
+                                    transformed_constraints):
         scratch_blocks = {}
         all_vars = list(self._get_all_var_objects(active_disjuncts))
         for disjunct, other_disjunct in itertools.product(active_disjuncts,
@@ -645,20 +647,7 @@ class MultipleBigMTransformation(Transformation):
                                                                   upper_M)
                 else:
                     (lower_M, upper_M) = (None, None)
-                # Then check Suffixes
-                suffix_list = _get_bigm_suffix_list(
-                    constraint.parent_block(), stopping_block=disjunct)
-                suffix_list.extend(suffix_Ms)
                 if constraint.lower is not None and lower_M is None:
-                    # Go looking at suffixes
-                    for m_values in suffix_list:
-                        if (constraint, other_disjunct) in m_values:
-                            (l, u) = _convert_M_to_tuple(
-                                m_values[constraint, other_disjunct],
-                                constraint, other_disjunct)
-                            if l is not None:
-                                lower_M = l
-                                break
                     # last resort: calculate
                     if lower_M is None:
                         scratch.obj.expr = constraint.body - constraint.lower
@@ -675,15 +664,6 @@ class MultipleBigMTransformation(Transformation):
                                     other_disjunct.name))
                         lower_M = value(scratch.obj.expr)
                 if constraint.upper is not None and upper_M is None:
-                    # Go looking at suffixes
-                    for m_values in suffix_list:
-                        if (constraint, other_disjunct) in m_values:
-                            (l, u) = _convert_M_to_tuple(
-                                m_values[constraint, other_disjunct],
-                                constraint, other_disjunct)
-                            if u is not None:
-                                upper_M = u
-                                break
                     # last resort: calculate
                     if upper_M is None:
                         scratch.obj.expr = constraint.body - constraint.upper
