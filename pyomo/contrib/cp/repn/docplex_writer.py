@@ -820,6 +820,8 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
     finalizeResult = None
 
 
+# [ESJ 11/7/22]: TODO: We should revisit this method in the future, as it is not
+# very efficient.
 def collect_valid_components(model, active=True, sort=None, valid=set(),
                              targets=set()):
     assert active in (True, None)
