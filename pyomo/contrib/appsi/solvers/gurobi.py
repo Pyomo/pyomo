@@ -205,9 +205,11 @@ class Gurobi(PersistentBase, PersistentSolver):
     Interface to Gurobi
     """
     _available = None
+    _num_instances = 0
 
     def __init__(self, only_child_vars=True):
         super(Gurobi, self).__init__(only_child_vars=only_child_vars)
+        self._num_instances += 1
         self._config = GurobiConfig()
         self._solver_options = dict()
         self._solver_model = None
@@ -275,7 +277,9 @@ class Gurobi(PersistentBase, PersistentSolver):
 
     def __del__(self):
         if not python_is_shutting_down():
-            self.release_license()
+            self._num_instances -= 1
+            if self._num_instances == 0:
+                self.release_license()
 
     def version(self):
         version = (gurobipy.GRB.VERSION_MAJOR,
