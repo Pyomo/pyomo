@@ -534,7 +534,6 @@ class BigM_Transformation(Transformation):
             M = (lower[0], upper[0])
 
             if self._generate_debug_messages:
-                _name = obj.getname(fully_qualified=True)
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "
                              "from the BigM argument is %s." % (cons_name,
                                                                 str(M)))
@@ -553,7 +552,6 @@ class BigM_Transformation(Transformation):
                 M = (lower[0], upper[0])
 
             if self._generate_debug_messages:
-                _name = obj.getname(fully_qualified=True)
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "
                              "after checking suffixes is %s." % (cons_name,
                                                                  str(M)))
@@ -566,7 +564,6 @@ class BigM_Transformation(Transformation):
                 upper = (M[1], None, None)
 
             if self._generate_debug_messages:
-                _name = obj.getname(fully_qualified=True)
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "
                              "after estimating (if needed) is %s." %
                              (cons_name, str(M)))
