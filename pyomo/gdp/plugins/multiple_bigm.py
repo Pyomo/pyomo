@@ -394,10 +394,7 @@ class MultipleBigMTransformation(Transformation):
         name = unique_component_name(relaxationBlock, obj.getname(
             fully_qualified=True))
 
-        if obj.is_indexed():
-            newConstraint = Constraint(obj.index_set(), transBlock.lbub)
-        else:
-            newConstraint = Constraint(transBlock.lbub)
+        newConstraint = Constraint(obj.index_set(), transBlock.lbub)
         relaxationBlock.add_component(name, newConstraint)
 
         for i in sorted(obj.keys()):
@@ -410,23 +407,15 @@ class MultipleBigMTransformation(Transformation):
                 rhs = sum(Ms[c,
                              disj][0]*disj.indicator_var.get_associated_binary()
                           for disj in active_disjuncts if disj is not disjunct)
-                if obj.is_indexed():
-                    newConstraint.add((i, 'lb'), c.body - c.lower >= rhs)
-                    transformed.append(newConstraint[i, 'lb'])
-                else:
-                    newConstraint.add('lb', c.body - c.lower >= rhs)
-                    transformed.append(newConstraint['lb'])
+                newConstraint.add((i, 'lb'), c.body - c.lower >= rhs)
+                transformed.append(newConstraint[i, 'lb'])
 
             if c.upper is not None:
                 rhs = sum(Ms[c,
                              disj][1]*disj.indicator_var.get_associated_binary()
                           for disj in active_disjuncts if disj is not disjunct)
-                if obj.is_indexed():
-                    newConstraint.add((i, 'ub'), c.body - c.upper <= rhs)
-                    transformed.append(newConstraint[i, 'ub'])
-                else:
-                    newConstraint.add('ub', c.body - c.upper <= rhs)
-                    transformed.append(newConstraint['ub'])
+                newConstraint.add((i, 'ub'), c.body - c.upper <= rhs)
+                transformed.append(newConstraint[i, 'ub'])
             for c_new in transformed:
                 constraintMap['srcConstraints'][c_new] = [c]
             constraintMap['transformedConstraints'][c] = transformed
