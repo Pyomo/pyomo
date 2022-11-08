@@ -703,9 +703,87 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
             )
 
 class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
-    '''
-    Axis aligned ellipsoidal uncertainty sets. Required inputs are half-lengths, nominal point, and right-hand side.
-    '''
+    """
+    Unit tests for the AxisAlignedEllipsoidalSet.
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test AxisAlignedEllipsoidalSet constructor and setter
+        work normally when bounds are appropriate.
+        """
+        center = [0, 0]
+        half_lengths = [1, 3]
+        aset = AxisAlignedEllipsoidalSet(center, half_lengths)
+        np.testing.assert_allclose(
+            center,
+            aset.center,
+            err_msg="AxisAlignedEllipsoidalSet center not as expected",
+        )
+        np.testing.assert_allclose(
+            half_lengths,
+            aset.half_lengths,
+            err_msg="AxisAlignedEllipsoidalSet half-lengths not as expected",
+        )
+
+        # check attributes update
+        new_center = [-1, -3]
+        new_half_lengths = [0, 1]
+        aset.center = new_center
+        aset.half_lengths = new_half_lengths
+
+        np.testing.assert_allclose(
+            new_center,
+            aset.center,
+            err_msg="AxisAlignedEllipsoidalSet center update not as expected",
+        )
+        np.testing.assert_allclose(
+            new_half_lengths,
+            aset.half_lengths,
+            err_msg=(
+                "AxisAlignedEllipsoidalSet half lengths update not as "
+                "expected"
+            ),
+        )
+
+    def test_error_on_axis_aligned_dim_change(self):
+        """
+        AxisAlignedEllipsoidalSet dimension is considered immutable.
+        Test ValueError raised when attempting to alter the
+        box set dimension (i.e. number of rows of `bounds`).
+        """
+        center = [0, 0]
+        half_lengths = [1, 3]
+        aset = AxisAlignedEllipsoidalSet(center, half_lengths)
+
+        exc_str = r"Attempting to set.*dimension 2 to value of dimension 3"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            aset.center = [0, 0, 1]
+
+        with self.assertRaisesRegex(ValueError, exc_str):
+            aset.half_lengths = [0, 0, 1]
+
+    def test_error_on_negative_axis_aligned_half_lengths(self):
+        """
+        Test ValueError if half lengths for AxisAlignedEllipsoidalSet
+        contains a negative value.
+        """
+        center = [1, 1]
+        invalid_half_lengths = [1, -1]
+        exc_str = (
+            r"Entry -1 of.*'half_lengths' is negative.*"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            AxisAlignedEllipsoidalSet(center, invalid_half_lengths)
+
+        # construct a valid axis-aligned ellipsoidal set
+        aset = AxisAlignedEllipsoidalSet(center, [1, 0])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            aset.half_lengths= invalid_half_lengths
 
     def test_uncertainty_set_with_correct_params(self):
         '''
