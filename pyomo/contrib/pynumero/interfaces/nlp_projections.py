@@ -106,6 +106,7 @@ class _BaseNLPDelegator(NLP):
 
 
 class _ExtendedNLPDelegator(_BaseNLPDelegator):
+    # TODO: This should raise an error if the original NLP is not an ExtendedNLP
 
     def n_eq_constraints(self):
         return self._original_nlp.n_eq_constraints()
