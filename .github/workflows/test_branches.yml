@@ -50,7 +50,7 @@ jobs:
           python: 3.9
           TARGET: win
           PYENV: conda
-          PACKAGES: glpk
+          PACKAGES: glpk scip
 
         - os: ubuntu-latest
           python: 3.9
