@@ -549,10 +549,10 @@ class BigM_Transformation(Transformation):
                                                                  str(M)))
 
             if c.lower is not None and M[0] is None:
-                M = (self._estimate_M(c.body, name)[0] - c.lower, M[1])
+                M = (self._estimate_M(c.body, cons_name)[0] - c.lower, M[1])
                 lower = (M[0], None, None)
             if c.upper is not None and M[1] is None:
-                M = (M[0], self._estimate_M(c.body, name)[1] - c.upper)
+                M = (M[0], self._estimate_M(c.body, cons_name)[1] - c.upper)
                 upper = (M[1], None, None)
 
             if self._generate_debug_messages:
