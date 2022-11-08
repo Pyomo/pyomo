@@ -470,7 +470,7 @@ class BigM_Transformation(Transformation):
                 'transformedConstraints': ComponentMap()}
         return transBlock._constraintMap
 
-    def _convert_M_to_tuple(self, M, constraint_name):
+    def _convert_M_to_tuple(self, M, constraint):
         if not isinstance(M, (tuple, list)):
             if M is None:
                 M = (None, None)
@@ -487,7 +487,7 @@ class BigM_Transformation(Transformation):
                             "length two. "
                             "Expected either a single value or "
                             "tuple or list of length two for M."
-                            % (str(M), constraint_name))
+                            % (str(M), constraint.name))
 
         return M
 
@@ -505,16 +505,8 @@ class BigM_Transformation(Transformation):
         cons_name = obj.getname(fully_qualified=True)
         name = unique_component_name(transBlock, cons_name)
 
-        if obj.is_indexed():
-            newConstraint = Constraint(obj.index_set(),
-                                       disjunctionRelaxationBlock.lbub)
-            # we map the container of the original to the container of the
-            # transformed constraint. Don't do this if obj is a ScalarConstraint
-            # because we will treat that like a _ConstraintData and map to a
-            # list of transformed _ConstraintDatas
-            constraintMap['transformedConstraints'][obj] = newConstraint
-        else:
-            newConstraint = Constraint(disjunctionRelaxationBlock.lbub)
+        newConstraint = Constraint(obj.index_set(),
+                                   disjunctionRelaxationBlock.lbub)
         transBlock.add_component(name, newConstraint)
         # add mapping of transformed constraint to original constraint
         constraintMap['srcConstraints'][newConstraint] = obj
@@ -571,47 +563,36 @@ class BigM_Transformation(Transformation):
             # save the source information
             bigm_src[c] = (lower, upper)
 
-            # Handle indices for both ScalarConstraint and IndexedConstraint
-            if i.__class__ is tuple:
-                i_lb = i + ('lb',)
-                i_ub = i + ('ub',)
-            elif obj.is_indexed():
-                i_lb = (i, 'lb',)
-                i_ub = (i, 'ub',)
-            else:
-                i_lb = 'lb'
-                i_ub = 'ub'
-
             if c.lower is not None:
                 if M[0] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint '%s' "
                                     "because M is not defined." % name)
                 M_expr = M[0] * (1 - disjunct.binary_indicator_var)
-                newConstraint.add(i_lb, c.lower <= c. body - M_expr)
+                newConstraint.add((i, 'lb'), c.lower <= c. body - M_expr)
                 constraintMap[
-                    'transformedConstraints'][c] = [newConstraint[i_lb]]
-                constraintMap['srcConstraints'][newConstraint[i_lb]] = c
+                    'transformedConstraints'][c] = [newConstraint[i, 'lb']]
+                constraintMap['srcConstraints'][newConstraint[i, 'lb']] = c
             if c.upper is not None:
                 if M[1] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint '%s' "
                                     "because M is not defined." % name)
                 M_expr = M[1] * (1 - disjunct.binary_indicator_var)
-                newConstraint.add(i_ub, c.body - M_expr <= c.upper)
+                newConstraint.add((i, 'ub'), c.body - M_expr <= c.upper)
                 transformed = constraintMap['transformedConstraints'].get(c)
                 if transformed is not None:
                     constraintMap['transformedConstraints'][
-                        c].append(newConstraint[i_ub])
+                        c].append(newConstraint[i, 'ub'])
                 else:
                     constraintMap[
-                        'transformedConstraints'][c] = [newConstraint[i_ub]]
-                constraintMap['srcConstraints'][newConstraint[i_ub]] = c
+                        'transformedConstraints'][c] = [newConstraint[i, 'ub']]
+                constraintMap['srcConstraints'][newConstraint[i, 'ub']] = c
 
             # deactivate because we relaxed
             c.deactivate()
 
     def _process_M_value(self, m, lower, upper, need_lower, need_upper, src,
-                         key, constraint_name, from_args=False):
-        m = self._convert_M_to_tuple(m, constraint_name)
+                         key, constraint, from_args=False):
+        m = self._convert_M_to_tuple(m, constraint)
         if need_lower and m[0] is not None:
             if from_args:
                 self.used_args[key] = m
@@ -635,7 +616,6 @@ class BigM_Transformation(Transformation):
         # None
         need_lower = constraint.lower is not None
         need_upper = constraint.upper is not None
-        constraint_name = constraint.getname(fully_qualified=True)
 
         # check for the constraint itself and its container
         parent = constraint.parent_component()
@@ -647,7 +627,7 @@ class BigM_Transformation(Transformation):
                                                              need_upper,
                                                              bigMargs,
                                                              constraint,
-                                                             constraint_name,
+                                                             constraint,
                                                              from_args=True)
             if not need_lower and not need_upper:
                 return lower, upper
@@ -658,7 +638,7 @@ class BigM_Transformation(Transformation):
                                                              need_lower,
                                                              need_upper,
                                                              bigMargs, parent,
-                                                             constraint_name,
+                                                             constraint,
                                                              from_args=True)
             if not need_lower and not need_upper:
                 return lower, upper
@@ -668,11 +648,11 @@ class BigM_Transformation(Transformation):
             for block, val in arg.items():
                 (lower, upper,
                  need_lower,
-                 need_upper) = self._process_M_value( val, lower, upper,
-                                                      need_lower, need_upper,
-                                                      bigMargs, block,
-                                                      constraint_name,
-                                                      from_args=True)
+                 need_upper) = self._process_M_value(val, lower, upper,
+                                                     need_lower, need_upper,
+                                                     bigMargs, block,
+                                                     constraint,
+                                                     from_args=True)
                 if not need_lower and not need_upper:
                     return lower, upper
 
@@ -684,7 +664,7 @@ class BigM_Transformation(Transformation):
                                                              need_lower,
                                                              need_upper,
                                                              bigMargs, None,
-                                                             constraint_name,
+                                                             constraint,
                                                              from_args=True)
             if not need_lower and not need_upper:
                 return lower, upper
@@ -696,7 +676,6 @@ class BigM_Transformation(Transformation):
         # looking for half the answer.
         need_lower = constraint.lower is not None and lower[0] is None
         need_upper = constraint.upper is not None and upper[0] is None
-        constraint_name = constraint.getname(fully_qualified=True)
         M = None
         # first we check if the constraint or its parent is a key in any of the
         # suffix lists
@@ -708,7 +687,7 @@ class BigM_Transformation(Transformation):
                  need_upper) = self._process_M_value(M, lower, upper,
                                                      need_lower, need_upper,
                                                      bigm, constraint,
-                                                     constraint_name)
+                                                     constraint)
                 if not need_lower and not need_upper:
                     return lower, upper
 
@@ -720,8 +699,7 @@ class BigM_Transformation(Transformation):
                  need_lower,
                  need_upper) = self._process_M_value(M, lower, upper,
                                                      need_lower, need_upper,
-                                                     bigm, parent,
-                                                     constraint_name)
+                                                     bigm, parent, constraint)
                 if not need_lower and not need_upper:
                     return lower, upper
 
@@ -735,8 +713,7 @@ class BigM_Transformation(Transformation):
                      need_lower,
                      need_upper) = self._process_M_value(M, lower, upper,
                                                          need_lower, need_upper,
-                                                         bigm, None,
-                                                         constraint_name)
+                                                         bigm, None, constraint)
                 if not need_lower and not need_upper:
                     return lower, upper
         return lower, upper
