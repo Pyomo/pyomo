@@ -531,6 +531,74 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         data_dict = dict(zip(zip(jac.row, jac.col), jac.data))
         self.assertEqual(pred_data_dict, data_dict)
 
+    def test_eval_eq_jacobian_proj_nlp_using_out_arg(self):
+        m, nlp, proj_nlp = self._get_nlps()
+        jac = proj_nlp.evaluate_jacobian_eq()
+        x0, x1, x2, x3 = [1.2, 1.3, 1.4, 1.5]
+        nlp.set_primals(self._x_to_nlp(m, nlp, [x0, x1, x2, x3]))
+
+        proj_nlp.evaluate_jacobian_eq(out=jac)
+        self.assertEqual(jac.shape, (2, 2))
+        # Predicted row/col indices. In the "natural ordering" of the equality
+        # constraints (eq1, eq2)
+        pred_rc = [
+            (0, 0), (0, 1), # eq 1
+            (1, 0), (1, 1), # eq 2
+        ]
+        pred_data_dict = {
+            # eq 1
+            (0, 0): x1**1.1 * x2**1.2,
+            (0, 1): 1.1 * x0 * (x1**0.1) * x2**1.2,
+            # eq 2
+            (1, 0): 2*x0,
+            (1, 1): 1.0,
+        }
+        # Projected NLP has primals: [x1, x0]
+        pred_rc_set = set(self._rc_to_proj_nlp_eq(m, nlp, rc) for rc in pred_rc)
+        pred_data_dict = {
+            self._rc_to_proj_nlp_eq(m, nlp, rc): val
+            for rc, val in pred_data_dict.items()
+        }
+        rc_set = set(zip(jac.row, jac.col))
+        self.assertEqual(pred_rc_set, rc_set)
+
+        data_dict = dict(zip(zip(jac.row, jac.col), jac.data))
+        self.assertEqual(pred_data_dict, data_dict)
+
+    def test_eval_ineq_jacobian_proj_nlp_using_out_arg(self):
+        m, nlp, proj_nlp = self._get_nlps()
+        jac = proj_nlp.evaluate_jacobian_ineq()
+        x0, x1, x2, x3 = [1.2, 1.3, 1.4, 1.5]
+        nlp.set_primals(self._x_to_nlp(m, nlp, [x0, x1, x2, x3]))
+
+        proj_nlp.evaluate_jacobian_ineq(out=jac)
+        self.assertEqual(jac.shape, (3, 2))
+        # Predicted row/col indices. In the "natural ordering" of the inequality
+        # constraints (ineq1, ineq2, ineq3)
+        pred_rc = [
+            (0, 0),         # ineq 1
+            (1, 1),         # ineq 2
+        ]
+        pred_data_dict = {
+            # ineq 1
+            (0, 0): 1.0 + x3,
+            # ineq 2
+            (1, 1): 1.0,
+        }
+        # Projected NLP has primals: [x1, x0]
+        pred_rc_set = set(
+            self._rc_to_proj_nlp_ineq(m, nlp, rc) for rc in pred_rc
+        )
+        pred_data_dict = {
+            self._rc_to_proj_nlp_ineq(m, nlp, rc): val
+            for rc, val in pred_data_dict.items()
+        }
+        rc_set = set(zip(jac.row, jac.col))
+        self.assertEqual(pred_rc_set, rc_set)
+
+        data_dict = dict(zip(zip(jac.row, jac.col), jac.data))
+        self.assertEqual(pred_data_dict, data_dict)
+
 
 if __name__ == '__main__':
     TestRenamedNLP().test_rename()
