@@ -106,7 +106,14 @@ class _BaseNLPDelegator(NLP):
 
 
 class _ExtendedNLPDelegator(_BaseNLPDelegator):
-    # TODO: This should raise an error if the original NLP is not an ExtendedNLP
+
+    def __init__(self, original_nlp):
+        if not isinstance(original_nlp, ExtendedNLP):
+            raise TypeError(
+                "Original NLP must be an instance of ExtendedNLP to use in"
+                " an _ExtendedNLPDelegator. Got type %s" % type(original_nlp)
+            )
+        super().__init__(original_nlp)
 
     def n_eq_constraints(self):
         return self._original_nlp.n_eq_constraints()

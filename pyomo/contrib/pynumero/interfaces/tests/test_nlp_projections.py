@@ -290,6 +290,15 @@ class TestProjectedExtendedNLP(unittest.TestCase):
         i, j = rc
         return (con_indices[i], var_indices[j])
 
+    def test_non_extended_original_nlp(self):
+        m, nlp, proj_nlp = self._get_nlps()
+        # Note that even though nlp is a PyomoNLP, and thus an ExtendedNLP,
+        # this projected NLP is *not* extended.
+        proj_nlp = ProjectedNLP(nlp, ["x[0]", "x[1]", "x[2]"])
+        msg = "Original NLP must be an instance of ExtendedNLP"
+        with self.assertRaisesRegex(TypeError, msg):
+            proj_ext_nlp = ProjectedExtendedNLP(proj_nlp, ["x[1]", "x[0]"])
+
     def test_n_primals_constraints(self):
         m, nlp, proj_nlp = self._get_nlps()
         self.assertEqual(proj_nlp.n_primals(), 2)
