@@ -32,7 +32,6 @@ from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from pyomo.solvers.plugins.solvers.gurobi_persistent import GurobiPersistent
 import math
-from pyomo.common.deprecation import deprecation_warning
 
 pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
 numpy = attempt_import('numpy')[0]

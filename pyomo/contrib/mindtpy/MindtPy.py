@@ -264,8 +264,8 @@ class MindtPySolver(object):
                     if v_from.name != v_to.name:
                         raise ValueError('The name of the two variables is not the same. Loading final solution')
                 copy_var_list_values(working_model_variable_list,
-                                    original_model_variable_list,
-                                    config=config)
+                                     original_model_variable_list,
+                                     config=config)
                 # exclude fixed variables here. This is consistent with the definition of variable_list in GDPopt.util
             if solve_data.objective_sense == minimize:
                 solve_data.results.problem.lower_bound = solve_data.dual_bound
