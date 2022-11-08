@@ -14,7 +14,8 @@ from pyomo.environ import (
     TransformationFactory, Constraint, ConcreteModel, Var, RangeSet, Objective, 
     maximize, SolverFactory, Any, Reference, LogicalConstraint)
 from pyomo.core.expr.logical_expr import (
-    EquivalenceExpression, NotExpression, AndExpression, ExactlyExpression)
+    EquivalenceExpression, NotExpression, AndExpression, ExactlyExpression
+)
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import GDP_Error, check_model_algebraic
@@ -837,9 +838,9 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             compute_bounds_method=compute_fbbt_bounds)
 
         b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
-        self.assertIs(m.disjunction.disjuncts[0].transformation_block(),
+        self.assertIs(m.disjunction.disjuncts[0].transformation_block,
                       b.disjunction.disjuncts[0])
-        self.assertIs(m.disjunction.disjuncts[1].transformation_block(),
+        self.assertIs(m.disjunction.disjuncts[1].transformation_block,
                       b.disjunction.disjuncts[1])
 
     def test_transformed_disjunctions_mapped_correctly(self):
@@ -1885,7 +1886,7 @@ class LogicalExpressions(unittest.TestCase, CommonTests):
             m,
             variable_partitions=[[m.x], [m.y]],
             compute_bounds_method=compute_fbbt_bounds)
-        d1 = m.d[1].transformation_block()
+        d1 = m.d[1].transformation_block
         self.assertEqual(len(d1.component_map(LogicalConstraint)), 1)
         c = d1.component("logical_constraints")
         self.assertIsInstance(c, LogicalConstraint)
@@ -1893,7 +1894,7 @@ class LogicalExpressions(unittest.TestCase, CommonTests):
         self.assertIsInstance(c[1].expr, NotExpression)
         self.assertIs(c[1].expr.args[0], m.Y[1])
 
-        d2 = m.d[2].transformation_block()
+        d2 = m.d[2].transformation_block
         self.assertEqual(len(d2.component_map(LogicalConstraint)), 1)
         c = d2.component("logical_constraints")
         self.assertIsInstance(c, LogicalConstraint)
@@ -1903,12 +1904,12 @@ class LogicalExpressions(unittest.TestCase, CommonTests):
         self.assertIs(c[1].expr.args[0], m.Y[1])
         self.assertIs(c[1].expr.args[1], m.Y[2])
 
-        d3 = m.d[3].transformation_block()
+        d3 = m.d[3].transformation_block
         self.assertEqual(len(d3.component_map(LogicalConstraint)), 1)
         c = d3.component("logical_constraints")
         self.assertEqual(len(c), 0)
 
-        d4 = m.d[4].transformation_block()
+        d4 = m.d[4].transformation_block
         self.assertEqual(len(d4.component_map(LogicalConstraint)), 1)
         c = d4.component("logical_constraints")
         self.assertIsInstance(c, LogicalConstraint)

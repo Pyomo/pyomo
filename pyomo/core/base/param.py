@@ -17,10 +17,12 @@ import logging
 from weakref import ref as weakref_ref
 from pyomo.common.pyomo_typing import overload
 
+from pyomo.common.autoslots import AutoSlots
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import NOTSET
 from pyomo.common.timing import ConstructionTimer
+
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
@@ -31,8 +33,9 @@ from pyomo.core.base.misc import apply_indexed_rule, apply_parameterized_indexed
 from pyomo.core.base.numvalue import (
     NumericValue, native_types, value as expr_value
 )
-from pyomo.core.base.set import Any, GlobalSetBase, Reals
+from pyomo.core.base.set import Reals, _AnySet
 from pyomo.core.base.units_container import units
+from pyomo.core.expr.current import GetItemExpression
 
 logger = logging.getLogger('pyomo.core')
 
@@ -49,13 +52,16 @@ def _raise_modifying_immutable_error(obj, index):
         % (name,))
 
 
-class _ImplicitAny(Any.__class__):
+class _ImplicitAny(_AnySet):
     """An Any that issues a deprecation warning for non-Real values.
 
     This is a helper class to implement the deprecation warnings for the
     change of Param's implicit domain from Any to Reals.
 
     """
+    __slots__ = ('_owner',)
+    __autoslot_mappers__ = {'_owner': AutoSlots.weakref_mapper}
+
     def __new__(cls, **kwargs):
         # Strip off owner / kwargs before calling base __new__
         return super().__new__(cls)
@@ -65,21 +71,11 @@ class _ImplicitAny(Any.__class__):
         super().__init__(**kwargs)
         self._component = weakref_ref(self)
         self.construct()
-
-    def __getstate__(self):
-        state = super().__getstate__()
-        state['_owner'] = None if self._owner is None else self._owner()
-        return state
-
-    def __setstate__(self, state):
-        _owner = state.pop('_owner')
-        super().__setstate__(state)
-        self._owner = None if _owner is None else weakref_ref(_owner)
-
-    def __deepcopy__(self, memo):
-        # Note: we need to start super() at GlobalSetBase to actually
-        # copy this object
-        return super(GlobalSetBase, self).__deepcopy__(memo)
+        # Because this is a "global set", we need to define the _bounds
+        # and _interval fields
+        object.__setattr__(self, '_parent', None)
+        self._bounds = (None, None)
+        self._interval = (None, None, None)
 
     def __contains__(self, val):
         if val not in Reals:
@@ -143,15 +139,6 @@ class _ParamData(ComponentData, NumericValue):
         # base NumericValue constructor.
         #
         self._value = Param.NoValue
-
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        state = super(_ParamData, self).__getstate__()
-        for i in _ParamData.__slots__:
-            state[i] = getattr(self, i)
-        return state
 
     # Note: because NONE of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
@@ -908,14 +895,25 @@ class IndexedParam(Param):
     # need to override the normal scheme for pre-allocating
     # ComponentData objects during deepcopy.
     def _create_objects_for_deepcopy(self, memo, component_list):
-        _id = id(self)
-        if _id not in memo:
-            component_list.append(self)
-            memo[_id] = self.__class__.__new__(self.__class__)
         if self.mutable:
-            for obj in self._data.values():
-                _id = id(obj)
-                if _id in memo:
-                    continue
-                component_list.append(obj)
-                memo[id(obj)] = obj.__class__.__new__(obj.__class__)
+            # Normal indexed object; leverage base implementation
+            return super()._create_objects_for_deepcopy(memo, component_list)
+        # This is immutable; only add the container (not the _data) to
+        # the component_list.
+        _new = self.__class__.__new__(self.__class__)
+        _ans = memo.setdefault(id(self), _new)
+        if _ans is _new:
+            component_list.append(self)
+        return _ans
+
+    # Because Emma wants crazy things... (Where crazy things are the ability to
+    # index Params by other (integer) Vars and integer-valued expressions--a
+    # thing you can do in Constraint Programming.)
+    def __getitem__(self, args):
+        tmp = args if args.__class__ is tuple else (args,)
+        if any(hasattr(arg, 'is_potentially_variable')
+               and arg.is_potentially_variable()
+               for arg in tmp
+        ):
+            return GetItemExpression((self,) + tmp)
+        return super().__getitem__(args)

@@ -199,6 +199,7 @@ class Ipopt(PersistentSolver):
         return self._writer.symbol_map
 
     def set_instance(self, model):
+        self._writer.config.symbolic_solver_labels = self.config.symbolic_solver_labels
         self._writer.set_instance(model)
 
     def add_variables(self, variables: List[_GeneralVarData]):
@@ -356,7 +357,6 @@ class Ipopt(PersistentSolver):
         if results.termination_condition == TerminationCondition.optimal and self.config.load_solution:
             for v, val in self._primal_sol.items():
                 v.set_value(val, skip_validation=True)
-
             if self._writer.get_active_objective() is None:
                 results.best_feasible_objective = None
             else:
@@ -376,15 +376,13 @@ class Ipopt(PersistentSolver):
                                'results.termination_condition and '
                                'resutls.best_feasible_objective before loading a solution.')
 
-        results.solution_loader = PersistentSolutionLoader(solver=self)
-
         return results
 
     def _apply_solver(self, timer: HierarchicalTimer):
         config = self.config
 
         if config.time_limit is not None:
-            timeout = config.time_limit + min(max(1, 0.01 * config.time_limit), 100)
+            timeout = config.time_limit + min(max(1.0, 0.01 * config.time_limit), 100)
         else:
             timeout = None
 
@@ -428,8 +426,6 @@ class Ipopt(PersistentSolver):
             results = Results()
             results.termination_condition = TerminationCondition.error
             results.best_feasible_objective = None
-            self._primal_sol = None
-            self._dual_sol = None
         else:
             timer.start('parse solution')
             results = self._parse_sol()
@@ -443,9 +439,17 @@ class Ipopt(PersistentSolver):
             else:
                 results.best_objective_bound = math.inf
 
+        results.solution_loader = PersistentSolutionLoader(solver=self)
+
         return results
 
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
+        if self._last_results_object is None or self._last_results_object.best_feasible_objective is None:
+            raise RuntimeError(
+                'Solver does not currently have a valid solution. Please '
+                'check the termination condition.'
+            )
+
         res = ComponentMap()
         if vars_to_load is None:
             for v, val in self._primal_sol.items():
@@ -455,13 +459,25 @@ class Ipopt(PersistentSolver):
                 res[v] = self._primal_sol[v]
         return res
 
-    def get_duals(self, cons_to_load = None):
+    def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None):
+        if self._last_results_object is None or self._last_results_object.termination_condition != TerminationCondition.optimal:
+            raise RuntimeError(
+                'Solver does not currently have valid duals. Please '
+                'check the termination condition.'
+            )
+
         if cons_to_load is None:
             return {k: v for k, v in self._dual_sol.items()}
         else:
             return {c: self._dual_sol[c] for c in cons_to_load}
 
     def get_reduced_costs(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
+        if self._last_results_object is None or self._last_results_object.termination_condition != TerminationCondition.optimal:
+            raise RuntimeError(
+                'Solver does not currently have valid reduced costs. Please '
+                'check the termination condition.'
+            )
+
         if vars_to_load is None:
             return ComponentMap((k, v) for k, v in self._reduced_costs.items())
         else:

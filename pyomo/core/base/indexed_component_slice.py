@@ -15,6 +15,7 @@ import itertools
 from pyomo.common import DeveloperError
 from pyomo.common.collections import Sequence
 
+from pyomo.core.base.global_set import UnindexedComponent_index
 
 class IndexedComponent_slice(object):
     """Special class for slicing through hierarchical component trees
@@ -263,11 +264,13 @@ class IndexedComponent_slice(object):
         for level in self._call_stack:
             if level[0] == IndexedComponent_slice.slice_info:
                 ans += level[1][0].name
-                tmp = dict(level[1][1])
-                tmp.update(level[1][2])
-                if level[1][3] is not None:
-                    tmp[level[1][3]] = Ellipsis
-                ans += self._getitem_args_to_str([tmp[i] for i in sorted(tmp)])
+                if level[1][1] is not None:
+                    tmp = dict(level[1][1])
+                    tmp.update(level[1][2])
+                    if level[1][3] is not None:
+                        tmp[level[1][3]] = Ellipsis
+                    ans += self._getitem_args_to_str(
+                        [tmp[i] for i in sorted(tmp)])
             elif level[0] & IndexedComponent_slice.ITEM_MASK:
                 if isinstance(level[1], Sequence):
                     tmp = list(level[1])
@@ -368,9 +371,24 @@ class _slice_generator(object):
         self.ellipsis = ellipsis
         self.iter_over_index = iter_over_index
 
+        # Cache for the most recent index returned. This is used to
+        # iterate over keys of the slice (for instance, in a
+        # _ReferenceDict).
+        self.last_index = ()
+
         self.tuplize_unflattened_index = (
             self.component._implicit_subsets is None
             or len(self.component._implicit_subsets) == 1 )
+
+        if fixed is None and sliced is None and ellipsis is None:
+            # This is a slice rooted at a concrete component.  This is
+            # unusual (i.e., it is generated programmatically and not
+            # through the normal slice/ellipsis notation).  We will mock
+            # up a "generator" so that the slice can be cleanly iterated
+            # over
+            self.explicit_index_count = 0
+            self.component_iter = _NotIterable
+            return
 
         self.explicit_index_count = len(fixed) + len(sliced)
         if iter_over_index and component.index_set().isfinite():
@@ -381,10 +399,6 @@ class _slice_generator(object):
             # The default behavior is to iterate over the component.
             self.component_iter = component.keys()
 
-        # Cache for the most recent index returned. This is used to
-        # iterate over keys of the slice (for instance, in a
-        # _ReferenceDict).
-        self.last_index = None
 
     def next(self):
         """__next__() iterator for Py2 compatibility"""
@@ -395,6 +409,13 @@ class _slice_generator(object):
         # imports.  Ideally, we would move normalize_index to another
         # module to resolve this.
         from .indexed_component import normalize_index
+
+        if self.component_iter is _NotIterable:
+            # Special case handling for "slices" rooted at concrete
+            # components.  We will replace the iterator with an "empty"
+            # iterator so that the next call will raise StopIteration
+            self.component_iter = iter(())
+            return self.component
 
         while 1:
             # Note: running off the end of the underlying iterator will
@@ -855,6 +876,8 @@ class _IndexedComponent_slice_iter(object):
               for x in self._iter_stack if x is not None ),
             ()
         )
+        if not ans:
+            return UnindexedComponent_index
         if len(ans) == 1:
             return ans[0]
         else:

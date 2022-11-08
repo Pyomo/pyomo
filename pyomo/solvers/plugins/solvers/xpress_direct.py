@@ -205,7 +205,7 @@ class XpressDirect(DirectSolver):
 
         start_time = time.time()
         if self._tee:
-            self._solver_model.solve()
+            self._solve_model()
         else:
             # In xpress versions greater than or equal 36,
             # it seems difficult to completely suppress console
@@ -213,7 +213,7 @@ class XpressDirect(DirectSolver):
             # As a work around, we capature all screen output
             # when tee is False.
             with capture_output() as OUT:
-                self._solver_model.solve()
+                self._solve_model()
         self._opt_time = time.time() - start_time
 
         self._solver_model.setlogfile('')
@@ -222,6 +222,10 @@ class XpressDirect(DirectSolver):
 
         # FIXME: can we get a return code indicating if XPRESS had a significant failure?
         return Bunch(rc=None, log=None)
+
+    def _solve_model(self):
+        self._solver_model.solve()
+        self._solver_model.postsolve()
 
     def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
         referenced_vars = ComponentSet()

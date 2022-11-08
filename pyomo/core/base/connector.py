@@ -49,17 +49,6 @@ class _ConnectorData(ComponentData, NumericValue):
 
         self.vars = {}
         self.aggregators = {}
-    
-
-    def __getstate__(self):
-        state = super(_ConnectorData, self).__getstate__()
-        for i in _ConnectorData.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
-    # Note: None of the slots on this class need to be edited, so we
-    # don't need to implement a specialized __setstate__ method, and
-    # can quietly rely on the super() class's implementation.
 
     def set_value(self, value):
         msg = "Cannot specify the value of a connector '%s'"
@@ -266,15 +255,6 @@ class ScalarConnector(Connector, _ConnectorData):
         _ConnectorData.__init__(self, component=self)
         Connector.__init__(self, *args, **kwd)
         self._index = UnindexedComponent_index
-
-    #
-    # Since this class derives from Component and Component.__getstate__
-    # just packs up the entire __dict__ into the state dict, we do not
-    # need to define the __getstate__ or __setstate__ methods.
-    # We just defer to the super() get/set state.  Since all of our
-    # get/set state methods rely on super() to traverse the MRO, this
-    # will automatically pick up both the Component and Data base classes.
-    #
 
 
 class SimpleConnector(metaclass=RenamedClass):

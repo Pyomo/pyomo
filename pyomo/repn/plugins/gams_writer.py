@@ -42,71 +42,52 @@ _legal_unary_functions = {
 _arc_functions = {'acos','asin','atan'}
 _dnlp_functions = {'ceil','floor','abs'}
 _zero_one = {0, 1}
+_plusMinusOne = {-1, 1}
+
+def _handle_PowExpression(visitor, node, values):
+    # If the exponent is a positive integer, use the power() function.
+    # Otherwise, use the ** operator.
+    exponent = node.arg(1)
+    if (exponent.__class__ in native_numeric_types and
+        exponent == int(exponent)):
+        return f"power({values[0]}, {values[1]})"
+    else:
+        return f"{values[0]} ** {values[1]}"
+
+def _handle_UnaryFunctionExpression(visitor, node, values):
+    if node.name not in _legal_unary_functions:
+        raise RuntimeError(
+            "GAMS files cannot represent the unary function %s"
+            % ( node.name, ))
+    if node.name in _dnlp_functions:
+        visitor.is_discontinuous = True
+    if node.name in _arc_functions:
+        return f"arc{node.name[1:]}({values[0]})"
+    else:
+        return node._to_string(values, False, visitor.smap)
+
+def _handle_AbsExpression(visitor, node, values):
+    visitor.is_discontinuous = True
+    return node._to_string(values, False, visitor.smap)
+
+
 #
 # A visitor pattern that creates a string for an expression
 # that is compatible with the GAMS syntax.
 #
-class ToGamsVisitor(EXPR.ExpressionValueVisitor):
+class ToGamsVisitor(EXPR._ToStringVisitor):
+
+    _expression_handlers = {
+        EXPR.PowExpression: _handle_PowExpression,
+        EXPR.UnaryFunctionExpression: _handle_UnaryFunctionExpression,
+        EXPR.AbsExpression: _handle_AbsExpression,
+    }
 
     def __init__(self, smap, treechecker, output_fixed_variables=False):
-        super(ToGamsVisitor, self).__init__()
-        self.smap = smap
+        super(ToGamsVisitor, self).__init__(False, smap)
         self.treechecker = treechecker
         self.is_discontinuous = False
         self.output_fixed_variables = output_fixed_variables
-
-    def visit(self, node, values):
-        """ Visit nodes that have been expanded """
-        tmp = []
-        for i,val in enumerate(values):
-            arg = node._args_[i]
-
-            parens = False
-            if val[0] in '-+':
-                # Note: This is technically only necessary for i > 0
-                parens = True
-            elif arg.__class__ in native_types:
-                pass
-            elif arg.is_expression_type():
-                if node._precedence() < arg._precedence():
-                    parens = True
-                elif node._precedence() == arg._precedence():
-                    if i == 0:
-                        parens = node._associativity() != 1
-                    elif i == len(node._args_)-1:
-                        parens = node._associativity() != -1
-                    else:
-                        parens = True
-            if parens:
-                tmp.append("(" + val + ")")
-            else:
-                tmp.append(val)
-
-        if node.__class__ is EXPR.PowExpression:
-            # If the exponent is a positive integer, use the power() function.
-            # Otherwise, use the ** operator.
-            exponent = node.arg(1)
-            if (exponent.__class__ in native_numeric_types and
-                    exponent == int(exponent)):
-                return "power({0}, {1})".format(tmp[0], tmp[1])
-            else:
-                return "{0} ** {1}".format(tmp[0], tmp[1])
-        elif node.__class__ is EXPR.UnaryFunctionExpression:
-            if node.name not in _legal_unary_functions:
-                raise RuntimeError(
-                    "GAMS files cannot represent the unary function %s"
-                    % ( node.name, ))
-            if node.name in _dnlp_functions:
-                self.is_discontinuous = True
-            if node.name in _arc_functions:
-                return "arc{0}({1})".format(node.name[1:], tmp[0])
-            else:
-                return node._to_string(tmp, None, self.smap, True)
-        elif node.__class__ is EXPR.AbsExpression:
-            self.is_discontinuous = True
-            return node._to_string(tmp, None, self.smap, True)
-        else:
-            return node._to_string(tmp, None, self.smap, True)
 
     def visiting_potential_leaf(self, node):
         """
@@ -116,14 +97,14 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
         """
         if node.__class__ in native_types:
             try:
-                return True, ftoa(node)
+                return True, ftoa(node, True)
             except TypeError:
                 return True, repr(node)
 
         if node.is_expression_type():
             # Special handling if NPV and semi-NPV types:
             if not node.is_potentially_variable():
-                return True, ftoa(value(node))
+                return True, ftoa(node(), True)
             if node.__class__ is EXPR.MonomialTermExpression:
                 return True, self._monomial_to_string(node)
             if node.__class__ is EXPR.LinearExpression:
@@ -149,42 +130,40 @@ class ToGamsVisitor(EXPR.ExpressionValueVisitor):
 
         if node.is_fixed() and not (
                 self.output_fixed_variables and node.is_potentially_variable()):
-            return True, ftoa(value(node))
+            return True, ftoa(node(), True)
         else:
             assert node.is_variable_type()
             return True, self.smap.getSymbol(node)
 
     def _monomial_to_string(self, node):
         const, var = node.args
-        const = value(const)
+        if const.__class__ not in native_types:
+            const = value(const)
         if var.is_fixed() and not self.output_fixed_variables:
-            return ftoa(const * var.value)
+            return ftoa(const * var.value, True)
         # Special handling: ftoa is slow, so bypass _to_string when this
         # is a trivial term
-        if const in {-1, 1}:
+        if not const:
+            return '0'
+        if const in _plusMinusOne:
             if const < 0:
                 return '-' + self.smap.getSymbol(var)
             else:
                 return self.smap.getSymbol(var)
-        return node._to_string((ftoa(const), self.smap.getSymbol(var)),
-                               False, self.smap, True)
+        return ftoa(const, True) + '*' + self.smap.getSymbol(var)
 
     def _linear_to_string(self, node):
         iter_ = iter(node.args)
         values = []
         if node.constant:
             next(iter_)
-            values.append(ftoa(node.constant))
+            values.append(ftoa(node.constant, True))
         values.extend(map(self._monomial_to_string, iter_))
-        return node._to_string(values, False, self.smap, True)
+        return node._to_string(values, False, self.smap)
 
 
-def expression_to_string(expr, treechecker, labeler=None, smap=None,
+def expression_to_string(expr, treechecker, smap=None,
                          output_fixed_variables=False):
-    if labeler is not None:
-        if smap is None:
-            smap = SymbolMap()
-        smap.default_labeler = labeler
     visitor = ToGamsVisitor(smap, treechecker, output_fixed_variables)
     expr_str = visitor.dfs_postorder_stack(expr)
     return expr_str, visitor.is_discontinuous
@@ -669,7 +648,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
 
         for var in categorized_vars.fixed:
             output_file.write("%s.fx = %s;\n" % (
-                var, ftoa(value(symbolMap.getObject(var)))
+                var, ftoa(value(symbolMap.getObject(var)), False)
             ))
         output_file.write("\n")
 
@@ -688,7 +667,7 @@ class ProblemWriter_gams(AbstractProblemWriter):
             if category == 'positive':
                 if ub is not None:
                     output_file.write("%s.up = %s;\n" %
-                                      (var_name, ftoa(ub)))
+                                      (var_name, ftoa(ub, False)))
             elif category == 'ints':
                 if lb is None:
                     warn_int_bounds = True
@@ -697,7 +676,8 @@ class ProblemWriter_gams(AbstractProblemWriter):
                                    "to -1.0E+100." % var.name)
                     output_file.write("%s.lo = -1.0E+100;\n" % (var_name))
                 elif lb != 0:
-                    output_file.write("%s.lo = %s;\n" % (var_name, ftoa(lb)))
+                    output_file.write(
+                        "%s.lo = %s;\n" % (var_name, ftoa(lb, False)))
                 if ub is None:
                     warn_int_bounds = True
                     # GAMS has an option value called IntVarUp that is the
@@ -708,22 +688,27 @@ class ProblemWriter_gams(AbstractProblemWriter):
                                    "to +1.0E+100." % var.name)
                     output_file.write("%s.up = +1.0E+100;\n" % (var_name))
                 else:
-                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub)))
+                    output_file.write(
+                        "%s.up = %s;\n" % (var_name, ftoa(ub, False)))
             elif category == 'binary':
                 if lb != 0:
-                    output_file.write("%s.lo = %s;\n" % (var_name, ftoa(lb)))
+                    output_file.write(
+                        "%s.lo = %s;\n" % (var_name, ftoa(lb, False)))
                 if ub != 1:
-                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub)))
+                    output_file.write(
+                        "%s.up = %s;\n" % (var_name, ftoa(ub, False)))
             elif category == 'reals':
                 if lb is not None:
-                    output_file.write("%s.lo = %s;\n" % (var_name, ftoa(lb)))
+                    output_file.write(
+                        "%s.lo = %s;\n" % (var_name, ftoa(lb, False)))
                 if ub is not None:
-                    output_file.write("%s.up = %s;\n" % (var_name, ftoa(ub)))
+                    output_file.write(
+                        "%s.up = %s;\n" % (var_name, ftoa(ub, False)))
             else:
                 raise KeyError('Category %s not supported' % category)
             if warmstart and var.value is not None:
                 output_file.write("%s.l = %s;\n" %
-                                  (var_name, ftoa(var.value)))
+                                  (var_name, ftoa(var.value, False)))
 
         if warn_int_bounds:
             logger.warning(
@@ -813,11 +798,13 @@ class ProblemWriter_gams(AbstractProblemWriter):
                 output_file.write("\nput results;")
                 output_file.write("\nput 'SYMBOL  :  LEVEL  :  MARGINAL' /;")
                 for var in var_list:
-                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;" % (var, var, var))
+                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;"
+                                      % (var, var, var))
                 for con in constraint_names:
-                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;" % (con, con, con))
-                output_file.write("\nput GAMS_OBJECTIVE GAMS_OBJECTIVE.l "
-                                  "GAMS_OBJECTIVE.m;\n")
+                    output_file.write("\nput %s ' ' %s.l ' ' %s.m /;"
+                                      % (con, con, con))
+                output_file.write("\nput GAMS_OBJECTIVE ' ' GAMS_OBJECTIVE.l "
+                                  "' ' GAMS_OBJECTIVE.m;\n")
 
                 statresults = put_results + 'stat.dat'
                 output_file.write("\nfile statresults /'%s'/;" % statresults)

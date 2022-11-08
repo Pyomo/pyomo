@@ -22,6 +22,7 @@ from pyomo.common.modeling import NOTSET
 from pyomo.common.formatting import tabular_writer
 from pyomo.common.timing import ConstructionTimer
 
+from pyomo.core.expr import current as EXPR
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
 from pyomo.core.base.indexed_component import (
@@ -45,6 +46,10 @@ class _ExpressionData(NumericValue):
 
     __slots__ = ()
 
+    EXPRESSION_SYSTEM = EXPR.common.ExpressionType.NUMERIC
+    PRECEDENCE = 0
+    ASSOCIATIVITY = EXPR.common.OperatorAssociativity.NON_ASSOCIATIVE
+
     #
     # Interface
     #
@@ -59,9 +64,10 @@ class _ExpressionData(NumericValue):
         """A boolean indicating whether this in a named expression."""
         return True
 
-    def is_expression_type(self):
+    def is_expression_type(self, expression_system=None):
         """A boolean indicating whether this in an expression."""
-        return True
+        return expression_system is None \
+            or expression_system == self.EXPRESSION_SYSTEM
 
     def arg(self, index):
         if index < 0 or index >= 1:
@@ -79,13 +85,7 @@ class _ExpressionData(NumericValue):
     def nargs(self):
         return 1
 
-    def _precedence(self):
-        return 0
-
-    def _associativity(self):
-        return 0
-
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         if verbose:
             return "%s{%s}" % (str(self), values[0])
         if self.expr is None:
@@ -150,8 +150,6 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         expr       The expression owned by this data.
     """
 
-    __pickle_slots__ = ('_expr',)
-
     __slots__ = ()
 
     def __init__(self, expr=None):
@@ -169,16 +167,6 @@ class _GeneralExpressionDataImpl(_ExpressionData):
         obj.construct()
         obj.expr = values[0]
         return obj
-
-    def __getstate__(self):
-        state = super(_GeneralExpressionDataImpl, self).__getstate__()
-        for i in _GeneralExpressionDataImpl.__pickle_slots__:
-            state[i] = getattr(self, i)
-        return state
-
-    # Note: because NONE of the slots on this class need to be edited,
-    #       we don't need to implement a specialized __setstate__
-    #       method.
 
     #
     # Abstract Interface
@@ -199,6 +187,11 @@ class _GeneralExpressionDataImpl(_ExpressionData):
             self._expr = None
             return
         expr = as_numeric(expr)
+        if not expr.is_numeric_type():
+            raise ValueError(
+                f"Cannot assign {expr.__class__.__name__} to "
+                f"'{self.name}': {self.__class__.__name__} components only "
+                "allow numeric expression types.")
         # In-place operators will leave self as an argument.  We need to
         # replace that with the current expression in order to avoid
         # loops in the expression tree.
@@ -219,7 +212,7 @@ class _GeneralExpressionDataImpl(_ExpressionData):
 
     def is_fixed(self):
         """A boolean indicating whether this expression is fixed."""
-        return self._expr.is_fixed()
+        return self._expr is None or self._expr.is_fixed()
 
 class _GeneralExpressionData(_GeneralExpressionDataImpl,
                              ComponentData):
@@ -237,7 +230,7 @@ class _GeneralExpressionData(_GeneralExpressionDataImpl,
         _component  The expression component.
     """
 
-    __slots__ = _GeneralExpressionDataImpl.__pickle_slots__
+    __slots__ = ('_expr',)
 
     def __init__(self, expr=None, component=None):
         _GeneralExpressionDataImpl.__init__(self, expr)
@@ -391,16 +384,6 @@ class ScalarExpression(_GeneralExpressionData, Expression):
         _GeneralExpressionData.__init__(self, expr=None, component=self)
         Expression.__init__(self, *args, **kwds)
         self._index = UnindexedComponent_index
-
-    #
-    # Since this class derives from Component and
-    # Component.__getstate__ just packs up the entire __dict__ into
-    # the state dict, we do not need to define the __getstate__ or
-    # __setstate__ methods.  We just defer to the super() get/set
-    # state.  Since all of our get/set state methods rely on super()
-    # to traverse the MRO, this will automatically pick up both the
-    # Component and Data base classes.
-    #
 
     #
     # Override abstract interface methods to first check for

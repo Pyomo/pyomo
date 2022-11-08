@@ -29,7 +29,6 @@ from pyomo.core.expr.current import (
     SumExpression, EqualityExpression, InequalityExpression,
     RangedExpression,
 )
-from pyomo.core.expr import logical_expr
 from pyomo.core.base.constraint import _GeneralConstraintData
 
 
