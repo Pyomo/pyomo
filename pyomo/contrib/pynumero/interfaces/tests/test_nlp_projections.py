@@ -46,7 +46,7 @@ class TestRenamedNLP(unittest.TestCase):
         self.assertEqual(nlp.primals_names(), expected_names)
         renamed_nlp = RenamedNLP(nlp, {'x[0]': 'y[0]', 'x[1]':'y[1]', 'x[2]':'y[2]'})
         expected_names = ['y[0]', 'y[1]', 'y[2]']
-        
+
 class TestProjectedNLP(unittest.TestCase):
     def test_projected(self):
         m = create_pyomo_model()
@@ -192,5 +192,3 @@ class TestProjectedNLP(unittest.TestCase):
 if __name__ == '__main__':
     TestRenamedNLP().test_rename()
     TestProjectedNLP().test_projected()
-    
-    
