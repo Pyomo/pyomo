@@ -25,7 +25,9 @@ if not AmplInterface.available():
 
 import pyomo.environ as pyo
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.contrib.pynumero.interfaces.nlp_projections import RenamedNLP, ProjectedNLP
+from pyomo.contrib.pynumero.interfaces.nlp_projections import (
+    RenamedNLP, ProjectedNLP, ProjectedExtendedNLP
+)
 
 def create_pyomo_model():
     m = pyo.ConcreteModel()
@@ -188,6 +190,112 @@ class TestProjectedNLP(unittest.TestCase):
         projected_nlp.evaluate_hessian_lag(out=H)
         denseH = H.todense()
         self.assertTrue(np.array_equal(denseH, expectedH))
+
+
+class TestProjectedExtendedNLP(unittest.TestCase):
+
+    def _make_model_with_inequalities(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=range(4))
+        m.x = pyo.Var(m.I, initialize=1.1)
+        m.obj = pyo.Objective(
+            expr=1*m.x[0] + 2*m.x[1]**2 + 3*m.x[1]*m.x[2] + 4*m.x[3]**3
+        )
+        m.eq_con_1 = pyo.Constraint(
+            expr=m.x[0] * (m.x[1]**1.1) * (m.x[2]**1.2) == 3.0
+        )
+        m.eq_con_2 = pyo.Constraint(expr=m.x[0]**2 + m.x[3]**2 + m.x[1] == 2.0)
+        m.ineq_con_1 = pyo.Constraint(expr=m.x[0] + m.x[3]*m.x[0] <= 4.0)
+        m.ineq_con_2 = pyo.Constraint(expr=m.x[1] + m.x[2] >= 1.0)
+        m.ineq_con_3 = pyo.Constraint(expr=m.x[2] >= 0)
+        return m
+
+    def _get_nlps(self):
+        m = self._make_model_with_inequalities()
+        nlp = PyomoNLP(m)
+        primals_ordering = ["x[1]", "x[0]"]
+        proj_nlp = ProjectedExtendedNLP(nlp, primals_ordering)
+        return m, nlp, proj_nlp
+
+    def _x_to_nlp(self, m, nlp, values):
+        # We often want to set coordinates in the nlp based on some
+        # order of variables in the model. However, in general we don't
+        # know the order of primals in the NLP. This method reorders
+        # a list of values such that they will be sent to x[0]...x[3]
+        # in the NLP.
+        indices = nlp.get_primal_indices([m.x[0], m.x[1], m.x[2], m.x[3]])
+        reordered_values = [None for _ in m.x]
+        for i, val in zip(indices, values):
+            reordered_values[i] = val
+        return reordered_values
+
+    def _c_to_nlp(self, m, nlp, values):
+        indices = nlp.get_constraint_indices(
+            [m.eq_con_1, m.eq_con_2, m.ineq_con_1, m.ineq_con_2, m.ineq_con_3]
+        )
+        reordered_values = [None]*5
+        for i, val in zip(indices, values):
+            reordered_values[i] = val
+        return reordered_values
+
+
+    def test_n_primals_constraints(self):
+        m, nlp, proj_nlp = self._get_nlps()
+        self.assertEqual(proj_nlp.n_primals(), 2)
+        self.assertEqual(proj_nlp.n_constraints(), 5)
+        self.assertEqual(proj_nlp.n_eq_constraints(), 2)
+        self.assertEqual(proj_nlp.n_ineq_constraints(), 3)
+
+    def test_set_get_primals(self):
+        m, nlp, proj_nlp = self._get_nlps()
+        primals = proj_nlp.get_primals()
+        np.testing.assert_array_equal(primals, [1.1, 1.1])
+        nlp.set_primals(self._x_to_nlp(m, nlp, [1.2, 1.3, 1.4, 1.5]))
+        proj_primals = proj_nlp.get_primals()
+        np.testing.assert_array_equal(primals, [1.3, 1.2])
+
+        proj_nlp.set_primals(np.array([-1.0, -1.1]))
+        # Make sure we can get this vector back from ProjNLP
+        np.testing.assert_array_equal(proj_nlp.get_primals(), [-1.0, -1.1])
+        # Make sure we can get this vector back from the original NLP
+        np.testing.assert_array_equal(
+            nlp.get_primals(), self._x_to_nlp(m, nlp, [-1.1, -1.0, 1.4, 1.5])
+        )
+
+    def test_set_primals_with_list(self):
+        # This doesn't work. Get a TypeError due to treating list as numpy array
+        m, nlp, proj_nlp = self._get_nlps()
+        msg = "only integer scalar arrays can be converted to a scalar index"
+        with self.assertRaisesRegex(TypeError, msg):
+            proj_nlp.set_primals([1.0, 2.0])
+
+    def test_get_set_duals(self):
+        m, nlp, proj_nlp = self._get_nlps()
+        nlp.set_duals([2, 3, 4, 5, 6])
+        np.testing.assert_array_equal(proj_nlp.get_duals(), [2, 3, 4, 5, 6])
+
+        proj_nlp.set_duals([-1, -2, -3, -4, -5])
+        np.testing.assert_array_equal(
+            proj_nlp.get_duals(), [-1, -2, -3, -4, -5]
+        )
+        np.testing.assert_array_equal(nlp.get_duals(), [-1, -2, -3, -4, -5])
+
+    def test_eval_constraints(self):
+        m, nlp, proj_nlp = self._get_nlps()
+        nlp.set_primals(self._x_to_nlp(m, nlp, [1.2, 1.3, 1.4, 1.5]))
+
+        con_resids = nlp.evaluate_constraints()
+        pred_con_body = [
+            1.2*1.3**1.1*1.4**1.2 - 3.0,
+            1.2**2 + 1.5**2 + 1.3 - 2.0,
+            1.2 + 1.2*1.5,
+            1.3 + 1.4,
+            1.4,
+        ]
+        np.testing.assert_array_equal(
+            con_resids, self._c_to_nlp(m, nlp, pred_con_body)
+        )
+
 
 if __name__ == '__main__':
     TestRenamedNLP().test_rename()
