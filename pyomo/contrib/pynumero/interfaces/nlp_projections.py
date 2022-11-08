@@ -120,6 +120,12 @@ class _ExtendedNLPDelegator(_BaseNLPDelegator):
     def evaluate_jacobian_eq(self):
         return self._original_nlp.evaluate_jacobian_eq()
 
+    def evaluate_ineq_constraints(self):
+        return self._original_nlp.evaluate_ineq_constraints()
+
+    def evaluate_jacobian_ineq(self):
+        return self._original_nlp.evaluate_jacobian_ineq()
+
 
 class RenamedNLP(_BaseNLPDelegator):
     def __init__(self, original_nlp, primals_name_map):
