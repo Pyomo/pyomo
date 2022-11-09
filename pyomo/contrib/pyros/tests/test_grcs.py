@@ -2652,6 +2652,31 @@ class testIntersectionSetClass(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             iset.all_sets.append(wrong_aset)
 
+    def test_type_error_on_invalid_arg(self):
+        """
+        Test TypeError raised if an argument not of type
+        UncertaintySet is passed to the IntersectionSet
+        constructor or appended to 'all_sets'.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0], [2, 2])
+
+        exc_str = (
+            r"Entry '1' of the argument `all_sets` is not An `UncertaintySet` "
+            r"object.*\(provided type 'int'\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(TypeError, exc_str):
+            IntersectionSet(box_set=bset, axis_set=aset, invalid_arg=1)
+
+        # construct a valid intersection set
+        iset = IntersectionSet(box_set=bset, axis_set=aset)
+
+        # assert error on update
+        with self.assertRaisesRegex(TypeError, exc_str):
+            iset.all_sets.append(1)
+
     def test_error_on_intersection_dim_change(self):
         """
         IntersectionSet dimension is considered immutable.
