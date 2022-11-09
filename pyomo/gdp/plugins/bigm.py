@@ -21,7 +21,7 @@ from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
-    Expression, SortComponents, TraversalStrategy, value, RangeSet,
+    Expression, TraversalStrategy, value, RangeSet,
     NonNegativeIntegers, Binary, Any)
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
