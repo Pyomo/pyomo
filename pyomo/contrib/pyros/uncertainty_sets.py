@@ -588,7 +588,9 @@ class UncertaintySetList(MutableSequence):
 
     def insert(self, idx, value):
         """Insert an object before index denoted by idx."""
-        if self._index_is_valid(idx, allow_int_only=True):
+        if isinstance(idx, Integral):
+            # index should be valid. Validate value before
+            # inserting
             self._validate(value, single_item=True)
         self._list.insert(idx, value)
 

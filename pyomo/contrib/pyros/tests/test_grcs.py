@@ -587,10 +587,173 @@ class testAbstractUncertaintySetClass(unittest.TestCase):
                              "variable expression.")
 
 class testEllipsoidalUncertaintySetClass(unittest.TestCase):
-    '''
-    Ellipsoidal uncertainty sets. Required inputs are covariance matrix covar, scale, mean, and list
-    of uncertain params.
-    '''
+    """
+    Unit tests for the EllipsoidalSet
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test EllipsoidalSet constructor and setter
+        work normally when arguments are appropriate.
+        """
+        center = [0, 0]
+        shape_matrix = [[1, 0], [0, 2]]
+        scale = 2
+        eset = EllipsoidalSet(center, shape_matrix, scale)
+        np.testing.assert_allclose(
+            center,
+            eset.center,
+            err_msg="EllipsoidalSet center not as expected",
+        )
+        np.testing.assert_allclose(
+            shape_matrix,
+            eset.shape_matrix,
+            err_msg="EllipsoidalSet shape matrix not as expected",
+        )
+        np.testing.assert_allclose(
+            scale,
+            eset.scale,
+            err_msg="EllipsoidalSet scale not as expected",
+        )
+
+        # check attributes update
+        new_center = [-1, -3]
+        new_shape_matrix = [[2, 1], [1, 3]]
+        new_scale = 1
+
+        eset.center = new_center
+        eset.shape_matrix = new_shape_matrix
+        eset.scale = new_scale
+
+        np.testing.assert_allclose(
+            new_center,
+            eset.center,
+            err_msg="EllipsoidalSet center update not as expected",
+        )
+        np.testing.assert_allclose(
+            new_shape_matrix,
+            eset.shape_matrix,
+            err_msg="EllipsoidalSet shape matrix update not as expected",
+        )
+        np.testing.assert_allclose(
+            new_scale,
+            eset.scale,
+            err_msg="EllipsoidalSet scale update not as expected",
+        )
+
+    def test_error_on_ellipsoidal_dim_change(self):
+        """
+        EllipsoidalSet dimension is considered immutable.
+        Test ValueError raised when center size is not equal
+        to set dimension.
+        """
+        invalid_center = [0, 0]
+        shape_matrix = [[1, 0], [0, 1]]
+        scale = 2
+
+        eset = EllipsoidalSet([0, 0], shape_matrix, scale)
+
+        exc_str = r"Attempting to set.*dimension 2 to value of dimension 3"
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.center = [0, 0, 0]
+
+    def test_error_on_neg_scale(self):
+        """
+        Test ValueError raised if scale attribute set to negative
+        value.
+        """
+        center = [0, 0]
+        shape_matrix = [[1, 0], [0, 2]]
+        neg_scale = -1
+
+        exc_str = r".*must be a non-negative real \(provided.*-1\)"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            EllipsoidalSet(center, shape_matrix, neg_scale)
+
+        # construct a valid EllipsoidalSet
+        eset = EllipsoidalSet(center, shape_matrix, scale=2)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.scale = neg_scale
+
+    def test_error_on_shape_matrix_with_wrong_size(self):
+        """
+        Test error in event EllipsoidalSet shape matrix
+        is not in accordance with set dimension.
+        """
+        center = [0, 0]
+        invalid_shape_matrix = [[1, 0]]
+        scale = 1
+
+        exc_str = (
+            r".*must be a square matrix of size 2.*"
+            r"\(provided.*shape \(1, 2\)\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            EllipsoidalSet(center, invalid_shape_matrix, scale)
+
+        # construct a valid EllipsoidalSet
+        eset = EllipsoidalSet(center, [[1, 0], [0, 1]], scale)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.shape_matrix = invalid_shape_matrix
+
+    def test_error_on_invalid_shape_matrix(self):
+        """
+        Test exceptional cases of invalid square shape matrix
+        arguments
+        """
+        center = [0, 0]
+        scale = 3
+
+        # assert error on construction
+        with self.assertRaisesRegex(
+                ValueError,
+                r"Shape matrix must be symmetric",
+                msg="Asymmetric shape matrix test failed",
+                ):
+            EllipsoidalSet(center, [[1, 1], [0, 1]], scale)
+        with self.assertRaises(
+                np.linalg.LinAlgError,
+                msg="Singular shape matrix test failed",
+                ):
+            EllipsoidalSet(center, [[0, 0], [0, 0]], scale)
+        with self.assertRaisesRegex(
+                ValueError,
+                r"Non positive-definite.*",
+                msg="Indefinite shape matrix test failed"
+                ):
+            EllipsoidalSet(center, [[1, 0], [0, -2]], scale)
+
+        # construct a valid EllipsoidalSet
+        eset = EllipsoidalSet(center, [[1, 0], [0, 2]], scale)
+
+        # assert error on update
+        with self.assertRaisesRegex(
+                ValueError,
+                r"Shape matrix must be symmetric",
+                msg="Asymmetric shape matrix test failed",
+                ):
+            eset.shape_matrix = [[1, 1], [0, 1]]
+        with self.assertRaises(
+                np.linalg.LinAlgError,
+                msg="Singular shape matrix test failed",
+                ):
+            eset.shape_matrix = [[0, 0], [0, 0]]
+        with self.assertRaisesRegex(
+                ValueError,
+                r"Non positive-definite.*",
+                msg="Indefinite shape matrix test failed"
+                ):
+            eset.shape_matrix = [[1, 0], [0, -2]]
 
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -2326,12 +2489,169 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for FactorModelSet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for FactorModelSet")
 
-class testIntersectionSetClass(unittest.TestCase):
-    '''
-    Intersection uncertainty sets. Required input is set objects to intersect, and set_as_constraint requires
-    a NLP solver to confirm the intersection is not empty.
-    '''
 
+class testIntersectionSetClass(unittest.TestCase):
+    """
+    Unit tests for the IntersectionSet class.
+    Required input is set objects to intersect,
+    and set_as_constraint requires
+    an NLP solver to confirm the intersection is not empty.
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test IntersectionSet constructor and setter
+        work normally when arguments are appropriate.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0, 0], [1, 1, 1])
+
+        iset = IntersectionSet(box_set=bset, axis_aligned_set=aset)
+        self.assertIn(
+            bset,
+            iset.all_sets,
+            msg=(
+                "IntersectionSet 'all_sets' attribute does not"
+                "contain expected BoxSet"
+            )
+        )
+        self.assertIn(
+            aset,
+            iset.all_sets,
+            msg=(
+                "IntersectionSet 'all_sets' attribute does not"
+                "contain expected AxisAlignedEllipsoidalSet"
+            )
+        )
+
+    def test_error_on_intersecting_wrong_dims(self):
+        """
+        Test ValueError raised if IntersectionSet sets
+        are not of same dimension.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0], [2, 2])
+        wrong_aset = AxisAlignedEllipsoidalSet([0, 0, 0], [1, 1, 1])
+
+        exc_str = r".*of dimension 2, but attempting to add set of dimension 3"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            IntersectionSet(box_set=bset, axis_set=aset, wrong_set=wrong_aset)
+
+        # construct a valid intersection set
+        iset = IntersectionSet(box_set=bset, axis_set=aset)
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            iset.all_sets.append(wrong_aset)
+
+    def test_error_on_intersection_dim_change(self):
+        """
+        IntersectionSet dimension is considered immutable.
+        Test ValueError raised when attempting to set the
+        constituent sets to a different dimension.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0], [2, 2])
+
+        # construct the set
+        iset = IntersectionSet(box_set=bset, axis_set=aset)
+
+        exc_str = (
+            r"Attempting to set.*dimension 2 to a sequence.* of dimension 1"
+        )
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            # attempt to set to 1-dimensional sets
+            iset.all_sets = [
+                BoxSet([[1, 1]]),
+                AxisAlignedEllipsoidalSet([0], [1]),
+            ]
+
+    def test_error_on_too_few_sets(self):
+        """
+        Check ValueError raised if too few sets are passed
+        to the intersection set.
+        """
+        exc_str = (
+            r"Attempting.*minimum required length 2.*iterable of length 1"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            IntersectionSet(bset=BoxSet([[1, 2]]))
+
+        # construct a valid intersection set
+        iset = IntersectionSet(
+            box_set=BoxSet([[1, 2]]),
+            axis_set=AxisAlignedEllipsoidalSet([0], [1]),
+        )
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            # attempt to set to 1-dimensional sets
+            iset.all_sets = [BoxSet([[1, 1]])]
+
+    def test_intersection_uncertainty_set_list_behavior(self):
+        """
+        Test the 'all_sets' attribute of the IntersectionSet
+        class behaves like a regular Python list.
+        """
+        iset = IntersectionSet(
+            bset=BoxSet([[0, 2]]),
+            aset=AxisAlignedEllipsoidalSet([0], [1]),
+        )
+
+        # an UncertaintySetList of length 2.
+        # should behave like a list of length 2
+        all_sets = iset.all_sets
+        
+        # test append
+        all_sets.append(BoxSet([[1, 2]]))
+        del all_sets[2:]
+
+        # test extend
+        all_sets.extend([BoxSet([[1, 2]]), EllipsoidalSet([0], [[1]], 2)])
+        del all_sets[2:]
+
+        # index in range. Allow slicing as well
+        # none of these should result in exception
+        all_sets[0]
+        all_sets[1]
+        all_sets[100:]
+        all_sets[0:2:20]
+        all_sets[0:2:1]
+        all_sets[-20:-1:2]
+
+        # index out of range
+        self.assertRaises(IndexError, lambda: all_sets[2])
+        self.assertRaises(IndexError, lambda: all_sets[-3])
+
+        # assert min length ValueError if attempting to clear
+        # list to length less than 2
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            all_sets[:] = all_sets[0]
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            del all_sets[1]
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            del all_sets[1:]
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            del all_sets[:]
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            all_sets.clear()
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            all_sets[0:] = []
+
+        # assignment out of range
+        with self.assertRaisesRegex(IndexError, r"assignment index out of range"):
+            all_sets[-3] = BoxSet([[1, 1.5]])
+        with self.assertRaisesRegex(IndexError, r"assignment index out of range"):
+            all_sets[2] = BoxSet([[1, 1.5]])
+
+        # assigning to slices should work fine
+        all_sets[3:] = [BoxSet([[1, 1.5]]), BoxSet([[1, 3]])]
+            
     @unittest.skipUnless(SolverFactory('ipopt').available(exception_flag=False), "Local NLP solver is not available.")
     def test_uncertainty_set_with_correct_params(self):
         '''
