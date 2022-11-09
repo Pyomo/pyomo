@@ -351,6 +351,27 @@ class TestNewtonPyomo(unittest.TestCase):
         predicted_x = 4.90547401
         self.assertAlmostEqual(predicted_x, m.x.value)
 
+    def test_solve_doesnt_converge(self):
+        m, _ = make_scalar_model()
+        m.x.set_value(3e10)
+        solver = pyo.SolverFactory("scipy.newton")
+        with self.assertRaisesRegex(RuntimeError, "Failed to converge"):
+            # scipy.optimize.newton raises a RuntimeError when it fails to
+            # converge to a solution (contrary to fsolve, which happily
+            # returns the result). This behavior makes it hard to test
+            # for cases where TerminationCondition is not feasible.
+            # Should the underlying scipy.optimize.newton call be wrapped
+            # with try/except to catch this case and return an infeasible
+            # TerminationCondition?
+            results = solver.solve(m)
+
+    def test_too_many_iter(self):
+        m, _ = make_scalar_model()
+        solver = pyo.SolverFactory("scipy.newton")
+        solver.set_options({"maxiter": 5})
+        with self.assertRaisesRegex(RuntimeError, "Failed to converge"):
+            results = solver.solve(m)
+
     def test_results_object(self):
         m, _ = make_scalar_model()
         solver = pyo.SolverFactory("scipy.newton")
