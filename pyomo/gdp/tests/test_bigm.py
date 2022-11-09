@@ -127,7 +127,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         # just lb
         self.assertEqual(len(c_list), 1)
         self.assertIs(c_list[0],
-                      disjBlock[0].component(oldblock[0].c.local_name)[None, 
+                      disjBlock[0].component(oldblock[0].c.local_name)[None,
                                                                        'lb'])
 
         # transformed -> original
@@ -685,33 +685,17 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
                 self.assertEqual(len(transformed), 2)
                 self.assertIsInstance(transformed[0], _ConstraintData)
                 self.assertIsInstance(transformed[1], _ConstraintData)
-                self.assertIs(
-                    transformed[0],
-                    disjBlock[dest].component(srcDisjunct.c.name)['lb'])
-                self.assertIs(
-                    transformed[1],
-                    disjBlock[dest].component(srcDisjunct.c.name)['ub'])
-                # check reverse maps from the _ConstraintDatas
-                self.assertIs(bigm.get_src_constraint(
-                    disjBlock[dest].component(srcDisjunct.c.name)['lb']),
+                self.assertIs(bigm.get_src_constraint(transformed[0]),
                               srcDisjunct.c)
-                self.assertIs(bigm.get_src_constraint(
-                    disjBlock[dest].component(srcDisjunct.c.name)['ub']),
+                self.assertIs(bigm.get_src_constraint(transformed[1]),
                               srcDisjunct.c)
             else:
                 # >=
                 self.assertEqual(len(transformed), 1)
                 self.assertIsInstance(transformed[0], _ConstraintData)
-                self.assertIs(
-                    transformed[0],
-                    disjBlock[dest].component(srcDisjunct.c.name)['lb'])
-                self.assertIs(bigm.get_src_constraint(
-                    disjBlock[dest].component(srcDisjunct.c.name)['lb']),
+                # check reverse map from the container
+                self.assertIs(bigm.get_src_constraint(transformed[0]),
                               srcDisjunct.c)
-            # check reverse map from the container
-            self.assertIs(bigm.get_src_constraint(
-                disjBlock[dest].component(srcDisjunct.c.name)),
-                srcDisjunct.c)
 
     def test_deactivated_disjuncts(self):
         ct.check_deactivated_disjuncts(self, 'bigm')
@@ -1467,7 +1451,7 @@ class ScalarDisjIndexedConstraints(unittest.TestCase, CommonTests):
             GDP_Error,
             r"Cannot estimate M for unbounded "
             r"expressions.\n\t\(found while processing "
-            r"constraint 'b.simpledisj1.c'\). "
+            r"constraint 'b.simpledisj1.c\[1\]'\). "
             r"Please specify a value of M "
             r"or ensure all variables that appear in the "
             r"constraint are bounded.",
@@ -1509,7 +1493,8 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
         # just add ['lb', 'ub'] as another index (using both for equality and
         # both bounds and the one that we need when we only have one bound)
         m = models.makeTwoTermDisj_IndexedConstraints_BoundedVars()
-        TransformationFactory('gdp.bigm').apply_to(m)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
 
         transBlock = m.component("_pyomo_gdp_bigm_reformulation")
         self.assertIsInstance(transBlock, Block)
@@ -1517,19 +1502,33 @@ class IndexedConstraintsInDisj(unittest.TestCase, CommonTests):
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
 
-        cons1 = disjBlock[0].component("disjunct[0].c")
-        self.assertIsInstance(cons1, Constraint)
-        self.assertTrue(cons1.active)
-        self.assertTrue(cons1[1,'lb'].active)
-        self.assertTrue(cons1[2,'lb'].active)
+        cons11 = bigm.get_transformed_constraints(m.disjunct[0].c[1])
+        self.assertEqual(len(cons11), 1)
+        cons11_lb = cons11[0]
+        self.assertIsInstance(cons11_lb.parent_component(), Constraint)
+        self.assertTrue(cons11_lb.active)
+        cons12 = bigm.get_transformed_constraints(m.disjunct[0].c[2])
+        self.assertEqual(len(cons12), 1)
+        cons12_lb = cons12[0]
+        self.assertIsInstance(cons12_lb.parent_component(), Constraint)
+        self.assertTrue(cons12_lb.active)
 
-        cons2 = disjBlock[1].component("disjunct[1].c")
-        self.assertIsInstance(cons2, Constraint)
-        self.assertTrue(cons2.active)
-        self.assertTrue(cons2[1,'lb'].active)
-        self.assertTrue(cons2[1,'ub'].active)
-        self.assertTrue(cons2[2,'lb'].active)
-        self.assertTrue(cons2[2,'ub'].active)
+        cons21 = bigm.get_transformed_constraints(m.disjunct[1].c[1])
+        self.assertEqual(len(cons21), 2)
+        cons21_lb = cons21[0]
+        cons21_ub = cons21[1]
+        self.assertIsInstance(cons21_lb.parent_component(), Constraint)
+        self.assertIsInstance(cons21_ub.parent_component(), Constraint)
+        self.assertTrue(cons21_lb.active)
+        self.assertTrue(cons21_ub.active)
+        cons22 = bigm.get_transformed_constraints(m.disjunct[1].c[2])
+        self.assertEqual(len(cons22), 2)
+        cons22_lb = cons22[0]
+        cons22_ub = cons22[1]
+        self.assertIsInstance(cons22_lb.parent_component(), Constraint)
+        self.assertIsInstance(cons22_ub.parent_component(), Constraint)
+        self.assertTrue(cons22_lb.active)
+        self.assertTrue(cons22_ub.active)
 
     def checkMs(self, model, c11lb, c12lb, c21lb, c21ub, c22lb, c22ub):
         bigm = TransformationFactory('gdp.bigm')
@@ -1933,13 +1932,14 @@ class DisjunctionInDisjunct(unittest.TestCase, CommonTests):
         # transformed by the outer ones.
         m = models.makeNestedDisjunctions()
         TransformationFactory('gdp.bigm').apply_to(m)
-        cons1 = m.disjunct[1].innerdisjunct[0].transformation_block.component(
-            m.disjunct[1].innerdisjunct[0].c.name)
-        cons1lb = cons1['lb']
+        cons1 = bigm.get_transformed_constraints(
+            m.disjunct[1].innerdisjunct[0].c)
+        self.assertEqual(len(cons1), 2)
+        cons1lb = cons[0]
+        cons1ub = cons[1]
         self.assertEqual(cons1lb.lower, 0)
         self.assertIsNone(cons1lb.upper)
         self.assertIs(cons1lb.body, m.z)
-        cons1ub = cons1['ub']
         self.assertIsNone(cons1ub.lower)
         self.assertEqual(cons1ub.upper, 0)
         self.check_bigM_constraint(cons1ub, m.z, 10,
