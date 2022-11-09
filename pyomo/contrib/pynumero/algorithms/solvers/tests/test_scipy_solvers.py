@@ -40,6 +40,15 @@ def make_simple_model():
     return m, nlp
 
 
+def make_scalar_model():
+    m = pyo.ConcreteModel()
+    m.x = pyo.Var(initialize=1.0, bounds=(0.0, None))
+    m.con = pyo.Constraint(expr=(m.x-2)**3 - 5*m.x == 0)
+    m.obj = pyo.Objective(expr=0.0)
+    nlp = PyomoNLP(m)
+    return m, nlp
+
+
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestSquareSolverBase(unittest.TestCase):
 
@@ -197,6 +206,25 @@ class TestFsolvePyomo(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, msg):
             res = solver.solve(m)
 
+    def test_with_scalar_model_bad_starting_point(self):
+        # NOTE: fsolve fails to solve this very simple scalar-valued
+        # equation with a default starting point (x=1). This may be
+        # worth looking into.
+        m, _ = make_scalar_model()
+        solver = pyo.SolverFactory("fsolve")
+        res = solver.solve(m)
+        predicted_x = 4.90547401
+        self.assertNotEqual(predicted_x, m.x.value)
+
+    def test_with_scalar_model_good_starting_point(self):
+        # NOTE: fsolve can solve this equation with a good starting point.
+        m, _ = make_scalar_model()
+        m.x.set_value(4.0)
+        solver = pyo.SolverFactory("fsolve")
+        res = solver.solve(m)
+        predicted_x = 4.90547401
+        self.assertAlmostEqual(predicted_x, m.x.value)
+
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestRootNLP(unittest.TestCase):
@@ -302,6 +330,87 @@ class TestRootPyomo(unittest.TestCase):
             pyo.TerminationCondition.feasible
         )
         self.assertEqual(results.solver.message, "The solution converged.")
+
+
+class TestNewtonPyomo(unittest.TestCase):
+
+    def test_available(self):
+        solver = pyo.SolverFactory("scipy.newton")
+        self.assertTrue(solver.available())
+        self.assertTrue(solver.license_is_valid())
+
+        sp_version = tuple(
+            int(num) for num in scipy.__version__.split('.')
+        )
+        self.assertEqual(sp_version, solver.version())
+
+    def test_solve(self):
+        m, _ = make_scalar_model()
+        solver = pyo.SolverFactory("scipy.newton")
+        results = solver.solve(m)
+        predicted_x = 4.90547401
+        self.assertAlmostEqual(predicted_x, m.x.value)
+
+    def test_results_object(self):
+        m, _ = make_scalar_model()
+        solver = pyo.SolverFactory("scipy.newton")
+        results = solver.solve(m)
+        predicted_x = 4.90547401
+        self.assertAlmostEqual(predicted_x, m.x.value)
+
+        # Check results.problem
+        self.assertEqual(results.problem.number_of_constraints, 1)
+        self.assertEqual(results.problem.number_of_variables, 1)
+        self.assertEqual(results.problem.number_of_continuous_variables, 1)
+        self.assertEqual(results.problem.number_of_binary_variables, 0)
+        self.assertEqual(results.problem.number_of_integer_variables, 0)
+
+        # Assert some reasonable things about the returned results
+        self.assertGreater(results.solver.wallclock_time, 0.0)
+        self.assertEqual(
+            results.solver.termination_condition,
+            pyo.TerminationCondition.feasible,
+        )
+        self.assertEqual(
+            results.solver.status,
+            pyo.SolverStatus.ok,
+        )
+        self.assertGreater(results.solver.number_of_function_evaluations, 0)
+
+    def test_results_object_without_full_output(self):
+        m, _ = make_scalar_model()
+        solver = pyo.SolverFactory("scipy.newton")
+        solver.set_options(dict(full_output=False))
+
+        results = solver.solve(m)
+        predicted_x = 4.90547401
+        self.assertAlmostEqual(predicted_x, m.x.value)
+
+        # Check results.problem
+        self.assertEqual(results.problem.number_of_constraints, 1)
+        self.assertEqual(results.problem.number_of_variables, 1)
+        self.assertEqual(results.problem.number_of_continuous_variables, 1)
+        self.assertEqual(results.problem.number_of_binary_variables, 0)
+        self.assertEqual(results.problem.number_of_integer_variables, 0)
+
+        # Assert some reasonable things about the returned results
+        self.assertGreater(results.solver.wallclock_time, 0.0)
+
+        # Now assert that termination condition and solver status have
+        # not been reported.
+        #
+        # This will break if Pyomo changes its default behavior.
+        self.assertIs(
+            results.solver.termination_condition,
+            pyo.TerminationCondition.unknown,
+        )
+        # The default SolverStatus appears to be ok...
+        #self.assertIsNot(results.solver.status, pyo.SolverStatus.ok)
+
+        with self.assertRaises(AttributeError):
+            # This attribute has no default, I guess.
+            # Assert that it hasn't been set.
+            n_eval = results.solver.number_of_function_evaluations
 
 
 if __name__ == "__main__":

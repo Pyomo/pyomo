@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from collections import namedtuple
 from pyomo.core.base.objective import Objective
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.modeling import unique_component_name
@@ -17,8 +18,10 @@ from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     DenseSquareNlpSolver,
 )
 from pyomo.opt import (
+    SolverStatus,
     SolverResults,
     TerminationCondition,
+    ProblemSense,
 )
 from pyomo.common.dependencies import (
     attempt_import,
@@ -109,6 +112,7 @@ class RootNlpSolver(DenseSquareNlpSolver):
         # NOTE: Only supporting Powell hybrid method and Levenberg-Marquardt
         # methods (both from MINPACK) for now.
         domain=In({"hybr", "lm"}),
+        #domain=str,
         description="Method used to solve for the function root",
     ))
 
@@ -121,6 +125,87 @@ class RootNlpSolver(DenseSquareNlpSolver):
             x0,
             jac=self.evaluate_jacobian,
         )
+        return results
+
+
+class NewtonNlpSolver(DenseSquareNlpSolver):
+
+    OPTIONS = ConfigBlock(
+        description="Options for SciPy newton wrapper",
+    )
+    OPTIONS.declare("tol", ConfigValue(
+        default=1e-8,
+        domain=float,
+        description="Convergence tolerance",
+    ))
+    OPTIONS.declare("secant", ConfigValue(
+        default=False,
+        domain=bool,
+        description="Whether to use SciPy's secant method",
+    ))
+
+    # TODO: Check that NLP is one-dimensional
+    def solve(self, x0=None):
+        self._timer.start("solve")
+        if x0 is None:
+            x0 = self._nlp.get_primals()
+
+        if self.options.secant:
+            fprime = None
+        else:
+            fprime = lambda x: self.evaluate_jacobian(np.array([x]))[0, 0]
+        results = sp.optimize.newton(
+            lambda x: self.evaluate_function(np.array([x]))[0],
+            x0[0],
+            fprime=fprime,
+            tol=self.options.tol,
+        )
+        self._timer.stop("solve")
+        return results
+
+
+class SecantNewtonNlpSolver(DenseSquareNlpSolver):
+
+    OPTIONS = ConfigBlock(
+        description="Options for SciPy newton wrapper",
+    )
+    OPTIONS.declare("tol", ConfigValue(
+        default=1e-8,
+        domain=float,
+        description="Convergence tolerance",
+    ))
+    OPTIONS.declare("secant_iter", ConfigValue(
+        default=2,
+        domain=int,
+        description=(
+            "Number of secant iterations to perform before switching"
+            " to Newton's method."
+        ),
+    ))
+
+    # TODO: Check that NLP is one-dimensional
+    def solve(self, x0=None):
+        self._timer.start("solve")
+        if x0 is None:
+            x0 = self._nlp.get_primals()
+
+        try:
+            results = sp.optimize.newton(
+                lambda x: self.evaluate_function(np.array([x]))[0],
+                x0[0],
+                fprime=None,
+                tol=self.options.tol,
+                maxiter=self.options.secant_iter,
+            )
+        except RuntimeError:
+            x0 = self._nlp.get_primals()
+            results = sp.optimize.newton(
+                lambda x: self.evaluate_function(np.array([x]))[0],
+                x0[0],
+                fprime=lambda x: self.evaluate_jacobian(np.array([x]))[0, 0],
+                tol=self.options.tol,
+            )
+        self._timer.stop("solve")
         return results
 
 
