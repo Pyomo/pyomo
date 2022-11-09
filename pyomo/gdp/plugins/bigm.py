@@ -323,9 +323,9 @@ class BigM_Transformation(Transformation):
 
         # add the XOR (or OR) constraints to parent block (with unique name)
         # It's indexed if this is an IndexedDisjunction, not otherwise
-        orC = Constraint(disjunction.index_set())
-        orCname = unique_component_name( transBlock, disjunction.getname(
-            fully_qualified=True) + '_xor')
+        orC = Constraint(Any)
+        orCname = unique_component_name(
+            transBlock,disjunction.getname(fully_qualified=False) + '_xor')
         transBlock.add_component(orCname, orC)
         disjunction._algebraic_constraint = weakref_ref(orC)
 
@@ -351,7 +351,7 @@ class BigM_Transformation(Transformation):
         if len(obj.disjuncts) == 0:
             raise GDP_Error("Disjunction '%s' is empty. This is "
                             "likely indicative of a modeling error."  %
-                            obj.getname(fully_qualified=True))
+                            obj.name)
 
         # add or (or xor) constraint
         or_expr = sum(disjunct.binary_indicator_var for disjunct in
@@ -435,7 +435,7 @@ class BigM_Transformation(Transformation):
         varRefBlock = disjunct._transformation_block().localVarReferences
         for v in block.component_objects(Var, descend_into=Block, active=None):
             varRefBlock.add_component(unique_component_name(
-                varRefBlock, v.getname(fully_qualified=True)), Reference(v))
+                varRefBlock, v.getname(fully_qualified=False)), Reference(v))
 
         # Now look through the component map of block and transform everything
         # we have a handler for. Yell if we don't know how to handle it. (Note
@@ -500,7 +500,7 @@ class BigM_Transformation(Transformation):
         # Though rare, it is possible to get naming conflicts here
         # since constraints from all blocks are getting moved onto the
         # same block. So we get a unique name
-        cons_name = obj.getname(fully_qualified=True)
+        cons_name = obj.getname(fully_qualified=False)
         name = unique_component_name(transBlock, cons_name)
 
         # We will make indexes from (obj.index_set() x ['lb', 'ub']), but don't
