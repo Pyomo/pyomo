@@ -2397,35 +2397,6 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, exc_str):
             fset.origin = [1, 3]
 
-    def test_error_on_factor_model_set_dim_change(self):
-        """
-        Cardinality set positive deviation attribute should
-        contain nonnegative numerical entries.
-
-        Check ValueError raised if any negative entries provided.
-        """
-        origin = [0, 0, 0]
-        number_of_factors = 2
-        psi_mat = [[1, 0], [0, 1], [1, 1]]
-        beta = 0.5
-
-        # construct factor model set
-        fset = FactorModelSet(origin, number_of_factors, psi_mat, beta)
-
-        exc_str = (
-            r"should be of shape \(3, 2\) to match.*dimensions "
-            r"\(provided shape \(2, 2\)\)"
-        )
-        with self.assertRaisesRegex(ValueError, exc_str):
-            fset.psi_mat = [[1, 0], [1, 2]]
-
-        exc_str = (
-            r".*'origin' of factor model set of dimension 3 "
-            r"to value of dimension 2"
-        )
-        with self.assertRaisesRegex(ValueError, exc_str):
-            fset.origin = [1, 1]
-
     def test_error_on_invalid_number_of_factors(self):
         """
         Test ValueError raised if number of factors
