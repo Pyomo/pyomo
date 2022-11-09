@@ -417,6 +417,7 @@ class BigM_Transformation(Transformation):
         # information for both.)
         relaxationBlock.bigm_src = {}
         relaxationBlock.localVarReferences = Block()
+        relaxationBlock.transformedConstraints = Constraint(Any)
         obj._transformation_block = weakref_ref(relaxationBlock)
         relaxationBlock._src_disjunct = weakref_ref(obj)
 
@@ -525,20 +526,23 @@ class BigM_Transformation(Transformation):
         
         # We will make indexes from (obj.index_set() x ['lb', 'ub']), but don't
         # bother construct that set here, as it can be quite expensive.
-        newConstraint = Constraint(Any)
+        newConstraint = transBlock.transformedConstraints#Constraint(Any)
+        unique = len(newConstraint)
         # Though rare, it is possible to get naming conflicts here since
         # constraints from all blocks are getting moved onto the same block. So
         # we get a unique name
-        transBlock.add_component(
-            unique_component_name(
-                transBlock,
-                obj.getname(fully_qualified=False)),
-            newConstraint)
+        # transBlock.add_component(
+        #     unique_component_name(
+        #         transBlock,
+        #         obj.getname(fully_qualified=False)),
+        #     newConstraint)
         # add mapping of transformed constraint to original constraint
+        # TODO: if we go this route, we are *NOT* mapping containers anymore
         constraintMap['srcConstraints'][newConstraint] = obj
 
         for i in sorted(obj.keys()):
             c = obj[i]
+            name = c.local_name + "_%s" % unique
             if not c.active:
                 continue
 
@@ -594,24 +598,28 @@ class BigM_Transformation(Transformation):
                     raise GDP_Error("Cannot relax disjunctive constraint '%s' "
                                     "because M is not defined." % name)
                 M_expr = M[0] * (1 - disjunct.binary_indicator_var)
-                newConstraint.add((i, 'lb'), c.lower <= c. body - M_expr)
+                newConstraint.add((name, i, 'lb'), c.lower <= c. body - M_expr)
                 constraintMap[
-                    'transformedConstraints'][c] = [newConstraint[i, 'lb']]
-                constraintMap['srcConstraints'][newConstraint[i, 'lb']] = c
+                    'transformedConstraints'][c] = [
+                        newConstraint[name, i, 'lb']]
+                constraintMap['srcConstraints'][
+                    newConstraint[name, i, 'lb']] = c
             if c.upper is not None:
                 if M[1] is None:
                     raise GDP_Error("Cannot relax disjunctive constraint '%s' "
                                     "because M is not defined." % name)
                 M_expr = M[1] * (1 - disjunct.binary_indicator_var)
-                newConstraint.add((i, 'ub'), c.body - M_expr <= c.upper)
+                newConstraint.add((name, i, 'ub'), c.body - M_expr <= c.upper)
                 transformed = constraintMap['transformedConstraints'].get(c)
                 if transformed is not None:
                     constraintMap['transformedConstraints'][
-                        c].append(newConstraint[i, 'ub'])
+                        c].append(newConstraint[name, i, 'ub'])
                 else:
                     constraintMap[
-                        'transformedConstraints'][c] = [newConstraint[i, 'ub']]
-                constraintMap['srcConstraints'][newConstraint[i, 'ub']] = c
+                        'transformedConstraints'][c] = [
+                            newConstraint[name, i, 'ub']]
+                constraintMap['srcConstraints'][
+                    newConstraint[name, i, 'ub']] = c
 
             # deactivate because we relaxed
             c.deactivate()
