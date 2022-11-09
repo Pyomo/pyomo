@@ -148,6 +148,11 @@ class NewtonNlpSolver(DenseSquareNlpSolver):
         domain=bool,
         description="Whether underlying solver should return its full output",
     ))
+    OPTIONS.declare("maxiter", ConfigValue(
+        default=50,
+        domain=int,
+        description="Maximum number of function evaluations per solve",
+    ))
 
     def __init__(self, nlp, timer=None, options=None):
         super().__init__(nlp, timer=timer, options=options)
@@ -173,6 +178,7 @@ class NewtonNlpSolver(DenseSquareNlpSolver):
             fprime=fprime,
             tol=self.options.tol,
             full_output=self.options.full_output,
+            maxiter=self.options.maxiter,
         )
         self._timer.stop("solve")
         return results
