@@ -522,16 +522,18 @@ class BigM_Transformation(Transformation):
         constraintMap = self._get_constraint_map_dict(transBlock)
 
         disjunctionRelaxationBlock = transBlock.parent_block()
-        # Though rare, it is possible to get naming conflicts here
-        # since constraints from all blocks are getting moved onto the
-        # same block. So we get a unique name
-        cons_name = obj.getname(fully_qualified=False)
-        name = unique_component_name(transBlock, cons_name)
-
+        
         # We will make indexes from (obj.index_set() x ['lb', 'ub']), but don't
         # bother construct that set here, as it can be quite expensive.
         newConstraint = Constraint(Any)
-        transBlock.add_component(name, newConstraint)
+        # Though rare, it is possible to get naming conflicts here since
+        # constraints from all blocks are getting moved onto the same block. So
+        # we get a unique name
+        transBlock.add_component(
+            unique_component_name(
+                transBlock,
+                obj.getname(fully_qualified=False)),
+            newConstraint)
         # add mapping of transformed constraint to original constraint
         constraintMap['srcConstraints'][newConstraint] = obj
 
@@ -551,7 +553,7 @@ class BigM_Transformation(Transformation):
 
             if self._generate_debug_messages:
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "
-                             "from the BigM argument is %s." % (cons_name,
+                             "from the BigM argument is %s." % (c.name,
                                                                 str(M)))
 
             # if we didn't get something we need from args, try suffixes:
@@ -569,7 +571,7 @@ class BigM_Transformation(Transformation):
 
             if self._generate_debug_messages:
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "
-                             "after checking suffixes is %s." % (cons_name,
+                             "after checking suffixes is %s." % (c.name,
                                                                  str(M)))
 
             if c.lower is not None and M[0] is None:
@@ -582,7 +584,7 @@ class BigM_Transformation(Transformation):
             if self._generate_debug_messages:
                 logger.debug("GDP(BigM): The value for M for constraint '%s' "
                              "after estimating (if needed) is %s." %
-                             (cons_name, str(M)))
+                             (c.name, str(M)))
 
             # save the source information
             bigm_src[c] = (lower, upper)
