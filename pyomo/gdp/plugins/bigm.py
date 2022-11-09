@@ -551,10 +551,10 @@ class BigM_Transformation(Transformation):
                                                                  str(M)))
 
             if c.lower is not None and M[0] is None:
-                M = (self._estimate_M(c.body, cons_name)[0] - c.lower, M[1])
+                M = (self._estimate_M(c.body, c)[0] - c.lower, M[1])
                 lower = (M[0], None, None)
             if c.upper is not None and M[1] is None:
-                M = (M[0], self._estimate_M(c.body, cons_name)[1] - c.upper)
+                M = (M[0], self._estimate_M(c.body, c)[1] - c.upper)
                 upper = (M[1], None, None)
 
             if self._generate_debug_messages:
@@ -720,7 +720,7 @@ class BigM_Transformation(Transformation):
                     return lower, upper
         return lower, upper
 
-    def _estimate_M(self, expr, name):
+    def _estimate_M(self, expr, constraint):
         # If there are fixed variables here, unfix them for this calculation,
         # and we'll restore them at the end.
         fixed_vars = ComponentMap()
@@ -736,7 +736,7 @@ class BigM_Transformation(Transformation):
                             "expressions.\n\t(found while processing "
                             "constraint '%s'). Please specify a value of M "
                             "or ensure all variables that appear in the "
-                            "constraint are bounded." % name)
+                            "constraint are bounded." % constraint.name)
         else:
             M = (expr_lb, expr_ub)
 
