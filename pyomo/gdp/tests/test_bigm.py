@@ -649,12 +649,6 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         transBlock = m.component("_pyomo_gdp_bigm_reformulation")
         self.assertIsInstance(transBlock, Block)
 
-        # check that we have the lbub set on the transformation block
-        lbub = transBlock.component("lbub")
-        self.assertIsInstance(lbub, Set)
-        self.assertEqual(len(lbub), 2)
-        self.assertEqual(lbub, ['lb', 'ub'])
-
         # check the IndexedBlock of transformed disjuncts
         disjBlock = transBlock.relaxedDisjuncts
         self.assertEqual(len(disjBlock), 8)
@@ -663,7 +657,7 @@ class TwoTermIndexedDisj(unittest.TestCase, CommonTests):
         # this relies on the order in which they are transformed.
         for i,j in self.pairs:
             self.assertIsInstance(
-                disjBlock[j].component(m.disjunct[i].c.name),
+                disjBlock[j].component(m.disjunct[i].c.local_name),
                 Constraint)
 
     def test_disjunct_and_constraint_maps(self):
