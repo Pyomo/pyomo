@@ -1077,16 +1077,15 @@ class PolyhedralSet(UncertaintySet):
     def _validate(self):
         """
         Check polyhedral set attributes are such that set is nonempty
-        and bounded. Currently, this method is invoked only at
-        construction.
+        (solve a feasibility problem).
 
         Raises
         ------
         ValueError
-            If set is empty, unbounded, or the check was not
+            If set is empty, or the check was not
             successfully completed due to numerical issues.
         """
-        # solve LP to verify set is nonempty and bounded; check results
+        # solve LP
         res = sp.optimize.linprog(
             c=np.zeros(self.coefficients_mat.shape[1]),
             A_ub=self.coefficients_mat,
@@ -1094,6 +1093,8 @@ class PolyhedralSet(UncertaintySet):
             method="simplex",
             bounds=(None, None),
         )
+
+        # check termination
         if res.status == 1 or res.status == 4:
             raise ValueError(
                 "Could not verify nonemptiness of the "
@@ -1104,11 +1105,6 @@ class PolyhedralSet(UncertaintySet):
             raise ValueError(
                 "PolyhedralSet defined by 'coefficients_mat' and "
                 "'rhs_vec' is empty. Check arguments"
-            )
-        elif res.status == 3:
-            raise ValueError(
-                "PolyhedralSet defined by 'coefficients_mat' and "
-                "'rhs_vec: is unbounded. Check arguments"
             )
 
     @property
@@ -1162,11 +1158,16 @@ class PolyhedralSet(UncertaintySet):
                     f"(provided {lhs_coeffs_arr.shape[0]} rows)"
                 )
 
-        # === Matrix is not all zeros
-        if np.all(np.isclose(lhs_coeffs_arr, 0)):
+        # check no column is all zeros. otherwise, set is unbounded
+        cols_with_all_zeros = np.nonzero(
+            [np.all(col == 0) for col in lhs_coeffs_arr.T]
+        )[0]
+        if cols_with_all_zeros.size > 0:
+            col_str = ", ".join(str(val) for val in cols_with_all_zeros)
             raise ValueError(
-                "PolyhedralSet attribute 'coefficients_mat' must have"
-                "at least one nonzero entry"
+                "Attempting to set attribute 'coefficients_mat' to value "
+                f"with all entries zero in columns at indexes: {col_str}. "
+                "Ensure column has at least one nonzero entry"
             )
 
         self._coefficients_mat = lhs_coeffs_arr

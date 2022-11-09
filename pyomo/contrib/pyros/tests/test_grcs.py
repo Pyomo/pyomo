@@ -1114,9 +1114,116 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
 
 
 class testPolyhedralUncertaintySetClass(unittest.TestCase):
-    '''
-    Polyhedral uncertainty sets. Required inputs are matrix A, right-hand-side b, and list of uncertain params.
-    '''
+    """
+    Unit tests for the Polyhedral set.
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test PolyhedralSet constructor and attribute setters work
+        appropriately.
+        """
+        lhs_coefficients_mat = [[1, 2, 3], [4, 5, 6]]
+        rhs_vec = [1, 3]
+
+        pset = PolyhedralSet(lhs_coefficients_mat, rhs_vec)
+
+        # check attributes are as expected
+        np.testing.assert_allclose(lhs_coefficients_mat, pset.coefficients_mat)
+        np.testing.assert_allclose(rhs_vec, pset.rhs_vec)
+
+        # update the set
+        pset.coefficients_mat = [[1, 0, 1], [1, 1, 1.5]]
+        pset.rhs_vec= [3, 4]
+
+        # check updates work
+        np.testing.assert_allclose(
+            [[1, 0, 1], [1, 1, 1.5]],
+            pset.coefficients_mat,
+        )
+        np.testing.assert_allclose([3, 4], pset.rhs_vec)
+
+    def test_error_on_polyhedral_set_dim_change(self):
+        """
+        PolyhedralSet dimension (number columns of 'coefficients_mat')
+        is considered immutable.
+        Test ValueError raised if attempt made to change dimension.
+        """
+        # construct valid set
+        pset = PolyhedralSet([[1, 2, 3], [4, 5, 6]], [1, 3])
+
+        exc_str = (
+            r".*must have 3 columns to match set dimension "
+            r"\(provided.*2 columns\)"
+        )
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pset.coefficients_mat = [[1, 2], [3, 4]]
+
+    def test_error_on_inconsistent_rows(self):
+        """
+        Number of rows of budget membership mat is immutable.
+        Similarly, size of rhs_vec is immutable.
+        Check ValueError raised in event of attempted change.
+        """
+        coeffs_mat_exc_str = (
+            r".*must have 2 rows to match shape of attribute 'rhs_vec' "
+            r"\(provided.*3 rows\)"
+        )
+        rhs_vec_exc_str = (
+            r".*must have 2 entries to match shape of attribute "
+            r"'coefficients_mat' \(provided.*3 entries\)"
+        )
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, rhs_vec_exc_str):
+            PolyhedralSet([[1, 2], [3, 4]], rhs_vec=[1, 3, 3])
+
+        # construct a valid polyhedral set
+        # (2 x 2 coefficients, 2-vector for RHS)
+        pset = PolyhedralSet([[1, 2], [3, 4]], rhs_vec=[1, 3])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, coeffs_mat_exc_str):
+            # 3 x 2 matrix row mismatch
+            pset.coefficients_mat = [[1, 2], [3, 4], [5, 6]]
+        with self.assertRaisesRegex(ValueError, rhs_vec_exc_str):
+            # 3-vector mismatches 2 rows
+            pset.rhs_vec = [1, 3, 2]
+
+    def test_error_on_empty_set(self):
+        """
+        Check ValueError raised if nonemptiness check performed
+        at construction returns a negative result.
+        """
+        exc_str = r"PolyhedralSet.*is empty.*"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            PolyhedralSet([[1], [-1]], rhs_vec=[1, -3])
+
+    def test_error_on_polyhedral_mat_all_zero_columns(self):
+        """
+        Test ValueError raised if budget membership mat
+        has a column with all zeros.
+        """
+        invalid_col_mat = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
+        rhs_vec = [1, 1, 2]
+
+        exc_str = (
+            r".*all entries zero in columns at indexes: 0, 1.*"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            PolyhedralSet(invalid_col_mat, rhs_vec)
+
+        # construct a valid budget set
+        pset = PolyhedralSet([[1, 0, 1], [1, 1, 0], [1, 1, 1]], rhs_vec)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pset.coefficients_mat = invalid_col_mat
 
     def test_uncertainty_set_with_correct_params(self):
         '''
