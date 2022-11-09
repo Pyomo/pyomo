@@ -22,7 +22,7 @@ from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, value, RangeSet,
-    NonNegativeIntegers, Binary, )
+    NonNegativeIntegers, Binary, Any)
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.core.base.external import ExternalFunction
@@ -306,7 +306,6 @@ class BigM_Transformation(Transformation):
         self._transformation_blocks[to_block] = transBlock = Block()
         to_block.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = _TransformedDisjunct(NonNegativeIntegers)
-        transBlock.lbub = Set(initialize=['lb', 'ub'])
 
         return transBlock
 
@@ -348,20 +347,19 @@ class BigM_Transformation(Transformation):
         # create or fetch the xor constraint
         xorConstraint = self._add_xor_constraint(obj.parent_component(),
                                                  transBlock)
-        xor = obj.xor
-        or_expr = 0
         # Just because it's unlikely this is what someone meant to do...
         if len(obj.disjuncts) == 0:
             raise GDP_Error("Disjunction '%s' is empty. This is "
                             "likely indicative of a modeling error."  %
                             obj.getname(fully_qualified=True))
-        for disjunct in obj.disjuncts:
-             or_expr += disjunct.binary_indicator_var
 
         # add or (or xor) constraint
+        or_expr = sum(disjunct.binary_indicator_var for disjunct in
+                      obj.disjuncts)
+
         rhs = 1 if parent_disjunct is None else \
               parent_disjunct.binary_indicator_var
-        if xor:
+        if obj.xor:
             xorConstraint[index] = or_expr == rhs
         else:
             xorConstraint[index] = or_expr >= rhs
@@ -505,8 +503,9 @@ class BigM_Transformation(Transformation):
         cons_name = obj.getname(fully_qualified=True)
         name = unique_component_name(transBlock, cons_name)
 
-        newConstraint = Constraint(obj.index_set(),
-                                   disjunctionRelaxationBlock.lbub)
+        # We will make indexes from (obj.index_set() x ['lb', 'ub']), but don't
+        # bother construct that set here, as it can be quite expensive.
+        newConstraint = Constraint(Any)
         transBlock.add_component(name, newConstraint)
         # add mapping of transformed constraint to original constraint
         constraintMap['srcConstraints'][newConstraint] = obj
