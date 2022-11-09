@@ -323,7 +323,10 @@ class BigM_Transformation(Transformation):
 
         # add the XOR (or OR) constraints to parent block (with unique name)
         # It's indexed if this is an IndexedDisjunction, not otherwise
-        orC = Constraint(Any)
+        if disjunction.is_indexed():
+            orC = Constraint(Any)
+        else:
+            orC = Constraint()
         orCname = unique_component_name(
             transBlock,disjunction.getname(fully_qualified=False) + '_xor')
         transBlock.add_component(orCname, orC)

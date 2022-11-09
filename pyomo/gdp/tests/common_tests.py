@@ -322,9 +322,8 @@ def check_transformation_block_name_collision(self, transformation):
     disjBlock = transBlock.relaxedDisjuncts
     self.assertIsInstance(disjBlock, Block)
     self.assertEqual(len(disjBlock), 2)
-    self.assertIsInstance(disjBlock[0].component("d[0].c"), Constraint)
-    self.assertIsInstance(disjBlock[1].component("d[1].c1"), Constraint)
-    self.assertIsInstance(disjBlock[1].component("d[1].c2"), Constraint)
+    self.assertIs(m.d[0].transformation_block, disjBlock[0])
+    self.assertIs(m.d[1].transformation_block, disjBlock[1])
 
     # we didn't add to the block that wasn't ours
     self.assertEqual(len(m.component("_pyomo_gdp_%s_reformulation" %

@@ -49,19 +49,12 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         transBlock = m.component("_pyomo_gdp_bigm_reformulation")
         self.assertIsInstance(transBlock, Block)
 
-        # check that we have the lbub set on the transformation block
-        lbub = transBlock.component("lbub")
-        self.assertIsInstance(lbub, Set)
-        self.assertEqual(len(lbub), 2)
-        self.assertEqual(lbub, ['lb', 'ub'])
-
         disjBlock = transBlock.component("relaxedDisjuncts")
         self.assertIsInstance(disjBlock, Block)
         self.assertEqual(len(disjBlock), 2)
         # it has the disjuncts on it
-        self.assertIsInstance( disjBlock[1].component("d[1].c1"), Constraint)
-        self.assertIsInstance( disjBlock[1].component("d[1].c2"), Constraint)
-        self.assertIsInstance( disjBlock[0].component("d[0].c"), Constraint)
+        self.assertIs(m.d[0].transformation_block, disjBlock[0])
+        self.assertIs(m.d[1].transformation_block, disjBlock[1])
 
     def test_disjunction_deactivated(self):
         ct.check_disjunction_deactivated(self, 'bigm')
@@ -119,40 +112,45 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(len(c1_list), 2)
         # this is an equality, so we have both lb and ub
         self.assertIs(c1_list[0],
-                      disjBlock[1].component(oldblock[1].c1.name)['lb'])
+                      disjBlock[1].component(oldblock[1].c1.local_name)[None,
+                                                                        'lb'])
         self.assertIs(c1_list[1],
-                      disjBlock[1].component(oldblock[1].c1.name)['ub'])
+                      disjBlock[1].component(oldblock[1].c1.local_name)[None,
+                                                                        'ub'])
         c2_list = transformedConstraints2[oldblock[1].c2]
         # just ub
         self.assertEqual(len(c2_list), 1)
         self.assertIs(c2_list[0],
-                      disjBlock[1].component(oldblock[1].c2.name)['ub'])
+                      disjBlock[1].component(oldblock[1].c2.local_name)[None,
+                                                                        'ub'])
         c_list = transformedConstraints1[oldblock[0].c]
         # just lb
         self.assertEqual(len(c_list), 1)
         self.assertIs(c_list[0],
-                      disjBlock[0].component(oldblock[0].c.name)['lb'])
+                      disjBlock[0].component(oldblock[0].c.local_name)[None, 
+                                                                       'lb'])
 
         # transformed -> original
         srcdict1 = constraintdict1['srcConstraints']
         self.assertIsInstance(srcdict1, ComponentMap)
         self.assertEqual(len(srcdict1), 2)
-        self.assertIs(srcdict1[disjBlock[0].component(oldblock[0].c.name)],
+        self.assertIs(srcdict1[disjBlock[0].component(
+            oldblock[0].c.local_name)],
                       oldblock[0].c)
         self.assertIs(srcdict1[disjBlock[0].component(
-            oldblock[0].c.name)['lb']], oldblock[0].c)
+            oldblock[0].c.local_name)[None, 'lb']], oldblock[0].c)
         srcdict2 = constraintdict2['srcConstraints']
         self.assertIsInstance(srcdict2, ComponentMap)
         self.assertEqual(len(srcdict2), 5)
-        self.assertIs(srcdict2[disjBlock[1].component("d[1].c1")],
+        self.assertIs(srcdict2[disjBlock[1].component("c1")],
                       oldblock[1].c1)
-        self.assertIs(srcdict2[disjBlock[1].component("d[1].c1")['lb']],
+        self.assertIs(srcdict2[disjBlock[1].component("c1")[None, 'lb']],
                       oldblock[1].c1)
-        self.assertIs(srcdict2[disjBlock[1].component("d[1].c1")['ub']],
+        self.assertIs(srcdict2[disjBlock[1].component("c1")[None, 'ub']],
                       oldblock[1].c1)
-        self.assertIs(srcdict2[disjBlock[1].component("d[1].c2")],
+        self.assertIs(srcdict2[disjBlock[1].component("c2")],
                       oldblock[1].c2)
-        self.assertIs(srcdict2[disjBlock[1].component("d[1].c2")['ub']],
+        self.assertIs(srcdict2[disjBlock[1].component("c2")[None, 'ub']],
                       oldblock[1].c2)
 
     def test_new_block_nameCollision(self):
@@ -185,8 +183,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
     def test_transformed_constraints(self):
         m = models.makeTwoTermDisj()
-        TransformationFactory('gdp.bigm').apply_to(m)
-        self.checkMs(m, -3, 2, 7, 2)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+        self.checkMs(m, bigm, -3, 2, 7, 2)
 
     def test_do_not_transform_userDeactivated_disjuncts(self):
         ct.check_user_deactivated_disjuncts(self, 'bigm')
@@ -201,56 +200,60 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
     # helper method to check the M values in all of the transformed
     # constraints (m, M) is the tuple for M.  This also relies on the
     # disjuncts being transformed in the same order every time.
-    def checkMs(self, model, cons1lb, cons2lb, cons2ub, cons3ub):
+    def checkMs(self, model, bigm, cons1lb, cons2lb, cons2ub, cons3ub):
         disjBlock = model._pyomo_gdp_bigm_reformulation.relaxedDisjuncts
 
         # first constraint
-        c = disjBlock[0].component("d[0].c")
+        c = bigm.get_transformed_constraints(model.d[0].c)
         self.assertEqual(len(c), 1)
-        self.assertTrue(c['lb'].active)
-        repn = generate_standard_repn(c['lb'].body)
+        c_lb = c[0]
+        self.assertTrue(c[0].active)
+        repn = generate_standard_repn(c[0].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         ct.check_linear_coef(self, repn, model.a, 1)
         ct.check_linear_coef(self, repn, model.d[0].indicator_var, cons1lb)
         self.assertEqual(repn.constant, -cons1lb)
-        self.assertEqual(c['lb'].lower, model.d[0].c.lower)
-        self.assertIsNone(c['lb'].upper)
+        self.assertEqual(c[0].lower, model.d[0].c.lower)
+        self.assertIsNone(c[0].upper)
 
         # second constraint
-        c = disjBlock[1].component("d[1].c1")
+        c = bigm.get_transformed_constraints(model.d[1].c1)
         self.assertEqual(len(c), 2)
-        self.assertTrue(c['lb'].active)
-        repn = generate_standard_repn(c['lb'].body)
+        c_lb = c[0]
+        c_ub = c[1]
+        self.assertTrue(c[0].active)
+        repn = generate_standard_repn(c[0].body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         ct.check_linear_coef(self, repn, model.a, 1)
         ct.check_linear_coef(self, repn, model.d[1].indicator_var, cons2lb)
         self.assertEqual(repn.constant, -cons2lb)
-        self.assertEqual(c['lb'].lower, model.d[1].c1.lower)
-        self.assertIsNone(c['lb'].upper)
-        self.assertTrue(c['ub'].active)
-        repn = generate_standard_repn(c['ub'].body)
+        self.assertEqual(c[0].lower, model.d[1].c1.lower)
+        self.assertIsNone(c[0].upper)
+        self.assertTrue(c_ub.active)
+        repn = generate_standard_repn(c_ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         ct.check_linear_coef(self, repn, model.a, 1)
         ct.check_linear_coef(self, repn, model.d[1].indicator_var, cons2ub)
         self.assertEqual(repn.constant, -cons2ub)
-        self.assertIsNone(c['ub'].lower)
-        self.assertEqual(c['ub'].upper, model.d[1].c1.upper)
+        self.assertIsNone(c_ub.lower)
+        self.assertEqual(c_ub.upper, model.d[1].c1.upper)
 
         # third constraint
-        c = disjBlock[1].component("d[1].c2")
+        c = bigm.get_transformed_constraints(model.d[1].c2)
         self.assertEqual(len(c), 1)
-        self.assertTrue(c['ub'].active)
-        repn = generate_standard_repn(c['ub'].body)
+        c_ub = c[0]
+        self.assertTrue(c_ub.active)
+        repn = generate_standard_repn(c_ub.body)
         self.assertTrue(repn.is_linear())
         self.assertEqual(len(repn.linear_vars), 2)
         ct.check_linear_coef(self, repn, model.x, 1)
         ct.check_linear_coef(self, repn, model.d[1].indicator_var, cons3ub)
         self.assertEqual(repn.constant, -cons3ub)
-        self.assertIsNone(c['ub'].lower)
-        self.assertEqual(c['ub'].upper, model.d[1].c2.upper)
+        self.assertIsNone(c_ub.lower)
+        self.assertEqual(c_ub.upper, model.d[1].c2.upper)
 
     def test_suffix_M_None(self):
         m = models.makeTwoTermDisj()
@@ -258,8 +261,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.BigM = Suffix(direction=Suffix.LOCAL)
         m.BigM[None] = 20
 
-        TransformationFactory('gdp.bigm').apply_to(m)
-        self.checkMs(m, -20, -20, 20, 20)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+        self.checkMs(m, bigm, -20, -20, 20, 20)
 
     def test_suffix_M_None_on_disjunctData(self):
         m = models.makeTwoTermDisj()
@@ -270,9 +274,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.d[0].BigM = Suffix(direction=Suffix.LOCAL)
         m.d[0].BigM[None] = 18
 
-        TransformationFactory('gdp.bigm').apply_to(m)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
         # there should now be different values of m on d[0] and d[1]
-        self.checkMs(m, -18, -20, 20, 20)
+        self.checkMs(m, bigm, -18, -20, 20, 20)
 
     def test_suffix_M_simpleConstraint_on_disjunctData(self):
         m = models.makeTwoTermDisj()
@@ -283,8 +288,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.d[0].BigM = Suffix(direction=Suffix.LOCAL)
         m.d[0].BigM[m.d[0].c] = 18
 
-        TransformationFactory('gdp.bigm').apply_to(m)
-        self.checkMs(m, -18, -20, 20, 20)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+        self.checkMs(m, bigm, -18, -20, 20, 20)
 
     def test_arg_M_None(self):
         m = models.makeTwoTermDisj()
@@ -293,8 +299,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.BigM[None] = 20
 
         # give an arg
-        TransformationFactory('gdp.bigm').apply_to(m, bigM={None: 19})
-        self.checkMs(m, -19, -19, 19, 19)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m, bigM={None: 19})
+        self.checkMs(m, bigm, -19, -19, 19, 19)
 
     def test_arg_M_singleNum(self):
         m = models.makeTwoTermDisj()
@@ -303,8 +310,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.BigM[None] = 20
 
         # give an arg
-        TransformationFactory('gdp.bigm').apply_to(m, bigM=19.2)
-        self.checkMs(m, -19.2, -19.2, 19.2, 19.2)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m, bigM=19.2)
+        self.checkMs(m, bigm, -19.2, -19.2, 19.2, 19.2)
 
     def test_singleArg_M_tuple(self):
         m = models.makeTwoTermDisj()
@@ -313,8 +321,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.BigM[None] = 20
 
         # give an arg
-        TransformationFactory('gdp.bigm').apply_to(m, bigM=(-18, 19.2))
-        self.checkMs(m, -18, -18, 19.2, 19.2)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m, bigM=(-18, 19.2))
+        self.checkMs(m, bigm, -18, -18, 19.2, 19.2)
 
     def test_singleArg_M_tuple_wrongLength(self):
         m = models.makeTwoTermDisj()
@@ -339,8 +348,9 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.BigM[None] = 20
 
         # give an arg
-        TransformationFactory('gdp.bigm').apply_to(m, bigM=[-18, 19.2])
-        self.checkMs(m, -18, -18, 19.2, 19.2)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m, bigM=[-18, 19.2])
+        self.checkMs(m, bigm, -18, -18, 19.2, 19.2)
 
     def test_singleArg_M_list_wrongLength(self):
         m = models.makeTwoTermDisj()
@@ -369,43 +379,48 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         m.BigM[m.d[1].c2] = 200
 
         # give an arg
-        TransformationFactory('gdp.bigm').apply_to(
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(
             m,
             bigM={None: 19,
                   m.d[0].c: 18,
                   m.d[1].c1: 17,
                   m.d[1].c2: 16})
-        self.checkMs(m, -18, -17, 17, 16)
+        self.checkMs(m, bigm, -18, -17, 17, 16)
 
     def test_tuple_M_arg(self):
         m = models.makeTwoTermDisj()
         # give a tuple arg
-        TransformationFactory('gdp.bigm').apply_to(
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(
             m,
             bigM={None: (-20,19)})
-        self.checkMs(m, -20, -20, 19, 19)
+        self.checkMs(m, bigm, -20, -20, 19, 19)
 
     def test_tuple_M_suffix(self):
         m = models.makeTwoTermDisj()
         m.BigM = Suffix(direction=Suffix.LOCAL)
         m.BigM[None] = (-18, 20)
-        TransformationFactory('gdp.bigm').apply_to(m)
-        self.checkMs(m, -18, -18, 20, 20)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+        self.checkMs(m, bigm, -18, -18, 20, 20)
 
     def test_list_M_arg(self):
         m = models.makeTwoTermDisj()
         # give a tuple arg
-        TransformationFactory('gdp.bigm').apply_to(
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(
             m,
             bigM={None: [-20,19]})
-        self.checkMs(m, -20, -20, 19, 19)
+        self.checkMs(m, bigm, -20, -20, 19, 19)
 
     def test_list_M_suffix(self):
         m = models.makeTwoTermDisj()
         m.BigM = Suffix(direction=Suffix.LOCAL)
         m.BigM[None] = [-18, 20]
-        TransformationFactory('gdp.bigm').apply_to(m)
-        self.checkMs(m, -18, -18, 20, 20)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.apply_to(m)
+        self.checkMs(m, bigm, -18, -18, 20, 20)
 
     def test_tuple_wrong_length_err(self):
         m = models.makeTwoTermDisj()
@@ -467,7 +482,6 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
                 len(list(relaxed.component_objects(Constraint))), 1)
             self.assertEqual(
                 len(list(relaxed.component_data_objects(Constraint))), i)
-            self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
 
     def test_virtual_indexed_constraints_in_disjunct(self):
         m = ConcreteModel()
@@ -500,7 +514,6 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
                 len(list(relaxed.component_objects(Constraint))), 1)
             self.assertEqual(
                 len(list(relaxed.component_data_objects(Constraint))), i)
-            self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
 
     def test_local_var(self):
         m = models.localVar()
