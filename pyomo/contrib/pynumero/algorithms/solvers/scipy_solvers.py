@@ -143,8 +143,21 @@ class NewtonNlpSolver(DenseSquareNlpSolver):
         domain=bool,
         description="Whether to use SciPy's secant method",
     ))
+    OPTIONS.declare("full_output", ConfigValue(
+        default=True,
+        domain=bool,
+        description="Whether underlying solver should return its full output",
+    ))
 
-    # TODO: Check that NLP is one-dimensional
+    def __init__(self, nlp, timer=None, options=None):
+        super().__init__(nlp, timer=timer, options=options)
+        if nlp.n_primals() != 1:
+            raise RuntimeError(
+                "Cannot use the scipy.optimize.newton solver on an NLP with"
+                " more than one variable and equality constraint. Got %s"
+                " primals. Please use RootNlpSolver or FsolveNlpSolver instead."
+            )
+
     def solve(self, x0=None):
         self._timer.start("solve")
         if x0 is None:
@@ -159,12 +172,13 @@ class NewtonNlpSolver(DenseSquareNlpSolver):
             x0[0],
             fprime=fprime,
             tol=self.options.tol,
+            full_output=self.options.full_output,
         )
         self._timer.stop("solve")
         return results
 
 
-class SecantNewtonNlpSolver(DenseSquareNlpSolver):
+class SecantNewtonNlpSolver(NewtonNlpSolver):
 
     OPTIONS = ConfigBlock(
         description="Options for SciPy newton wrapper",
@@ -373,4 +387,54 @@ class PyomoRootSolver(PyomoScipySolver):
         results.solver.number_of_function_evaluations = scipy_results.nfev
         results.solver.number_of_gradient_evaluations = scipy_results.njev
 
+        return results
+
+
+class PyomoNewtonSolver(PyomoScipySolver):
+
+    def create_nlp_solver(self, **kwds):
+        nlp = self.get_nlp()
+        solver = NewtonNlpSolver(nlp, **kwds)
+        return solver
+
+    def get_pyomo_results(self, model, scipy_results):
+        nlp = self.get_nlp()
+        results = SolverResults()
+
+        if self._nlp_solver.options.full_output:
+            root, res = scipy_results
+        else:
+            root = scipy_results
+
+        # Record problem data
+        results.problem.name = model.name
+        results.problem.number_of_constraints = nlp.n_eq_constraints()
+        results.problem.number_of_variables = nlp.n_primals()
+        results.problem.number_of_binary_variables = 0
+        results.problem.number_of_integer_variables = 0
+        results.problem.number_of_continuous_variables = nlp.n_primals()
+
+        # Record solver data
+        results.solver.name = "scipy.newton"
+
+        results.solver.wallclock_time = self._timer.timers["solve"].total_time
+
+        if self._nlp_solver.options.full_output:
+            # We only have access to any of this information if the solver was
+            # requested to return its full output.
+
+            # For this solver, res.flag is a string.
+            # If successful, it is 'converged'
+            results.solver.message = res.flag
+
+            if res.converged:
+                term_cond = TerminationCondition.feasible
+            else:
+                term_cond = TerminationCondition.Error
+            results.solver.termination_condition = term_cond
+            results.solver.status = TerminationCondition.to_solver_status(
+                results.solver.termination_condition
+            )
+
+            results.solver.number_of_function_evaluations = res.function_calls
         return results
