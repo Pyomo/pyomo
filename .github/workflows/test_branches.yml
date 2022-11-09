@@ -248,7 +248,7 @@ jobs:
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
-            python -m pip install --cache-dir cache/pip cplex \
+            python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip \
                 -i https://pypi.gurobi.com gurobipy \
@@ -301,7 +301,8 @@ jobs:
         done
         conda install -q -y -c conda-forge $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
-            conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
+            conda install -q -y -c ibmdecisionoptimization \
+                'cplex>=12.10' docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             conda install -q -y -c gurobi gurobi \
                 || echo "WARNING: Gurobi is not available"

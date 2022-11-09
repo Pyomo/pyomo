@@ -147,7 +147,8 @@ def calculate_variable_from_constraint(variable, constraint,
         if slope:
             variable.set_value(-intercept/slope, skip_validation=True)
             body_val = value(body, exception=False)
-            if body_val is not None and abs(body_val - upper) < eps:
+            if (body_val is not None and body_val.__class__ is not complex
+                and abs(body_val - upper) < eps):
                 # Re-set the variable value to trigger any warnings WRT
                 # the final variable state
                 variable.set_value(variable.value)
