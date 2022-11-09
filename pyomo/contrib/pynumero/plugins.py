@@ -16,6 +16,7 @@ from .algorithms.solvers.cyipopt_solver import PyomoCyIpoptSolver
 from .algorithms.solvers.scipy_solvers import (
     PyomoFsolveSolver,
     PyomoRootSolver,
+    PyomoNewtonSolver,
 )
 
 def load():
@@ -37,3 +38,7 @@ def load():
             "root: Find the root of a vector function"
         ),
     )(PyomoRootSolver)
+    SolverFactory.register(
+        "scipy.newton",
+        doc="newton: Find a zero of a scalar-valued function",
+    )(PyomoNewtonSolver)
