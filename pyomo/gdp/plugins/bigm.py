@@ -22,7 +22,7 @@ from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, value, RangeSet,
-    NonNegativeIntegers, Binary, Any)
+    NonNegativeIntegers, Binary, Any, Objective)
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.core.base.external import ExternalFunction
@@ -37,6 +37,7 @@ from pyomo.gdp.util import (
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
+from pyomo.util.vars_from_expressions import get_vars_from_components
 from functools import wraps
 from weakref import ref as weakref_ref, ReferenceType
 
@@ -204,12 +205,16 @@ class BigM_Transformation(Transformation):
                                         # as a key in bigMargs, I need the error
                                         # not to be when I try to put it into
                                         # this map!
+        self.fixed_vars = ComponentMap()
         try:
             self._apply_to_impl(instance, **kwds)
         finally:
-            # same for our bookkeeping about what we used from bigM arg dict
             self.used_args.clear()
             self._transformation_blocks.clear()
+            # clean up if we unfixed things (fixed_vars is empty if we were
+            # assuming fixed vars are fixed for life)
+            for v, val in self.fixed_vars.items():
+                v.fix(val)
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
@@ -226,7 +231,6 @@ class BigM_Transformation(Transformation):
         # up.
         config.set_value(kwds)
         bigM = config.bigM
-        self.assume_fixed_vars_permanent = config.assume_fixed_vars_permanent
 
         targets = config.targets
         # We need to check that all the targets are in fact on instance. As we
@@ -268,6 +272,23 @@ class BigM_Transformation(Transformation):
             instance,
             targets=[blk for blk in targets if blk.ctype is Block] +
             [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
+
+        # If there are fixed variables here, unfix them for the duration of the
+        # transformation, and we'll restore them at the end. Note that this
+        # might mess with variables we'll never see given whatever is actually
+        # in targets, but this allows us to do this all at once so that we are
+        # not iterating through the same variables over and over again as we
+        # transform each Disjunct (assuming their expressions could have many
+        # variables in common)
+        if not config.assume_fixed_vars_permanent:
+            for v in get_vars_from_components(instance,
+                                              ctype=(Constraint, Objective),
+                                              active=None,
+                                              descend_into=(Block, Disjunct),
+                                              include_fixed=True):
+                if v.fixed:
+                    self.fixed_vars[v] = value(v)
+                    v.fixed = False
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
@@ -721,15 +742,6 @@ class BigM_Transformation(Transformation):
         return lower, upper
 
     def _estimate_M(self, expr, constraint):
-        # If there are fixed variables here, unfix them for this calculation,
-        # and we'll restore them at the end.
-        fixed_vars = ComponentMap()
-        if not self.assume_fixed_vars_permanent:
-            for v in EXPR.identify_variables(expr, include_fixed=True):
-                if v.fixed:
-                    fixed_vars[v] = value(v)
-                    v.fixed = False
-
         expr_lb, expr_ub = compute_bounds_on_expr(expr)
         if expr_lb is None or expr_ub is None:
             raise GDP_Error("Cannot estimate M for unbounded "
@@ -739,12 +751,6 @@ class BigM_Transformation(Transformation):
                             "constraint are bounded." % constraint.name)
         else:
             M = (expr_lb, expr_ub)
-
-        # clean up if we unfixed things (fixed_vars is empty if we were assuming
-        # fixed vars are fixed for life)
-        for v, val in fixed_vars.items():
-            v.fix(val)
-
         return tuple(M)
 
     # These are all functions to retrieve transformed components from
