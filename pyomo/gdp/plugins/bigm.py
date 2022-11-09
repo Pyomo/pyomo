@@ -22,7 +22,7 @@ from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, value, RangeSet,
-    NonNegativeIntegers, Binary, Any, Objective)
+    NonNegativeIntegers, Binary, Any)
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.core.base.external import ExternalFunction
@@ -205,7 +205,7 @@ class BigM_Transformation(Transformation):
                                         # as a key in bigMargs, I need the error
                                         # not to be when I try to put it into
                                         # this map!
-        self.fixed_vars = ComponentMap()
+        #self.fixed_vars = ComponentMap()
         try:
             self._apply_to_impl(instance, **kwds)
         finally:
@@ -213,8 +213,8 @@ class BigM_Transformation(Transformation):
             self._transformation_blocks.clear()
             # clean up if we unfixed things (fixed_vars is empty if we were
             # assuming fixed vars are fixed for life)
-            for v, val in self.fixed_vars.items():
-                v.fix(val)
+            # for v, val in self.fixed_vars.items():
+            #     v.fix(val)
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
@@ -280,15 +280,16 @@ class BigM_Transformation(Transformation):
         # not iterating through the same variables over and over again as we
         # transform each Disjunct (assuming their expressions could have many
         # variables in common)
-        if not config.assume_fixed_vars_permanent:
-            for v in get_vars_from_components(instance,
-                                              ctype=(Constraint, Objective),
-                                              active=None,
-                                              descend_into=(Block, Disjunct),
-                                              include_fixed=True):
-                if v.fixed:
-                    self.fixed_vars[v] = value(v)
-                    v.fixed = False
+        # if not config.assume_fixed_vars_permanent:
+        #     for v in get_vars_from_components(instance,
+        #                                       ctype=Constraint,
+        #                                       active=None,
+        #                                       descend_into=(Block, Disjunct),
+        #                                       include_fixed=True):
+        #         if v.fixed:
+        #             self.fixed_vars[v] = value(v)
+        #             v.fixed = False
+        self.assume_fixed_vars_permanent = config.assume_fixed_vars_permanent
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
@@ -742,7 +743,8 @@ class BigM_Transformation(Transformation):
         return lower, upper
 
     def _estimate_M(self, expr, constraint):
-        expr_lb, expr_ub = compute_bounds_on_expr(expr)
+        expr_lb, expr_ub = compute_bounds_on_expr(
+            expr, ignore_fixed=not self.assume_fixed_vars_permanent)
         if expr_lb is None or expr_ub is None:
             raise GDP_Error("Cannot estimate M for unbounded "
                             "expressions.\n\t(found while processing "
