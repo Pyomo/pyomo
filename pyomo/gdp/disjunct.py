@@ -20,6 +20,7 @@ from pyomo.common.autoslots import AutoSlots
 from pyomo.common.deprecation import deprecation_warning, RenamedClass
 from pyomo.common.errors import PyomoException
 from pyomo.common.log import is_debug_set
+from pyomo.common.numeric_types import native_logical_types, native_types
 from pyomo.common.modeling import unique_component_name, NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core import (
@@ -30,7 +31,6 @@ from pyomo.core.base.component import (
     ActiveComponent, ActiveComponentData, ComponentData
 )
 from pyomo.core.base.global_set import UnindexedComponent_index
-from pyomo.core.base.numvalue import native_types
 from pyomo.core.base.block import _BlockData
 from pyomo.core.base.misc import apply_indexed_rule
 from pyomo.core.base.indexed_component import ActiveIndexedComponent
@@ -235,7 +235,8 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
     def __eq__(self, arg):
         # If the other operand is a Boolean, then we want to fall back
         # on the "normal" implementation of __eq__ for Boolean values
-        if isinstance(arg, BooleanValue):
+        if isinstance(arg, BooleanValue) \
+           or arg.__class__ in native_logical_types:
             return super().__eq__(arg)
         # Otherwise, we will treat this as a binary operand and use the
         # (numeric) relational expression system
@@ -243,7 +244,8 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
     def __ne__(self, arg):
         # If the other operand is a Boolean, then we want to fall back
         # on the "normal" implementation of __ne__ for Boolean values
-        if isinstance(arg, BooleanValue):
+        if isinstance(arg, BooleanValue) \
+           or arg.__class__ in native_logical_types:
             return super().__ne__(arg)
         # Otherwise, we will treat this as a binary operand and use the
         # (numeric) relational expression system

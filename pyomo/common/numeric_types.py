@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.deprecation import relocated_module_attribute
+from pyomo.common.deprecation import deprecated, relocated_module_attribute
 
 #: Python set used to identify numeric constants, boolean values, strings
 #: and instances of

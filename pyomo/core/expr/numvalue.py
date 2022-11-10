@@ -35,7 +35,6 @@ from pyomo.core.expr.expr_common import (
 from pyomo.common.numeric_types import (
     nonpyomo_leaf_types, native_types, native_numeric_types,
     native_integer_types, native_logical_types,
-    RegisterNumericType, RegisterIntegerType, RegisterBooleanType,
     pyomo_constant_types,
 )
 from pyomo.core.pyomoobject import PyomoObject
@@ -48,6 +47,15 @@ relocated_module_attribute(
     "contains types that were convertable to bool, and not types that should "
     "be treated as if they were bool (as was the case for the other "
     "native_*_types sets).  Users likely should use native_logical_types.")
+relocated_module_attribute(
+    'RegisterNumericType', 'pyomo.common.numeric_types.RegisterNumericType',
+    version='TBD')
+relocated_module_attribute(
+    'RegisterIntegerType', 'pyomo.common.numeric_types.RegisterIntegerType',
+    version='TBD')
+relocated_module_attribute(
+    'RegisterBooleanType', 'pyomo.common.numeric_types.RegisterBooleanType',
+    version='TBD')
 
 logger = logging.getLogger('pyomo.core')
 
@@ -440,8 +448,7 @@ def check_if_numeric_type(obj):
     %s
 Dynamic registration is supported for convenience, but there are known
 limitations to this approach.  We recommend explicitly registering
-numeric types using the following functions:
-    RegisterNumericType(), RegisterIntegerType(), RegisterBooleanType()."""
+numeric types using RegisterNumericType() or RegisterIntegerType()."""
             % (obj_class.__name__,))
         return True
     else:

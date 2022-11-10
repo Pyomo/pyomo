@@ -401,7 +401,7 @@ class TestRelocated(unittest.TestCase):
         with LoggingIntercept() as LOG:
             self.assertIs(_import_object(
                 'oldName', 'pyomo.common.tests.test_deprecated.logger',
-                'TBD', None), logger)
+                'TBD', None, None), logger)
         self.assertRegex(
             LOG.getvalue().replace('\n', ' '),
             "DEPRECATED: the 'oldName' attribute has been moved to "
@@ -410,7 +410,7 @@ class TestRelocated(unittest.TestCase):
         with LoggingIntercept() as LOG:
             self.assertIs(_import_object(
                 'oldName', 'pyomo.common.tests.test_deprecated._import_object',
-                'TBD', None), _import_object)
+                'TBD', None, None), _import_object)
         self.assertRegex(
             LOG.getvalue().replace('\n', ' '),
             "DEPRECATED: the 'oldName' function has been moved to "
@@ -419,7 +419,7 @@ class TestRelocated(unittest.TestCase):
         with LoggingIntercept() as LOG:
             self.assertIs(_import_object(
                 'oldName', 'pyomo.common.tests.test_deprecated.TestRelocated',
-                'TBD', None), TestRelocated)
+                'TBD', None, None), TestRelocated)
         self.assertRegex(
             LOG.getvalue().replace('\n', ' '),
             "DEPRECATED: the 'oldName' class has been moved to "
