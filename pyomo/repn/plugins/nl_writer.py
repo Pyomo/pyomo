@@ -2175,7 +2175,10 @@ def _before_linear(visitor, child):
             const += arg
         else:
             const += arg()
-    return False, (_GENERAL, AMPLRepn(const, linear, None))
+    if linear:
+        return False, (_GENERAL, AMPLRepn(const, linear, None))
+    else:
+        return False, (_CONSTANT, const)
 
 def _before_named_expression(visitor, child):
     _id = id(child)
