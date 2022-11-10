@@ -8,6 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+import collections
 from .visitor import StreamBasedExpressionVisitor
 from .numvalue import nonpyomo_leaf_types
 from .current import (
@@ -43,35 +44,23 @@ def handle_unary_expression(node: UnaryFunctionExpression, pn: List):
     return node.args
 
 
-def handle_external_function_expression(node: ExternalFunctionExpression, pn: List):
+def handle_external_function_expression(node: ExternalFunctionExpression,
+                                        pn: List):
     pn.append((type(node), node.nargs(), node._fcn))
     return node.args
 
+def _generic_expression_handler():
+    return handle_expression
 
-handler = dict()
-handler[LinearExpression] = handle_expression
-handler[SumExpression] = handle_expression
-handler[MonomialTermExpression] = handle_expression
-handler[ProductExpression] = handle_expression
-handler[DivisionExpression] = handle_expression
-handler[PowExpression] = handle_expression
-handler[NegationExpression] = handle_expression
-handler[NPV_ProductExpression] = handle_expression
-handler[NPV_DivisionExpression] = handle_expression
-handler[NPV_PowExpression] = handle_expression
-handler[NPV_SumExpression] = handle_expression
-handler[NPV_NegationExpression] = handle_expression
+handler = collections.defaultdict(_generic_expression_handler)
+
 handler[UnaryFunctionExpression] = handle_unary_expression
 handler[NPV_UnaryFunctionExpression] = handle_unary_expression
 handler[ExternalFunctionExpression] = handle_external_function_expression
 handler[NPV_ExternalFunctionExpression] = handle_external_function_expression
-handler[Expr_ifExpression] = handle_expression
 handler[AbsExpression] = handle_unary_expression
 handler[NPV_AbsExpression] = handle_unary_expression
 handler[RangedExpression] = handle_expression
-handler[InequalityExpression] = handle_expression
-handler[EqualityExpression] = handle_expression
-handler[GetItemExpression] = handle_expression
 
 
 class PrefixVisitor(StreamBasedExpressionVisitor):
