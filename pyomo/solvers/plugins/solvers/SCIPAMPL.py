@@ -77,8 +77,8 @@ class SCIPAMPL(SystemCallSolver):
         # revert to scipampl for older versions
         executable = Executable("scipampl")
         if not executable:
-            logger.warning("Could not locate the 'scipampl' executable or"
-                           " the 'scip' executable since 8.0.0, which is "
+            logger.warning("Could not locate the 'scip' executable or"
+                           " the older 'scipampl' executable, which is "
                            "required for solver %s" % self.name)
             self.enable = False
             return None
@@ -108,7 +108,7 @@ class SCIPAMPL(SystemCallSolver):
         #
         if self._log_file is None:
             self._log_file = TempfileManager.\
-                             create_tempfile(suffix="_scipampl.log")
+                             create_tempfile(suffix="_scip.log")
 
         fname = problem_files[0]
         if '.' in fname:
@@ -396,6 +396,9 @@ class SCIPAMPL(SystemCallSolver):
             if len(results.solution) > 0:
                 results.solution(0).status = \
                     SolutionStatus.optimal
+            results.problem.lower_bound = results.solver.primal_bound
+            results.problem.upper_bound = results.solver.primal_bound
+
                     
         # WARNING # infeasible='infeasible' # Demonstrated that the problem is infeasible
           
