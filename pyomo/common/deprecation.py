@@ -256,19 +256,20 @@ def deprecated(msg=None, logger=None, version=None, remove_in=None):
     return wrap
 
 
-def _import_object(name, target, version, remove_in):
+def _import_object(name, target, version, remove_in, msg):
     from importlib import import_module
     modname, targetname = target.rsplit('.',1)
     _object = getattr(import_module(modname), targetname)
-    if inspect.isclass(_object):
-        _type = 'class'
-    elif inspect.isfunction(_object):
-        _type = 'function'
-    else:
-        _type = 'attribute'
-    deprecation_warning(
-        "the '%s' %s has been moved to '%s'.  Please update your import."
-        % (name, _type, target), version=version, remove_in=remove_in)
+    if msg is None:
+        if inspect.isclass(_object):
+            _type = 'class'
+        elif inspect.isfunction(_object):
+            _type = 'function'
+        else:
+            _type = 'attribute'
+        msg = (f"the '{name}' {_type} has been moved to '{target}'."
+               "  Please update your import.")
+    deprecation_warning(msg, version=version, remove_in=remove_in)
     return _object
 
 class _ModuleGetattrBackport_27(object):
@@ -393,7 +394,7 @@ def relocated_module(new_name, msg=None, logger=None,
               'Please update your import.'
     deprecation_warning(msg, logger, version, remove_in, cf)
 
-def relocated_module_attribute(local, target, version, remove_in=None):
+def relocated_module_attribute(local, target, version, remove_in=None, msg=None):
     """Provide a deprecation path for moved / renamed module attributes
 
     This function declares that a local module attribute has been moved
@@ -410,14 +411,23 @@ def relocated_module_attribute(local, target, version, remove_in=None):
     ----------
     local: str
         The original (local) name of the relocated attribute
+
     target: str
         The new absolute import name of the relocated attribute
+
     version: str
         The Pyomo version when this move was released
         (passed to deprecation_warning)
+
     remove_in: str
         The Pyomo version when this deprecation path will be removed
         (passed to deprecation_warning)
+
+    msg: str
+        If not None, then this specifies a custom deprecation message to
+        be emitted when the attribute is accessed from its original
+        location.
+
     """
     _module = sys.modules[inspect.currentframe().f_back.f_globals['__name__']]
     if not hasattr(_module, '__relocated_attrs__'):
@@ -448,7 +458,7 @@ def relocated_module_attribute(local, target, version, remove_in=None):
         else: # sys.version_info >= (2,7):
             _module = sys.modules[_module.__name__] \
                       = _ModuleGetattrBackport_27(_module)
-    _module.__relocated_attrs__[local] = (target, version, remove_in)
+    _module.__relocated_attrs__[local] = (target, version, remove_in, msg)
 
 
 class RenamedClass(type):
