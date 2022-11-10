@@ -18,10 +18,8 @@ from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     DenseSquareNlpSolver,
 )
 from pyomo.opt import (
-    SolverStatus,
     SolverResults,
     TerminationCondition,
-    ProblemSense,
 )
 from pyomo.common.dependencies import (
     attempt_import,
