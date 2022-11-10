@@ -88,6 +88,10 @@ def RegisterIntegerType(new_type):
     native_types.add(new_type)
     nonpyomo_leaf_types.add(new_type)
 
+@deprecated(
+    "The native_boolean_types set (and hence RegisterBooleanType) "
+    "is deprecated.  Users likely should use RegisterLogicalType.",
+    version='TBD')
 def RegisterBooleanType(new_type):
     """
     A utility function for updating the set of types that are
@@ -97,5 +101,18 @@ def RegisterBooleanType(new_type):
     The argument should be a class (e.g., numpy.bool_).
     """
     _native_boolean_types.add(new_type)
+    native_types.add(new_type)
+    nonpyomo_leaf_types.add(new_type)
+
+def RegisterLogicalType(new_type):
+    """
+    A utility function for updating the set of types that are
+    recognized as handling boolean values. This function does not
+    register the type of integer or numeric.
+
+    The argument should be a class (e.g., numpy.bool_).
+    """
+    _native_boolean_types.add(new_type)
+    native_logical_types.add(new_type)
     native_types.add(new_type)
     nonpyomo_leaf_types.add(new_type)
