@@ -1279,8 +1279,11 @@ def _binary_op_dispatcher_type_mapping(dispatcher, updates):
         return dispatcher[a.__class__, b.__class__](a, b)
 
     def _mutable_mutable(a, b):
-        a = _recast_mutable(a)
-        b = _recast_mutable(b)
+        if a is b:
+            a = b = _recast_mutable(a)
+        else:
+            a = _recast_mutable(a)
+            b = _recast_mutable(b)
         return dispatcher[a.__class__, b.__class__](a, b)
 
     mapping = {}
