@@ -25,8 +25,8 @@ from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.expr.numvalue import (
     NumericConstant, as_numeric, is_numeric_data,
     native_types, native_numeric_types, native_integer_types,
-    _native_boolean_types,
 )
+from pyomo.common.numeric_types import _native_boolean_types
 
 try:
     import numpy
