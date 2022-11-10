@@ -19,7 +19,7 @@ from pyomo.common.tempfiles import TempfileManager
 
 from pyomo.opt.base import ProblemFormat, ResultsFormat
 from pyomo.opt.base.solvers import _extract_version, SolverFactory
-from pyomo.opt.results import SolverStatus, TerminationCondition, SolutionStatus 
+from pyomo.opt.results import SolverStatus, TerminationCondition, SolutionStatus , ProblemSense
 from pyomo.opt.solver import SystemCallSolver
 
 import logging
@@ -396,9 +396,10 @@ class SCIPAMPL(SystemCallSolver):
             if len(results.solution) > 0:
                 results.solution(0).status = \
                     SolutionStatus.optimal
-            results.problem.lower_bound = results.solver.primal_bound
-            results.problem.upper_bound = results.solver.primal_bound
-
+            if results.problem.sense == ProblemSense.minimize:
+                results.problem.lower_bound = results.solver.primal_bound
+            else:
+                results.problem.upper_bound = results.solver.primal_bound
                     
         # WARNING # infeasible='infeasible' # Demonstrated that the problem is infeasible
           
