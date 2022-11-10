@@ -49,6 +49,7 @@ from pyomo.environ import Block, ComponentUID
 
 import pyomo.contrib.parmest.utils as utils
 import pyomo.contrib.parmest.graphics as graphics
+from pyomo.dae import ContinuousSet
 
 parmest_available = numpy_available & pandas_available & scipy_available
 
@@ -468,7 +469,7 @@ class Estimator(object):
                     for key in self.solver_options:
                         solver.options[key] = self.solver_options[key]
 
-                solve_result = solver.solve(ef, tee = self.tee)
+                solve_result = solver.solve(self.ef_instance, tee = self.tee)
 
             # The import error will be raised when we attempt to use
             # inv_reduced_hessian_barrier below.
@@ -533,13 +534,21 @@ class Estimator(object):
 
             if len(return_values) > 0:
                 var_values = []
-                for exp_i in self.ef_instance.component_objects(Block, descend_into=False):
+                if len(scen_names) > 1:  # multiple scenarios
+                    block_objects = self.ef_instance.component_objects(Block, descend_into=False)
+                else:  # single scenario
+                    block_objects = [self.ef_instance]
+                for exp_i in block_objects:
                     vals = {}
                     for var in return_values:
                         exp_i_var = exp_i.find_component(str(var))
                         if exp_i_var is None:  # we might have a block such as _mpisppy_data
                             continue
-                        temp = [pyo.value(_) for _ in exp_i_var.values()]
+                        # if value to return is ContinuousSet
+                        if type(exp_i_var) == ContinuousSet:
+                            temp = list(exp_i_var)
+                        else:
+                            temp = [pyo.value(_) for _ in exp_i_var.values()]
                         if len(temp) == 1:
                             vals[var] = temp[0]
                         else:

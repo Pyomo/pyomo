@@ -34,7 +34,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python: [3.7, 3.8, 3.9, '3.10']
+        python: [3.7, 3.8, 3.9, '3.10', '3.11']
         other: [""]
         category: [""]
 
@@ -78,7 +78,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.8
+          python: '3.10'
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
@@ -113,6 +113,11 @@ jobs:
           skip_doctest: 1
           TARGET: win
           PYENV: pip
+
+        exclude:
+        # Exclude 3.11 on conda until matplotlib!=3.6.1 is released on
+        # conda-forge for python 3.11
+        - {os: windows-latest, python: 3.11}
 
     steps:
     - name: Checkout Pyomo source
@@ -269,7 +274,7 @@ jobs:
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
-            python -m pip install --cache-dir cache/pip cplex \
+            python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip \
                 -i https://pypi.gurobi.com gurobipy \
@@ -322,7 +327,8 @@ jobs:
         done
         conda install -q -y -c conda-forge $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
-            conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
+            conda install -q -y -c ibmdecisionoptimization \
+                'cplex>=12.10' docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             conda install -q -y -c gurobi gurobi \
                 || echo "WARNING: Gurobi is not available"

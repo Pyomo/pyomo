@@ -199,6 +199,7 @@ setup_kwargs = dict(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Scientific/Engineering :: Mathematics',
@@ -250,7 +251,10 @@ setup_kwargs = dict(
             # The following optional dependencies are difficult to
             # install on PyPy (binary wheels are not available), so we
             # will only "require" them on other (CPython) platforms:
-            'casadi; implementation_name!="pypy"',  # dae
+            #
+            # DAE can use casadi; as of 1 Nov 22, casadi has not been
+            # released for Python 3.11
+            'casadi; implementation_name!="pypy" and python_version<"3.11"',
             'numdifftools; implementation_name!="pypy"', # pynumero
             'pandas; implementation_name!="pypy"',
             'seaborn; implementation_name!="pypy"',   # parmest.graphics
