@@ -2106,8 +2106,8 @@ class EllipsoidalSet(UncertaintySet):
     def _verify_positive_definite(matrix):
         """
         Verify that a given symmetric square matrix is positive
-        definite. An exception is raised at any point this
-        verificiation ro
+        definite. An exception is raised if the square matrix
+        is not positive definite.
 
         Parameters
         ----------
@@ -2427,7 +2427,7 @@ class DiscreteScenarioSet(UncertaintySet):
     def point_in_set(self, point):
         """
         Determine whether a given point lies in the discrete
-        scenario setset.
+        scenario set.
 
         Parameters
         ----------
