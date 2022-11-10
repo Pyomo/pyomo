@@ -25,7 +25,7 @@ from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.expr.numvalue import (
     NumericConstant, as_numeric, is_numeric_data,
     native_types, native_numeric_types, native_integer_types,
-    native_boolean_types,
+    _native_boolean_types,
 )
 
 try:
@@ -495,7 +495,7 @@ class Test_as_numeric(unittest.TestCase):
             self.skipTest("This test requires NumPy")
         self.assertIn(numpy.float_, native_numeric_types)
         self.assertNotIn(numpy.float_, native_integer_types)
-        self.assertIn(numpy.float_, native_boolean_types)
+        self.assertIn(numpy.float_, _native_boolean_types)
         self.assertIn(numpy.float_, native_types)
 
     def test_numpy_basic_int_registration(self):
@@ -503,7 +503,7 @@ class Test_as_numeric(unittest.TestCase):
             self.skipTest("This test requires NumPy")
         self.assertIn(numpy.int_, native_numeric_types)
         self.assertIn(numpy.int_, native_integer_types)
-        self.assertIn(numpy.int_, native_boolean_types)
+        self.assertIn(numpy.int_, _native_boolean_types)
         self.assertIn(numpy.int_, native_types)
 
     def test_numpy_basic_bool_registration(self):
@@ -511,7 +511,7 @@ class Test_as_numeric(unittest.TestCase):
             self.skipTest("This test requires NumPy")
         self.assertNotIn(numpy.bool_, native_numeric_types)
         self.assertNotIn(numpy.bool_, native_integer_types)
-        self.assertIn(numpy.bool_, native_boolean_types)
+        self.assertIn(numpy.bool_, _native_boolean_types)
         self.assertIn(numpy.bool_, native_types)
 
 

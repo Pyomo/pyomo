@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.deprecation import relocated_module_attribute
 
 #: Python set used to identify numeric constants, boolean values, strings
 #: and instances of
@@ -34,11 +35,20 @@ nonpyomo_leaf_types = set([])
 #: Python set used to identify numeric constants.  This set includes
 #: native Python types as well as numeric types from Python packages
 #: like numpy, which may be registered by users.
-native_numeric_types = set([ int, float, bool, complex ])
-native_integer_types = set([ int, bool ])
-native_boolean_types = set([ int, bool, str, bytes ])
+native_numeric_types = {int, float, complex, }
+native_integer_types = {int,}
 native_logical_types = {bool, }
 pyomo_constant_types = set()  # includes NumericConstant
+
+_native_boolean_types = {int, bool, str, bytes, }
+relocated_module_attribute(
+    'native_boolean_types', 'pyomo.common.numeric_types._native_boolean_types',
+    version='TBD',
+    msg="The native_boolean_types set will be removed in the future: the set "
+    "contains types that were convertable to bool, and not types that should "
+    "be treated as if they were bool (as was the case for the other "
+    "native_*_types sets).  Users likely should use native_logical_types.")
+
 
 #: Python set used to identify numeric constants and related native
 #: types.  This set includes
@@ -49,7 +59,8 @@ pyomo_constant_types = set()  # includes NumericConstant
 native_types = set([ bool, str, type(None), slice, bytes])
 native_types.update( native_numeric_types )
 native_types.update( native_integer_types )
-native_types.update( native_boolean_types )
+native_types.update( _native_boolean_types )
+native_types.update( native_logical_types )
 
 nonpyomo_leaf_types.update( native_types )
 
@@ -85,6 +96,6 @@ def RegisterBooleanType(new_type):
 
     The argument should be a class (e.g., numpy.bool_).
     """
-    native_boolean_types.add(new_type)
+    _native_boolean_types.add(new_type)
     native_types.add(new_type)
     nonpyomo_leaf_types.add(new_type)

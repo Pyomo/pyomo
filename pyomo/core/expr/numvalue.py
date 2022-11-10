@@ -19,7 +19,9 @@ import sys
 import logging
 
 from pyomo.common.dependencies import numpy as np, numpy_available
-from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.common.deprecation import (
+    deprecated, deprecation_warning, relocated_module_attribute,
+)
 from pyomo.common.errors import PyomoException
 from pyomo.core.expr.expr_common import (
     _add, _sub, _mul, _div, _pow,
@@ -32,12 +34,20 @@ from pyomo.core.expr.expr_common import (
 # TODO: update imports of these objects to pull from numeric_types
 from pyomo.common.numeric_types import (
     nonpyomo_leaf_types, native_types, native_numeric_types,
-    native_integer_types, native_boolean_types, native_logical_types,
+    native_integer_types, native_logical_types,
     RegisterNumericType, RegisterIntegerType, RegisterBooleanType,
     pyomo_constant_types,
 )
 from pyomo.core.pyomoobject import PyomoObject
 from pyomo.core.expr.expr_errors import TemplateExpressionError
+
+relocated_module_attribute(
+    'native_boolean_types', 'pyomo.common.numeric_types._native_boolean_types',
+    version='TBD',
+    msg="The native_boolean_types set will be removed in the future: the set "
+    "contains types that were convertable to bool, and not types that should "
+    "be treated as if they were bool (as was the case for the other "
+    "native_*_types sets).  Users likely should use native_logical_types.")
 
 logger = logging.getLogger('pyomo.core')
 
@@ -51,7 +61,7 @@ _pow_dispatcher = collections.defaultdict(_incomplete_import)
 _neg_dispatcher = collections.defaultdict(_incomplete_import)
 _abs_dispatcher = collections.defaultdict(_incomplete_import)
 def _generate_relational_expression(etype, lhs, rhs):
-    raise RuntimeError("incomplete import of Pyomo expression system")  #pragma: no cover
+    raise RuntimeError("incomplete import of Pyomo expression system")
 
 ##------------------------------------------------------------------------
 ##
