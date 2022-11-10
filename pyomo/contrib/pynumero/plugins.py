@@ -17,6 +17,7 @@ from .algorithms.solvers.scipy_solvers import (
     PyomoFsolveSolver,
     PyomoRootSolver,
     PyomoNewtonSolver,
+    PyomoSecantNewtonSolver,
 )
 
 def load():
@@ -42,3 +43,11 @@ def load():
         "scipy.newton",
         doc="newton: Find a zero of a scalar-valued function",
     )(PyomoNewtonSolver)
+    SolverFactory.register(
+        "scipy.secant-newton",
+        doc=(
+            "secant-newton: Take a few secant iterations to try to converge"
+            " a potentially linear equation quickly, then switch to Newton's"
+            " method"
+        ),
+    )(PyomoSecantNewtonSolver)
