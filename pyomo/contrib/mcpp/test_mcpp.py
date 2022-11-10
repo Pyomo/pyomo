@@ -116,10 +116,9 @@ class TestMcCormick(unittest.TestCase):
     def test_linear_expression(self):
         m = ConcreteModel()
         m.x = Var(bounds=(1, 2), initialize=1)
-        with self.assertRaises(NotImplementedError):
-            mc_expr = mc(quicksum([m.x, m.x], linear=True))
-            self.assertEqual(mc_expr.lower(), 2)
-            self.assertEqual(mc_expr.upper(), 4)
+        mc_expr = mc(quicksum([m.x, m.x], linear=True))
+        self.assertEqual(mc_expr.lower(), 2)
+        self.assertEqual(mc_expr.upper(), 4)
 
     def test_trig(self):
         m = ConcreteModel()
