@@ -76,7 +76,7 @@ class nonlinear_expression(mutable_expression):
     The preferred context manager is :py:class:`mutable_expression`, as
     the return type will be the most specific of
     :py:class:`SumExpression`, :py:class:`LinearExpression`, or
-    :py:class:`NPV_SumExpression`.  This contest manager will *always*
+    :py:class:`NPV_SumExpression`.  This context manager will *always*
     return a :py:class:`SumExpression`.
 
     """
@@ -1160,10 +1160,13 @@ def _categorize_arg_types(*args):
                 types.append(_EXPR_TYPE.INVALID)
             continue
         if arg.is_expression_type():
-            # Note: because sum expressions may be NPV depending on
-            # their arguments, we need to filter out those types first
+            # Note: this makes a strong assumption that NPV is a class
+            # attribute and not determined by the current expression
+            # arguments / state.
             if not arg.is_potentially_variable():
                 types.append(_EXPR_TYPE.NPV)
+                # TODO: remove NPV_expression_types
+                NPV_expression_types.add(arg.__class__)
             elif isinstance(arg, _MutableSumExpression):
                 types.append(_EXPR_TYPE.MUTABLE)
             elif arg.__class__ is MonomialTermExpression:
