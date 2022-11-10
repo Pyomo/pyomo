@@ -37,7 +37,6 @@ from pyomo.gdp.util import (
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
-from pyomo.util.vars_from_expressions import get_vars_from_components
 from functools import wraps
 from weakref import ref as weakref_ref, ReferenceType
 
@@ -205,16 +204,11 @@ class BigM_Transformation(Transformation):
                                         # as a key in bigMargs, I need the error
                                         # not to be when I try to put it into
                                         # this map!
-        #self.fixed_vars = ComponentMap()
         try:
             self._apply_to_impl(instance, **kwds)
         finally:
             self.used_args.clear()
             self._transformation_blocks.clear()
-            # clean up if we unfixed things (fixed_vars is empty if we were
-            # assuming fixed vars are fixed for life)
-            # for v, val in self.fixed_vars.items():
-            #     v.fix(val)
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
@@ -273,22 +267,6 @@ class BigM_Transformation(Transformation):
             targets=[blk for blk in targets if blk.ctype is Block] +
             [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
 
-        # If there are fixed variables here, unfix them for the duration of the
-        # transformation, and we'll restore them at the end. Note that this
-        # might mess with variables we'll never see given whatever is actually
-        # in targets, but this allows us to do this all at once so that we are
-        # not iterating through the same variables over and over again as we
-        # transform each Disjunct (assuming their expressions could have many
-        # variables in common)
-        # if not config.assume_fixed_vars_permanent:
-        #     for v in get_vars_from_components(instance,
-        #                                       ctype=Constraint,
-        #                                       active=None,
-        #                                       descend_into=(Block, Disjunct),
-        #                                       include_fixed=True):
-        #         if v.fixed:
-        #             self.fixed_vars[v] = value(v)
-        #             v.fixed = False
         self.assume_fixed_vars_permanent = config.assume_fixed_vars_permanent
 
         for t in preprocessed_targets:
@@ -524,21 +502,19 @@ class BigM_Transformation(Transformation):
 
         disjunctionRelaxationBlock = transBlock.parent_block()
         
-        # We will make indexes from (obj.index_set() x ['lb', 'ub']), but don't
-        # bother construct that set here, as it can be quite expensive.
-        newConstraint = transBlock.transformedConstraints#Constraint(Any)
+        # We will make indexes from ({obj.local_name} x obj.index_set() x ['lb',
+        # 'ub']), but don't bother construct that set here, as taking Cartesian
+        # products is kind of expensive (and redundant since we have the
+        # original model)
+        newConstraint = transBlock.transformedConstraints
+        # Since we are both combining components from multiple blocks and using
+        # local names, we need to make sure that the first index for
+        # transformedConstraints is guaranteed to be unique. We just grab the
+        # currentl length of the list here since that will be monotonically
+        # increasing and hence unique. We'll append it to the
+        # slightly-more-human-readable constraint name for something familiar
+        # but unique.
         unique = len(newConstraint)
-        # Though rare, it is possible to get naming conflicts here since
-        # constraints from all blocks are getting moved onto the same block. So
-        # we get a unique name
-        # transBlock.add_component(
-        #     unique_component_name(
-        #         transBlock,
-        #         obj.getname(fully_qualified=False)),
-        #     newConstraint)
-        # add mapping of transformed constraint to original constraint
-        # TODO: if we go this route, we are *NOT* mapping containers anymore
-        constraintMap['srcConstraints'][newConstraint] = obj
 
         for i in sorted(obj.keys()):
             c = obj[i]
