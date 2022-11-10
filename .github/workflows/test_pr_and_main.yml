@@ -58,7 +58,7 @@ jobs:
           skip_doctest: 1
           TARGET: linux
           PYENV: conda
-          PACKAGES: scip
+          PACKAGES: glpk
 
         - os: ubuntu-latest
           python: 3.8
