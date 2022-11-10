@@ -341,6 +341,7 @@ class TestRootPyomo(unittest.TestCase):
         self.assertEqual(results.solver.message, "The solution converged.")
 
 
+@unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestNewtonPyomo(unittest.TestCase):
 
     def test_available(self):
@@ -443,6 +444,7 @@ class TestNewtonPyomo(unittest.TestCase):
             n_eval = results.solver.number_of_function_evaluations
 
 
+@unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestSecantNewtonPyomo(unittest.TestCase):
 
     def test_available(self):
