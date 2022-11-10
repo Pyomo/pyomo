@@ -50,7 +50,7 @@ jobs:
           python: 3.9
           TARGET: win
           PYENV: conda
-          PACKAGES: glpk scip
+          PACKAGES: glpk
 
         - os: ubuntu-latest
           python: 3.9
@@ -308,7 +308,7 @@ jobs:
                 || echo "WARNING: Gurobi is not available"
             conda install -q -y -c fico-xpress xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
-            for PKG in cyipopt pymumps; do
+            for PKG in cyipopt pymumps scip; do
                 conda install -q -y -c conda-forge $PKG \
                     || echo "WARNING: $PKG is not available"
             done
