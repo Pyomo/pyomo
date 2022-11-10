@@ -233,8 +233,20 @@ class AutoLinkedBooleanVar(ScalarBooleanVar):
     def __gt__(self, arg):
         return self.as_binary().__gt__(arg)
     def __eq__(self, arg):
+        # If the other operand is a Boolean, then we want to fall back
+        # on the "normal" implementation of __eq__ for Boolean values
+        if isinstance(arg, BooleanValue):
+            return super().__eq__(arg)
+        # Otherwise, we will treat this as a binary operand and use the
+        # (numeric) relational expression system
         return self.as_binary().__eq__(arg)
     def __ne__(self, arg):
+        # If the other operand is a Boolean, then we want to fall back
+        # on the "normal" implementation of __ne__ for Boolean values
+        if isinstance(arg, BooleanValue):
+            return super().__ne__(arg)
+        # Otherwise, we will treat this as a binary operand and use the
+        # (numeric) relational expression system
         return self.as_binary().__ne__(arg)
 
     def __add__(self, arg):
