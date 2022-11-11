@@ -82,9 +82,11 @@ class TestDeprecated(unittest.TestCase):
         def foo(bar='yeah'):
             logger.warning(bar)
 
-        self.assertIn(
-            '.. deprecated:: test\n   This function has been deprecated',
-            foo.__doc__)
+        self.assertRegex(
+            foo.__doc__,
+            r'^DEPRECATED.\n\n.. deprecated:: test\n'
+            r'   This function \(.*\.foo\) has been deprecated'
+        )
 
         # Test the default argument
         DEP_OUT = StringIO()
@@ -96,8 +98,10 @@ class TestDeprecated(unittest.TestCase):
         self.assertIn('yeah', FCN_OUT.getvalue())
         self.assertNotIn('DEPRECATED', FCN_OUT.getvalue())
         # Test that the deprecation warning was logged
-        self.assertIn('DEPRECATED: This function has been deprecated',
-                      DEP_OUT.getvalue())
+        self.assertRegex(
+            DEP_OUT.getvalue().replace('\n', ' '),
+            r'DEPRECATED: This function \(.*\.foo\) has been deprecated',
+        )
 
         # Test that the function argument gets passed in
         DEP_OUT = StringIO()
@@ -110,8 +114,10 @@ class TestDeprecated(unittest.TestCase):
         self.assertIn('custom', FCN_OUT.getvalue())
         self.assertNotIn('DEPRECATED', FCN_OUT.getvalue())
         # Test that the deprecation warning was logged
-        self.assertIn('DEPRECATED: This function has been deprecated',
-                      DEP_OUT.getvalue())
+        self.assertRegex(
+            DEP_OUT.getvalue().replace('\n', ' '),
+            r'DEPRECATED: This function \(.*\.foo\) has been deprecated',
+        )
 
 
     def test_with_doc_string(self):
@@ -124,10 +130,12 @@ class TestDeprecated(unittest.TestCase):
             """
             logger.warning(bar)
 
-        self.assertIn(
-            '.. deprecated:: test\n   This function has been deprecated',
-            foo.__doc__)
-        self.assertIn('I am a good person.', foo.__doc__)
+        self.assertRegex(
+            foo.__doc__,
+            r'I am a good person.\s+Because I document my public functions.\s+'
+            r'.. deprecated:: test\n'
+            r'   This function \(.*\.foo\) has been deprecated'
+        )
 
         # Test the default argument
         DEP_OUT = StringIO()
@@ -139,8 +147,10 @@ class TestDeprecated(unittest.TestCase):
         self.assertIn('yeah', FCN_OUT.getvalue())
         self.assertNotIn('DEPRECATED', FCN_OUT.getvalue())
         # Test that the deprecation warning was logged
-        self.assertIn('DEPRECATED: This function has been deprecated',
-                      DEP_OUT.getvalue())
+        self.assertRegex(
+            DEP_OUT.getvalue().replace('\n', ' '),
+            r'DEPRECATED: This function \(.*\.foo\) has been deprecated',
+        )
 
         # Test that the function argument gets passed in
         DEP_OUT = StringIO()
@@ -153,8 +163,10 @@ class TestDeprecated(unittest.TestCase):
         self.assertIn('custom', FCN_OUT.getvalue())
         self.assertNotIn('DEPRECATED', FCN_OUT.getvalue())
         # Test that the deprecation warning was logged
-        self.assertIn('DEPRECATED: This function has been deprecated',
-                      DEP_OUT.getvalue())
+        self.assertRegex(
+            DEP_OUT.getvalue().replace('\n', ' '),
+            r'DEPRECATED: This function \(.*\.foo\) has been deprecated',
+        )
 
 
     def test_with_custom_message(self):
@@ -252,9 +264,11 @@ class TestDeprecated(unittest.TestCase):
                 logger.warning('yeah')
 
         self.assertIs(type(foo), type)
-        self.assertIn(
-            '.. deprecated:: test\n   This class has been deprecated',
-            foo.__doc__)
+        self.assertRegex(
+            foo.__doc__,
+            r'.. deprecated:: test\n'
+            r'   This class \(.*\.foo\) has been deprecated',
+        )
 
         # Test the default argument
         DEP_OUT = StringIO()
@@ -266,8 +280,11 @@ class TestDeprecated(unittest.TestCase):
         self.assertIn('yeah', FCN_OUT.getvalue())
         self.assertNotIn('DEPRECATED', FCN_OUT.getvalue())
         # Test that the deprecation warning was logged
-        self.assertIn('DEPRECATED: This class has been deprecated',
-                      DEP_OUT.getvalue())
+        self.assertRegex(
+            DEP_OUT.getvalue().replace('\n', ' '),
+            r'DEPRECATED: This class \(.*\.foo\) has been deprecated.*'
+            r'\(deprecated in test\)',
+        )
 
 
     def test_with_method(self):
@@ -278,9 +295,11 @@ class TestDeprecated(unittest.TestCase):
             def bar(self):
                 logger.warning('yeah')
 
-        self.assertIn(
-            '.. deprecated:: test\n   This function has been deprecated',
-            foo.bar.__doc__)
+        self.assertRegex(
+            foo.bar.__doc__,
+            r'.. deprecated:: test\n'
+            r'   This function \(.*\.foo\.bar\) has been deprecated',
+        )
 
         # Test the default argument
         DEP_OUT = StringIO()
@@ -292,8 +311,11 @@ class TestDeprecated(unittest.TestCase):
         self.assertIn('yeah', FCN_OUT.getvalue())
         self.assertNotIn('DEPRECATED', FCN_OUT.getvalue())
         # Test that the deprecation warning was logged
-        self.assertIn('DEPRECATED: This function has been deprecated',
-                      DEP_OUT.getvalue())
+        self.assertRegex(
+            DEP_OUT.getvalue().replace('\n', ' '),
+            r'DEPRECATED: This function \(.*\.foo\.bar\) has been deprecated.*'
+            r'\(deprecated in test\)',
+        )
 
     def test_with_remove_in(self):
         class foo(object):
@@ -303,11 +325,12 @@ class TestDeprecated(unittest.TestCase):
             def bar(self):
                 logger.warning('yeah')
 
-        self.assertIn(
-            '.. deprecated:: 1.2\n   This function has been deprecated',
-            foo.bar.__doc__)
-        self.assertIn('(will be removed in (or after) 3.4)',
-                      foo.bar.__doc__.replace('\n',' '))
+        self.assertRegex(
+            foo.bar.__doc__,
+            r'.. deprecated:: 1.2\n'
+            r'   This function \(.*\.foo\.bar\) has been deprecated.*'
+            r'\(will be removed in \(or after\) 3.4\)'
+        )
 
         # Test the default argument
         DEP_OUT = StringIO()
@@ -319,10 +342,12 @@ class TestDeprecated(unittest.TestCase):
         self.assertIn('yeah', FCN_OUT.getvalue())
         self.assertNotIn('DEPRECATED', FCN_OUT.getvalue())
         # Test that the deprecation warning was logged
-        self.assertIn('DEPRECATED: This function has been deprecated',
-                      DEP_OUT.getvalue())
-        self.assertIn('(deprecated in 1.2, will be removed in (or after) 3.4)',
-                      DEP_OUT.getvalue().replace('\n', ' '))
+        self.assertRegex(
+            DEP_OUT.getvalue().replace('\n', ' '),
+            r'DEPRECATED: This function \(.*\.foo\.bar\) has been deprecated.*'
+            r'\(deprecated in 1.2, will be removed in \(or after\) 3.4\)',
+        )
+
 
 
 class Bar(object):
