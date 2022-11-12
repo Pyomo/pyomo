@@ -18,11 +18,10 @@ from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, han
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_nlp_subproblem_tc
 from pyomo.core import minimize, maximize
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code, copy_var_list_values
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from operator import itemgetter
 
