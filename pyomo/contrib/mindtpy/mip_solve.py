@@ -12,7 +12,7 @@
 """main problem functions."""
 from __future__ import division
 import logging
-from pyomo.core import Constraint, Expression, Objective, minimize, value
+from pyomo.core import Constraint, Expression, Objective, minimize, value, maximize
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, time_code
@@ -306,7 +306,7 @@ def handle_main_infeasible(main_mip, solve_data, config):
     config.logger.info(
         'MindtPy exiting due to MILP main problem infeasibility.')
     if solve_data.results.solver.termination_condition is None:
-        if solve_data.mip_iter == 0:
+        if (solve_data.primal_bound == float('inf') and solve_data.objective_sense == minimize) or (solve_data.primal_bound == float('-inf') and solve_data.objective_sense == maximize):
             solve_data.results.solver.termination_condition = tc.infeasible
         else:
             solve_data.results.solver.termination_condition = tc.feasible
