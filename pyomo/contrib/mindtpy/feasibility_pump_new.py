@@ -57,7 +57,7 @@ TODO: test_FP_OA_8PP will fail. Need to fix.
 from __future__ import division
 import logging
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
-from algorithm_base_class import _MindtPyAlgorithm
+from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import minimize, Constraint, TransformationFactory, value
 from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, fp_converged, add_orthogonality_cuts

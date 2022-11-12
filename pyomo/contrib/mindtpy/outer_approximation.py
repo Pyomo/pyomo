@@ -61,8 +61,8 @@ from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object
 from pyomo.core import TransformationFactory
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
-from algorithm_base_class import _MindtPyAlgorithm
-from feasibility_pump_new import MindtPy_FP_Solver
+from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
+from pyomo.contrib.mindtpy.feasibility_pump_new import MindtPy_FP_Solver
 
 
 __version__ = (0, 1, 0)

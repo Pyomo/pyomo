@@ -61,7 +61,7 @@ from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, get_
 from pyomo.core import TransformationFactory, maximize
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
-from algorithm_base_class import _MindtPyAlgorithm
+from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.opt import TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from operator import itemgetter
