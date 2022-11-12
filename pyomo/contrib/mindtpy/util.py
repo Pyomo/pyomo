@@ -15,7 +15,7 @@ from contextlib import contextmanager
 import logging
 from pyomo.common.collections import ComponentMap, Bunch, ComponentSet
 from pyomo.core import (Block, Constraint, VarList,
-                        Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
+                        Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory, value)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
@@ -1285,3 +1285,4 @@ def create_utility_block(model, name, solve_data):
     yield
     if created_util_block:
         model.del_component(name)
+
