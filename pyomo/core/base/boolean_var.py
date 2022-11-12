@@ -18,6 +18,7 @@ from pyomo.common.modeling import unique_component_name, NOTSET
 from pyomo.common.timing import ConstructionTimer
 from pyomo.core.staleflag import StaleFlagManager
 from pyomo.core.expr.boolean_value import BooleanValue
+from pyomo.core.expr.current import GetItemExpression
 from pyomo.core.expr.numvalue import value
 from pyomo.core.base.component import ComponentData, ModelComponentFactory
 from pyomo.core.base.global_set import UnindexedComponent_index
@@ -589,6 +590,18 @@ class IndexedBooleanVar(BooleanVar):
     @property
     def domain(self):
         return BooleanSet
+
+    # Because Emma wants crazy things... (Where crazy things are the ability to
+    # index BooleanVars by other (integer) Vars and integer-valued
+    # expressions--a thing you can do in Constraint Programming.)
+    def __getitem__(self, args):
+        tmp = args if args.__class__ is tuple else (args,)
+        if any(hasattr(arg, 'is_potentially_variable')
+               and arg.is_potentially_variable()
+               for arg in tmp
+        ):
+            return GetItemExpression((self,) + tmp)
+        return super().__getitem__(args)
     
 
 @ModelComponentFactory.register("List of logical decision variables.")
