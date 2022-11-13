@@ -251,7 +251,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         config.logger.info(
             'MindtPy exiting on bound convergence. '
             'Absolute gap: {} <= absolute tolerance: {} \n'.format(
-                solve_data.rel_gap, config.absolute_bound_tolerance))
+                solve_data.abs_gap, config.absolute_bound_tolerance))
         solve_data.results.solver.termination_condition = tc.optimal
         return True
     # Check relative bound convergence
@@ -259,7 +259,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         if solve_data.rel_gap <= config.relative_bound_tolerance:
             config.logger.info(
                 'MindtPy exiting on bound convergence. '
-                'Relative gap : {} <= relative tolerance: {} \n'.format(solve_data.abs_gap, config.relative_bound_tolerance))
+                'Relative gap : {} <= relative tolerance: {} \n'.format(solve_data.rel_gap, config.relative_bound_tolerance))
             solve_data.results.solver.termination_condition = tc.optimal
             return True
 
