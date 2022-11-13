@@ -2188,7 +2188,8 @@ class _MindtPyAlgorithm(object):
         config.logger.info(
             'MindtPy exiting due to MILP main problem infeasibility.')
         if self.results.solver.termination_condition is None:
-            if self.mip_iter == 0:
+            if (self.primal_bound == float('inf') and self.objective_sense == minimize) or (self.primal_bound == float('-inf') and self.objective_sense == maximize):
+            # if self.mip_iter == 0:
                 self.results.solver.termination_condition = tc.infeasible
             else:
                 self.results.solver.termination_condition = tc.feasible
@@ -2462,21 +2463,28 @@ class _MindtPyAlgorithm(object):
         # The original does not have variable list. 
         # Use get_vars_from_components() should be used for both working_model and original_model to exclude the unused variables.
         self.working_model.MindtPy_utils.deactivate()
+        # The original objective should be activated to make sure the variable list is in the same order (get_vars_from_components).
+        self.working_model.MindtPy_utils.objective_list[0].activate()
         if self.working_model.find_component("_int_to_binary_reform") is not None:
             self.working_model._int_to_binary_reform.deactivate()
         # exclude fixed variables here. This is consistent with the definition of variable_list in GDPopt.util
-        copy_var_list_values(list(get_vars_from_components(block=self.working_model, 
+        working_model_variable_list = list(get_vars_from_components(block=self.working_model, 
                                     ctype=(Constraint, Objective), 
                                     include_fixed=False, 
                                     active=True,
                                     sort=True, 
                                     descend_into=True,
-                                    descent_order=None)),
-                            list(get_vars_from_components(block=self.original_model, 
+                                    descent_order=None))
+        original_model_variable_list = list(get_vars_from_components(block=self.original_model, 
                                     ctype=(Constraint, Objective), 
                                     include_fixed=False, 
                                     active=True,
                                     sort=True, 
                                     descend_into=True,
-                                    descent_order=None)),
+                                    descent_order=None))
+        for v_from, v_to in zip(working_model_variable_list, original_model_variable_list):
+            if v_from.name != v_to.name:
+                raise ValueError('The name of the two variables is not the same. Loading final solution')
+        copy_var_list_values(working_model_variable_list,
+                            original_model_variable_list,
                             config=config)
