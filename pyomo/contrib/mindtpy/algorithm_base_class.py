@@ -484,7 +484,10 @@ class _MindtPyAlgorithm(object):
         """Update the relative gap and the absolute gap.
 
         """
-        self.abs_gap = abs(self.primal_bound - self.dual_bound)
+        if self.objective_sense == minimize:
+            self.abs_gap = self.primal_bound - self.dual_bound
+        else:
+            self.abs_gap = self.dual_bound - self.primal_bound
         self.rel_gap = self.abs_gap / (abs(self.primal_bound) + 1E-10)
 
 
@@ -1687,8 +1690,8 @@ class _MindtPyAlgorithm(object):
         if self.abs_gap <= config.absolute_bound_tolerance:
             config.logger.info(
                 'MindtPy exiting on bound convergence. '
-                '|Primal Bound: {} - Dual Bound: {}| <= (absolute tolerance {})  \n'.format(
-                    self.primal_bound, self.dual_bound, config.absolute_bound_tolerance))
+                'Absolute gap: {} <= absolute tolerance: {} \n'.format(
+                    self.abs_gap, config.absolute_bound_tolerance))
             self.results.solver.termination_condition = tc.optimal
             return True
         # Check relative bound convergence
@@ -1696,9 +1699,8 @@ class _MindtPyAlgorithm(object):
             if self.rel_gap <= config.relative_bound_tolerance:
                 config.logger.info(
                     'MindtPy exiting on bound convergence. '
-                    '|Primal Bound: {} - Dual Bound: {}| / (1e-10 + |Primal Bound|:{}) <= relative tolerance: {}'.format(self.primal_bound, self.dual_bound, abs(self.primal_bound), config.relative_bound_tolerance))
-                self.results.solver.termination_condition = tc.optimal
-                return True
+                    'Relative gap : {} <= relative tolerance: {} \n'.format(
+                        self.rel_gap, config.relative_bound_tolerance))
 
         # Check iteration limit
         if self.mip_iter >= config.iteration_limit:
