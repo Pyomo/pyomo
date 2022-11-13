@@ -20,11 +20,11 @@ def _strategy_deprecation(strategy):
 def _get_algorithm_config():
     CONFIG = ConfigBlock("MindtPyAlgorithm")
     CONFIG.declare("strategy", ConfigValue(
-        default=None, domain=_strategy_deprecation,
+        default='OA', domain=_strategy_deprecation,
         description="DEPRECATED: Please use 'algorithm' instead."
     ))
     CONFIG.declare("algorithm", ConfigValue(
-        default=None, domain=In(_supported_algorithms),
+        default='OA', domain=In(_supported_algorithms),
         description="Algorithm to use."
     ))
     return CONFIG

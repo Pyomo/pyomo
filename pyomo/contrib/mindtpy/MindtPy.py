@@ -50,9 +50,8 @@
 - Add single-tree implementation.
 - Add support for cplex_persistent solver.
 - Fix bug in OA cut expression in cut_generation.py.
-
-TODO: mindtpy rewrite
 """
+
 from __future__ import division
 import logging
 from pyomo.contrib.gdpopt.util import (copy_var_list_values, 

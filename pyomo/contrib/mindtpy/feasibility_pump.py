@@ -9,12 +9,8 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.core import (minimize, Constraint, TransformationFactory, value)
+from pyomo.core import Constraint
 from pyomo.core.base.constraint import ConstraintList
-from pyomo.opt import SolverFactory, SolutionStatus, SolverResults, SolverStatus
-from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, copy_var_list_values, time_code, get_main_elapsed_time
-from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function, set_solver_options
 from pyomo.contrib.mindtpy.util import generate_norm1_norm_constraint
 
 
@@ -23,8 +19,10 @@ def fp_converged(working_model, mip_model, config, discrete_only=True):
 
     Parameters
     ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
+    working_model : Pyomo model
+        The working model(original model).
+    mip_model : Pyomo model
+        The mip model.
     config : ConfigBlock
         The specific configurations for MindtPy.
     discrete_only : bool, optional
@@ -41,8 +39,6 @@ def fp_converged(working_model, mip_model, config, discrete_only=True):
                         mip_model.MindtPy_utils.variable_list)
                     if (not discrete_only) or milp_var.is_integer()))
     return distance <= config.fp_projzerotol
-
-
 
 
 def add_orthogonality_cuts(working_model, mip_model, config):
@@ -72,28 +68,28 @@ def add_orthogonality_cuts(working_model, mip_model, config):
             orthogonality_cut)
 
 
-def generate_norm_constraint(fp_nlp, mip, config):
+def generate_norm_constraint(fp_nlp_model, mip_model, config):
     """Generate the norm constraint for the FP-NLP subproblem.
 
     Parameters
     ----------
-    fp_nlp : Pyomo model
+    fp_nlp_model : Pyomo model
         The feasibility pump NLP subproblem.
-    mip : Pyomo model
-        The mip model.
+    mip_model : Pyomo model
+        The mip_model model.
     config : ConfigBlock
         The specific configurations for MindtPy.
     """
     if config.fp_main_norm == 'L1':
         # TODO: check if we can access the block defined in FP-main problem
         generate_norm1_norm_constraint(
-            fp_nlp, mip, config, discrete_only=True)
+            fp_nlp_model, mip_model, config, discrete_only=True)
     elif config.fp_main_norm == 'L2':
-        fp_nlp.norm_constraint = Constraint(expr=sum((nlp_var - mip_var.value)**2 - config.fp_norm_constraint_coef*(nlp_var.value - mip_var.value)**2
-                                                     for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, mip.MindtPy_utils.discrete_variable_list)) <= 0)
+        fp_nlp_model.norm_constraint = Constraint(expr=sum((nlp_var - mip_var.value)**2 - config.fp_norm_constraint_coef*(nlp_var.value - mip_var.value)**2
+                                                     for nlp_var, mip_var in zip(fp_nlp_model.MindtPy_utils.discrete_variable_list, mip_model.MindtPy_utils.discrete_variable_list)) <= 0)
     elif config.fp_main_norm == 'L_infinity':
-        fp_nlp.norm_constraint = ConstraintList()
+        fp_nlp_model.norm_constraint = ConstraintList()
         rhs = config.fp_norm_constraint_coef * max(nlp_var.value - mip_var.value for nlp_var, mip_var in zip(
-            fp_nlp.MindtPy_utils.discrete_variable_list, mip.MindtPy_utils.discrete_variable_list))
-        for nlp_var, mip_var in zip(fp_nlp.MindtPy_utils.discrete_variable_list, mip.MindtPy_utils.discrete_variable_list):
-            fp_nlp.norm_constraint.add(nlp_var - mip_var.value <= rhs)
+            fp_nlp_model.MindtPy_utils.discrete_variable_list, mip_model.MindtPy_utils.discrete_variable_list))
+        for nlp_var, mip_var in zip(fp_nlp_model.MindtPy_utils.discrete_variable_list, mip_model.MindtPy_utils.discrete_variable_list):
+            fp_nlp_model.norm_constraint.add(nlp_var - mip_var.value <= rhs)

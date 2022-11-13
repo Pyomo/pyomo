@@ -12,48 +12,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-"""Implementation of the MindtPy solver.
-
-22.2.10 changes:
-- Add support for partitioning nonlinear-sum objective.
-
-22.1.12 changes:
-- Improve the log.
-
-21.12.15 changes:
-- Improve the online doc.
-
-21.11.10 changes:
-- Add support for solution pool of MIP solvers.
-
-21.8.21 changes:
-- Add support for gurobi_persistent solver in (Regularized) LP/NLP-based B&B algorithm.
-
-21.5.19 changes:
-- Add Feasibility Pump strategy.
-- Add Regularized Outer Approximation method.
-- Restructure and simplify the MindyPy code.
-
-20.10.15 changes:
-- Add Extended Cutting Plane and Global Outer Approximation strategy.
-- Update online doc.
-
-20.6.30 changes:
-- Add support for different norms (L1, L2, L-infinity) of the objective function in the feasibility subproblem.
-- Add support for different differentiate_mode to calculate Jacobian.
-
-20.6.9 changes:
-- Add cycling check in Outer Approximation method.
-- Add support for GAMS solvers interface.
-- Fix warmstart for both OA and LP/NLP method.
-
-20.5.9 changes:
-- Add single-tree implementation.
-- Add support for cplex_persistent solver.
-- Fix bug in OA cut expression in cut_generation.py.
-
-TODO: test_FP_OA_8PP will fail. Need to fix.
-"""
 from __future__ import division
 import logging
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
@@ -62,7 +20,7 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.core import minimize, Constraint, TransformationFactory, value
 from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, fp_converged, add_orthogonality_cuts
 from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function, set_solver_options, set_up_logger, setup_results_object
-from pyomo.opt import SolverFactory, SolverResults, SolutionStatus
+from pyomo.opt import SolverFactory, SolverResults, SolutionStatus, SolverStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, copy_var_list_values, get_main_elapsed_time, time_code, lower_logger_level_to
 
 # 
@@ -385,7 +343,6 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
                     'MindtPy unable to handle NLP subproblem termination '
                     'condition of {}'.format(fp_nlp_result.solver.termination_condition))
             # Call the NLP post-solve callback
-            # TODO fix bug
             config.call_after_subproblem_solve(fp_nlp)
             self.fp_iter += 1
         self.mip.MindtPy_utils.del_component('fp_mip_obj')

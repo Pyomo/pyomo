@@ -54,11 +54,11 @@ class TestMindtPy(unittest.TestCase):
 
     def test_handle_termination_condition(self):
         """Test the outer approximation decomposition algorithm."""
-        model = SimpleMINLP()
+        # model = SimpleMINLP()
         config = _get_MindtPy_config()
-        solve_data = set_up_solve_data(model, config)
-        with time_code(solve_data.timing, 'total', is_main_timer=True), \
-                create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
+        # solve_data = set_up_solve_data(model, config)
+        # with time_code(solve_data.timing, 'total', is_main_timer=True), \
+        #         create_utility_block(solve_data.working_model, 'MindtPy_utils', solve_data):
 
             # MindtPy = solve_data.working_model.MindtPy_utils
 
@@ -282,39 +282,39 @@ class TestMindtPy(unittest.TestCase):
             # solve_data.dual_bound = 5
             # self.assertEqual(get_dual_integral(solve_data, config), 14.1)
 
-            # test check_config
-            config.add_regularization = 'level_L1'
-            config.regularization_mip_threads = 0
-            config.threads = 8
-            check_config(config)
-            self.assertEqual(config.regularization_mip_threads, 8)
+        # test check_config
+        config.add_regularization = 'level_L1'
+        config.regularization_mip_threads = 0
+        config.threads = 8
+        check_config(config)
+        self.assertEqual(config.regularization_mip_threads, 8)
 
-            config.strategy = 'GOA'
-            config.add_slack = True
-            config.use_mcpp = False
-            config.equality_relaxation = True
-            config.use_fbbt = False
-            config.add_no_good_cuts = False
-            config.use_tabu_list = False
-            check_config(config)
-            self.assertTrue(config.use_mcpp)
-            self.assertTrue(config.use_fbbt)
-            self.assertFalse(config.add_slack)
-            self.assertFalse(config.equality_relaxation)
-            self.assertTrue(config.add_no_good_cuts)
-            self.assertFalse(config.use_tabu_list)
-            
-            config.single_tree = False
-            config.strategy = 'FP'
-            config.init_strategy = 'rNLP'
-            config.iteration_limit = 100
-            config.add_no_good_cuts = False
-            config.use_tabu_list = True
-            check_config(config)
-            self.assertEqual(config.init_strategy, 'FP')
-            self.assertEqual(config.iteration_limit, 0)
-            self.assertEqual(config.add_no_good_cuts, True)
-            self.assertEqual(config.use_tabu_list, False)
+        config.strategy = 'GOA'
+        config.add_slack = True
+        config.use_mcpp = False
+        config.equality_relaxation = True
+        config.use_fbbt = False
+        config.add_no_good_cuts = False
+        config.use_tabu_list = False
+        check_config(config)
+        self.assertTrue(config.use_mcpp)
+        self.assertTrue(config.use_fbbt)
+        self.assertFalse(config.add_slack)
+        self.assertFalse(config.equality_relaxation)
+        self.assertTrue(config.add_no_good_cuts)
+        self.assertFalse(config.use_tabu_list)
+        
+        config.single_tree = False
+        config.strategy = 'FP'
+        config.init_strategy = 'rNLP'
+        config.iteration_limit = 100
+        config.add_no_good_cuts = False
+        config.use_tabu_list = True
+        check_config(config)
+        self.assertEqual(config.init_strategy, 'FP')
+        self.assertEqual(config.iteration_limit, 0)
+        self.assertEqual(config.add_no_good_cuts, True)
+        self.assertEqual(config.use_tabu_list, False)
 
 if __name__ == '__main__':
     unittest.main()

@@ -44,65 +44,6 @@ class MindtPySolveData(object):
 
 # TODO: move all functions in this file to algorithm base class and solve_data data can be removed.
 
-def model_is_valid(solve_data, config):
-    """Determines whether the model is solvable by MindtPy.
-
-    Parameters
-    ----------
-    solve_data : MindtPySolveData
-        Data container that holds solve-instance data.
-    config : ConfigBlock
-        The specific configurations for MindtPy.
-
-    Returns
-    -------
-    bool
-        True if model is solvable in MindtPy, False otherwise.
-    """
-    m = solve_data.working_model
-    MindtPy = m.MindtPy_utils
-
-    # Handle LP/NLP being passed to the solver
-    prob = solve_data.results.problem
-    if len(MindtPy.discrete_variable_list) == 0:
-        config.logger.info('Problem has no discrete decisions.')
-        obj = next(m.component_data_objects(ctype=Objective, active=True))
-        if (any(c.body.polynomial_degree() not in solve_data.mip_constraint_polynomial_degree for c in MindtPy.constraint_list) or
-                obj.expr.polynomial_degree() not in solve_data.mip_objective_polynomial_degree):
-            config.logger.info(
-                'Your model is a NLP (nonlinear program). '
-                'Using NLP solver %s to solve.' % config.nlp_solver)
-            nlpopt = SolverFactory(config.nlp_solver)
-            set_solver_options(nlpopt, solve_data.timing, config, solver_type='nlp')
-            nlpopt.solve(solve_data.original_model,
-                         tee=config.nlp_solver_tee, **config.nlp_solver_args)
-            return False
-        else:
-            config.logger.info(
-                'Your model is an LP (linear program). '
-                'Using LP solver %s to solve.' % config.mip_solver)
-            mainopt = SolverFactory(config.mip_solver)
-            if isinstance(mainopt, PersistentSolver):
-                mainopt.set_instance(solve_data.original_model)
-            set_solver_options(mainopt, solve_data.timing,
-                               config, solver_type='mip')
-            results = mainopt.solve(solve_data.original_model,
-                                    tee=config.mip_solver_tee,
-                                    load_solutions=False,
-                                    **config.mip_solver_args
-                                    )
-            if len(results.solution) > 0:
-                solve_data.original_model.solutions.load_from(results)
-            return False
-
-    if not hasattr(m, 'dual') and config.calculate_dual_at_solution:  # Set up dual value reporting
-        m.dual = Suffix(direction=Suffix.IMPORT)
-
-    # TODO if any continuous variables are multiplied with binary ones,
-    #  need to do some kind of transformation (Glover?) or throw an error message
-    return True
-
-
 def calc_jacobians(model, config):
     """Generates a map of jacobians for the variables in the model.
 
@@ -994,83 +935,6 @@ def epigraph_reformulation(exp, slack_var_list, constraint_list, use_mcpp, sense
     else:
         constraint_list.add(expr=slack_var <= exp)
 
-def build_ordered_component_lists(model, solve_data):
-    """Define lists used for future data transfer.
-
-    Also attaches ordered lists of the variables, constraints, disjuncts, and
-    disjunctions to the model so that they can be used for mapping back and
-    forth.
-
-    """
-    util_blk = getattr(model, solve_data.util_block_name)
-    var_set = ComponentSet()
-    setattr(
-        util_blk, 'constraint_list', list(
-            model.component_data_objects(
-                ctype=Constraint, active=True,
-                descend_into=(Block, Disjunct))))
-    if hasattr(solve_data,'mip_constraint_polynomial_degree'):
-        mip_constraint_polynomial_degree = solve_data.mip_constraint_polynomial_degree
-    else:
-        mip_constraint_polynomial_degree = {0, 1}
-    setattr(
-        util_blk, 'linear_constraint_list', list(
-            c for c in model.component_data_objects(
-            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() in mip_constraint_polynomial_degree))
-    setattr(
-        util_blk, 'nonlinear_constraint_list', list(
-            c for c in model.component_data_objects(
-            ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-            if c.body.polynomial_degree() not in mip_constraint_polynomial_degree))
-    setattr(
-        util_blk, 'disjunct_list', list(
-            model.component_data_objects(
-                ctype=Disjunct, active=True,
-                descend_into=(Block, Disjunct))))
-    setattr(
-        util_blk, 'disjunction_list', list(
-            model.component_data_objects(
-                ctype=Disjunction, active=True,
-                descend_into=(Disjunct, Block))))
-    setattr(
-        util_blk, 'objective_list', list(
-            model.component_data_objects(
-                ctype=Objective, active=True,
-                descend_into=(Block))))
-
-    # Identify the non-fixed variables in (potentially) active constraints and
-    # objective functions
-    for constr in getattr(util_blk, 'constraint_list'):
-        for v in EXPR.identify_variables(constr.body, include_fixed=False):
-            var_set.add(v)
-    for obj in model.component_data_objects(ctype=Objective, active=True):
-        for v in EXPR.identify_variables(obj.expr, include_fixed=False):
-            var_set.add(v)
-    # Disjunct indicator variables might not appear in active constraints. In
-    # fact, if we consider them Logical variables, they should not appear in
-    # active algebraic constraints. For now, they need to be added to the
-    # variable set.
-    for disj in getattr(util_blk, 'disjunct_list'):
-        var_set.add(disj.binary_indicator_var)
-
-    # We use component_data_objects rather than list(var_set) in order to
-    # preserve a deterministic ordering.
-    var_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set)
-    setattr(util_blk, 'variable_list', var_list)
-    discrete_variable_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set and v.is_integer())
-    setattr(util_blk, 'discrete_variable_list', discrete_variable_list)
-    continuous_variable_list = list(
-        v for v in model.component_data_objects(
-            ctype=Var, descend_into=(Block, Disjunct))
-        if v in var_set and v.is_continuous())
-    setattr(util_blk, 'continuous_variable_list', continuous_variable_list)
 
 def setup_results_object(results, model, config):
     """Record problem statistics for original model."""
@@ -1079,7 +943,6 @@ def setup_results_object(results, model, config):
     prob = res.problem
     res.problem.name = model.name
     res.problem.number_of_nonzeros = None  # TODO
-    # TODO work on termination condition and message
     res.solver.termination_condition = None
     res.solver.message = None
     res.solver.user_time = None
@@ -1192,27 +1055,3 @@ def process_objective(solve_data, config, move_objective=False,
                     util_blk.linear_constraint_list.append(constr)
                 else:
                     util_blk.nonlinear_constraint_list.append(constr)
-
-
-@contextmanager
-def create_utility_block(model, name, solve_data):
-    created_util_block = False
-    # Create a model block on which to store GDPopt-specific utility
-    # modeling objects.
-    if hasattr(model, name):
-        raise RuntimeError(
-            "MindtPy needs to create a Block named %s "
-            "on the model object, but an attribute with that name "
-            "already exists." % name)
-    else:
-        created_util_block = True
-        setattr(model, name, Block(
-            doc="Container for MindtPy solver utility modeling objects"))
-        solve_data.util_block_name = name
-
-        # Save ordered lists of main modeling components, so that data can
-        # be easily transferred between future model clones.
-        build_ordered_component_lists(model, solve_data)
-    yield
-    if created_util_block:
-        model.del_component(name)

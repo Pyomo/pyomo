@@ -97,8 +97,6 @@ def solve_subproblem(solve_data, config):
     # Solve the NLP
     nlpopt = SolverFactory(config.nlp_solver)
     nlp_args = dict(config.nlp_solver_args)
-    # TODO: Can we move set_solver_options outside of this function?
-    # if not, we can define this function as a method
     set_solver_options(nlpopt, solve_data.timing, config, solver_type='nlp')
     with SuppressInfeasibleWarning():
         with time_code(solve_data.timing, 'fixed subproblem'):
@@ -112,7 +110,6 @@ def solve_subproblem(solve_data, config):
 
 
 def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config, cb_opt=None):
-    # TODO: move this to algorithm base class.
     """This function handles different terminaton conditions of the fixed-NLP subproblem.
 
     Parameters
@@ -151,7 +148,6 @@ def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config, cb_opt=None)
 
 
 def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=False):
-    # TODO: move this to algorithm base class.
     """This function copies the result of the NLP solver function ('solve_subproblem') to the working model, updates
     the bounds, adds OA and no-good cuts, and then stores the new solution if it is the new best solution. This
     function handles the result of the latest iteration of solving the NLP subproblem given an optimal solution.
@@ -238,7 +234,6 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
 
 
 def handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt=None):
-    # TODO: move this to algorithm base class.
     """Solves feasibility problem and adds cut according to the specified strategy.
 
     This function handles the result of the latest iteration of solving the NLP subproblem given an infeasible

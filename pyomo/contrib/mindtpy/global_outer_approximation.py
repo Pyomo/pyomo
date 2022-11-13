@@ -12,48 +12,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-"""Implementation of the MindtPy solver.
 
-22.2.10 changes:
-- Add support for partitioning nonlinear-sum objective.
-
-22.1.12 changes:
-- Improve the log.
-
-21.12.15 changes:
-- Improve the online doc.
-
-21.11.10 changes:
-- Add support for solution pool of MIP solvers.
-
-21.8.21 changes:
-- Add support for gurobi_persistent solver in (Regularized) LP/NLP-based B&B algorithm.
-
-21.5.19 changes:
-- Add Feasibility Pump strategy.
-- Add Regularized Outer Approximation method.
-- Restructure and simplify the MindyPy code.
-
-20.10.15 changes:
-- Add Extended Cutting Plane and Global Outer Approximation strategy.
-- Update online doc.
-
-20.6.30 changes:
-- Add support for different norms (L1, L2, L-infinity) of the objective function in the feasibility subproblem.
-- Add support for different differentiate_mode to calculate Jacobian.
-
-20.6.9 changes:
-- Add cycling check in Outer Approximation method.
-- Add support for GAMS solvers interface.
-- Fix warmstart for both OA and LP/NLP method.
-
-20.5.9 changes:
-- Add single-tree implementation.
-- Add support for cplex_persistent solver.
-- Fix bug in OA cut expression in cut_generation.py.
-
-TODO: work well.
-"""
 from __future__ import division
 import logging
 from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to

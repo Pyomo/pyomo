@@ -69,7 +69,6 @@ class _MindtPyAlgorithm(object):
         correctly set up the config arguments and initialize the generic parts
         of the algorithm state.
 
-        这里是应该包含所有set_up_solve_data中的数据
         """
         self.config = self.CONFIG(kwds.pop('options', {}),
                                   preserve_implicit=True)
@@ -92,9 +91,7 @@ class _MindtPyAlgorithm(object):
         self.mip_iter = 0
         self.mip_subiter = 0
         self.nlp_infeasible_counter = 0
-        # TODO: 这个init_strategy的判断应该不需要吧
-        if self.config.init_strategy == 'FP':
-            self.fp_iter = 1
+        self.fp_iter = 1
 
         self.primal_bound_progress_time = [0]
         self.dual_bound_progress_time = [0]
@@ -114,7 +111,6 @@ class _MindtPyAlgorithm(object):
         self.best_solution_found = None
         self.best_solution_found_time = None
 
-        # 下面的是跟cofig相关的，上面已经定义config了，那是不是放在这里也可以？
         if self.config.add_regularization is not None:
             if self.config.add_regularization in {'level_L1', 'level_L_infinity', 'grad_lag'}:
                 self.regularization_mip_type = 'MILP'
@@ -126,15 +122,6 @@ class _MindtPyAlgorithm(object):
         if self.config.strategy == 'GOA' and (self.config.add_no_good_cuts or self.config.use_tabu_list):
             self.num_no_good_cuts_added = {}
 
-        # TODO: still need? or move to somewhere else
-        # if self.config.nlp_solver == 'ipopt':
-        #     if not hasattr(self.working_model, 'ipopt_zL_out'):
-        #         self.working_model.ipopt_zL_out = Suffix(
-        #             direction=Suffix.IMPORT)
-        #     if not hasattr(self.working_model, 'ipopt_zU_out'):
-        #         self.working_model.ipopt_zU_out = Suffix(
-        #             direction=Suffix.IMPORT)
-
         if self.config.quadratic_strategy == 0:
             self.mip_objective_polynomial_degree = {0, 1}
             self.mip_constraint_polynomial_degree = {0, 1}
@@ -145,40 +132,11 @@ class _MindtPyAlgorithm(object):
             self.mip_objective_polynomial_degree = {0, 1, 2}
             self.mip_constraint_polynomial_degree = {0, 1, 2}
 
-        # -----------------------
-        # 下面的很多都是根据具体输入模型相关的，不应该放到__init__中
-        # 这里config看一下是否有一些个性化的配置
-        # if the objective function is a constant, dual bound constraint is not added.
-        # TODO: 这个应该可以换一个位置
         self.primal_bound = float('inf')
         self.dual_bound = float('-inf')
         self.primal_bound_progress = [self.primal_bound]
         self.dual_bound_progress = [self.dual_bound]
         self.config.use_dual_bound = True
-
-
-        # obj = next(self.working_model.component_data_objects(ctype=Objective, active=True))
-        # if obj.expr.polynomial_degree() == 0:
-        #     self.config.use_dual_bound = False
-
-        # # TODO: 这个应该可以换一个位置
-        # if self.config.use_fbbt:
-        #     fbbt(self.working_model)
-        #     # TODO: logging_level is not logging.INFO here
-        #     self.config.logger.info(
-        #         'Use the fbbt to tighten the bounds of variables')
-        
-        # # set up bounds
-        # if obj.sense == minimize:
-        #     self.primal_bound = float('inf')
-        #     self.dual_bound = float('-inf')
-        # else:
-        #     self.primal_bound = float('-inf')
-        #     self.dual_bound = float('inf')
-        # # -----------------------
-
-        # self.primal_bound_progress = [self.primal_bound]
-        # self.dual_bound_progress = [self.dual_bound]
 
     # Support use as a context manager under current solver API
     def __enter__(self):
@@ -202,52 +160,6 @@ class _MindtPyAlgorithm(object):
 
     _metasolver = False
 
-    def solve(self, model, **kwds):
-        """Solve the model.
-
-        Args:
-            model (Block): a Pyomo model or block to be solved
-        """
-        alg = kwds.pop('algorithm', None)
-        if alg is None:
-            alg = kwds.pop('strategy', None)
-        if alg is not None:
-            raise ValueError("Changing the algorithm in the solve method "
-                             "is not supported for algorithm-specific "
-                             "MindtPy solvers. Either use "
-                             "SolverFactory('mindtpy') or instantiate a "
-                             "solver with the algorithm you want to use.")
-
-        config = self.config(kwds.pop('options', {}),
-                             preserve_implicit=True)
-        config.set_value(kwds)
-
-        with lower_logger_level_to(config.logger, tee=config.tee):
-            self._log_solver_intro_message(config)
-            try:
-                with time_code(self.timing, 'total', is_main_timer=True):
-                    # TODO: rewrite 
-                    results = self._gather_problem_info_and_solve_non_gdps(
-                        model, config)
-                    # If it wasn't disjunctive, we solved it
-                    if not results:
-                        # main loop implemented by each algorithm
-                        self._solve_minlp(model, config)
-
-            finally:
-                self._get_final_pyomo_results_object()
-                self._log_termination_message(config.logger)
-                if (self.pyomo_results.solver.termination_condition not in
-                    {tc.infeasible, tc.unbounded}):
-                    self._transfer_incumbent_to_original_model(config.logger)
-                self._delete_original_model_util_block()
-            return self.pyomo_results
-
-    def _solve_minlp(self, original_model, config):
-        # To be implemented by the algorithms
-        raise NotImplementedError("Derived _GDPoptAlgorithms need to "
-                                  "implement the _solve_gdp method.")
-
     def _log_solver_intro_message(self, config):
         config.logger.info(
             "Starting MindtPy version %s using %s algorithm"
@@ -262,15 +174,12 @@ class _MindtPyAlgorithm(object):
                 '---------------------------------------------------------------------------------------------\n'
                 'For more information, please visit \n'
                 'https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html')
-        # config.logger.info("""
-        # If you use this software, you may cite the following:
-        # - Implementation:
-        # Chen, Q; Johnson, ES; Bernal, DE; Valentin, R; Kale, S;
-        # Bates, J; Siirola, JD; Grossmann, IE.
-        # Pyomo.GDP: an ecosystem for logic based modeling and optimization
-        # development.
-        # Optimization and Engineering, 2021.
-        # """.strip())
+        config.logger.info("""
+        If you use this software, you may cite the following:
+        - Implementation:
+        Bernal, David E., et al. "Mixed-integer nonlinear decomposition toolbox for Pyomo (MindtPy)." 
+        Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 895-900.
+        """.strip())
     
     def set_up_logger(self):
         """Set up the formatter and handler for logger.
@@ -1245,9 +1154,7 @@ class _MindtPyAlgorithm(object):
         return fixed_nlp, results
 
 
-
     def handle_nlp_subproblem_tc(self, fixed_nlp, result, config, cb_opt=None):
-        # TODO: move this to algorithm base class.
         """This function handles different terminaton conditions of the fixed-NLP subproblem.
 
         Parameters
@@ -1280,7 +1187,6 @@ class _MindtPyAlgorithm(object):
 
 
     def handle_subproblem_optimal(self, fixed_nlp, config, cb_opt=None, fp=False):
-        # TODO: move this to algorithm base class.
         """This function copies the result of the NLP solver function ('solve_subproblem') to the working model, updates
         the bounds, adds OA and no-good cuts, and then stores the new solution if it is the new best solution. This
         function handles the result of the latest iteration of solving the NLP subproblem given an optimal solution.
