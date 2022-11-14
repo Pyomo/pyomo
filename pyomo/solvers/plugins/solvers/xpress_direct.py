@@ -436,7 +436,7 @@ class XpressDirect(DirectSolver):
                 soln.status = SolutionStatus.unbounded
             elif status == xp.nlp_unfinished:
                 results.solver.status = SolverStatus.ok
-                results.solver.termination_message = "Non-convex solve not finished"
+                results.solver.termination_message = "Non-convex solve not finished (numerical issues?)"
                 results.solver.termination_condition = TerminationCondition.unknown
                 soln.status = SolutionStatus.unknown
                 have_soln, check_soln = True, True
