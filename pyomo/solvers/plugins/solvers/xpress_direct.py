@@ -414,7 +414,7 @@ class XpressDirect(DirectSolver):
             elif status == xp.nlp_globally_optimal:
                 results.solver.status = SolverStatus.ok
                 results.solver.termination_message = "Non-convex model was solved to global optimality"
-                results.solver.termination_condition = TerminationCondition.locallyOptimal
+                results.solver.termination_condition = TerminationCondition.optimal
                 soln.status = SolutionStatus.optimal
                 have_soln, check_soln = True, True
             elif status == xp.nlp_locally_infeasible:
