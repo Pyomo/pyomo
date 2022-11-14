@@ -754,6 +754,8 @@ class XpressDirect(DirectSolver):
         self.results.solver.name = XpressDirect._name
         self.results.solver.wallclock_time = self._opt_time
 
+        if not hasattr(self, '_get_results'):
+            raise RuntimeError('Model was solved but `_get_results` property is not set')
         have_soln, check_soln = self._get_results(self.results, soln)
         self.results.problem.name = xprob_attrs.matrixname
 
