@@ -400,6 +400,7 @@ class XpressDirect(DirectSolver):
             # The problem was non-linear
             status = xprob_attrs.xslp_nlpstatus
             have_soln, check_soln = False, False
+            optimal = False # *globally* optimal?
             if status == xp.nlp_unstarted:
                 results.solver.status = SolverStatus.unknown
                 results.solver.termination_message = "Non-convex model solve was not start"
@@ -417,6 +418,7 @@ class XpressDirect(DirectSolver):
                 results.solver.termination_condition = TerminationCondition.optimal
                 soln.status = SolutionStatus.optimal
                 have_soln, check_soln = True, True
+                optimal = True
             elif status == xp.nlp_locally_infeasible:
                 results.solver.status = SolverStatus.ok
                 results.solver.termination_message = "Non-convex model was proven to be locally infeasible"
@@ -447,8 +449,10 @@ class XpressDirect(DirectSolver):
             results.problem.upper_bound = None
             results.problem.lower_bound = None
             try:
-                results.problem.lower_bound = xprob_attrs.xslp_objval
-                results.problem.upper_bound = xprob_attrs.xslp_objval
+                if xprob_attrs.objsense > 0.0 or optimal:  # minimizing
+                    results.problem.upper_bound = xprob_attrs.xslp_objval
+                if xprob_attrs.objsense < 0.0 or optimal:  # maximizing
+                    results.problem.lower_bound = xprob_attrs.xslp_objval
             except (XpressDirect.XpressException, AttributeError):
                 pass
       
