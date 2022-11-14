@@ -382,11 +382,90 @@ class XpressDirect(DirectSolver):
                 xprob_attrs.lpstatus in [xp.lp_optimal, xp.lp_cutoff,
                                          xp.lp_cutoff_in_dual])
 
+    def _get_nlp_results(self, results, soln):
+        """Sets up `results` and `soln` and returns whether there is a solution
+        to query."""
+        xprob = self._solver_model
+        xp = xpress
+        xprob_attrs = xprob.attributes
+        solver = xprob_attrs.xslp_solverselected
+        if solver == 2:
+            # Under the hood we used the Xpress optimizer, i.e., the problem
+            # was convex
+            if (xprob_attrs.originalmipents > 0) or (xprob_attrs.originalsets > 0):
+                return self.get_mip_results(results, soln)
+            else:
+                return self.get_lp_results(results, soln)
+        else:
+            # The problem was non-linear
+            status = xprob_attrs.xslp_nlpstatus
+            have_soln, check_soln = False, False
+            if status == xp.nlp_unstarted:
+                results.solver.status = SolverStatus.unknown
+                results.solver.termination_message = "Non-convex model solve was not start"
+                results.solver.termination_condition = TerminationCondition.unknown
+                soln.status = SolutionStatus.unknown
+            elif status in [xp.nlp_solution, xp.nlp_locally_optimal]:
+                results.solver.status = SolverStatus.ok
+                results.solver.termination_message = "Non-convex model was solved to local optimality"
+                results.solver.termination_condition = TerminationCondition.locallyOptimal
+                soln.status = SolutionStatus.locallyOptimal
+                have_soln, check_soln = True, True
+            elif status == xp.nlp_globally_optimal:
+                results.solver.status = SolverStatus.ok
+                results.solver.termination_message = "Non-convex model was solved to global optimality"
+                results.solver.termination_condition = TerminationCondition.locallyOptimal
+                soln.status = SolutionStatus.optimal
+                have_soln, check_soln = True, True
+            elif status == xp.nlp_locally_infeasible:
+                results.solver.status = SolverStatus.ok
+                results.solver.termination_message = "Non-convex model was proven to be locally infeasible"
+                results.solver.termination_condition = TerminationCondition.noSolution
+                soln.status = SolutionStatus.unknown
+            elif status == xp.nlp_infeasible:
+                results.solver.status = SolverStatus.ok
+                results.solver.termination_message = "Non-conex model was proven to be infeasible"
+                results.solver.termination_condition = TerminationCondition.infeasible
+                soln.status = SolutionStatus.infeasble
+            elif status == xp.nlp_unbounded: # locally unbounded!
+                results.solver.status = SolverStatus.ok
+                results.solver.termination_message = "Non-convex model is locally unbounded"
+                results.solver.termination_condition = TerminationCondition.unbounded
+                soln.status = SolutionStatus.infeasible
+            elif status == xp.nlp_unfinished:
+                results.solver.status = SolverStatus.ok
+                results.solver.termination_message = "Non-convex solve not finished"
+                results.solver.termination_condition = TerminationCondition.unknown
+                soln.status = SolutionStatus.unknown
+                have_soln, check_soln = True, True
+            else:
+                results.solver.status = SolverStatus.error
+                results.solver.termination_message = "Error for non-convex model: " + str(status)
+                results.solver.termination_condition = TerminationCondition.error
+                soln.status = SolutionStatus.error
+
+            results.problem.upper_bound = None
+            results.problem.lower_bound = None
+            try:
+                results.problem.lower_bound = xprob_attrs.xslp_objval
+                results.problem.upper_bound = xprob_attrs.xslp_objval
+            except (XpressDirect.XpressException, AttributeError):
+                pass
+      
+            return have_soln, check_soln
+
     def _solve_model(self):
         xprob = self._solver_model
 
         is_mip = (xprob.attributes.mipents > 0) or (xprob.attributes.sets > 0)
-        if is_mip:
+        # Check for quadratic objective or quadratic constraints. If there are
+        # any then we call nlpoptimize since that can handle non-convex
+        # quadratics as well. In case of convex quadratics it will call
+        # mipoptimize under the hood.
+        if (xprob.attributes.qelems > 0) or (xprob.attributes.qcelems > 0):
+            xprob.nlpoptimize("g" if is_mip else "")
+            self._get_results = self._get_nlp_results
+        elif is_mip:
             xprob.mipoptimize()
             self._get_results = self._get_mip_results
         else:
