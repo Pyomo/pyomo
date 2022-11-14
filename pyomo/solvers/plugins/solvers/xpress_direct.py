@@ -405,7 +405,7 @@ class XpressDirect(DirectSolver):
                 results.solver.termination_message = "Non-convex model solve was not start"
                 results.solver.termination_condition = TerminationCondition.unknown
                 soln.status = SolutionStatus.unknown
-            elif status in [xp.nlp_solution, xp.nlp_locally_optimal]:
+            elif status == xp.nlp_locally_optimal:
                 results.solver.status = SolverStatus.ok
                 results.solver.termination_message = "Non-convex model was solved to local optimality"
                 results.solver.termination_condition = TerminationCondition.locallyOptimal
