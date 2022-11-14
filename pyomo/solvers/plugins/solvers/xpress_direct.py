@@ -393,9 +393,9 @@ class XpressDirect(DirectSolver):
             # Under the hood we used the Xpress optimizer, i.e., the problem
             # was convex
             if (xprob_attrs.originalmipents > 0) or (xprob_attrs.originalsets > 0):
-                return self.get_mip_results(results, soln)
+                return self._get_mip_results(results, soln)
             else:
-                return self.get_lp_results(results, soln)
+                return self._get_lp_results(results, soln)
         else:
             # The problem was non-linear
             status = xprob_attrs.xslp_nlpstatus
