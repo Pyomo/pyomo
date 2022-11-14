@@ -223,8 +223,176 @@ class XpressDirect(DirectSolver):
         # FIXME: can we get a return code indicating if XPRESS had a significant failure?
         return Bunch(rc=None, log=None)
 
+    def _get_mip_results(self, results, soln):
+        """Sets up `results` and `soln` and returns whether there is a solution
+        to query."""
+        xprob = self._solver_model
+        xp = xpress
+        xprob_attrs = xprob.attributes
+        status = xprob_attrs.mipstatus
+        mip_sols = xprob_attrs.mipsols
+        if status == xp.mip_not_loaded:
+            results.solver.status = SolverStatus.aborted
+            results.solver.termination_message = "Model is not loaded; no solution information is available."
+            results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.unknown
+            #no MIP solution, first LP did not solve, second LP did, third search started but incomplete
+        elif status == xp.mip_lp_not_optimal \
+             or status == xp.mip_lp_optimal \
+             or status == xp.mip_no_sol_found:
+            results.solver.status = SolverStatus.aborted
+            results.solver.termination_message = "Model is loaded, but no solution information is available."
+            results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.unknown
+        elif status == xp.mip_solution: # some solution available
+            results.solver.status = SolverStatus.warning
+            results.solver.termination_message = "Unable to satisfy optimality tolerances; a sub-optimal " \
+            "solution is available."
+            results.solver.termination_condition = TerminationCondition.other
+            soln.status = SolutionStatus.feasible
+        elif status == xp.mip_infeas: # MIP proven infeasible
+            results.solver.status = SolverStatus.warning
+            results.solver.termination_message = "Model was proven to be infeasible"
+            results.solver.termination_condition = TerminationCondition.infeasible
+            soln.status = SolutionStatus.infeasible
+        elif status == xp.mip_optimal: # optimal
+            results.solver.status = SolverStatus.ok
+            results.solver.termination_message = "Model was solved to optimality (subject to tolerances), " \
+                "and an optimal solution is available."
+            results.solver.termination_condition = TerminationCondition.optimal
+            soln.status = SolutionStatus.optimal
+        elif status == xp.mip_unbounded and mip_sols > 0:
+            results.solver.status = SolverStatus.warning
+            results.solver.termination_message = "LP relaxation was proven to be unbounded, " \
+                "but a solution is available."
+            results.solver.termination_condition = TerminationCondition.unbounded
+            soln.status = SolutionStatus.unbounded
+        elif status == xp.mip_unbounded and mip_sols <= 0:
+            results.solver.status = SolverStatus.warning
+            results.solver.termination_message = "LP relaxation was proven to be unbounded."
+            results.solver.termination_condition = TerminationCondition.unbounded
+            soln.status = SolutionStatus.unbounded
+        else:
+            results.solver.status = SolverStatus.error
+            results.solver.termination_message = \
+                ("Unhandled Xpress solve status "
+                 "("+str(status)+")")
+            results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.error
+
+        results.problem.upper_bound = None
+        results.problem.lower_bound = None
+        if xprob_attrs.objsense == 1.0:  # minimizing MIP
+            try:
+                results.problem.upper_bound = xprob_attrs.mipbestobjval
+            except (XpressDirect.XpressException, AttributeError):
+                pass
+            try:
+                results.problem.lower_bound = xprob_attrs.bestbound
+            except (XpressDirect.XpressException, AttributeError):
+                pass
+        elif xprob_attrs.objsense == -1.0:  # maximizing MIP
+            try:
+                results.problem.upper_bound = xprob_attrs.bestbound
+            except (XpressDirect.XpressException, AttributeError):
+                pass
+            try:
+                results.problem.lower_bound = xprob_attrs.mipbestobjval
+            except (XpressDirect.XpressException, AttributeError):
+                pass
+            
+        # TODO: Pyomo only queries solution if the LP status is optimal.
+        #       This seems wrong at first glance
+        return (xprob_attrs.lpstatus == xp.lp_optimal and mip_sols > 0,
+                mip_sols > 0)
+
+    def _get_lp_results(self, results, soln):
+        """Sets up `results` and `soln` and returns whether there is a solution
+        to query."""
+        xprob = self._solver_model
+        xp = xpress
+        xprob_attrs = xprob.attributes
+        status = xprob_attrs.lpstatus
+        if status == xp.lp_unstarted:
+            results.solver.status = SolverStatus.aborted
+            results.solver.termination_message = "Model is not loaded; no solution information is available."
+            results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.unknown
+        elif status == xp.lp_optimal:
+            results.solver.status = SolverStatus.ok
+            results.solver.termination_message = "Model was solved to optimality (subject to tolerances), " \
+                "and an optimal solution is available."
+            results.solver.termination_condition = TerminationCondition.optimal
+            soln.status = SolutionStatus.optimal
+        elif status == xp.lp_infeas:
+            results.solver.status = SolverStatus.warning
+            results.solver.termination_message = "Model was proven to be infeasible"
+            results.solver.termination_condition = TerminationCondition.infeasible
+            soln.status = SolutionStatus.infeasible
+        elif status == xp.lp_cutoff:
+            results.solver.status = SolverStatus.ok
+            results.solver.termination_message = "Optimal objective for model was proven to be worse than the " \
+                "cutoff value specified; a solution is available."
+            results.solver.termination_condition = TerminationCondition.minFunctionValue
+            soln.status = SolutionStatus.optimal
+        elif status == xp.lp_unfinished:
+            results.solver.status = SolverStatus.aborted
+            results.solver.termination_message = "Optimization was terminated by the user."
+            results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.error
+        elif status == xp.lp_unbounded:
+            results.solver.status = SolverStatus.warning
+            results.solver.termination_message = "Model was proven to be unbounded."
+            results.solver.termination_condition = TerminationCondition.unbounded
+            soln.status = SolutionStatus.unbounded
+        elif status == xp.lp_cutoff_in_dual:
+            results.solver.status = SolverStatus.ok
+            results.solver.termination_message = "Xpress reported the LP was cutoff in the dual."
+            results.solver.termination_condition = TerminationCondition.minFunctionValue
+            soln.status = SolutionStatus.optimal
+        elif status == xp.lp_unsolved:
+            results.solver.status = SolverStatus.error
+            results.solver.termination_message = "Optimization was terminated due to unrecoverable numerical " \
+                "difficulties."
+            results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.error
+        elif status == xp.lp_nonconvex:
+            results.solver.status = SolverStatus.error
+            results.solver.termination_message = "Optimization was terminated because nonconvex quadratic data " \
+                "were found."
+            results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.error
+        else:
+            results.solver.status = SolverStatus.error
+            results.solver.termination_message = \
+                ("Unhandled Xpress solve status "
+                 "("+str(status)+")")
+            results.solver.termination_condition = TerminationCondition.error
+            soln.status = SolutionStatus.error
+
+        results.problem.upper_bound = None
+        results.problem.lower_bound = None
+        try:
+            results.problem.upper_bound = xprob_attrs.lpobjval
+            results.problem.lower_bound = xprob_attrs.lpobjval
+        except (XpressDirect.XpressException, AttributeError):
+            pass
+      
+        return (xprob_attrs.lpstatus == xp.lp_optimal,
+                xprob_attrs.lpstatus in [xp.lp_optimal, xp.lp_cutoff,
+                                         xp.lp_cutoff_in_dual])
+
     def _solve_model(self):
-        self._solver_model.solve()
+        xprob = self._solver_model
+
+        is_mip = (xprob.attributes.mipents > 0) or (xprob.attributes.sets > 0)
+        if is_mip:
+            xprob.mipoptimize()
+            self._get_results = self._get_mip_results
+        else:
+            xprob.lpoptimize()
+            self._get_results = self._get_lp_results
+        
         self._solver_model.postsolve()
 
     def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
@@ -507,117 +675,7 @@ class XpressDirect(DirectSolver):
         self.results.solver.name = XpressDirect._name
         self.results.solver.wallclock_time = self._opt_time
 
-        if is_mip:
-            status = xprob_attrs.mipstatus
-            mip_sols = xprob_attrs.mipsols
-            if status == xp.mip_not_loaded:
-                self.results.solver.status = SolverStatus.aborted
-                self.results.solver.termination_message = "Model is not loaded; no solution information is available."
-                self.results.solver.termination_condition = TerminationCondition.error
-                soln.status = SolutionStatus.unknown
-            #no MIP solution, first LP did not solve, second LP did, third search started but incomplete
-            elif status == xp.mip_lp_not_optimal \
-                    or status == xp.mip_lp_optimal \
-                    or status == xp.mip_no_sol_found:
-                self.results.solver.status = SolverStatus.aborted
-                self.results.solver.termination_message = "Model is loaded, but no solution information is available."
-                self.results.solver.termination_condition = TerminationCondition.error
-                soln.status = SolutionStatus.unknown
-            elif status == xp.mip_solution: # some solution available
-                self.results.solver.status = SolverStatus.warning
-                self.results.solver.termination_message = "Unable to satisfy optimality tolerances; a sub-optimal " \
-                                                          "solution is available."
-                self.results.solver.termination_condition = TerminationCondition.other
-                soln.status = SolutionStatus.feasible
-            elif status == xp.mip_infeas: # MIP proven infeasible
-                self.results.solver.status = SolverStatus.warning
-                self.results.solver.termination_message = "Model was proven to be infeasible"
-                self.results.solver.termination_condition = TerminationCondition.infeasible
-                soln.status = SolutionStatus.infeasible
-            elif status == xp.mip_optimal: # optimal
-                self.results.solver.status = SolverStatus.ok
-                self.results.solver.termination_message = "Model was solved to optimality (subject to tolerances), " \
-                                                          "and an optimal solution is available."
-                self.results.solver.termination_condition = TerminationCondition.optimal
-                soln.status = SolutionStatus.optimal
-            elif status == xp.mip_unbounded and mip_sols > 0:
-                self.results.solver.status = SolverStatus.warning
-                self.results.solver.termination_message = "LP relaxation was proven to be unbounded, " \
-                                                          "but a solution is available."
-                self.results.solver.termination_condition = TerminationCondition.unbounded
-                soln.status = SolutionStatus.unbounded
-            elif status == xp.mip_unbounded and mip_sols <= 0:
-                self.results.solver.status = SolverStatus.warning
-                self.results.solver.termination_message = "LP relaxation was proven to be unbounded."
-                self.results.solver.termination_condition = TerminationCondition.unbounded
-                soln.status = SolutionStatus.unbounded
-            else:
-                self.results.solver.status = SolverStatus.error
-                self.results.solver.termination_message = \
-                    ("Unhandled Xpress solve status "
-                     "("+str(status)+")")
-                self.results.solver.termination_condition = TerminationCondition.error
-                soln.status = SolutionStatus.error
-        else: ## an LP, we'll check the lpstatus
-            status = xprob_attrs.lpstatus
-            if status == xp.lp_unstarted:
-                self.results.solver.status = SolverStatus.aborted
-                self.results.solver.termination_message = "Model is not loaded; no solution information is available."
-                self.results.solver.termination_condition = TerminationCondition.error
-                soln.status = SolutionStatus.unknown
-            elif status == xp.lp_optimal:
-                self.results.solver.status = SolverStatus.ok
-                self.results.solver.termination_message = "Model was solved to optimality (subject to tolerances), " \
-                                                          "and an optimal solution is available."
-                self.results.solver.termination_condition = TerminationCondition.optimal
-                soln.status = SolutionStatus.optimal
-            elif status == xp.lp_infeas:
-                self.results.solver.status = SolverStatus.warning
-                self.results.solver.termination_message = "Model was proven to be infeasible"
-                self.results.solver.termination_condition = TerminationCondition.infeasible
-                soln.status = SolutionStatus.infeasible
-            elif status == xp.lp_cutoff:
-                self.results.solver.status = SolverStatus.ok
-                self.results.solver.termination_message = "Optimal objective for model was proven to be worse than the " \
-                                                          "cutoff value specified; a solution is available."
-                self.results.solver.termination_condition = TerminationCondition.minFunctionValue
-                soln.status = SolutionStatus.optimal
-            elif status == xp.lp_unfinished:
-                self.results.solver.status = SolverStatus.aborted
-                self.results.solver.termination_message = "Optimization was terminated by the user."
-                self.results.solver.termination_condition = TerminationCondition.error
-                soln.status = SolutionStatus.error
-            elif status == xp.lp_unbounded:
-                self.results.solver.status = SolverStatus.warning
-                self.results.solver.termination_message = "Model was proven to be unbounded."
-                self.results.solver.termination_condition = TerminationCondition.unbounded
-                soln.status = SolutionStatus.unbounded
-            elif status == xp.lp_cutoff_in_dual:
-                self.results.solver.status = SolverStatus.ok
-                self.results.solver.termination_message = "Xpress reported the LP was cutoff in the dual."
-                self.results.solver.termination_condition = TerminationCondition.minFunctionValue
-                soln.status = SolutionStatus.optimal
-            elif status == xp.lp_unsolved:
-                self.results.solver.status = SolverStatus.error
-                self.results.solver.termination_message = "Optimization was terminated due to unrecoverable numerical " \
-                                                          "difficulties."
-                self.results.solver.termination_condition = TerminationCondition.error
-                soln.status = SolutionStatus.error
-            elif status == xp.lp_nonconvex:
-                self.results.solver.status = SolverStatus.error
-                self.results.solver.termination_message = "Optimization was terminated because nonconvex quadratic data " \
-                                                          "were found."
-                self.results.solver.termination_condition = TerminationCondition.error
-                soln.status = SolutionStatus.error
-            else:
-                self.results.solver.status = SolverStatus.error
-                self.results.solver.termination_message = \
-                    ("Unhandled Xpress solve status "
-                     "("+str(status)+")")
-                self.results.solver.termination_condition = TerminationCondition.error
-                soln.status = SolutionStatus.error
-
-
+        have_soln, check_soln = self._get_results(self.results, soln)
         self.results.problem.name = xprob_attrs.matrixname
 
         if xprob_attrs.objsense == 1.0:
@@ -626,35 +684,6 @@ class XpressDirect(DirectSolver):
             self.results.problem.sense = maximize
         else:
             raise RuntimeError('Unrecognized Xpress objective sense: {0}'.format(xprob_attrs.objsense))
-
-        self.results.problem.upper_bound = None
-        self.results.problem.lower_bound = None
-        if not is_mip: #LP or continuous problem
-            try:
-                self.results.problem.upper_bound = xprob_attrs.lpobjval
-                self.results.problem.lower_bound = xprob_attrs.lpobjval
-            except (XpressDirect.XpressException, AttributeError):
-                pass
-        elif xprob_attrs.objsense == 1.0:  # minimizing MIP
-            try:
-                self.results.problem.upper_bound = xprob_attrs.mipbestobjval
-            except (XpressDirect.XpressException, AttributeError):
-                pass
-            try:
-                self.results.problem.lower_bound = xprob_attrs.bestbound
-            except (XpressDirect.XpressException, AttributeError):
-                pass
-        elif xprob_attrs.objsense == -1.0:  # maximizing MIP
-            try:
-                self.results.problem.upper_bound = xprob_attrs.bestbound
-            except (XpressDirect.XpressException, AttributeError):
-                pass
-            try:
-                self.results.problem.lower_bound = xprob_attrs.mipbestobjval
-            except (XpressDirect.XpressException, AttributeError):
-                pass
-        else:
-            raise RuntimeError('Unrecognized xpress objective sense: {0}'.format(xprob_attrs.objsense))
 
         try:
             soln.gap = self.results.problem.upper_bound - self.results.problem.lower_bound
@@ -677,9 +706,7 @@ class XpressDirect(DirectSolver):
             This code in this if statement is only needed for backwards compatability. It is more efficient to set
             _save_results to False and use load_vars, load_duals, etc.
             """
-            if xprob_attrs.lpstatus in \
-                    [xp.lp_optimal, xp.lp_cutoff, xp.lp_cutoff_in_dual] or \
-                    xprob_attrs.mipsols > 0:
+            if check_soln:
                 soln_variables = soln.variable
                 soln_constraints = soln.constraint
 
@@ -726,8 +753,7 @@ class XpressDirect(DirectSolver):
                             soln_constraints[con.name]["Slack"] = val
 
         elif self._load_solutions:
-            if xprob_attrs.lpstatus == xp.lp_optimal and \
-                    ((not is_mip) or (xprob_attrs.mipsols > 0)):
+            if have_soln:
 
                 self.load_vars()
 
