@@ -431,7 +431,7 @@ class XpressDirect(DirectSolver):
                 results.solver.status = SolverStatus.ok
                 results.solver.termination_message = "Non-convex model is locally unbounded"
                 results.solver.termination_condition = TerminationCondition.unbounded
-                soln.status = SolutionStatus.infeasible
+                soln.status = SolutionStatus.unbounded
             elif status == xp.nlp_unfinished:
                 results.solver.status = SolverStatus.ok
                 results.solver.termination_message = "Non-convex solve not finished"
