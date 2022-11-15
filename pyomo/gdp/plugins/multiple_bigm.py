@@ -351,7 +351,7 @@ class MultipleBigMTransformation(Transformation):
         for v in disjunct.component_objects(Var, descend_into=Block,
                                             active=None):
             varRefBlock.add_component(unique_component_name(
-                varRefBlock, v.getname(fully_qualified=True)), Reference(v))
+                varRefBlock, v.getname(fully_qualified=False)), Reference(v))
 
         # Look through the component map of block and transform everything we
         # have a handler for. Yell if we don't know how to handle it. (Note that
@@ -392,7 +392,7 @@ class MultipleBigMTransformation(Transformation):
         # since constraints from all blocks are getting moved onto the
         # same block. So we get a unique name
         name = unique_component_name(relaxationBlock, obj.getname(
-            fully_qualified=True))
+            fully_qualified=False))
 
         newConstraint = Constraint(obj.index_set(), transBlock.lbub)
         relaxationBlock.add_component(name, newConstraint)
@@ -572,7 +572,7 @@ class MultipleBigMTransformation(Transformation):
         transBlock.add_component(
             unique_component_name(transBlock,
                                   disjunction.getname(
-                                      fully_qualified=True) + '_xor'), orC)
+                                      fully_qualified=False) + '_xor'), orC)
         disjunction._algebraic_constraint = weakref_ref(orC)
 
         return orC
