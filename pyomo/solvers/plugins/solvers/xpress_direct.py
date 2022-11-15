@@ -399,6 +399,7 @@ class XpressDirect(DirectSolver):
         else:
             # The problem was non-linear
             status = xprob_attrs.xslp_nlpstatus
+            solstatus = xprob_attrs.xslp_solstatus
             have_soln, check_soln = False, False
             optimal = False # *globally* optimal?
             if status == xp.nlp_unstarted:
@@ -407,10 +408,18 @@ class XpressDirect(DirectSolver):
                 results.solver.termination_condition = TerminationCondition.unknown
                 soln.status = SolutionStatus.unknown
             elif status == xp.nlp_locally_optimal:
-                results.solver.status = SolverStatus.ok
-                results.solver.termination_message = "Non-convex model was solved to local optimality"
-                results.solver.termination_condition = TerminationCondition.locallyOptimal
-                soln.status = SolutionStatus.locallyOptimal
+                # This is either xp.nlp_locally_optimal or xp.nlp_solution
+                # we must look at the solstatus to figure out which
+                if solstatus in [2, 3]:
+                    results.solver.status = SolverStatus.ok
+                    results.solver.termination_message = "Non-convex model was solved to local optimality"
+                    results.solver.termination_condition = TerminationCondition.locallyOptimal
+                    soln.status = SolutionStatus.locallyOptimal
+                else:
+                    results.solver.status = SolverStatus.ok
+                    results.solver.termination_message = "Feasible solution found for non-convex model"
+                    results.solver.termination_condition = TerminationCondition.feasible
+                    soln.status = SolutionStatus.feasible
                 have_soln, check_soln = True, True
             elif status == xp.nlp_globally_optimal:
                 results.solver.status = SolverStatus.ok
