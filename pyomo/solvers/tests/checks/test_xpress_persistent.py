@@ -279,6 +279,7 @@ class TestXpressPersistent(unittest.TestCase):
         m.equ2 = pe.Constraint(rule=lambda m: m.x1 >= 0)
 
         opt = pe.SolverFactory('xpress_direct')
+        opt.options['XSLP_SOLVER'] = 0
 
         results = opt.solve(m)
         self.assertEqual(results.solver.status, SolverStatus.ok)
@@ -306,6 +307,7 @@ class TestXpressPersistent(unittest.TestCase):
         m.equ2 = pe.Constraint(rule=lambda m: m.x1 >= 0)
 
         opt = pe.SolverFactory('xpress_direct')
+        opt.options['XSLP_SOLVER'] = 0
 
         results = opt.solve(m)
         self.assertEqual(results.solver.status, SolverStatus.ok)
