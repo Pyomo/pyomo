@@ -9,8 +9,43 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from collections import namedtuple
 from pyomo.common.timing import HierarchicalTimer
 from pyomo.common.config import ConfigBlock
+
+
+# This is like a DirectSolver or PersistentSolver, but with a more limited API.
+# It may make sense to inherit from one of these classes at some point.
+# It may also make sense to merge this with the sensitivity toolbox class,
+# so that sensitivities wrt this model may be calculated. However, for this
+# solve, we limit ourselves to square problems, and don't immediately require
+# derivatives.
+# The purpose of this class is to define an API that we can use for implicit
+# function solves. The reason this API is useful is that it allows resolves
+# with different parameters without rewriting the NL file.
+class ParameterizedSquareSolver(object):
+    """
+    Given a square Pyomo model representing a system:
+    g(x, y) = 0
+    where x are variables and y are parameters.
+    This class allows updating parameters and solving for variables.
+
+    """
+
+    def __init__(self, model, param_vars):
+        # Is param_vars a confusing name? These must be variables, but they
+        # will be treated as paramters
+        # In a proper Pyomo interface, these could be actual parameters
+        # or variables. Maybe this should even go through the existing
+        # sensitivity interface.
+        self._model = model
+        self._param_vars = param_vars
+
+    def update_parameters(self, values):
+        raise NotImplementedError()
+
+    def solve(self):
+        raise NotImplementedError()
 
 
 class SquareNlpSolverBase(object):
@@ -69,14 +104,18 @@ class SquareNlpSolverBase(object):
 
     def evaluate_function(self, x0):
         # NOTE: NLP object should handle any caching
+        self._timer.start("eval_f")
         self._nlp.set_primals(x0)
         values = self._nlp.evaluate_eq_constraints()
+        self._timer.stop("eval_f")
         return values
 
     def evaluate_jacobian(self, x0):
         # NOTE: NLP object should handle any caching
+        self._timer.start("eval_j")
         self._nlp.set_primals(x0)
         self._jacobian = self._nlp.evaluate_jacobian_eq(out=self._jacobian)
+        self._timer.stop("eval_j")
         return self._jacobian
 
 
