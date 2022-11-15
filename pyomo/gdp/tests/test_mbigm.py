@@ -302,7 +302,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         # and then specify them for the others
         m = self.make_model()
         mbm = TransformationFactory('gdp.mbigm')
-        mbm.apply_to(m)
+        mbm.apply_to(m, reduce_bound_constraints=False)
 
         self.check_all_untightened_bounds_constraints(m, mbm)
         self.check_linear_func_constraints(m, mbm)
@@ -313,7 +313,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
     def test_transformed_constraints_correct_Ms_specified(self):
         m = self.make_model()
         mbm = TransformationFactory('gdp.mbigm')
-        mbm.apply_to(m, bigM=self.get_Ms(m))
+        mbm.apply_to(m, bigM=self.get_Ms(m), reduce_bound_constraints=False)
 
         self.check_all_untightened_bounds_constraints(m, mbm)
         self.check_linear_func_constraints(m, mbm)
@@ -330,7 +330,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
     def test_mappings_between_original_and_transformed_components(self):
         m = self.make_model()
         mbm = TransformationFactory('gdp.mbigm')
-        mbm.apply_to(m, bigM=self.get_Ms(m))
+        mbm.apply_to(m, bigM=self.get_Ms(m), reduce_bound_constraints=False)
 
         d1_block = m.d1.transformation_block
         self.assertIs(mbm.get_src_disjunct(d1_block), m.d1)
@@ -350,7 +350,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
     def test_algebraic_constraints(self):
         m = self.make_model()
         mbm = TransformationFactory('gdp.mbigm')
-        mbm.apply_to(m, bigM=self.get_Ms(m))
+        mbm.apply_to(m, bigM=self.get_Ms(m), reduce_bound_constraints=False)
 
         self.assertIsNotNone(m.disjunction.algebraic_constraint)
         xor = m.disjunction.algebraic_constraint()
@@ -457,7 +457,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         Ms[m.d3.func, m.d1] = [10, 20]
 
         mbigm = TransformationFactory('gdp.mbigm')
-        mbigm.apply_to(m, bigM=Ms)
+        mbigm.apply_to(m, bigM=Ms, reduce_bound_constraints=False)
 
         self.assertStructuredAlmostEqual(mbigm.get_all_M_values(m), Ms)
         self.check_linear_func_constraints(m, mbigm, Ms)
@@ -478,8 +478,8 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
                                                                  m.d3: 110},
                                                  upper=10)
 
-    # TODO: This is failing because I can't figure out if Suffixes actually
-    # allow tuples as keys or what I'm going to do if they don't...
+    # TODO: If Suffixes allow tuple keys then we can support them and it will
+    # look something like this:
     # def test_Ms_specified_as_suffixes_honored(self):
     #     m = self.make_model()
     #     m.BigM = Suffix(direction=Suffix.LOCAL)
@@ -533,7 +533,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         m.d4.deactivate()
 
         mbm = TransformationFactory('gdp.mbigm')
-        mbm.apply_to(m, bigM=self.get_Ms(m))
+        mbm.apply_to(m, bigM=self.get_Ms(m), reduce_bound_constraints=False)
 
         # we don't transform d1
         self.assertIsNone(m.d4.transformation_block)
@@ -624,7 +624,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         m.d1.logical = LogicalConstraint(expr=m.d1.Y.implies(m.d1.Z))
 
         mbm = TransformationFactory('gdp.mbigm')
-        mbm.apply_to(m, bigM=self.get_Ms(m))
+        mbm.apply_to(m, bigM=self.get_Ms(m), reduce_bound_constraints=False)
 
         transformed = mbm.get_transformed_constraints(
             m.d1.logic_to_linear.transformed_constraints[1])

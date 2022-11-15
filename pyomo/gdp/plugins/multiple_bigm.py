@@ -109,7 +109,7 @@ class MultipleBigMTransformation(Transformation):
         """
     ))
     CONFIG.declare('reduce_bound_constraints', ConfigValue(
-        default=False,
+        default=True,
         domain=bool,
         description="Flag indicating whether or not to handle disjunctive "
         "constraints that bound a single variable in a single (tighter) "
