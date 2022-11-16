@@ -23,7 +23,7 @@ from pyomo.contrib.mindtpy.nlp_solve import handle_subproblem_other_termination,
 from pyomo.core.base import TransformationFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import time_code
-from pyomo.contrib.mindtpy.util import create_utility_block, process_objective, setup_results_object
+from pyomo.contrib.mindtpy.util import create_utility_block, process_objective, setup_results_object, update_gap
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main, init_rNLP
 from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, handle_fp_main_tc
 from pyomo.core import Block, ConstraintList
@@ -314,6 +314,13 @@ class TestMindtPy(unittest.TestCase):
                 solve_data, config, check_cycling=False), True)
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.feasible)
+
+            solve_data.primal_bound = 0.5
+            solve_data.dual_bound = 1
+            update_gap(solve_data)
+            self.assertEqual(solve_data.abs_gap, -0.5)
+            self.assertIs(algorithm_should_terminate(
+                solve_data, config, check_cycling=False), True)
 
             solve_data.primal_bound_progress = [float('inf'), 5, 4, 3, 2, 1]
             solve_data.primal_bound_progress_time = [1, 2, 3, 4, 5, 6]
