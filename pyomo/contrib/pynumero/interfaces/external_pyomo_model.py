@@ -34,7 +34,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
     CyIpoptSolver,
 )
 from pyomo.contrib.pynumero.algorithms.solvers.param_square_solvers import (
-    SccSolver,
+    SccNlpSolver,
     CyIpoptSolverWrapper,
 )
 from pyomo.contrib.incidence_analysis.util import (
@@ -181,7 +181,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             timer = HierarchicalTimer()
         self._timer = timer
         if solver_class is None:
-            solver_class = SccSolver
+            solver_class = SccNlpSolver
         self._solver_class = solver_class
         if solver_options is None:
             solver_options = {}
@@ -197,6 +197,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         self._block._obj = Objective(expr=0.0)
         self._nlp = PyomoNLP(self._block)
 
+        # TODO: Send variables and constraints to PyomoImplicitFunction
+        # directly.
         self._external_block = create_subsystem_block(
             external_cons, input_vars + external_vars
         )
@@ -239,11 +241,29 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         solver.update_parameters(input_values)
         solver.solve()
 
+        # At this point we assume the solution has been loaded into the model.
+        # I would like to switch to a function-like interface, where I receive
+        # outputs from the solver.
+        # The purpose of this method is then to receive the output values from
+        # the function and send them 
+
+        # outputs = solver.evaluate_outputs()
+
         # Send updated variable values to NLP for dervative evaluation
         primals = self._nlp.get_primals()
+
+        # external_vars are the outputs of solver. If necessary, they should
+        # be accessible via get_output_variables()
+
+        # These variables shouldn't be necessary. I should have the coordinates
+        # of (inputs+external) cached somewhere.
         to_update = input_vars + external_vars
         indices = self._nlp.get_primal_indices(to_update)
+
+        # values = np.concat((input_values, outputs))
         values = np.fromiter((var.value for var in to_update), float)
+
+        # Then update and set primals in the same manner
         primals[indices] = values
         self._nlp.set_primals(primals)
 
