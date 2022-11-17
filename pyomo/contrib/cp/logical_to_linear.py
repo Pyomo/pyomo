@@ -43,7 +43,6 @@ def _dispatch_equivalence(visitor, node, a, b):
         _dispatch_or(visitor, node, 1 - a, b),
         _dispatch_or(visitor, node, a, 1 - b),
     )
-    return z
 
 def _dispatch_and(visitor, node, *args):
     # z == a ^ b ^ ...
@@ -62,16 +61,48 @@ def _dispatch_or(visitor, node, *args):
     return z
 
 def _dispatch_xor(visitor, node, a, b):
-    pass
+    # z == a XOR b
+    # Special case of exactly:
+    return _dispatch_exactly(visitor, node, 1, a, b)
 
 def _dispatch_exactly(visitor, node, *args):
-    pass
+    # z = sum(args[1:] == args[0]
+    # This is currently implemented as a big-m transformation of:
+    # [sum(args[1:] = n] v [[sum(args[1:]) < n] v [sum(args[1:]) > n]]
+    z = visitor.z_vars.add()
+    M = len(args) - 1
+    n = args[0]
+    sum_expr = sum(args[1:])
+    visitor.constraints.add(sum_expr <= n + (M - n)*(1 - z))
+    visitor.constraints.add(sum_expr >= n - n*(1 - z))
+    a = visitor.z_vars.add()
+    b = visitor.z_vars.add()
+    visitor.constraints.add(1 - z == a + b)
+    visitor.constraints.add(sum_expr >= n + 1 - (n + 1)*(1 - a))
+    visitor.constraints.add(sum_expr <= n - 1 + (M - n + 1)*(1 - b))
+    return z
 
 def _dispatch_atleast(visitor, node, *args):
-    pass
+    # z = sum[args[1:] >= n
+    # This is implemented as a big-m transformation of:
+    # [sum(args[1:] >= n] v [sum(args[1:] < n]
+    z = visitor.z_vars.add()
+    n = args[0]
+    sum_expr = sum(args[1:])
+    visitor.constraints.add(sum_expr >= n - n*(1 - z))
+    visitor.constraints.add(sum_expr <= n - 1 + (len(args) - n)*z)
+    return z
 
 def _dispatch_atmost(visitor, node, *args):
-    pass
+    # z = sum[args[1:] <= n
+    # This is implemented as a big-m transformation of:
+    # [sum(args[1:] <= n] v [sum(args[1:] > n]
+    z = visitor.z_vars.add()
+    n = args[0]
+    sum_expr = sum(args[1:])
+    visitor.constraints.add(sum_expr <= n + (len(args) - 1 - n)*(1 - z))
+    visitor.constraints.add(sum_expr >= n + 1 - (n + 1)*z)
+    return z
 
 #_operator_dispatcher = collections.defaultdict(_register_dispatcher_type)
 _operator_dispatcher = {}
@@ -86,7 +117,6 @@ _operator_dispatcher[LE.XorExpression] = _dispatch_xor
 _operator_dispatcher[LE.ExactlyExpression] = _dispatch_exactly
 _operator_dispatcher[LE.AtLeastExpression] = _dispatch_atleast
 _operator_dispatcher[LE.AtMostExpression] = _dispatch_atmost
-
 
 
 class LogicalToLinearVisitor(StreamBasedExpressionVisitor):
