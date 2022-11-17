@@ -13,6 +13,7 @@ import collections
 
 from pyomo.common.collections import ComponentMap
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
+import pyomo.core.expr.current as EXPR
 import pyomo.core.expr.logical_expr as LE
 from pyomo.core.base import Binary, VarList, ConstraintList
 import pyomo.core.base.boolean_var as BV
@@ -62,7 +63,7 @@ def _dispatch_or(visitor, node, *args):
 
 def _dispatch_xor(visitor, node, a, b):
     # z == a XOR b
-    # Special case of exactly:
+    # This is a special case of exactly
     return _dispatch_exactly(visitor, node, 1, a, b)
 
 def _dispatch_exactly(visitor, node, *args):
@@ -134,6 +135,12 @@ class LogicalToLinearVisitor(StreamBasedExpressionVisitor):
         self.expansions = ComponentMap()
         self.boolean_to_binary_map = ComponentMap()
 
+    def beforeChild(self, node, child, child_idx):
+        if child.__class__ in EXPR.native_types:
+            return False, child
+
+        return True, None
+
     # def beforeChild(self, node, child, child_idx):
     #     try:
     #         return _before_child_handlers[child.__class__](self, child)
@@ -142,6 +149,7 @@ class LogicalToLinearVisitor(StreamBasedExpressionVisitor):
     #     return _before_child_handlers[child.__class__](self, child)
 
     def exitNode(self, node, data):
+
         return _operator_dispatcher[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):
