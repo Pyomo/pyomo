@@ -17,13 +17,21 @@ import pyomo.core.expr.current as EXPR
 import pyomo.core.expr.logical_expr as LE
 from pyomo.core.base import Binary, VarList, ConstraintList
 import pyomo.core.base.boolean_var as BV
+from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
+from pyomo.core.base.var import ScalarVar, _GeneralVarData
 
 def _dispatch_boolean_var(visitor, node):
     if node not in visitor.boolean_to_binary_map:
         z = visitor.z_vars.add()
         visitor.boolean_to_binary_map[node] = z
         node.associate_binary_var(z)
-    return visitor.boolean_to_binary_map[node]
+    return False, visitor.boolean_to_binary_map[node]
+
+def _dispatch_var(visitor, node):
+    return False, node
+
+def _dispatch_expression(visitor, node):
+    return False, node.expr
 
 def _dispatch_not(visitor, node, a):
     # z == !a
@@ -107,8 +115,6 @@ def _dispatch_atmost(visitor, node, *args):
 
 #_operator_dispatcher = collections.defaultdict(_register_dispatcher_type)
 _operator_dispatcher = {}
-_operator_dispatcher[BV.ScalarBooleanVar] = _dispatch_boolean_var
-_operator_dispatcher[BV._BooleanVarData] = _dispatch_boolean_var
 _operator_dispatcher[LE.ImplicationExpression] = _dispatch_implication
 _operator_dispatcher[LE.EquivalenceExpression] = _dispatch_equivalence
 _operator_dispatcher[LE.NotExpression] = _dispatch_not
@@ -119,6 +125,13 @@ _operator_dispatcher[LE.ExactlyExpression] = _dispatch_exactly
 _operator_dispatcher[LE.AtLeastExpression] = _dispatch_atleast
 _operator_dispatcher[LE.AtMostExpression] = _dispatch_atmost
 
+_before_child_dispatcher = {}
+_before_child_dispatcher[BV.ScalarBooleanVar] = _dispatch_boolean_var
+_before_child_dispatcher[BV._BooleanVarData] = _dispatch_boolean_var
+_before_child_dispatcher[ScalarVar] = _dispatch_var
+_before_child_dispatcher[_GeneralVarData] = _dispatch_var
+_before_child_dispatcher[_GeneralExpressionData] = _dispatch_expression
+_before_child_dispatcher[ScalarExpression] = _dispatch_expression
 
 class LogicalToLinearVisitor(StreamBasedExpressionVisitor):
     """Converts BooleanExpressions to Linear (MIP) representation
@@ -135,21 +148,22 @@ class LogicalToLinearVisitor(StreamBasedExpressionVisitor):
         self.expansions = ComponentMap()
         self.boolean_to_binary_map = ComponentMap()
 
+    def initializeWalker(self, expr):
+        walk, result = self.beforeChild(None, expr, 0)
+        if not walk:
+            return False, self.finalizeResult(result)
+        return True, expr
+
     def beforeChild(self, node, child, child_idx):
         if child.__class__ in EXPR.native_types:
             return False, child
 
+        if not child.is_expression_type() or child.is_named_expression_type():
+            return _before_child_dispatcher[child.__class__](self, child)
+
         return True, None
 
-    # def beforeChild(self, node, child, child_idx):
-    #     try:
-    #         return _before_child_handlers[child.__class__](self, child)
-    #     except KeyError:
-    #         self._register_new_before_child_processor(child)
-    #     return _before_child_handlers[child.__class__](self, child)
-
     def exitNode(self, node, data):
-
         return _operator_dispatcher[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):

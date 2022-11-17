@@ -13,7 +13,8 @@ import pyomo.common.unittest as unittest
 from pyomo.contrib.cp.logical_to_linear import LogicalToLinearVisitor
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import (
-    atmost, atleast, BooleanVar, ConcreteModel, land, lnot, lor, value)
+    atmost, atleast, BooleanVar, ConcreteModel, Expression, Integers, land,
+    lnot, lor, value, Var)
 
 class TestLogicalToLinearVisitor(unittest.TestCase):
     def make_model(self):
@@ -258,3 +259,72 @@ class TestLogicalToLinearVisitor(unittest.TestCase):
 
         self.assertTrue(m.z[4].fixed)
         self.assertEqual(value(m.z[4]), 1)
+
+    def test_no_need_to_walk(self):
+        m = self.make_model()
+        e = m.a
+
+        visitor = LogicalToLinearVisitor()
+        m.cons = visitor.constraints
+        m.z = visitor.z_vars
+
+        visitor.walk_expression(e)
+        self.assertEqual(len(m.z), 1)
+        self.assertIs(m.a.get_associated_binary(), m.z[1])
+        self.assertEqual(len(m.cons), 0)
+        self.assertTrue(m.z[1].fixed)
+        self.assertEqual(value(m.z[1]), 1)
+
+    def test_integer_var_in_at_least(self):
+        m = self.make_model()
+        m.x = Var(bounds=(0, 10), domain=Integers)
+        e = atleast(m.x, m.a, m.b, m.c)
+
+        visitor = LogicalToLinearVisitor()
+        m.cons = visitor.constraints
+        m.z = visitor.z_vars
+
+        visitor.walk_expression(e)
+        self.assertIs(m.a.get_associated_binary(), m.z[1])
+        a = m.z[1]
+        self.assertIs(m.b.get_associated_binary(), m.z[2])
+        b = m.z[2]
+        self.assertIs(m.c.get_associated_binary(), m.z[3])
+        c = m.z[3]
+
+        self.assertEqual(len(m.z), 4)
+        self.assertEqual(len(m.cons), 2)
+
+        # TODO: This is not linear. This is not what should happen. What
+        # *should* happen?
+        assertExpressionsEqual(
+            self, m.cons[1].expr, a + b + c >= m.x - m.x*(1 - m.z[4]))
+        assertExpressionsEqual(
+            self, m.cons[2].expr, a + b + c <= m.x - 1 + (4 - m.x)*m.z[4])
+
+        self.assertTrue(m.z[4].fixed)
+        self.assertEqual(value(m.z[4]), 1)
+
+    def test_named_expression_in_at_most(self):
+        m = self.make_model()
+        m.x = Var([1, 2], domain=Integers, bounds=(0, 5))
+        m.e = Expression(expr=m.x[1]**2)
+
+        # TODO: If we allow this, we need to let for all sort of algebriac
+        # expressions in beforechild
+        e = atmost(m.e + m.x[2], m.a, m.b)
+        visitor = LogicalToLinearVisitor()
+        m.cons = visitor.constraints
+        m.z = visitor.z_vars
+
+        visitor.walk_expression(e)
+        # self.assertIs(m.a.get_associated_binary(), m.z[1])
+        # a = m.z[1]
+        # self.assertIs(m.b.get_associated_binary(), m.z[2])
+        # b = m.z[2]
+
+        # self.assertEqual(len(m.z), 3)
+        # self.assertEqual(len(m.cons), 2)
+
+        # assertExpressionsEqual(
+        #     self, m.cons[1].expr, a + b <= m.e + m.x[2] - (2 + m.e + m.x[2])*
