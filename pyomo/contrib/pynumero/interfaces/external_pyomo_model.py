@@ -198,7 +198,10 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         self._nlp = PyomoNLP(self._block)
 
         # TODO: Send variables and constraints to PyomoImplicitFunction
-        # directly.
+        # directly, and get indices.
+        # external_block_indices = self._nlp.get_primal_indices(
+        #     input_vars + external_vars
+        # )
         self._external_block = create_subsystem_block(
             external_cons, input_vars + external_vars
         )
@@ -261,6 +264,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         indices = self._nlp.get_primal_indices(to_update)
 
         # values = np.concat((input_values, outputs))
+        # Indices will be cached somewhere.
         values = np.fromiter((var.value for var in to_update), float)
 
         # Then update and set primals in the same manner
