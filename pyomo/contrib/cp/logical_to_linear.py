@@ -19,12 +19,17 @@ from pyomo.core.base import Binary, VarList, ConstraintList
 import pyomo.core.base.boolean_var as BV
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.var import ScalarVar, _GeneralVarData
+from pyomo.gdp.disjunct import AutoLinkedBooleanVar
 
 def _dispatch_boolean_var(visitor, node):
     if node not in visitor.boolean_to_binary_map:
-        z = visitor.z_vars.add()
-        visitor.boolean_to_binary_map[node] = z
-        node.associate_binary_var(z)
+        binary = node.get_associated_binary()
+        if binary is not None:
+            visitor.boolean_to_binary_map[node] = binary
+        else:
+            z = visitor.z_vars.add()
+            visitor.boolean_to_binary_map[node] = z
+            node.associate_binary_var(z)
     return False, visitor.boolean_to_binary_map[node]
 
 def _dispatch_var(visitor, node):
@@ -127,7 +132,8 @@ _operator_dispatcher[LE.AtMostExpression] = _dispatch_atmost
 
 _before_child_dispatcher = {}
 _before_child_dispatcher[BV.ScalarBooleanVar] = _dispatch_boolean_var
-_before_child_dispatcher[BV._BooleanVarData] = _dispatch_boolean_var
+_before_child_dispatcher[BV._GeneralBooleanVarData] = _dispatch_boolean_var
+_before_child_dispatcher[AutoLinkedBooleanVar] = _dispatch_boolean_var
 _before_child_dispatcher[ScalarVar] = _dispatch_var
 _before_child_dispatcher[_GeneralVarData] = _dispatch_var
 _before_child_dispatcher[_GeneralExpressionData] = _dispatch_expression
