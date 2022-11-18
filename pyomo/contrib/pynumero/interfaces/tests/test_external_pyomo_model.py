@@ -780,17 +780,19 @@ class TestExternalPyomoModel(unittest.TestCase):
         x1_init_list = [-4.5, -2.3, 0.0, 1.0, 4.1]
         x_init_list = list(itertools.product(x0_init_list, x1_init_list))
         external_model = ExternalPyomoModel(
-                list(m.x.values()),
-                list(m.y.values()),
-                list(m.residual_eqn.values()),
-                list(m.external_eqn.values()),
-                )
+            list(m.x.values()),
+            list(m.y.values()),
+            list(m.residual_eqn.values()),
+            list(m.external_eqn.values()),
+        )
 
         for x in x_init_list:
             external_model.set_input_values(x)
             jac = external_model.evaluate_jacobian_equality_constraints()
             expected_jac = model.evaluate_jacobian(x)
-            np.testing.assert_allclose(jac.toarray(), expected_jac, rtol=1e-8)
+            np.testing.assert_allclose(
+                jac.toarray(), expected_jac, rtol=1e-8, atol=1e-8
+            )
 
     def test_hessian_SimpleModel2x2_1(self):
         model = SimpleModel2by2_1()
