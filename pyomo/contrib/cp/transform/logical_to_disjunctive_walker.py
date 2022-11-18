@@ -139,7 +139,7 @@ _before_child_dispatcher[_GeneralVarData] = _dispatch_var
 _before_child_dispatcher[_GeneralExpressionData] = _dispatch_expression
 _before_child_dispatcher[ScalarExpression] = _dispatch_expression
 
-class LogicalToLinearVisitor(StreamBasedExpressionVisitor):
+class LogicalToDisjunctiveVisitor(StreamBasedExpressionVisitor):
     """Converts BooleanExpressions to Linear (MIP) representation
 
     This converter eschews conjunctive normal form, and instead follows

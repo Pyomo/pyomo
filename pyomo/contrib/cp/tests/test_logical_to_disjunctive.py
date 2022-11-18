@@ -10,13 +10,15 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.cp.logical_to_linear import LogicalToLinearVisitor
+from pyomo.contrib.cp.transform.logical_to_disjunctive_walker import (
+    LogicalToDisjunctiveVisitor
+)
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import (
     atmost, atleast, BooleanVar, ConcreteModel, Expression, Integers, land,
     lnot, lor, value, Var)
 
-class TestLogicalToLinearVisitor(unittest.TestCase):
+class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
     def make_model(self):
         m = ConcreteModel()
 
@@ -30,7 +32,7 @@ class TestLogicalToLinearVisitor(unittest.TestCase):
         m = self.make_model()
         e = lor(m.a, m.b, m.c)
 
-        visitor = LogicalToLinearVisitor()
+        visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
 
@@ -63,7 +65,7 @@ class TestLogicalToLinearVisitor(unittest.TestCase):
         m = self.make_model()
         e = land(m.a, m.b, m.c)
 
-        visitor = LogicalToLinearVisitor()
+        visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
 
@@ -89,7 +91,7 @@ class TestLogicalToLinearVisitor(unittest.TestCase):
         m = self.make_model()
         e = lnot(m.a)
 
-        visitor = LogicalToLinearVisitor()
+        visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
 
@@ -106,7 +108,7 @@ class TestLogicalToLinearVisitor(unittest.TestCase):
         m = self.make_model()
         e = m.a.implies(m.b.land(m.c))
 
-        visitor = LogicalToLinearVisitor()
+        visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
 
@@ -137,7 +139,7 @@ class TestLogicalToLinearVisitor(unittest.TestCase):
         m = self.make_model()
         e = m.a.equivalent_to(m.c)
 
-        visitor = LogicalToLinearVisitor()
+        visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
 
@@ -174,7 +176,7 @@ class TestLogicalToLinearVisitor(unittest.TestCase):
         m = self.make_model()
         e = m.a.xor(m.b)
 
-        visitor = LogicalToLinearVisitor()
+        visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
 
@@ -204,7 +206,7 @@ class TestLogicalToLinearVisitor(unittest.TestCase):
         m = self.make_model()
         e = atmost(2, m.a, (m.a.land(m.b)), m.c)
 
-        visitor = LogicalToLinearVisitor()
+        visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
 
@@ -237,7 +239,7 @@ class TestLogicalToLinearVisitor(unittest.TestCase):
     def test_at_least(self):
         m = self.make_model()
         e = atleast(2, m.a, m.b, m.c)
-        visitor = LogicalToLinearVisitor()
+        visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
 
@@ -264,7 +266,7 @@ class TestLogicalToLinearVisitor(unittest.TestCase):
         m = self.make_model()
         e = m.a
 
-        visitor = LogicalToLinearVisitor()
+        visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
 
@@ -280,7 +282,7 @@ class TestLogicalToLinearVisitor(unittest.TestCase):
         m.x = Var(bounds=(0, 10), domain=Integers)
         e = atleast(m.x, m.a, m.b, m.c)
 
-        visitor = LogicalToLinearVisitor()
+        visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
 
@@ -313,7 +315,7 @@ class TestLogicalToLinearVisitor(unittest.TestCase):
         # TODO: If we allow this, we need to let for all sort of algebriac
         # expressions in beforechild
         e = atmost(m.e + m.x[2], m.a, m.b)
-        visitor = LogicalToLinearVisitor()
+        visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
 
