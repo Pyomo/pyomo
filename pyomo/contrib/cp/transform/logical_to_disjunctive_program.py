@@ -160,7 +160,7 @@ class LogicalToLinear(IsomorphicTransformation):
         #new_boolvarlist = xfrm_block.augmented_vars
         #new_varlist = xfrm_block.augmented_vars_asbinary
 
-        # This is maybe too cute, but just deceive the walker so it puts stuff
+        # This is may be too cute, but just deceive the walker so it puts stuff
         # in the right place.
         visitor.constraints = xfrm_block.transformed_constraints
         visitor.z_vars = xfrm_block.augmented_vars_asbinary

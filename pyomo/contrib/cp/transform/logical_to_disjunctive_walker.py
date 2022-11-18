@@ -12,14 +12,18 @@
 import collections
 
 from pyomo.common.collections import ComponentMap
+from pyomo.common.errors import MouseTrap
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
+from pyomo.core.expr.numeric_expr import NumericExpression
+from pyomo.core.expr.relational_expr import RelationalExpression
 import pyomo.core.expr.current as EXPR
 import pyomo.core.expr.logical_expr as LE
-from pyomo.core.base import Binary, VarList, ConstraintList
+from pyomo.core.base import (
+    Binary, Constraint, ConstraintList, NonNegativeIntegers, VarList)
 import pyomo.core.base.boolean_var as BV
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
 from pyomo.core.base.var import ScalarVar, _GeneralVarData
-from pyomo.gdp.disjunct import AutoLinkedBooleanVar
+from pyomo.gdp.disjunct import AutoLinkedBooleanVar, Disjunct, Disjunction
 
 def _dispatch_boolean_var(visitor, node):
     if node not in visitor.boolean_to_binary_map:
@@ -37,6 +41,11 @@ def _dispatch_var(visitor, node):
 
 def _dispatch_expression(visitor, node):
     return False, node.expr
+
+def _before_relational_expression(visitor, node):
+    raise MouseTrap("The RelationalExpression '%s' was used as a Boolean atom "
+                    "in a logical proposition. This is not yet supported "
+                    "when transforming to disjunctive form." % node)
 
 def _dispatch_not(visitor, node, a):
     # z == !a
@@ -79,46 +88,66 @@ def _dispatch_xor(visitor, node, a, b):
     # This is a special case of exactly
     return _dispatch_exactly(visitor, node, 1, a, b)
 
+def _get_integer_value(n, node):
+    if n.__class__ in EXPR.native_numeric_types and int(n) == n:
+        return n
+    if n.__class__ not in EXPR.native_types and n.is_potentially_variable():
+        # [ESJ 11/22]: This is probably worth supporting sometime, but right now
+        # we are abiding by what docplex allows in their 'count' function. Part
+        # of supporting this will be making sure we catch strict inequalities in
+        # the GDP transformations. Because if we don't know that n is
+        # integer-valued we will be forced to write strict inequalities instead
+        # of incrememting or decrementing by 1 in the disjunctions.
+        raise MouseTrap(
+            "The first argument '%s' to '%s' is potentially variable. "
+            "This may be a mathematically coherent expression; However "
+            "it is not yet supported to convert it to a disjunctive "
+            "program." % (n, node))
+    raise ValueError("The first argument to '%s' must be an integer.\n\t"
+                     "Recieved: %s" % (node, n))
+
 def _dispatch_exactly(visitor, node, *args):
     # z = sum(args[1:] == args[0]
-    # This is currently implemented as a big-m transformation of:
+    # This is currently implemented as:
     # [sum(args[1:] = n] v [[sum(args[1:]) < n] v [sum(args[1:]) > n]]
-    z = visitor.z_vars.add()
     M = len(args) - 1
-    n = args[0]
+    n = _get_integer_value(args[0], node)
     sum_expr = sum(args[1:])
-    visitor.constraints.add(sum_expr <= n + (M - n)*(1 - z))
-    visitor.constraints.add(sum_expr >= n - n*(1 - z))
-    a = visitor.z_vars.add()
-    b = visitor.z_vars.add()
-    visitor.constraints.add(1 - z == a + b)
-    visitor.constraints.add(sum_expr >= n + 1 - (n + 1)*(1 - a))
-    visitor.constraints.add(sum_expr <= n - 1 + (M - n + 1)*(1 - b))
-    return z
+    equality_disj = visitor.disjuncts[len(visitor.disjuncts)]
+    equality_disj.constraint = Constraint(expr=sum_expr == n)
+    inequality_disj = visitor.disjuncts[len(visitor.disjuncts)]
+    inequality_disj.disjunction = Disjunction(
+        expr=[[sum_expr <= n - 1], [sum_expr >= n + 1]])
+    visitor.disjunctions[len(visitor.disjunctions)] = [equality_disj,
+                                                       inequality_disj]
+    return equality_disj.indicator_var.get_associated_binary()
 
 def _dispatch_atleast(visitor, node, *args):
     # z = sum[args[1:] >= n
-    # This is implemented as a big-m transformation of:
+    # This is implemented as:
     # [sum(args[1:] >= n] v [sum(args[1:] < n]
-    z = visitor.z_vars.add()
-    n = args[0]
+    n = _get_integer_value(args[0], node)
     sum_expr = sum(args[1:])
-    visitor.constraints.add(sum_expr >= n - n*(1 - z))
-    visitor.constraints.add(sum_expr <= n - 1 + (len(args) - n)*z)
-    return z
+    atleast_disj = visitor.disjuncts[len(visitor.disjuncts)]
+    less_disj = visitor.disjuncts[len(visitor.disjuncts)]
+    atleast_disj.constraint = Constraint(expr=sum_expr >= n)
+    less_disj.constraint = Constraint(expr=sum_expr <= n - 1)
+    visitor.disjunctions[len(visitor.disjunctions)] = [atleast_disj, less_disj]
+    return atleast_disj.indicator_var.get_associated_binary()
 
 def _dispatch_atmost(visitor, node, *args):
     # z = sum[args[1:] <= n
-    # This is implemented as a big-m transformation of:
+    # This is implemented as:
     # [sum(args[1:] <= n] v [sum(args[1:] > n]
-    z = visitor.z_vars.add()
-    n = args[0]
+    n = _get_integer_value(args[0], node)
     sum_expr = sum(args[1:])
-    visitor.constraints.add(sum_expr <= n + (len(args) - 1 - n)*(1 - z))
-    visitor.constraints.add(sum_expr >= n + 1 - (n + 1)*z)
-    return z
+    atmost_disj = visitor.disjuncts[len(visitor.disjuncts)]
+    more_disj = visitor.disjuncts[len(visitor.disjuncts)]
+    atmost_disj.constraint = Constraint(expr=sum_expr <= n)
+    more_disj.constraint = Constraint(expr=sum_expr >= n + 1)
+    visitor.disjunctions[len(visitor.disjunctions)] = [atmost_disj, more_disj]
+    return atmost_disj.indicator_var.get_associated_binary()
 
-#_operator_dispatcher = collections.defaultdict(_register_dispatcher_type)
 _operator_dispatcher = {}
 _operator_dispatcher[LE.ImplicationExpression] = _dispatch_implication
 _operator_dispatcher[LE.EquivalenceExpression] = _dispatch_equivalence
@@ -150,7 +179,11 @@ class LogicalToDisjunctiveVisitor(StreamBasedExpressionVisitor):
     def __init__(self):
         super().__init__()
         self.z_vars = VarList(domain=Binary)
+        self.z_vars.construct()
         self.constraints = ConstraintList()
+        self.disjuncts = Disjunct(NonNegativeIntegers, concrete=True)
+        self.disjunctions = Disjunction(NonNegativeIntegers)
+        self.disjunctions.construct()
         self.expansions = ComponentMap()
         self.boolean_to_binary_map = ComponentMap()
 
@@ -163,6 +196,13 @@ class LogicalToDisjunctiveVisitor(StreamBasedExpressionVisitor):
     def beforeChild(self, node, child, child_idx):
         if child.__class__ in EXPR.native_types:
             return False, child
+
+        if isinstance(child, NumericExpression):
+            # Just pass it through, we'll figure it out later
+            return False, child
+        if isinstance(child, RelationalExpression):
+            # Eventually we'll handle these. Right now we raise a MouseTrap
+            return _before_relational_expr(self, child)
 
         if not child.is_expression_type() or child.is_named_expression_type():
             return _before_child_dispatcher[child.__class__](self, child)

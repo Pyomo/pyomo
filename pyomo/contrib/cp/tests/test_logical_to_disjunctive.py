@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from pyomo.common.errors import MouseTrap
 import pyomo.common.unittest as unittest
 from pyomo.contrib.cp.transform.logical_to_disjunctive_walker import (
     LogicalToDisjunctiveVisitor
@@ -179,28 +180,31 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
+        m.disjuncts = visitor.disjuncts
+        m.disjunctions = visitor.disjunctions
 
         visitor.walk_expression(e)
         self.assertIs(m.a.get_associated_binary(), m.z[1])
         self.assertIs(m.b.get_associated_binary(), m.z[2])
 
-        self.assertEqual(len(m.z), 5)
-        self.assertEqual(len(m.cons), 5)
+        self.assertEqual(len(m.z), 2)
+        self.assertEqual(len(m.cons), 0)
+        self.assertEqual(len(m.disjuncts), 2)
+        self.assertEqual(len(m.disjunctions), 1)
 
         assertExpressionsEqual(
-            self, m.cons[1].expr, m.z[1] + m.z[2] <= 1 + (1 - m.z[3]))
+            self, m.disjuncts[0].constraint.expr, m.z[1] + m.z[2] == 1)
         assertExpressionsEqual(
-            self, m.cons[2].expr, m.z[1] + m.z[2] >= 1 - (1 - m.z[3]))
+            self,
+            m.disjuncts[1].disjunction.disjuncts[0].constraint[1].expr,
+            m.z[1] + m.z[2] <= 0)
+        assertExpressionsEqual(
+            self,
+            m.disjuncts[1].disjunction.disjuncts[1].constraint[1].expr,
+            m.z[1] + m.z[2] >= 2)
 
-        assertExpressionsEqual(
-            self, m.cons[3].expr, 1 - m.z[3] == m.z[4] + m.z[5])
-        assertExpressionsEqual(
-            self, m.cons[4].expr, m.z[1] + m.z[2] >= 2 - 2*(1 - m.z[4]))
-        assertExpressionsEqual(
-            self, m.cons[5].expr, m.z[1] + m.z[2] <= 2*(1 - m.z[5]))
-
-        self.assertTrue(m.z[3].fixed)
-        self.assertEqual(value(m.z[3]), 1)
+        self.assertTrue(m.disjuncts[0].binary_indicator_var.fixed)
+        self.assertEqual(value(m.disjuncts[0].binary_indicator_var), 1)
 
     def test_at_most(self):
         m = self.make_model()
@@ -209,6 +213,8 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
+        m.disjuncts = visitor.disjuncts
+        m.disjunctions = visitor.disjunctions
 
         visitor.walk_expression(e)
         self.assertIs(m.a.get_associated_binary(), m.z[1])
@@ -218,8 +224,10 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         self.assertIs(m.c.get_associated_binary(), m.z[4])
         c = m.z[4]
 
-        self.assertEqual(len(m.z), 5)
-        self.assertEqual(len(m.cons), 4)
+        self.assertEqual(len(m.z), 4)
+        self.assertEqual(len(m.cons), 2)
+        self.assertEqual(len(m.disjuncts), 2)
+        self.assertEqual(len(m.disjunctions), 1)
 
         # z3 = a ^ b
         assertExpressionsEqual(
@@ -227,14 +235,16 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         assertExpressionsEqual(
             self, m.cons[2].expr, m.z[3] <= b)
 
-        # bigm of atmost disjunction
+        # atmost in disjunctive form
         assertExpressionsEqual(
-            self, m.cons[3].expr, a + m.z[3] + c <= 2 + (1 - m.z[5]))
+            self, m.disjuncts[0].constraint.expr, m.z[1] + m.z[3] + m.z[4] <= 2)
         assertExpressionsEqual(
-            self, m.cons[4].expr, a + m.z[3] + c >= 3 - 3*m.z[5])
+            self,
+            m.disjuncts[1].constraint.expr,
+            m.z[1] + m.z[3] + m.z[4] >= 3)
 
-        self.assertTrue(m.z[5].fixed)
-        self.assertEqual(value(m.z[5]), 1)
+        self.assertTrue(m.disjuncts[0].binary_indicator_var.fixed)
+        self.assertEqual(value(m.disjuncts[0].binary_indicator_var), 1)
 
     def test_at_least(self):
         m = self.make_model()
@@ -242,6 +252,8 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         visitor = LogicalToDisjunctiveVisitor()
         m.cons = visitor.constraints
         m.z = visitor.z_vars
+        m.disjuncts = visitor.disjuncts
+        m.disjunctions = visitor.disjunctions
 
         visitor.walk_expression(e)
         self.assertIs(m.a.get_associated_binary(), m.z[1])
@@ -251,16 +263,19 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         self.assertIs(m.c.get_associated_binary(), m.z[3])
         c = m.z[3]
 
-        self.assertEqual(len(m.z), 4)
-        self.assertEqual(len(m.cons), 2)
+        self.assertEqual(len(m.z), 3)
+        self.assertEqual(len(m.cons), 0)
 
+        # atleast in disjunctive form
         assertExpressionsEqual(
-            self, m.cons[1].expr, a + b + c >= 2 - 2*(1 - m.z[4]))
+            self, m.disjuncts[0].constraint.expr, m.z[1] + m.z[2] + m.z[3] >= 2)
         assertExpressionsEqual(
-            self, m.cons[2].expr, a + b + c <= 1 + 2*m.z[4])
+            self,
+            m.disjuncts[1].constraint.expr,
+            m.z[1] + m.z[2] + m.z[3] <= 1)
 
-        self.assertTrue(m.z[4].fixed)
-        self.assertEqual(value(m.z[4]), 1)
+        self.assertTrue(m.disjuncts[0].binary_indicator_var.fixed)
+        self.assertEqual(value(m.disjuncts[0].binary_indicator_var), 1)
 
     def test_no_need_to_walk(self):
         m = self.make_model()
@@ -286,47 +301,11 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         m.cons = visitor.constraints
         m.z = visitor.z_vars
 
-        visitor.walk_expression(e)
-        self.assertIs(m.a.get_associated_binary(), m.z[1])
-        a = m.z[1]
-        self.assertIs(m.b.get_associated_binary(), m.z[2])
-        b = m.z[2]
-        self.assertIs(m.c.get_associated_binary(), m.z[3])
-        c = m.z[3]
-
-        self.assertEqual(len(m.z), 4)
-        self.assertEqual(len(m.cons), 2)
-
-        # TODO: This is not linear. This is not what should happen. What
-        # *should* happen?
-        assertExpressionsEqual(
-            self, m.cons[1].expr, a + b + c >= m.x - m.x*(1 - m.z[4]))
-        assertExpressionsEqual(
-            self, m.cons[2].expr, a + b + c <= m.x - 1 + (4 - m.x)*m.z[4])
-
-        self.assertTrue(m.z[4].fixed)
-        self.assertEqual(value(m.z[4]), 1)
-
-    def test_named_expression_in_at_most(self):
-        m = self.make_model()
-        m.x = Var([1, 2], domain=Integers, bounds=(0, 5))
-        m.e = Expression(expr=m.x[1]**2)
-
-        # TODO: If we allow this, we need to let for all sort of algebriac
-        # expressions in beforechild
-        e = atmost(m.e + m.x[2], m.a, m.b)
-        visitor = LogicalToDisjunctiveVisitor()
-        m.cons = visitor.constraints
-        m.z = visitor.z_vars
-
-        visitor.walk_expression(e)
-        # self.assertIs(m.a.get_associated_binary(), m.z[1])
-        # a = m.z[1]
-        # self.assertIs(m.b.get_associated_binary(), m.z[2])
-        # b = m.z[2]
-
-        # self.assertEqual(len(m.z), 3)
-        # self.assertEqual(len(m.cons), 2)
-
-        # assertExpressionsEqual(
-        #     self, m.cons[1].expr, a + b <= m.e + m.x[2] - (2 + m.e + m.x[2])*
+        with self.assertRaisesRegex(
+                MouseTrap,
+                r"The first argument 'x' to "
+                r"'atleast\(x: \[a, b, c\]\)' is potentially variable. "
+                r"This may be a mathematically coherent expression; However "
+                r"it is not yet supported to convert it to a disjunctive "
+                r"program."):
+            visitor.walk_expression(e)
