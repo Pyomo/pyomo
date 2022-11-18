@@ -34,6 +34,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
     CyIpoptSolver,
 )
 from pyomo.contrib.pynumero.algorithms.solvers.param_square_solvers import (
+    ImplicitFunctionSolver,
     SccNlpSolver,
     CyIpoptSolverWrapper,
 )
@@ -156,8 +157,10 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         solver_class=None,
         solver_options=None,
         timer=None,
-        use_cyipopt=False,
-        solver=None,
+        # These arguments are deprecated. I will remove them,
+        # breaking backwards compatability in the process.
+        #use_cyipopt=False,
+        #solver=None,
     ):
         """
         Arguments:
@@ -181,12 +184,12 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             timer = HierarchicalTimer()
         self._timer = timer
         if solver_class is None:
-            solver_class = SccNlpSolver
+            solver_class = ImplicitFunctionSolver
         self._solver_class = solver_class
         if solver_options is None:
             solver_options = {}
-            if use_cyipopt:
-                solver_options["solver_class"] = CyIpoptSolverWrapper
+            #if use_cyipopt:
+            #    solver_options["solver_class"] = CyIpoptSolverWrapper
 
         # We only need this block to construct the NLP, which wouldn't
         # be necessary if we could compute Hessians of Pyomo constraints.
@@ -205,13 +208,20 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         self._external_block = create_subsystem_block(
             external_cons, input_vars + external_vars
         )
+        # Update with the PyomoImplicitFunction API:
         self._solver = self._solver_class(
-            self._external_block,
+            external_vars,
+            external_cons,
             input_vars,
-            variables=external_vars,
             timer=self._timer,
-            **solver_options,
         )
+        #self._solver = self._solver_class(
+        #    self._external_block,
+        #    input_vars,
+        #    variables=external_vars,
+        #    timer=self._timer,
+        #    **solver_options,
+        #)
 
         assert len(external_vars) == len(external_cons)
 
@@ -222,6 +232,10 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
         self.residual_con_multipliers = [None for _ in residual_cons]
         self.residual_scaling_factors = None
+
+        self._input_output_coords = self._nlp.get_primal_indices(
+            input_vars + external_vars
+        )
 
     def n_inputs(self):
         return len(self.input_vars)
@@ -241,8 +255,12 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         external_vars = self.external_vars
         input_vars = self.input_vars
 
-        solver.update_parameters(input_values)
-        solver.solve()
+        solver.set_parameters(input_values)
+        outputs = solver.evaluate_outputs()
+        solver.update_pyomo_model()
+
+        #solver.update_parameters(input_values)
+        #solver.solve()
 
         # At this point we assume the solution has been loaded into the model.
         # I would like to switch to a function-like interface, where I receive
@@ -260,15 +278,16 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
         # These variables shouldn't be necessary. I should have the coordinates
         # of (inputs+external) cached somewhere.
-        to_update = input_vars + external_vars
-        indices = self._nlp.get_primal_indices(to_update)
+        #to_update = input_vars + external_vars
+        #indices = self._nlp.get_primal_indices(to_update)
 
         # values = np.concat((input_values, outputs))
         # Indices will be cached somewhere.
-        values = np.fromiter((var.value for var in to_update), float)
+        #values = np.fromiter((var.value for var in to_update), float)
+        values = np.concatenate((input_values, outputs))
 
         # Then update and set primals in the same manner
-        primals[indices] = values
+        primals[self._input_output_coords] = values
         self._nlp.set_primals(primals)
 
     def set_equality_constraint_multipliers(self, eq_con_multipliers):
