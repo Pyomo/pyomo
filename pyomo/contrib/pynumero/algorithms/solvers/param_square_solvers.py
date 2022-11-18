@@ -17,6 +17,7 @@ from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.core.base.objective import Objective
 from pyomo.core.base.suffix import Suffix
+from pyomo.core.expr.visitor import identify_variables
 from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.util.subsystems import (
     create_subsystem_block,
@@ -26,7 +27,7 @@ from pyomo.util.subsystems import (
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 # This refactor should not strictly *need* ProjectedExtendedNLP
 from pyomo.contrib.pynumero.interfaces.nlp_projections import (
-    #ProjectedExtendedNLP,
+    ProjectedExtendedNLP,
     ProjectedNLP,
 )
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
@@ -35,13 +36,14 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
     CyIpoptSolver,
 )
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
+    PyomoImplicitFunctionBase,
     ParameterizedSquareSolver,
 )
 from pyomo.contrib.pynumero.algorithms.solvers.scipy_solvers import (
     FsolveNlpSolver,
     RootNlpSolver,
-    #NewtonNlpSolver,
-    #SecantNewtonNlpSolver,
+    NewtonNlpSolver,
+    SecantNewtonNlpSolver,
 )
 from pyomo.contrib.incidence_analysis.interface import (
     get_structural_incidence_matrix,
@@ -52,9 +54,24 @@ from pyomo.contrib.incidence_analysis.util import (
     generate_strongly_connected_components,
 )
 import networkx as nx
+import numpy as np
 
 
-class CyIpoptSolverWrapper(object):
+class NlpSolverBase(object):
+    """
+    A base class that solves an NLP object. Subclasses should implement this
+    interface for compatibility with ImplicitFunctionSolver objects.
+
+    """
+
+    def __init__(self, nlp, options=None, timer=None):
+        raise NotImplementedError()
+
+    def solve(self, **kwds):
+        raise NotImplementedError()
+
+
+class CyIpoptSolverWrapper(NlpSolverBase):
     """A wrapper for CyIpoptNLP and CyIpoptSolver that implements the
     API required by ParameterizedSquareSolvers.
 
@@ -70,7 +87,7 @@ class CyIpoptSolverWrapper(object):
 # If I include this class, this branch depends on the scipy.optimize.newton.
 # Is that okay? Yes. This is very necessary to make sure that the problem
 # can be solved with computations entirely in C (i.e. no GIL)
-class ScipySolverWrapper(object):
+class ScipySolverWrapper(NlpSolverBase):
     def __init__(self, nlp, timer=None, options=None):
         if options is None:
             options = {}
@@ -90,6 +107,112 @@ class ScipySolverWrapper(object):
     def solve(self, x0=None):
         res = self._solver.solve(x0=x0)
         return res
+
+
+class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
+
+    def __init__(
+        self,
+        variables,
+        constraints,
+        parameters,
+        # TODO: How to accept a solver as an argument? Accept class or instance?
+        solver_class=None,
+        solver_options=None,
+        timer=None,
+    ):
+        if timer is None:
+            self._timer = HierarchicalTimer()
+        if solver_options is None:
+            solver_options = {}
+        super().__init__(variables, constraints, parameters)
+        block = self.get_block()
+        block._obj = Objective(expr=0.0)
+        self._nlp = PyomoNLP(block)
+        primals_ordering = [var.name for var in variables]
+        self._proj_nlp = ProjectedExtendedNLP(self._nlp, primals_ordering)
+
+        if solver_class is None:
+            self._solver = ScipySolverWrapper(
+                self._proj_nlp, options=solver_options, timer=timer
+            )
+        else:
+            self._solver = solver_class(
+                self._proj_nlp, options=solver_options, timer=timer
+            )
+
+        vars_in_cons = []
+        _seen = set()
+        for con in constraints:
+            for var in identify_variables(con.expr, include_fixed=False):
+                if id(var) not in _seen:
+                    _seen.add(id(var))
+                    vars_in_cons.append(var)
+        self._active_var_set = ComponentSet(vars_in_cons)
+
+        # It is possible (and fairly common) for variables specified as
+        # parameters to not appear in any of the specified constraints.
+        # We will fail if we try to get their coordinates in the NLP.
+        #
+        # Technically, this could happen for the variables as well. However,
+        # this would guarantee that the Jacobian is singular. I will worry
+        # about this when I encounter such a case.
+        self._active_param_mask = np.array(
+            [(p in self._active_var_set) for p in parameters]
+        )
+        self._active_parameters = [
+            p for i, p in enumerate(parameters) if self._active_param_mask[i]
+        ]
+
+        if any((var not in self._active_var_set) for var in variables):
+            raise RuntimeError(
+                "Invalid model. All variables must appear in specified"
+                " constriants."
+            )
+
+        # These are coordinates in the original NLP
+        self._variable_coords = self._nlp.get_primal_indices(variables)
+        self._active_parameter_coords = self._nlp.get_primal_indices(
+            self._active_parameters
+        )
+
+        # NOTE: With this array, we are storing the same data in two locations.
+        # Once here, and once in the NLP. We do this because parameters do not
+        # *need* to exist in the NLP. However, we still need to be able to
+        # update the "parameter variables" in the Pyomo model. If we only stored
+        # the parameters in the NLP, we would lose the values for parameters
+        # that don't appear in the active constraints.
+        self._parameter_values = np.array([var.value for var in parameters])
+
+    def set_parameters(self, values, **kwds):
+        # I am not 100% sure the values will always be an array (as opposed to
+        # list), so explicitly convert here.
+        values = np.array(values)
+        self._parameter_values = values
+        values = np.compress(self._active_param_mask, values)
+        #values.compress(self._active_param_mask)
+        primals = self._nlp.get_primals()
+        # Will it cause a problem that _parameter_coords is a list rather
+        # than array?
+        primals[self._active_parameter_coords] = values
+        self._nlp.set_primals(primals)
+        results = self._solver.solve(**kwds)
+        return results
+
+    def evaluate_outputs(self):
+        # TODO: out argument?
+        primals = self._nlp.get_primals()
+        outputs = primals[self._variable_coords]
+        return outputs
+
+    def update_pyomo_model(self):
+        # NOTE: I am relying on fact that these coords are in lists, rather
+        # than NumPy arrays
+        primals = self._nlp.get_primals()
+        for i, var in enumerate(self.get_variables()):
+            var.set_value(primals[self._variable_coords[i]])
+        for var, value in zip(self._parameters, self._parameter_values):
+            var.set_value(value)
 
 
 class _SquareDecompositionSolver(ParameterizedSquareSolver):
