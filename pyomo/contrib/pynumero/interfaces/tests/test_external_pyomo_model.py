@@ -1087,7 +1087,6 @@ class TestScaling(unittest.TestCase):
             [m.x, m.y],
             [m.con_3, m.con_4],
             [m.con_1, m.con_2],
-            use_cyipopt=False,
         )
         epm_model.obj = pyo.Objective(
             expr=m.x**2 + m.y**2 + m.u**2 + m.v**2
