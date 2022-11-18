@@ -35,6 +35,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
 )
 from pyomo.contrib.pynumero.algorithms.solvers.param_square_solvers import (
     ImplicitFunctionSolver,
+    SccImplicitFunctionSolver,
     SccNlpSolver,
     CyIpoptSolverWrapper,
 )
@@ -184,7 +185,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             timer = HierarchicalTimer()
         self._timer = timer
         if solver_class is None:
-            solver_class = ImplicitFunctionSolver
+            #solver_class = ImplicitFunctionSolver
+            solver_class = SccImplicitFunctionSolver
         self._solver_class = solver_class
         if solver_options is None:
             solver_options = {}
