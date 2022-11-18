@@ -42,8 +42,8 @@ def _dispatch_var(visitor, node):
 def _dispatch_expression(visitor, node):
     return False, node.expr
 
-def _before_relational_expression(visitor, node):
-    raise MouseTrap("The RelationalExpression '%s' was used as a Boolean atom "
+def _before_relational_expr(visitor, node):
+    raise MouseTrap("The RelationalExpression '%s' was used as a Boolean term "
                     "in a logical proposition. This is not yet supported "
                     "when transforming to disjunctive form." % node)
 
@@ -201,7 +201,7 @@ class LogicalToDisjunctiveVisitor(StreamBasedExpressionVisitor):
             # Just pass it through, we'll figure it out later
             return False, child
         if isinstance(child, RelationalExpression):
-            # Eventually we'll handle these. Right now we raise a MouseTrap
+            # Eventually we'll handle these. Right now we set a MouseTrap
             return _before_relational_expr(self, child)
 
         if not child.is_expression_type() or child.is_named_expression_type():

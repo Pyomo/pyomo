@@ -16,8 +16,8 @@ from pyomo.contrib.cp.transform.logical_to_disjunctive_walker import (
 )
 from pyomo.core.expr.compare import assertExpressionsEqual
 from pyomo.environ import (
-    atmost, atleast, BooleanVar, ConcreteModel, Expression, Integers, land,
-    lnot, lor, value, Var)
+    atmost, atleast, BooleanVar, Binary, ConcreteModel, Expression, Integers,
+    land, lnot, lor, value, Var)
 
 class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
     def make_model(self):
@@ -292,6 +292,29 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         self.assertTrue(m.z[1].fixed)
         self.assertEqual(value(m.z[1]), 1)
 
+    def test_binary_already_associated(self):
+        m = self.make_model()
+        m.mine = Var(domain=Binary)
+        m.a.associate_binary_var(m.mine)
+
+        e = m.a.land(m.b)
+
+        visitor = LogicalToDisjunctiveVisitor()
+        m.cons = visitor.constraints
+        m.z = visitor.z_vars
+
+        visitor.walk_expression(e)
+
+        self.assertEqual(len(m.z), 2)
+        self.assertIs(m.b.get_associated_binary(), m.z[1])
+        self.assertEqual(len(m.cons), 2)
+        assertExpressionsEqual(self, m.cons[1].expr, m.z[2] <= m.mine)
+        assertExpressionsEqual(self, m.cons[2].expr, m.z[2] <= m.z[1])
+        self.assertTrue(m.z[2].fixed)
+        self.assertEqual(value(m.z[2]), 1)
+
+    # [ESJ 11/22]: We'll probably eventually support all of these examples, but
+    # for now test that we handle them gracefully:
     def test_integer_var_in_at_least(self):
         m = self.make_model()
         m.x = Var(bounds=(0, 10), domain=Integers)
@@ -309,3 +332,59 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
                 r"it is not yet supported to convert it to a disjunctive "
                 r"program."):
             visitor.walk_expression(e)
+
+    def test_numeric_expression_in_at_most(self):
+        m = self.make_model()
+        m.x = Var([1, 2], bounds=(0, 10), domain=Integers)
+        m.y = Var(domain=Integers)
+        m.e = Expression(expr=m.x[1]*m.x[2])
+        e = atmost(m.e + m.y, m.a, m.b, m.c)
+
+        visitor = LogicalToDisjunctiveVisitor()
+        m.cons = visitor.constraints
+        m.z = visitor.z_vars
+
+        with self.assertRaisesRegex(
+                MouseTrap,
+                r"The first argument '\(x\[1\]\*x\[2\]\) \+ y' to "
+                r"'atmost\(\(x\[1\]\*x\[2\]\) \+ y: \[a, b, c\]\)' is "
+                r"potentially variable. "
+                r"This may be a mathematically coherent expression; However "
+                r"it is not yet supported to convert it to a disjunctive "
+                r"program"):
+            visitor.walk_expression(e)
+
+    def test_named_expression_in_at_most(self):
+        m = self.make_model()
+        m.x = Var([1, 2], bounds=(0, 10), domain=Integers)
+        m.y = Var(domain=Integers)
+        m.e = Expression(expr=m.x[1]*m.x[2])
+        e = atmost(m.e, m.a, m.b, m.c)
+
+        visitor = LogicalToDisjunctiveVisitor()
+        m.cons = visitor.constraints
+        m.z = visitor.z_vars
+
+        with self.assertRaisesRegex(
+                MouseTrap,
+                r"The first argument 'x\[1\]\*x\[2\]' to "
+                r"'atmost\(\(x\[1\]\*x\[2\]\): \[a, b, c\]\)' is "
+                r"potentially variable. "
+                r"This may be a mathematically coherent expression; However "
+                r"it is not yet supported to convert it to a disjunctive "
+                r"program"):
+            visitor.walk_expression(e)
+
+    def test_relational_expr_as_boolean_atom(self):
+        m = self.make_model()
+        m.x = Var()
+        e = m.a.land(m.x >= 3)
+        visitor = LogicalToDisjunctiveVisitor()
+
+        with self.assertRaisesRegex(
+                MouseTrap,
+                "The RelationalExpression '3  <=  x' was used as a Boolean "
+                "term in a logical proposition. This is not yet supported "
+                "when transforming to disjunctive form."):
+            visitor.walk_expression(e)
+
