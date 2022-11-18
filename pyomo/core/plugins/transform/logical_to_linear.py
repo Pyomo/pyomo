@@ -1,5 +1,6 @@
 """Transformation from BooleanVar and LogicalConstraint to Binary and
 Constraints."""
+from pyomo.common import deprecated
 from pyomo.common.collections import ComponentMap
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.config import ConfigBlock, ConfigValue
@@ -28,6 +29,10 @@ from pyomo.core.util import target_list
 
 @TransformationFactory.register("core.logical_to_linear", 
                                 doc="Convert logic to linear constraints")
+@deprecated(
+    "The 'core.logical_to_linear transformation' is deprecated. "
+    "Please use the 'contrib.logical_to_disjunctive_program' transformation "
+    "instead.", version="TBD")
 class LogicalToLinear(IsomorphicTransformation):
     """
     Re-encode logical constraints as linear constraints,
