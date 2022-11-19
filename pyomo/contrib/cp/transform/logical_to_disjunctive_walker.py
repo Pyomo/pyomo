@@ -19,9 +19,10 @@ from pyomo.core.expr.relational_expr import RelationalExpression
 import pyomo.core.expr.current as EXPR
 import pyomo.core.expr.logical_expr as LE
 from pyomo.core.base import (
-    Binary, Constraint, ConstraintList, NonNegativeIntegers, VarList)
+    Binary, Constraint, ConstraintList, NonNegativeIntegers, VarList, value)
 import pyomo.core.base.boolean_var as BV
 from pyomo.core.base.expression import ScalarExpression, _GeneralExpressionData
+from pyomo.core.base.param import ScalarParam, _ParamData
 from pyomo.core.base.var import ScalarVar, _GeneralVarData
 from pyomo.gdp.disjunct import AutoLinkedBooleanVar, Disjunct, Disjunction
 
@@ -38,6 +39,14 @@ def _dispatch_boolean_var(visitor, node):
 
 def _dispatch_var(visitor, node):
     return False, node
+
+def _dispatch_param(visitor, node):
+    if int(value(node)) == value(node):
+        return False, node
+    else:
+        raise ValueError("Found non-integer valued Param '%s' in a logical "
+                         "expression. This cannot be written to a disjunctive "
+                         "form." % node.name)
 
 def _dispatch_expression(visitor, node):
     return False, node.expr
@@ -91,18 +100,22 @@ def _dispatch_xor(visitor, node, a, b):
 def _get_integer_value(n, node):
     if n.__class__ in EXPR.native_numeric_types and int(n) == n:
         return n
-    if n.__class__ not in EXPR.native_types and n.is_potentially_variable():
-        # [ESJ 11/22]: This is probably worth supporting sometime, but right now
-        # we are abiding by what docplex allows in their 'count' function. Part
-        # of supporting this will be making sure we catch strict inequalities in
-        # the GDP transformations. Because if we don't know that n is
-        # integer-valued we will be forced to write strict inequalities instead
-        # of incrememting or decrementing by 1 in the disjunctions.
-        raise MouseTrap(
-            "The first argument '%s' to '%s' is potentially variable. "
-            "This may be a mathematically coherent expression; However "
-            "it is not yet supported to convert it to a disjunctive "
-            "program." % (n, node))
+    if n.__class__ not in EXPR.native_types:
+        if n.is_potentially_variable():
+            # [ESJ 11/22]: This is probably worth supporting sometime, but right
+            # now we are abiding by what docplex allows in their 'count'
+            # function. Part of supporting this will be making sure we catch
+            # strict inequalities in the GDP transformations. Because if we
+            # don't know that n is integer-valued we will be forced to write
+            # strict inequalities instead of incrememting or decrementing by 1
+            # in the disjunctions.
+            raise MouseTrap(
+                "The first argument '%s' to '%s' is potentially variable. "
+                "This may be a mathematically coherent expression; However "
+                "it is not yet supported to convert it to a disjunctive "
+                "program." % (n, node))
+        else:
+            return n
     raise ValueError("The first argument to '%s' must be an integer.\n\t"
                      "Recieved: %s" % (node, n))
 
@@ -163,6 +176,10 @@ _before_child_dispatcher = {}
 _before_child_dispatcher[BV.ScalarBooleanVar] = _dispatch_boolean_var
 _before_child_dispatcher[BV._GeneralBooleanVarData] = _dispatch_boolean_var
 _before_child_dispatcher[AutoLinkedBooleanVar] = _dispatch_boolean_var
+_before_child_dispatcher[_ParamData] = _dispatch_param
+_before_child_dispatcher[ScalarParam] = _dispatch_param
+# for the moment, these are all just so we can get good error messages when we
+# don't handle them:
 _before_child_dispatcher[ScalarVar] = _dispatch_var
 _before_child_dispatcher[_GeneralVarData] = _dispatch_var
 _before_child_dispatcher[_GeneralExpressionData] = _dispatch_expression
