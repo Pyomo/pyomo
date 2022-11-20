@@ -621,7 +621,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                 "for scalar variables; converting to dense=True"
                 % (self.name,))
             self._dense = True
-        self._rule_bounds = BoundInitializer(self, _bounds_arg)
+        self._rule_bounds = BoundInitializer(_bounds_arg, self)
 
     def flag_as_stale(self):
         """
@@ -729,7 +729,10 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                     # Empty index!
                     return
                 call_domain_rule = not self._rule_domain.constant()
-                call_bounds_rule = not self._rule_bounds.constant()
+                call_bounds_rule = (
+                    self._rule_bounds is not None
+                    and not self._rule_bounds.constant()
+                )
                 call_init_rule = self._rule_init is not None and (
                     not self._rule_init.constant()
                     # If either the domain or bounds change, then we
@@ -792,7 +795,8 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         # We can directly set the attribute (not the property) because
         # the SetInitializer ensures that the value is a proper Set.
         obj._domain = self._rule_domain(parent, index)
-        obj.lower, obj.upper = self._rule_bounds(parent, index)
+        if self._rule_bounds is not None:
+            obj.lower, obj.upper = self._rule_bounds(parent, index)
         if self._rule_init is not None:
             obj.set_value(self._rule_init(parent, index))
         return obj
