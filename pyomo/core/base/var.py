@@ -913,17 +913,27 @@ class IndexedVar(Var):
         for vardata in self.values():
             vardata.domain = domain
 
-    # Because Emma wants crazy things... (Where crazy things are the ability to
-    # index Vars by other (integer) Vars and integer-valued expressions--a thing
-    # you can do in Constraint Programming.)
+    # Because CP supports indirection [the ability to index objects by
+    # another (inter) Var] for certain types (including Var), we will
+    # catch the normal RuntimeError and return a (variable)
+    # GetItemExpression.
+    #
+    # FIXME: We should integrate this logic into the base implementation
+    # of `__getitem__()`, including the recognition / differentiation
+    # between potentially variable GetItemExpression objects and
+    # "constant" GetItemExpression objects.  That will need to wait for
+    # the expression rework [JDS; Nov 22].
     def __getitem__(self, args):
-        tmp = args if args.__class__ is tuple else (args,)
-        if any(hasattr(arg, 'is_potentially_variable')
-               and arg.is_potentially_variable()
-               for arg in tmp
-        ):
-            return GetItemExpression((self,) + tmp)
-        return super().__getitem__(args)
+        try:
+            return super().__getitem__(args)
+        except RuntimeError:
+            tmp = args if args.__class__ is tuple else (args,)
+            if any(hasattr(arg, 'is_potentially_variable')
+                   and arg.is_potentially_variable()
+                   for arg in tmp
+               ):
+                return GetItemExpression((self,) + tmp)
+            raise
 
 
 @ModelComponentFactory.register("List of decision variables.")
