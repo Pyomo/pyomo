@@ -15,70 +15,33 @@ from pyomo.common.config import ConfigBlock
 from pyomo.util.subsystems import create_subsystem_block
 
 
-# This is like a DirectSolver or PersistentSolver, but with a more limited API.
-# It may make sense to inherit from one of these classes at some point.
-# It may also make sense to merge this with the sensitivity toolbox class,
-# so that sensitivities wrt this model may be calculated. However, for this
-# solve, we limit ourselves to square problems, and don't immediately require
-# derivatives.
-#
-# The purpose of this class is to define an API that we can use for implicit
-# function solves. The reason this API is useful is that it allows resolves
-# with different parameters without rewriting the NL file.
-#
-# Question on the API:
-# - should this accept *values* as inputs, or just automatically update
-#   from the Pyomo variables?
-#
-# A parameterized solver on a Pyomo model needs:
-# - A list of variables/parameters (need only be "set value"-compatible)
-# - A solve method
-#
-# Does a "parameterized solver" make sense for a Pyomo model?
-# Not really, but it's not necessarily invalid.
-#
-# I think this model-based API actually makes sense.
-# We accept a Pyomo model, but then have an API that allows for separation
-# between model an NLP during the solve.
-# What output data does this class allow us to access?
-# Currently, only the model, with its values after the solve. Which we
-# send to another NLP for derivative evaluation.
-# The caller just needs to get values into an NLP object. Should this
-# class have more of an "input-output" interface? I can take the outputs, i.e.
-# values of all variables, and load them into model, NLP, or whatever else
-# I want. This makes the most sense. However, for now, is ParamSquareSolver
-# an okay abstraction?
-#
-# I need something that operates on a model, so that this can still work
-# if CyIpopt is not available. Well in that case we just use a SciPy solver.
-# This is all a silly distinction. I don't need to support a model-only case.
-#
-# If I don't need to support a model-only API, what is the simplest API
-# I can implement?
-# Accept: NLP, list of parameters
-# Methods: Update parameters, solve.
-# ... but this is not consistent with the decomposed solver ...
-# So far everything I do relies on a "global" model to store values.
-# I need either:
-# - global model/NLP
-#   - Receive model, write NLP and NLPs for decomposition blocks
-#   - Solve NLPs, transfer values into "global" NLP
-#   - Transfer values from global NLP into global NLP used for
-#     derivative evaluations
-# - A vector of outputs in pre-specified variables
-#   - This seems much simpler
-#   - Just need to know the coordinates in the "derivative NLP"
-#   - How do I get the output variables?
-#   - Are they specified a priori?
-# Currently, this class is instantiated with _external_block in
-# EPM. I explicitly specify input variables. Should I explicitly
-# specify output variables?
 class PyomoImplicitFunctionBase(object):
+    """A base class defining an API for implicit functions defined using
+    Pyomo components. In particular, this is the API required by
+    ExternalPyomoModel.
+
+    Implicit functions are defined by two lists of Pyomo VarData and
+    one list of Pyomo ConstraintData. The first list of VarData corresponds
+    to "variables" defining the outputs of the implicit function.
+    The list of ConstraintData are equality constraints that are converged
+    to evaluate the implicit function. The second list of VarData are
+    variables to be treated as "parameters" or inputs to the implicit
+    function.
+
+    """
 
     def __init__(self, variables, constraints, parameters):
-        # TODO: If I'm going to add these attributes in the base class,
-        # I should probably add an interface to access them. Otherwise,
-        # derived classes have to access these private attributes.
+        """
+        Arguments
+        ---------
+        variables: List of VarData
+            Variables to be treated as outputs of the implicit function
+        constraints: List of ConstraintData
+            Constraints that are converged to evaluate the implicit function
+        parameters: List of VarData
+            Variables to be treated as inputs to the implicit function
+
+        """
         self._variables = variables
         self._constraints = constraints
         self._parameters = parameters
@@ -101,62 +64,44 @@ class PyomoImplicitFunctionBase(object):
         return self._block
 
     def set_parameters(self, values):
-        # A derived class may implement whatever storage scheme for the
-        # parameter values they wish
+        """Sets the parameters of the system that defines the implicit
+        function.
+
+        This method does not necessarily need to update values of the Pyomo
+        variables, as long as the next evaluation of this implicit function
+        is consistent with these inputs.
+
+        Arguments
+        ---------
+        values: NumPy array
+            Array of values to set for the "parameter variables" in the order
+            they were specified in the constructor
+
+        """
         raise NotImplementedError()
 
     def evaluate_outputs(self):
-        # Should return an array in the size of the output variables
+        """Returns the values of the variables that are treated as outputs
+        of the implicit function
+
+        The returned values do not necessarily need to be the values stored
+        in the Pyomo varriables, as long as they are consistent with the
+        latest parameters that have been set.
+
+        Returns
+        -------
+        NumPy array
+            Array with values corresponding to the "output variables" in
+            the order they were specified in the constructor
+
+        """
         raise NotImplementedError()
 
     def update_pyomo_model(self):
-        raise NotImplementedError()
+        """Sets values of "parameter variables" and "output variables"
+        to the most recent values set or computed in this implicit function
 
-
-class ParameterizedSquareSolver(object):
-    """
-    Given a square Pyomo model representing a system:
-    g(x, y) = 0
-    where x are variables and y are parameters.
-    This class allows updating parameters and solving for variables.
-
-    """
-
-    def __init__(self, model, param_vars):
-        # Is param_vars a confusing name? These must be variables, but they
-        # will be treated as paramters
-        # In a proper Pyomo interface, these could be actual parameters
-        # or variables. Maybe this should even go through the existing
-        # sensitivity interface.
-        self._model = model
-        self._param_vars = param_vars
-
-    def update_parameters(self, values):
-        # Does this make sense? The purpose of this class is to cache some
-        # data structure
-        raise NotImplementedError()
-
-    def solve(self):
-        raise NotImplementedError()
-
-
-# This is the class that I actually want to use in the implicit function.
-# But I want to be able to fall back on a writer-based Pyomo implementation
-# if for some reason this is not available.
-class ParameterizedSquareNlpSolver(object):
-
-    def __init__(self, nlp, parameters):
-        # 1. Identify parameters in the NLP
-        # 2. "Project out" these parameters
-        # 3. Make sure the result is square
-        raise NotImplementedError()
-
-    def set_parameters(self, values):
-        # We need a method to update parameters, as we do not want to
-        # rely on the Pyomo model during a solve.
-        raise NotImplementedError()
-
-    def solve(self):
+        """
         raise NotImplementedError()
 
 
