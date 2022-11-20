@@ -26,7 +26,6 @@ from pyomo.util.subsystems import (
 )
 
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-# This refactor should not strictly *need* ProjectedExtendedNLP
 from pyomo.contrib.pynumero.interfaces.nlp_projections import (
     ProjectedExtendedNLP,
     ProjectedNLP,
@@ -38,7 +37,6 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
 )
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     PyomoImplicitFunctionBase,
-    ParameterizedSquareSolver,
 )
 from pyomo.contrib.pynumero.algorithms.solvers.scipy_solvers import (
     FsolveNlpSolver,
@@ -74,7 +72,7 @@ class NlpSolverBase(object):
 
 class CyIpoptSolverWrapper(NlpSolverBase):
     """A wrapper for CyIpoptNLP and CyIpoptSolver that implements the
-    API required by ParameterizedSquareSolvers.
+    NlpSolverBase API
 
     """
     def __init__(self, nlp, options=None, timer=None):
@@ -85,10 +83,14 @@ class CyIpoptSolverWrapper(NlpSolverBase):
         return self._cyipopt_solver.solve(**kwds)
 
 
-# If I include this class, this branch depends on the scipy.optimize.newton.
-# Is that okay? Yes. This is very necessary to make sure that the problem
-# can be solved with computations entirely in C (i.e. no GIL)
 class ScipySolverWrapper(NlpSolverBase):
+    """A wrapper for SciPy NLP solvers that implements the NlpSolverBase API
+
+    This solver uses scipy.optimize.root for "vector-valued" NLPs (with more
+    than one primal and equality constraint) and scipy.optimize.newton
+    for "scalar-valued" NLPs.
+
+    """
     def __init__(self, nlp, timer=None, options=None):
         if options is None:
             options = {}
@@ -111,13 +113,17 @@ class ScipySolverWrapper(NlpSolverBase):
 
 
 class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
+    """A basic implicit function solver that uses a ProjectedNLP to solve
+    the parameterized system without repeated file writes when parameters
+    are updated
+
+    """
 
     def __init__(
         self,
         variables,
         constraints,
         parameters,
-        # TODO: How to accept a solver as an argument? Accept class or instance?
         solver_class=None,
         solver_options=None,
         timer=None,
@@ -190,10 +196,9 @@ class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
         values = np.array(values)
         self._parameter_values = values
         values = np.compress(self._active_param_mask, values)
-        #values.compress(self._active_param_mask)
         primals = self._nlp.get_primals()
-        # Will it cause a problem that _parameter_coords is a list rather
-        # than array?
+        # Will it cause a problem that _active_parameter_coords is a list
+        # rather than array?
         primals[self._active_parameter_coords] = values
         self._nlp.set_primals(primals)
         results = self._solver.solve(**kwds)
@@ -206,8 +211,6 @@ class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
         return outputs
 
     def update_pyomo_model(self):
-        # NOTE: I am relying on fact that these coords are in lists, rather
-        # than NumPy arrays
         primals = self._nlp.get_primals()
         for i, var in enumerate(self.get_variables()):
             var.set_value(primals[self._variable_coords[i]])
@@ -216,6 +219,14 @@ class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
 
 
 class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
+    """A base class for an implicit function that applies a partition
+    to its variables and constraints and converges the system by solving
+    subsets sequentially
+
+    Subclasses should implement the partition_system method, which
+    determines how variables and constraints are partitioned into subsets.
+
+    """
 
     def __init__(
         self,
@@ -231,15 +242,14 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             timer = HierarchicalTimer()
         self._timer = timer
         if solver_class is None:
-            #solver_class = ScipySolverWrapper
-            solver_class = CyIpoptSolverWrapper
+            solver_class = ScipySolverWrapper
+            #solver_class = CyIpoptSolverWrapper
         self._solver_class = solver_class
         if solver_options is None:
             solver_options = {}
         self._solver_options = solver_options
         self._calc_var_cutoff = 2 if use_calc_var else 1
-        # TODO: Is there any reason this super call is necessary?
-        # Just so the get_* methods work.
+        # NOTE: This super call is only necessary so the get_* methods work
         super().__init__(variables, constraints, parameters)
 
         subsystem_list = [
@@ -344,6 +354,8 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         self._local_input_global_coords = [
             # I expect to get errors here. Inputs do not necessarily
             # need to be variables or parameters...
+            # This error only shows up in the CLC models. TODO: Test
+            # that covers this functionality.
             np.array(
                 [self._global_indices[var] for var in inputs],
                 dtype=np.int,
@@ -384,6 +396,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         # variables that are neither variables nor parameters.
 
     def partition_system(self, variables, constraints):
+        # TODO: Docstring
         # Subclasses should implement this method, which returns an ordered
         # partition (two lists-of-lists) of variables and constraints.
         raise NotImplementedError()
@@ -515,191 +528,3 @@ class SccImplicitFunctionSolver(DecomposedImplicitFunctionBase):
             variables, constraints
         )
         return var_blocks, con_blocks
-
-
-class _SquareDecompositionSolver(ParameterizedSquareSolver):
-    """This is an abstract parameterized solver that applies a decomposition
-    to its variables and constraints and solves subsets individually.
-
-    """
-    # This class needs to be extendable in two ways:
-    # - Specify Pyomo solver (e.g. SolverFactory("ipopt")), then solve blocks
-    # - Specify NLP solver. This requires an NLP for each block
-    # What are the minimal steps we must perform?
-    # - determine decomposition; create blocks
-    # - Solve each one-by-one
-    def __init__(self):
-        self._partition = None
-
-    def determine_partition(self):
-        raise NotImplementedError()
-
-    def update_parameters(self):
-        raise NotImplementedError()
-
-    def solve(self):
-        # Too messy to generalize? We have two options: "standard"
-        # or direct/persistent, and these have very different arguments.
-        raise NotImplementedError()
-
-
-class SquareNlpDecompositionSolver(ParameterizedSquareSolver):
-
-    def __init__(
-        self,
-        model,
-        param_vars,
-        variables=None,
-        timer=None,
-        solver_class=None,
-        solver_options=None,
-        use_calc_var=True,
-    ):
-        self._model = model
-        self._param_vars = param_vars
-        self._param_var_set = ComponentSet(param_vars)
-        if timer is None:
-            timer = HierarchicalTimer()
-        self._timer = timer
-        if solver_class is None:
-            solver_class = CyIpoptSolverWrapper #FsolveNlpSolver
-        self._solver_class = solver_class
-        if solver_options is None:
-            solver_options = {}
-        self._solver_options = solver_options
-        # Whether we use calculate_variable_from_constraint
-        self._use_calc_var = use_calc_var
-        # Minimum size of a system that will not be solved with calc-var
-        self._calc_var_cutoff = 2 if self._use_calc_var else 1
-
-        self.equations = list(
-            model.component_data_objects(Constraint, active=True)
-        )
-        if variables is None:
-            variables = [
-                # TODO: This should be variables in active constraints.
-                v for v in model.component_data_objects(Var)
-                if not v.fixed and not v in self._param_var_set
-            ]
-        self.variables = variables
-        if len(self.variables) != len(self.equations):
-            raise RuntimeError()
-
-        subsystems = self.partition_system(self.variables, self.equations)
-        # Switch order for compatibility with generate_subsystem_blocks
-        subsystems = [(eqns, vars) for vars, eqns in subsystems]
-        self._subsystem_list = list(generate_subsystem_blocks(subsystems))
-        self._solver_subsystem_list = [
-            # Subsystems that need a solver (rather than calc-var)
-            (block, inputs) for block, inputs in self._subsystem_list
-            if len(block.vars) >= self._calc_var_cutoff
-        ]
-
-        # Need a dummy objective to create an NLP
-        for block, inputs in self._solver_subsystem_list:
-            block._obj = Objective(expr=0.0)
-
-            # I need scaling_factor so Pyomo NLPs I create from these blocks
-            # don't break when ProjectedNLP calls get_primals_scaling
-            block.scaling_factor = Suffix(direction=Suffix.EXPORT)
-            # HACK: scaling_factor just needs to be nonempty.
-            block.scaling_factor[block._obj] = 1.0
-
-        # These are the "original NLPs" that will be projected
-        self._solver_subsystem_nlps = [
-            PyomoNLP(block) for block, inputs in self._solver_subsystem_list
-        ]
-        self._solver_subsystem_var_names = [
-            [var.name for var in block.vars.values()]
-            for block, inputs in self._solver_subsystem_list
-        ]
-        self._solver_proj_nlps = [
-            ProjectedNLP(nlp, names) for nlp, names in
-            #ProjectedExtendedNLP(nlp, names) for nlp, names in
-            zip(self._solver_subsystem_nlps, self._solver_subsystem_var_names)
-        ]
-
-        # We will solve the ProjectedNLPs rather than the original NLPs
-        self._nlp_solvers = [
-            self._solver_class(
-                nlp, timer=self._timer, options=self._solver_options
-            ) for nlp in self._solver_proj_nlps
-        ]
-        self._solver_subsystem_input_coords = [
-            nlp.get_primal_indices(inputs)
-            for nlp, (subsystem, inputs) in
-            zip(self._solver_subsystem_nlps, self._solver_subsystem_list)
-        ]
-
-    def partition_system(self, variables, equations):
-        raise NotImplementedError()
-
-    def update_parameters(self, values):
-        for var, val in zip(self._param_vars, values):
-            var.set_value(val, skip_validation=True)
-
-    def solve(self):
-        solver_subsystem_idx = 0
-        for block, inputs in self._subsystem_list:
-            if len(block.vars) < self._calc_var_cutoff:
-                calculate_variable_from_constraint(
-                    block.vars[0], block.cons[0]
-                )
-            else:
-                # Transfer variable values into the projected NLP, solve,
-                # and extract values.
-
-                nlp = self._solver_subsystem_nlps[solver_subsystem_idx]
-                proj_nlp = self._solver_proj_nlps[solver_subsystem_idx]
-                input_coords = self._solver_subsystem_input_coords[solver_subsystem_idx]
-
-                nlp_solver = self._nlp_solvers[solver_subsystem_idx]
-                _, local_inputs = self._solver_subsystem_list[solver_subsystem_idx]
-
-                primals = nlp.get_primals()
-                variables = nlp.get_pyomo_variables()
-
-                # Set values and bounds from inputs to the SCC.
-                # This works because values have been set in the original
-                # pyomo model, either by a previous SCC solve, or from the
-                # "global inputs"
-                for i, var in zip(input_coords, local_inputs):
-                    # Set primals (inputs) in the original NLP
-                    primals[i] = var.value
-                # This affects future evaluations in the ProjectedNLP
-
-                nlp.set_primals(primals)
-
-                x0 = proj_nlp.get_primals()
-
-                #sol, _ = nlp_solver.solve(x0=x0)
-                # TODO: Do I need a consistent return value between different
-                # solvers? Don't thing so, as long as primals get updated.
-                nlp_solver.solve(x0=x0)
-
-                # Set primals from solution in projected NLP. This updates
-                # values in the original NLP
-                #proj_nlp.set_primals(sol)
-                #
-                # Values should already be set in the projected NLP...
-
-                # I really only need to set new primals for the variables in
-                # the ProjectedNLP. However, I can only get a list of variables
-                # from the original Pyomo NLP, so here some of the values I'm
-                # setting are redundant.
-                new_primals = nlp.get_primals()
-                assert len(new_primals) == len(variables)
-                for var, val in zip(variables, new_primals):
-                    var.set_value(val, skip_validation=True)
-
-                solver_subsystem_idx += 1
-
-
-class SccNlpSolver(SquareNlpDecompositionSolver):
-
-    def partition_system(self, variables, equations):
-        igraph = IncidenceGraphInterface()
-        var_blocks, con_blocks = igraph.get_diagonal_blocks(
-            variables, equations
-        )
-        return list(zip(var_blocks, con_blocks))
