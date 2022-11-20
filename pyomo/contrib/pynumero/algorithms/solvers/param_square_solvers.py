@@ -358,7 +358,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             # that covers this functionality.
             np.array(
                 [self._global_indices[var] for var in inputs],
-                dtype=np.int,
+                dtype=int,
             ) for (_, inputs) in self._solver_subsystem_list
         ]
 
@@ -385,7 +385,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         self._output_coords = [
             np.array(
                 [self._global_indices[var] for var in block.vars.values()],
-                dtype=np.int,
+                dtype=int,
             ) for (block, _) in self._solver_subsystem_list
         ]
 
