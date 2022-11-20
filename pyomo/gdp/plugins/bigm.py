@@ -18,6 +18,8 @@ from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.contrib.cp.transform.logical_to_disjunctive_program import (
+    LogicalToDisjunctive)
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
@@ -237,6 +239,18 @@ class BigM_Transformation(Transformation):
                     yield t
         targets = list(_filter_inactive(targets))
 
+        # TODO: I currently have a chicken and egg issue where this needs to
+        # occur before we get the GDP tree. But that means that it cannot rely
+        # on the preprocessing. Or I need to add what I create to the
+        # preprocessed lists...
+
+        # transform any logical constraints that might be anywhere on the stuff
+        # we're about to transform.
+        TransformationFactory('contrib.logical_to_disjunctive').apply_to(
+            instance,
+            targets=[blk for blk in targets if blk.ctype is Block] +
+            [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
+
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
         # the list.
@@ -244,13 +258,6 @@ class BigM_Transformation(Transformation):
         preprocessed_targets = preprocess_targets(targets, instance,
                                                   knownBlocks,
                                                   gdp_tree=gdp_tree)
-
-        # transform any logical constraints that might be anywhere on the stuff
-        # we're about to transform.
-        TransformationFactory('core.logical_to_linear').apply_to(
-            instance,
-            targets=[blk for blk in targets if blk.ctype is Block] +
-            [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
