@@ -36,7 +36,6 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
 from pyomo.contrib.pynumero.algorithms.solvers.param_square_solvers import (
     ImplicitFunctionSolver,
     SccImplicitFunctionSolver,
-    SccNlpSolver,
     CyIpoptSolverWrapper,
 )
 from pyomo.contrib.incidence_analysis.util import (
@@ -190,40 +189,23 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         self._solver_class = solver_class
         if solver_options is None:
             solver_options = {}
-            #if use_cyipopt:
-            #    solver_options["solver_class"] = CyIpoptSolverWrapper
 
         # We only need this block to construct the NLP, which wouldn't
         # be necessary if we could compute Hessians of Pyomo constraints.
         self._block = create_subsystem_block(
-                residual_cons+external_cons,
-                input_vars+external_vars,
-                )
+            residual_cons+external_cons,
+            input_vars+external_vars,
+        )
         self._block._obj = Objective(expr=0.0)
         self._nlp = PyomoNLP(self._block)
 
-        # TODO: Send variables and constraints to PyomoImplicitFunction
-        # directly, and get indices.
-        # external_block_indices = self._nlp.get_primal_indices(
-        #     input_vars + external_vars
-        # )
-        self._external_block = create_subsystem_block(
-            external_cons, input_vars + external_vars
-        )
-        # Update with the PyomoImplicitFunction API:
+        # Instantiate a solver with the PyomoImplicitFunction API:
         self._solver = self._solver_class(
             external_vars,
             external_cons,
             input_vars,
             timer=self._timer,
         )
-        #self._solver = self._solver_class(
-        #    self._external_block,
-        #    input_vars,
-        #    variables=external_vars,
-        #    timer=self._timer,
-        #    **solver_options,
-        #)
 
         assert len(external_vars) == len(external_cons)
 
@@ -261,34 +243,11 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         outputs = solver.evaluate_outputs()
         solver.update_pyomo_model()
 
-        #solver.update_parameters(input_values)
-        #solver.solve()
-
-        # At this point we assume the solution has been loaded into the model.
-        # I would like to switch to a function-like interface, where I receive
-        # outputs from the solver.
-        # The purpose of this method is then to receive the output values from
-        # the function and send them 
-
-        # outputs = solver.evaluate_outputs()
-
+        #
         # Send updated variable values to NLP for dervative evaluation
+        #
         primals = self._nlp.get_primals()
-
-        # external_vars are the outputs of solver. If necessary, they should
-        # be accessible via get_output_variables()
-
-        # These variables shouldn't be necessary. I should have the coordinates
-        # of (inputs+external) cached somewhere.
-        #to_update = input_vars + external_vars
-        #indices = self._nlp.get_primal_indices(to_update)
-
-        # values = np.concat((input_values, outputs))
-        # Indices will be cached somewhere.
-        #values = np.fromiter((var.value for var in to_update), float)
         values = np.concatenate((input_values, outputs))
-
-        # Then update and set primals in the same manner
         primals[self._input_output_coords] = values
         self._nlp.set_primals(primals)
 
