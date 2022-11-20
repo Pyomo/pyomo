@@ -33,7 +33,8 @@ from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
     is_child_of, get_src_disjunction, get_src_constraint, get_gdp_tree,
     get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
-     _warn_for_active_disjunct, preprocess_targets, _to_dict)
+     _warn_for_active_disjunct, preprocess_targets, _to_dict,
+    _get_bigm_suffix_list, _convert_M_to_tuple, _warn_for_unused_bigM_args)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
@@ -165,24 +166,6 @@ class BigM_Transformation(Transformation):
         self._generate_debug_messages = False
         self._transformation_blocks = {}
 
-    def _get_bigm_suffix_list(self, block, stopping_block=None):
-        # Note that you can only specify suffixes on BlockData objects or
-        # ScalarBlocks. Though it is possible at this point to stick them
-        # on whatever components you want, we won't pick them up.
-        suffix_list = []
-
-        # go searching above block in the tree, stop when we hit stopping_block
-        # (This is so that we can search on each Disjunct once, but get any
-        # information between a constraint and its Disjunct while transforming
-        # the constraint).
-        while block is not stopping_block:
-            bigm = block.component('BigM')
-            if type(bigm) is Suffix:
-                suffix_list.append(bigm)
-            block = block.parent_block()
-
-        return suffix_list
-
     def _get_bigm_arg_list(self, bigm_args, block):
         # Gather what we know about blocks from args exactly once. We'll still
         # check for constraints in the moment, but if that fails, we've
@@ -280,19 +263,7 @@ class BigM_Transformation(Transformation):
 
         # issue warnings about anything that was in the bigM args dict that we
         # didn't use
-        if bigM is not None:
-            unused_args = ComponentSet(bigM.keys()) - \
-                          ComponentSet(self.used_args.keys())
-            if len(unused_args) > 0:
-                warning_msg = ("Unused arguments in the bigM map! "
-                               "These arguments were not used by the "
-                               "transformation:\n")
-                for component in unused_args:
-                    if hasattr(component, 'name'):
-                        warning_msg += "\t%s\n" % component.name
-                    else:
-                        warning_msg += "\t%s\n" % component
-                logger.warning(warning_msg)
+        _warn_for_unused_bigM_args(bigM, self.used_args, logger)
 
     def _add_transformation_block(self, to_block):
         if to_block in self._transformation_blocks:
@@ -377,7 +348,7 @@ class BigM_Transformation(Transformation):
         root = root_disjunct.parent_block() if root_disjunct is not None else \
                obj.parent_block()
         transBlock = self._add_transformation_block(root)
-        suffix_list = self._get_bigm_suffix_list(obj)
+        suffix_list = _get_bigm_suffix_list(obj)
         arg_list = self._get_bigm_arg_list(bigM, obj)
 
         # add reference to original disjunct on transformation block
@@ -472,27 +443,6 @@ class BigM_Transformation(Transformation):
                 'transformedConstraints': ComponentMap()}
         return transBlock._constraintMap
 
-    def _convert_M_to_tuple(self, M, constraint):
-        if not isinstance(M, (tuple, list)):
-            if M is None:
-                M = (None, None)
-            else:
-                try:
-                    M = (-M, M)
-                except:
-                    logger.error("Error converting scalar M-value %s "
-                                 "to (-M,M).  Is %s not a numeric type?"
-                                 % (M, type(M)))
-                    raise
-        if len(M) != 2:
-            raise GDP_Error("Big-M %s for constraint %s is not of "
-                            "length two. "
-                            "Expected either a single value or "
-                            "tuple or list of length two for M."
-                            % (str(M), constraint.name))
-
-        return M
-
     def _transform_constraint(self, obj, disjunct, bigMargs, arg_list,
                               disjunct_suffix_list):
         # add constraint to the transformation block, we'll transform it there.
@@ -540,7 +490,7 @@ class BigM_Transformation(Transformation):
             if (M[0] is None and c.lower is not None) or \
                (M[1] is None and c.upper is not None):
                 # first get anything parent to c but below disjunct
-                suffix_list = self._get_bigm_suffix_list(
+                suffix_list = _get_bigm_suffix_list(
                     c.parent_block(),
                     stopping_block=disjunct)
                 # prepend that to what we already collected for the disjunct.
@@ -602,7 +552,7 @@ class BigM_Transformation(Transformation):
 
     def _process_M_value(self, m, lower, upper, need_lower, need_upper, src,
                          key, constraint, from_args=False):
-        m = self._convert_M_to_tuple(m, constraint)
+        m = _convert_M_to_tuple(m, constraint)
         if need_lower and m[0] is not None:
             if from_args:
                 self.used_args[key] = m
