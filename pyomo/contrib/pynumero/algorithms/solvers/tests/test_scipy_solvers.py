@@ -152,7 +152,7 @@ class TestPyomoScipySolver(unittest.TestCase):
 class TestFsolvePyomo(unittest.TestCase):
 
     def test_available_and_version(self):
-        solver = pyo.SolverFactory("fsolve")
+        solver = pyo.SolverFactory("scipy.fsolve")
         self.assertTrue(solver.available())
         self.assertTrue(solver.license_is_valid())
 
@@ -163,7 +163,7 @@ class TestFsolvePyomo(unittest.TestCase):
 
     def test_solve_simple_nlp(self):
         m, _ = make_simple_model()
-        solver = pyo.SolverFactory("fsolve")
+        solver = pyo.SolverFactory("scipy.fsolve")
 
         # Just want to make sure this option works
         solver.set_options(dict(full_output=False))
@@ -175,7 +175,7 @@ class TestFsolvePyomo(unittest.TestCase):
 
     def test_solve_results_obj(self):
         m, _ = make_simple_model()
-        solver = pyo.SolverFactory("fsolve")
+        solver = pyo.SolverFactory("scipy.fsolve")
         results = solver.solve(m)
         solution = [m.x[1].value, m.x[2].value, m.x[3].value]
         predicted = [0.92846891, -0.22610731, 0.29465397]
@@ -199,7 +199,7 @@ class TestFsolvePyomo(unittest.TestCase):
 
     def test_solve_max_iter(self):
         m, _ = make_simple_model()
-        solver = pyo.SolverFactory("fsolve")
+        solver = pyo.SolverFactory("scipy.fsolve")
         solver.set_options(dict(xtol=1e-9, maxfev=10))
         res = solver.solve(m)
         self.assertNotEqual(res.solver.return_code, 1)
@@ -207,7 +207,7 @@ class TestFsolvePyomo(unittest.TestCase):
 
     def test_solve_too_tight_tol(self):
         m, _ = make_simple_model()
-        solver = pyo.SolverFactory("fsolve", options=dict(
+        solver = pyo.SolverFactory("scipy.fsolve", options=dict(
             xtol=1e-3,
             maxfev=20,
             tol=1e-8,
@@ -221,7 +221,7 @@ class TestFsolvePyomo(unittest.TestCase):
         # equation with a default starting point (x=1). This may be
         # worth looking into.
         m, _ = make_scalar_model()
-        solver = pyo.SolverFactory("fsolve")
+        solver = pyo.SolverFactory("scipy.fsolve")
         res = solver.solve(m)
         predicted_x = 4.90547401
         self.assertNotEqual(predicted_x, m.x.value)
@@ -230,7 +230,7 @@ class TestFsolvePyomo(unittest.TestCase):
         # NOTE: fsolve can solve this equation with a good starting point.
         m, _ = make_scalar_model()
         m.x.set_value(4.0)
-        solver = pyo.SolverFactory("fsolve")
+        solver = pyo.SolverFactory("scipy.fsolve")
         res = solver.solve(m)
         predicted_x = 4.90547401
         self.assertAlmostEqual(predicted_x, m.x.value)
@@ -280,7 +280,7 @@ class TestRootNLP(unittest.TestCase):
 class TestRootPyomo(unittest.TestCase):
 
     def test_available_and_version(self):
-        solver = pyo.SolverFactory("root")
+        solver = pyo.SolverFactory("scipy.root")
         self.assertTrue(solver.available())
         self.assertTrue(solver.license_is_valid())
 
@@ -291,7 +291,7 @@ class TestRootPyomo(unittest.TestCase):
 
     def test_solve_simple_nlp(self):
         m, _ = make_simple_model()
-        solver = pyo.SolverFactory("root")
+        solver = pyo.SolverFactory("scipy.root")
 
         solver.set_options(dict(tol=1e-7))
 
@@ -302,7 +302,7 @@ class TestRootPyomo(unittest.TestCase):
 
     def test_solve_simple_nlp_levenberg_marquardt(self):
         m, _ = make_simple_model()
-        solver = pyo.SolverFactory("root")
+        solver = pyo.SolverFactory("scipy.root")
 
         solver.set_options(dict(tol=1e-7, method="lm"))
 
@@ -313,7 +313,7 @@ class TestRootPyomo(unittest.TestCase):
 
     def test_bad_method(self):
         m, _ = make_simple_model()
-        solver = pyo.SolverFactory("root")
+        solver = pyo.SolverFactory("scipy.root")
 
         solver.set_options(dict(tol=1e-7, method="some-solver"))
         with self.assertRaisesRegex(ValueError, "not in domain"):
@@ -321,7 +321,7 @@ class TestRootPyomo(unittest.TestCase):
 
     def test_solver_results_obj(self):
         m, _ = make_simple_model()
-        solver = pyo.SolverFactory("root")
+        solver = pyo.SolverFactory("scipy.root")
 
         solver.set_options(dict(tol=1e-7))
 
@@ -341,7 +341,7 @@ class TestRootPyomo(unittest.TestCase):
 
     def test_solver_results_obj_levenberg_marquardt(self):
         m, _ = make_simple_model()
-        solver = pyo.SolverFactory("root")
+        solver = pyo.SolverFactory("scipy.root")
 
         solver.set_options(dict(tol=1e-7, method="lm"))
 
