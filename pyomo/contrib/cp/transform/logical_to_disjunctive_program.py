@@ -59,18 +59,6 @@ class LogicalToDisjunctive(Transformation):
         transBlocks = {}
         visitor = LogicalToDisjunctiveVisitor()
         for t in targets:
-            # If the user promises that the target is Block-like, we will go
-            # with it. Note, however, that they can only use targets for
-            # this--when we go searching for stuff to transform we will only
-            # look on Blocks. And yes, this means we are ignoring Disjuncts. We
-            # are in fact ignoring all GDP components because this
-            # transformation is a promise only to transform LogicalConstraints
-            # and the relevant BooleanVars, not to create an algebraic
-            # model. (We are making this decision largely because having this
-            # transformation do anything to GDP stuff is an assumption on how
-            # the GDP will be solved, and it would be wrong to assume that a GDP
-            # will *necessarily* be solved as an algebraic model. The star
-            # example of not doing so being GDPopt.)
             if t.ctype is Block or isinstance(t, _BlockData):
                 self._transform_block(t, model, visitor, transBlocks)
             elif t.ctype is LogicalConstraint:
@@ -93,8 +81,16 @@ class LogicalToDisjunctive(Transformation):
         _blocks = target_block.values() if target_block.is_indexed() else \
                   (target_block,)
         for block in _blocks:
+            # Note that this changes the current (though not the original)
+            # behavior of logical-to-linear because we descend into Disjuncts in
+            # order to find logical constraints. In the context of creating a
+            # traditional disjunctive program, this makes sense--we cannot have
+            # logical constraints *anywhere* in the active tree after this
+            # transformation.
             for logical_constraint in block.component_objects(
-                    ctype=LogicalConstraint, active=True, descend_into=Block):
+                    ctype=LogicalConstraint,
+                    active=True,
+                    descend_into=(Block, Disjunct)):
                 self._transform_constraint(logical_constraint, new_varlists,
                                            transBlocks)
 
