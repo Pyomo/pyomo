@@ -460,7 +460,7 @@ class BigM_Transformation(Transformation):
         # Since we are both combining components from multiple blocks and using
         # local names, we need to make sure that the first index for
         # transformedConstraints is guaranteed to be unique. We just grab the
-        # currentl length of the list here since that will be monotonically
+        # current length of the list here since that will be monotonically
         # increasing and hence unique. We'll append it to the
         # slightly-more-human-readable constraint name for something familiar
         # but unique.
