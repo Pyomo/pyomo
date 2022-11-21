@@ -46,9 +46,15 @@ def apply_basic_step(disjunctions_or_constraints):
     # Basic steps only apply to XOR'd disjunctions
     #
     disjunctions = list(obj for obj in disjunctions_or_constraints
-                        if obj.ctype == Disjunction)
+                        if obj.ctype is Disjunction)
     constraints = list(obj for obj in disjunctions_or_constraints
-                       if obj.ctype == Constraint)
+                       if obj.ctype is Constraint)
+    if len(disjunctions) + len(constraints) != len(disjunctions_or_constraints):
+        raise ValueError('apply_basic_step only accepts a list containing '
+                         'Disjunctions or Constraints')
+    if not disjunctions:
+        raise ValueError('apply_basic_step: argument list must contain at '
+                         'least one Disjunction')
     for d in disjunctions:
         if not d.xor:
             raise ValueError(
@@ -76,14 +82,22 @@ def apply_basic_step(disjunctions_or_constraints):
         #
         ans.disjuncts[idx].src = Block(ans.DISJUNCTIONS)
         for i in ans.DISJUNCTIONS:
-            tmp = _clone_all_but_indicator_vars(disjunctions[i].disjuncts[
-                idx[i] if isinstance(idx, tuple) else idx])
-            for k,v in list(tmp.component_map().items()):
-                if v.parent_block() is not tmp:
-                    # Skip indicator_var and binary_indicator_var
-                    continue
-                tmp.del_component(k)
-                ans.disjuncts[idx].src[i].add_component(k,v)
+            try:
+                src_disj = disjunctions[i].disjuncts[
+                    idx[i] if isinstance(idx, tuple) else idx]
+                tmp = _clone_all_but_indicator_vars(src_disj)
+                for k,v in list(tmp.component_map().items()):
+                    if v.parent_block() is not tmp:
+                        # Skip indicator_var and binary_indicator_var
+                        continue
+                    tmp.del_component(k)
+                    ans.disjuncts[idx].src[i].add_component(k,v)
+            except AttributeError:
+                logger.error(
+                    "Encountered partially cloned component when applying "
+                    f"basic step: cloning disjunct {i} ({src_disj.name}) "
+                    f"for new disjunct {idx}")
+                raise
         # Copy in the constraints corresponding to the improper disjunctions
         ans.disjuncts[idx].improper_constraints = ConstraintList()
         for constr in constraints:
