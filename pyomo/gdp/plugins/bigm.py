@@ -239,17 +239,16 @@ class BigM_Transformation(Transformation):
                     yield t
         targets = list(_filter_inactive(targets))
 
-        # TODO: I currently have a chicken and egg issue where this needs to
-        # occur before we get the GDP tree. But that means that it cannot rely
-        # on the preprocessing. Or I need to add what I create to the
-        # preprocessed lists...
-
         # transform any logical constraints that might be anywhere on the stuff
-        # we're about to transform.
+        # we're about to transform. We do this before we preprocess targets
+        # because we will likely create more disjunctive components that will
+        # need transformation.
         TransformationFactory('contrib.logical_to_disjunctive').apply_to(
             instance,
             targets=[blk for blk in targets if blk.ctype is Block] +
-            [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
+            [disj for disj in targets if disj.ctype is Disjunct] +
+            [disj for disjunction in targets if disjunction.ctype is
+             Disjunction for disj in disjunction.disjuncts])
 
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
@@ -547,7 +546,7 @@ class BigM_Transformation(Transformation):
                     raise GDP_Error("Cannot relax disjunctive constraint '%s' "
                                     "because M is not defined." % name)
                 M_expr = M[0] * (1 - disjunct.binary_indicator_var)
-                newConstraint.add(i_lb, c.lower <= c. body - M_expr)
+                newConstraint.add(i_lb, c.lower <= c.body - M_expr)
                 constraintMap[
                     'transformedConstraints'][c] = [newConstraint[i_lb]]
                 constraintMap['srcConstraints'][newConstraint[i_lb]] = c

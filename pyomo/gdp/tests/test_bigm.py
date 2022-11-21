@@ -18,6 +18,7 @@ from pyomo.environ import (TransformationFactory, Block, Set, Constraint,
                            Any, value)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.core.base import constraint, _ConstraintData
+from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.repn import generate_standard_repn
 from pyomo.common.log import LoggingIntercept
@@ -2585,31 +2586,44 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
 
         # first d[1]:
         cons = bigm.get_transformed_constraints(
-            m.d[1].logic_to_linear.transformed_constraints[1])
+            m.d[1]._logical_to_disjunctive.transformed_constraints[1])
+        # big-M transformation of z = 1 - y1:
+        #     z <= 1 - y1 + (1 - d[1].indicator_var)
+        #     z >= 1 - y1 - (1 - d[1].indicator_var)
+        z = m.d[1]._logical_to_disjunctive.auxiliary_vars[1]
         self.assertEqual(len(cons), 2)
         leq = cons[0]
-        self.assertEqual(leq.lower, 1)
+        self.assertEqual(leq.lower, 0)
         self.assertIsNone(leq.upper)
         repn = generate_standard_repn(leq.body)
         self.assertTrue(repn.is_linear())
-        self.assertEqual(repn.constant, 2)
-        self.assertEqual(len(repn.linear_vars), 2)
-        ct.check_linear_coef(self, repn, y1, -1)
-        ct.check_linear_coef(self, repn, m.d[1].binary_indicator_var, -1)
-        # this is a stupid constraint
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            # z is fixed so it went to the constant
+            y1 - 1.0*m.d[1].binary_indicator_var + 1.0)
         geq = cons[1]
+        self.assertEqual(geq.upper, 0)
         self.assertIsNone(geq.lower)
-        self.assertEqual(geq.upper, 1)
         repn = generate_standard_repn(geq.body)
         self.assertTrue(repn.is_linear())
-        self.assertEqual(repn.constant, 1)
-        self.assertEqual(len(repn.linear_vars), 1)
-        ct.check_linear_coef(self, repn, y1, -1)
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            # z is fixed so it went to the constant
+            y1 + m.d[1].binary_indicator_var - 1)
 
         # then d[4]:
         # 1 <= 1 - Y[2] + Y[1]
         cons = bigm.get_transformed_constraints(
-            m.d[4].logic_to_linear.transformed_constraints[1])
+            m.d[4]._logical_to_disjunctive.transformed_constraints[1])
+        m.d[4]._logical_to_disjunctive.pprint()
         self.assertEqual(len(cons), 1)
         leq = cons[0]
         self.assertEqual(leq.lower, 1)
