@@ -107,11 +107,14 @@ class RootNlpSolver(DenseSquareNlpSolver):
     ))
     OPTIONS.declare("method", ConfigValue(
         default="hybr",
-        # NOTE: Only supporting Powell hybrid method and Levenberg-Marquardt
-        # methods (both from MINPACK) for now.
         domain=In({"hybr", "lm"}),
-        #domain=str,
         description="Method used to solve for the function root",
+        doc=(
+            """The 'method' argument in the scipy.optimize.root function.
+            For now only 'hybr' (Powell hybrid method from MINPACK) and
+            'lm' (Legenberg-Marquardt from MINPACK) are supported.
+            """
+        ),
     ))
 
     def solve(self, x0=None):
