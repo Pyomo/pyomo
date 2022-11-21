@@ -119,10 +119,13 @@ ExpectedFailures['cbc', 'nl', 'MILP_unbounded'] = \
      "the NL interface (through 2.9.x), and fails with invalid free() "
      "(in 2.10.x).")
 
+# The following is due to a bug introduced into Clp as part of CBC 2.10
+# and was resolved by Clp commit 130dd199 (13 Feb 2021), and included
+# in the CBC 2.10.6 release
 ExpectedFailures['cbc', 'nl', 'LP_unbounded'] = \
-    (lambda v: v[:2] == (2, 10),
+    (lambda v: v > (2, 10) and v < (2, 10, 6),
      "Cbc fails (invalid free()) for unbounded LP models through "
-     "the NL interface in 2.10.x versions "
+     "the NL interface in 2.10.x versions through 2.10.5 "
      "(reported upstream as coin-or/Cbc#389)")
 
 ExpectedFailures['cbc', 'nl', 'SOS1_simple'] = \
