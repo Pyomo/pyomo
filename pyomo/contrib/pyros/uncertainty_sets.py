@@ -236,7 +236,7 @@ def validate_array(
     required_shape : list or None, optional
         Specification of the length of the array in each dimension.
         If `None` is provided, no specifications are imposed.
-        If a `list` is provided, then each entry of the listmust be
+        If a `list` is provided, then each entry of the list must be
         an `int` specifying the required length in the dimension
         corresponding to the position of the entry
         or `None` (meaning no requirement for the length in the
@@ -790,7 +790,7 @@ class BoxSet(UncertaintySet):
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
-        Construct a list of box contraints on a given sequence
+        Construct a list of box constraints on a given sequence
         of uncertain parameter objects.
 
         Parameters
@@ -1233,7 +1233,7 @@ class PolyhedralSet(UncertaintySet):
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
-        Construct a list of polyhedral contraints on a given sequence
+        Construct a list of polyhedral constraints on a given sequence
         of uncertain parameter objects.
 
         Parameters
@@ -1507,7 +1507,7 @@ class BudgetSet(UncertaintySet):
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
-        Construct a list of budget contraints on a given sequence
+        Construct a list of budget constraints on a given sequence
         of uncertain parameter objects.
 
         Parameters
@@ -1783,7 +1783,7 @@ class FactorModelSet(UncertaintySet):
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
-        Construct a list of factor model contraints on a given sequence
+        Construct a list of factor model constraints on a given sequence
         of uncertain parameter objects.
 
         Parameters
@@ -2117,7 +2117,7 @@ class EllipsoidalSet(UncertaintySet):
         Raises
         ------
         ValueError
-            If matrix is not symmetirc, not positive definite,
+            If matrix is not symmetric, not positive definite,
             or the square roots of the diagonal entries are
             not accessible.
         LinAlgError
@@ -2631,7 +2631,7 @@ class IntersectionSet(UncertaintySet):
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
-        Construct a list of contraints on a given sequence
+        Construct a list of constraints on a given sequence
         of uncertain parameter objects. In advance of constructing
         the constraints, a check is performed to determine whether
         the set is empty.
