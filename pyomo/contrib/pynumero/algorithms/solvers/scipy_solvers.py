@@ -383,10 +383,6 @@ class PyomoFsolveSolver(PyomoScipySolver):
 
 class PyomoRootSolver(PyomoScipySolver):
 
-    _term_cond = {
-        1: TerminationCondition.feasible,
-    }
-
     def create_nlp_solver(self, **kwds):
         nlp = self.get_nlp()
         solver = RootNlpSolver(nlp, **kwds)
