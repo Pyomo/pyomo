@@ -82,6 +82,10 @@ def apply_basic_step(disjunctions_or_constraints):
         #
         ans.disjuncts[idx].src = Block(ans.DISJUNCTIONS)
         for i in ans.DISJUNCTIONS:
+            # This try-except is not strictly necessary, but has been
+            # added to help diagnose an intermittent deepcopy error
+            # observed in the GHA tests, but not reproducible
+            # locally. [JDS; 21 Nov 2022]
             try:
                 src_disj = disjunctions[i].disjuncts[
                     idx[i] if isinstance(idx, tuple) else idx]
