@@ -120,7 +120,7 @@ ExpectedFailures['cbc', 'nl', 'MILP_unbounded'] = \
      "(in 2.10.x).")
 
 ExpectedFailures['cbc', 'nl', 'LP_unbounded'] = \
-    (lambda v: v[:2] == (2, 10),
+    (lambda v: v > (2, 10) and v < (2, 10, 6),
      "Cbc fails (invalid free()) for unbounded LP models through "
      "the NL interface in 2.10.x versions "
      "(reported upstream as coin-or/Cbc#389)")
