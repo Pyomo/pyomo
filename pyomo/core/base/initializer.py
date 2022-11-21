@@ -48,7 +48,7 @@ def Initializer(arg,
     ----------
     arg:
 
-        The argument passed to the component conostructor.  This could
+        The argument passed to the component constructor.  This could
         be almost any type, including a scalar, dict, list, function,
         generator, or None.
 
@@ -484,7 +484,7 @@ class BoundInitializer(InitializerBase):
     arg:
 
         As with :py:func:`Initializer`, this is the raw argument passed
-        to the compnent constructor.
+        to the component constructor.
 
     obj: :py:class:`Component`
 
@@ -497,7 +497,7 @@ class BoundInitializer(InitializerBase):
     __slots__ = ('_initializer',)
 
     def __new__(cls, arg=None, obj=NOTSET):
-        # The Initialier() function returns None if the initializer is
+        # The Initializer() function returns None if the initializer is
         # None.  We will mock that behavior by commandeering __new__()
         if arg is None and obj is not NOTSET:
             return None
