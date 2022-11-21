@@ -25,6 +25,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.scipy_solvers import (
     FsolveNlpSolver,
     RootNlpSolver,
     PyomoScipySolver,
+    SecantNewtonNlpSolver,
 )
 
 
@@ -442,6 +443,24 @@ class TestNewtonPyomo(unittest.TestCase):
             # This attribute has no default, I guess.
             # Assert that it hasn't been set.
             n_eval = results.solver.number_of_function_evaluations
+
+
+@unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
+class TestSecantNewton(unittest.TestCase):
+
+    def test_inherited_options_skipped(self):
+        m, nlp = make_scalar_model()
+        options = SecantNewtonNlpSolver.OPTIONS
+        self.assertNotIn("maxiter", options)
+        self.assertNotIn("secant", options)
+        self.assertIn("secant_iter", options)
+        self.assertIn("newton_iter", options)
+
+        with self.assertRaisesRegex(
+                ValueError,
+                "implicit.*keys are not allowed",
+            ):
+            solver = SecantNewtonNlpSolver(nlp, options={"maxiter": 10})
 
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
