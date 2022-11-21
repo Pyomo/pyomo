@@ -34,7 +34,7 @@ pyomo_nlp, _ = attempt_import("pyomo.contrib.pynumero.interfaces.pyomo_nlp")
 
 class FsolveNlpSolver(DenseSquareNlpSolver):
 
-    OPTIONS = ConfigBlock(
+    OPTIONS = DenseSquareNlpSolver.OPTIONS(
         description="Options for SciPy fsolve wrapper",
     )
     OPTIONS.declare("xtol", ConfigValue(
@@ -98,7 +98,7 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
 
 class RootNlpSolver(DenseSquareNlpSolver):
 
-    OPTIONS = ConfigBlock(
+    OPTIONS = DenseSquareNlpSolver.OPTIONS(
         description="Options for SciPy fsolve wrapper",
     )
     OPTIONS.declare("tol", ConfigValue(
@@ -137,7 +137,7 @@ class NewtonNlpSolver(ScalarDenseSquareNlpSolver):
 
     """
 
-    OPTIONS = ConfigBlock(
+    OPTIONS = ScalarDenseSquareNlpSolver.OPTIONS(
         description="Options for SciPy newton wrapper",
     )
     OPTIONS.declare("tol", ConfigValue(
