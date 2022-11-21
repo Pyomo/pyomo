@@ -16,6 +16,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     DenseSquareNlpSolver,
+    ScalarDenseSquareNlpSolver,
 )
 from pyomo.opt import (
     SolverResults,
@@ -131,22 +132,7 @@ class RootNlpSolver(DenseSquareNlpSolver):
         return results
 
 
-class _ScalarDenseSquareNlpSolver(DenseSquareNlpSolver):
-    # A base class for solvers for scalar equations.
-    # Not intended to be instantiated directly. Instead,
-    # NewtonNlpSolver or SecantNewtonNlpSolver should be used.
-
-    def __init__(self, nlp, timer=None, options=None):
-        super().__init__(nlp, timer=timer, options=options)
-        if nlp.n_primals() != 1:
-            raise RuntimeError(
-                "Cannot use the scipy.optimize.newton solver on an NLP with"
-                " more than one variable and equality constraint. Got %s"
-                " primals. Please use RootNlpSolver or FsolveNlpSolver instead."
-            )
-
-
-class NewtonNlpSolver(_ScalarDenseSquareNlpSolver):
+class NewtonNlpSolver(ScalarDenseSquareNlpSolver):
     """A wrapper around the SciPy scalar Newton solver for NLP objects
 
     """
