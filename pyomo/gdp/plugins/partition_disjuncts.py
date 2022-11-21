@@ -526,7 +526,7 @@ class PartitionDisjuncts_Transformation(Transformation):
             unique_component_name(transBlock,
                                   obj.getname(fully_qualified=True)),
             transformed_disjunction)
-        obj._algebraic_constraint = weakref_ref(transformed_disjunction)
+        obj.algebraic_constraint = transformed_disjunction
 
         obj.deactivate()
 

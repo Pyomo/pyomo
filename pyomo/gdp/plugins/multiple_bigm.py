@@ -288,7 +288,7 @@ class MultipleBigMTransformation(Transformation):
         algebraic_constraint.add(index, (or_expr, rhs))
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
-        obj._algebraic_constraint = weakref_ref(algebraic_constraint[index])
+        obj.algebraic_constraint = algebraic_constraint[index]
 
         obj.deactivate()
 
@@ -573,7 +573,7 @@ class MultipleBigMTransformation(Transformation):
             unique_component_name(transBlock,
                                   disjunction.getname(
                                       fully_qualified=False) + '_xor'), orC)
-        disjunction._algebraic_constraint = weakref_ref(orC)
+        disjunction.algebraic_constraint = orC
 
         return orC
 

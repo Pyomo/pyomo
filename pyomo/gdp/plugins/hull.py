@@ -341,8 +341,8 @@ class Hull_Reformulation(Transformation):
         # Put XOR constraint on the transformation block
 
         # check if the constraint already exists
-        if disjunction._algebraic_constraint is not None:
-            return disjunction._algebraic_constraint()
+        if disjunction.algebraic_constraint is not None:
+            return disjunction.algebraic_constraint
 
         # add the XOR constraints to parent block (with unique name) It's
         # indexed if this is an IndexedDisjunction, not otherwise
@@ -351,7 +351,7 @@ class Hull_Reformulation(Transformation):
             unique_component_name(transBlock,
                                   disjunction.getname(
                                       fully_qualified=True) + '_xor'), orC)
-        disjunction._algebraic_constraint = weakref_ref(orC)
+        disjunction.algebraic_constraint = orC
 
         return orC
 
@@ -488,7 +488,7 @@ class Hull_Reformulation(Transformation):
         orConstraint.add(index, (or_expr, rhs))
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
-        obj._algebraic_constraint = weakref_ref(orConstraint[index])
+        obj.algebraic_constraint = orConstraint[index]
 
         # add the reaggregation constraints
         for i, var in enumerate(varsToDisaggregate):

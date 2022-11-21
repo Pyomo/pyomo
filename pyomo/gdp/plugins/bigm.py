@@ -289,8 +289,8 @@ class BigM_Transformation(Transformation):
         # DisjunctionData, we did something wrong.
 
         # first check if the constraint already exists
-        if disjunction._algebraic_constraint is not None:
-            return disjunction._algebraic_constraint()
+        if disjunction.algebraic_constraint is not None:
+            return disjunction.algebraic_constraint
 
         # add the XOR (or OR) constraints to parent block (with unique name)
         # It's indexed if this is an IndexedDisjunction, not otherwise
@@ -301,7 +301,7 @@ class BigM_Transformation(Transformation):
         orCname = unique_component_name(
             transBlock,disjunction.getname(fully_qualified=False) + '_xor')
         transBlock.add_component(orCname, orC)
-        disjunction._algebraic_constraint = weakref_ref(orC)
+        disjunction.algebraic_constraint = orC
 
         return orC
 
@@ -339,7 +339,7 @@ class BigM_Transformation(Transformation):
             xorConstraint[index] = or_expr >= rhs
         # Mark the DisjunctionData as transformed by mapping it to its XOR
         # constraint.
-        obj._algebraic_constraint = weakref_ref(xorConstraint[index])
+        obj.algebraic_constraint = xorConstraint[index]
 
         # and deactivate for the writers
         obj.deactivate()

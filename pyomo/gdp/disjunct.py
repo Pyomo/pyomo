@@ -437,6 +437,13 @@ class _DisjunctionData(ActiveComponentData):
         return None if self._algebraic_constraint is None else \
             self._algebraic_constraint()
 
+    @algebraic_constraint.setter
+    def algebraic_constraint(self, val):
+        if val is None:
+            self._algebraic_constraint = val
+        else:
+            self._algebraic_constraint = weakref_ref(val)
+
     def __init__(self, component=None):
         #
         # These lines represent in-lining of the
@@ -543,16 +550,21 @@ class Disjunction(ActiveIndexedComponent):
                 "Cannot specify both rule= and expr= for Disjunction %s"
                 % ( self.name, ))
 
-    # FIXME: This is a workaround for double-declating the
+    # FIXME: This is a workaround for double-declaring the
     # _algebraic_constraint autoslot for ScalarDisjunctions,
     # necessitated by test failures encountered during release.
+    # [JDS; 21 Nov 2022]
     @property
-    def _algebraic_constraint(self):
-        return self._indexed_algebraic_constraint
+    def algebraic_constraint(self):
+        return None if self._indexed_algebraic_constraint is None else \
+            self._indexed_algebraic_constraint()
 
-    @_algebraic_constraint.setter
-    def _algebraic_constraint(self, val):
-        self._indexed_algebraic_constraint = val
+    @algebraic_constraint.setter
+    def algebraic_constraint(self, val):
+        if val is None:
+            self._indexed_algebraic_constraint = val
+        else:
+            self._indexed_algebraic_constraint = weakref_ref(val)
 
     #
     # TODO: Ideally we would not override these methods and instead add
