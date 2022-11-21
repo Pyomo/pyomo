@@ -342,6 +342,12 @@ class PyomoScipySolver(object):
 
 class PyomoFsolveSolver(PyomoScipySolver):
 
+    # Note that scipy.optimize.fsolve does not return a
+    # scipy.optimize.OptimizeResult object (as of SciPy 1.9.3).
+    # To assess convergence, we must check the integer flag "ier"
+    # that is the third (or second if full_output=False) entry
+    # of the returned tuple. This dict maps documented "ier" values
+    # to Pyomo termination conditions.
     _term_cond = {
         1: TerminationCondition.feasible,
     }
@@ -479,7 +485,7 @@ class PyomoNewtonSolver(PyomoScipySolver):
         return results
 
 
-class PyomoSecantNewtonSolver(PyomoScipySolver):
+class PyomoSecantNewtonSolver(PyomoNewtonSolver):
 
     def converged_with_secant(self):
         return self._nlp_solver.converged_with_secant
@@ -488,45 +494,3 @@ class PyomoSecantNewtonSolver(PyomoScipySolver):
         nlp = self.get_nlp()
         solver = SecantNewtonNlpSolver(nlp, **kwds)
         return solver
-
-    def get_pyomo_results(self, model, scipy_results):
-        nlp = self.get_nlp()
-        results = SolverResults()
-
-        if self._nlp_solver.options.full_output:
-            root, res = scipy_results
-        else:
-            root = scipy_results
-
-        # Record problem data
-        results.problem.name = model.name
-        results.problem.number_of_constraints = nlp.n_eq_constraints()
-        results.problem.number_of_variables = nlp.n_primals()
-        results.problem.number_of_binary_variables = 0
-        results.problem.number_of_integer_variables = 0
-        results.problem.number_of_continuous_variables = nlp.n_primals()
-
-        # Record solver data
-        results.solver.name = "scipy.secant-newton"
-
-        results.solver.wallclock_time = self._timer.timers["solve"].total_time
-
-        if self._nlp_solver.options.full_output:
-            # We only have access to any of this information if the solver was
-            # requested to return its full output.
-
-            # For this solver, res.flag is a string.
-            # If successful, it is 'converged'
-            results.solver.message = res.flag
-
-            if res.converged:
-                term_cond = TerminationCondition.feasible
-            else:
-                term_cond = TerminationCondition.Error
-            results.solver.termination_condition = term_cond
-            results.solver.status = TerminationCondition.to_solver_status(
-                results.solver.termination_condition
-            )
-
-            results.solver.number_of_function_evaluations = res.function_calls
-        return results
