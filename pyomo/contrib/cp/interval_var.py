@@ -159,9 +159,9 @@ class IntervalVar(Block):
         kwargs.setdefault('ctype', IntervalVar)
         Block.__init__(self, *args, **kwargs)
 
-        self._start_bounds = BoundInitializer(self, _start_arg)
-        self._end_bounds = BoundInitializer(self, _end_arg)
-        self._length_bounds = BoundInitializer(self, _length_arg)
+        self._start_bounds = BoundInitializer(_start_arg, self)
+        self._end_bounds = BoundInitializer(_end_arg, self)
+        self._length_bounds = BoundInitializer(_length_arg, self)
         self._optional = Initializer(_optional_arg)
 
     def _getitem_when_not_present(self, index):
@@ -172,9 +172,12 @@ class IntervalVar(Block):
         parent = obj.parent_block()
         obj._index = index
 
-        obj.start_time.bounds = self._start_bounds(parent, index)
-        obj.end_time.bounds = self._end_bounds(parent, index)
-        obj.length.bounds = self._length_bounds(parent, index)
+        if self._start_bounds is not None:
+            obj.start_time.bounds = self._start_bounds(parent, index)
+        if self._end_bounds is not None:
+            obj.end_time.bounds = self._end_bounds(parent, index)
+        if self._length_bounds is not None:
+            obj.length.bounds = self._length_bounds(parent, index)
         # hit the setter so I get error checking
         obj.optional = self._optional(parent, index)
 
