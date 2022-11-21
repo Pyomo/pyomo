@@ -54,8 +54,7 @@
 """
 from __future__ import division
 import logging
-from pyomo.contrib.gdpopt.util import (copy_var_list_values, 
-                                       time_code, lower_logger_level_to)
+from pyomo.contrib.gdpopt.util import (copy_var_list_values, time_code, lower_logger_level_to)
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main
 from pyomo.contrib.mindtpy.iterate import MindtPy_iteration_loop
 from pyomo.contrib.mindtpy.util import model_is_valid, set_up_solve_data, set_up_logger, get_primal_integral, get_dual_integral, setup_results_object, process_objective, create_utility_block
@@ -243,23 +242,30 @@ class MindtPySolver(object):
                     config=config)
                 # The original does not have variable list. Use get_vars_from_components() should be used for both working_model and original_model to exclude the unused variables.
                 solve_data.working_model.MindtPy_utils.deactivate()
+                # The original objective should be activated to make sure the variable list is in the same order (get_vars_from_components).
+                solve_data.working_model.MindtPy_utils.objective_list[0].activate()
                 if solve_data.working_model.find_component("_int_to_binary_reform") is not None:
                     solve_data.working_model._int_to_binary_reform.deactivate()
-                copy_var_list_values(list(get_vars_from_components(block=solve_data.working_model, 
+                working_model_variable_list = list(get_vars_from_components(block=solve_data.working_model, 
                                          ctype=(Constraint, Objective), 
                                          include_fixed=False, 
                                          active=True,
                                          sort=True, 
                                          descend_into=True,
-                                         descent_order=None)),
-                                    list(get_vars_from_components(block=solve_data.original_model, 
+                                         descent_order=None))
+                original_model_variable_list = list(get_vars_from_components(block=solve_data.original_model, 
                                          ctype=(Constraint, Objective), 
                                          include_fixed=False, 
                                          active=True,
                                          sort=True, 
                                          descend_into=True,
-                                         descent_order=None)),
-                                    config=config)
+                                         descent_order=None))
+                for v_from, v_to in zip(working_model_variable_list, original_model_variable_list):
+                    if v_from.name != v_to.name:
+                        raise ValueError('The name of the two variables is not the same. Loading final solution')
+                copy_var_list_values(working_model_variable_list,
+                                     original_model_variable_list,
+                                     config=config)
                 # exclude fixed variables here. This is consistent with the definition of variable_list in GDPopt.util
             if solve_data.objective_sense == minimize:
                 solve_data.results.problem.lower_bound = solve_data.dual_bound

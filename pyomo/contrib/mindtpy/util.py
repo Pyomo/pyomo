@@ -15,7 +15,7 @@ from contextlib import contextmanager
 import logging
 from pyomo.common.collections import ComponentMap, Bunch, ComponentSet
 from pyomo.core import (Block, Constraint, VarList,
-                        Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
+                        Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory, value)
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.repn import generate_standard_repn
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
@@ -785,7 +785,10 @@ def update_gap(solve_data):
     solve_data : MindtPySolveData
         Data container that holds solve-instance data.
     """
-    solve_data.abs_gap = abs(solve_data.primal_bound - solve_data.dual_bound)
+    if solve_data.objective_sense == minimize:
+        solve_data.abs_gap = solve_data.primal_bound - solve_data.dual_bound
+    else:
+        solve_data.abs_gap = solve_data.dual_bound - solve_data.primal_bound
     solve_data.rel_gap = solve_data.abs_gap / (abs(solve_data.primal_bound) + 1E-10)
 
 
@@ -1285,3 +1288,4 @@ def create_utility_block(model, name, solve_data):
     yield
     if created_util_block:
         model.del_component(name)
+

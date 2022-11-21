@@ -52,7 +52,9 @@ def _default_msg(obj, user_msg, version, remove_in):
 
         _qual = getattr(obj, '__qualname__', '') or ''
         if _qual.endswith('.__init__') or _qual.endswith('.__new__'):
-            _obj = ' class'
+            _obj = f' class ({_qual.rsplit(".", 1)[0]})'
+        elif _qual and _obj:
+            _obj += f' ({_qual})'
 
         user_msg = 'This%s has been deprecated and may be removed in a ' \
                    'future release.' % (_obj,)

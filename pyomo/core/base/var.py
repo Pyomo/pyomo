@@ -593,7 +593,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
     def __init__(self, *indexes, domain=Reals, within=Reals, bounds=None,
                  initialize=None, rule=None, dense=True, units=None,
                  name=None, doc=None): ...
-    
+
     def __init__(self, *args, **kwargs):
         #
         # Default keyword values
@@ -621,7 +621,7 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                 "for scalar variables; converting to dense=True"
                 % (self.name,))
             self._dense = True
-        self._rule_bounds = BoundInitializer(self, _bounds_arg)
+        self._rule_bounds = BoundInitializer(_bounds_arg, self)
 
     def flag_as_stale(self):
         """
@@ -729,7 +729,10 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
                     # Empty index!
                     return
                 call_domain_rule = not self._rule_domain.constant()
-                call_bounds_rule = not self._rule_bounds.constant()
+                call_bounds_rule = (
+                    self._rule_bounds is not None
+                    and not self._rule_bounds.constant()
+                )
                 call_init_rule = self._rule_init is not None and (
                     not self._rule_init.constant()
                     # If either the domain or bounds change, then we
@@ -792,7 +795,8 @@ class Var(IndexedComponent, IndexedComponent_NDArrayMixin):
         # We can directly set the attribute (not the property) because
         # the SetInitializer ensures that the value is a proper Set.
         obj._domain = self._rule_domain(parent, index)
-        obj.lower, obj.upper = self._rule_bounds(parent, index)
+        if self._rule_bounds is not None:
+            obj.lower, obj.upper = self._rule_bounds(parent, index)
         if self._rule_init is not None:
             obj.set_value(self._rule_init(parent, index))
         return obj
@@ -913,17 +917,27 @@ class IndexedVar(Var):
         for vardata in self.values():
             vardata.domain = domain
 
-    # Because Emma wants crazy things... (Where crazy things are the ability to
-    # index Vars by other (integer) Vars and integer-valued expressions--a thing
-    # you can do in Constraint Programming.)
+    # Because CP supports indirection [the ability to index objects by
+    # another (inter) Var] for certain types (including Var), we will
+    # catch the normal RuntimeError and return a (variable)
+    # GetItemExpression.
+    #
+    # FIXME: We should integrate this logic into the base implementation
+    # of `__getitem__()`, including the recognition / differentiation
+    # between potentially variable GetItemExpression objects and
+    # "constant" GetItemExpression objects.  That will need to wait for
+    # the expression rework [JDS; Nov 22].
     def __getitem__(self, args):
-        tmp = args if args.__class__ is tuple else (args,)
-        if any(hasattr(arg, 'is_potentially_variable')
-               and arg.is_potentially_variable()
-               for arg in tmp
-        ):
-            return GetItemExpression((self,) + tmp)
-        return super().__getitem__(args)
+        try:
+            return super().__getitem__(args)
+        except RuntimeError:
+            tmp = args if args.__class__ is tuple else (args,)
+            if any(hasattr(arg, 'is_potentially_variable')
+                   and arg.is_potentially_variable()
+                   for arg in tmp
+               ):
+                return GetItemExpression((self,) + tmp)
+            raise
 
 
 @ModelComponentFactory.register("List of decision variables.")
