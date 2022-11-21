@@ -18,6 +18,14 @@ class SquareNlpSolverBase(object):
     of equality constraints.
 
     """
+    # Ideally, this ConfigBlock would contain options that are valid for any
+    # square NLP solver. However, no such options seem to exist while
+    # preserving the names of the SciPy function arguments. E.g., tolerance
+    # is "tol" in some solvers and "xtol" in others, and some solvers
+    # support "maxiter" while others support "maxfev". It may be useful to
+    # attempt some standardization by, e.g., mapping tol->xtol, then
+    # specifying "universal" options here, but this can happen at a later
+    # date as these solvers see more use.
     OPTIONS = ConfigBlock()
 
     def __init__(self, nlp, timer=None, options=None):
