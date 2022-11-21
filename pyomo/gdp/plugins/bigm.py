@@ -165,6 +165,7 @@ class BigM_Transformation(Transformation):
         }
         self._generate_debug_messages = False
         self._transformation_blocks = {}
+        self._algebraic_constraints = {}
 
     def _get_bigm_arg_list(self, bigm_args, block):
         # Gather what we know about blocks from args exactly once. We'll still
@@ -192,6 +193,7 @@ class BigM_Transformation(Transformation):
         finally:
             self.used_args.clear()
             self._transformation_blocks.clear()
+            self._algebraic_constraints.clear()
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
@@ -289,8 +291,8 @@ class BigM_Transformation(Transformation):
         # DisjunctionData, we did something wrong.
 
         # first check if the constraint already exists
-        if disjunction._algebraic_constraint is not None:
-            return disjunction._algebraic_constraint()
+        if disjunction in self._algebraic_constraints:
+            return self._algebraic_constraints[disjunction]
 
         # add the XOR (or OR) constraints to parent block (with unique name)
         # It's indexed if this is an IndexedDisjunction, not otherwise
@@ -301,7 +303,7 @@ class BigM_Transformation(Transformation):
         orCname = unique_component_name(
             transBlock,disjunction.getname(fully_qualified=False) + '_xor')
         transBlock.add_component(orCname, orC)
-        disjunction._algebraic_constraint = weakref_ref(orC)
+        self._algebraic_constraints[disjunction] = orC
 
         return orC
 
