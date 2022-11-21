@@ -847,6 +847,8 @@ class MOSEKDirect(DirectSolver):
         return DirectOrPersistentSolver._postsolve(self)
 
     def warm_start_capable(self):
+        # See #2613: enabling warmstart on MOSEK 10 breaks an MIQP test.
+        # return self.version() < (10, 0)
         return True
 
     def _warm_start(self):
