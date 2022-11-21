@@ -257,6 +257,24 @@ class TestRootNLP(unittest.TestCase):
             predicted_nlporder,
         )
 
+    def test_solve_simple_nlp_levenberg_marquardt(self):
+        m, nlp = make_simple_model()
+        solver = RootNlpSolver(nlp, options=dict(method="lm"))
+        results = solver.solve()
+        self.assertTrue(results.success)
+
+        variables = [m.x[1], m.x[2], m.x[3]]
+        predicted_xorder = [0.92846891, -0.22610731, 0.29465397]
+        indices = nlp.get_primal_indices(variables)
+        nlp_to_x_indices = [None]*len(variables)
+        for i, j in enumerate(indices):
+            nlp_to_x_indices[j] = i
+        predicted_nlporder = [predicted_xorder[i] for i in nlp_to_x_indices]
+        self.assertStructuredAlmostEqual(
+            results.x.tolist(),
+            predicted_nlporder,
+        )
+
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
 class TestRootPyomo(unittest.TestCase):
@@ -334,12 +352,19 @@ class TestRootPyomo(unittest.TestCase):
 
         self.assertEqual(results.problem.number_of_constraints, 3)
         self.assertEqual(results.problem.number_of_variables, 3)
-        self.assertEqual(results.solver.return_code, 1)
+
+        # NOTE: Return code (the scipy OptimizeResult.status field) is not
+        # documented in SciPy 1.9.3, so we cannot assert anything about it.
+        #self.assertEqual(results.solver.return_code, 1)
+
         self.assertEqual(
             results.solver.termination_condition,
             pyo.TerminationCondition.feasible
         )
-        self.assertEqual(results.solver.message, "The solution converged.")
+        self.assertIn(
+            "The relative error between two consecutive iterates",
+            results.solver.message,
+        )
 
 
 @unittest.skipUnless(AmplInterface.available(), "AmplInterface is not available")
