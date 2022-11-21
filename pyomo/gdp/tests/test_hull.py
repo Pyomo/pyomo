@@ -547,15 +547,15 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertIs(hull.get_src_var(x), m.disj1.x)
 
         # there is a spare x on disjunction1's block
-        x2 = m.disjunction1.algebraic_constraint().parent_block().\
+        x2 = m.disjunction1.algebraic_constraint.parent_block().\
              _disaggregatedVars[2]
         self.assertIs(hull.get_disaggregated_var(m.disj1.x, m.disj2), x2)
         self.assertIs(hull.get_src_var(x2), m.disj1.x)
 
         # and both a spare x and y on disjunction2's block
-        x2 = m.disjunction2.algebraic_constraint().parent_block().\
+        x2 = m.disjunction2.algebraic_constraint.parent_block().\
              _disaggregatedVars[0]
-        y1 = m.disjunction2.algebraic_constraint().parent_block().\
+        y1 = m.disjunction2.algebraic_constraint.parent_block().\
              _disaggregatedVars[1]
         self.assertIs(hull.get_disaggregated_var(m.disj1.x, m.disj4), x2)
         self.assertIs(hull.get_src_var(x2), m.disj1.x)
@@ -793,7 +793,7 @@ class MultiTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(x1.ub, 8)
         self.assertIs(hull.get_src_var(x1), m.x)
 
-        x2 = m.disjunction.algebraic_constraint().parent_block().\
+        x2 = m.disjunction.algebraic_constraint.parent_block().\
              _disaggregatedVars[0]
         self.assertIs(hull.get_src_var(x2), m.x)
         self.assertIs(hull.get_disaggregated_var(m.x, m.d2), x2)
@@ -1369,11 +1369,11 @@ class NestedDisjunction(unittest.TestCase, CommonTests):
         self.assertEqual(repn.constant, 0)
         ct.check_linear_coef(self, repn, m.d1.binary_indicator_var, 1)
         ct.check_linear_coef(self, repn, m.d2.binary_indicator_var, 1)
-        self.assertIs(xor, m.disj.algebraic_constraint())
+        self.assertIs(xor, m.disj.algebraic_constraint)
         self.assertIs(m.disj, hull.get_src_disjunction(xor))
 
         # inner xor should be on this block
-        xor = m.d1.disj2.algebraic_constraint()
+        xor = m.d1.disj2.algebraic_constraint
         self.assertIs(xor.parent_block(), transBlock)
         self.assertIsInstance(xor, Constraint)
         self.assertTrue(xor.active)

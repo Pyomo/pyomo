@@ -598,7 +598,7 @@ def _convert_M_to_tuple(M, constraint, disjunct=None):
                         "length two. "
                         "Expected either a single value or "
                         "tuple or list of length two for M."
-                        % (str(M), constraint_name))
+                        % (str(M), constraint.name))
 
     return M
 
