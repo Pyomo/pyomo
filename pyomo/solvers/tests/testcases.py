@@ -55,6 +55,11 @@ for _io in ('python', 'persistent'):
             lambda v: True,
             "Mosek does not handle nonconvex quadratic constraints")
 
+    for _test in ('MIQP_simple', ):
+        SkipTests['mosek', _io, _test] = (
+            lambda v: v[0] == 10,
+            "Mosek 10 fails on assertion warmstarting MIQP models; see #2613")
+
 #
 # CPLEX
 #
