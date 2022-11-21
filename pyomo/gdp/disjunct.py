@@ -434,7 +434,8 @@ class _DisjunctionData(ActiveComponentData):
 
     @property
     def algebraic_constraint(self):
-        return self._algebraic_constraint
+        return None if self._algebraic_constraint is None else \
+            self._algebraic_constraint()
 
     def __init__(self, component=None):
         #

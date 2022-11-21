@@ -785,7 +785,10 @@ def update_gap(solve_data):
     solve_data : MindtPySolveData
         Data container that holds solve-instance data.
     """
-    solve_data.abs_gap = abs(solve_data.primal_bound - solve_data.dual_bound)
+    if solve_data.objective_sense == minimize:
+        solve_data.abs_gap = solve_data.primal_bound - solve_data.dual_bound
+    else:
+        solve_data.abs_gap = solve_data.dual_bound - solve_data.primal_bound
     solve_data.rel_gap = solve_data.abs_gap / (abs(solve_data.primal_bound) + 1E-10)
 
 

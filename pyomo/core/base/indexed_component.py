@@ -18,6 +18,7 @@ import textwrap
 
 from copy import deepcopy
 
+from pyomo.core.expr import current as EXPR
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import native_types, NumericNDArray
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
@@ -563,11 +564,6 @@ You can silence this warning by one of three ways:
                 obj = _NotFound
 
         if obj is _NotFound:
-            # Not good: we have to defer this import to now
-            # due to circular imports (expr imports _VarData
-            # imports indexed_component, but we need expr
-            # here
-            from pyomo.core.expr import current as EXPR
             if index.__class__ is EXPR.GetItemExpression:
                 return index
             validated_index = self._validate_index(index)
@@ -808,7 +804,6 @@ You can silence this warning by one of three ways:
              (Scalar)Component
           3) the index contains an IndexTemplate
         """
-        from pyomo.core.expr import current as EXPR
         #
         # Iterate through the index and look for slices and constant
         # components
@@ -862,7 +857,6 @@ You can silence this warning by one of three ways:
                     # The index is a template expression, so return the
                     # templatized expression.
                     #
-                    from pyomo.core.expr import current as EXPR
                     return EXPR.GetItemExpression((self,) + tuple(idx))
 
                 except EXPR.NonConstantExpressionError:

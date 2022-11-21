@@ -344,9 +344,8 @@ class Hull_Reformulation(Transformation):
         if disjunction._algebraic_constraint is not None:
             return disjunction._algebraic_constraint()
 
-        # add the XOR (or OR) constraints to parent block (with
-        # unique name) It's indexed if this is an
-        # IndexedDisjunction, not otherwise
+        # add the XOR constraints to parent block (with unique name) It's
+        # indexed if this is an IndexedDisjunction, not otherwise
         orC = Constraint(disjunction.index_set())
         transBlock.add_component(
             unique_component_name(transBlock,
