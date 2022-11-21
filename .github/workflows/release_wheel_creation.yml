@@ -35,6 +35,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install twine wheel setuptools pybind11
+    # TODO: Update the manylinux builder to next tagged release
     - name: Build manylinux Python wheels
       uses: RalfG/python-wheels-manylinux-build@a1e012c58ed3960f81b7ed2759a037fb0ad28e2d
       with:
