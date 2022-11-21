@@ -360,7 +360,7 @@ class PyomoFsolveSolver(PyomoScipySolver):
         results.problem.number_of_continuous_variables = nlp.n_primals()
 
         # Record solver data
-        results.solver.name = "fsolve"
+        results.solver.name = "scipy.fsolve"
         results.solver.return_code = ier
         results.solver.message = msg
         results.solver.wallclock_time = self._timer.timers["solve"].total_time
@@ -396,7 +396,7 @@ class PyomoRootSolver(PyomoScipySolver):
         results.problem.number_of_continuous_variables = nlp.n_primals()
 
         # Record solver data
-        results.solver.name = "root"
+        results.solver.name = "scipy.root"
         results.solver.return_code = scipy_results.status
         results.solver.message = scipy_results.message
         results.solver.wallclock_time = self._timer.timers["solve"].total_time
@@ -423,6 +423,8 @@ class PyomoRootSolver(PyomoScipySolver):
 
 class PyomoNewtonSolver(PyomoScipySolver):
 
+    _solver_name = "scipy.newton"
+
     def create_nlp_solver(self, **kwds):
         nlp = self.get_nlp()
         solver = NewtonNlpSolver(nlp, **kwds)
@@ -446,7 +448,7 @@ class PyomoNewtonSolver(PyomoScipySolver):
         results.problem.number_of_continuous_variables = nlp.n_primals()
 
         # Record solver data
-        results.solver.name = "scipy.newton"
+        results.solver.name = self._solver_name
 
         results.solver.wallclock_time = self._timer.timers["solve"].total_time
 
@@ -472,6 +474,8 @@ class PyomoNewtonSolver(PyomoScipySolver):
 
 
 class PyomoSecantNewtonSolver(PyomoNewtonSolver):
+
+    _solver_name = "scipy.secant-newton"
 
     def converged_with_secant(self):
         return self._nlp_solver.converged_with_secant
