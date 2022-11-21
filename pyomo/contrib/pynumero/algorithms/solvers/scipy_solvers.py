@@ -122,6 +122,8 @@ class RootNlpSolver(DenseSquareNlpSolver):
             self.evaluate_function,
             x0,
             jac=self.evaluate_jacobian,
+            tol=self.options.tol,
+            method=self.options.method,
         )
         return results
 
@@ -407,9 +409,15 @@ class PyomoRootSolver(PyomoScipySolver):
         results.solver.return_code = scipy_results.status
         results.solver.message = scipy_results.message
         results.solver.wallclock_time = self._timer.timers["solve"].total_time
-        results.solver.termination_condition = self._term_cond.get(
-            scipy_results.status, TerminationCondition.error
-        )
+
+        # Check the "success" field of the scipy results object as status
+        # appears to be different between solvers (i.e. "hybrid" vs "lm")
+        # and not well documented as of SciPy 1.9.3
+        if scipy_results.success:
+            results.solver.termination_condition = TerminationCondition.feasible
+        else:
+            results.solver.termination_condition = TerminationCondition.error
+
         results.solver.status = TerminationCondition.to_solver_status(
             results.solver.termination_condition
         )
