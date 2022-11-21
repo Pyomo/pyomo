@@ -9,11 +9,10 @@ Pyomo 6.4.3    21 Nov 2022
 - General
   - Update performance driver to be usable outside of Pyomo (#2505)
   - Update PauseGC to work in nested contexts (#2507)
-  - Simplify deepcopy/pickle logic to  speed up model clone (#2510)
+  - Simplify deepcopy/pickle logic to speed up model clone (#2510)
   - Fix generate_standard_repo to handle unexpected NPV expressions (#2511)
   - Add thread safe proxies for singleton instances (PauseGC, TempFileManager) (#2514)
   - Fix bug in ConstructionTimer for components indexed by nonfinite sets (#2518)
-  - Update the performance test driver (#2538)
   - Add differentiation mode option to calculate_variable_from_constraint (#2549)
   - Update URL for downloading GSL and GJH (#2556, #2588)
   - Update logic for retrying failed downloads (#2569)
@@ -40,7 +39,7 @@ Pyomo 6.4.3    21 Nov 2022
   - Fix examples in working_models.rst (#2502)
 - Solver Interfaces
   - Improve SCIP results object (#2462)
-  - Improve warning message when  LP writer raises KeyError (#2497)
+  - Improve warning message when LP writer raises KeyError (#2497)
   - Fix Gurobi work limit bug (#2530)
   - Fix Xpress when stopped due to MAXTIME or MAXNODES (#2553)
   - Add support for MOSEK 10 affine conic constraints (#2557)
@@ -52,8 +51,9 @@ Pyomo 6.4.3    21 Nov 2022
   - Release MOSEK license when optimize raises a mosek.Error (#2593)
   - Update list of allowable characters in CPLEX filenames (#2597)
 - Testing
+  - Update the performance test driver (#2538)
   - Reduce amount of environment code cached in GitHub actions (#2565)
-  - Update GtHub actions versions from v2 to v3 (#2566)
+  - Update GitHub actions versions from v2 to v3 (#2566)
   - Skip a test in MOSEK 10 due to a bug in warm starting MIQPs (#2614)
   - Update skipped CBC test that works with CBC 2.10.6 (#2615)
 - GDP
@@ -75,7 +75,6 @@ Pyomo 6.4.3    21 Nov 2022
   - GDPopt: Delete dummy objective when we're done using it (#2552)
   - GDPopt: Add enumerate solution approach (#2559, #2575)
   - iis: Add package for computing the IIS of an infeasible Pyomo model (#2512)
-  - incidence_analysis: 
   - MindtPy: Fix bug in termination condition (#2587)
   - MindtPy: Fix bug in checking absolute and relative gap (#2608)
   - mpc: Data structures and utils for rolling horizon dynamic optimization (#2477)
