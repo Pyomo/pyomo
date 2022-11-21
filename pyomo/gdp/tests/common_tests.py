@@ -43,7 +43,7 @@ def check_linear_coef(self, repn, var, coef):
         if v is var:
             var_id = i
     self.assertIsNotNone(var_id)
-    self.assertEqual(repn.linear_coefs[var_id], coef)
+    self.assertAlmostEqual(repn.linear_coefs[var_id], coef)
 
 def check_squared_term_coef(self, repn, var, coef):
     var_id = None
@@ -70,6 +70,20 @@ def diff_apply_to_and_create_using(self, model, transformation, **kwargs):
     model.pprint(ostream=model_buf)
     model_output = model_buf.getvalue()
     self.assertMultiLineEqual(modelcopy_output, model_output)
+
+def check_obj_in_active_tree(self, obj, root=None):
+    # Utility for checking that transformed components are indeed on the new
+    # model, but without relying on private names to locate them. Basically,
+    # I've been known to change where transformed components go, and I don't
+    # want to test that. But I would like to check that they went somewhere that
+    # the writers can find them.
+    self.assertTrue(obj.active)
+    parent = obj.parent_component()
+    self.assertTrue(parent.active)
+    blk = parent.parent_block()
+    while blk is not root:
+        self.assertTrue(blk.active)
+        blk = blk.parent_block()
 
 def check_relaxation_block(self, m, name, numdisjuncts):
     # utility for checking the transformation block (this method is generic to
