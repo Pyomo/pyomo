@@ -191,7 +191,7 @@ class NewtonNlpSolver(_ScalarDenseSquareNlpSolver):
         return results
 
 
-class SecantNewtonNlpSolver(_ScalarDenseSquareNlpSolver):
+class SecantNewtonNlpSolver(NewtonNlpSolver):
     """A wrapper around the SciPy scalar Newton solver for NLP objects
     that takes a specified number of secant iterations (default is 2) to
     try to converge a linear equation quickly then switches to Newton's
@@ -203,11 +203,10 @@ class SecantNewtonNlpSolver(_ScalarDenseSquareNlpSolver):
     OPTIONS = ConfigBlock(
         description="Options for the SciPy Newton-secant hybrid",
     )
-    OPTIONS.declare("tol", ConfigValue(
-        default=1e-8,
-        domain=float,
-        description="Convergence tolerance",
-    ))
+    OPTIONS.declare_from(
+        NewtonNlpSolver.OPTIONS,
+        skip={"maxiter", "secant"},
+    )
     OPTIONS.declare("secant_iter", ConfigValue(
         default=2,
         domain=int,
@@ -215,11 +214,6 @@ class SecantNewtonNlpSolver(_ScalarDenseSquareNlpSolver):
             "Number of secant iterations to perform before switching"
             " to Newton's method."
         ),
-    ))
-    OPTIONS.declare("full_output", ConfigValue(
-        default=True,
-        domain=bool,
-        description="Whether underlying solver should return its full output",
     ))
     OPTIONS.declare("newton_iter", ConfigValue(
         default=50,
