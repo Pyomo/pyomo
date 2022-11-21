@@ -66,32 +66,6 @@ class BooleanValue(PyomoObject):
     __slots__ = ()
     __hash__ = None
 
-    def __getstate__(self):
-        _base = super(BooleanValue, self)
-        if hasattr(_base, '__getstate__'):
-            return _base.__getstate__()
-        else:
-            return {}
-
-    def __setstate__(self, state):
-        """
-        Restore a pickled state into this instance
-        Our model for setstate is for derived classes to modify
-        the state dictionary as control passes up the inheritance
-        hierarchy (using super() calls).  All assignment of state ->
-        object attributes is handled at the last class before 'object',
-        which may -- or may not (thanks to MRO) -- be here.
-        """
-        _base = super(BooleanValue, self)
-        if hasattr(_base, '__setstate__'):
-            return _base.__setstate__(state)
-        else:
-            for key, val in state.items():
-                # Note: per the Python data model docs, we explicitly
-                # set the attribute using object.__setattr__() instead
-                # of setting self.__dict__[key] = val.
-                object.__setattr__(self, key, val)
-
     def getname(self, fully_qualified=False, name_buffer=None):
         """
         If this is a component, return the component's name on the owning
@@ -215,12 +189,6 @@ class BooleanConstant(BooleanValue):
         if value not in native_logical_values:
             raise TypeError('Not a valid BooleanValue. Unable to create a logical constant')
         self.value = value
-
-    def __getstate__(self):
-        state = super(BooleanConstant, self).__getstate__()
-        for i in BooleanConstant.__slots__:
-            state[i] = getattr(self, i)
-        return state
 
     def is_constant(self):
         return True

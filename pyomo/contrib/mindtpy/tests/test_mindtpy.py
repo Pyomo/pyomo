@@ -361,6 +361,18 @@ class TestMindtPy(unittest.TestCase):
             self.assertAlmostEqual(
                 value(model.objective.expr), 14.83, places=1)
 
+    def test_infeasible_model(self):
+        """Test the outer approximation decomposition algorithm."""
+        with SolverFactory('mindtpy') as opt:
+            model = SimpleMINLP()
+            model.X[1].fix(0)
+            model.Y[1].fix(0)
+            results = opt.solve(model, strategy='OA',
+                                mip_solver=required_solvers[1],
+                                nlp_solver=required_solvers[0],
+                                )
+            self.assertIs(results.solver.termination_condition, TerminationCondition.infeasible)
+
 
 if __name__ == '__main__':
     unittest.main()

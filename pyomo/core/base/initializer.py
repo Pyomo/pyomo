@@ -180,7 +180,7 @@ class InitializerBase(object):
         classes (where __slots__ are only declared on the most derived
         class).
         """
-        return {k:getattr(self,k) for k in self.__slots__}
+        return {k:getattr(self, k) for k in self.__slots__}
 
     def __setstate__(self, state):
         for key, val in state.items():
@@ -206,7 +206,7 @@ class InitializerBase(object):
 
 class ConstantInitializer(InitializerBase):
     """Initializer for constant values"""
-    __slots__ = ('val','verified')
+    __slots__ = ('val', 'verified')
 
     def __init__(self, val):
         self.val = val
@@ -280,7 +280,6 @@ class IndexedCallInitializer(InitializerBase):
             return self._fcn(parent, *idx)
         else:
             return self._fcn(parent, idx)
-
 
 
 class CountedCallGenerator(object):
@@ -444,3 +443,45 @@ class DefaultInitializer(InitializerBase):
 
     def indices(self):
         return self._initializer.indices()
+
+
+class BoundInitializer(InitializerBase):
+    __slots__ = ('_initializer',)
+
+    def __init__(self, obj, init):
+        if obj.is_indexed():
+            treat_sequences_as_mappings = not (
+                isinstance(init, Sequence)
+                and len(init) == 2
+                and not isinstance(init[0], Sequence)
+            )
+        else:
+            treat_sequences_as_mappings = False
+        self._initializer = Initializer(
+            init, treat_sequences_as_mappings=treat_sequences_as_mappings)
+
+    def __call__(self, parent, index):
+        if self._initializer is not None:
+            val = self._initializer(parent, index)
+        else:
+            val = None
+        if not isinstance(val, Sequence):
+            return (val, val)
+        else:
+            return val
+
+    def constant(self):
+        """Return True if this initializer is constant across all indices"""
+        return self._initializer is None or self._initializer.constant()
+
+    def contains_indices(self):
+        """Return True if this initializer contains embedded indices"""
+        return (self._initializer is not None and
+                self._initializer.contains_indices())
+
+    def indices(self):
+        if self._initializer is not None:
+            return self._initializer.indices()
+        else:
+            # raise an error
+            InitializerBase.indices(self)

@@ -11,6 +11,7 @@
 
 import copy
 import weakref
+from pyomo.common.autoslots import AutoSlots
 
 def _not_implemented(*args, **kwds):
     raise NotImplementedError("This property is abstract")     #pragma:nocover
@@ -47,7 +48,7 @@ def _convert_descend_into(value):
 _convert_descend_into._true = lambda x: True
 _convert_descend_into._false = lambda x: False
 
-class ICategorizedObject(object):
+class ICategorizedObject(AutoSlots.Mixin):
     """
     Interface for objects that maintain a weak reference to
     a parent storage object and have a category type.
@@ -68,6 +69,7 @@ class ICategorizedObject(object):
             object.
     """
     __slots__ = ()
+    __autoslot_mappers__ = {'_parent': AutoSlots.weakref_mapper}
 
     # These flags can be used by implementations
     # to avoid isinstance calls.
@@ -251,46 +253,16 @@ class ICategorizedObject(object):
 
             if not _known[tmpId]:
                 # component is out-of-scope. shallow copy only
-                ans = memo[id(self)] = self
-                return ans
+                memo[id(self)] = self
+                return self
+
+        if id(self) in memo:
+            return memo[id(self)]
 
         ans = memo[id(self)] = self.__class__.__new__(self.__class__)
         ans.__setstate__(copy.deepcopy(self.__getstate__(), memo))
         return ans
 
-    #
-    # The following two methods allow implementations to be
-    # pickled. These should work whether or not the
-    # implementation makes use of __slots__, and whether or
-    # not non-empty __slots__ declarations appear on
-    # multiple classes in the inheritance chain.
-    #
-
-    def __getstate__(self):
-        state = getattr(self, "__dict__", {}).copy()
-        # Get all slots in the inheritance chain
-        for cls in self.__class__.__mro__:
-            for key in cls.__dict__.get("__slots__",()):
-                state[key] = getattr(self, key)
-        # make sure we don't store the __dict__ in
-        # duplicate (it can be declared as a slot)
-        state.pop('__dict__', None)
-        # make sure not to pickle the __weakref__
-        # slot if it was declared
-        state.pop('__weakref__', None)
-        # make sure to dereference the parent weakref
-        state['_parent'] = self.parent
-        return state
-
-    def __setstate__(self, state):
-        for key, value in state.items():
-            # bypass a possibly overridden __setattr__
-            object.__setattr__(self, key, value)
-        # make sure _parent is a weakref
-        # if it is not None
-        if self._parent is not None:
-            self._update_parent_and_storage_key(self._parent,
-                                                self._storage_key)
 
 class ICategorizedObjectContainer(ICategorizedObject):
     """

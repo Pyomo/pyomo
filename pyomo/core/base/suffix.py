@@ -129,9 +129,6 @@ def suffix_generator(a_block, datatype=False):
             if suffix.get_datatype() is datatype:
                 yield name, suffix
 
-# Note: The order of inheritance here is important so that
-#       __setstate__ works correctly on the ActiveComponent base class.
-
 
 @ModelComponentFactory.register("Declare a container for extraneous model data")
 class Suffix(ComponentMap, ActiveComponent):
@@ -204,14 +201,6 @@ class Suffix(ComponentMap, ActiveComponent):
 
         if self._rule is None:
             self.construct()
-
-    def __setstate__(self, state):
-        """
-        This method must be defined for deepcopy/pickling because this
-        class relies on component ids.
-        """
-        ActiveComponent.__setstate__(self, state)
-        ComponentMap.__setstate__(self, state)
 
     def construct(self, data=None):
         """

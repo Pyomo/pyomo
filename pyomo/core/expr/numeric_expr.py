@@ -128,22 +128,16 @@ class NumericExpression(ExpressionBase, NumericValue):
         """
         Return the child nodes
 
-        Returns: Either a list or tuple (depending on the node storage
-            model) containing only the child nodes of this node
+        Returns
+        -------
+        list or tuple:
+            Sequence containing only the child nodes of this node.  The
+            return type depends on the node storage model.  Users are
+            not permitted to change the returned data (even for the case
+            of data returned as a list), as that breaks the promise of
+            tree immutability.
         """
-        return self._args_[:self.nargs()]
-
-    def __getstate__(self):
-        """
-        Pickle the expression object
-
-        Returns:
-            The pickled state.
-        """
-        state = super().__getstate__()
-        for i in NumericExpression.__slots__:
-           state[i] = getattr(self,i)
-        return state
+        return self._args_
 
     @deprecated('The implicit recasting of a "not potentially variable" '
                 'expression node to a potentially variable one is no '
@@ -229,10 +223,14 @@ class NPV_Mixin(object):
         if npv_args:
             return super().create_node_with_local_data(args, None)
         else:
-            cls = list(self.__class__.__bases__)
-            cls.remove(NPV_Mixin)
-            assert len(cls) == 1
-            return super().create_node_with_local_data(args, cls[0])
+            return super().create_node_with_local_data(
+                args, self.potentially_variable_base_class())
+
+    def potentially_variable_base_class(self):
+        cls = list(self.__class__.__bases__)
+        cls.remove(NPV_Mixin)
+        assert len(cls) == 1
+        return cls[0]
 
 
 class NegationExpression(NumericExpression):
@@ -302,12 +300,6 @@ class ExternalFunctionExpression(NumericExpression):
         if classtype is None:
             classtype = self.__class__
         return classtype(args, self._fcn)
-
-    def __getstate__(self):
-        state = super(ExternalFunctionExpression, self).__getstate__()
-        for i in ExternalFunctionExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
 
     def getname(self, *args, **kwds):           #pragma: no cover
         return self._fcn.getname(*args, **kwds)
@@ -543,9 +535,6 @@ class DivisionExpression(NumericExpression):
     __slots__ = ()
     PRECEDENCE = 4
 
-    def nargs(self):
-        return 2
-
     def _compute_polynomial_degree(self, result):
         if result[1] == 0:
             return result[0]
@@ -567,27 +556,7 @@ class NPV_DivisionExpression(NPV_Mixin, DivisionExpression):
     __slots__ = ()
 
 
-class _LinearOperatorExpression(NumericExpression):
-    """
-    An 'abstract' class that defines the polynomial degree for a simple
-    linear operator
-    """
-
-    __slots__ = ()
-
-    def _compute_polynomial_degree(self, result):
-        # NB: We can't use max() here because None (non-polynomial)
-        # overrides a numeric value (and max() just ignores it)
-        ans = 0
-        for x in result:
-            if x is None:
-                return None
-            elif ans < x:
-                ans = x
-        return ans
-
-
-class SumExpressionBase(_LinearOperatorExpression):
+class SumExpressionBase(NumericExpression):
     """
     A base class for simple summation of expressions
 
@@ -613,40 +582,34 @@ class SumExpressionBase(_LinearOperatorExpression):
     def getname(self, *args, **kwds):
         return 'sum'
 
-
-class NPV_SumExpression(NPV_Mixin, SumExpressionBase):
-    __slots__ = ()
-
-    def create_potentially_variable_object(self):
-        return SumExpression( self._args_ )
-
     def _apply_operation(self, result):
-        l_, r_ = result
-        return l_ + r_
+        return sum(result)
+
+    def _compute_polynomial_degree(self, result):
+        # NB: We can't use max() here because None (non-polynomial)
+        # overrides a numeric value (and max() just ignores it)
+        ans = 0
+        for x in result:
+            if x is None:
+                return None
+            elif ans < x:
+                ans = x
+        return ans
 
     def _to_string(self, values, verbose, smap):
         if verbose:
             return f"{self.getname()}({', '.join(values)})"
-        if values[1][0] == '-':
-            return f"{values[0]} {values[1]}"
-        return f"{values[0]} + {values[1]}"
 
-    def create_node_with_local_data(self, args, classtype=None):
-        assert classtype is None
-        try:
-            npv_args = all(
-                type(arg) in native_types or not arg.is_potentially_variable()
-                for arg in args
-            )
-        except AttributeError:
-            # We can hit this during expression replacement when the new
-            # type is not a PyomoObject type, but is not in the
-            # native_types set.  We will play it safe and clear the NPV flag
-            npv_args = False
-        if npv_args:
-            return NPV_SumExpression(args)
-        else:
-            return SumExpression(args)
+        for i in range(1, len(values)):
+            val = values[i]
+            if val[0] == '-':
+                values[i] = ' - ' + val[1:].strip()
+            elif len(val) > 3 and val[:2] == '(-' and val[-1] == ')' \
+                 and _balanced_parens(val[1:-1]):
+                values[i] = ' - ' + val[2:-1].strip()
+            else:
+                values[i] = ' + ' + val
+        return ''.join(values)
 
 
 class SumExpression(SumExpressionBase):
@@ -683,32 +646,47 @@ class SumExpression(SumExpressionBase):
     def nargs(self):
         return self._nargs
 
-    def _apply_operation(self, result):
-        return sum(result)
+    @property
+    def args(self):
+        return self._args_[:self._nargs]
 
     def create_node_with_local_data(self, args, classtype=None):
         return super().create_node_with_local_data(list(args), classtype)
 
-    def __getstate__(self):
-        state = super(SumExpression, self).__getstate__()
-        for i in SumExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
+
+class NPV_SumExpression(NPV_Mixin, SumExpression):
+    __slots__ = ()
+
+    def create_potentially_variable_object(self):
+        return SumExpression( self._args_ )
+
+    def _apply_operation(self, result):
+        l_, r_ = result
+        return l_ + r_
 
     def _to_string(self, values, verbose, smap):
         if verbose:
             return f"{self.getname()}({', '.join(values)})"
+        if values[1][0] == '-':
+            return f"{values[0]} {values[1]}"
+        return f"{values[0]} + {values[1]}"
 
-        for i in range(1, len(values)):
-            val = values[i]
-            if val[0] == '-':
-                values[i] = ' - ' + val[1:].strip()
-            elif len(val) > 3 and val[:2] == '(-' and val[-1] == ')' \
-                 and _balanced_parens(val[1:-1]):
-                values[i] = ' - ' + val[2:-1].strip()
-            else:
-                values[i] = ' + ' + val
-        return ''.join(values)
+    def create_node_with_local_data(self, args, classtype=None):
+        assert classtype is None
+        try:
+            npv_args = all(
+                type(arg) in native_types or not arg.is_potentially_variable()
+                for arg in args
+            )
+        except AttributeError:
+            # We can hit this during expression replacement when the new
+            # type is not a PyomoObject type, but is not in the
+            # native_types set.  We will play it safe and clear the NPV flag
+            npv_args = False
+        if npv_args:
+            return NPV_SumExpression(args)
+        else:
+            return SumExpression(args)
 
 
 class _MutableSumExpression(SumExpression):
@@ -770,20 +748,14 @@ class Expr_ifExpression(NumericExpression):
     def nargs(self):
         return 3
 
-    def __getstate__(self):
-        state = super(Expr_ifExpression, self).__getstate__()
-        for i in Expr_ifExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
     def getname(self, *args, **kwds):
         return "Expr_if"
 
     def _is_fixed(self, args):
         assert(len(args) == 3)
+        if args[1] and args[2]:
+            return True
         if args[0]: # self._if.is_fixed():
-            if args[1] and args[2]:
-                return True
             if value(self._if):
                 return args[1] # self._then.is_fixed()
             else:
@@ -842,12 +814,6 @@ class UnaryFunctionExpression(NumericExpression):
         if classtype is None:
             classtype = self.__class__
         return classtype(args, self._name, self._fcn)
-
-    def __getstate__(self):
-        state = super(UnaryFunctionExpression, self).__getstate__()
-        for i in UnaryFunctionExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
 
     def getname(self, *args, **kwds):
         return self._name
@@ -985,10 +951,6 @@ class LinearExpression(NumericExpression):
             *map(attrgetter('args'), value[first_var:]))
         self.linear_coefs = list(self.linear_coefs)
         self.linear_vars = list(self.linear_vars)
-
-    # __getstate__ is not needed, as while we are defining local slots,
-    # all the data in the slot is redundant to the information already
-    # being pickled through the base class _args_ attribute.
 
     def create_node_with_local_data(self, args, classtype=None):
         if classtype is not None:
