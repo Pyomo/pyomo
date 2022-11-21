@@ -347,10 +347,6 @@ class PseudoMap(AutoSlots.Mixin):
 
     __slots__ = ('_block', '_ctypes', '_active', '_sorted')
 
-    # If a writer cached a repn on this block, remove it when cloning
-    #  TODO: remove repn caching from the model
-    __autoslot_mappers = {'_repn': AutoSlots.encode_as_none}
-
     def __init__(self, block, ctype, active=None, sort=False):
         """
         TODO
@@ -576,6 +572,10 @@ class _BlockData(ActiveComponentData):
     This class holds the fundamental block data.
     """
     _Block_reserved_words = set()
+
+    # If a writer cached a repn on this block, remove it when cloning
+    #  TODO: remove repn caching from the model
+    __autoslot_mappers = {'_repn': AutoSlots.encode_as_none}
 
     def __init__(self, component):
         #
