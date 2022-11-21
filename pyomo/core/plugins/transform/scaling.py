@@ -85,10 +85,10 @@ class ScaleModel(Transformation):
         scaling_factor = None
         if component_data in instance.scaling_factor:
             scaling_factor = instance.scaling_factor[component_data]
-        elif component_data in component_data.parent_block().scaling_factor:
-            scaling_factor = component_data.parent_block().scaling_factor[component_data]
         elif component_data.parent_component() in instance.scaling_factor:
             scaling_factor = instance.scaling_factor[component_data.parent_component()]
+        elif component_data in component_data.parent_block().scaling_factor:
+            scaling_factor = component_data.parent_block().scaling_factor[component_data]
         elif component_data.parent_component() in component_data.parent_block().scaling_factor:
             scaling_factor = component_data.parent_block().scaling_factor[component_data.parent_component()]
 

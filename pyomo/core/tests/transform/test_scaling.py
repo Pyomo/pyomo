@@ -215,7 +215,6 @@ class TestScaleModelTransformation(unittest.TestCase):
         m.v2 = pyo.Var(initialize=20)
         m.v3 = pyo.Var(initialize=30)
 
-
         def c1_rule(m):
             return m.v1 == 1e6
         m.c1 = pyo.Constraint(rule=c1_rule)
@@ -250,7 +249,6 @@ class TestScaleModelTransformation(unittest.TestCase):
         m.b.scaling_factor[m.b.v6] = 0.25
         m.b.scaling_factor[m.b.c3] = 1e-5
         m.b.scaling_factor[m.b.c4] = 1e5
-
 
         values = {}
         values[id(m.v1)] = (m.v1.value, m.scaling_factor[m.v1])
