@@ -102,5 +102,3 @@ class ScalarDenseSquareNlpSolver(DenseSquareNlpSolver):
                 " more than one variable and equality constraint. Got %s"
                 " primals. Please use RootNlpSolver or FsolveNlpSolver instead."
             )
-
-
