@@ -518,7 +518,8 @@ class _DisjunctionData(ActiveComponentData):
 @ModelComponentFactory.register("Disjunction expressions.")
 class Disjunction(ActiveIndexedComponent):
     _ComponentDataClass = _DisjunctionData
-    __autoslot_mappers__ = {'_algebraic_constraint': AutoSlots.weakref_mapper}
+    __autoslot_mappers__ = {
+        '_indexed_algebraic_constraint': AutoSlots.weakref_mapper}
 
     def __new__(cls, *args, **kwds):
         if cls != Disjunction:
@@ -533,7 +534,7 @@ class Disjunction(ActiveIndexedComponent):
         self._init_expr = kwargs.pop('expr', None)
         self._init_xor = _Initializer.process(kwargs.pop('xor', True))
         self._autodisjuncts = None
-        self._algebraic_constraint = None
+        self._indexed_algebraic_constraint = None
         kwargs.setdefault('ctype', Disjunction)
         super(Disjunction, self).__init__(*args, **kwargs)
 
@@ -541,6 +542,17 @@ class Disjunction(ActiveIndexedComponent):
             raise ValueError(
                 "Cannot specify both rule= and expr= for Disjunction %s"
                 % ( self.name, ))
+
+    # FIXME: This is a workaround for double-declating the
+    # _algebraic_constraint autoslot for ScalarDisjunctions,
+    # necessitated by test failures encountered during release.
+    @property
+    def _algebraic_constraint(self):
+        return self._indexed_algebraic_constraint
+
+    @_algebraic_constraint.setter
+    def _algebraic_constraint(self, val):
+        self._indexed_algebraic_constraint = val
 
     #
     # TODO: Ideally we would not override these methods and instead add
