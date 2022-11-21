@@ -353,7 +353,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         mbm.apply_to(m, bigM=self.get_Ms(m), reduce_bound_constraints=False)
 
         self.assertIsNotNone(m.disjunction.algebraic_constraint)
-        xor = m.disjunction.algebraic_constraint()
+        xor = m.disjunction.algebraic_constraint
         self.assertIs(mbm.get_src_disjunction(xor), m.disjunction)
 
         self.assertEqual(value(xor.lower), 1)
