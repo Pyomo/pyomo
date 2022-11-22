@@ -3,6 +3,14 @@ PyROS CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+PyROS 1.2.3    22 Nov 2022
+-------------------------------------------------------------------------------
+- Generalize FactorModelSet.
+- Resolve issues with FactorModelSet parameter bounds.
+- Modularize construction of uncertainty set bounding problems.
+
+
+-------------------------------------------------------------------------------
 PyROS 1.2.2    09 Nov 2022
 -------------------------------------------------------------------------------
 - Rewrite PyROS `UncertaintySet` module, class, and attribute docstrings
