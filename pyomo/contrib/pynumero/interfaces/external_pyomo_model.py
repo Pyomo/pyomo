@@ -157,10 +157,6 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         solver_class=None,
         solver_options=None,
         timer=None,
-        # These arguments are deprecated. I will remove them,
-        # breaking backwards compatability in the process.
-        #use_cyipopt=False,
-        #solver=None,
     ):
         """
         Arguments:
@@ -184,7 +180,6 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             timer = HierarchicalTimer()
         self._timer = timer
         if solver_class is None:
-            #solver_class = ImplicitFunctionSolver
             solver_class = SccImplicitFunctionSolver
         self._solver_class = solver_class
         if solver_options is None:
