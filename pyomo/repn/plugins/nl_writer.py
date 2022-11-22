@@ -489,8 +489,11 @@ class _NLWriter_impl(object):
         AMPLRepn.ActiveVisitor = None
 
     def write(self, model):
-        timer = TicTocTimer(
-            logger=logging.getLogger('pyomo.common.timing.writer')
+        timing_logger = logging.getLogger('pyomo.common.timing.writer')
+        timer = TicTocTimer(logger=timing_logger)
+        with_debug_timing = (
+            timing_logger.isEnabledFor(logging.DEBUG)
+            and timing_logger.hasHandlers()
         )
 
         sorter = SortComponents.unsorted
@@ -511,7 +514,7 @@ class _NLWriter_impl(object):
                 # TODO: Piecewise, Complementarity
             },
             targets={
-                Objective, Constraint, Suffix, SOSConstraint,
+                Suffix, SOSConstraint,
             }
         )
         if unknown:
@@ -556,33 +559,23 @@ class _NLWriter_impl(object):
         #
         objectives = []
         linear_objs = []
-        for block in component_map[Objective]:
-            for obj_comp in block.component_objects(
-                    Objective, active=True, descend_into=False, sort=sorter):
-                try:
-                    obj_vals = obj_comp.values()
-                except AttributeError:
-                    # kernel does not define values() for scalar
-                    # objectives or list/tuple containers
-                    try:
-                        # This could be a list/tuple container.  Try to
-                        # iterate over it, and if that fails assume it
-                        # is a scalar
-                        obj_vals = iter(obj_comp)
-                    except:
-                        obj_vals = (obj_comp,)
-                for obj in obj_vals:
-                    if not obj.active:
-                        continue
-                    expr = visitor.walk_expression((obj.expr, obj, 1))
-                    if expr.named_exprs:
-                        self._record_named_expression_usage(
-                            expr.named_exprs, obj, 1)
-                    if expr.nonlinear:
-                        objectives.append((obj, expr))
-                    else:
-                        linear_objs.append((obj, expr))
-                timer.toc('Objective %s', obj_comp, level=logging.DEBUG)
+        last_parent = None
+        for obj in model.component_data_objects(
+                Objective, active=True, sort=sorter):
+            if with_debug_timing and obj.parent_component() is not last_parent:
+                timer.toc('Objective %s', last_parent, level=logging.DEBUG)
+                last_parent = obj.parent_component()
+            expr = visitor.walk_expression((obj.expr, obj, 1))
+            if expr.named_exprs:
+                self._record_named_expression_usage(
+                    expr.named_exprs, obj, 1)
+            if expr.nonlinear:
+                objectives.append((obj, expr))
+            else:
+                linear_objs.append((obj, expr))
+        if with_debug_timing:
+            # report the last objective
+            timer.toc('Objective %s', last_parent, level=logging.DEBUG)
 
         # Order the objectives, moving all nonlinear objectives to
         # the beginning
@@ -594,65 +587,54 @@ class _NLWriter_impl(object):
         linear_cons = []
         n_ranges = 0
         n_equality = 0
-        for block in component_map[Constraint]:
-            for con_comp in block.component_objects(
-                    Constraint, active=True, descend_into=False, sort=sorter):
-                try:
-                    con_vals = con_comp.values()
-                except AttributeError:
-                    # kernel does not define values() for scalar
-                    # constraints or list/tuple containers
-                    try:
-                        # This could be a list/tuple container.  Try to
-                        # iterate over it, and if that fails assume it
-                        # is a scalar
-                        con_vals = iter(con_comp)
-                    except:
-                        con_vals = (con_comp,)
-                for con in con_vals:
-                    if not con.active:
-                        continue
-                    expr = visitor.walk_expression((con.body, con, 0))
-                    if expr.named_exprs:
-                        self._record_named_expression_usage(
-                            expr.named_exprs, con, 0)
-                    lb = con.lb
-                    if lb is not None:
-                        lb = repr(lb - expr.const)
-                    ub = con.ub
-                    if ub is not None:
-                        ub = repr(ub - expr.const)
-                    _type = _RANGE_TYPE(lb, ub)
-                    if _type == 4:
-                        n_equality += 1
-                    elif _type == 0:
-                        n_ranges += 1
-                    elif _type == 3: #and self.config.skip_trivial_constraints:
-                        # FIXME: historically the NL writer was
-                        # hard-coded to skip all unbounded constraints
-                        continue
-                    if expr.nonlinear:
-                        constraints.append((con, expr, _type, lb, ub))
-                    elif expr.linear:
-                        linear_cons.append((con, expr, _type, lb, ub))
-                    elif not self.config.skip_trivial_constraints:
-                        linear_cons.append((con, expr, _type, lb, ub))
-                    else: # constant constraint and skip_trivial_constraints
-                        #
-                        # TODO: skip_trivial_constraints should be an
-                        # enum that also accepts "Exception" so that
-                        # solvers can be (easily) notified of infeasible
-                        # trivial constraints.
-                        if (lb is not None and float(lb) > TOL) or (
-                                ub is not None and float(ub) < -TOL):
-                            logger.warning(
-                                "model contains a trivially infeasible "
-                                f"constraint {con.name}, but "
-                                "skip_trivial_constraints==True and the "
-                                "constraint is being omitted from the NL "
-                                "file.  Solving the model may incorrectly "
-                                "report a feasible solution.")
-                timer.toc('Constraint %s', con_comp, level=logging.DEBUG)
+        for con in model.component_data_objects(
+                Constraint, active=True, sort=sorter):
+            if with_debug_timing and con.parent_component() is not last_parent:
+                timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
+                last_parent = con.parent_component()
+            expr = visitor.walk_expression((con.body, con, 0))
+            if expr.named_exprs:
+                self._record_named_expression_usage(
+                    expr.named_exprs, con, 0)
+            lb = con.lb
+            if lb is not None:
+                lb = repr(lb - expr.const)
+            ub = con.ub
+            if ub is not None:
+                ub = repr(ub - expr.const)
+            _type = _RANGE_TYPE(lb, ub)
+            if _type == 4:
+                n_equality += 1
+            elif _type == 0:
+                n_ranges += 1
+            elif _type == 3: #and self.config.skip_trivial_constraints:
+                # FIXME: historically the NL writer was
+                # hard-coded to skip all unbounded constraints
+                continue
+            if expr.nonlinear:
+                constraints.append((con, expr, _type, lb, ub))
+            elif expr.linear:
+                linear_cons.append((con, expr, _type, lb, ub))
+            elif not self.config.skip_trivial_constraints:
+                linear_cons.append((con, expr, _type, lb, ub))
+            else: # constant constraint and skip_trivial_constraints
+                #
+                # TODO: skip_trivial_constraints should be an
+                # enum that also accepts "Exception" so that
+                # solvers can be (easily) notified of infeasible
+                # trivial constraints.
+                if (lb is not None and float(lb) > TOL) or (
+                        ub is not None and float(ub) < -TOL):
+                    logger.warning(
+                        "model contains a trivially infeasible "
+                        f"constraint {con.name}, but "
+                        "skip_trivial_constraints==True and the "
+                        "constraint is being omitted from the NL "
+                        "file.  Solving the model may incorrectly "
+                        "report a feasible solution.")
+        if with_debug_timing:
+            # report the last constraint
+            timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
 
         if self.config.row_order:
             # Note: this relies on two things: 1) dict are ordered, and
