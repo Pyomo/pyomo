@@ -456,18 +456,9 @@ class BigM_Transformation(Transformation):
         # products is kind of expensive (and redundant since we have the
         # original model)
         newConstraint = transBlock.transformedConstraints
-        # Since we are both combining components from multiple blocks and using
-        # local names, we need to make sure that the first index for
-        # transformedConstraints is guaranteed to be unique. We just grab the
-        # current length of the list here since that will be monotonically
-        # increasing and hence unique. We'll append it to the
-        # slightly-more-human-readable constraint name for something familiar
-        # but unique.
-        unique = len(newConstraint)
 
         for i in sorted(obj.keys()):
             c = obj[i]
-            name = c.local_name + "_%s" % unique
             if not c.active:
                 continue
 
@@ -518,36 +509,52 @@ class BigM_Transformation(Transformation):
             # save the source information
             bigm_src[c] = (lower, upper)
 
-            if c.lower is not None:
-                if M[0] is None:
-                    raise GDP_Error("Cannot relax disjunctive constraint '%s' "
-                                    "because M is not defined." % name)
-                M_expr = M[0] * (1 - disjunct.binary_indicator_var)
-                newConstraint.add((name, i, 'lb'), c.lower <= c. body - M_expr)
-                constraintMap[
-                    'transformedConstraints'][c] = [
-                        newConstraint[name, i, 'lb']]
-                constraintMap['srcConstraints'][
-                    newConstraint[name, i, 'lb']] = c
-            if c.upper is not None:
-                if M[1] is None:
-                    raise GDP_Error("Cannot relax disjunctive constraint '%s' "
-                                    "because M is not defined." % name)
-                M_expr = M[1] * (1 - disjunct.binary_indicator_var)
-                newConstraint.add((name, i, 'ub'), c.body - M_expr <= c.upper)
-                transformed = constraintMap['transformedConstraints'].get(c)
-                if transformed is not None:
-                    constraintMap['transformedConstraints'][
-                        c].append(newConstraint[name, i, 'ub'])
-                else:
-                    constraintMap[
-                        'transformedConstraints'][c] = [
-                            newConstraint[name, i, 'ub']]
-                constraintMap['srcConstraints'][
-                    newConstraint[name, i, 'ub']] = c
+            self._add_constraint_expressions(c, i, M,
+                                             disjunct.binary_indicator_var,
+                                             newConstraint, constraintMap)
 
             # deactivate because we relaxed
             c.deactivate()
+
+    def _add_constraint_expressions(self, c, i, M, indicator_var, newConstraint,
+                                    constraintMap):
+        # Since we are both combining components from multiple blocks and using
+        # local names, we need to make sure that the first index for
+        # transformedConstraints is guaranteed to be unique. We just grab the
+        # current length of the list here since that will be monotonically
+        # increasing and hence unique. We'll append it to the
+        # slightly-more-human-readable constraint name for something familiar
+        # but unique.
+        unique = len(newConstraint)
+        name = c.local_name + "_%s" % unique
+
+        if c.lower is not None:
+            if M[0] is None:
+                raise GDP_Error("Cannot relax disjunctive constraint '%s' "
+                                "because M is not defined." % name)
+            M_expr = M[0] * (1 - indicator_var)
+            newConstraint.add((name, i, 'lb'), c.lower <= c. body - M_expr)
+            constraintMap[
+                'transformedConstraints'][c] = [
+                    newConstraint[name, i, 'lb']]
+            constraintMap['srcConstraints'][
+                newConstraint[name, i, 'lb']] = c
+        if c.upper is not None:
+            if M[1] is None:
+                raise GDP_Error("Cannot relax disjunctive constraint '%s' "
+                                "because M is not defined." % name)
+            M_expr = M[1] * (1 - indicator_var)
+            newConstraint.add((name, i, 'ub'), c.body - M_expr <= c.upper)
+            transformed = constraintMap['transformedConstraints'].get(c)
+            if transformed is not None:
+                constraintMap['transformedConstraints'][
+                    c].append(newConstraint[name, i, 'ub'])
+            else:
+                constraintMap[
+                    'transformedConstraints'][c] = [
+                        newConstraint[name, i, 'ub']]
+            constraintMap['srcConstraints'][
+                newConstraint[name, i, 'ub']] = c
 
     def _process_M_value(self, m, lower, upper, need_lower, need_upper, src,
                          key, constraint, from_args=False):
