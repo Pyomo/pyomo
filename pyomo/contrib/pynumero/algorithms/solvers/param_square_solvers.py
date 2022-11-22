@@ -268,9 +268,8 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
 
         subsystem_list = [
         # Switch order in list for compatibility with generate_subsystem_blocks
-            (cons, vars) for vars, cons in zip(
-                *self.partition_system(variables, constraints)
-            )
+            (cons, vars) for vars, cons
+                in self.partition_system(variables, constraints)
         ]
 
         var_param_set = ComponentSet(variables + parameters)
@@ -480,6 +479,8 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         return self._global_values[:self._n_variables]
 
     def update_pyomo_model(self):
+        # NOTE: Here we rely on the fact that global_values is in the
+        # order (variables, parameters)
         for i, var in enumerate(self.get_variables() + self.get_parameters()):
             var.set_value(self._global_values[i])
 
@@ -491,4 +492,4 @@ class SccImplicitFunctionSolver(DecomposedImplicitFunctionBase):
         var_blocks, con_blocks = igraph.get_diagonal_blocks(
             variables, constraints
         )
-        return var_blocks, con_blocks
+        return zip(var_blocks, con_blocks)
