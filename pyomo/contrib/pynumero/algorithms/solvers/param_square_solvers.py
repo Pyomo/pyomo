@@ -87,23 +87,38 @@ class CyIpoptSolverWrapper(NlpSolverBase):
 class ScipySolverWrapper(NlpSolverBase):
     """A wrapper for SciPy NLP solvers that implements the NlpSolverBase API
 
-    This solver uses scipy.optimize.root for "vector-valued" NLPs (with more
-    than one primal and equality constraint) and scipy.optimize.newton
-    for "scalar-valued" NLPs.
+    This solver uses scipy.optimize.fsolve for "vector-valued" NLPs (with more
+    than one primal variable and equality constraint) and the Secant-Newton
+    hybrid for "scalar-valued" NLPs.
 
     """
     def __init__(self, nlp, timer=None, options=None):
         if options is None:
             options = {}
-        options = dict(options) # Copy options dict so we don't modify
+        for key in options:
+            if (
+                key not in SecantNewtonNlpSolver.OPTIONS
+                and key not in FsolveNlpSolver.OPTIONS
+            ):
+                raise ValueError(
+                    "Option %s is invalid for both SecantNewtonNlpSolver and"
+                    " FsolveNlpSolver" % key
+                )
+        # Note that options currently contain the options for both solvers.
+        # There is currently no way to specify, e.g., different tolerances
+        # for the two solvers. This can be updated if there is demand for it.
+        newton_options = {
+            key: value for key, value in options.items()
+            if key in SecantNewtonNlpSolver.OPTIONS
+        }
+        fsolve_options = {
+            key: value for key, value in options.items()
+            if key in FsolveNlpSolver.OPTIONS
+        }
         if nlp.n_primals() == 1:
-            #options["secant"] = True
-            solver = NewtonNlpSolver(nlp, timer=timer, options=options)
             solver = SecantNewtonNlpSolver(nlp, timer=timer, options=options)
         else:
-            options["method"] = "lm"
-            #solver = FsolveNlpSolver(nlp, options=options)
-            solver = RootNlpSolver(nlp, timer=timer, options=options)
+            solver = FsolveNlpSolver(nlp, timer=timer, options=options)
         self._nlp = nlp
         self._options = options
         self._solver = solver
