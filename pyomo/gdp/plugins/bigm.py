@@ -366,6 +366,12 @@ class BigM_Transformation(Transformation):
         # information for both.)
         relaxationBlock.bigm_src = {}
         relaxationBlock.localVarReferences = Block()
+        # add the map that will link back and forth between transformed
+        # constraints and their originals.
+        relaxationBlock._constraintMap = {
+            'srcConstraints': ComponentMap(),
+            'transformedConstraints': ComponentMap()
+        }
         relaxationBlock.transformedConstraints = Constraint(Any)
         obj._transformation_block = weakref_ref(relaxationBlock)
         relaxationBlock._src_disjunct = weakref_ref(obj)
@@ -436,19 +442,12 @@ class BigM_Transformation(Transformation):
                                   arg_list, suffix_list):
         _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
 
-    def _get_constraint_map_dict(self, transBlock):
-        if not hasattr(transBlock, "_constraintMap"):
-            transBlock._constraintMap = {
-                'srcConstraints': ComponentMap(),
-                'transformedConstraints': ComponentMap()}
-        return transBlock._constraintMap
-
     def _transform_constraint(self, obj, disjunct, bigMargs, arg_list,
                               disjunct_suffix_list):
         # add constraint to the transformation block, we'll transform it there.
         transBlock = disjunct._transformation_block()
         bigm_src = transBlock.bigm_src
-        constraintMap = self._get_constraint_map_dict(transBlock)
+        constraintMap = transBlock._constraintMap
 
         disjunctionRelaxationBlock = transBlock.parent_block()
         
