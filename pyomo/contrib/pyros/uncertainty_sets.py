@@ -348,6 +348,38 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
+    def bounding_model(self):
+        """
+        Make uncertain parameter value bounding problems (optimize
+        value of each uncertain parameter subject to constraints on the
+        uncertain parameters).
+
+        Returns
+        -------
+        model : ConcreteModel
+            Bounding problem, with all Objectives deactivated.
+        """
+        model = ConcreteModel()
+        model.util = Block()
+
+        # construct param vars, initialize to nominal point
+        model.param_vars = Var(range(self.dim))
+
+        # add constraints
+        model.cons = self.set_as_constraint(
+            uncertain_params=model.param_vars,
+            model=model,
+        )
+
+        @model.Objective(range(self.dim))
+        def param_var_objectives(self, idx):
+            return model.param_vars[idx]
+
+        # deactivate all objectives
+        model.param_var_objectives.deactivate()
+
+        return model
+
     def is_bounded(self, config):
         """
         Determine whether the uncertainty set is bounded.
@@ -374,35 +406,36 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         This method is invoked during the validation step of a PyROS
         solver call.
         """
-        # === Determine bounds on all uncertain params
-        bounding_model = ConcreteModel()
-        bounding_model.util = Block() # So that boundedness checks work for Cardinality and FactorModel sets
-        bounding_model.uncertain_param_vars = IndexedVar(range(len(config.uncertain_params)), initialize=1)
-        for idx, param in enumerate(config.uncertain_params):
-            bounding_model.uncertain_param_vars[idx].set_value(
-                param.value, skip_validation=True)
+        bounding_model = self.bounding_model()
+        solver = config.global_solver
 
-        bounding_model.add_component("uncertainty_set_constraint",
-                                     config.uncertainty_set.set_as_constraint(
-                                         uncertain_params=bounding_model.uncertain_param_vars,
-                                         model=bounding_model,
-                                         config=config
-                                     ))
+        # initialize uncertain parameter variables
+        for param, param_var in zip(
+                config.uncertain_params,
+                bounding_model.param_vars.values(),
+                ):
+            param_var.set_value(param.value, skip_validation=True)
 
-        for idx, param in enumerate(list(bounding_model.uncertain_param_vars.values())):
-            bounding_model.add_component("lb_obj_" + str(idx), Objective(expr=param, sense=minimize))
-            bounding_model.add_component("ub_obj_" + str(idx), Objective(expr=param, sense=maximize))
+        for idx, obj in bounding_model.param_var_objectives.items():
+            # activate objective for corresponding dimension
+            obj.activate()
 
-        for o in bounding_model.component_data_objects(Objective):
-            o.deactivate()
+            # solve for lower bound, then upper bound
+            for sense in (minimize, maximize):
+                obj.sense = sense
+                res = solver.solve(
+                    bounding_model,
+                    load_solutions=False,
+                    tee=False,
+                )
 
-        for i in range(len(bounding_model.uncertain_param_vars)):
-            for limit in ("lb", "ub"):
-                getattr(bounding_model, limit + "_obj_" + str(i)).activate()
-                res = config.global_solver.solve(bounding_model, tee=False)
-                getattr(bounding_model, limit + "_obj_" + str(i)).deactivate()
                 if not check_optimal_termination(res):
                     return False
+
+            # ensure sense is minimize when done, deactivate
+            obj.sense = minimize
+            obj.deactivate()
+
         return True
 
     def is_nonempty(self, config):
