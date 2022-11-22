@@ -643,3 +643,27 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         check_linear_coef(self, repn, z, -1)
         check_linear_coef(self, repn, m.d2.binary_indicator_var, -1)
         check_linear_coef(self, repn, m.d3.binary_indicator_var, -1)
+
+    def test_only_multiple_bigm_bound_constraints(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m, only_mbigm_bound_constraints=True)
+
+        cons = mbm.get_transformed_constraints(m.d1.x1_bounds)
+        self.assertEqual(len(cons), 2)
+        self.check_pretty_bound_constraints(cons[0], m.x1, {m.d1: 0.5, m.d2:
+                                                            0.65, m.d3: 2},
+                                            lb=True)
+        self.check_pretty_bound_constraints(cons[1], m.x1, {m.d1: 2, m.d2: 3,
+                                                            m.d3: 10}, lb=False)
+
+        cons = mbm.get_transformed_constraints(m.d1.x2_bounds)
+        self.assertEqual(len(cons), 2)
+        self.check_pretty_bound_constraints(cons[0], m.x2, {m.d1: 0.75, m.d2: 3,
+                                                            m.d3: 0.55},
+                                            lb=True)
+        self.check_pretty_bound_constraints(cons[1], m.x2, {m.d1: 3, m.d2: 10,
+                                                            m.d3: 1}, lb=False)
+
+        # TODO: now we check that the other constraints were transformed with
+        # normal bigm

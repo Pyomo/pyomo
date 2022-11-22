@@ -524,7 +524,8 @@ class BigM_Transformation(Transformation):
         # current length of the list here since that will be monotonically
         # increasing and hence unique. We'll append it to the
         # slightly-more-human-readable constraint name for something familiar
-        # but unique.
+        # but unique. (Note that we really could do this outside of the loop
+        # over the constraint indices, but I don't think it matters a lot.)
         unique = len(newConstraint)
         name = c.local_name + "_%s" % unique
 
