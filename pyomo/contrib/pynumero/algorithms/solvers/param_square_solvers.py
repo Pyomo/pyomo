@@ -205,7 +205,6 @@ class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
         return results
 
     def evaluate_outputs(self):
-        # TODO: out argument?
         primals = self._nlp.get_primals()
         outputs = primals[self._variable_coords]
         return outputs
@@ -243,12 +242,11 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         self._timer = timer
         if solver_class is None:
             solver_class = ScipySolverWrapper
-            #solver_class = CyIpoptSolverWrapper
         self._solver_class = solver_class
         if solver_options is None:
             solver_options = {}
         self._solver_options = solver_options
-        self._calc_var_cutoff = 2 if use_calc_var else 1
+        self._calc_var_cutoff = 1 if use_calc_var else 0
         # NOTE: This super call is only necessary so the get_* methods work
         super().__init__(variables, constraints, parameters)
 
@@ -258,13 +256,6 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
                 *self.partition_system(variables, constraints)
             )
         ]
-
-        # NOTE: In general, there are variables in the constraints that are neither
-        # "variables" (outputs) nor "parameters" (inputs). These are
-        # "constants", which I would like to completely ignore. I should be able
-        # to do this by temporarily fixing them while constructing subsystem
-        # blocks (so they don't show up in the blocks' inputs) and NLPs of
-        # these blocks (so they don't show up as columns in NLPs).
 
         var_param_set = ComponentSet(variables + parameters)
         # We will treat variables that are neither variables nor parameters
@@ -290,10 +281,10 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             self._subsystem_list = list(generate_subsystem_blocks(subsystem_list))
             # These are subsystems that need an external solver, rather than
             # calculate_variable_from_constraint. _calc_var_cutoff should be either
-            # 1 or 2.
+            # 0 or 1.
             self._solver_subsystem_list = [
                 (block, inputs) for block, inputs in self._subsystem_list
-                if len(block.vars) >= self._calc_var_cutoff
+                if len(block.vars) > self._calc_var_cutoff
             ]
 
             # Need a dummy objective to create an NLP
@@ -302,10 +293,12 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
                 # I need scaling_factor so Pyomo NLPs I create from these blocks
                 # don't break when ProjectedNLP calls get_primals_scaling
                 block.scaling_factor = Suffix(direction=Suffix.EXPORT)
-                # HACK: scaling_factor just needs to be nonempty.
+                # HACK: scaling_factor just needs to be nonempty
                 block.scaling_factor[block._obj] = 1.0
 
             # Original PyomoNLP for each subset in the partition
+            # Since we are creating these NLPs with "constants" fixed, these
+            # variables will not show up in the NLPs
             self._solver_subsystem_nlps = [
                 PyomoNLP(block) for block, inputs in self._solver_subsystem_list
             ]
@@ -344,44 +337,28 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         #
         # NOTE: This could also be implemented as a tuple of
         # (subsystem_coord, primal_coord), which would eliminate the need to
-        # store data in two locations.
+        # store data in two locations. The current implementation is easier,
+        # however.
         self._global_values = np.array(
             [var.value for var in variables + parameters]
         )
         self._global_indices = ComponentMap(
             (var, i) for i, var in enumerate(variables + parameters)
         )
+        # Cache the global array-coordinates of each subset of "input"
+        # variables. These are used for updating before each solve.
         self._local_input_global_coords = [
-            # I expect to get errors here. Inputs do not necessarily
-            # need to be variables or parameters...
-            # This error only shows up in the CLC models. TODO: Test
-            # that covers this functionality.
+            # If I do not fix "constants" above, I get errors here
+            # that only show up in the CLC models.
+            # TODO: Add a test that covers this edge case.
             np.array(
                 [self._global_indices[var] for var in inputs],
                 dtype=int,
             ) for (_, inputs) in self._solver_subsystem_list
         ]
 
-        # What coordinates do we need here?
-        # - Coordinates of local inputs in each subsystem. How do I update
-        #   these before each solve? Don't have a global model (or NLP) to
-        #   store values. Having a global array of values seems to make
-        #   sense. Update this array after each subsystem solve.
-        #
-        # local_primals[local_input_coords] = global_values[local_input_global_coords]
-        #
-        # - Just return the appropriate projection of global_values when outputs
-        #   are requested
-        # - Need the coordinates of (output) variables in the original NLP.
-        #   (Could use the Projected NLP, but original NLP seems cleaner.)
-        #   I envision:
-        #
-        # global_values[0:n_variables] = primals[local_output_coords]
-        #
-        # Storing local_output_coords may actually not be necessary, as the
-        # primals in the ProjectedNLP are already ordered according to the
-        # order of the output variables.
-
+        # Cache the global array-coordinates of each subset of "output"
+        # variables. These are used for updating after each solve.
         self._output_coords = [
             np.array(
                 [self._global_indices[var] for var in block.vars.values()],
@@ -389,14 +366,35 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             ) for (block, _) in self._solver_subsystem_list
         ]
 
-        # Will this fail due to parameters not appearing in an NLP? I don't
-        # think so, as, for each NLP, I only try to access that NLP's local
-        # inputs.
-        # This will fail, however, as I try to get the "global coord" of
-        # variables that are neither variables nor parameters.
-
     def partition_system(self, variables, constraints):
-        # TODO: Docstring
+        """Partitions the systems of equations defined by the provided
+        variables and constraints
+
+        Each subset of the partition should have an equal number of variables
+        and equations. These subsets, or "subsystems", will be solved
+        sequentially in the order provided by this method instead of solving
+        the entire system simultaneously. Subclasses should implement this
+        method to define the partition that their implicit function solver
+        will use. Partitions are defined as a list of tuples of lists.
+        Each tuple has two entries, the first a list of variables, and the
+        second a list of constraints. These inner lists should have the
+        same number of entries.
+
+        Arguments
+        ---------
+        variables: list
+            List of VarData in the system to be partitioned
+        constraints: list
+            List of ConstraintData (equality constraints) defining the
+            equations of the system to be partitioned
+
+        Returns
+        -------
+        List of tuples
+            List of tuples describing the ordered partition. Each tuple
+            contains equal-length subsets of variables and constraints.
+
+        """
         # Subclasses should implement this method, which returns an ordered
         # partition (two lists-of-lists) of variables and constraints.
         raise NotImplementedError()
@@ -418,7 +416,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         # new values.
         solver_subsystem_idx = 0
         for block, inputs in self._subsystem_list:
-            if len(block.vars) < self._calc_var_cutoff:
+            if len(block.vars) <= self._calc_var_cutoff:
                 # Update model values from global array.
                 for var in inputs:
                     idx = self._global_indices[var]
@@ -442,73 +440,23 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
 
                 nlp_solver = self._nlp_solvers[solver_subsystem_idx]
 
-                # This should no longer be necessary.
-                #_, local_inputs = self._solver_subsystem_list[solver_subsystem_idx]
-
                 # Get primals, load potentially new input values into primals,
                 # then load primals into NLP
                 primals = nlp.get_primals()
-                # Variables will not be necessary
-                #variables = nlp.get_pyomo_variables()
-
                 primals[input_coords] = self._global_values[input_global_coords]
-
-                # Set values and bounds from inputs to the SCC.
-                # This works because values have been set in the original
-                # pyomo model, either by a previous SCC solve, or from the
-                # "global inputs"
-                #
-                # This should no longer be necessary
-                #for i, var in zip(input_coords, local_inputs):
-                #    # Set primals (inputs) in the original NLP
-                #    primals[i] = var.value
-                # This affects future evaluations in the ProjectedNLP
 
                 # Set primals in the original NLP. This is necessary so the
                 # parameters get updated.
                 nlp.set_primals(primals)
 
+                # Get initial guess in the space of variables we solve for
                 x0 = proj_nlp.get_primals()
-
-                #sol, _ = nlp_solver.solve(x0=x0)
-                # TODO: Do I need a consistent return value between different
-                # solvers? Don't thing so, as long as primals get updated.
                 nlp_solver.solve(x0=x0)
 
-                #
-                # Set values in global array
-                #
-                # This would probably work:
-                #
-                # self._global_values[:self._n_variables] = proj_nlp.get_primals()
-                #
-                # This is because the projected primals are ordered according
-                # to the output variables.
-                # ^ This does not work. Need to specify the proper subset of
-                #   coordinates in _global_values
-                #
-                #new_primals = nlp.get_primals()
-
-                #
+                # Set values in global array. Here we rely on the fact that
+                # the projected NLP's primals are in the order that variables
+                # were initially specified.
                 self._global_values[output_global_coords] = proj_nlp.get_primals()
-
-                # Set primals from solution in projected NLP. This updates
-                # values in the original NLP
-                #proj_nlp.set_primals(sol)
-                #
-                # Values should already be set in the projected NLP...
-
-                # I really only need to set new primals for the variables in
-                # the ProjectedNLP. However, I can only get a list of variables
-                # from the original Pyomo NLP, so here some of the values I'm
-                # setting are redundant.
-                #
-                # NOTE: This should no longer be necessary.
-                #
-                #new_primals = nlp.get_primals()
-                #assert len(new_primals) == len(variables)
-                #for var, val in zip(variables, new_primals):
-                #    var.set_value(val, skip_validation=True)
 
                 solver_subsystem_idx += 1
 
