@@ -57,9 +57,10 @@ import numpy as np
 
 
 class NlpSolverBase(object):
-    """
-    A base class that solves an NLP object. Subclasses should implement this
-    interface for compatibility with ImplicitFunctionSolver objects.
+    """A base class that solves an NLP object
+
+    Subclasses should implement this interface for compatibility with
+    ImplicitFunctionSolver objects.
 
     """
 
