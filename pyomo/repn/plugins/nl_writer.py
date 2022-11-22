@@ -370,11 +370,51 @@ class _SuffixData(object):
         self.datatype = set()
 
     def update(self, suffix):
+        missing_component = missing_other = 0
         self.datatype.add(suffix.datatype)
         for item in suffix.items():
-            self.store(*item)
+            missing = self._store(*item)
+            if missing:
+                if missing > 0:
+                    missing_component += missing
+                else:
+                    missing_other += missing
+        if missing_component:
+            logger.warning(
+                f"model contained export suffix {suffix.name} that "
+                f"contained {missing_component} component keys that are "
+                "not exported as part of the NL file.  "
+                "Skipping.")
+        if missing_other:
+            logger.warning(
+                f"model contained export suffix {suffix.name} that "
+                f"contained {missing_other} keys that are not "
+                "Var, Constrtaint, Objective, or the model.  Skipping.")
 
     def store(self, obj, val):
+        missing = self._store(obj, val)
+        if not missing:
+            return
+        if missing == 1:
+            logger.warning(
+                f"model contained export suffix {self._name} with "
+                f"{obj.ctype.__name__} key '{obj.name}', but that "
+                "object is not exported as part of the NL file.  "
+                "Skipping.")
+        elif missing > 1:
+            logger.warning(
+                f"model contained export suffix {self._name} with "
+                f"{obj.ctype.__name__} key '{obj.name}', but that "
+                "object contained {missing} data objects that are "
+                "not exported as part of the NL file.  "
+                "Skipping.")
+        else:
+            logger.warning(
+                f"model contained export suffix {self._name} with "
+                f"{obj.__class__.__name__} key '{obj}' that is not "
+                "a Var, Constrtaint, Objective, or the model.  Skipping.")
+
+    def _store(self, obj, val):
         _id = id(obj)
         if _id in self._column_order:
             self.var[self._column_order[_id]] = val
@@ -386,19 +426,14 @@ class _SuffixData(object):
             self.prob[0] = val
         elif isinstance(obj, PyomoObject):
             if obj.is_indexed():
+                missing_ct = 0
                 for o in obj.values():
-                    self.store(o, val)
+                    missing_ct += self._store(o, val)
+                return missing_ct
             else:
-                logger.warning(
-                    f"model contained export suffix {self._name} with "
-                    f"{obj.ctype.__name__} key '{obj.name}', but that "
-                    "object is not exported as part of the NL file.  "
-                    "Skipping.")
+                return 1
         else:
-            logger.warning(
-                f"model contained export suffix {self._name} with "
-                f"{obj.__class__.__name__} key '{obj}' that is not "
-                "a Var, Constrtaint, Objective, or the model.  Skipping.")
+            return -1
 
 
 class _NLWriter_impl(object):
