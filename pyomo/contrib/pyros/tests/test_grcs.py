@@ -2462,7 +2462,7 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
 
     @unittest.skipUnless(
         SolverFactory("cbc").available(exception_flag=False),
-        "LP solvers CPLEX, GUROBI, and CBC not available",
+        "LP solver CBC not available",
     )
     def test_factor_model_parameter_bounds_correct(self):
         """
