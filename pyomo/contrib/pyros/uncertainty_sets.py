@@ -1572,10 +1572,9 @@ class FactorModelSet(UncertaintySet):
         Natural number representing the dimensionality of the
         space to which the set projects.
     psi_mat : (N, `number_of_factors`) array_like
-        Matrix with nonnegative entries designating each
-        uncertain parameter's contribution to each factor.
-        Each row is associated with a separate uncertain parameter.
-        Each column is associated with a separate factor.
+        Matrix designating each uncertain parameter's contribution to
+        each factor.  Each row is associated with a separate uncertain
+        parameter.  Each column is associated with a separate factor.
     beta : numeric type
         Real value between 0 and 1 specifying the fraction of the
         independent factors that can simultaneously attain
@@ -1661,8 +1660,7 @@ class FactorModelSet(UncertaintySet):
         (N, `number_of_factors`) numpy.ndarray : Matrix designating each
         uncertain parameter's contribution to each factor. Each row is
         associated with a separate uncertain parameter. Each column with
-        a separate factor.  Every entry of the matrix must be
-        nonnegative.
+        a separate factor.
         """
         return self._psi_mat
 
@@ -1696,13 +1694,6 @@ class FactorModelSet(UncertaintySet):
                     "Each column of attribute 'psi_mat' should have at least "
                     "one nonzero entry"
                 )
-
-            for entry in column:
-                if entry < 0:
-                    raise ValueError(
-                        f"Entry {entry} of attribute 'psi_mat' is negative. "
-                        "Ensure all entries are nonnegative"
-                    )
 
         self._psi_mat = psi_mat_arr
 
@@ -1758,27 +1749,55 @@ class FactorModelSet(UncertaintySet):
             the uncertain parameter bounds for the corresponding set
             dimension.
         """
-        nom_val = self.origin
+        F = self.number_of_factors
         psi_mat = self.psi_mat
 
-        F = self.number_of_factors
-        beta_F = self.beta * F
-        floor_beta_F = math.floor(beta_F)
+        # evaluate some important quantities
+        beta_F = self.beta * self.number_of_factors
+        crit_pt_type = int((beta_F + F) / 2)
+        beta_F_fill_in = (beta_F + F) - 2 * crit_pt_type - 1
+
+        # argsort rows of psi_mat in descending order
+        row_wise_args = np.argsort(-psi_mat, axis=1)
+
         parameter_bounds = []
-        for i in range(len(nom_val)):
-            non_decreasing_factor_row = sorted(psi_mat[i], reverse=True)
-            # deviation = sum_j=1^floor(beta F) {psi_if_j} + (beta F - floor(beta F)) psi_{if_{betaF +1}}
-            # because indexing starts at 0, we adjust the limit on the sum and the final factor contribution
-            if beta_F - floor_beta_F == 0:
-                deviation = sum(non_decreasing_factor_row[j] for j in range(floor_beta_F - 1))
+        for idx, orig_val in enumerate(self.origin):
+            # number nonnegative values in row
+            M = len(psi_mat[idx][psi_mat[idx] >= 0])
+
+            # argsort psi matrix row in descending order
+            sorted_psi_row_args = row_wise_args[idx]
+            sorted_psi_row = psi_mat[idx, sorted_psi_row_args]
+
+            # now evaluate max deviation from origin
+            # (depends on number nonneg entries and critical point type)
+            if M >= crit_pt_type + 1 and crit_pt_type < F:
+                max_deviation = (
+                    sorted_psi_row[:crit_pt_type].sum()
+                    + beta_F_fill_in * sorted_psi_row[crit_pt_type]
+                    - sorted_psi_row[crit_pt_type + 1:].sum()
+                )
+            elif M <= F - crit_pt_type - 1 and crit_pt_type < F:
+                max_deviation = (
+                    sorted_psi_row[:F - crit_pt_type - 1].sum()
+                    - beta_F_fill_in * sorted_psi_row[F - crit_pt_type - 1]
+                    - sorted_psi_row[F - crit_pt_type:].sum()
+                )
             else:
-                deviation = sum(non_decreasing_factor_row[j] for j in range(floor_beta_F - 1)) + (
-                            beta_F - floor_beta_F) * psi_mat[i][floor_beta_F]
-            lb = nom_val[i] - deviation
-            ub = nom_val[i] + deviation
-            if lb > ub:
-                raise AttributeError("The computed lower bound on uncertain parameters must be less than or equal to the upper bound.")
-            parameter_bounds.append((lb, ub))
+                hypercub_vertex_type = max(
+                    int(np.ceil((F - int(beta_F)) / 2)),
+                    min(M, int((F + int(beta_F)) / 2)),
+                )
+                max_deviation = (
+                    sorted_psi_row[:hypercub_vertex_type].sum()
+                    - sorted_psi_row[hypercub_vertex_type:].sum()
+                )
+
+            # finally, evaluate the bounds for this dimension
+            parameter_bounds.append(
+                (orig_val - max_deviation, orig_val + max_deviation),
+            )
+
         return parameter_bounds
 
     def set_as_constraint(self, uncertain_params, **kwargs):
