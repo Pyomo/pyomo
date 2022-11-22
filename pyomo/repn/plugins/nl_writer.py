@@ -124,9 +124,11 @@ class NLWriterInfo(object):
 
 class FileDeterminism(enum.IntEnum):
     NONE = 0
-    ORDERED = 1
-    SORT_INDICES = 2
-    SORT_SYMBOLS = 3
+    DEPRECATED_KEYS = 1
+    DEPRECATED_KEYS_AND_NAMES = 2
+    ORDERED = 10
+    SORT_INDICES = 20
+    SORT_SYMBOLS = 30
 
 
 def _activate_nl_writer_version(n):
@@ -210,9 +212,9 @@ class NLWriter(object):
         How much effort do we want to put into ensuring the
         NL file is written deterministically for a Pyomo model:
             NONE (0) : None
-            ORDERED (1): rely on underlying component ordering (default)
-            SORT_INDICES (2) : sort keys of indexed components
-            SORT_SYMBOLS (3) : sort keys AND sort names (over declaration order)
+            ORDERED (10): rely on underlying component ordering (default)
+            SORT_INDICES (20) : sort keys of indexed components
+            SORT_SYMBOLS (30) : sort keys AND sort names (not declaration order)
         """
     ))
     CONFIG.declare('symbolic_solver_labels', ConfigValue(
@@ -428,6 +430,16 @@ class _NLWriter_impl(object):
         )
         self.next_V_line_id = 0
         self.pause_gc = None
+
+        if config.file_determinism in (
+                FileDeterminism.DEPRECATED_KEYS,
+                FileDeterminism.DEPRECATED_KEYS_AND_NAMES):
+            old = config.file_determinism
+            config.file_determinism = 10*(old + 1)
+            new = config.file_determinism
+            deprecation_warning(
+                f'{str(old)} ({int(old)}) is deprecated.  '
+                f'Please use {str(new)} ({int(new)})', version='TBD')
 
     def __enter__(self):
         assert AMPLRepn.ActiveVisitor is None
