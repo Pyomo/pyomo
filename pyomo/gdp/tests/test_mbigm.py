@@ -645,6 +645,64 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         check_linear_coef(self, repn, m.d2.binary_indicator_var, -1)
         check_linear_coef(self, repn, m.d3.binary_indicator_var, -1)
 
+    def check_traditionally_bigmed_constraints(self, m, mbm, Ms):
+        cons = mbm.get_transformed_constraints(m.d1.func)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        ub = cons[1]
+        assertExpressionsEqual(self, lb.expr, 0.0 <= m.x1 + m.x2 - m.d -
+                               Ms[m.d1][0]*(1 - m.d1.binary_indicator_var))
+        # [ESJ 11/23/22]: It's really hard to use assertExpressionsEqual on the
+        # ub constraints because SumExpressions are sharing args, I think. So
+        # when they get constructed in the transformation (because they come
+        # after the lb constraints), there are nested SumExpressions. Instead of
+        # trying to reproduce them I am just building a "flat" SumExpression
+        # with generate_standard_repn and comparing that.
+        self.assertIsNone(ub.lower)
+        self.assertEqual(ub.upper, 0)
+        repn = generate_standard_repn(ub.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsEqual(self, simplified, m.x1 + m.x2 - m.d +
+                               Ms[m.d1][1]*m.d1.binary_indicator_var -
+                               Ms[m.d1][1])
+
+        cons = mbm.get_transformed_constraints(m.d2.func)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        ub = cons[1]
+        assertExpressionsEqual(self, lb.expr, 0.0 <= 2*m.x1 + 4*m.x2 + 7 - m.d -
+                               Ms[m.d2][0]*(1 - m.d2.binary_indicator_var))
+        self.assertIsNone(ub.lower)
+        self.assertEqual(ub.upper, 0)
+        repn = generate_standard_repn(ub.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsEqual(self, simplified, 2*m.x1 + 4*m.x2 - m.d +
+                               Ms[m.d2][1]*m.d2.binary_indicator_var -
+                               (Ms[m.d2][1] - 7))
+
+        cons = mbm.get_transformed_constraints(m.d3.func)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        ub = cons[1]
+        assertExpressionsEqual(self, lb.expr, 0.0 <= m.x1 - 5*m.x2 - 3 - m.d -
+                               Ms[m.d3][0]*(1 - m.d3.binary_indicator_var))
+        self.assertIsNone(ub.lower)
+        self.assertEqual(ub.upper, 0)
+        repn = generate_standard_repn(ub.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsEqual(self, simplified, m.x1 - 5*m.x2 - m.d +
+                               Ms[m.d3][1]*m.d3.binary_indicator_var -
+                               (Ms[m.d3][1] + 3))
+
     def test_only_multiple_bigm_bound_constraints(self):
         m = self.make_model()
         mbm = TransformationFactory('gdp.mbigm')
@@ -666,64 +724,38 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         self.check_pretty_bound_constraints(cons[1], m.x2, {m.d1: 3, m.d2: 10,
                                                             m.d3: 1}, lb=False)
 
-        cons = mbm.get_transformed_constraints(m.d1.func)
-        self.assertEqual(len(cons), 2)
-        lb = cons[0]
-        ub = cons[1]
-        assertExpressionsEqual(self, lb.expr, 0.0 <= m.x1 + m.x2 - m.d -
-                               (-1030.0)*(1 - m.d1.binary_indicator_var))
-        # [ESJ 11/23/22]: It's really hard to use assertExpressionsEqual on the
-        # ub constraints because SumExpressions are sharing args, I think. So
-        # when they get constructed in the transformation (because they come
-        # after the lb constraints), there are nested SumExpressions. Instead of
-        # trying to reproduce them I am just building a "flat" SumExpression
-        # with generate_standard_repn and comparing that.
-        self.assertIsNone(ub.lower)
-        self.assertEqual(ub.upper, 0)
-        repn = generate_standard_repn(ub.body)
-        self.assertTrue(repn.is_linear())
-        simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
-        assertExpressionsEqual(
-            self,
-            simplified,
-            m.x1 + m.x2 - m.d + 1030.0*m.d1.binary_indicator_var - 1030.0)
+        self.check_traditionally_bigmed_constraints(
+            m,
+            mbm,
+            {m.d1: (-1030.0, 1030.0),
+             m.d2: (-1093.0, 1107.0),
+             m.d3: (-1113.0, 1107.0)})
 
-        cons = mbm.get_transformed_constraints(m.d2.func)
-        self.assertEqual(len(cons), 2)
-        lb = cons[0]
-        ub = cons[1]
-        print(lb.expr)
-        assertExpressionsEqual(self, lb.expr, 0.0 <= 2*m.x1 + 4*m.x2 + 7 - m.d -
-                               (-1093.0)*(1 - m.d2.binary_indicator_var))
-        self.assertIsNone(ub.lower)
-        self.assertEqual(ub.upper, 0)
-        repn = generate_standard_repn(ub.body)
-        self.assertTrue(repn.is_linear())
-        simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
-        assertExpressionsEqual(
-            self,
-            simplified,
-            2*m.x1 + 4*m.x2 - m.d + 1107.0*m.d2.binary_indicator_var - 1100.0)
+    def test_only_multiple_bigm_bound_constraints_arg_Ms(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        Ms = {m.d1: 1050, m.d2.func: (-2000, 1200), None: 4000}
+        mbm.apply_to(m, only_mbigm_bound_constraints=True, bigM=Ms)
 
-        cons = mbm.get_transformed_constraints(m.d3.func)
+        cons = mbm.get_transformed_constraints(m.d1.x1_bounds)
         self.assertEqual(len(cons), 2)
-        lb = cons[0]
-        ub = cons[1]
-        print(lb.expr)
-        assertExpressionsEqual(self, lb.expr, 0.0 <= m.x1 - 5*m.x2 - 3 - m.d -
-                               (-1113.0)*(1 - m.d3.binary_indicator_var))
-        self.assertIsNone(ub.lower)
-        self.assertEqual(ub.upper, 0)
-        repn = generate_standard_repn(ub.body)
-        self.assertTrue(repn.is_linear())
-        simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
-        assertExpressionsEqual(
-            self,
-            simplified,
-            m.x1 - 5*m.x2 - m.d + 1107.0*m.d3.binary_indicator_var - 1110.0)
+        self.check_pretty_bound_constraints(cons[0], m.x1, {m.d1: 0.5, m.d2:
+                                                            0.65, m.d3: 2},
+                                            lb=True)
+        self.check_pretty_bound_constraints(cons[1], m.x1, {m.d1: 2, m.d2: 3,
+                                                            m.d3: 10}, lb=False)
+
+        cons = mbm.get_transformed_constraints(m.d1.x2_bounds)
+        self.assertEqual(len(cons), 2)
+        self.check_pretty_bound_constraints(cons[0], m.x2, {m.d1: 0.75, m.d2: 3,
+                                                            m.d3: 0.55},
+                                            lb=True)
+        self.check_pretty_bound_constraints(cons[1], m.x2, {m.d1: 3, m.d2: 10,
+                                                            m.d3: 1}, lb=False)
+
+        self.check_traditionally_bigmed_constraints(
+            m,
+            mbm,
+            {m.d1: (-1050, 1050),
+             m.d2: (-2000, 1200),
+             m.d3: (-4000, 4000)})

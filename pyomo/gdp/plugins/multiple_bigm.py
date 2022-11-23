@@ -432,6 +432,7 @@ class MultipleBigMTransformation(Transformation):
         bigm = TransformationFactory('gdp.bigm')
         bigm.assume_fixed_vars_permanent = self._config.\
                                            assume_fixed_vars_permanent
+        bigm.used_args = self.used_args
 
         for i in sorted(obj.keys()):
             c = obj[i]
