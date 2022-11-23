@@ -581,10 +581,6 @@ class MultipleBigMTransformation(Transformation):
                 for (c, disj) in lower_bound_constraints_by_var[v]:
                     relaxationBlock._constraintMap['srcConstraints'][
                         transformed[idx, 'lb']].append(c)
-                    print(disj)
-                    print(disj.transformation_block.name)
-                    print(c)
-                    print('===============')
                     disj.transformation_block._constraintMap[
                         'transformedConstraints'][c] = [transformed[idx, 'lb']]
             if len(upper_dict) > 0:
