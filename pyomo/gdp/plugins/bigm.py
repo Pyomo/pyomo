@@ -243,12 +243,18 @@ class BigM_Transformation(Transformation):
         # we're about to transform. We do this before we preprocess targets
         # because we will likely create more disjunctive components that will
         # need transformation.
+        disj_targets = []
+        for t in targets:
+            disj_datas = t.values() if t.is_indexed() else [t,]
+            if t.ctype is Disjunct:
+                disj_targets.extend(disj_datas)
+            if t.ctype is Disjunction:
+                disj_targets.extend([d for disjunction in disj_datas for d in
+                                     disjunction.disjuncts])
         TransformationFactory('contrib.logical_to_disjunctive').apply_to(
             instance,
             targets=[blk for blk in targets if blk.ctype is Block] +
-            [disj for disj in targets if disj.ctype is Disjunct] +
-            [disj for disjunction in targets if disjunction.ctype is
-             Disjunction for disj in disjunction.disjuncts])
+            disj_targets)
 
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
