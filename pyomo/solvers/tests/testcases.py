@@ -199,12 +199,12 @@ ExpectedFailures['ipopt', 'nl', 'LP_trivial_constraints'] = \
 
 ExpectedFailures['scip', 'nl', 'SOS2_simple'] = \
     (lambda v: v <= (3, 1, 0, 9),
-    "SCIP (scipampl) does not recognize sos2 constraints "
+    "SCIP (scip) does not recognize sos2 constraints "
     "inside NL files. A ticket has been filed.")
 
 ExpectedFailures['scip', 'nl', 'SOS1_simple'] = \
     (lambda v: v <= (3, 1, 0, 9),
-    "SCIP (scipampl) does not recognize sos1 constraints "
+    "SCIP (scip) does not recognize sos1 constraints "
     "inside NL files. A ticket has been filed.")
 
 #
