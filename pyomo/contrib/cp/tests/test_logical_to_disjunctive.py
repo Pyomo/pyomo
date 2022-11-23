@@ -152,7 +152,6 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
         visitor.walk_expression(e)
         self.assertIs(m.a.get_associated_binary(), m.z[1])
         self.assertIs(m.c.get_associated_binary(), m.z[2])
-        m.pprint()
         self.assertEqual(len(m.z), 5)
         self.assertEqual(len(m.cons), 8)
 
