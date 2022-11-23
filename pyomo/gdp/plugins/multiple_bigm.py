@@ -105,7 +105,9 @@ class MultipleBigMTransformation(Transformation):
 
         Note: Unlike in the bigm transformation, we require the keys in this
         mapping specify the components the M value applies to exactly in order
-        to avoid ambiguity.
+        to avoid ambiguity. However, if the 'only_mbigm_bound_constraints'
+        option is True, this argument can be used as it would be in the
+        traditional bigm transformation for the non-bound constraints.
         """
     ))
     CONFIG.declare('reduce_bound_constraints', ConfigValue(
