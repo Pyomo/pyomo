@@ -16,7 +16,6 @@ from pyomo.environ import (
 from pyomo.core.expr.logical_expr import (
     EquivalenceExpression, NotExpression, AndExpression, ExactlyExpression
 )
-from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.gdp import Disjunct, Disjunction
 from pyomo.gdp.util import GDP_Error, check_model_algebraic
 from pyomo.gdp.plugins.partition_disjuncts import (
@@ -1872,7 +1871,6 @@ class CommonModels(unittest.TestCase, CommonTests):
                                                         num_partitions=2)
 
     @unittest.skipUnless(ct.linear_solvers, "Could not find a linear solver")
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_network_disjuncts(self):
         ct.check_network_disjuncts(self, True, 'between_steps',
                                    num_partitions=2)
