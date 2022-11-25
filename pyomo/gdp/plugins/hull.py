@@ -271,6 +271,23 @@ class Hull_Reformulation(Transformation):
                     yield t
         targets = list(_filter_inactive(targets))
 
+        # transform any logical constraints that might be anywhere on the stuff
+        # we're about to transform. We do this before we preprocess targets
+        # because we will likely create more disjunctive components that will
+        # need transformation.
+        disj_targets = []
+        for t in targets:
+            disj_datas = t.values() if t.is_indexed() else [t,]
+            if t.ctype is Disjunct:
+                disj_targets.extend(disj_datas)
+            if t.ctype is Disjunction:
+                disj_targets.extend([d for disjunction in disj_datas for d in
+                                     disjunction.disjuncts])
+        TransformationFactory('contrib.logical_to_disjunctive').apply_to(
+            instance,
+            targets=[blk for blk in targets if blk.ctype is Block] +
+            disj_targets)
+
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that they appear before disjunctions that are
         # contained in their disjuncts. That is, in hull, we will transform from
@@ -282,12 +299,6 @@ class Hull_Reformulation(Transformation):
 
         preprocessed_targets = gdp_tree.topological_sort()
         self._targets = set(preprocessed_targets)
-        # transform any logical constraints that might be anywhere on the stuff
-        # we're about to transform.
-        TransformationFactory('core.logical_to_linear').apply_to(
-            instance,
-            targets=[blk for blk in targets if blk.ctype is Block] +
-            [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:

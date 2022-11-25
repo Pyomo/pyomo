@@ -18,7 +18,7 @@ from pyomo.environ import (TransformationFactory, Block, Set, Constraint, Var,
                            RealSet, ComponentMap, value, log, ConcreteModel,
                            Any, Suffix, SolverFactory, RangeSet, Param,
                            Objective, TerminationCondition, Reference)
-from pyomo.core.expr.sympy_tools import sympy_available
+from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
 from pyomo.repn import generate_standard_repn
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
@@ -2137,7 +2137,6 @@ class NetworkDisjuncts(unittest.TestCase, CommonTests):
     def test_solution_minimize(self):
         ct.check_network_disjuncts(self, minimize=True, transformation='hull')
 
-@unittest.skipUnless(sympy_available, "Sympy not available")
 class LogicalConstraintsOnDisjuncts(unittest.TestCase):
     def test_logical_constraints_transformed(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
@@ -2151,25 +2150,43 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
 
         # first d[1]:
         cons = hull.get_transformed_constraints(
-            m.d[1].logic_to_linear.transformed_constraints[1])
+            m.d[1]._logical_to_disjunctive.transformed_constraints[1])
+        dis_z1 = hull.get_disaggregated_var(
+            m.d[1]._logical_to_disjunctive.auxiliary_vars[1], m.d[1])
+        dis_y1 = hull.get_disaggregated_var(y1, m.d[1])
+
         self.assertEqual(len(cons), 1)
         # this simplifies because the dissaggregated variable is *always* 0
         c = cons[0]
+        from pytest import set_trace
+        # hull transformation of z1 = 1 - y1:
+        # dis_z1 + dis_y1 = d[1].ind_var
         self.assertEqual(c.lower, 0)
         self.assertEqual(c.upper, 0)
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
-        self.assertEqual(repn.constant, 0)
-        self.assertEqual(len(repn.linear_vars), 1)
-        ct.check_linear_coef(self, repn, hull.get_disaggregated_var(y1, m.d[1]),
-                             -1)
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            dis_z1 + dis_y1 - m.d[1].binary_indicator_var)
 
         # then d[4]:
         y1d = hull.get_disaggregated_var(y1, m.d[4])
         y2d = hull.get_disaggregated_var(y2, m.d[4])
-        # 1 <= 1 - Y[2] + Y[1]
+        z1d = hull.get_disaggregated_var(
+            m.d[4]._logical_to_disjunctive.auxiliary_vars[1], m.d[4])
+        z2d = hull.get_disaggregated_var(
+            m.d[4]._logical_to_disjunctive.auxiliary_vars[2], m.d[4])
+        z3d = hull.get_disaggregated_var(
+            m.d[4]._logical_to_disjunctive.auxiliary_vars[3], m.d[4])
+
+        # hull transformation of (1 - z1) + (1 - y1) + y2 >= 1:
+        # dz1 + dy1 - dy2 <= m.d[4].ind_var
         cons = hull.get_transformed_constraints(
-            m.d[4].logic_to_linear.transformed_constraints[1])
+            m.d[4]._logical_to_disjunctive.transformed_constraints[1])
         # these also are simple because it's really an equality, and since both
         # disaggregated variables will be 0 when the disjunct isn't selected, it
         # doesn't even need big-Ming.
@@ -2179,24 +2196,139 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         self.assertEqual(cons.upper, 0)
         repn = generate_standard_repn(cons.body)
         self.assertTrue(repn.is_linear())
-        self.assertEqual(repn.constant, 0)
-        self.assertEqual(len(repn.linear_vars), 2)
-        ct.check_linear_coef(self, repn, y2d, 1)
-        ct.check_linear_coef(self, repn, y1d, -1)
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            - m.d[4].binary_indicator_var + z1d + y1d - y2d)
 
-        # 1 <= 1 - Y[1] + Y[2]
+        # hull transformation of z1 + 1 - (1 - y1) >= 1
+        # -y1d - z1d <= -d[4].ind_var
         cons = hull.get_transformed_constraints(
-            m.d[4].logic_to_linear.transformed_constraints[2])
+            m.d[4]._logical_to_disjunctive.transformed_constraints[2])
         self.assertEqual(len(cons), 1)
         cons = cons[0]
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 0)
         repn = generate_standard_repn(cons.body)
         self.assertTrue(repn.is_linear())
-        self.assertEqual(repn.constant, 0)
-        self.assertEqual(len(repn.linear_vars), 2)
-        ct.check_linear_coef(self, repn, y2d, -1)
-        ct.check_linear_coef(self, repn, y1d, 1)
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            m.d[4].binary_indicator_var - y1d - z1d)
+
+        # hull transformation of z1 + (1 - y2) >= 1
+        # y2d - z1d <= 0
+        cons = hull.get_transformed_constraints(
+            m.d[4]._logical_to_disjunctive.transformed_constraints[3])
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            y2d - z1d)
+
+        # hull transformation of (1 - z2) + y1 + (1 - y2) >= 1
+        # z2d - y1d + y2d <= m.d[4].ind_var
+        cons = hull.get_transformed_constraints(
+            m.d[4]._logical_to_disjunctive.transformed_constraints[4])
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            - m.d[4].binary_indicator_var + z2d + y2d - y1d)
+
+        # hull transformation of z2 + (1 - y1) >= 1
+        # y1d - z2d <= 0
+        cons = hull.get_transformed_constraints(
+            m.d[4]._logical_to_disjunctive.transformed_constraints[5])
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            y1d - z2d)
+
+        # hull transformation of z2 + 1 - (1 - y2) >= 1
+        # -y2d - z2d <= -d[4].ind_var
+        cons = hull.get_transformed_constraints(
+            m.d[4]._logical_to_disjunctive.transformed_constraints[6])
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            m.d[4].binary_indicator_var - y2d - z2d)
+
+        # hull transformation of z3 <= z1
+        # z3d - z1d <= 0
+        cons = hull.get_transformed_constraints(
+            m.d[4]._logical_to_disjunctive.transformed_constraints[7])
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            z3d - z1d)
+
+        # hull transformation of z3 <= z2
+        # z3d - z2d <= 0
+        cons = hull.get_transformed_constraints(
+            m.d[4]._logical_to_disjunctive.transformed_constraints[8])
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        self.assertIsNone(cons.lower)
+        self.assertEqual(cons.upper, 0)
+        repn = generate_standard_repn(cons.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            z3d - z2d)
 
         self.assertFalse(m.bwahaha.active)
         self.assertFalse(m.p.active)

@@ -397,7 +397,7 @@ class BigM_Transformation(Transformation):
     def _transform_block_components(self, block, disjunct, bigM, arg_list,
                                     suffix_list):
         # We don't know where all the BooleanVars are going to be used, so if
-        # there are any that the logical_to_linear transformation didn't
+        # there are any that the logical_to_disjunctive transformation didn't
         # transform, we need to do it now, so that the Reference gets moved
         # up. This won't be necessary when the writers are willing to find Vars
         # not in the active subtree.
