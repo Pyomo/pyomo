@@ -23,8 +23,6 @@ from pyomo.core import (
     Param, RangeSet, Set, SetOf, SortComponents, Suffix, value, Var
 )
 from pyomo.core.base import Reference, Transformation, TransformationFactory
-from pyomo.core.base.boolean_var import (
-    _DeprecatedImplicitAssociatedBinaryVariable)
 import pyomo.core.expr.current as EXPR
 from pyomo.core.util import target_list
 
@@ -339,21 +337,6 @@ class MultipleBigMTransformation(Transformation):
         obj._deactivate_without_fixing_indicator()
 
     def _transform_block_components(self, disjunct, active_disjuncts, Ms):
-        # We don't know where all the BooleanVars are used, so if there are any
-        # that logical_to_disjunctive didn't transform, we need to do it now
-        for boolean in disjunct.component_data_objects(BooleanVar,
-                                                       descend_into=Block,
-                                                       active=None):
-            if isinstance(boolean._associated_binary,
-                          _DeprecatedImplicitAssociatedBinaryVariable):
-                parent_block = boolean.parent_block()
-                new_var = Var(domain=Binary)
-                parent_block.add_component(
-                    unique_component_name(parent_block,
-                                          boolean.local_name + "_asbinary"),
-                    new_var)
-                boolean.associate_binary_var(new_var)
-
         # add references to all local variables on block (including the
         # indicator_var). We won't have to do this when the writers can find
         # Vars not in the active subtree.
