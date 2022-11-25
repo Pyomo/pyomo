@@ -194,6 +194,23 @@ class MultipleBigMTransformation(Transformation):
         if targets is None:
             targets = (instance, )
 
+        # transform any logical constraints that might be anywhere on the stuff
+        # we're about to transform. We do this before we preprocess targets
+        # because we will likely create more disjunctive components that will
+        # need transformation.
+        disj_targets = []
+        for t in targets:
+            disj_datas = t.values() if t.is_indexed() else [t,]
+            if t.ctype is Disjunct:
+                disj_targets.extend(disj_datas)
+            if t.ctype is Disjunction:
+                disj_targets.extend([d for disjunction in disj_datas for d in
+                                     disjunction.disjuncts])
+        TransformationFactory('contrib.logical_to_disjunctive').apply_to(
+            instance,
+            targets=[blk for blk in targets if blk.ctype is Block] +
+            disj_targets)
+
         # We don't allow nested, so it doesn't much matter which way we sort
         # this. But transforming from leaf to root makes the error checking for
         # complaining about nested smoother, so we do that. We have to transform
@@ -201,13 +218,6 @@ class MultipleBigMTransformation(Transformation):
         # need information from the other Disjuncts in the Disjunction.
         gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
         preprocessed_targets = gdp_tree.reverse_topological_sort()
-
-        # transform any logical constraints that might be anywhere on the stuff
-        # we're about to transform.
-        TransformationFactory('core.logical_to_linear').apply_to(
-            instance,
-            targets=[blk for blk in targets if blk.ctype is Block] +
-            [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
