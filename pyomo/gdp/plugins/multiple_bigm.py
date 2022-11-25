@@ -340,7 +340,7 @@ class MultipleBigMTransformation(Transformation):
 
     def _transform_block_components(self, disjunct, active_disjuncts, Ms):
         # We don't know where all the BooleanVars are used, so if there are any
-        # that logical_to_linear didn't transform, we need to do it now
+        # that logical_to_disjunctive didn't transform, we need to do it now
         for boolean in disjunct.component_data_objects(BooleanVar,
                                                        descend_into=Block,
                                                        active=None):
