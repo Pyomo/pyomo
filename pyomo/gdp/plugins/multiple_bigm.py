@@ -556,8 +556,8 @@ class MultipleBigMTransformation(Transformation):
         # Put XOR constraint on the transformation block
 
         # check if the constraint already exists
-        if disjunction._algebraic_constraint is not None:
-            return disjunction._algebraic_constraint()
+        if disjunction.algebraic_constraint is not None:
+            return disjunction.algebraic_constraint
 
         # add the XOR constraints to parent block (with unique name) It's
         # indexed if this is an IndexedDisjunction, not otherwise
@@ -708,7 +708,7 @@ class MultipleBigMTransformation(Transformation):
                 descend_into=(Block, Disjunct),
                 sort=SortComponents.deterministic):
             if disjunction.algebraic_constraint is not None:
-                transBlock = disjunction.algebraic_constraint().parent_block()
+                transBlock = disjunction.algebraic_constraint.parent_block()
                 # Don't necessarily assume all disjunctions were transformed
                 # with multiple bigm...
                 if hasattr(transBlock, "_mbm_values"):

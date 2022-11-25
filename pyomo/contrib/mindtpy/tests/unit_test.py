@@ -23,7 +23,7 @@ from pyomo.contrib.mindtpy.nlp_solve import handle_subproblem_other_termination,
 from pyomo.core.base import TransformationFactory
 from pyomo.opt import TerminationCondition as tc
 from pyomo.contrib.gdpopt.util import time_code
-from pyomo.contrib.mindtpy.util import create_utility_block, process_objective, setup_results_object
+from pyomo.contrib.mindtpy.util import create_utility_block, process_objective, setup_results_object, update_gap
 from pyomo.contrib.mindtpy.initialization import MindtPy_initialize_main, init_rNLP
 from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, handle_fp_main_tc
 from pyomo.core import Block, ConstraintList
@@ -70,7 +70,7 @@ class TestMindtPy(unittest.TestCase):
             setup_results_object(solve_data, config)
             process_objective(solve_data, config,
                               move_objective=(config.init_strategy == 'FP'
-                                                     or config.add_regularization is not None),
+                                              or config.add_regularization is not None),
                               use_mcpp=config.use_mcpp,
                               update_var_con_list=config.add_regularization is None
                               )
@@ -163,21 +163,21 @@ class TestMindtPy(unittest.TestCase):
                 tc.optimal, MindtPy, solve_data, config)
             handle_feasibility_subproblem_tc(
                 tc.infeasible, MindtPy, solve_data, config)
-            self.assertIs(solve_data.should_terminate, True)
+            self.assertTrue(solve_data.should_terminate)
             self.assertIs(solve_data.results.solver.status, SolverStatus.error)
 
             solve_data.should_terminate = False
             solve_data.results.solver.status = None
             handle_feasibility_subproblem_tc(
                 tc.maxIterations, MindtPy, solve_data, config)
-            self.assertIs(solve_data.should_terminate, True)
+            self.assertTrue(solve_data.should_terminate)
             self.assertIs(solve_data.results.solver.status, SolverStatus.error)
 
             solve_data.should_terminate = False
             solve_data.results.solver.status = None
             handle_feasibility_subproblem_tc(
                 tc.solverFailure, MindtPy, solve_data, config)
-            self.assertIs(solve_data.should_terminate, True)
+            self.assertTrue(solve_data.should_terminate)
             self.assertIs(solve_data.results.solver.status, SolverStatus.error)
 
             # test NLP subproblem infeasible
@@ -193,21 +193,21 @@ class TestMindtPy(unittest.TestCase):
             fixed_nlp_results.solver.termination_condition = tc.maxTimeLimit
             handle_nlp_subproblem_tc(
                 fixed_nlp, fixed_nlp_results, solve_data, config)
-            self.assertIs(solve_data.should_terminate, True)
+            self.assertTrue(solve_data.should_terminate)
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.maxTimeLimit)
 
             fixed_nlp_results.solver.termination_condition = tc.maxEvaluations
             handle_nlp_subproblem_tc(
                 fixed_nlp, fixed_nlp_results, solve_data, config)
-            self.assertIs(solve_data.should_terminate, True)
+            self.assertTrue(solve_data.should_terminate)
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.maxEvaluations)
 
             fixed_nlp_results.solver.termination_condition = tc.maxIterations
             handle_nlp_subproblem_tc(
                 fixed_nlp, fixed_nlp_results, solve_data, config)
-            self.assertIs(solve_data.should_terminate, True)
+            self.assertTrue(solve_data.should_terminate)
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.maxEvaluations)
 
@@ -220,35 +220,35 @@ class TestMindtPy(unittest.TestCase):
             feas_main_results.solver.termination_condition = tc.optimal
             fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
-            self.assertIs(fp_should_terminate, False)
+            self.assertFalse(fp_should_terminate)
 
             feas_main_results.solver.termination_condition = tc.maxTimeLimit
             fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
-            self.assertIs(fp_should_terminate, True)
+            self.assertTrue(fp_should_terminate)
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.maxTimeLimit)
 
             feas_main_results.solver.termination_condition = tc.infeasible
             fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
-            self.assertIs(fp_should_terminate, True)
+            self.assertTrue(fp_should_terminate)
 
             feas_main_results.solver.termination_condition = tc.unbounded
             fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
-            self.assertIs(fp_should_terminate, True)
+            self.assertTrue(fp_should_terminate)
 
             feas_main_results.solver.termination_condition = tc.other
             feas_main_results.solution.status = SolutionStatus.feasible
             fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
-            self.assertIs(fp_should_terminate, False)
+            self.assertFalse(fp_should_terminate)
 
             feas_main_results.solver.termination_condition = tc.solverFailure
             fp_should_terminate = handle_fp_main_tc(
                 feas_main_results, solve_data, config)
-            self.assertIs(fp_should_terminate, True)
+            self.assertTrue(fp_should_terminate)
 
             # test generate_norm_constraint
             fp_nlp = solve_data.working_model.clone()
@@ -304,16 +304,23 @@ class TestMindtPy(unittest.TestCase):
             # test algorithm_should_terminate
             solve_data.should_terminate = True
             solve_data.primal_bound = float('inf')
-            self.assertIs(algorithm_should_terminate(
-                solve_data, config, check_cycling=False), True)
+            self.assertTrue(algorithm_should_terminate(
+                solve_data, config, check_cycling=False))
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.noSolution)
 
             solve_data.primal_bound = 100
-            self.assertIs(algorithm_should_terminate(
-                solve_data, config, check_cycling=False), True)
+            self.assertTrue(algorithm_should_terminate(
+                solve_data, config, check_cycling=False))
             self.assertIs(
                 solve_data.results.solver.termination_condition, tc.feasible)
+
+            solve_data.primal_bound = 0.5
+            solve_data.dual_bound = 1
+            update_gap(solve_data)
+            self.assertEqual(solve_data.abs_gap, -0.5)
+            self.assertTrue(algorithm_should_terminate(
+                solve_data, config, check_cycling=False))
 
             solve_data.primal_bound_progress = [float('inf'), 5, 4, 3, 2, 1]
             solve_data.primal_bound_progress_time = [1, 2, 3, 4, 5, 6]
@@ -346,7 +353,7 @@ class TestMindtPy(unittest.TestCase):
             self.assertFalse(config.equality_relaxation)
             self.assertTrue(config.add_no_good_cuts)
             self.assertFalse(config.use_tabu_list)
-            
+
             config.single_tree = False
             config.strategy = 'FP'
             config.init_strategy = 'rNLP'
@@ -358,6 +365,7 @@ class TestMindtPy(unittest.TestCase):
             self.assertEqual(config.iteration_limit, 0)
             self.assertEqual(config.add_no_good_cuts, True)
             self.assertEqual(config.use_tabu_list, False)
+
 
 if __name__ == '__main__':
     unittest.main()
