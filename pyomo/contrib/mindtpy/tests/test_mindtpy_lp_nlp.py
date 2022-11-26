@@ -66,7 +66,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     mip_solver='cplex_persistent',
                                     nlp_solver=required_nlp_solvers,
                                     single_tree=True)
@@ -83,7 +83,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the LP/NLP decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     mip_solver='gurobi_persistent',
                                     nlp_solver=required_nlp_solvers,
                                     single_tree=True)
@@ -99,7 +99,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    results = opt.solve(model, strategy='OA',
+                    results = opt.solve(model, algorithm='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
                                         single_tree=True,
@@ -118,7 +118,7 @@ class TestMindtPy(unittest.TestCase):
                 for mip_solver in available_mip_solvers:
                     if known_solver_failure(mip_solver, model):
                         continue
-                    results = opt.solve(model, strategy='OA',
+                    results = opt.solve(model, algorithm='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
                                         single_tree=True,
@@ -135,7 +135,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    results = opt.solve(model, strategy='OA',
+                    results = opt.solve(model, algorithm='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
                                         single_tree=True,
@@ -152,7 +152,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
                 for mip_solver in available_mip_solvers:
-                    results = opt.solve(model, strategy='OA',
+                    results = opt.solve(model, algorithm='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
                                         single_tree=True,
@@ -171,7 +171,7 @@ class TestMindtPy(unittest.TestCase):
                 for mip_solver in available_mip_solvers:
                     if known_solver_failure(mip_solver, model):
                         continue
-                    results = opt.solve(model, strategy='OA',
+                    results = opt.solve(model, algorithm='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
                                         single_tree=True,
@@ -190,7 +190,7 @@ class TestMindtPy(unittest.TestCase):
                 for mip_solver in available_mip_solvers:
                     if known_solver_failure(mip_solver, model):
                         continue
-                    results = opt.solve(model, strategy='OA',
+                    results = opt.solve(model, algorithm='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
                                         single_tree=True,
@@ -209,7 +209,7 @@ class TestMindtPy(unittest.TestCase):
                 for mip_solver in available_mip_solvers:
                     if known_solver_failure(mip_solver, model):
                         continue
-                    results = opt.solve(model, strategy='OA',
+                    results = opt.solve(model, algorithm='OA',
                                         mip_solver=mip_solver,
                                         nlp_solver=required_nlp_solvers,
                                         single_tree=True,

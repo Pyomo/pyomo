@@ -44,7 +44,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     init_strategy='rNLP',
                                     solution_pool=True,
                                     mip_solver=required_solvers[1],
@@ -62,7 +62,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     init_strategy='rNLP',
                                     solution_pool=True,
                                     mip_solver=required_solvers[2],
@@ -81,7 +81,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     init_strategy='rNLP',
                                     solution_pool=True,
                                     mip_solver='glpk',

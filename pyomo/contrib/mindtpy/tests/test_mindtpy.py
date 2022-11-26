@@ -76,7 +76,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     init_strategy='rNLP',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
@@ -92,7 +92,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in extreme_model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     init_strategy='rNLP',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
@@ -102,7 +102,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     init_strategy='rNLP',
                                     feasibility_norm='L2',
                                     mip_solver=required_solvers[1],
@@ -119,7 +119,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     init_strategy='rNLP',
                                     feasibility_norm='L_infinity',
                                     mip_solver=required_solvers[1],
@@ -136,7 +136,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     init_strategy='max_binary',
                                     feasibility_norm='L1',
                                     mip_solver=required_solvers[1],
@@ -153,7 +153,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     differentiate_mode='sympy',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
@@ -169,7 +169,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     init_strategy='initial_binary',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
@@ -185,7 +185,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
                                     add_no_good_cuts=True
@@ -208,7 +208,7 @@ class TestMindtPy(unittest.TestCase):
             elif SolverFactory('gurobi').available():
                 mip_solver = 'gurobi'
             for quadratic_strategy in (0, 1, 2):
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     mip_solver=mip_solver,
                                     nlp_solver=required_solvers[0],
                                     quadratic_strategy=quadratic_strategy,
@@ -226,7 +226,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     mip_solver='appsi_cplex',
                                     nlp_solver=required_solvers[0]
                                     )
@@ -242,7 +242,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     mip_solver=required_solvers[1],
                                     nlp_solver='appsi_ipopt'
                                     )
@@ -256,7 +256,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
                                     integer_to_binary=True
@@ -272,7 +272,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm (partition_obj_nonlinear_terms)."""
         with SolverFactory('mindtpy') as opt:
             for model in obj_nonlinear_sum_model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
                                     partition_obj_nonlinear_terms=True
@@ -288,7 +288,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     init_strategy='initial_binary',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
@@ -301,7 +301,7 @@ class TestMindtPy(unittest.TestCase):
                     value(model.objective.expr), model.optimal_value, places=1)
                 self.check_optimal_solution(model)
 
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     init_strategy='rNLP',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
@@ -318,7 +318,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in nonconvex_model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
                                     heuristic_nonconvex=True
@@ -333,7 +333,7 @@ class TestMindtPy(unittest.TestCase):
     def test_iteration_limit(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
-            opt.solve(model, strategy='OA',
+            opt.solve(model, algorithm='OA',
                       iteration_limit=1,
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0]
@@ -343,7 +343,7 @@ class TestMindtPy(unittest.TestCase):
     def test_time_limit(self):
         with SolverFactory('mindtpy') as opt:
             model = ConstraintQualificationExample()
-            opt.solve(model, strategy='OA',
+            opt.solve(model, algorithm='OA',
                       time_limit=1,
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0]
@@ -354,7 +354,7 @@ class TestMindtPy(unittest.TestCase):
         with SolverFactory('mindtpy') as opt:
             model = ProposalModel()
             model.objective.sense = maximize
-            opt.solve(model, strategy='OA',
+            opt.solve(model, algorithm='OA',
                       mip_solver=required_solvers[1],
                       nlp_solver=required_solvers[0],
                       )
@@ -367,7 +367,7 @@ class TestMindtPy(unittest.TestCase):
             model = SimpleMINLP()
             model.X[1].fix(0)
             model.Y[1].fix(0)
-            results = opt.solve(model, strategy='OA',
+            results = opt.solve(model, algorithm='OA',
                                 mip_solver=required_solvers[1],
                                 nlp_solver=required_solvers[0],
                                 )

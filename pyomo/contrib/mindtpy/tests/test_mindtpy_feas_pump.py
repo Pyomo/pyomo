@@ -52,7 +52,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the feasibility pump algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='FP',
+                results = opt.solve(model, algorithm='FP',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
                                     absolute_bound_tolerance=1E-5)
@@ -63,7 +63,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the FP-OA algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='OA',
+                results = opt.solve(model, algorithm='OA',
                                     init_strategy='FP',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],

@@ -71,6 +71,8 @@ def _handle_strategy_deprecation(config):
     # This method won't be needed when the strategy arg is removed, but for now,
     # we need to copy it over as algorithm. The config system already gave the
     # deprecation warning.
+    if config.algorithm is not None:
+        config.strategy = config.algorithm
     if config.algorithm is None and config.strategy is not None:
         config.algorithm = config.strategy
 
@@ -146,7 +148,8 @@ class MindtPySolver(object):
         # can validate.
         kwds.pop('algorithm', None)
         # kwds.pop('strategy', None)
-
+        # kwds['algorithm'] = algorithm
+        kwds['strategy'] = algorithm
         # The algorithm has already been validated, so this will work.
         return SolverFactory(
             _supported_algorithms[algorithm][0]).solve(model, **kwds)

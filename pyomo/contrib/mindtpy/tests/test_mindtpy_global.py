@@ -43,7 +43,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='GOA',
+                results = opt.solve(model, algorithm='GOA',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0])
 
@@ -57,7 +57,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='GOA',
+                results = opt.solve(model, algorithm='GOA',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
                                     use_tabu_list=True)

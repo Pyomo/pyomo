@@ -41,7 +41,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the extended cutting plane decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='ECP',
+                results = opt.solve(model, algorithm='ECP',
                                     init_strategy='rNLP',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
@@ -57,7 +57,7 @@ class TestMindtPy(unittest.TestCase):
         """Test the extended cutting plane decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
             for model in model_list:
-                results = opt.solve(model, strategy='ECP',
+                results = opt.solve(model, algorithm='ECP',
                                     init_strategy='rNLP',
                                     mip_solver=required_solvers[1],
                                     nlp_solver=required_solvers[0],
