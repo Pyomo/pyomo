@@ -22,14 +22,10 @@ logger = logging.getLogger('pyomo.gdp')
 
 def _clone_all_but_indicator_vars(self):
     """Clone everything in a Disjunct except for the indicator_vars"""
-    memo = {
-        '__block_scope__': {id(self): True, id(None): False},
+    return self.clone({
         id(self.indicator_var): self.indicator_var,
         id(self.binary_indicator_var): self.binary_indicator_var,
-    }
-    new_block = copy.deepcopy(self, memo)
-    new_block._parent = None
-    return new_block
+    })
 
 
 def _squish_singletons(tuple_iter):
