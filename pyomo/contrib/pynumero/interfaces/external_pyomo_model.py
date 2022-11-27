@@ -33,7 +33,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
     CyIpoptNLP,
     CyIpoptSolver,
 )
-from pyomo.contrib.pynumero.algorithms.solvers.param_square_solvers import (
+from pyomo.contrib.pynumero.algorithms.solvers.implicit_functions import (
     SccImplicitFunctionSolver,
 )
 from pyomo.contrib.incidence_analysis.util import (
