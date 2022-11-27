@@ -20,8 +20,13 @@ from pyomo.common.dependencies import (
 )
 from pyomo.contrib.pynumero.asl import AmplInterface
 from pyomo.contrib.pynumero.algorithms.solvers.implicit_functions import (
+    CyIpoptSolverWrapper,
     ImplicitFunctionSolver,
+    DecomposedImplicitFunctionBase,
     SccImplicitFunctionSolver,
+)
+from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
+    cyipopt_available,
 )
 
 if not scipy_available or not numpy_available:
@@ -232,14 +237,14 @@ class _TestSolver(unittest.TestCase):
     def get_solver_class(self):
         raise NotImplementedError()
 
-    def _test_implicit_function(self, ImplicitFunctionClass):
+    def _test_implicit_function(self, ImplicitFunctionClass, **kwds):
         SolverClass = self.get_solver_class()
         fcn = ImplicitFunctionClass()
         variables = fcn.get_variables()
         parameters = fcn.get_parameters()
         equations = fcn.get_equations()
 
-        solver = SolverClass(variables, equations, parameters)
+        solver = SolverClass(variables, equations, parameters, **kwds)
 
         for inputs, pred_outputs in fcn.get_input_output_sequence():
             solver.set_parameters(inputs)
@@ -254,8 +259,8 @@ class _TestSolver(unittest.TestCase):
                     var.value, pred_outputs[i], delta=1e-5
                 )
 
-    def _test_implicit_function_1(self):
-        self._test_implicit_function(ImplicitFunction1)
+    def _test_implicit_function_1(self, **kwds):
+        self._test_implicit_function(ImplicitFunction1, **kwds)
 
     def _test_implicit_function_inputs_dont_appear(self):
         self._test_implicit_function(ImplicitFunctionInputsDontAppear)
@@ -272,8 +277,19 @@ class TestImplicitFunctionSolver(_TestSolver):
     def get_solver_class(self):
         return ImplicitFunctionSolver
 
+    def test_bad_option(self):
+        msg = "Option.*is invalid"
+        with self.assertRaisesRegex(ValueError, msg):
+            self._test_implicit_function_1(
+                solver_options=dict(bad_option=None)
+            )
+
     def test_implicit_function_1(self):
         self._test_implicit_function_1()
+
+    @unittest.skipUnless(cyipopt_available, "CyIpopt is not available")
+    def test_implicit_function_1_with_cyipopt(self):
+        self._test_implicit_function_1(solver_class=CyIpoptSolverWrapper)
 
     def test_implicit_function_inputs_dont_appear(self):
         self._test_implicit_function_inputs_dont_appear()
@@ -290,6 +306,17 @@ class TestSccImplicitFunctionSolver(_TestSolver):
     def get_solver_class(self):
         return SccImplicitFunctionSolver
 
+    def test_partition_not_implemented(self):
+        fcn = ImplicitFunction1()
+        variables = fcn.get_variables()
+        parameters = fcn.get_parameters()
+        equations = fcn.get_equations()
+        msg = "has not implemented"
+        with self.assertRaisesRegex(NotImplementedError, msg):
+            solver = DecomposedImplicitFunctionBase(
+                variables, equations, parameters
+            )
+
     def test_n_subsystems(self):
         SolverClass = self.get_solver_class()
         fcn = ImplicitFunction1()
@@ -303,6 +330,16 @@ class TestSccImplicitFunctionSolver(_TestSolver):
 
     def test_implicit_function_1(self):
         self._test_implicit_function_1()
+
+    @unittest.skipUnless(cyipopt_available, "CyIpopt is not available")
+    def test_implicit_function_1_with_cyipopt(self):
+        self._test_implicit_function_1(solver_class=CyIpoptSolverWrapper)
+
+    def test_implicit_function_1_no_calc_var(self):
+        self._test_implicit_function_1(
+            use_calc_var=False,
+            solver_options={"maxfev": 20},
+        )
 
     def test_implicit_function_inputs_dont_appear(self):
         self._test_implicit_function_inputs_dont_appear()
