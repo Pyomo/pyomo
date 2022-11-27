@@ -381,6 +381,14 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             ) for (block, _) in self._solver_subsystem_list
         ]
 
+    def n_subsystems(self):
+        """Returns the number of subsystems in the partition of variables
+        and equations used to converge the system defining the implicit
+        function
+
+        """
+        return len(self._subsystem_list)
+
     def partition_system(self, variables, constraints):
         """Partitions the systems of equations defined by the provided
         variables and constraints
