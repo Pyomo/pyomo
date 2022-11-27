@@ -10,34 +10,20 @@
 #  ___________________________________________________________________________
 
 import itertools
-from pyomo.environ import SolverFactory
 from pyomo.core.base.var import Var
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.objective import Objective
 from pyomo.core.expr.visitor import identify_variables
-from pyomo.common.collections import ComponentSet
 from pyomo.common.timing import HierarchicalTimer
-from pyomo.core.base.suffix import Suffix
-from pyomo.util.calc_var_value import calculate_variable_from_constraint
 from pyomo.util.subsystems import (
     create_subsystem_block,
-    TemporarySubsystemManager,
 )
 from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
 from pyomo.contrib.pynumero.interfaces.external_grey_box import (
     ExternalGreyBoxModel,
 )
-from pyomo.contrib.pynumero.interfaces.nlp_projections import ProjectedNLP
-from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
-    cyipopt_available,
-    CyIpoptNLP,
-    CyIpoptSolver,
-)
 from pyomo.contrib.pynumero.algorithms.solvers.implicit_functions import (
     SccImplicitFunctionSolver,
-)
-from pyomo.contrib.incidence_analysis.util import (
-    generate_strongly_connected_components,
 )
 import numpy as np
 import scipy.sparse as sps
