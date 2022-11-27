@@ -34,9 +34,7 @@ from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
     CyIpoptSolver,
 )
 from pyomo.contrib.pynumero.algorithms.solvers.param_square_solvers import (
-    ImplicitFunctionSolver,
     SccImplicitFunctionSolver,
-    CyIpoptSolverWrapper,
 )
 from pyomo.contrib.incidence_analysis.util import (
     generate_strongly_connected_components,
@@ -171,9 +169,11 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         external_cons: list
             List of equality constraints used to solve for the external
             variables
-        solver_class: Subclass of ParamSquareSolver
+        solver_class: Subclass of ImplicitFunctionSolver
+            The solver object that is used to converge the system of
+            equations defining the implicit function.
         solver_options: dict
-            Options dict for the ParamSquareSolver
+            Options dict for the ImplicitFunctionSolver
 
         """
         if timer is None:
@@ -194,7 +194,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         self._block._obj = Objective(expr=0.0)
         self._nlp = PyomoNLP(self._block)
 
-        # Instantiate a solver with the PyomoImplicitFunction API:
+        # Instantiate a solver with the ImplicitFunctionSolver API:
         self._solver = self._solver_class(
             external_vars,
             external_cons,
