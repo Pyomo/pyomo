@@ -65,10 +65,14 @@ class NlpSolverBase(object):
     """
 
     def __init__(self, nlp, options=None, timer=None):
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "%s has not implemented the __init__ method" % type(self)
+        )
 
     def solve(self, **kwds):
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "%s has not implemented the solve method" % type(self)
+        )
 
 
 class CyIpoptSolverWrapper(NlpSolverBase):
@@ -116,9 +120,13 @@ class ScipySolverWrapper(NlpSolverBase):
             if key in FsolveNlpSolver.OPTIONS
         }
         if nlp.n_primals() == 1:
-            solver = SecantNewtonNlpSolver(nlp, timer=timer, options=options)
+            solver = SecantNewtonNlpSolver(
+                nlp, timer=timer, options=newton_options
+            )
         else:
-            solver = FsolveNlpSolver(nlp, timer=timer, options=options)
+            solver = FsolveNlpSolver(
+                nlp, timer=timer, options=fsolve_options
+            )
         self._nlp = nlp
         self._options = options
         self._solver = solver
@@ -150,7 +158,13 @@ class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
             solver_options = {}
         super().__init__(variables, constraints, parameters)
         block = self.get_block()
+
+        # PyomoNLP requires an objective
         block._obj = Objective(expr=0.0)
+        # CyIpoptSolver requires a non-empty scaling factor
+        block.scaling_factor = Suffix(direction=Suffix.EXPORT)
+        block.scaling_factor[block._obj] = 1.0
+
         self._nlp = PyomoNLP(block)
         primals_ordering = [var.name for var in variables]
         self._proj_nlp = ProjectedExtendedNLP(self._nlp, primals_ordering)
@@ -420,7 +434,9 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         """
         # Subclasses should implement this method, which returns an ordered
         # partition (two lists-of-lists) of variables and constraints.
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "%s has not implemented the partition_system method" % type(self)
+        )
 
     def set_parameters(self, values):
         values = np.array(values)
