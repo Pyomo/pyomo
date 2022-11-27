@@ -39,18 +39,6 @@ if not AmplInterface.available():
     )
 
 
-def make_simple_model():
-    m = pyo.ConcreteModel()
-    m.I = pyo.Set(initialize=[1, 2, 3])
-    m.x = pyo.Var(m.I, initialize=1.0)
-    m.con1 = pyo.Constraint(expr=m.x[1]**2 + m.x[2]**2 + m.x[3]**2 == 1)
-    m.con2 = pyo.Constraint(expr=2*m.x[1] + 3*m.x[2] - 4*m.x[3] == 0)
-    m.con3 = pyo.Constraint(expr=m.x[1] == 2*pyo.exp(m.x[2]/m.x[3]))
-    m.obj = pyo.Objective(expr=0.0)
-    nlp = PyomoNLP(m)
-    return m, nlp
-
-
 class ImplicitFunction1(object):
 
     def __init__(self):
@@ -117,6 +105,113 @@ class ImplicitFunction1(object):
         return list(zip(inputs, outputs))
 
 
+class ImplicitFunctionWithExtraVariables(ImplicitFunction1):
+    """This is the same system as ImplicitFunction1, but now some
+    of the hand-coded constants have been replaced by unfixed variables.
+    These variables will be completely ignored and treated as constants
+    by the implicit functions.
+
+    """
+
+    def _make_model(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=[1, 2, 3])
+        m.J = pyo.Set(initialize=[1, 2])
+        m.K = pyo.Set(initialize=[1, 2, 3])
+        m.x = pyo.Var(m.I, initialize=1.0)
+        m.p = pyo.Var(m.J, initialize=1.0)
+
+        # These variables will be treated as neither outputs nor
+        # inputs. They are simply treated as constants.
+        m.const = pyo.Var(m.K, initialize=1.0)
+        m.const[1].set_value(1.0)
+        m.const[2].set_value(2.0)
+        m.const[3].set_value(1.5)
+
+        m.con1 = pyo.Constraint(
+            expr=m.const[1]*m.x[2]**2 + m.x[3]**2 == m.p[1]
+        )
+        m.con2 = pyo.Constraint(
+            expr=m.const[2]*m.x[1] + 3*m.x[2] - 4*m.x[3] == m.p[1]**2 - m.p[2]
+        )
+        m.con3 = pyo.Constraint(
+            expr=m.p[2]**m.const[3] == 2*pyo.exp(m.x[2]/m.x[3])
+        )
+        m.obj = pyo.Objective(expr=0.0)
+        return m
+
+
+class ImplicitFunctionInputsDontAppear(object):
+    """This is an implicit function designed to test the edge case
+    where inputs do not appear in the system defining the implicit
+    function (i.e. the function is constant).
+
+    """
+    def __init__(self):
+        self._model = self._make_model()
+
+    def _make_model(self):
+        m = pyo.ConcreteModel()
+        m.I = pyo.Set(initialize=[1, 2, 3])
+        m.J = pyo.Set(initialize=[1, 2])
+        m.x = pyo.Var(m.I, initialize=1.0)
+        m.p = pyo.Var(m.J, initialize=1.0)
+        m.con1 = pyo.Constraint(
+            expr=m.x[2]**2 + m.x[3]**2 == 1.0
+        )
+        m.con2 = pyo.Constraint(
+            expr=2*m.x[1] + 3*m.x[2] - 4*m.x[3] == 0.0
+        )
+        m.con3 = pyo.Constraint(
+            expr=1.0 == 2*pyo.exp(m.x[2]/m.x[3])
+        )
+        m.obj = pyo.Objective(expr=0.0)
+        return m
+
+    def get_parameters(self):
+        m = self._model
+        return [m.p[1], m.p[2]]
+
+    def get_variables(self):
+        m = self._model
+        return [m.x[1], m.x[2], m.x[3]]
+
+    def get_equations(self):
+        m = self._model
+        return [m.con1, m.con2, m.con3]
+
+    def get_input_output_sequence(self):
+        # As the implicit function is constant, these parameter
+        # values don't matter
+        p1_inputs = [-1.0, 0.0]
+        p2_inputs = [1.0]
+        inputs = list(itertools.product(p1_inputs, p2_inputs))
+
+        outputs = [
+            # Outputs computed by solving system with Ipopt
+            (2.498253, -0.569676, 0.821869),
+            (2.498253, -0.569676, 0.821869),
+        ]
+        return list(zip(inputs, outputs))
+
+
+class ImplicitFunctionNoInputs(ImplicitFunctionInputsDontAppear):
+    """The same system as with inputs that don't appear, but not the
+    inputs are not provided to the implicit function solver
+
+    """
+    def get_parameters(self):
+        return []
+
+    def get_input_output_sequence(self):
+        inputs = [()]
+        outputs = [
+            # Outputs computed by solving system with Ipopt
+            (2.498253, -0.569676, 0.821869),
+        ]
+        return list(zip(inputs, outputs))
+
+
 class _TestSolver(unittest.TestCase):
     """A suite of basic tests for implicit function solvers.
 
@@ -125,6 +220,9 @@ class _TestSolver(unittest.TestCase):
     add "test" methods that call the following methods:
 
         _test_implicit_function_1
+        _test_implicit_function_inputs_dont_appear
+        _test_implicit_function_no_inputs
+        _test_implicit_function_with_extra_variables
 
     These methods are private so they don't get picked up on the base
     class by pytest.
@@ -134,9 +232,9 @@ class _TestSolver(unittest.TestCase):
     def get_solver_class(self):
         raise NotImplementedError()
 
-    def _test_implicit_function_1(self):
+    def _test_implicit_function(self, ImplicitFunctionClass):
         SolverClass = self.get_solver_class()
-        fcn = ImplicitFunction1()
+        fcn = ImplicitFunctionClass()
         variables = fcn.get_variables()
         parameters = fcn.get_parameters()
         equations = fcn.get_equations()
@@ -156,6 +254,18 @@ class _TestSolver(unittest.TestCase):
                     var.value, pred_outputs[i], delta=1e-5
                 )
 
+    def _test_implicit_function_1(self):
+        self._test_implicit_function(ImplicitFunction1)
+
+    def _test_implicit_function_inputs_dont_appear(self):
+        self._test_implicit_function(ImplicitFunctionInputsDontAppear)
+
+    def _test_implicit_function_no_inputs(self):
+        self._test_implicit_function(ImplicitFunctionNoInputs)
+
+    def _test_implicit_function_with_extra_variables(self):
+        self._test_implicit_function(ImplicitFunctionWithExtraVariables)
+
 
 class TestImplicitFunctionSolver(_TestSolver):
 
@@ -165,44 +275,73 @@ class TestImplicitFunctionSolver(_TestSolver):
     def test_implicit_function_1(self):
         self._test_implicit_function_1()
 
+    def test_implicit_function_inputs_dont_appear(self):
+        self._test_implicit_function_inputs_dont_appear()
+
+    def test_implicit_function_no_inputs(self):
+        self._test_implicit_function_no_inputs()
+
+    def test_implicit_function_with_extra_variables(self):
+        self._test_implicit_function_with_extra_variables()
+
 
 class TestSccImplicitFunctionSolver(_TestSolver):
 
     def get_solver_class(self):
         return SccImplicitFunctionSolver
 
+    def test_n_subsystems(self):
+        SolverClass = self.get_solver_class()
+        fcn = ImplicitFunction1()
+        variables = fcn.get_variables()
+        parameters = fcn.get_parameters()
+        equations = fcn.get_equations()
+        solver = SolverClass(variables, equations, parameters)
+
+        # Assert that the system decomposes into two subsystems.
+        self.assertEqual(solver.n_subsystems(), 2)
+
     def test_implicit_function_1(self):
         self._test_implicit_function_1()
 
+    def test_implicit_function_inputs_dont_appear(self):
+        self._test_implicit_function_inputs_dont_appear()
 
-#def _solve_with_ipopt():
-#    from pyomo.util.subsystems import TemporarySubsystemManager
-#    ipopt = pyo.SolverFactory("ipopt")
-#    fcn = ImplicitFunction1()
-#    m = fcn._model
-#    params = fcn.get_parameters()
-#    variables = fcn.get_variables()
-#    input_list = []
-#    output_list = []
-#    error_list = []
-#    for (p1, p2), _ in fcn.get_input_output_sequence():
-#        params[0].set_value(p1)
-#        params[1].set_value(p2)
-#        input_list.append((p1, p2))
-#        with TemporarySubsystemManager(to_fix=params):
-#            try:
-#                res = ipopt.solve(m, tee=True)
-#                pyo.assert_optimal_termination(res)
-#                error_list.append(False)
-#            except (ValueError, AssertionError, RuntimeError):
-#                error_list.append(True)
-#            output_list.append(tuple(var.value for var in variables))
-#    for i, (inputs, outputs) in enumerate(zip(input_list, output_list)):
-#        print(inputs, outputs, error_list[i])
-#    for outputs in output_list:
-#        print("(%1.6f, %1.6f, %1.6f)," % outputs)
+    def test_implicit_function_no_inputs(self):
+        self._test_implicit_function_no_inputs()
+
+    def test_implicit_function_with_extra_variables(self):
+        self._test_implicit_function_with_extra_variables()
+
+
+def _solve_with_ipopt():
+    from pyomo.util.subsystems import TemporarySubsystemManager
+    ipopt = pyo.SolverFactory("ipopt")
+    fcn = ImplicitFunctionInputsDontAppear()
+    m = fcn._model
+    params = fcn.get_parameters()
+    variables = fcn.get_variables()
+    input_list = []
+    output_list = []
+    error_list = []
+    for (p1, p2), _ in fcn.get_input_output_sequence():
+        params[0].set_value(p1)
+        params[1].set_value(p2)
+        input_list.append((p1, p2))
+        with TemporarySubsystemManager(to_fix=params):
+            try:
+                res = ipopt.solve(m, tee=True)
+                pyo.assert_optimal_termination(res)
+                error_list.append(False)
+            except (ValueError, AssertionError, RuntimeError):
+                error_list.append(True)
+            output_list.append(tuple(var.value for var in variables))
+    for i, (inputs, outputs) in enumerate(zip(input_list, output_list)):
+        print(inputs, outputs, error_list[i])
+    for outputs in output_list:
+        print("(%1.6f, %1.6f, %1.6f)," % outputs)
 
 
 if __name__ == "__main__":
-    unittest.main()
-    #_solve_with_ipopt()
+    #unittest.main()
+    _solve_with_ipopt()
