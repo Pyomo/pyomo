@@ -133,7 +133,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
 
     """
 
-    def __init__(self,
+    def __init__(
+        self,
         input_vars,
         external_vars,
         residual_cons,
