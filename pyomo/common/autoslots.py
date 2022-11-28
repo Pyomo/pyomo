@@ -33,7 +33,7 @@ def _deepcopy_tuple(obj, memo, _id):
         # preserve that behavior here.
         #
         # It also appears to be faster *not* to cache the fact that this
-        # particular tuple was unchanged by the deepcopy (Note the the
+        # particular tuple was unchanged by the deepcopy (Note: the
         # standard library also does not cache the unchanged tuples in
         # the memo)
         #
