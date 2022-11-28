@@ -36,6 +36,7 @@ Pyomo 6.4.3    28 Nov 2022
   - Update tracking of used named subexpressions in NLv2 writer (#2568)
   - Add test utilities for comparing expressions (#2590)
   - Fix some performance degradations from pyomo.contrib.cp (#2612)
+  - Improve deepcopy performance (#2628)
 - Documentation
   - Fix examples in working_models.rst (#2502)
 - Solver Interfaces
@@ -91,7 +92,6 @@ Pyomo 6.4.3    28 Nov 2022
   - PyROS: Rewrite UncertaintySet docstrings and improve validation robustness (#2488)
   - PyROS: Updates to subproblem initialization and solver call routines (#2515)
   - PyROS: Fix collection of sub-solver solve times (#2543)
-
 
 -------------------------------------------------------------------------------
 Pyomo 6.4.2    17 Aug 2022
