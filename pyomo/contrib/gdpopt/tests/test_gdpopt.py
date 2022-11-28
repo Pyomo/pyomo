@@ -31,7 +31,6 @@ from pyomo.contrib.gdpopt.util import is_feasible, time_code
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available
 from pyomo.contrib.gdpopt.solve_discrete_problem import (
     solve_MILP_discrete_problem, distinguish_mip_infeasible_or_unbounded)
-from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.environ import (
     Block, ConcreteModel, Constraint, Integers, LogicalConstraint, maximize,
     Objective, RangeSet, TransformationFactory, SolverFactory, sqrt, value, Var)
@@ -605,14 +604,12 @@ class TestGDPopt(unittest.TestCase):
         self.assertAlmostEqual(results.problem.upper_bound, 1300*x_val,
                                places=6)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_logical_constraints_on_disjuncts(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
         SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
                                           nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_logical_constraints_on_disjuncts_nonlinear_convex(self):
         m = models.makeLogicalConstraintsOnDisjuncts_NonlinearConvex()
         SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
@@ -635,7 +632,6 @@ class TestGDPopt(unittest.TestCase):
         self.assertAlmostEqual(value(m.x), sqrt(2)/2)
         self.assertAlmostEqual(value(m.y), sqrt(2)/2)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_boolean_vars_on_disjuncts(self):
         m = models.makeBooleanVarsOnDisjuncts()
         SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
@@ -682,7 +678,6 @@ class TestGDPopt(unittest.TestCase):
         self.assertEqual(results.solver.termination_condition,
                          TerminationCondition.maxTimeLimit)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_LOA_8PP_logical_default_init(self):
         """Test logic-based outer approximation with 8PP."""
         exfile = import_file(
@@ -728,7 +723,6 @@ class TestGDPopt(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_LOA_strip_pack_logical_constraints(self):
         """Test logic-based outer approximation with variation of strip
         packing with some logical constraints."""
@@ -780,7 +774,6 @@ class TestGDPopt(unittest.TestCase):
                                                     nlp_solver=nlp_solver)
         ct.check_8PP_solution(self, eight_process, results)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_LOA_8PP_logical_maxBinary(self):
         """Test logic-based OA with max_binary initialization."""
         exfile = import_file(
@@ -804,7 +797,6 @@ class TestGDPopt(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_LOA_strip_pack_maxBinary_logical_constraints(self):
         """Test LOA with strip packing using max_binary initialization and
         logical constraints."""
@@ -999,14 +991,12 @@ class TestGDPoptRIC(unittest.TestCase):
                                           nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.o), 0)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_logical_constraints_on_disjuncts(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
         SolverFactory('gdpopt.ric').solve(m, mip_solver=mip_solver,
                                           nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_boolean_vars_on_disjuncts(self):
         m = models.makeBooleanVarsOnDisjuncts()
         SolverFactory('gdpopt.ric').solve(m, mip_solver=mip_solver,
@@ -1024,7 +1014,6 @@ class TestGDPoptRIC(unittest.TestCase):
                                                     tee=False)
         ct.check_8PP_solution(self, eight_process, results)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_RIC_8PP_logical_default_init(self):
         """Test logic-based outer approximation with 8PP."""
         exfile = import_file(
@@ -1070,7 +1059,6 @@ class TestGDPoptRIC(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_RIC_strip_pack_default_init_logical_constraints(self):
         """Test logic-based outer approximation with strip packing with
         logical constraints."""
@@ -1130,7 +1118,6 @@ class TestGDPoptRIC(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
-    @unittest.skipUnless(sympy_available, "Sympy not available")
     def test_RIC_strip_pack_maxBinary_logical_constraints(self):
         """Test RIC with strip packing using max_binary initialization and
         including logical constraints."""
@@ -1348,18 +1335,16 @@ class TestGLOA(unittest.TestCase):
         self.assertEqual(res.solver.termination_condition,
                          TerminationCondition.infeasible)
 
-    @unittest.skipUnless(license_available and sympy_available,
-                         "Global NLP solver license not available or sympy "
-                         "not available.")
+    @unittest.skipUnless(license_available,
+                         "Global NLP solver license not available")
     def test_logical_constraints_on_disjuncts(self):
         m = models.makeLogicalConstraintsOnDisjuncts()
         SolverFactory('gdpopt.gloa').solve(m, mip_solver=mip_solver,
                                            nlp_solver=global_nlp_solver)
         self.assertAlmostEqual(value(m.x), 8)
 
-    @unittest.skipUnless(license_available and sympy_available,
-                         "Global NLP solver license not available or sympy "
-                         "not available.")
+    @unittest.skipUnless(license_available,
+                         "Global NLP solver license not available")
     def test_boolean_vars_on_disjuncts(self):
         m = models.makeBooleanVarsOnDisjuncts()
         SolverFactory('gdpopt.gloa').solve(m, mip_solver=mip_solver,
@@ -1381,9 +1366,8 @@ class TestGLOA(unittest.TestCase):
         )
         ct.check_8PP_solution(self, eight_process, results)
 
-    @unittest.skipUnless(license_available and sympy_available,
-                         "Global NLP solver license not available or sympy "
-                         "not available.")
+    @unittest.skipUnless(license_available,
+                         "Global NLP solver license not available")
     def test_GLOA_8PP_logical(self):
         """Test the global logic-based outer approximation algorithm."""
         exfile = import_file(
@@ -1428,9 +1412,8 @@ class TestGLOA(unittest.TestCase):
         self.assertTrue(
             fabs(value(strip_pack.total_length.expr) - 11) <= 1E-2)
 
-    @unittest.skipUnless(license_available and sympy_available,
-                         "Global NLP solver license not available or sympy "
-                         "not available.")
+    @unittest.skipUnless(license_available,
+                         "Global NLP solver license not available")
     def test_GLOA_strip_pack_default_init_logical_constraints(self):
         """Test logic-based outer approximation with strip packing."""
         exfile = import_file(
