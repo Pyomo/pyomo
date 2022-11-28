@@ -192,6 +192,7 @@ class MultipleBigMTransformation(Transformation):
         }
         self._transformation_blocks = {}
         self._algebraic_constraints = {}
+        self._arg_list = {}
 
     def _apply_to(self, instance, **kwds):
         self.used_args = ComponentMap()
@@ -201,6 +202,7 @@ class MultipleBigMTransformation(Transformation):
             self.used_args.clear()
             self._transformation_blocks.clear()
             self._algebraic_constraints.clear()
+            self._arg_list.clear()
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
