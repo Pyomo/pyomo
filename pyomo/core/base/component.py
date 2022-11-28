@@ -261,7 +261,7 @@ class _ComponentBase(PyomoObject):
     def _deepcopy_field(self, memo, slot_name, value):
         saved_memo = len(memo)
         try:
-            return deepcopy(value, memo)
+            return fast_deepcopy(value, memo)
         except CloneError:
             raise
         except:
