@@ -26,6 +26,7 @@ including:
  -  Generalized disjunctive programming
  -  Differential algebraic equations
  -  Mathematical programming with equilibrium constraints
+ -  Constraint programming
 
 Pyomo supports analysis and scripting within a full-featured programming
 language. Further, Pyomo has also proven an effective framework for
