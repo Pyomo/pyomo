@@ -3,7 +3,7 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 6.4.3    21 Nov 2022
+Pyomo 6.4.3    28 Nov 2022
 -------------------------------------------------------------------------------
 
 - General
@@ -19,6 +19,7 @@ Pyomo 6.4.3    21 Nov 2022
   - Allow nan to compare equal in assertStructuredAlmostEqual() (#2582)
   - Add support and testing for Python 3.11 (#2596)
   - Update deprecation utilities to improve user messages (#2606)
+  - Add Python 3.11 to wheel creation workflow (#2618)
 - Core
   - Refactor expression hierarchy, add RelationalExpression base class (#2499)
   - Support cloning individual blocks (#2504)
@@ -28,7 +29,7 @@ Pyomo 6.4.3    21 Nov 2022
   - Improve handling of restricted words on Blocks (#2535)
   - Improve Reference() performance (#2537)
   - Fix mapping gradient/hessian for external functions with string args (#2539)
-  - Updates and fixes for the NLv2 writer (#2540)
+  - Updates and fixes for the NLv2 writer (#2540, #2622)
   - Fix bug for sum_product(Var, Param, Param) (#2551)
   - Add deprecation path for expression objects moved to relational_expr (#2554)
   - Raise exception when setting value of Expression to non-numeric expression (#2567)
@@ -56,6 +57,7 @@ Pyomo 6.4.3    21 Nov 2022
   - Update GitHub actions versions from v2 to v3 (#2566)
   - Skip a test in MOSEK 10 due to a bug in warm starting MIQPs (#2614)
   - Update skipped CBC test that works with CBC 2.10.6 (#2615)
+  - Add SCIP to GitHub actions environment (#2602)
 - GDP
   - Use OrderedSet instead of list in GDPTree to improve performance (#2516)
   - Reduce calls to logical_to_linear in GDP transformations (#2519)
@@ -64,6 +66,7 @@ Pyomo 6.4.3    21 Nov 2022
   - Fix pickling of transformed GDP models (#2576)
   - Add multiple-bigM transformation (#2592)
   - Improve performance of BigM transformation (#2605)
+  - Remove weakref mapping Disjunctions to their algebraic_constraint (#2617)
 - Contributed Packages
   - APPSI: Fix exception raised by appsi_gurobi during Python shutdown (#2498)
   - APPSI: Improve handling of Gurobi results (#2517)
@@ -84,6 +87,7 @@ Pyomo 6.4.3    21 Nov 2022
   - PyNumero: Add interfaces to SciPy square solvers (#2523)
   - PyNumero: Check that AmplInterface is available in SciPy solver tests (#2594)
   - PyNumero: Add ProjectedExtendedNLP class (#2601)
+  - PyNumero: Add interface to SciPy scalar Newton solver (#2603)
   - PyROS: Rewrite UncertaintySet docstrings and improve validation robustness (#2488)
   - PyROS: Updates to subproblem initialization and solver call routines (#2515)
   - PyROS: Fix collection of sub-solver solve times (#2543)
