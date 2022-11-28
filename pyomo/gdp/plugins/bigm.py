@@ -14,8 +14,7 @@
 import logging
 
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.common.config import ConfigBlock, ConfigValue
-from pyomo.common.log import is_debug_set
+from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
@@ -25,13 +24,14 @@ from pyomo.core import (
     NonNegativeIntegers, Binary, Any)
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
-from pyomo.core.base.external import ExternalFunction
-from pyomo.core.base import Transformation, TransformationFactory, Reference
+from pyomo.core.base import TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp.plugins.gdp_to_mip_transformation import (
+    GDP_to_MIP_Transformation)
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
-    is_child_of, get_src_disjunction, get_src_constraint, get_gdp_tree,
+    is_child_of, get_src_disjunction, get_src_constraint,
     get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
      _warn_for_active_disjunct, preprocess_targets, _to_dict,
     _get_bigm_suffix_list, _convert_M_to_tuple, _warn_for_unused_bigM_args)
@@ -45,7 +45,7 @@ logger = logging.getLogger('pyomo.gdp.bigm')
 
 @TransformationFactory.register('gdp.bigm', doc="Relax disjunctive model using "
                                 "big-M terms.")
-class BigM_Transformation(Transformation):
+class BigM_Transformation(GDP_to_MIP_Transformation):
     """Relax disjunctive model using big-M terms.
 
     Relaxes a disjunctive model into an algebraic model by adding Big-M
@@ -92,7 +92,7 @@ class BigM_Transformation(Transformation):
 
     """
 
-    CONFIG = ConfigBlock("gdp.bigm")
+    CONFIG = ConfigDict("gdp.bigm")
     CONFIG.declare('targets', ConfigValue(
         default=None,
         domain=target_list,
@@ -133,38 +133,9 @@ class BigM_Transformation(Transformation):
         while the variables remain fixed.
         """
     ))
-
     def __init__(self):
-        """Initialize transformation object."""
         super(BigM_Transformation, self).__init__()
-        self.handlers = {
-            Constraint:  self._transform_constraint,
-            Var:         False, # Note that if a Var appears on a Disjunct, we
-                                # still treat its bounds as global. If the
-                                # intent is for its bounds to be on the
-                                # disjunct, it should be declared with no bounds
-                                # and the bounds should be set in constraints on
-                                # the Disjunct.
-            BooleanVar:  False,
-            Connector:   False,
-            Expression:  False,
-            Suffix:      False,
-            Param:       False,
-            Set:         False,
-            SetOf:       False,
-            RangeSet:    False,
-            Disjunction: False,# It's impossible to encounter an active
-                               # Disjunction because preprocessing would have
-                               # put it before its parent Disjunct in the order
-                               # of transformation.
-            Disjunct:    self._warn_for_active_disjunct,
-            Block:       False,
-            ExternalFunction: False,
-            Port:        False, # not Arcs, because those are deactivated after
-                                # the network.expand_arcs transformation
-        }
-        self._generate_debug_messages = False
-        self._transformation_blocks = {}
+        self.logger = logger
 
     def _get_bigm_arg_list(self, bigm_args, block):
         # Gather what we know about blocks from args exactly once. We'll still
@@ -180,7 +151,6 @@ class BigM_Transformation(Transformation):
         return arg_list
 
     def _apply_to(self, instance, **kwds):
-        self._generate_debug_messages = is_debug_set(logger)
         self.used_args = ComponentMap() # If everything was sure to go well,
                                         # this could be a dictionary. But if
                                         # someone messes up and gives us a Var
@@ -194,63 +164,26 @@ class BigM_Transformation(Transformation):
             self._transformation_blocks.clear()
 
     def _apply_to_impl(self, instance, **kwds):
-        if not instance.ctype in (Block, Disjunct):
-            raise GDP_Error("Transformation called on %s of type %s. "
-                            "'instance' must be a ConcreteModel, Block, or "
-                            "Disjunct (in the case of nested disjunctions)." %
-                            (instance.name, instance.ctype))
+        super(BigM_Transformation, self)._apply_to_impl(instance, **kwds)
 
-        config = self.CONFIG(kwds.pop('options', {}))
-
-        # We will let args override suffixes and estimate as a last
-        # resort. More specific args/suffixes override ones anywhere in
-        # the tree. Suffixes lower down in the tree override ones higher
-        # up.
-        config.set_value(kwds)
-        bigM = config.bigM
-
-        targets = config.targets
-        # We need to check that all the targets are in fact on instance. As we
-        # do this, we will use the set below to cache components we know to be
-        # in the tree rooted at instance.
-        knownBlocks = {}
-        if targets is None:
-            targets = (instance, )
-
-        # FIXME: For historical reasons, BigM would silently skip
-        # any targets that were explicitly deactivated.  This
-        # preserves that behavior (although adds a warning).  We
-        # should revisit that design decision and probably remove
-        # this filter, as it is slightly ambiguous as to what it
-        # means for the target to be deactivated: is it just the
-        # target itself [historical implementation] or any block in
-        # the hierarchy?
-        def _filter_inactive(targets):
-            for t in targets:
-                if not t.active:
-                    logger.warning(
-                        'GDP.BigM transformation passed a deactivated '
-                        f'target ({t.name}). Skipping.')
-                else:
-                    yield t
-        targets = list(_filter_inactive(targets))
+        bigM = self._config.bigM
 
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
         # the list.
-        gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
-        preprocessed_targets = preprocess_targets(targets, instance,
-                                                  knownBlocks,
-                                                  gdp_tree=gdp_tree)
+        gdp_tree = self._get_gdp_tree_from_targets(instance)
+        preprocessed_targets = gdp_tree.reverse_topological_sort()
 
         # transform any logical constraints that might be anywhere on the stuff
         # we're about to transform.
         TransformationFactory('core.logical_to_linear').apply_to(
             instance,
-            targets=[blk for blk in targets if blk.ctype is Block] +
+            targets=[blk for blk in self._config.targets 
+                     if blk.ctype is Block] +
             [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
 
-        self.assume_fixed_vars_permanent = config.assume_fixed_vars_permanent
+        self.assume_fixed_vars_permanent = self._config.\
+                                           assume_fixed_vars_permanent
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
@@ -266,19 +199,8 @@ class BigM_Transformation(Transformation):
         _warn_for_unused_bigM_args(bigM, self.used_args, logger)
 
     def _add_transformation_block(self, to_block):
-        if to_block in self._transformation_blocks:
-            return self._transformation_blocks[to_block]
-
-        # make a transformation block on to_block to put transformed disjuncts
-        # on
-        transBlockName = unique_component_name(
-            to_block,
-            '_pyomo_gdp_bigm_reformulation')
-        self._transformation_blocks[to_block] = transBlock = Block()
-        to_block.add_component(transBlockName, transBlock)
-        transBlock.relaxedDisjuncts = _TransformedDisjunct(NonNegativeIntegers)
-
-        return transBlock
+        return super(BigM_Transformation, self)._add_transformation_block(
+            to_block, 'bigm')
 
     def _add_xor_constraint(self, disjunction, transBlock):
         # Put the disjunction constraint on the transformation block and

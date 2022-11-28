@@ -14,11 +14,10 @@ import logging
 import pyomo.common.config as cfg
 from pyomo.common import deprecated
 from pyomo.common.collections import ComponentMap, ComponentSet
-from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.core.expr.numvalue import ZeroConstant
 import pyomo.core.expr.current as EXPR
-from pyomo.core.base import Transformation, TransformationFactory, Reference
+from pyomo.core.base import TransformationFactory, Reference
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, Any, RangeSet, Reals, value,
@@ -26,14 +25,14 @@ from pyomo.core import (
 from pyomo.core.base.boolean_var import (
     _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp.plugins.gdp_to_mip_transformation import (
+    GDP_to_MIP_Transformation)
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
     clone_without_expression_components, is_child_of, get_src_disjunction,
     get_src_constraint, get_transformed_constraints,
-    get_src_disjunct, _warn_for_active_disjunct, preprocess_targets,
-    get_gdp_tree)
+    get_src_disjunct, _warn_for_active_disjunct, preprocess_targets)
 from pyomo.core.util import target_list
-from pyomo.network import Port
 from functools import wraps
 from weakref import ref as weakref_ref
 
@@ -42,7 +41,7 @@ logger = logging.getLogger('pyomo.gdp.hull')
 @TransformationFactory.register(
     'gdp.hull',
     doc="Relax disjunctive model by forming the hull reformulation.")
-class Hull_Reformulation(Transformation):
+class Hull_Reformulation(GDP_to_MIP_Transformation):
     """Relax disjunctive model by forming the hull reformulation.
 
     Relaxes a disjunctive model into an algebraic model by forming the
@@ -93,9 +92,7 @@ class Hull_Reformulation(Transformation):
         <src var>:ComponentMap(<srcDisjunction>: <disaggregation constraint>)
 
     """
-
-
-    CONFIG = cfg.ConfigBlock('gdp.hull')
+    CONFIG = cfg.ConfigDict('gdp.hull')
     CONFIG.declare('targets', cfg.ConfigValue(
         default=None,
         domain=target_list,
@@ -177,29 +174,8 @@ class Hull_Reformulation(Transformation):
 
     def __init__(self):
         super(Hull_Reformulation, self).__init__()
-        self.handlers = {
-            Constraint : self._transform_constraint,
-            Var :        False,
-            BooleanVar:  False,
-            Connector :  False,
-            Expression : False,
-            Param :      False,
-            Set :        False,
-            SetOf :      False,
-            RangeSet:    False,
-            Suffix :     False,
-            Disjunction: False, # We intentionally pass over active Disjunctions
-                                # that are on Disjuncts because we know they are
-                                # in the list of objects to transform after
-                                # preprocessing, so they will be transformed
-                                # later.
-            Disjunct:    self._warn_for_active_disjunct,
-            Block:       False,
-            Port:        False,
-            }
-        self._generate_debug_messages = False
-        self._transformation_blocks = {}
         self._targets = set()
+        self.logger = logger
 
     def _add_local_vars(self, block, local_var_dict):
         localVars = block.component('LocalVars')
@@ -238,47 +214,9 @@ class Hull_Reformulation(Transformation):
             self._targets = set()
 
     def _apply_to_impl(self, instance, **kwds):
-        if not instance.ctype in (Block, Disjunct):
-            raise GDP_Error("Transformation called on %s of type %s. 'instance'"
-                            " must be a ConcreteModel, Block, or Disjunct (in "
-                            "the case of nested disjunctions)." %
-                            (instance.name, instance.ctype))
+        super(Hull_Reformulation, self)._apply_to_impl(instance, **kwds)
 
-        self._config = self.CONFIG(kwds.pop('options', {}))
-        self._config.set_value(kwds)
-        self._generate_debug_messages = is_debug_set(logger)
-
-        targets = self._config.targets
-        knownBlocks = {}
-        if targets is None:
-            targets = ( instance, )
-
-        # FIXME: For historical reasons, Hull would silently skip
-        # any targets that were explicitly deactivated.  This
-        # preserves that behavior (although adds a warning).  We
-        # should revisit that design decision and probably remove
-        # this filter, as it is slightly ambiguous as to what it
-        # means for the target to be deactivated: is it just the
-        # target itself [historical implementation] or any block in
-        # the hierarchy?
-        def _filter_inactive(targets):
-            for t in targets:
-                if not t.active:
-                    logger.warning(
-                        'GDP.Hull transformation passed a deactivated '
-                        f'target ({t.name}). Skipping.')
-                else:
-                    yield t
-        targets = list(_filter_inactive(targets))
-
-        # we need to preprocess targets to make sure that if there are any
-        # disjunctions in targets that they appear before disjunctions that are
-        # contained in their disjuncts. That is, in hull, we will transform from
-        # root to leaf in order to avoid have to modify transformed constraints
-        # more than once: It is most efficient to build nested transformed
-        # constraints when we already have the disaggregated variables of the
-        # parent disjunct.
-        gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
+        gdp_tree = self._get_gdp_tree_from_targets(instance)
 
         preprocessed_targets = gdp_tree.topological_sort()
         self._targets = set(preprocessed_targets)
