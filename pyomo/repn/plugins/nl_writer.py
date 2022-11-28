@@ -1776,7 +1776,7 @@ def handle_product_node(visitor, node, arg1, arg2):
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
-                        version='TBD')
+                        version='6.4.3')
                     _prod = 0
                 return (_CONSTANT, _prod)
             return arg1
@@ -1804,7 +1804,7 @@ def handle_product_node(visitor, node, arg1, arg2):
                         "Mapping the NaN result to 0 for compatibility "
                         "with the nl_v1 writer.  In the future, this NaN "
                         "will be preserved/emitted to comply with IEEE-754.",
-                        version='TBD')
+                        version='6.4.3')
                     _prod = 0
                 return (_CONSTANT, _prod)
             return (_CONSTANT, mult*arg2[1])
@@ -2169,7 +2169,7 @@ def _before_monomial(visitor, child):
                 "Mapping the NaN result to 0 for compatibility "
                 "with the nl_v1 writer.  In the future, this NaN "
                 "will be preserved/emitted to comply with IEEE-754.",
-                version='TBD')
+                version='6.4.3')
             _prod = 0
         return (_CONSTANT, _prod)
 
