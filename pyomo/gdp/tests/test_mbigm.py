@@ -626,10 +626,7 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
 
         y = m.d1.Y.get_associated_binary()
         z = m.d1.Z.get_associated_binary()
-        # z1 will be fixed to 1
         z1 = m.d1._logical_to_disjunctive.auxiliary_vars[3]
-        self.assertTrue(z1.fixed)
-        self.assertEqual(value(z1), 1)
 
         # MbigM transformation of: (1 - z1) + (1 - y) + z >= 1
         # (1 - z1) + (1 - y) + z >= 1 - d2.ind_var - d3.ind_var
@@ -648,34 +645,18 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         assertExpressionsStructurallyEqual(
             self,
             simplified,
-            # z1 and the constant cancel.
-            - m.d2.binary_indicator_var - m.d3.binary_indicator_var + y - z)
+            - m.d2.binary_indicator_var - m.d3.binary_indicator_var + z1 +
+            y - z - 1)
 
         # MbigM transformation of: z1 + 1 - (1 - y) >= 1
-        # 1 + 1 - (1 - y) >= 1
+        # z1 + y >= 1 - d2.ind_var - d3.ind_var
         transformed = mbm.get_transformed_constraints(
             m.d1._logical_to_disjunctive.transformed_constraints[2])
         self.assertEqual(len(transformed), 1)
         c = transformed[0]
         check_obj_in_active_tree(self, c)
-        self.assertIsNone(c.upper)
-        self.assertEqual(value(c.lower), 0)
-        repn = generate_standard_repn(c.body)
-        self.assertTrue(repn.is_linear())
-        simplified = repn.constant + sum(
-            repn.linear_coefs[i]*repn.linear_vars[i]
-            for i in range(len(repn.linear_vars)))
-        assertExpressionsStructurallyEqual(self, simplified, y)
-
-        # MbigM transformation of: z1 + 1 - z >= 1
-        # 1 + 1 - z >= 1
-        transformed = mbm.get_transformed_constraints(
-            m.d1._logical_to_disjunctive.transformed_constraints[3])
-        self.assertEqual(len(transformed), 1)
-        c = transformed[0]
-        check_obj_in_active_tree(self, c)
-        self.assertIsNone(c.upper)
-        self.assertEqual(value(c.lower), 0)
+        self.assertIsNone(c.lower)
+        self.assertEqual(value(c.upper), 0)
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
         simplified = repn.constant + sum(
@@ -684,4 +665,24 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         assertExpressionsStructurallyEqual(
             self,
             simplified,
-            1 - z)
+            - m.d2.binary_indicator_var - m.d3.binary_indicator_var - y - z1 +
+            1)
+
+        # MbigM transformation of: z1 + 1 - z >= 1
+        # z1 + 1 - z >= 1 - d2.ind_var - d3.ind_var
+        transformed = mbm.get_transformed_constraints(
+            m.d1._logical_to_disjunctive.transformed_constraints[3])
+        self.assertEqual(len(transformed), 1)
+        c = transformed[0]
+        check_obj_in_active_tree(self, c)
+        self.assertIsNone(c.lower)
+        self.assertEqual(value(c.upper), 0)
+        repn = generate_standard_repn(c.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            - m.d2.binary_indicator_var - m.d3.binary_indicator_var + z - z1)
