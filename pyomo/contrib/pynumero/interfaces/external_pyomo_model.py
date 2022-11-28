@@ -216,6 +216,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return ["residual_%i" % i for i in range(self.n_equality_constraints())]
 
     def set_input_values(self, input_values):
+        self._timer.start("set_inputs")
+
         solver = self._solver
         external_cons = self.external_cons
         external_vars = self.external_vars
@@ -232,6 +234,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         values = np.concatenate((input_values, outputs))
         primals[self._input_output_coords] = values
         self._nlp.set_primals(primals)
+
+        self._timer.stop("set_inputs")
 
     def set_equality_constraint_multipliers(self, eq_con_multipliers):
         """
@@ -324,6 +328,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         return self._nlp.extract_subvector_constraints(self.residual_cons)
 
     def evaluate_jacobian_equality_constraints(self):
+        self._timer.start("jacobian")
+
         nlp = self._nlp
         x = self.input_vars
         y = self.external_vars
@@ -349,6 +355,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         dfdx = jfx + jfy.dot(dydx)
 
         full_sparse = _dense_to_full_sparse(dfdx)
+
+        self._timer.stop("jacobian")
         return full_sparse
 
     def evaluate_jacobian_external_variables(self):
@@ -460,6 +468,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         due to these equality constraints.
 
         """
+        self._timer.start("hessian")
+
         # External multipliers must be calculated after both primals and duals
         # are set, and are only necessary for this Hessian calculation.
         # We know this Hessian calculation wants to use the most recently
@@ -476,6 +486,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         hess_lag = self.calculate_reduced_hessian_lagrangian(hlxx, hlxy, hlyy)
         sparse = _dense_to_full_sparse(hess_lag)
         lower_triangle = sps.tril(sparse)
+        self._timer.stop("hessian")
         return lower_triangle
 
     def set_equality_constraint_scaling_factors(self, scaling_factors):
