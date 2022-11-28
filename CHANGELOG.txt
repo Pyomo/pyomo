@@ -3,6 +3,93 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.4.3    28 Nov 2022
+-------------------------------------------------------------------------------
+
+- General
+  - Update PauseGC to work in nested contexts (#2507)
+  - Simplify deepcopy/pickle logic to speed up model clone (#2510)
+  - Fix generate_standard_repn to handle unexpected NPV expressions (#2511)
+  - Add thread safe proxies for PauseGC, TempFileManager singletons (#2514)
+  - Fix ConstructionTimer bug for components indexed by nonfinite sets (#2518)
+  - Add calculate_variable_from_constraint differentiation mode option (#2549)
+  - Update URL for downloading GSL and GJH (#2556, #2588)
+  - Update logic for retrying failed downloads (#2569)
+  - Add support and testing for Python 3.11 (#2596, #2618)
+  - Update deprecation utilities to improve user messages (#2606)
+- Core
+  - Refactor expression hierarchy, add RelationalExpression base class (#2499)
+  - Support cloning individual blocks (#2504)
+  - Block performance improvements (#2508)
+  - Add support for creating a slice to a single ComponentData object (#2509)
+  - Fix missing import of value in pyomo.core.base.external (#2525)
+  - Improve handling of restricted words on Blocks (#2535)
+  - Improve Reference() performance (#2537)
+  - Fix mapping gradient/hessian for external functions with string args (#2539)
+  - Fix bug for sum_product(Var, Param, Param) (#2551)
+  - Add deprecation path for expression objects moved to relational_expr (#2554)
+  - Exception when setting value of Expression to non-numeric expression (#2567)
+  - Improve deepcopy performance (#2628)
+- Documentation
+  - Fix examples in working_models.rst (#2502)
+- Solver Interfaces
+  - Improve SCIP results object (#2462)
+  - Improve warning message when LP writer raises KeyError (#2497)
+  - Fix Gurobi work limit bug (#2530)
+  - Updates and fixes for the NLv2 writer (#2540, #2622, #2568)
+  - Fix Xpress when stopped due to MAXTIME or MAXNODES (#2553)
+  - Add support for MOSEK 10 affine conic constraints (#2557)
+  - Fix missing explicit space in GAMS put command (#2578)
+  - Fix GAMS logfile storage location (#2580)
+  - LP writer performance improvements (#2583, #2585)
+  - Update handling of MOSEK Env and Python module (#2591)
+  - Release MOSEK license when optimize raises a mosek.Error (#2593)
+  - Update list of allowable characters in CPLEX filenames (#2597)
+- Testing
+  - Update performance driver to be usable outside of Pyomo (#2505)
+  - Update the performance test driver (#2538)
+  - Reduce amount of environment code cached in GitHub actions (#2565)
+  - Update GitHub actions versions from v2 to v3 (#2566)
+  - Allow nan to compare equal in assertStructuredAlmostEqual() (#2582)
+  - Add test utilities for comparing expressions (#2590)
+  - Skip a test in MOSEK 10 due to a bug in warm starting MIQPs (#2614)
+  - Update skipped CBC test that works with CBC 2.10.6 (#2615)
+  - Add SCIP to GitHub actions environment (#2602)
+- GDP
+  - Use OrderedSet instead of list in GDPTree to improve performance (#2516)
+  - Reduce calls to logical_to_linear in GDP transformations (#2519)
+  - Add utility for gathering BigM values after transformation (#2520)
+  - Add tighter logical constraints in transformations of nested GDPs (#2550)
+  - Fix pickling of transformed GDP models (#2576)
+  - Add multiple-bigM transformation (#2592)
+  - Improve performance of BigM transformation (#2605)
+  - Remove weakref mapping Disjunctions to their algebraic_constraint (#2617)
+- Contributed Packages
+  - APPSI: Fix exception raised by appsi_gurobi during Python shutdown (#2498)
+  - APPSI: Improve handling of Gurobi results (#2517)
+  - APPSI: Add interface to HiGHS solver (#2561)
+  - APPSI: Only release Gurobi license after deleting all instances (#2599)
+  - APPSI: Patch IntEnum to preserve pre-3.11 formatting (#2607)
+  - CP: New package for constraint programming (#2570, #2612)
+  - GDPopt: Add warning when reporting results from LBB (#2534)
+  - GDPopt: Delete dummy objective when we're done using it (#2552)
+  - GDPopt: Add enumerate solution approach (#2559, #2575)
+  - IIS: Add package for computing the IIS of an infeasible Pyomo model (#2512)
+  - MindtPy: Fix bug in termination condition (#2587)
+  - MindtPy: Fix bug in checking absolute and relative gap (#2608)
+  - MPC: Data structures/utils for rolling horizon dynamic optimization (#2477)
+  - Parmest: Solve square problem to initialize regression problem (#2438)
+  - Parmest: Return ContinuousSet values from theta_est() (#2464)
+  - PyNumero: Fix NumPy deprecation warnings (#2521)
+  - PyNumero: Add interfaces to SciPy square solvers (#2523)
+  - PyNumero: Check AmplInterface availability in SciPy solver tests (#2594)
+  - PyNumero: Add ProjectedExtendedNLP class (#2601)
+  - PyNumero: Add interface to SciPy scalar Newton solver (#2603)
+  - PyROS: Rewrite UncertaintySet docstrings/improve validation (#2488)
+  - PyROS: Updates to subproblem initialization and solver call routines (#2515)
+  - PyROS: Fix collection of sub-solver solve times (#2543)
+
+-------------------------------------------------------------------------------
 Pyomo 6.4.2    17 Aug 2022
 -------------------------------------------------------------------------------
 

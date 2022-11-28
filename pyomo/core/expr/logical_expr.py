@@ -46,19 +46,19 @@ import operator
 relocated_module_attribute(
     'EqualityExpression',
     'pyomo.core.expr.relational_expr.EqualityExpression',
-    version='TBD')
+    version='6.4.3')
 relocated_module_attribute(
     'InequalityExpression',
     'pyomo.core.expr.relational_expr.InequalityExpression',
-    version='TBD')
+    version='6.4.3')
 relocated_module_attribute(
     'RangedExpression',
     'pyomo.core.expr.relational_expr.RangedExpression',
-    version='TBD')
+    version='6.4.3')
 relocated_module_attribute(
     'inequality',
     'pyomo.core.expr.relational_expr.inequality',
-    version='TBD')
+    version='6.4.3')
 
 
 def _generate_logical_proposition(etype, lhs, rhs):
@@ -117,7 +117,7 @@ class BooleanExpression(ExpressionBase, BooleanValue):
 
 class BooleanExpressionBase(metaclass=RenamedClass):
     __renamed__new_class__ = BooleanExpression
-    __renamed__version__ = 'TBD'
+    __renamed__version__ = '6.4.3'
 
 
 """
