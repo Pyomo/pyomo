@@ -13,6 +13,7 @@ import collections
 
 from pyomo.common.collections import ComponentMap
 from pyomo.common.errors import MouseTrap
+from pyomo.core.expr.expr_common import ExpressionType
 from pyomo.core.expr.visitor import StreamBasedExpressionVisitor
 from pyomo.core.expr.numeric_expr import NumericExpression
 from pyomo.core.expr.relational_expr import RelationalExpression
@@ -214,10 +215,10 @@ class LogicalToDisjunctiveVisitor(StreamBasedExpressionVisitor):
         if child.__class__ in EXPR.native_types:
             return False, child
 
-        if isinstance(child, NumericExpression):
+        if child.is_numeric_type():
             # Just pass it through, we'll figure it out later
             return False, child
-        if isinstance(child, RelationalExpression):
+        if child.is_expression_type(ExpressionType.RELATIONAL):
             # Eventually we'll handle these. Right now we set a MouseTrap
             return _before_relational_expr(self, child)
 

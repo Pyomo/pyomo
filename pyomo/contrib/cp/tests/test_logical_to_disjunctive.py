@@ -22,8 +22,6 @@ from pyomo.environ import (
     Expression, Integers, land, lnot, lor, LogicalConstraint, Param, value,
     Var, TransformationFactory)
 
-from pytest import set_trace
-
 class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
     def make_model(self):
         m = ConcreteModel()
@@ -365,7 +363,7 @@ class TestLogicalToDisjunctiveVisitor(unittest.TestCase):
 
         with self.assertRaisesRegex(
                 MouseTrap,
-                r"The first argument 'x\[1\]\*x\[2\]' to "
+                r"The first argument 'e' to "
                 r"'atmost\(\(x\[1\]\*x\[2\]\): \[a, b, c\]\)' is "
                 r"potentially variable. "
                 r"This may be a mathematically coherent expression; However "
