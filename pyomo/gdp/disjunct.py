@@ -518,7 +518,6 @@ class _DisjunctionData(ActiveComponentData):
 @ModelComponentFactory.register("Disjunction expressions.")
 class Disjunction(ActiveIndexedComponent):
     _ComponentDataClass = _DisjunctionData
-    __autoslot_mappers__ = {'_algebraic_constraint': AutoSlots.weakref_mapper}
 
     def __new__(cls, *args, **kwds):
         if cls != Disjunction:
@@ -533,7 +532,6 @@ class Disjunction(ActiveIndexedComponent):
         self._init_expr = kwargs.pop('expr', None)
         self._init_xor = _Initializer.process(kwargs.pop('xor', True))
         self._autodisjuncts = None
-        self._algebraic_constraint = None
         kwargs.setdefault('ctype', Disjunction)
         super(Disjunction, self).__init__(*args, **kwargs)
 
