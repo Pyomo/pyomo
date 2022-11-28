@@ -113,7 +113,7 @@ class RootNlpSolver(DenseSquareNlpSolver):
         doc=(
             """The 'method' argument in the scipy.optimize.root function.
             For now only 'hybr' (Powell hybrid method from MINPACK) and
-            'lm' (Legenberg-Marquardt from MINPACK) are supported.
+            'lm' (Levenberg-Marquardt from MINPACK) are supported.
             """
         ),
     ))
