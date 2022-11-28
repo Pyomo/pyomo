@@ -389,7 +389,7 @@ class _SuffixData(object):
             logger.warning(
                 f"model contained export suffix {suffix.name} that "
                 f"contained {missing_other} keys that are not "
-                "Var, Constrtaint, Objective, or the model.  Skipping.")
+                "Var, Constraint, Objective, or the model.  Skipping.")
 
     def store(self, obj, val):
         missing = self._store(obj, val)
@@ -412,7 +412,7 @@ class _SuffixData(object):
             logger.warning(
                 f"model contained export suffix {self._name} with "
                 f"{obj.__class__.__name__} key '{obj}' that is not "
-                "a Var, Constrtaint, Objective, or the model.  Skipping.")
+                "a Var, Constraint, Objective, or the model.  Skipping.")
 
     def _store(self, obj, val):
         _id = id(obj)
