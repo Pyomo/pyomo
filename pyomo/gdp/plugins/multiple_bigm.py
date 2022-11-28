@@ -168,6 +168,7 @@ class MultipleBigMTransformation(Transformation):
                                 # the network.expand_arcs transformation
         }
         self._transformation_blocks = {}
+        self._algebraic_constraints = {}
 
     def _apply_to(self, instance, **kwds):
         self.used_args = ComponentMap()
@@ -176,6 +177,7 @@ class MultipleBigMTransformation(Transformation):
         finally:
             self.used_args.clear()
             self._transformation_blocks.clear()
+            self._algebraic_constraints.clear()
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
@@ -556,8 +558,8 @@ class MultipleBigMTransformation(Transformation):
         # Put XOR constraint on the transformation block
 
         # check if the constraint already exists
-        if disjunction.algebraic_constraint is not None:
-            return disjunction.algebraic_constraint
+        if disjunction in self._algebraic_constraints:
+            return self._algebraic_constraints[disjunction]
 
         # add the XOR constraints to parent block (with unique name) It's
         # indexed if this is an IndexedDisjunction, not otherwise
@@ -566,7 +568,7 @@ class MultipleBigMTransformation(Transformation):
             unique_component_name(transBlock,
                                   disjunction.getname(
                                       fully_qualified=False) + '_xor'), orC)
-        disjunction._algebraic_constraint = weakref_ref(orC)
+        self._algebraic_constraints[disjunction] = orC
 
         return orC
 

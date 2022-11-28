@@ -19,6 +19,7 @@ from pyomo.environ import (TransformationFactory, Block, Set, Constraint, Var,
                            Any, Suffix, SolverFactory, RangeSet, Param,
                            Objective, TerminationCondition, Reference)
 from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
+from pyomo.core.base import constraint
 from pyomo.repn import generate_standard_repn
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
@@ -1072,7 +1073,10 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
             secondTerm)), 1)
 
         orig = model.component("_pyomo_gdp_hull_reformulation")
-        self.assertEqual(len(orig.disjunctionList_xor), 2)
+        self.assertIsInstance(model.disjunctionList[1].algebraic_constraint,
+                              constraint._GeneralConstraintData)
+        self.assertIsInstance(model.disjunctionList[0].algebraic_constraint,
+                              constraint._GeneralConstraintData)
         self.assertFalse(model.disjunctionList[1].active)
         self.assertFalse(model.disjunctionList[0].active)
 

@@ -18,6 +18,14 @@ class SquareNlpSolverBase(object):
     of equality constraints.
 
     """
+    # Ideally, this ConfigBlock would contain options that are valid for any
+    # square NLP solver. However, no such options seem to exist while
+    # preserving the names of the SciPy function arguments. E.g., tolerance
+    # is "tol" in some solvers and "xtol" in others, and some solvers
+    # support "maxiter" while others support "maxfev". It may be useful to
+    # attempt some standardization by, e.g., mapping tol->xtol, then
+    # specifying "universal" options here, but this can happen at a later
+    # date as these solvers see more use.
     OPTIONS = ConfigBlock()
 
     def __init__(self, nlp, timer=None, options=None):
@@ -88,3 +96,17 @@ class DenseSquareNlpSolver(SquareNlpSolverBase):
         sparse_jac = super().evaluate_jacobian(x0)
         dense_jac = sparse_jac.toarray()
         return dense_jac
+
+class ScalarDenseSquareNlpSolver(DenseSquareNlpSolver):
+    # A base class for solvers for scalar equations.
+    # Not intended to be instantiated directly. Instead,
+    # NewtonNlpSolver or SecantNewtonNlpSolver should be used.
+
+    def __init__(self, nlp, timer=None, options=None):
+        super().__init__(nlp, timer=timer, options=options)
+        if nlp.n_primals() != 1:
+            raise RuntimeError(
+                "Cannot use the scipy.optimize.newton solver on an NLP with"
+                " more than one variable and equality constraint. Got %s"
+                " primals. Please use RootNlpSolver or FsolveNlpSolver instead."
+            )
