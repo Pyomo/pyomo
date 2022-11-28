@@ -1804,26 +1804,22 @@ class FactorModelSet(UncertaintySet):
 
             # now evaluate max deviation from origin
             # (depends on number nonneg entries and critical point type)
-            if M >= crit_pt_type + 1 and crit_pt_type < F:
+            if M > crit_pt_type:
                 max_deviation = (
                     sorted_psi_row[:crit_pt_type].sum()
                     + beta_F_fill_in * sorted_psi_row[crit_pt_type]
                     - sorted_psi_row[crit_pt_type + 1:].sum()
                 )
-            elif M <= F - crit_pt_type - 1 and crit_pt_type < F:
+            elif M < F - crit_pt_type:
                 max_deviation = (
                     sorted_psi_row[:F - crit_pt_type - 1].sum()
                     - beta_F_fill_in * sorted_psi_row[F - crit_pt_type - 1]
                     - sorted_psi_row[F - crit_pt_type:].sum()
                 )
             else:
-                hypercub_vertex_type = max(
-                    int(np.ceil((F - int(beta_F)) / 2)),
-                    min(M, int((F + int(beta_F)) / 2)),
-                )
                 max_deviation = (
-                    sorted_psi_row[:hypercub_vertex_type].sum()
-                    - sorted_psi_row[hypercub_vertex_type:].sum()
+                    sorted_psi_row[:M].sum()
+                    - sorted_psi_row[M:].sum()
                 )
 
             # finally, evaluate the bounds for this dimension
