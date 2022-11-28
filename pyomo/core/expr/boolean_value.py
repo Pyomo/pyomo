@@ -94,7 +94,8 @@ class BooleanValue(PyomoObject):
         return False
 
     @deprecated("is_relational() is deprecated in favor of "
-                "is_expression_type(ExpressionType.RELATIONAL)", version='TBD')
+                "is_expression_type(ExpressionType.RELATIONAL)",
+                version='6.4.3')
     def is_relational(self):
         """
         Return True if this Logical value represents a relational expression.
