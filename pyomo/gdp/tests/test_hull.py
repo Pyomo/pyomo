@@ -2162,7 +2162,6 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         self.assertEqual(len(cons), 1)
         # this simplifies because the dissaggregated variable is *always* 0
         c = cons[0]
-        from pytest import set_trace
         # hull transformation of z1 = 1 - y1:
         # dis_z1 + dis_y1 = d[1].ind_var
         self.assertEqual(c.lower, 0)
@@ -2176,6 +2175,14 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
             self,
             simplified,
             dis_z1 + dis_y1 - m.d[1].binary_indicator_var)
+
+        cons = hull.get_transformed_constraints(
+            m.d[1]._logical_to_disjunctive.transformed_constraints[2])
+        self.assertEqual(len(cons), 1)
+        c = cons[0]
+        # hull transformation of z1 >= 1
+        assertExpressionsStructurallyEqual(self, c.expr, dis_z1 >=
+                                           m.d[1].binary_indicator_var)
 
         # then d[4]:
         y1d = hull.get_disaggregated_var(y1, m.d[4])
@@ -2333,6 +2340,14 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
             self,
             simplified,
             z3d - z2d)
+
+        # hull transformation of z3 >= 1
+        cons = hull.get_transformed_constraints(
+            m.d[4]._logical_to_disjunctive.transformed_constraints[9])
+        self.assertEqual(len(cons), 1)
+        cons = cons[0]
+        assertExpressionsStructurallyEqual(
+            self, cons.expr, z3d >= m.d[4].binary_indicator_var)
 
         self.assertFalse(m.bwahaha.active)
         self.assertFalse(m.p.active)
