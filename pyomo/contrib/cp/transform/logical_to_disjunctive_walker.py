@@ -230,6 +230,8 @@ class LogicalToDisjunctiveVisitor(StreamBasedExpressionVisitor):
         return _operator_dispatcher[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):
-        # This LogicalExpression must evaluate to True
-        result.fix(1)
+        # This LogicalExpression must evaluate to True (but note that we cannot
+        # fix this variable to 1 since this logical expression could be living
+        # on a Disjunct and later need to be relaxed.)
+        self.constraints.add(result >= 1)
         return result
