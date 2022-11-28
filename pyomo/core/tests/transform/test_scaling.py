@@ -438,21 +438,21 @@ class TestScaleModelTransformation(unittest.TestCase):
         m.b1.b2.b3.v3 = pyo.Var(initialize=30)
 
         # Scale v1 at lowest level - this should not get picked up
-        m.b1.b2.b3.scaling_facotr[m.v1] = 0.1
+        m.b1.b2.b3.scaling_factor[m.v1] = 0.1
 
         m.b1.scaling_factor[m.b1.b2.b3.v2] = 0.2
         m.b1.scaling_factor[m.b1.b2.b3.v3] = 0.3
 
-        m.b1.b2.b3.scaling_factor[m.b1.b2.v3] = 0.4
+        m.b1.b2.b3.scaling_factor[m.b1.b2.b3.v3] = 0.4
 
         # v1 should be unscaled as SF set below variable level
         sf = ScaleModel()._get_float_scaling_factor(m, m.v1)
         assert sf == 1.0
         # v2 should get SF from b1 level
-        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.v2)
+        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.b3.v2)
         assert sf == float(0.2)
         # v2 should get SF from lowest level, ignoring b1 level
-        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.v3)
+        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.b3.v3)
         assert sf == float(0.4)
 
 if __name__ == "__main__":

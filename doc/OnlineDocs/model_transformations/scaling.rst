@@ -9,10 +9,10 @@ Good scaling of models can greatly improve the numerical properties of a problem
 Setting Scaling Factors
 -----------------------
 
-Scaling factors for components in a model are declared using :ref:`Suffixes`, as shown in the example above. In order to define a scaling factor for a component, a ``Suffix`` named ``scaling_factor`` must first be created to hold the scaling factor(s). Scaling factor suffixes must be declared either:
+Scaling factors for components in a model are declared using :ref:`Suffixes`, as shown in the example above. In order to define a scaling factor for a component, a ``Suffix`` named ``scaling_factor`` must first be created to hold the scaling factor(s). Scaling factor suffixes can be declared at any level of the model hierarchy, and will be applied with the following precedence:
 
-1. on the top-level ``model`` or ``Block`` to which the scaling transformation will be applied, or,
-2. on the parent block of the component to be scaled.
+1. any scaling factors declared on the top-level ``model`` or ``Block`` to which the scaling transformation will be applied first,
+2. for any component with out a top-level scaling factor, the transformation will walk the model tree starting from the component's parent block and moving upwards, taking the first scaling factor encountered.
 
 Scaling suffixes are dict-like where each key is a Pyomo component and the value is the scaling factor to be applied to that component.
 

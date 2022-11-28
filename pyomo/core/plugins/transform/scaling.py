@@ -83,26 +83,32 @@ class ScaleModel(Transformation):
 
     def _get_float_scaling_factor(self, instance, component_data):
         scaling_factor = None
-        if component_data in instance.scaling_factor:
-            scaling_factor = instance.scaling_factor[component_data]
-        elif component_data.parent_component() in instance.scaling_factor:
-            scaling_factor = instance.scaling_factor[component_data.parent_component()]
-        else:
+        # Try for a top-level scaling factor first
+        if hasattr(instance, "scaling_factor"):
+            if component_data in instance.scaling_factor:
+                scaling_factor = instance.scaling_factor[component_data]
+            elif component_data.parent_component() in instance.scaling_factor:
+                scaling_factor = instance.scaling_factor[component_data.parent_component()]
+
+        # If scaling_factor is still none, begin walking parent tree
+        if scaling_factor is None:
             parent = component_data.parent_block()
             while parent is not None:
                 if hasattr(parent, "scaling_factor"):
-                    if component_data in component_data.parent_block().scaling_factor:
-                        scaling_factor = component_data.parent_block().scaling_factor[component_data]
+                    if component_data in parent.scaling_factor:
+                        scaling_factor = parent.scaling_factor[component_data]
                         break
-                    elif component_data.parent_component() in component_data.parent_block().scaling_factor:
-                        scaling_factor = component_data.parent_block().scaling_factor[component_data.parent_component()]
+                    elif component_data.parent_component() in parent.scaling_factor:
+                        scaling_factor = parent.scaling_factor[component_data.parent_component()]
                         break
 
                 parent = parent.parent_block()
 
+        # If still no scaling factor, return 1.0
         if scaling_factor is None:
             return 1.0
 
+        # Make sure scaling factor is a float
         try:
             scaling_factor = float(scaling_factor)
         except ValueError:
