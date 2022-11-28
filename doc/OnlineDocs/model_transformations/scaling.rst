@@ -24,7 +24,7 @@ In the case of indexed components, scaling factors can either be declared for an
 
 .. note::
 
-   Scaling factors declared in other locations will not be picked up and applied by the scaling transformation. 
+   Only the first scaling factor encountered in the search will be used. Scaling factors declared in other locations will not be picked up and applied by the scaling transformation. 
 
 Applying Model Scaling
 ----------------------
