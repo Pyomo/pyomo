@@ -2594,8 +2594,7 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         assertExpressionsStructurallyEqual(
             self,
             simplified,
-            # z is fixed so it went to the constant
-            y1 - 1.0*m.d[1].binary_indicator_var + 1.0)
+            z + y1 - m.d[1].binary_indicator_var)
         geq = cons[1]
         self.assertEqual(geq.upper, 0)
         self.assertIsNone(geq.lower)
@@ -2607,8 +2606,7 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         assertExpressionsStructurallyEqual(
             self,
             simplified,
-            # z is fixed so it went to the constant
-            y1 + m.d[1].binary_indicator_var - 1)
+            z + y1 + m.d[1].binary_indicator_var - 2)
 
         # then d[4]:
         z1 = m.d[4]._logical_to_disjunctive.auxiliary_vars[1]
@@ -2714,7 +2712,7 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
             m.d[4]._logical_to_disjunctive.transformed_constraints[7])
         self.assertEqual(len(cons), 1)
         c = cons[0]
-        # z3 <= z1
+        # z3 <= z1 + (1 - d4.ind_var)
         self.assertIsNone(c.lower)
         self.assertEqual(c.upper, 0)
         repn = generate_standard_repn(c.body)
@@ -2725,12 +2723,12 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         assertExpressionsStructurallyEqual(
             self,
             simplified,
-            - z1 + m.d[4].binary_indicator_var) # z3 fixed to 1 so it's gone
+            z3 - z1 + m.d[4].binary_indicator_var - 1)
         cons = bigm.get_transformed_constraints(
             m.d[4]._logical_to_disjunctive.transformed_constraints[8])
         self.assertEqual(len(cons), 1)
         c = cons[0]
-        # z3 <= z2
+        # z3 <= z2 + (1 - d4.ind_var)
         self.assertIsNone(c.lower)
         self.assertEqual(c.upper, 0)
         repn = generate_standard_repn(c.body)
@@ -2741,7 +2739,7 @@ class LogicalConstraintsOnDisjuncts(unittest.TestCase):
         assertExpressionsStructurallyEqual(
             self,
             simplified,
-            - z2 + m.d[4].binary_indicator_var) # z3 fixed to 1 so it's gone
+            z3 - z2 + m.d[4].binary_indicator_var - 1)
 
         # check that the global logical constraints were also transformed.
         self.assertFalse(m.p.active)
