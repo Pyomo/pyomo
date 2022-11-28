@@ -20,14 +20,26 @@ _autoslot_info = namedtuple(
 )
 
 def _deepcopy_tuple(obj, memo, _id):
-    _unchanged.append(True)
-    ans = tuple(fast_deepcopy(x, memo) for x in obj)
-    if _unchanged.pop():
-        # It appears to be faster *not* to cache the fact that this
-        # particular tuple was unchanged by the deepcopy
-        #   memo[_id] = obj
+    ans = []
+    unchanged = True
+    for item in obj:
+        new_item = fast_deepcopy(item, memo)
+        ans.append(new_item)
+        if new_item is not item:
+            unchanged = False
+    if unchanged:
+        # Python does not duplicate "unchanged" tuples (i.e. allows the
+        # original objecct to be returned from deepcopy()).  We will
+        # preserve that behavior here.
+        #
+        # It also appears to be faster *not* to cache the fact that this
+        # particular tuple was unchanged by the deepcopy (Note the the
+        # standard library also does not cache the unchanged tuples in
+        # the memo)
+        #
+        #  memo[_id] = obj
         return obj
-    memo[_id] = ans
+    memo[_id] = ans = tuple(ans)
     return ans
 
 def _deepcopy_list(obj, memo, _id):
@@ -55,7 +67,6 @@ _deepcopy_mapper = {
     dict: _deepcopy_dict,
 }
 
-_unchanged = [None]
 
 def fast_deepcopy(obj, memo):
     """A faster implementation of copy.deepcopy()
@@ -70,12 +81,9 @@ def fast_deepcopy(obj, memo):
         return obj
     _id = id(obj)
     if _id in memo:
-        ans = memo[_id]
+        return memo[_id]
     else:
-        ans = _deepcopy_mapper.get(obj.__class__, _deepcopier)(obj, memo, _id)
-    if ans is not obj:
-        _unchanged[-1] = False
-    return ans
+        return _deepcopy_mapper.get(obj.__class__, _deepcopier)(obj, memo, _id)
 
 
 class AutoSlots(type):
