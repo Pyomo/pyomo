@@ -1,7 +1,7 @@
 Model Scaling Transformation
 ============================
 
-Good scaling of models can greatly improve the numerical properties of a problem and thus increase reliability and convergence. The ``ScaleModel`` transformation allows users to separate scaling of a model from the declaration of the model variables and constraints which allows for models to be written in more natural forms and to be scaled and rescaled as required without having to rewrite the model code.
+Good scaling of models can greatly improve the numerical properties of a problem and thus increase reliability and convergence. The ``core.scale_model`` transformation allows users to separate scaling of a model from the declaration of the model variables and constraints which allows for models to be written in more natural forms and to be scaled and rescaled as required without having to rewrite the model code.
 
 .. autoclass:: pyomo.core.plugins.transform.scaling.ScaleModel
     :members:
@@ -29,17 +29,17 @@ In the case of indexed components, scaling factors can either be declared for an
 Applying Model Scaling
 ----------------------
 
-The ``ScaleModel`` transformation provides two approaches for creating a scaled model.
+The ``core.scale_model`` transformation provides two approaches for creating a scaled model.
 
 In-Place Scaling
 ****************
 
-The ``ScaleModel.apply_to(model)`` method can be used to apply scaling directly to an existing model. When using this method, all the variables, constraints and objectives within the target model are replaced with new scaled components and the appropriate scaling factors applied. The model can then be sent to a solver as usual, however the results will be in terms of the scaled components and must be un-scaled by the user.
+The ``apply_to(model)`` method can be used to apply scaling directly to an existing model. When using this method, all the variables, constraints and objectives within the target model are replaced with new scaled components and the appropriate scaling factors applied. The model can then be sent to a solver as usual, however the results will be in terms of the scaled components and must be un-scaled by the user.
 
 Creating a New Scaled Model
 ***************************
 
-Alternatively, the ``ScaleModel.create_using(model)`` method can be used to create a new, scaled version of the model which can be solved. In this case, a clone of the original model is generated with the variables, constraints and objectives replaced by scaled equivalents. Users can the send the scaled model to a solver after which the ``ScaleModel.propagate_solution`` method can be used to map the scaled solution back onto the original model for further analysis.
+Alternatively, the ``create_using(model)`` method can be used to create a new, scaled version of the model which can be solved. In this case, a clone of the original model is generated with the variables, constraints and objectives replaced by scaled equivalents. Users can then send the scaled model to a solver after which the ``propagate_solution`` method can be used to map the scaled solution back onto the original model for further analysis.
 
 The advantage of this approach is that the original model is maintained separately from the scaled model, which facilitates rescaling and other manipulation of the original model after a solution has been found. The disadvantage of this approach is that cloning the model may result in memory issues when dealing with larger models.
 

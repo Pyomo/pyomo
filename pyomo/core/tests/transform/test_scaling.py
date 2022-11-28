@@ -13,6 +13,7 @@
 import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.opt.base.solvers import UnknownSolver
+from pyomo.core.plugins.transform.scaling import ScaleModel
 
 
 class TestScaleModelTransformation(unittest.TestCase):
@@ -363,6 +364,96 @@ class TestScaleModelTransformation(unittest.TestCase):
             scale_factor,
         )
 
+    def test_get_float_scaling_factor_top_level(self):
+        m = pyo.ConcreteModel()
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.b1 = pyo.Block()
+        m.b1.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.b1.b2 = pyo.Block()
+        m.b1.b2.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.v1 = pyo.Var(initialize=10)
+        m.b1.v2 = pyo.Var(initialize=20)
+        m.b1.b2.v3 = pyo.Var(initialize=30)
+
+        m.scaling_factor[m.v1] = 0.1
+        m.scaling_factor[m.b1.v2] = 0.2
+
+        # SF should be 0.1 from top level
+        sf = ScaleModel()._get_float_scaling_factor(m, m.v1)
+        assert sf == float(0.1)
+        # SF should be 0.1 from top level, lower level ignored
+        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.v2)
+        assert sf == float(0.2)
+        # No SF, should return 1
+        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.v3)
+        assert sf == 1.0
+
+    def test_get_float_scaling_factor_local_level(self):
+        m = pyo.ConcreteModel()
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.b1 = pyo.Block()
+        m.b1.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.b1.b2 = pyo.Block()
+        m.b1.b2.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.v1 = pyo.Var(initialize=10)
+        m.b1.v2 = pyo.Var(initialize=20)
+        m.b1.b2.v3 = pyo.Var(initialize=30)
+
+        m.scaling_factor[m.v1] = 0.1
+        m.b1.scaling_factor[m.b1.v2] = 0.2
+        m.b1.b2.scaling_factor[m.b1.b2.v3] = 0.3
+
+        # Add an intermediate scaling factor - this should be ignored
+        m.b1.scaling_factor[m.b1.b2.v3] = 0.4
+
+        # Should get SF from local levels
+        sf = ScaleModel()._get_float_scaling_factor(m, m.v1)
+        assert sf == float(0.1)
+        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.v2)
+        assert sf == float(0.2)
+        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.v3)
+        assert sf == float(0.3)
+
+    def test_get_float_scaling_factor_intermediate_level(self):
+        m = pyo.ConcreteModel()
+        m.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.b1 = pyo.Block()
+        m.b1.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.b1.b2 = pyo.Block()
+        # No suffix at b2 level - this should not cause an issue
+
+        m.b1.b2.b3 = pyo.Block()
+        m.b1.b2.b3.scaling_factor = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        m.v1 = pyo.Var(initialize=10)
+        m.b1.b2.b3.v2 = pyo.Var(initialize=20)
+        m.b1.b2.b3.v3 = pyo.Var(initialize=30)
+
+        # Scale v1 at lowest level - this should not get picked up
+        m.b1.b2.b3.scaling_facotr[m.v1] = 0.1
+
+        m.b1.scaling_factor[m.b1.b2.b3.v2] = 0.2
+        m.b1.scaling_factor[m.b1.b2.b3.v3] = 0.3
+
+        m.b1.b2.b3.scaling_factor[m.b1.b2.v3] = 0.4
+
+        # v1 should be unscaled as SF set below variable level
+        sf = ScaleModel()._get_float_scaling_factor(m, m.v1)
+        assert sf == 1.0
+        # v2 should get SF from b1 level
+        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.v2)
+        assert sf == float(0.2)
+        # v2 should get SF from lowest level, ignoring b1 level
+        sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.v3)
+        assert sf == float(0.4)
 
 if __name__ == "__main__":
     unittest.main()
