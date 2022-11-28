@@ -27,6 +27,7 @@ from pyomo.core.base.component import Component, ActiveComponent
 from pyomo.core.base.config import PyomoOptions
 from pyomo.core.base.global_set import UnindexedComponent_set
 from pyomo.common import DeveloperError
+from pyomo.common.autoslots import fast_deepcopy
 from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.deprecation import deprecated
 from pyomo.common.modeling import NOTSET
@@ -330,19 +331,12 @@ class IndexedComponent(Component):
                 # Because we are already checking / updating the memo
                 # for the _data dict, we can effectively "deepcopy" it
                 # right now (almost for free!)
-                memo[id(self._data)] = _new._data = _data = {}
-                for idx, obj in self._data.items():
-                    # We need to deepcopy the index, but deepcopying
-                    # tuples in Python is SLOW.  We will only deepcopy
-                    # if necessary.
-                    if idx.__class__ is tuple:
-                        if any(x.__class__ not in native_types for x in idx):
-                            idx = deepcopy(idx, memo)
-                    elif idx.__class__ not in native_types:
-                        idx = deepcopy(idx, memo)
+                _src = self._data
+                memo[id(_src)] = _new._data = _data = _src.__class__()
+                for idx, obj in _src.items():
+                    _data[fast_deepcopy(idx, memo)] \
+                        = obj._create_objects_for_deepcopy(memo, component_list)
 
-                    _data[idx] = obj._create_objects_for_deepcopy(
-                        memo, component_list)
         return _ans
 
     def to_dense_data(self):
