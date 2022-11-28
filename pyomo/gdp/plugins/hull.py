@@ -197,6 +197,7 @@ class Hull_Reformulation(Transformation):
             }
         self._generate_debug_messages = False
         self._transformation_blocks = {}
+        self._algebraic_constraints = {}
         self._targets = set()
 
     def _add_local_vars(self, block, local_var_dict):
@@ -233,6 +234,7 @@ class Hull_Reformulation(Transformation):
             self._apply_to_impl(instance, **kwds)
         finally:
             self._transformation_blocks.clear()
+            self._algebraic_constraints.clear()
             self._targets = set()
 
     def _apply_to_impl(self, instance, **kwds):
@@ -350,8 +352,8 @@ class Hull_Reformulation(Transformation):
         # Put XOR constraint on the transformation block
 
         # check if the constraint already exists
-        if disjunction._algebraic_constraint is not None:
-            return disjunction._algebraic_constraint()
+        if disjunction in self._algebraic_constraints:
+            return self._algebraic_constraints[disjunction]
 
         # add the XOR constraints to parent block (with unique name) It's
         # indexed if this is an IndexedDisjunction, not otherwise
@@ -360,7 +362,7 @@ class Hull_Reformulation(Transformation):
             unique_component_name(transBlock,
                                   disjunction.getname(
                                       fully_qualified=True) + '_xor'), orC)
-        disjunction._algebraic_constraint = weakref_ref(orC)
+        self._algebraic_constraints[disjunction] = orC
 
         return orC
 
