@@ -64,7 +64,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-      wheel-version: ['cp37-cp37m', 'cp38-cp38', 'cp39-cp39', 'cp310-cp310', 'cp311-cp311']
+        wheel-version: ['cp37-cp37m', 'cp38-cp38', 'cp39-cp39', 'cp310-cp310', 'cp311-cp311']
         os: [ubuntu-latest]
         include:
         - os: ubuntu-latest
