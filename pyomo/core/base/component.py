@@ -107,32 +107,35 @@ class _ComponentBase(PyomoObject):
         # we need to override __deepcopy__ for both Component and
         # ComponentData.
         #
-        # Note: there is an edge case when cloning a block: the initial
-        # call to deepcopy (on the target block) has __block_scope__
-        # defined, however, the parent block of self is either None, or
-        # is (by definition) out of scope.  So we will check that
-        # id(self) is not in __block_scope__: if it is, then this is the
-        # top-level block and we need to do the normal deepcopy.
-        if '__block_scope__' in memo and \
-                id(self) not in memo['__block_scope__']:
-            _known = memo['__block_scope__']
-            _new = []
+        if '__block_scope__' in memo:
+            _scope = memo['__block_scope__']
+            _new = None
             tmp = self.parent_block()
-            tmpId = id(tmp)
             # Note: normally we would need to check that tmp does not
             # end up being None.  However, since clone() inserts
             # id(None) into the __block_scope__ dictionary, we are safe
-            while tmpId not in _known:
-                _new.append(tmpId)
+            while id(tmp) not in _scope:
+                _new = (_new, id(tmp))
                 tmp = tmp.parent_block()
-                tmpId = id(tmp)
+            _in_scope = _scope[id(tmp)]
 
             # Remember whether all newly-encountered blocks are in or
             # out of scope (prevent duplicate work)
-            for _id in _new:
-                _known[_id] = _known[tmpId]
+            while _new is not None:
+                _new, _id = _new
+                _scope[_id] = _in_scope
 
-            if not _known[tmpId]:
+            # Note: there is an edge case when cloning a block: the
+            # initial call to deepcopy (on the target block) has
+            # __block_scope__ defined, however, the parent block of self
+            # is either None, or is (by definition) out of scope.  So we
+            # will check that id(self) is not in __block_scope__: if it
+            # is, then this is the top-level block and we need to do the
+            # normal deepcopy.  We defer this check until now for
+            # efficiency reasons beause we expect that (for sane models)
+            # the bulk of the ccomponents we will encounter will be *in*
+            # scope.
+            if not _in_scope and id(self) not in _scope:
                 # component is out-of-scope.  shallow copy only
                 memo[id(self)] = self
                 return self
