@@ -114,11 +114,6 @@ jobs:
           TARGET: win
           PYENV: pip
 
-        exclude:
-        # Exclude 3.11 on conda until matplotlib!=3.6.1 is released on
-        # conda-forge for python 3.11
-        - {os: windows-latest, python: 3.11}
-
     steps:
     - name: Checkout Pyomo source
       uses: actions/checkout@v3
