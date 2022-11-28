@@ -612,8 +612,10 @@ class TestGDPopt(unittest.TestCase):
 
     def test_logical_constraints_on_disjuncts_nonlinear_convex(self):
         m = models.makeLogicalConstraintsOnDisjuncts_NonlinearConvex()
-        SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
-                                          nlp_solver=nlp_solver, tee=True)
+        results = SolverFactory('gdpopt.loa').solve(m, mip_solver=mip_solver,
+                                                    nlp_solver=nlp_solver)
+        self.assertEqual(results.solver.termination_condition,
+                         TerminationCondition.optimal)
         self.assertAlmostEqual(value(m.x), 4)
 
     def test_nested_disjunctions_no_init(self):
