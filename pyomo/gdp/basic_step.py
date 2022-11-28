@@ -78,26 +78,15 @@ def apply_basic_step(disjunctions_or_constraints):
         #
         ans.disjuncts[idx].src = Block(ans.DISJUNCTIONS)
         for i in ans.DISJUNCTIONS:
-            # This try-except is not strictly necessary, but has been
-            # added to help diagnose an intermittent deepcopy error
-            # observed in the GHA tests, but not reproducible
-            # locally. [JDS; 21 Nov 2022]
-            try:
-                src_disj = disjunctions[i].disjuncts[
-                    idx[i] if isinstance(idx, tuple) else idx]
-                tmp = _clone_all_but_indicator_vars(src_disj)
-                for k,v in list(tmp.component_map().items()):
-                    if v.parent_block() is not tmp:
-                        # Skip indicator_var and binary_indicator_var
-                        continue
-                    tmp.del_component(k)
-                    ans.disjuncts[idx].src[i].add_component(k,v)
-            except AttributeError:
-                logger.error(
-                    "Encountered partially cloned component when applying "
-                    f"basic step: cloning disjunct {i} ({src_disj.name}) "
-                    f"for new disjunct {idx}")
-                raise
+            src_disj = disjunctions[i].disjuncts[
+                idx[i] if isinstance(idx, tuple) else idx]
+            tmp = _clone_all_but_indicator_vars(src_disj)
+            for k,v in list(tmp.component_map().items()):
+                if v.parent_block() is not tmp:
+                    # Skip indicator_var and binary_indicator_var
+                    continue
+                tmp.del_component(k)
+                ans.disjuncts[idx].src[i].add_component(k,v)
         # Copy in the constraints corresponding to the improper disjunctions
         ans.disjuncts[idx].improper_constraints = ConstraintList()
         for constr in constraints:
