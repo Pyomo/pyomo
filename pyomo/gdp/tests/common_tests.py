@@ -876,8 +876,7 @@ def check_disjunction_data_target(self, transformation):
     # suppose we transform the next one separately
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m, targets=[m.disjunction[1]])
-    # we added to the same XOR constraint before
-    self.assertIsInstance(transBlock.disjunction_xor[1],
+    self.assertIsInstance(m.disjunction[1].algebraic_constraint,
                           constraint._GeneralConstraintData)
     transBlock = m.component("_pyomo_gdp_%s_reformulation_4" % transformation)
     self.assertIsInstance(transBlock, Block)
