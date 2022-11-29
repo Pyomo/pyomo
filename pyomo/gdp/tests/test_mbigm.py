@@ -16,11 +16,9 @@ import pickle
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
-<<<<<<< HEAD
-from pyomo.core.expr.compare import assertExpressionsStructurallyEqual
-=======
-from pyomo.core.expr.compare import assertExpressionsEqual
->>>>>>> main
+from pyomo.core.expr.compare import (
+    assertExpressionsEqual, assertExpressionsStructurallyEqual
+)
 
 from pyomo.environ import (
     BooleanVar, ConcreteModel, Constraint, LogicalConstraint,
