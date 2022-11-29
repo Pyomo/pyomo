@@ -27,8 +27,9 @@ from pyomo.core.expr.current import identify_variables
 from pyomo.core.plugins.transform.hierarchy import IsomorphicTransformation
 from pyomo.core.util import target_list
 
-@TransformationFactory.register("core.logical_to_linear", 
-                                doc="Convert logic to linear constraints")
+@TransformationFactory.register(
+    "core.logical_to_linear",
+    doc="[DEPRECATED] Convert logic to linear constraints")
 @deprecated(
     "The 'core.logical_to_linear transformation' is deprecated. "
     "Please use the 'contrib.logical_to_disjunctive' transformation "
