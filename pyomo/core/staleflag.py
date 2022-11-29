@@ -21,7 +21,7 @@ class _StaleFlagManager(object):
             if value:
                 return 0
             else:
-                self.get_flag(0)
+                return self.get_flag(0)
 
     def _get_flag(self, current_flag):
         """Return the current global stale flag value"""
