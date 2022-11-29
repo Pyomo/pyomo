@@ -10,8 +10,6 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.dependencies import attempt_import
-cp, docplex_available = attempt_import('docplex.cp.model')
-cp_solver, docplex_available = attempt_import('docplex.cp.solver')
 
 import itertools
 import logging
@@ -67,6 +65,18 @@ from pyomo.opt import (
 ### longer report active==True
 from pyomo.network import Port
 ###
+
+def _finalize_docplex(module, available):
+    if not available:
+        return
+    _deferred_element_getattr_dispatcher['start_time'] = cp.start_of
+    _deferred_element_getattr_dispatcher['end_time'] = cp.end_of
+    _deferred_element_getattr_dispatcher['length'] = cp.length_of
+    _deferred_element_getattr_dispatcher['is_present'] = cp.presence_of
+
+cp, docplex_available = attempt_import(
+    'docplex.cp.model', callback=_finalize_docplex)
+cp_solver, docplex_available = attempt_import('docplex.cp.solver')
 
 logger = logging.getLogger('pyomo.contrib.cp')
 
@@ -217,13 +227,8 @@ _element_constraint_attr_dispatcher = {
     'xor': _XOR,
     'equivalent_to': _EQUIVALENT_TO,
 }
-if docplex_available:
-    _deferred_element_getattr_dispatcher = {
-        'start_time': cp.start_of,
-        'end_time': cp.end_of,
-        'length': cp.length_of,
-        'is_present': cp.presence_of,
-    }
+# This will get populated when cp is finally imported
+_deferred_element_getattr_dispatcher = {}
 
 def _handle_getattr(visitor, node, obj, attr):
     # We either end up here because we do not yet know the list of variables to
