@@ -126,9 +126,3 @@ class LogicalToDisjunctive(Transformation):
         new_xfrm_block.auxiliary_disjunctions = Disjunction(NonNegativeIntegers)
 
         return new_xfrm_block
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, et, ev, tb):
-        return
