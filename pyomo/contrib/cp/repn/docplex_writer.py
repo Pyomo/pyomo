@@ -69,10 +69,10 @@ from pyomo.network import Port
 def _finalize_docplex(module, available):
     if not available:
         return
-    _deferred_element_getattr_dispatcher['start_time'] = cp.start_of
-    _deferred_element_getattr_dispatcher['end_time'] = cp.end_of
-    _deferred_element_getattr_dispatcher['length'] = cp.length_of
-    _deferred_element_getattr_dispatcher['is_present'] = cp.presence_of
+    _deferred_element_getattr_dispatcher['start_time'] = module.start_of
+    _deferred_element_getattr_dispatcher['end_time'] = module.end_of
+    _deferred_element_getattr_dispatcher['length'] = module.length_of
+    _deferred_element_getattr_dispatcher['is_present'] = module.presence_of
 
 cp, docplex_available = attempt_import(
     'docplex.cp.model', callback=_finalize_docplex)
