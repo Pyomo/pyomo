@@ -107,7 +107,7 @@ Carl D. Laird, Chair, Pyomo Management Committee, claird at andrew dot cmu dot e
                      license file directly.
                 -->
 		<projectLicenseURL>
-		  https://github.com/Pyomo/pyomo/blob/main/LICENSE.txt
+		  https://github.com/Pyomo/pyomo/blob/main/LICENSE.md
 		</projectLicenseURL>
 
 		<!-- Below, you can list other COIN projects your project      -->
