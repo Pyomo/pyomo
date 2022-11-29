@@ -348,6 +348,38 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
+    def bounding_model(self):
+        """
+        Make uncertain parameter value bounding problems (optimize
+        value of each uncertain parameter subject to constraints on the
+        uncertain parameters).
+
+        Returns
+        -------
+        model : ConcreteModel
+            Bounding problem, with all Objectives deactivated.
+        """
+        model = ConcreteModel()
+        model.util = Block()
+
+        # construct param vars, initialize to nominal point
+        model.param_vars = Var(range(self.dim))
+
+        # add constraints
+        model.cons = self.set_as_constraint(
+            uncertain_params=model.param_vars,
+            model=model,
+        )
+
+        @model.Objective(range(self.dim))
+        def param_var_objectives(self, idx):
+            return model.param_vars[idx]
+
+        # deactivate all objectives
+        model.param_var_objectives.deactivate()
+
+        return model
+
     def is_bounded(self, config):
         """
         Determine whether the uncertainty set is bounded.
@@ -374,35 +406,36 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         This method is invoked during the validation step of a PyROS
         solver call.
         """
-        # === Determine bounds on all uncertain params
-        bounding_model = ConcreteModel()
-        bounding_model.util = Block() # So that boundedness checks work for Cardinality and FactorModel sets
-        bounding_model.uncertain_param_vars = IndexedVar(range(len(config.uncertain_params)), initialize=1)
-        for idx, param in enumerate(config.uncertain_params):
-            bounding_model.uncertain_param_vars[idx].set_value(
-                param.value, skip_validation=True)
+        bounding_model = self.bounding_model()
+        solver = config.global_solver
 
-        bounding_model.add_component("uncertainty_set_constraint",
-                                     config.uncertainty_set.set_as_constraint(
-                                         uncertain_params=bounding_model.uncertain_param_vars,
-                                         model=bounding_model,
-                                         config=config
-                                     ))
+        # initialize uncertain parameter variables
+        for param, param_var in zip(
+                config.uncertain_params,
+                bounding_model.param_vars.values(),
+                ):
+            param_var.set_value(param.value, skip_validation=True)
 
-        for idx, param in enumerate(list(bounding_model.uncertain_param_vars.values())):
-            bounding_model.add_component("lb_obj_" + str(idx), Objective(expr=param, sense=minimize))
-            bounding_model.add_component("ub_obj_" + str(idx), Objective(expr=param, sense=maximize))
+        for idx, obj in bounding_model.param_var_objectives.items():
+            # activate objective for corresponding dimension
+            obj.activate()
 
-        for o in bounding_model.component_data_objects(Objective):
-            o.deactivate()
+            # solve for lower bound, then upper bound
+            for sense in (minimize, maximize):
+                obj.sense = sense
+                res = solver.solve(
+                    bounding_model,
+                    load_solutions=False,
+                    tee=False,
+                )
 
-        for i in range(len(bounding_model.uncertain_param_vars)):
-            for limit in ("lb", "ub"):
-                getattr(bounding_model, limit + "_obj_" + str(i)).activate()
-                res = config.global_solver.solve(bounding_model, tee=False)
-                getattr(bounding_model, limit + "_obj_" + str(i)).deactivate()
                 if not check_optimal_termination(res):
                     return False
+
+            # ensure sense is minimize when done, deactivate
+            obj.sense = minimize
+            obj.deactivate()
+
         return True
 
     def is_nonempty(self, config):
@@ -1572,10 +1605,9 @@ class FactorModelSet(UncertaintySet):
         Natural number representing the dimensionality of the
         space to which the set projects.
     psi_mat : (N, `number_of_factors`) array_like
-        Matrix with nonnegative entries designating each
-        uncertain parameter's contribution to each factor.
-        Each row is associated with a separate uncertain parameter.
-        Each column is associated with a separate factor.
+        Matrix designating each uncertain parameter's contribution to
+        each factor.  Each row is associated with a separate uncertain
+        parameter.  Each column is associated with a separate factor.
     beta : numeric type
         Real value between 0 and 1 specifying the fraction of the
         independent factors that can simultaneously attain
@@ -1661,8 +1693,7 @@ class FactorModelSet(UncertaintySet):
         (N, `number_of_factors`) numpy.ndarray : Matrix designating each
         uncertain parameter's contribution to each factor. Each row is
         associated with a separate uncertain parameter. Each column with
-        a separate factor.  Every entry of the matrix must be
-        nonnegative.
+        a separate factor.
         """
         return self._psi_mat
 
@@ -1696,13 +1727,6 @@ class FactorModelSet(UncertaintySet):
                     "Each column of attribute 'psi_mat' should have at least "
                     "one nonzero entry"
                 )
-
-            for entry in column:
-                if entry < 0:
-                    raise ValueError(
-                        f"Entry {entry} of attribute 'psi_mat' is negative. "
-                        "Ensure all entries are nonnegative"
-                    )
 
         self._psi_mat = psi_mat_arr
 
@@ -1758,27 +1782,51 @@ class FactorModelSet(UncertaintySet):
             the uncertain parameter bounds for the corresponding set
             dimension.
         """
-        nom_val = self.origin
+        F = self.number_of_factors
         psi_mat = self.psi_mat
 
-        F = self.number_of_factors
-        beta_F = self.beta * F
-        floor_beta_F = math.floor(beta_F)
+        # evaluate some important quantities
+        beta_F = self.beta * self.number_of_factors
+        crit_pt_type = int((beta_F + F) / 2)
+        beta_F_fill_in = (beta_F + F) - 2 * crit_pt_type - 1
+
+        # argsort rows of psi_mat in descending order
+        row_wise_args = np.argsort(-psi_mat, axis=1)
+
         parameter_bounds = []
-        for i in range(len(nom_val)):
-            non_decreasing_factor_row = sorted(psi_mat[i], reverse=True)
-            # deviation = sum_j=1^floor(beta F) {psi_if_j} + (beta F - floor(beta F)) psi_{if_{betaF +1}}
-            # because indexing starts at 0, we adjust the limit on the sum and the final factor contribution
-            if beta_F - floor_beta_F == 0:
-                deviation = sum(non_decreasing_factor_row[j] for j in range(floor_beta_F - 1))
+        for idx, orig_val in enumerate(self.origin):
+            # number nonnegative values in row
+            M = len(psi_mat[idx][psi_mat[idx] >= 0])
+
+            # argsort psi matrix row in descending order
+            sorted_psi_row_args = row_wise_args[idx]
+            sorted_psi_row = psi_mat[idx, sorted_psi_row_args]
+
+            # now evaluate max deviation from origin
+            # (depends on number nonneg entries and critical point type)
+            if M > crit_pt_type:
+                max_deviation = (
+                    sorted_psi_row[:crit_pt_type].sum()
+                    + beta_F_fill_in * sorted_psi_row[crit_pt_type]
+                    - sorted_psi_row[crit_pt_type + 1:].sum()
+                )
+            elif M < F - crit_pt_type:
+                max_deviation = (
+                    sorted_psi_row[:F - crit_pt_type - 1].sum()
+                    - beta_F_fill_in * sorted_psi_row[F - crit_pt_type - 1]
+                    - sorted_psi_row[F - crit_pt_type:].sum()
+                )
             else:
-                deviation = sum(non_decreasing_factor_row[j] for j in range(floor_beta_F - 1)) + (
-                            beta_F - floor_beta_F) * psi_mat[i][floor_beta_F]
-            lb = nom_val[i] - deviation
-            ub = nom_val[i] + deviation
-            if lb > ub:
-                raise AttributeError("The computed lower bound on uncertain parameters must be less than or equal to the upper bound.")
-            parameter_bounds.append((lb, ub))
+                max_deviation = (
+                    sorted_psi_row[:M].sum()
+                    - sorted_psi_row[M:].sum()
+                )
+
+            # finally, evaluate the bounds for this dimension
+            parameter_bounds.append(
+                (orig_val - max_deviation, orig_val + max_deviation),
+            )
+
         return parameter_bounds
 
     def set_as_constraint(self, uncertain_params, **kwargs):
