@@ -1598,5 +1598,27 @@ class MiscVarTests(unittest.TestCase):
         self.assertFalse(m.x.stale)
         self.assertFalse(m.y.stale)
 
+    def test_stale_clone(self):
+        m = ConcreteModel()
+        m.x = Var(initialize=0)
+        self.assertFalse(m.x.stale)
+        m.y = Var()
+        self.assertTrue(m.y.stale)
+        m.z = Var(initialize=0)
+        self.assertFalse(m.z.stale)
+
+        i = m.clone()
+        self.assertFalse(i.x.stale)
+        self.assertTrue(i.y.stale)
+        self.assertFalse(i.z.stale)
+
+        StaleFlagManager.mark_all_as_stale(delayed=True)
+        m.z = 5
+        i = m.clone()
+        self.assertTrue(i.x.stale)
+        self.assertTrue(i.y.stale)
+        self.assertFalse(i.z.stale)
+        
+
 if __name__ == "__main__":
     unittest.main()

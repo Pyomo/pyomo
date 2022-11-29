@@ -45,7 +45,8 @@ subproblems using Python parallel communication libraries.
 
 Pyomo was formerly released as the Coopr software library.
 
-Pyomo is available under the BSD License, see the LICENSE.txt file.
+Pyomo is available under the BSD License - see the 
+[`LICENSE.md`](https://github.com/Pyomo/pyomo/blob/main/LICENSE.md) file.
 
 Pyomo is currently tested with the following Python implementations:
 
@@ -78,7 +79,7 @@ To get help from the Pyomo community ask a question on one of the following:
 
 Pyomo development moved to this repository in June, 2016 from
 Sandia National Laboratories. Developer discussions are hosted by
-[google groups](https://groups.google.com/forum/#!forum/pyomo-developers).
+[Google Groups](https://groups.google.com/forum/#!forum/pyomo-developers).
 
 By contributing to this software project, you are agreeing to the
 following terms and conditions for your contributions:
