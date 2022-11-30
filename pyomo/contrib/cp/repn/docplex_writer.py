@@ -74,6 +74,21 @@ def _finalize_docplex(module, available):
     _deferred_element_getattr_dispatcher['length'] = module.length_of
     _deferred_element_getattr_dispatcher['is_present'] = module.presence_of
 
+    # Scheduling dispatchers
+    _before_dispatchers[_START_TIME, _START_TIME] = module.start_before_start
+    _before_dispatchers[_START_TIME, _END_TIME] = module.start_before_end
+    _before_dispatchers[_END_TIME, _START_TIME] = module.end_before_start
+    _before_dispatchers[_END_TIME, _END_TIME] = module.end_before_end
+
+    _at_dispatchers[_START_TIME, _START_TIME] = module.start_at_start
+    _at_dispatchers[_START_TIME, _END_TIME] = module.start_at_end
+    _at_dispatchers[_END_TIME, _START_TIME] = module.end_at_start
+    _at_dispatchers[_END_TIME, _END_TIME] = module.end_at_end
+
+    _time_point_dispatchers[_START_TIME] = module.start_of
+    _time_point_dispatchers[_END_TIME] = module.end_of
+
+
 cp, docplex_available = attempt_import(
     'docplex.cp.model', callback=_finalize_docplex)
 cp_solver, docplex_available = attempt_import('docplex.cp.solver')
@@ -681,25 +696,13 @@ def _handle_call(visitor, node, *args):
 # Scheduling
 ##
 
-if docplex_available:
-    _before_dispatchers = {
-        (_START_TIME, _START_TIME): cp.start_before_start,
-        (_START_TIME, _END_TIME): cp.start_before_end,
-        (_END_TIME, _START_TIME): cp.end_before_start,
-        (_END_TIME, _END_TIME): cp.end_before_end,
-    }
-    _at_dispatchers = {
-        (_START_TIME, _START_TIME): cp.start_at_start,
-        (_START_TIME, _END_TIME): cp.start_at_end,
-        (_END_TIME, _START_TIME): cp.end_at_start,
-        (_END_TIME, _END_TIME): cp.end_at_end
-    }
-    _time_point_dispatchers = {
-        _START_TIME: cp.start_of,
-        _END_TIME: cp.end_of,
-        _GENERAL: lambda x: x,
-        _ELEMENT_CONSTRAINT: lambda x: x,
-    }
+# This will get populated when cp is finally imported
+_before_dispatchers = {}
+_at_dispatchers = {}
+_time_point_dispatchers = {
+    _GENERAL: lambda x: x,
+    _ELEMENT_CONSTRAINT: lambda x: x,
+}
 
 _non_precedence_types = {_GENERAL, _ELEMENT_CONSTRAINT}
 
