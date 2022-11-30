@@ -409,7 +409,7 @@ class TestScaleModelTransformation(unittest.TestCase):
         m.b1.scaling_factor[m.b1.v2] = 0.2
         m.b1.b2.scaling_factor[m.b1.b2.v3] = 0.3
 
-        # Add an intermediate scaling factor - this should be ignored
+        # Add an intermediate scaling factor - this should take priority
         m.b1.scaling_factor[m.b1.b2.v3] = 0.4
 
         # Should get SF from local levels
@@ -418,7 +418,7 @@ class TestScaleModelTransformation(unittest.TestCase):
         sf = ScaleModel()._get_float_scaling_factor(m, m.b1.v2)
         assert sf == float(0.2)
         sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.v3)
-        assert sf == float(0.3)
+        assert sf == float(0.4)
 
     def test_get_float_scaling_factor_intermediate_level(self):
         m = pyo.ConcreteModel()
@@ -451,9 +451,53 @@ class TestScaleModelTransformation(unittest.TestCase):
         # v2 should get SF from b1 level
         sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.b3.v2)
         assert sf == float(0.2)
-        # v2 should get SF from lowest level, ignoring b1 level
+        # v2 should get SF from highest level, ignoring b3 level
         sf = ScaleModel()._get_float_scaling_factor(m, m.b1.b2.b3.v3)
-        assert sf == float(0.4)
+        assert sf == float(0.3)
+
+    def test_suffix_finder(self):
+        # Build a dummy model
+        m = pyo.ConcreteModel()
+        m.v1 = pyo.Var()
+
+        m.b1 = pyo.Block()
+        m.b1.v2 = pyo.Var()
+
+        m.b1.b2 = pyo.Block()
+        m.b1.b2.v3 = pyo.Var()
+
+        # Add Suffixes
+        m.suffix = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+        # No suffix on b1 - make sure we can handle missing suffixes
+        m.b1.b2.suffix = pyo.Suffix(direction=pyo.Suffix.EXPORT)
+
+        # Check for no suffix value
+        assert ScaleModel()._suffix_finder(m.b1.b2.v3, "suffix") == None
+
+        # Check finding default values
+        # Add a default at the top level
+        m.suffix[None] = 1
+        assert ScaleModel()._suffix_finder(m.b1.b2.v3, "suffix") == 1
+
+        # Add a suffix at a lower level
+        m.b1.b2.suffix[None] = 2
+        assert ScaleModel()._suffix_finder(m.b1.b2.v3, "suffix") == 2
+
+        # Check for specific values at lowest level
+        m.b1.b2.suffix[m.b1.b2.v3] = 3
+        assert ScaleModel()._suffix_finder(m.b1.b2.v3, "suffix") == 3
+
+        # Check for specific values at all levels
+        m.suffix[m.b1.b2.v3] = 4
+        assert ScaleModel()._suffix_finder(m.b1.b2.v3, "suffix") == 4
+
+        # Make sure we don't find default suffixes at lower levels
+        assert ScaleModel()._suffix_finder(m.v1, "suffix") == 1
+
+        # Make sure we don't find specific suffixes at lower levels
+        m.b1.b2.suffix[m.v1] = 5
+        assert ScaleModel()._suffix_finder(m.v1, "suffix") == 1
+
 
 if __name__ == "__main__":
     unittest.main()

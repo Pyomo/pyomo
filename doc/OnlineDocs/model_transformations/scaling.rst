@@ -9,10 +9,7 @@ Good scaling of models can greatly improve the numerical properties of a problem
 Setting Scaling Factors
 -----------------------
 
-Scaling factors for components in a model are declared using :ref:`Suffixes`, as shown in the example above. In order to define a scaling factor for a component, a ``Suffix`` named ``scaling_factor`` must first be created to hold the scaling factor(s). Scaling factor suffixes can be declared at any level of the model hierarchy, and will be applied with the following precedence:
-
-1. any scaling factors declared on the top-level ``model`` or ``Block`` to which the scaling transformation will be applied first,
-2. for any component with out a top-level scaling factor, the transformation will walk the model tree starting from the component's parent block and moving upwards, taking the first scaling factor encountered.
+Scaling factors for components in a model are declared using :ref:`Suffixes`, as shown in the example above. In order to define a scaling factor for a component, a ``Suffix`` named ``scaling_factor`` must first be created to hold the scaling factor(s). Scaling factor suffixes can be declared at any level of the model hierarchy, but scaling factors declared on the higher-level ``models`` or ``Blocks`` take precedence over those declared at lower levels.
 
 Scaling suffixes are dict-like where each key is a Pyomo component and the value is the scaling factor to be applied to that component.
 
@@ -20,11 +17,11 @@ In the case of indexed components, scaling factors can either be declared for an
 
 .. note::
 
-   In the case that a scaling factor is declared for a component on both the top-level model and the parent component, the scaling factor on the top-level component will be applied.
+   In the case that a scaling factor is declared for a component on at multiple levels of the hierarchy, the highest level scaling factor will be applied.
 
 .. note::
 
-   Only the first scaling factor encountered in the search will be used. Scaling factors declared in other locations will not be picked up and applied by the scaling transformation. 
+   It is also possible (but not encouraged) to define a "default" scaling factor to be applied to any component for which a specific scaling factor has not been declared by setting a entry in a Suffix with a key of ``None``. In this case, the default value declared closest to the component to be scaled will be used (i.e., the first default value found when walking up the model hierarchy).
 
 Applying Model Scaling
 ----------------------
@@ -42,4 +39,3 @@ Creating a New Scaled Model
 Alternatively, the ``create_using(model)`` method can be used to create a new, scaled version of the model which can be solved. In this case, a clone of the original model is generated with the variables, constraints and objectives replaced by scaled equivalents. Users can then send the scaled model to a solver after which the ``propagate_solution`` method can be used to map the scaled solution back onto the original model for further analysis.
 
 The advantage of this approach is that the original model is maintained separately from the scaled model, which facilitates rescaling and other manipulation of the original model after a solution has been found. The disadvantage of this approach is that cloning the model may result in memory issues when dealing with larger models.
-

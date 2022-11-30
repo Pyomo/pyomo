@@ -81,28 +81,55 @@ class ScaleModel(Transformation):
         self._apply_to(scaled_model, **kwds)
         return scaled_model
 
+    def _suffix_finder(self, component_data, suffix_name, top_level=None):
+        """
+        Find suffix value for a given component data object in model tree according
+        to the following precedence:
+
+        1. Specific suffix values at higher levels take precedence.
+        2. If no specific suffix value is found, the lowest level default value
+        (Suffix key None) is used.
+        3. If no suffix values are defined, return None.
+
+        Args:
+            component_data: component data object to find suffix value for.
+            suffix_name: name of Suffix to search for.
+            top_level: Block at which to stop searching for Suffixes (default=None).
+
+        Returns:
+            Value for suffix associated with component data if found, else None.
+        """
+        # Prototype for Suffix finder
+        val = None  # default return of None if no corresponding suffix found
+
+        # Walk parent tree and search for suffixes
+        parent = component_data.parent_block()
+        # TODO: Stop at instance, or run out the top of the stack?
+        # For now, run out the top
+        while parent is not top_level:
+            # Look for appropriate suffix
+            try:
+                suffix = getattr(parent, suffix_name)
+                # If a value exists for component_data, this supersedes any value we already have
+                if component_data in suffix:
+                    val = suffix[component_data]
+                elif component_data.parent_component() in suffix:
+                    val = suffix[component_data.parent_component()]
+                # If we don't have a value yet, look for a default value whist we are here
+                # Only need this if we haven't found anything specific yet
+                elif val is None and None in suffix:
+                    val = suffix[None]
+
+            except AttributeError:
+                # It's OK if there is no suffix
+                pass
+
+            parent = parent.parent_block()
+
+        return val
+
     def _get_float_scaling_factor(self, instance, component_data):
-        scaling_factor = None
-        # Try for a top-level scaling factor first
-        if hasattr(instance, "scaling_factor"):
-            if component_data in instance.scaling_factor:
-                scaling_factor = instance.scaling_factor[component_data]
-            elif component_data.parent_component() in instance.scaling_factor:
-                scaling_factor = instance.scaling_factor[component_data.parent_component()]
-
-        # If scaling_factor is still none, begin walking parent tree
-        if scaling_factor is None:
-            parent = component_data.parent_block()
-            while parent is not None:
-                if hasattr(parent, "scaling_factor"):
-                    if component_data in parent.scaling_factor:
-                        scaling_factor = parent.scaling_factor[component_data]
-                        break
-                    elif component_data.parent_component() in parent.scaling_factor:
-                        scaling_factor = parent.scaling_factor[component_data.parent_component()]
-                        break
-
-                parent = parent.parent_block()
+        scaling_factor = self._suffix_finder(component_data, "scaling_factor")
 
         # If still no scaling factor, return 1.0
         if scaling_factor is None:
