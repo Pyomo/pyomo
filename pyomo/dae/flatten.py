@@ -305,7 +305,10 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
                 if type(descend_data) is IndexedComponent_slice:
                     try:
                         # Attempt to find a data object matching this slice
-                        descend_data = next(iter(descend_data))
+                        _data = next(iter(descend_data))
+                        while not _data.active:
+                            _data = next(iter(descend_data))
+                        descend_data = _data
                     except StopIteration:
                         # For this particular idx (and given indices), no
                         # block data object exists to descend into.
@@ -313,6 +316,8 @@ def generate_sliced_components(b, index_stack, slice_, sets, ctype, index_map):
                         continue
             else:
                 descend_data = sub
+                if not descend_data.active:
+                    continue
             
             # Recursively generate sliced components from this data object
             for st, v in generate_sliced_components(
