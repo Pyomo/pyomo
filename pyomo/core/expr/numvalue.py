@@ -367,7 +367,7 @@ def as_numeric(obj):
             deprecation_warning(
                 "returning a relational expression from as_numeric().  "
                 "Relational expressions are no longer numeric types.  "
-                "In the future this will raise a TypeError.", version='TBD')
+                "In the future this will raise a TypeError.", version='6.4.3')
             return obj
         else:
             try:
@@ -436,7 +436,7 @@ numeric types using the following functions:
 
 
 @deprecated("check_if_numeric_type_and_cache() has been deprecated in "
-            "favor of just calling as_numeric()", version='TBD')
+            "favor of just calling as_numeric()", version='6.4.3')
 def check_if_numeric_type_and_cache(obj):
     """Test if the argument is a numeric type by checking if we can add
     zero to it.  If that works, then we cache the value and return a
@@ -495,7 +495,8 @@ class NumericValue(PyomoObject):
         return False
 
     @deprecated("is_relational() is deprecated in favor of "
-                "is_expression_type(ExpressionType.RELATIONAL)", version='TBD')
+                "is_expression_type(ExpressionType.RELATIONAL)",
+                version='6.4.3')
     def is_relational(self):
         """
         Return True if this numeric value represents a relational expression.

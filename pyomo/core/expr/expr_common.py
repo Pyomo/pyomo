@@ -76,7 +76,7 @@ class ExpressionType(enum.Enum):
 Beginning with Pyomo5 expressions, expression cloning (detangling) no
 longer occurs automatically within expression generation.  As a result,
 the 'clone counter' has lost its utility and is no longer supported.
-This context manager will always report 0.""", version='TBD')
+This context manager will always report 0.""", version='6.4.3')
 class clone_counter(nullcontext):
     """ Context manager for counting cloning events.
 

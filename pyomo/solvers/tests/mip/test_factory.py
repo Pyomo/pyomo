@@ -60,7 +60,7 @@ class OptFactoryDebug(unittest.TestCase):
         """
         SolverFactory.register('stest3')(MockSolver)
         ans = sorted(SolverFactory)
-        tmp = ['_mock_asl', '_mock_cbc', '_mock_cplex', '_mock_glpk', 'cbc', 'cplex', 'glpk', 'stest3', 'asl']
+        tmp = ['_mock_asl', '_mock_cbc', '_mock_cplex', '_mock_glpk', 'cbc', 'cplex', 'glpk', 'scip', 'stest3', 'asl']
         tmp.sort()
         self.assertTrue(set(tmp) <= set(ans), msg="Set %s is not a subset of set %s" %(tmp,ans))
 

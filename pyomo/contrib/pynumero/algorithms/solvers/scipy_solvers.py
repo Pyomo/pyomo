@@ -16,6 +16,7 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.common.config import ConfigBlock, ConfigValue, In
 from pyomo.contrib.pynumero.algorithms.solvers.square_solver_base import (
     DenseSquareNlpSolver,
+    ScalarDenseSquareNlpSolver,
 )
 from pyomo.opt import (
     SolverResults,
@@ -33,7 +34,7 @@ pyomo_nlp, _ = attempt_import("pyomo.contrib.pynumero.interfaces.pyomo_nlp")
 
 class FsolveNlpSolver(DenseSquareNlpSolver):
 
-    OPTIONS = ConfigBlock(
+    OPTIONS = DenseSquareNlpSolver.OPTIONS(
         description="Options for SciPy fsolve wrapper",
     )
     OPTIONS.declare("xtol", ConfigValue(
@@ -97,7 +98,7 @@ class FsolveNlpSolver(DenseSquareNlpSolver):
 
 class RootNlpSolver(DenseSquareNlpSolver):
 
-    OPTIONS = ConfigBlock(
+    OPTIONS = DenseSquareNlpSolver.OPTIONS(
         description="Options for SciPy fsolve wrapper",
     )
     OPTIONS.declare("tol", ConfigValue(
@@ -107,11 +108,14 @@ class RootNlpSolver(DenseSquareNlpSolver):
     ))
     OPTIONS.declare("method", ConfigValue(
         default="hybr",
-        # NOTE: Only supporting Powell hybrid method and Levenberg-Marquardt
-        # methods (both from MINPACK) for now.
         domain=In({"hybr", "lm"}),
-        #domain=str,
         description="Method used to solve for the function root",
+        doc=(
+            """The 'method' argument in the scipy.optimize.root function.
+            For now only 'hybr' (Powell hybrid method from MINPACK) and
+            'lm' (Levenberg-Marquardt from MINPACK) are supported.
+            """
+        ),
     ))
 
     def solve(self, x0=None):
@@ -122,31 +126,18 @@ class RootNlpSolver(DenseSquareNlpSolver):
             self.evaluate_function,
             x0,
             jac=self.evaluate_jacobian,
+            tol=self.options.tol,
+            method=self.options.method,
         )
         return results
 
 
-class _ScalarDenseSquareNlpSolver(DenseSquareNlpSolver):
-    # A base class for solvers for scalar equations.
-    # Not intended to be instantiated directly. Instead,
-    # NewtonNlpSolver or SecantNewtonNlpSolver should be used.
-
-    def __init__(self, nlp, timer=None, options=None):
-        super().__init__(nlp, timer=timer, options=options)
-        if nlp.n_primals() != 1:
-            raise RuntimeError(
-                "Cannot use the scipy.optimize.newton solver on an NLP with"
-                " more than one variable and equality constraint. Got %s"
-                " primals. Please use RootNlpSolver or FsolveNlpSolver instead."
-            )
-
-
-class NewtonNlpSolver(_ScalarDenseSquareNlpSolver):
+class NewtonNlpSolver(ScalarDenseSquareNlpSolver):
     """A wrapper around the SciPy scalar Newton solver for NLP objects
 
     """
 
-    OPTIONS = ConfigBlock(
+    OPTIONS = ScalarDenseSquareNlpSolver.OPTIONS(
         description="Options for SciPy newton wrapper",
     )
     OPTIONS.declare("tol", ConfigValue(
@@ -191,7 +182,7 @@ class NewtonNlpSolver(_ScalarDenseSquareNlpSolver):
         return results
 
 
-class SecantNewtonNlpSolver(_ScalarDenseSquareNlpSolver):
+class SecantNewtonNlpSolver(NewtonNlpSolver):
     """A wrapper around the SciPy scalar Newton solver for NLP objects
     that takes a specified number of secant iterations (default is 2) to
     try to converge a linear equation quickly then switches to Newton's
@@ -203,11 +194,10 @@ class SecantNewtonNlpSolver(_ScalarDenseSquareNlpSolver):
     OPTIONS = ConfigBlock(
         description="Options for the SciPy Newton-secant hybrid",
     )
-    OPTIONS.declare("tol", ConfigValue(
-        default=1e-8,
-        domain=float,
-        description="Convergence tolerance",
-    ))
+    OPTIONS.declare_from(
+        NewtonNlpSolver.OPTIONS,
+        skip={"maxiter", "secant"},
+    )
     OPTIONS.declare("secant_iter", ConfigValue(
         default=2,
         domain=int,
@@ -215,11 +205,6 @@ class SecantNewtonNlpSolver(_ScalarDenseSquareNlpSolver):
             "Number of secant iterations to perform before switching"
             " to Newton's method."
         ),
-    ))
-    OPTIONS.declare("full_output", ConfigValue(
-        default=True,
-        domain=bool,
-        description="Whether underlying solver should return its full output",
     ))
     OPTIONS.declare("newton_iter", ConfigValue(
         default=50,
@@ -343,6 +328,12 @@ class PyomoScipySolver(object):
 
 class PyomoFsolveSolver(PyomoScipySolver):
 
+    # Note that scipy.optimize.fsolve does not return a
+    # scipy.optimize.OptimizeResult object (as of SciPy 1.9.3).
+    # To assess convergence, we must check the integer flag "ier"
+    # that is the third (or second if full_output=False) entry
+    # of the returned tuple. This dict maps documented "ier" values
+    # to Pyomo termination conditions.
     _term_cond = {
         1: TerminationCondition.feasible,
     }
@@ -369,7 +360,7 @@ class PyomoFsolveSolver(PyomoScipySolver):
         results.problem.number_of_continuous_variables = nlp.n_primals()
 
         # Record solver data
-        results.solver.name = "fsolve"
+        results.solver.name = "scipy.fsolve"
         results.solver.return_code = ier
         results.solver.message = msg
         results.solver.wallclock_time = self._timer.timers["solve"].total_time
@@ -386,10 +377,6 @@ class PyomoFsolveSolver(PyomoScipySolver):
 
 
 class PyomoRootSolver(PyomoScipySolver):
-
-    _term_cond = {
-        1: TerminationCondition.feasible,
-    }
 
     def create_nlp_solver(self, **kwds):
         nlp = self.get_nlp()
@@ -409,13 +396,19 @@ class PyomoRootSolver(PyomoScipySolver):
         results.problem.number_of_continuous_variables = nlp.n_primals()
 
         # Record solver data
-        results.solver.name = "root"
+        results.solver.name = "scipy.root"
         results.solver.return_code = scipy_results.status
         results.solver.message = scipy_results.message
         results.solver.wallclock_time = self._timer.timers["solve"].total_time
-        results.solver.termination_condition = self._term_cond.get(
-            scipy_results.status, TerminationCondition.error
-        )
+
+        # Check the "success" field of the scipy results object as status
+        # appears to be different between solvers (i.e. "hybrid" vs "lm")
+        # and not well documented as of SciPy 1.9.3
+        if scipy_results.success:
+            results.solver.termination_condition = TerminationCondition.feasible
+        else:
+            results.solver.termination_condition = TerminationCondition.error
+
         results.solver.status = TerminationCondition.to_solver_status(
             results.solver.termination_condition
         )
@@ -429,6 +422,8 @@ class PyomoRootSolver(PyomoScipySolver):
 
 
 class PyomoNewtonSolver(PyomoScipySolver):
+
+    _solver_name = "scipy.newton"
 
     def create_nlp_solver(self, **kwds):
         nlp = self.get_nlp()
@@ -453,7 +448,7 @@ class PyomoNewtonSolver(PyomoScipySolver):
         results.problem.number_of_continuous_variables = nlp.n_primals()
 
         # Record solver data
-        results.solver.name = "scipy.newton"
+        results.solver.name = self._solver_name
 
         results.solver.wallclock_time = self._timer.timers["solve"].total_time
 
@@ -478,7 +473,9 @@ class PyomoNewtonSolver(PyomoScipySolver):
         return results
 
 
-class PyomoSecantNewtonSolver(PyomoScipySolver):
+class PyomoSecantNewtonSolver(PyomoNewtonSolver):
+
+    _solver_name = "scipy.secant-newton"
 
     def converged_with_secant(self):
         return self._nlp_solver.converged_with_secant
@@ -487,45 +484,3 @@ class PyomoSecantNewtonSolver(PyomoScipySolver):
         nlp = self.get_nlp()
         solver = SecantNewtonNlpSolver(nlp, **kwds)
         return solver
-
-    def get_pyomo_results(self, model, scipy_results):
-        nlp = self.get_nlp()
-        results = SolverResults()
-
-        if self._nlp_solver.options.full_output:
-            root, res = scipy_results
-        else:
-            root = scipy_results
-
-        # Record problem data
-        results.problem.name = model.name
-        results.problem.number_of_constraints = nlp.n_eq_constraints()
-        results.problem.number_of_variables = nlp.n_primals()
-        results.problem.number_of_binary_variables = 0
-        results.problem.number_of_integer_variables = 0
-        results.problem.number_of_continuous_variables = nlp.n_primals()
-
-        # Record solver data
-        results.solver.name = "scipy.secant-newton"
-
-        results.solver.wallclock_time = self._timer.timers["solve"].total_time
-
-        if self._nlp_solver.options.full_output:
-            # We only have access to any of this information if the solver was
-            # requested to return its full output.
-
-            # For this solver, res.flag is a string.
-            # If successful, it is 'converged'
-            results.solver.message = res.flag
-
-            if res.converged:
-                term_cond = TerminationCondition.feasible
-            else:
-                term_cond = TerminationCondition.Error
-            results.solver.termination_condition = term_cond
-            results.solver.status = TerminationCondition.to_solver_status(
-                results.solver.termination_condition
-            )
-
-            results.solver.number_of_function_evaluations = res.function_calls
-        return results

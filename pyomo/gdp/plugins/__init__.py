@@ -18,3 +18,4 @@ def load():
     import pyomo.gdp.plugins.fix_disjuncts
     import pyomo.gdp.plugins.partition_disjuncts
     import pyomo.gdp.plugins.between_steps
+    import pyomo.gdp.plugins.multiple_bigm

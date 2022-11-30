@@ -27,14 +27,14 @@ def load():
         doc='Cyipopt: direct python bindings to the Ipopt NLP solver'
     )(PyomoCyIpoptSolver)
     SolverFactory.register(
-        "fsolve",
+        "scipy.fsolve",
         doc=(
             "fsolve: A SciPy wrapper around MINPACK's hybrd and"
             " hybrj algorithms"
         ),
     )(PyomoFsolveSolver)
     SolverFactory.register(
-        "root",
+        "scipy.root",
         doc=(
             "root: Find the root of a vector function"
         ),
