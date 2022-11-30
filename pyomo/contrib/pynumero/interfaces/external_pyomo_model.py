@@ -187,6 +187,7 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             external_cons,
             input_vars,
             timer=self._timer,
+            **solver_options,
         )
 
         assert len(external_vars) == len(external_cons)
