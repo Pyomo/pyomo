@@ -86,7 +86,7 @@ When the ``Disjunction`` object constructor is passed a list of lists, the outer
 
     By default, Pyomo.GDP ``Disjunction`` objects enforce an implicit "exactly one" relationship among the selection of the disjuncts (generalization of exclusive-OR).
     That is, exactly one of the ``Disjunct`` indicator variables should take a ``True`` value.
-    This can be seen as an implicit logical proposition, in our example, :math:`Y_1 \underline{\lxor} Y_2`.
+    This can be seen as an implicit logical proposition, in our example, :math:`Y_1 \veebar Y_2`.
 
 Logical Propositions
 ====================
@@ -225,8 +225,8 @@ Here, we demonstrate this capability with a toy example:
     \min~&x\\
     \text{s.t.}~&\left[\begin{gathered}Y_1\\x \geq 2\end{gathered}\right] \vee \left[\begin{gathered}Y_2\\x \geq 3\end{gathered}\right]\\
     &\left[\begin{gathered}Y_3\\x \leq 8\end{gathered}\right] \vee \left[\begin{gathered}Y_4\\x = 2.5\end{gathered}\right] \\
-    &Y_1 \underline{\vee} Y_2\\
-    &Y_3 \underline{\vee} Y_4\\
+    &Y_1 \veebar Y_2\\
+    &Y_3 \veebar Y_4\\
     &Y_1 \Rightarrow Y_4
 
 .. doctest::
@@ -361,7 +361,7 @@ In the ``logical_to_linear`` transformation, we automatically convert these spec
 Additional Examples
 ===================
 
-The following models all work and are equivalent for :math:`\left[x = 0\right] \underline{\lor} \left[y = 0\right]`:
+The following models all work and are equivalent for :math:`\left[x = 0\right] \veebar \left[y = 0\right]`:
 
 .. doctest::
 
