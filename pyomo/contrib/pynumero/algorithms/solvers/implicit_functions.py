@@ -242,9 +242,12 @@ class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
     def update_pyomo_model(self):
         primals = self._nlp.get_primals()
         for i, var in enumerate(self.get_variables()):
-            var.set_value(primals[self._variable_coords[i]])
+            var.set_value(
+                primals[self._variable_coords[i]],
+                skip_validation=True,
+            )
         for var, value in zip(self._parameters, self._parameter_values):
-            var.set_value(value)
+            var.set_value(value, skip_validation=True)
 
 
 class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
@@ -459,7 +462,10 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
                 # Update model values from global array.
                 for var in inputs:
                     idx = self._global_indices[var]
-                    var.set_value(self._global_values[idx])
+                    var.set_value(
+                        self._global_values[idx],
+                        skip_validation=True,
+                    )
                 # Solve using calculate_variable_from_constraint
                 var = block.vars[0]
                 con = block.cons[0]
@@ -506,7 +512,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         # NOTE: Here we rely on the fact that global_values is in the
         # order (variables, parameters)
         for i, var in enumerate(self.get_variables() + self.get_parameters()):
-            var.set_value(self._global_values[i])
+            var.set_value(self._global_values[i], skip_validation=True)
 
 
 class SccImplicitFunctionSolver(DecomposedImplicitFunctionBase):
