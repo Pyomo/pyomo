@@ -1,5 +1,6 @@
 import pyomo.common.unittest as unittest
 
+from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.environ import (AbstractModel, BooleanVar, ConcreteModel,
                            LogicalConstraint, TransformationFactory, Constraint)
@@ -43,11 +44,28 @@ class TestLogicalConstraintCreation(unittest.TestCase):
         self.assertEqual(repn.linear_coefs[1], 1)
 
     @unittest.skipUnless(sympy_available, "Sympy not available")
-    def test_statement_in_Disjunct(self):
+    def test_statement_in_Disjunct_with_logical_to_linear(self):
+        # This is an old test that originally tested that GDP's
+        # BigM/Hull correctly handled Disjuncts with LogicalConstraints
+        # (implicitly calling logical_to_linear to leave the transformed
+        # algebraic constraints on the Disjuncts).  That is no longer
+        # the default behavior.  However, we will preserve this (with an
+        # explicit call to logical_to_linear) for posterity
         model = self.create_model()
         model.disj = Disjunction(expr=[
             [model.x.lor(model.y)], [model.y.lor(model.z)]
         ])
+
+        with LoggingIntercept() as LOG:
+            TransformationFactory('core.logical_to_linear').apply_to(
+                model, targets=model.disj.disjuncts)
+        self.assertRegex(
+            LOG.getvalue().replace("\n", " ").strip(),
+            "^DEPRECATED: The 'core.logical_to_linear' transformation "
+            "is deprecated. Please use the 'contrib.logical_to_disjunctive' "
+            "transformation instead.  \(deprecated in [^\)]+\) "
+            "\(called from [^\)]+\)$"
+        )
 
         bigmed = TransformationFactory('gdp.bigm').create_using(model)
         # check that the algebraic versions are living on the Disjuncts

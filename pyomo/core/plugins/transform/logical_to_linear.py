@@ -31,7 +31,7 @@ from pyomo.core.util import target_list
     "core.logical_to_linear",
     doc="[DEPRECATED] Convert logic to linear constraints")
 @deprecated(
-    "The 'core.logical_to_linear transformation' is deprecated. "
+    "The 'core.logical_to_linear' transformation is deprecated. "
     "Please use the 'contrib.logical_to_disjunctive' transformation "
     "instead.", version="TBD")
 class LogicalToLinear(IsomorphicTransformation):
