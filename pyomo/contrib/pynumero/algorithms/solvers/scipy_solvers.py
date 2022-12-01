@@ -162,7 +162,6 @@ class NewtonNlpSolver(ScalarDenseSquareNlpSolver):
     ))
 
     def solve(self, x0=None):
-        self._timer.start("solve")
         if x0 is None:
             x0 = self._nlp.get_primals()
 
@@ -178,7 +177,6 @@ class NewtonNlpSolver(ScalarDenseSquareNlpSolver):
             full_output=self.options.full_output,
             maxiter=self.options.maxiter,
         )
-        self._timer.stop("solve")
         return results
 
 
@@ -217,7 +215,6 @@ class SecantNewtonNlpSolver(NewtonNlpSolver):
         self.converged_with_secant = None
 
     def solve(self, x0=None):
-        self._timer.start("solve")
         if x0 is None:
             x0 = self._nlp.get_primals()
 
@@ -242,7 +239,6 @@ class SecantNewtonNlpSolver(NewtonNlpSolver):
                 maxiter=self.options.newton_iter,
                 full_output=self.options.full_output,
             )
-        self._timer.stop("solve")
         return results
 
 
