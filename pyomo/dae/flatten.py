@@ -460,10 +460,11 @@ def flatten_components_along_sets(m, sets, ctype, indices=None, active=None):
     return sets_list, comps_list
 
 
-def flatten_dae_components(model, time, ctype, indices=None):
+def flatten_dae_components(model, time, ctype, indices=None, active=None):
     target = ComponentSet((time,))
-    sets_list, comps_list = flatten_components_along_sets(model, target, ctype,
-            indices=indices)
+    sets_list, comps_list = flatten_components_along_sets(
+        model, target, ctype, indices=indices, active=active
+    )
     # Initialize these variables as, if no components of either category are
     # found, we expect to get an empty list.
     scalar_comps = []
@@ -471,13 +472,14 @@ def flatten_dae_components(model, time, ctype, indices=None):
     for sets, comps in zip(sets_list, comps_list):
         if len(sets) == 1 and sets[0] is time:
             dae_comps = comps
-        elif len(sets) == 0 or (len(sets) == 1 and 
-                sets[0] is UnindexedComponent_set):
+        elif len(sets) == 0 or (
+            len(sets) == 1 and sets[0] is UnindexedComponent_set
+        ):
             scalar_comps = comps
         else:
             raise RuntimeError(
                 "Invalid model for `flatten_dae_components`.\n"
                 "This can happen if your model has components that are\n"
                 "indexed by time (explicitly or implicitly) multiple times."
-                )
+            )
     return scalar_comps, dae_comps
