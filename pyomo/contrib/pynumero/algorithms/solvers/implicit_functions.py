@@ -175,6 +175,7 @@ class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
         primals_ordering = [var.name for var in variables]
         self._proj_nlp = ProjectedExtendedNLP(self._nlp, primals_ordering)
 
+        self._timer.start("NlpSolver")
         if solver_class is None:
             self._solver = ScipySolverWrapper(
                 self._proj_nlp, options=solver_options, timer=timer
@@ -183,6 +184,7 @@ class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
             self._solver = solver_class(
                 self._proj_nlp, options=solver_options, timer=timer
             )
+        self._timer.stop("NlpSolver")
 
         vars_in_cons = []
         _seen = set()
@@ -362,11 +364,13 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
         ]
 
         # We will solve the ProjectedNLPs rather than the original NLPs
+        self._timer.start("NlpSolver")
         self._nlp_solvers = [
             self._solver_class(
                 nlp, timer=self._timer, options=self._solver_options
             ) for nlp in self._solver_proj_nlps
         ]
+        self._timer.stop("NlpSolver")
         self._solver_subsystem_input_coords = [
             # Coordinates in the NLP, not ProjectedNLP
             nlp.get_primal_indices(inputs)
