@@ -172,6 +172,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         if solver_options is None:
             solver_options = {}
 
+        self._timer.start("__init__")
+
         # We only need this block to construct the NLP, which wouldn't
         # be necessary if we could compute Hessians of Pyomo constraints.
         self._block = create_subsystem_block(
@@ -179,7 +181,9 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             input_vars+external_vars,
         )
         self._block._obj = Objective(expr=0.0)
+        self._timer.start("PyomoNLP")
         self._nlp = PyomoNLP(self._block)
+        self._timer.stop("PyomoNLP")
 
         # Instantiate a solver with the ImplicitFunctionSolver API:
         self._solver = self._solver_class(
@@ -203,6 +207,8 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
         self._input_output_coords = self._nlp.get_primal_indices(
             input_vars + external_vars
         )
+
+        self._timer.stop("__init__")
 
     def n_inputs(self):
         return len(self.input_vars)
