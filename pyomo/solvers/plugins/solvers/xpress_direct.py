@@ -225,7 +225,9 @@ class XpressDirect(DirectSolver):
 
     def _get_mip_results(self, results, soln):
         """Sets up `results` and `soln` and returns whether there is a solution
-        to query."""
+        to query.
+        Returns `True` if a feasible solution is available, `False` otherwise.
+        """
         xprob = self._solver_model
         xp = xpress
         xprob_attrs = xprob.attributes
@@ -301,14 +303,13 @@ class XpressDirect(DirectSolver):
             except (XpressDirect.XpressException, AttributeError):
                 pass
             
-        # TODO: Pyomo only queries solution if the LP status is optimal.
-        #       This seems wrong at first glance
-        return (xprob_attrs.lpstatus == xp.lp_optimal and mip_sols > 0,
-                mip_sols > 0)
+        return mip_sols > 0
 
     def _get_lp_results(self, results, soln):
         """Sets up `results` and `soln` and returns whether there is a solution
-        to query."""
+        to query.
+        Returns `True` if a feasible solution is available, `False` otherwise.
+        """
         xprob = self._solver_model
         xp = xpress
         xprob_attrs = xprob.attributes
@@ -377,14 +378,18 @@ class XpressDirect(DirectSolver):
             results.problem.lower_bound = xprob_attrs.lpobjval
         except (XpressDirect.XpressException, AttributeError):
             pass
-      
-        return (xprob_attrs.lpstatus == xp.lp_optimal,
-                xprob_attrs.lpstatus in [xp.lp_optimal, xp.lp_cutoff,
-                                         xp.lp_cutoff_in_dual])
+
+        # Not all solution information will be available in all cases, it is
+        # up to the caller/user to check the actual status and figure which
+        # of x, slack, duals, reduced costs are valid.
+        return  xprob_attrs.lpstatus in [xp.lp_optimal, xp.lp_cutoff,
+                                         xp.lp_cutoff_in_dual]
 
     def _get_nlp_results(self, results, soln):
         """Sets up `results` and `soln` and returns whether there is a solution
-        to query."""
+        to query.
+        Returns `True` if a feasible solution is available, `False` otherwise.
+        """
         xprob = self._solver_model
         xp = xpress
         xprob_attrs = xprob.attributes
@@ -400,7 +405,7 @@ class XpressDirect(DirectSolver):
             # The problem was non-linear
             status = xprob_attrs.xslp_nlpstatus
             solstatus = xprob_attrs.xslp_solstatus
-            have_soln, check_soln = False, False
+            have_soln = False
             optimal = False # *globally* optimal?
             if status == xp.nlp_unstarted:
                 results.solver.status = SolverStatus.unknown
@@ -420,13 +425,13 @@ class XpressDirect(DirectSolver):
                     results.solver.termination_message = "Feasible solution found for non-convex model"
                     results.solver.termination_condition = TerminationCondition.feasible
                     soln.status = SolutionStatus.feasible
-                have_soln, check_soln = True, True
+                have_soln = True
             elif status == xp.nlp_globally_optimal:
                 results.solver.status = SolverStatus.ok
                 results.solver.termination_message = "Non-convex model was solved to global optimality"
                 results.solver.termination_condition = TerminationCondition.optimal
                 soln.status = SolutionStatus.optimal
-                have_soln, check_soln = True, True
+                have_soln = True
                 optimal = True
             elif status == xp.nlp_locally_infeasible:
                 results.solver.status = SolverStatus.ok
@@ -448,7 +453,7 @@ class XpressDirect(DirectSolver):
                 results.solver.termination_message = "Non-convex solve not finished (numerical issues?)"
                 results.solver.termination_condition = TerminationCondition.unknown
                 soln.status = SolutionStatus.unknown
-                have_soln, check_soln = True, True
+                have_soln = True
             else:
                 results.solver.status = SolverStatus.error
                 results.solver.termination_message = "Error for non-convex model: " + str(status)
@@ -465,7 +470,7 @@ class XpressDirect(DirectSolver):
             except (XpressDirect.XpressException, AttributeError):
                 pass
       
-            return have_soln, check_soln
+            return have_soln
 
     def _solve_model(self):
         xprob = self._solver_model
@@ -769,7 +774,7 @@ class XpressDirect(DirectSolver):
 
         if not hasattr(self, '_get_results'):
             raise RuntimeError('Model was solved but `_get_results` property is not set')
-        have_soln, check_soln = self._get_results(self.results, soln)
+        have_soln = self._get_results(self.results, soln)
         self.results.problem.name = xprob_attrs.matrixname
 
         if xprob_attrs.objsense == 1.0:
@@ -800,7 +805,7 @@ class XpressDirect(DirectSolver):
             This code in this if statement is only needed for backwards compatability. It is more efficient to set
             _save_results to False and use load_vars, load_duals, etc.
             """
-            if check_soln:
+            if have_soln:
                 soln_variables = soln.variable
                 soln_constraints = soln.constraint
 
