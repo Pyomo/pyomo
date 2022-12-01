@@ -394,7 +394,7 @@ def relocated_module(new_name, msg=None, logger=None,
               'Please update your import.'
     deprecation_warning(msg, logger, version, remove_in, cf)
 
-def relocated_module_attribute(local, target, version, remove_in=None, msg=None):
+def relocated_module_attribute(local, target, version, remove_in=None, msg=None, f_globals=None):
     """Provide a deprecation path for moved / renamed module attributes
 
     This function declares that a local module attribute has been moved
@@ -429,23 +429,28 @@ def relocated_module_attribute(local, target, version, remove_in=None, msg=None)
         location.
 
     """
-    _module = sys.modules[inspect.currentframe().f_back.f_globals['__name__']]
-    if not hasattr(_module, '__relocated_attrs__'):
-        _module.__relocated_attrs__ = {}
+    if f_globals is None:
+        f_globals = inspect.currentframe().f_back.f_globals
+        if f_globals['__name__'] == 'importlib._bootstrap':
+            raise DeveloperError(
+                "relocated_module_attribute() called from a cythonized "
+                "module without passing f_globals")
+    _relocated = f_globals.get('__relocated_attrs__', None)
+    if _relocated is None:
+        f_globals['__relocated_attrs__'] = _relocated = {}
         if sys.version_info >= (3,7):
-            _relocated = _module.__relocated_attrs__
-            _mod_getattr = getattr(_module, '__getattr__', None)
+            _mod_getattr = f_globals.get('__getattr__', None)
             def __getattr__(name):
                 info = _relocated.get(name, None)
                 if info is not None:
                     target_obj = _import_object(name, *info)
-                    setattr(_module, name, target_obj)
+                    f_globals[name] = target_obj
                     return target_obj
                 elif _mod_getattr is not None:
                     return _mod_getattr(name)
                 raise AttributeError("module '%s' has no attribute '%s'"
-                                     % (_module.__name__, name))
-            _module.__getattr__ = __getattr__
+                                     % (f_globals['__name__'], name))
+            f_globals['__getattr__'] = __getattr__
         elif sys.version_info >= (3,5):
             # If you run across a case where this assertion fails
             # (because someone else has messed with the module type), we
@@ -453,12 +458,14 @@ def relocated_module_attribute(local, target, version, remove_in=None, msg=None)
             # to wrap the module.  However, as I believe that this will
             # never happen in Pyomo, it is not worth adding unused
             # functionality at this point
+            _module = sys.modules[f_globals['__name__']]
             assert _module.__class__ is types.ModuleType
             _module.__class__ = _ModuleGetattrBackport_35
         else: # sys.version_info >= (2,7):
+            _module = sys.modules[f_globals['__name__']]
             _module = sys.modules[_module.__name__] \
                       = _ModuleGetattrBackport_27(_module)
-    _module.__relocated_attrs__[local] = (target, version, remove_in, msg)
+    _relocated[local] = (target, version, remove_in, msg)
 
 
 class RenamedClass(type):
