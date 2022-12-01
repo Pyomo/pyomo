@@ -272,62 +272,6 @@ def _import_object(name, target, version, remove_in, msg):
     deprecation_warning(msg, version=version, remove_in=remove_in)
     return _object
 
-class _ModuleGetattrBackport_27(object):
-    """Backport for support of module.__getattr__
-
-
-    Beginning in Python 3.7, modules support the declaration of a
-    module-scoped __getattr__ and __dir__ to allow for the dynamic
-    resolution of module attributes.  This class wraps the module class
-    and implements `__getattr__`.  As it declares no local
-    attributes, all module attribute accesses incur a slight runtime
-    penalty (one extra function call).
-
-    """
-    def __init__(self, module):
-        # Wrapped module needs to be a local attribute.  Everything else
-        # is delegated to the inner module type
-        super(_ModuleGetattrBackport_27, self).__setattr__(
-            '_wrapped_module', module)
-
-    def __getattr__(self, name):
-        try:
-            return getattr(self._wrapped_module, name)
-        except AttributeError:
-            info = self._wrapped_module.__relocated_attrs__.get(name, None)
-            if info is not None:
-                target_obj = _import_object(name, *info)
-                setattr(self, name, target_obj)
-                return target_obj
-            raise
-
-    def __dir__(self):
-        return dir(self._wrapped_module)
-
-    def __setattr__(self, name, val):
-        setattr(self._wrapped_module, name, val)
-
-class _ModuleGetattrBackport_35(types.ModuleType):
-    """Backport for support of module.__getattr__
-
-    Beginning in Python 3.7, modules support the declaration of a
-    module-scoped __getattr__ and __dir__ to allow for the dynamic
-    resolution of module attributes.  This class derives from
-    types.ModuleType and implements `__getattr__`.  As it is a direct
-    replacement for types.ModuleType (i.e., we can reassign the already
-    loaded module to this type, it is more efficient that the
-    ModuleGetattrBackport_27 class which must wrap the already loaded
-    module.
-
-    """
-    def __getattr__(self, name):
-        info = self.__relocated_attrs__.get(name, None)
-        if info is not None:
-            target_obj = _import_object(name, *info)
-            setattr(self, name, target_obj)
-            return target_obj
-        raise AttributeError("module '%s' has no attribute '%s'"
-                             % (self.__name__, name))
 
 def relocated_module(new_name, msg=None, logger=None,
                      version=None, remove_in=None):
@@ -429,6 +373,9 @@ def relocated_module_attribute(local, target, version, remove_in=None, msg=None,
         location.
 
     """
+    # Historical note: This method only works for Python >= 3.7.  There
+    # were backports to previous Python interpreters, but were removed
+    # after SHA 4e04819aaeefc2c08b7718460918885e12343451
     if f_globals is None:
         f_globals = inspect.currentframe().f_back.f_globals
         if f_globals['__name__'].startswith('importlib.'):
@@ -438,33 +385,18 @@ def relocated_module_attribute(local, target, version, remove_in=None, msg=None,
     _relocated = f_globals.get('__relocated_attrs__', None)
     if _relocated is None:
         f_globals['__relocated_attrs__'] = _relocated = {}
-        if sys.version_info >= (3,7):
-            _mod_getattr = f_globals.get('__getattr__', None)
-            def __getattr__(name):
-                info = _relocated.get(name, None)
-                if info is not None:
-                    target_obj = _import_object(name, *info)
-                    f_globals[name] = target_obj
-                    return target_obj
-                elif _mod_getattr is not None:
-                    return _mod_getattr(name)
-                raise AttributeError("module '%s' has no attribute '%s'"
-                                     % (f_globals['__name__'], name))
-            f_globals['__getattr__'] = __getattr__
-        elif sys.version_info >= (3,5):
-            # If you run across a case where this assertion fails
-            # (because someone else has messed with the module type), we
-            # could add logic to use the _ModuleGetattrBackport_27 class
-            # to wrap the module.  However, as I believe that this will
-            # never happen in Pyomo, it is not worth adding unused
-            # functionality at this point
-            _module = sys.modules[f_globals['__name__']]
-            assert _module.__class__ is types.ModuleType
-            _module.__class__ = _ModuleGetattrBackport_35
-        else: # sys.version_info >= (2,7):
-            _module = sys.modules[f_globals['__name__']]
-            _module = sys.modules[_module.__name__] \
-                      = _ModuleGetattrBackport_27(_module)
+        _mod_getattr = f_globals.get('__getattr__', None)
+        def __getattr__(name):
+            info = _relocated.get(name, None)
+            if info is not None:
+                target_obj = _import_object(name, *info)
+                f_globals[name] = target_obj
+                return target_obj
+            elif _mod_getattr is not None:
+                return _mod_getattr(name)
+            raise AttributeError("module '%s' has no attribute '%s'"
+                                 % (f_globals['__name__'], name))
+        f_globals['__getattr__'] = __getattr__
     _relocated[local] = (target, version, remove_in, msg)
 
 
