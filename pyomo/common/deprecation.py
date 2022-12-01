@@ -431,7 +431,7 @@ def relocated_module_attribute(local, target, version, remove_in=None, msg=None,
     """
     if f_globals is None:
         f_globals = inspect.currentframe().f_back.f_globals
-        if f_globals['__name__'] == 'importlib._bootstrap':
+        if f_globals['__name__'].startswith('importlib.'):
             raise DeveloperError(
                 "relocated_module_attribute() called from a cythonized "
                 "module without passing f_globals")
