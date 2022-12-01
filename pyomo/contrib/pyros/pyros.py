@@ -46,7 +46,7 @@ from pyomo.contrib.pyros.uncertainty_sets import uncertainty_sets
 from pyomo.core.base import Constraint
 
 
-__version__ = "1.2.1"
+__version__ = "1.2.3"
 
 
 def NonNegIntOrMinusOne(obj):

@@ -77,7 +77,6 @@ By default, the BM transformation will estimate reasonably tight M values for yo
 For nonlinear models where finite expression bounds may be inferred from variable bounds, the BM transformation may also be able to automatically compute M values for you.
 For all other models, you will need to provide the M values through a "BigM" Suffix, or through the `bigM` argument to the transformation.
 We will raise a ``GDP_Error`` for missing M values.
-We implement the multiple-parameter Big-M (MBM) approach described in literature\ [#gdp-mbm]_.
 
 To apply the BM reformulation within a python script, use:
 
@@ -86,6 +85,27 @@ To apply the BM reformulation within a python script, use:
     TransformationFactory('gdp.bigm').apply_to(model)
 
 From the Pyomo command line, include the ``--transform pyomo.gdp.bigm`` option.
+
+Multiple Big-M (MBM) Reformulation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+We also implement the multiple-parameter Big-M (MBM) approach described in literature\ [#gdp-mbm]_.
+By default, the MBM transformation will solve continuous subproblems in order to calculate M values.
+This process can be time-consuming, so the transformation also provides a method to export the M values used as a dictionary and allows for M values to be provided through the `bigM` argument.
+
+For example, to apply the transformation and store the M values, use:
+
+.. code::
+
+    mbigm = TransformationFactory('gdp.mbigm')
+    mbigm.apply_to(model)
+
+    # These can be stored...
+    M_values = mbigm.get_all_M_values(model)
+    # ...so that in future runs, you can write:
+    mbigm.apply_to(m, bigM=M_values)
+
+From the Pyomo command line, include the ``--transform pyomo.gdp.mbigm`` option.
 
 Hull Reformulation (HR)
 ^^^^^^^^^^^^^^^^^^^^^^^

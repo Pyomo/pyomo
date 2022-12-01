@@ -1,9 +1,95 @@
-===============
 Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
-Pyomo 6.4.2    17 Aug 2022
+Pyomo 6.4.3    (28 Nov 2022)
+-------------------------------------------------------------------------------
+
+- General
+  - Update PauseGC to work in nested contexts (#2507)
+  - Simplify deepcopy/pickle logic to speed up model clone (#2510)
+  - Fix generate_standard_repn to handle unexpected NPV expressions (#2511)
+  - Add thread safe proxies for PauseGC, TempFileManager singletons (#2514)
+  - Fix ConstructionTimer bug for components indexed by nonfinite sets (#2518)
+  - Add calculate_variable_from_constraint differentiation mode option (#2549)
+  - Update URL for downloading GSL and GJH (#2556, #2588)
+  - Update logic for retrying failed downloads (#2569)
+  - Add support and testing for Python 3.11 (#2596, #2618)
+  - Update deprecation utilities to improve user messages (#2606)
+- Core
+  - Refactor expression hierarchy, add RelationalExpression base class (#2499)
+  - Support cloning individual blocks (#2504)
+  - Block performance improvements (#2508)
+  - Add support for creating a slice to a single ComponentData object (#2509)
+  - Fix missing import of value in pyomo.core.base.external (#2525)
+  - Improve handling of restricted words on Blocks (#2535)
+  - Improve Reference() performance (#2537)
+  - Fix mapping gradient/hessian for external functions with string args (#2539)
+  - Fix bug for sum_product(Var, Param, Param) (#2551)
+  - Add deprecation path for expression objects moved to relational_expr (#2554)
+  - Exception when setting value of Expression to non-numeric expression (#2567)
+  - Improve deepcopy performance (#2628)
+- Documentation
+  - Fix examples in working_models.rst (#2502)
+- Solver Interfaces
+  - Improve SCIP results object (#2462)
+  - Improve warning message when LP writer raises KeyError (#2497)
+  - Fix Gurobi work limit bug (#2530)
+  - Updates and fixes for the NLv2 writer (#2540, #2622, #2568)
+  - Fix Xpress when stopped due to MAXTIME or MAXNODES (#2553)
+  - Add support for MOSEK 10 affine conic constraints (#2557)
+  - Fix missing explicit space in GAMS put command (#2578)
+  - Fix GAMS logfile storage location (#2580)
+  - LP writer performance improvements (#2583, #2585)
+  - Update handling of MOSEK Env and Python module (#2591)
+  - Release MOSEK license when optimize raises a mosek.Error (#2593)
+  - Update list of allowable characters in CPLEX filenames (#2597)
+- Testing
+  - Update performance driver to be usable outside of Pyomo (#2505)
+  - Update the performance test driver (#2538)
+  - Reduce amount of environment code cached in GitHub actions (#2565)
+  - Update GitHub actions versions from v2 to v3 (#2566)
+  - Allow nan to compare equal in assertStructuredAlmostEqual() (#2582)
+  - Add test utilities for comparing expressions (#2590)
+  - Skip a test in MOSEK 10 due to a bug in warm starting MIQPs (#2614)
+  - Update skipped CBC test that works with CBC 2.10.6 (#2615)
+  - Add SCIP to GitHub actions environment (#2602)
+- GDP
+  - Use OrderedSet instead of list in GDPTree to improve performance (#2516)
+  - Reduce calls to logical_to_linear in GDP transformations (#2519)
+  - Add utility for gathering BigM values after transformation (#2520)
+  - Add tighter logical constraints in transformations of nested GDPs (#2550)
+  - Fix pickling of transformed GDP models (#2576)
+  - Add multiple-bigM transformation (#2592)
+  - Improve performance of BigM transformation (#2605)
+  - Remove weakref mapping Disjunctions to their algebraic_constraint (#2617)
+- Contributed Packages
+  - APPSI: Fix exception raised by appsi_gurobi during Python shutdown (#2498)
+  - APPSI: Improve handling of Gurobi results (#2517)
+  - APPSI: Add interface to HiGHS solver (#2561)
+  - APPSI: Only release Gurobi license after deleting all instances (#2599)
+  - APPSI: Patch IntEnum to preserve pre-3.11 formatting (#2607)
+  - CP: New package for constraint programming (#2570, #2612)
+  - GDPopt: Add warning when reporting results from LBB (#2534)
+  - GDPopt: Delete dummy objective when we're done using it (#2552)
+  - GDPopt: Add enumerate solution approach (#2559, #2575)
+  - IIS: Add package for computing the IIS of an infeasible Pyomo model (#2512)
+  - MindtPy: Fix bug in termination condition (#2587)
+  - MindtPy: Fix bug in checking absolute and relative gap (#2608)
+  - MPC: Data structures/utils for rolling horizon dynamic optimization (#2477)
+  - Parmest: Solve square problem to initialize regression problem (#2438)
+  - Parmest: Return ContinuousSet values from theta_est() (#2464)
+  - PyNumero: Fix NumPy deprecation warnings (#2521)
+  - PyNumero: Add interfaces to SciPy square solvers (#2523)
+  - PyNumero: Check AmplInterface availability in SciPy solver tests (#2594)
+  - PyNumero: Add ProjectedExtendedNLP class (#2601)
+  - PyNumero: Add interface to SciPy scalar Newton solver (#2603)
+  - PyROS: Rewrite UncertaintySet docstrings/improve validation (#2488)
+  - PyROS: Updates to subproblem initialization and solver call routines (#2515)
+  - PyROS: Fix collection of sub-solver solve times (#2543)
+
+-------------------------------------------------------------------------------
+Pyomo 6.4.2    (17 Aug 2022)
 -------------------------------------------------------------------------------
 
 - General
@@ -62,7 +148,7 @@ Pyomo 6.4.2    17 Aug 2022
   - PyROS: Update exception handling parsing BARON lower/upper bounds (#2486)
 
 -------------------------------------------------------------------------------
-Pyomo 6.4.1    13 May 2022
+Pyomo 6.4.1    (13 May 2022)
 -------------------------------------------------------------------------------
 
 - General
@@ -100,7 +186,7 @@ Pyomo 6.4.1    13 May 2022
     (#2353, #2371)
 
 -------------------------------------------------------------------------------
-Pyomo 6.4.0    16 Mar 2022
+Pyomo 6.4.0    (16 Mar 2022)
 -------------------------------------------------------------------------------
 
 - General
@@ -128,7 +214,7 @@ Pyomo 6.4.0    16 Mar 2022
   - PyROS: Fix variable default initialization (#2331)
 
 -------------------------------------------------------------------------------
-Pyomo 6.3.0    23 Feb 2022
+Pyomo 6.3.0    (23 Feb 2022)
 -------------------------------------------------------------------------------
 
 ADVANCE CHANGE NOTICE
@@ -208,7 +294,7 @@ ADVANCE CHANGE NOTICE
   - TrustRegion: New implementation of Trust Region Framework (#2238, #2279)
 
 -------------------------------------------------------------------------------
-Pyomo 6.2    17 Nov 2021
+Pyomo 6.2    (17 Nov 2021)
 -------------------------------------------------------------------------------
 
 - General
@@ -280,7 +366,7 @@ Pyomo 6.2    17 Nov 2021
   - PyROS: Add uncertain variable bounds detection (#2159)
 
 -------------------------------------------------------------------------------
-Pyomo 6.1.2  20 Aug 2021
+Pyomo 6.1.2  (20 Aug 2021)
 -------------------------------------------------------------------------------
 
 - General
@@ -295,14 +381,14 @@ Pyomo 6.1.2  20 Aug 2021
   - MindtPy: Support gurobi_persistent in LP/NLP-based B&B algorithm (#2071)
 
 -------------------------------------------------------------------------------
-Pyomo 6.1.1  17 Aug 2021
+Pyomo 6.1.1  (17 Aug 2021)
 -------------------------------------------------------------------------------
 
 - General
   - Adding missing __init__.py files across Pyomo (#2086)
 
 -------------------------------------------------------------------------------
-Pyomo 6.1    17 Aug 2021
+Pyomo 6.1    (17 Aug 2021)
 -------------------------------------------------------------------------------
 
 - General
@@ -364,7 +450,7 @@ Pyomo 6.1    17 Aug 2021
 
 
 -------------------------------------------------------------------------------
-Pyomo 6.0.1   4 Jun 2021
+Pyomo 6.0.1   (4 Jun 2021)
 -------------------------------------------------------------------------------
 
 - General
@@ -379,7 +465,7 @@ Pyomo 6.0.1   4 Jun 2021
   - GDPopt: Fix implicit conversion warnings (#2002)
 
 -------------------------------------------------------------------------------
-Pyomo 6.0    20 May 2021
+Pyomo 6.0    (20 May 2021)
 -------------------------------------------------------------------------------
 
 BACKWARDS COMPATIBILITY WARNINGS
@@ -508,7 +594,7 @@ BACKWARDS COMPATIBILITY WARNINGS
   - MindtPy: general improvements and add feasibility pump (#1847)
 
 -------------------------------------------------------------------------------
-Pyomo 5.7.3   29 Jan 2021
+Pyomo 5.7.3   (29 Jan 2021)
 -------------------------------------------------------------------------------
 
 ADVANCE CHANGE NOTICE:
@@ -555,7 +641,7 @@ ADVANCE CHANGE NOTICE:
   - Parmest: update pairwise plot to use the covariance matrix (#1774)
 
 -------------------------------------------------------------------------------
-Pyomo 5.7.2   17 Dec 2020
+Pyomo 5.7.2   (17 Dec 2020)
 -------------------------------------------------------------------------------
 
 - General
@@ -645,7 +731,7 @@ Pyomo 5.7.2   17 Dec 2020
     misc updates (#1632, #1653, #1610, #1667, #1681, #1705, #1724)
 
 -------------------------------------------------------------------------------
-Pyomo 5.7.1   15 Sep 2020
+Pyomo 5.7.1   (15 Sep 2020)
 -------------------------------------------------------------------------------
 
 - General
@@ -707,7 +793,7 @@ Pyomo 5.7.1   15 Sep 2020
   - Add integer arithmetic option to FME transformation (#1594)
 
 -------------------------------------------------------------------------------
-Pyomo 5.7.0   19 Jun 2020
+Pyomo 5.7.0   (19 Jun 2020)
 -------------------------------------------------------------------------------
 
 - General
@@ -793,7 +879,7 @@ Pyomo 5.7.0   19 Jun 2020
   - Add basic interior point algorithm based on PyNumero (#1450, #1505, #1495)
 
 -------------------------------------------------------------------------------
-Pyomo 5.6.9   18 Mar 2020
+Pyomo 5.6.9   (18 Mar 2020)
 -------------------------------------------------------------------------------
 
 - General
@@ -863,7 +949,7 @@ Pyomo 5.6.9   18 Mar 2020
   - Fix Benders MPI logic bug and expand parallel test coverage (#1278)
 
 -------------------------------------------------------------------------------
-Pyomo 5.6.8   13 Dec 2019
+Pyomo 5.6.8   (13 Dec 2019)
 -------------------------------------------------------------------------------
 
 - General
@@ -896,7 +982,7 @@ Pyomo 5.6.8   13 Dec 2019
   - Add test skipping to trust region tests requiring IPOPT (#1220)
 
 -------------------------------------------------------------------------------
-Pyomo 5.6.7    7 Nov 2019
+Pyomo 5.6.7    (7 Nov 2019)
 -------------------------------------------------------------------------------
 
 - General
@@ -942,7 +1028,7 @@ Pyomo 5.6.7    7 Nov 2019
   - Add documentation for user interface to LinearExpression (#1120)
 
 -------------------------------------------------------------------------------
-Pyomo 5.6.6   21 Jun 2019
+Pyomo 5.6.6   (21 Jun 2019)
 -------------------------------------------------------------------------------
 
 - Core
@@ -959,7 +1045,7 @@ Pyomo 5.6.6   21 Jun 2019
     support for AbstractModels (#955, #1054, #1066)
 
 -------------------------------------------------------------------------------
-Pyomo 5.6.5   10 Jun 2019
+Pyomo 5.6.5   (10 Jun 2019)
 -------------------------------------------------------------------------------
 
 - General
@@ -972,14 +1058,14 @@ Pyomo 5.6.5   10 Jun 2019
   - Benders cut generator component (#1028)
 
 -------------------------------------------------------------------------------
-Pyomo 5.6.4   24 May 2019
+Pyomo 5.6.4   (24 May 2019)
 -------------------------------------------------------------------------------
 
 - General
   - Resolve project description rendering on PyPI
 
 -------------------------------------------------------------------------------
-Pyomo 5.6.3   24 May 2019
+Pyomo 5.6.3   (24 May 2019)
 -------------------------------------------------------------------------------
 
 - General
@@ -1005,7 +1091,7 @@ Pyomo 5.6.3   24 May 2019
   - GDPbb improvements and cleanup (#982)
 
 -------------------------------------------------------------------------------
-Pyomo 5.6.2   1 May 2019
+Pyomo 5.6.2   (1 May 2019)
 -------------------------------------------------------------------------------
 
 - General
@@ -1090,7 +1176,7 @@ Pyomo 5.6.2   1 May 2019
   - Show how to activate/deactivate constraints (#932)
 
 -------------------------------------------------------------------------------
-Pyomo 5.6.1   18 Jan 2019
+Pyomo 5.6.1   (18 Jan 2019)
 -------------------------------------------------------------------------------
 
 - General
@@ -1106,7 +1192,7 @@ Pyomo 5.6.1   18 Jan 2019
   - Add support for RangeSet in GDP transformations (#803)
 
 -------------------------------------------------------------------------------
-Pyomo 5.6     19 Dec 2018
+Pyomo 5.6     (19 Dec 2018)
 -------------------------------------------------------------------------------
 
 - General
@@ -1231,14 +1317,14 @@ Pyomo 5.6     19 Dec 2018
   - Update examples (#436)
 
 -------------------------------------------------------------------------------
-Pyomo 5.5.1   26 Oct 2018
+Pyomo 5.5.1   (26 Oct 2018)
 -------------------------------------------------------------------------------
 
 - General
   - Adding support for Python 3.7
 
 -------------------------------------------------------------------------------
-Pyomo 5.5     14 Apr 2018
+Pyomo 5.5     (14 Apr 2018)
 -------------------------------------------------------------------------------
 
 - Move preprocessing transformations to contrib (#426)
@@ -1273,25 +1359,25 @@ Pyomo 5.5     14 Apr 2018
 - Documentation updates (#425)
 
 -------------------------------------------------------------------------------
-Pyomo 5.4.3   2 Mar 2018
+Pyomo 5.4.3   (2 Mar 2018)
 -------------------------------------------------------------------------------
 
 - Another fix in the release process.
 
 -------------------------------------------------------------------------------
-Pyomo 5.4.2   2 Mar 2018
+Pyomo 5.4.2   (2 Mar 2018)
 -------------------------------------------------------------------------------
 
 - Misc fix in the release process.
 
 -------------------------------------------------------------------------------
-Pyomo 5.4.1   28 Feb 2018
+Pyomo 5.4.1   (28 Feb 2018)
 -------------------------------------------------------------------------------
 
 - Misc version increment to support pypi idiosyncrasies.
 
 -------------------------------------------------------------------------------
-Pyomo 5.4     28 Feb 2018
+Pyomo 5.4     (28 Feb 2018)
 -------------------------------------------------------------------------------
 
 =======
@@ -1337,7 +1423,7 @@ Pyomo 5.4     28 Feb 2018
 - Logging overhaul and support for timing concrete models (#245)
 
 -------------------------------------------------------------------------------
-Pyomo 5.3     21 Oct 2017
+Pyomo 5.3     (21 Oct 2017)
 -------------------------------------------------------------------------------
 
 - Removed testing for Python 3.4
@@ -1361,7 +1447,7 @@ Pyomo 5.3     21 Oct 2017
 - Tracking changes in pyutilib.th
 
 -------------------------------------------------------------------------------
-Pyomo 5.2     14 May 2017
+Pyomo 5.2     (14 May 2017)
 -------------------------------------------------------------------------------
 
 - Resolved timeout issues running NEOS solvers
@@ -1406,13 +1492,13 @@ Pyomo 5.2     14 May 2017
 - Updating the bilinear transform to avoid creating a Set `index`.
 
 -------------------------------------------------------------------------------
-Pyomo 5.1.1   8 Jan 2017
+Pyomo 5.1.1   (8 Jan 2017)
 -------------------------------------------------------------------------------
 
 - Monkeypatch to resolve (#95)
 
 -------------------------------------------------------------------------------
-Pyomo 5.1     4 Jan 2017
+Pyomo 5.1     (4 Jan 2017)
 -------------------------------------------------------------------------------
 
 - Added a CONOPT plugin to handle a custom SOL file output (#88)
@@ -1436,13 +1522,13 @@ Pyomo 5.1     4 Jan 2017
 - Removed support for OpenOpt
 
 -------------------------------------------------------------------------------
-Pyomo 5.0.1   16 Nov 2016
+Pyomo 5.0.1   (16 Nov 2016)
 -------------------------------------------------------------------------------
 
 - Updating PyUtilib dependency
 
 -------------------------------------------------------------------------------
-Pyomo 5.0     15 Nov 2016
+Pyomo 5.0     (15 Nov 2016)
 -------------------------------------------------------------------------------
 
 - Added examples used in the Pyomo book to the Pyomo software repos

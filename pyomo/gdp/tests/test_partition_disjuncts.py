@@ -11,7 +11,7 @@
 
 import pyomo.common.unittest as unittest
 from pyomo.environ import (
-    TransformationFactory, Constraint, ConcreteModel, Var, RangeSet, Objective, 
+    TransformationFactory, Constraint, ConcreteModel, Var, RangeSet, Objective,
     maximize, SolverFactory, Any, Reference, LogicalConstraint)
 from pyomo.core.expr.logical_expr import (
     EquivalenceExpression, NotExpression, AndExpression, ExactlyExpression
@@ -46,7 +46,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
         self.assertEqual(repn.constant, 0)
         self.assertIs(repn.linear_vars[0], auxVar1)
         self.assertIs(repn.linear_vars[1], auxVar2)
-        self.assertEqual(repn.linear_coefs[0], 1)        
+        self.assertEqual(repn.linear_coefs[0], 1)
         self.assertEqual(repn.linear_coefs[1], 1)
 
     def check_global_constraint_disj1(self, c1, auxVar, var1, var2):
@@ -854,7 +854,7 @@ class PaperTwoCircleExample(unittest.TestCase, CommonTests):
             compute_bounds_method=compute_fbbt_bounds)
 
         b = m.component("_pyomo_gdp_partition_disjuncts_reformulation")
-        self.assertIs(m.disjunction.algebraic_constraint(), b.disjunction)
+        self.assertIs(m.disjunction.algebraic_constraint, b.disjunction)
 
     def add_disjunction(self, b):
         m = b.model()
