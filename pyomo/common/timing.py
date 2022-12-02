@@ -437,9 +437,6 @@ def _move_grandchildren_to_root(root, child):
     child.timers.clear()
 
 
-iterable_scalars = (str, bytes)
-
-
 def _clear_timers_except(timer, to_retain):
     """A helper function for removing keys, except for those specified,
     from the dictionary of timers
