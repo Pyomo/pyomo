@@ -402,6 +402,41 @@ See :py:meth:`TicTocTimer.toc()`.
 """
 
 
+def _move_grandchildren_to_root(root, child):
+    """A helper function to assist with flattening of HierarchicalTimer
+    objects
+
+    Parameters
+    ----------
+        root: HierarchicalTimer or _HierarchicalHelper
+            The root node. Children of `child` will become children of
+            this node
+
+        child: _HierarchicalHelper
+            The child node that will be turned into a leaf by moving
+            its children to the root
+
+    """
+    for gchild_key, gchild_timer in child.timers.items():
+        # For each grandchild, if this key corresponds to a child,
+        # combine the information from these timers. Otherwise,
+        # add the new timer as a child of the root.
+        if gchild_key in root.timers:
+            gchild_total_time = gchild_timer.total_time
+            gchild_n_calls = gchild_timer.n_calls
+            root.timers[gchild_key].total_time += gchild_total_time
+            root.timers[gchild_key].n_calls += gchild_n_calls
+        else:
+            root.timers[gchild_key] = gchild_timer
+    
+        # Subtract the grandchild's total time from the child (which
+        # will no longer be a parent of the grandchild)
+        child.total_time -= gchild_timer.total_time
+    
+    # Clear the child timer's dict to make it a leaf node
+    child.timers.clear()
+
+
 class _HierarchicalHelper(object):
     def __init__(self):
         self.tic_toc = TicTocTimer()
@@ -462,6 +497,16 @@ class _HierarchicalHelper(object):
             _name = prefix + '.' + name
             res.append(_name)
             timer.get_timers(res, _name)
+
+    def flatten(self):
+        # Get keys and values so we don't modify dict while iterating it.
+        items = list(self.timers.items())
+        for child_key, child_timer in items:
+            # Flatten the child timer. Now all grandchildren are leaf nodes
+            child_timer.flatten()
+            # Flatten by removing grandchildren and adding them as children
+            # of the root.
+            _move_grandchildren_to_root(root, child_timer)
 
 
 class HierarchicalTimer(object):
@@ -810,3 +855,19 @@ class HierarchicalTimer(object):
             res.append(name)
             timer.get_timers(res, name)
         return res
+
+    def flatten(self):
+        """Flatten the HierarchicalTimer in-place, moving all the timing
+        categories present into a single level
+
+        """
+        if self.stack:
+            raise RuntimeError(
+                "Cannot flatten a HierarchicalTimer while any timers are"
+                " active. Current active timer is %s. flatten should only"
+                " be called as a post-processing step." % self.stack[-1]
+            )
+        items = list(self.timers.items())
+        for key, timer in items:
+            timer.flatten()
+            _move_grandchildren_to_root(self, timer)
