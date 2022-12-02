@@ -32,6 +32,7 @@ from pyomo.opt.results.solution import Solution, SolutionStatus
 from pyomo.opt.results.solver import TerminationCondition, SolverStatus
 from pyomo.opt.base import SolverFactory
 from pyomo.core.base.suffix import Suffix
+from pyomo.core.base.constraint import Constraint
 import pyomo.core.base.var
 
 
@@ -110,10 +111,476 @@ xpress, xpress_available = attempt_import(
     callback=_finalize_xpress_import,
 )
 
+class CallbackContext(object):
+    """Base class for the contexts that are passed to Xpress callback functions.
+
+    Any callback function supported in Pyomo receives a single argument:
+    an instance of a subclass of `CallbackContext`. This instance carries
+    callback-specific information and also allows callback-specific actions.
+    """
+    def __init__(self, prob, solver, var2idx):
+        super(CallbackContext, self).__init__()
+        self._prob = prob
+        self._solver = solver
+        self._lpsol = None
+        self._mipsol = None
+        self._var2idx = var2idx
+    @property
+    def solver(self):
+        """The Pyomo solver object."""
+        return self._solver
+    @property
+    def prob(self):
+        """The callback local Xpress problem instance."""
+        return self._prob
+    @property
+    def attributes(self):
+        """The attributes of the callback local Xpress problem instance."""
+        return self._prob.attributes
+    @property
+    def controls(self):
+        """The controls of the callback local Xpress problem instance."""
+        return self._prob.controls
+    def _make_value_map(self, values, comp2idx, component_map):
+        """Create a `ComponentMap` that maps the keys in `component_map` to
+        data from `values`.
+        `values`:        Array of values the indices of which correspond to
+                         Xpress variable indices.
+        `comp2idx`:      Maps Xpress variables to their respective index.
+        `component_map`: Maps Pyomo variables (or other stuff) to
+                         Xpress variables (or other stuff)
+        """
+        m = ComponentMap()
+        for p in component_map:
+            m[p] = values[comp2idx[component_map[p]]]
+        return m
+    def getlpsol(self):
+        """Get LP solution for callback.
+
+        The meaning of the returned vector depends on the actual callback
+        context.
+        Returns a `ComponentMap` that maps Pyomo variables to values.
+        """
+        if self._lpsol is None:
+            x = [0.0] * self._prob.attributes.originalcols
+            self._prob.getlpsol(x)
+            self._lpsol = self._make_value_map(x, self._var2idx,
+                                               self._solver._pyomo_var_to_solver_var_map)
+        return self._lpsol
+
+    def getmipsol(self):
+        """Get MIP solution for callback.
+
+        The meaning of the returned vector depends on the actual callback
+        context.
+        Returns a `ComponentMap` that maps Pyomo variables to values.
+        """
+        if self._mipsol is None:
+            x = [0.0] * self._prob.attributes.originalcols
+            self._prob.getmipsol(x)
+            self._mipsol = self._make_value_map(x, self._var2idx,
+                                                self._solver._pyomo_var_to_solver_var_map)
+        return self._mipsol
+
+    def addmipsol(self, sol):
+        """Inject a feasible solution.
+
+        - `sol`: A map from Pyomo variables to solution values.
+                 May be incomplete. If multiple values are specified for the
+                 same variable then it is unspecified which of them will be
+                 used.
+        """
+        var2idx = self._var2idx
+        component_map = self._solver._pyomo_var_to_solver_var_map
+        data = dict()
+        for x in sol:
+            data[var2idx[component_map[x]]] = sol[x]
+        self._prob.addmipsol([data[x] for x in sorted(data)], sorted(data))
+
+    def addcut(self, cut, cuttype=0):
+        """Add a (local) cut to the current node.
+
+        - `cut`:     The cut to add. Must be a linear non-range constraint.
+        - `cuttype`: An integer chosen by the user. The Xpress optimizer does
+                     not use the actual value.
+        """
+
+        if not isinstance(cut, Constraint):
+            cut = Constraint(expr=cut)
+            cut.construct()
+
+        if cut.has_lb():
+            if cut.has_ub():
+                if cut.lower != cut.upper:
+                    raise ValueError("Cannot add ranged cut {0} ".format(cut))
+                sense = 'E'
+                origrhs = cut.lower
+            else:
+                sense = 'G'
+                origrhs = cut.lower
+        elif cut.has_ub():
+            sense = 'L'
+            origrhs = cut.upper
+        else:
+            raise ValueError("Cannot add free cut {0} ".format(cut))
+                
+        if cut._linear_canonical_form:
+            lhs = cut.canonical_form()
+        else:
+            lhs = generate_standard_repn(cut.body, quadratic=False)
+
+        degree = lhs.polynomial_degree()
+        if (degree is None) or (degree > 1):
+            raise ValueError("Cannot add non-linear cut {0} ".format(cut))
+
+        
+        origrowcoef = lhs.linear_coefs
+        origcolind = [self._var2idx[self._solver._pyomo_var_to_solver_var_map[x]] for x in lhs.linear_vars]
+        maxcoefs = self._prob.attributes.cols
+        colind = []
+        rowcoef = []
+        redrhs, status = self._prob.presolverow(sense, origcolind,
+                                                origrowcoef, origrhs,
+                                                maxcoefs, colind, rowcoef)
+        if status != 0:
+            raise RuntimeError('Cut cannot be presolved: %d' % status)
+        self._prob.addcuts([cuttype], [sense], [redrhs], [0, len(colind)],
+                           colind, rowcoef)
+
+class MessageCallbackContext(CallbackContext):
+    """Data passed to message callbacks.
+
+    In addition to the super class, this class has the following properties:
+    - `msg`     [read]: The message that is sent (may be `None`).
+    - `msgtype` [read]: The type of message sent (info, warning, error).
+    """
+    def __init__(self, prob, solver, var2idx, msg, msgtype):
+        super(MessageCallbackContext, self).__init__(prob, solver, var2idx)
+        self._msg = msg
+        self._msgtype = msgtype
+    @property
+    def msg(self):
+        """Message sent by this callback."""
+        return self._msg
+    @property
+    def msgtype(self):
+        """Type of message sent."""
+        return self._msgtype
+    @property
+    def is_info(self):
+        """`True` if this is an info message."""
+        return self._msgtype == 1
+    @property
+    def is_warning(self):
+        """`True` if this is a warning message."""
+        return self._msgtype == 3
+    @property
+    def is_error(self):
+        """`True` if this is an error message."""
+        return self._msgtype == 4
+    @property
+    def is_flush(self):
+        """`True` if this message is a request to flush output."""
+        return self._msgtype < 0
+
+class OptNodeCallbackContext(CallbackContext):
+    """Data passed to optnode callbacks.
+
+    In addition to the super class, this class has two properties:
+    - `infeas` [write]: Wether the node is considered infeasible.
+    """
+    def __init__(self, prob, solver, var2idx):
+        super(OptNodeCallbackContext, self).__init__(prob, solver, var2idx)
+        self._infeas = False
+    @property
+    def infeas(self):
+        """Message sent by this callback."""
+        return self._infeas
+    @infeas.setter
+    def infeas(self, value):
+        self._infeas = value
+
+class PreIntSolCallbackContext(CallbackContext):
+    """Data passed to preintsol callbacks.
+
+    In addition to the super class, this class has the following properties:
+    - `soltype`       [read]: Solution type (heuristic, optimal node, ...)
+    - `cutoff`  [read/write]: New cutoff value in case solution is not rejected
+    - `reject`       [write]: Whether solution should be rejected
+    - `candidate_sol` [read]: The candidate solution.
+    - `candidate_obj` [read]: The objective value for `candidate_sol`
+    """
+    def __init__(self, prob, solver, var2idx, soltype, cutoff):
+        super(PreIntSolCallbackContext, self).__init__(prob, solver, var2idx)
+        self._soltype = soltype
+        self._cutoff = cutoff
+        self._reject = False
+    @property
+    def soltype(self):
+        """Solution type."""
+        return self._soltype
+    @property
+    def cutoff(self):
+        """Cutoff if solution if accepted."""
+        return self._cutoff
+    @cutoff.setter
+    def cutoff(self, value):
+        """Cutoff if solution if accepted."""
+        self._cutoff = value
+    @property
+    def reject(self):
+        """Should solution be rejected?"""
+        return self._reject
+    @reject.setter
+    def reject(self, value):
+        """Should solution be rejected?"""
+        self._reject = value
+    @property
+    def candidate_sol(self):
+        """Returns the candidate solution as a map from Pyomo variables to
+        values.
+        """
+        return self.getlpsol()
+    @property
+    def candidate_obj(self):
+        """Get the objective value for `candidate_sol`."""
+        return self.attributes.lpobjval
+
+class IntSolCallbackContext(CallbackContext):
+    """Data passed to intsol callbacks.
+
+    In addition to the super class, this class has the following properties:
+    - `solution` [read]: The solution being reported.
+    - `objval`   [read]: The objective value of `solution`.
+    """
+    def __init__(self, prob, solver, var2idx):
+        super(IntSolCallbackContext, self).__init__(prob, solver, var2idx)
+    @property
+    def solution(self):
+        """Returns the solution as a map from Pyomo variables to values."""
+        return self.getmipsol()
+    @property
+    def objval(self):
+        """Get the objective value for `solution`."""
+        return self.attributes.mipobjval
+
+class ChgBranchObjectCallbackContext(CallbackContext):
+    """Data passed to chgbranchobject callbacks.
+
+    In addition to the super class, this class has the following properties:
+    - `orig_branchobject`  [read]: The branching that Xpress suggests
+    - `branchobject' [read/write]: The branching that will be executed.
+    - `new_object()`:              Create a new branching object.
+    """
+    def __init__(self, prob, solver, var2idx, obranch):
+        super(ChgBranchObjectCallbackContext, self).__init__(prob, solver, var2idx)
+        self._obranch = obranch
+        self._branch = obranch
+    @property
+    def orig_branchobject(self):
+        """The branching suggested by Xpress."""
+        return self._obranch
+    @property
+    def branchobject(self):
+        """The branching that will be carried out.
+
+        If you set this to `None` then Xpress will carry out the branching
+        it originally intended to do.
+        """
+        return self._branch
+    @branchobject.setter
+    def branchobject(self, value):
+        self._branch = value
+    def new_object(self, nbranch):
+        """Create a new branch object that branches in the original space."""
+        return xpress.branchobj(prob, nbranch, isoriginal=True)
+    def map_pyomo_var(self, var):
+        """Map a Pyomo variable to an Xpress variable."""
+        return self._solver._pyomo_var_to_solver_var_map[var]
+
+class CallbackInterface(object):
+    """This is an internal class that is used for callback handling.
+
+    Callbacks are stored internally and are only applied to an Xpress
+    problem instance when `_apply` is called. The usage pattern is this:
+      with callback_interface._apply(prob):
+         prob.solve()
+    """
+
+    class EmptyManager:
+        """Context manager used in `_apply` in case there are not callbacks."""
+        def __enter__(self):
+            return self
+        def __exit__(self, type, value, traceback):
+            pass
+    
+    def __init__(self):
+        super(CallbackInterface, self).__init__()
+        self._callbacks = {
+            'message': [],
+            'optnode': [],
+            'preintsol': [],
+            'intsol': [],
+            'chgbranchobject': []
+        }
+        self._numcbs = 0
+        self._nocb = CallbackInterface.EmptyManager()
+    def _add_callback(self, name, cb, priority):
+        self._callbacks[name].append((cb, priority))
+        self._numcbs += 1
+    def _del_callback(self, name, cb):
+        self._numcbs -= len(self._callbacks[name])
+        if cb is None:
+            # Delete all
+            self._callbacks[name] = []
+        else:
+            try:
+                self._callbacks[name].remove(cb)
+            except ValueError:
+                # It is ok if the callback was not even registered
+                pass
+        self._numcbs += len(self._callbacks[name])
+    def add_message(self, messagecb, priority = 0):
+        """Add a message callback.
+        `messagecb` must be a callable that takes exactly one argument.
+        It will be invoked with an instance of `MessageCallbackContext`
+        as argument.
+        """
+        self._add_callback('message', messagecb, priority)
+    def del_message(self, messagecb = None):
+        """Remove a specific or all (`messagecb` is `None`) message callbacks."""
+        self._del_callback('message', messagecb)
+    def _message_wrapper(self, solver, var2idx):
+        return lambda prob, cb, msg, msgtype: cb(MessageCallbackContext(prob, solver, var2idx, msg, msgtype))
+
+    def add_optnode(self, optnodecb, priority = 0):
+        """Add an optnode callback.
+        `optnodecb` must be a callable that takes exactly one argument.
+        It will be invoked with an instance of `OptNodeCallbackContext`
+        as argument.
+        """
+        self._add_callback('optnode', optnodecb, priority)
+    def del_optnode(self, optnodecb = None):
+        """Remove a specific or all (`optnodecb` is `None`) optnode callbacks."""
+        self._del_callback('optnode', optnodecb)
+    def _optnode_wrapper(self, solver, var2idx):
+        def wrapper(prob, cb):
+            data = OptNodeCallbackContext(prob, solver, var2idx)
+            cb(data)
+            return data.infeas
+        return wrapper
+
+    def add_preintsol(self, preintsolcb, priority = 0):
+        """Add a preintsol callback.
+        `preintsolcb` must be a callable that takes exactly one argument.
+        It will be invoked with an instance of `PreIntSolCallbackContext`
+        as argument.
+        """
+        self._add_callback('preintsol', preintsolcb, priority)
+    def del_preintsol(self, preintsolcb = None):
+        """Remove a specific or all (`preintsolcb` is `None`) preintsol callbacks."""
+        self._del_callback('preintsol', preintsolcb)
+    def _preintsol_wrapper(self, solver, var2idx):
+        def wrapper(prob, cb, soltype, cutoff):
+            data = PreIntSolCallbackContext(prob, solver, var2idx, soltype, cutoff)
+            cb(data)
+            return (data.reject, data.cutoff)
+        return wrapper
+
+    def add_intsol(self, intsolcb, priority = 0):
+        """Add an intsol callback.
+        `intsolcb` must be a callable that takes exactly one argument.
+        It will be invoked with an instance of `IntSolCallbackContext`
+        as argument.
+        """
+        self._add_callback('intsol', intsolcb, priority)
+    def del_intsol(self, intsolcb = None):
+        """Remove a specific or all (`intsolcb` is `None`) intsol callbacks."""
+        self._del_callback('intsol', preintsolcb)
+    def _intsol_wrapper(self, solver, var2idx):
+        return lambda prob, cb: cb(IntSolCallbackContext(prob, solver, var2idx))
+
+    def add_chgbranchobject(self, chgbranchobjectcb, priority = 0):
+        """Add an chgbranchobject callback."""
+        self._add_callback('chgbranchobject', chgbranchobjectcb, priority)
+    def del_chgbranchobject(self, chgbranchobjectcb = None):
+        """Remove a specific or all (`chgbranchobjectcb` is `None`) chgbranchobject callbacks."""
+        self._del_callback('chgbranchobject', prechgbranchobjectcb)
+    def _chgbranchobject_wrapper(self, solver, var2idx):
+        def wrapper(prob, cb, obranch):
+            data = ChgBranchObjectCallbackContext(prob, solver, var2idx, obranch)
+            cb(data)
+            return data.branchobject
+        return wrapper
+
+    def _apply(self, prob, solver):
+        """Apply callback settings.
+
+        Installs all registered callbacks into `prob`.
+        `solver` is the solver object that will be available as "solver"
+        property in the objects that are passed to the callback functions.
+        Returns a context manager that will uninstall callbacks in `__exit__`.
+        """
+        if self._numcbs == 0:
+            return self._nocb
+
+        # This is required in the callbacks to map Pyomo variables to the
+        # respective variable indices in the solver.
+        var2idx = { v: i for i, v in enumerate(prob.getVariable()) }
+
+        class Manager(object):
+            def __init__(self, prob):
+                self._prob = prob
+                self._cbs = []
+            def __enter__(self):
+                return self
+            def __exit__(self, type, value, traceback):
+                self._prob.removecbmessage(None, None)
+                self._prob.removecboptnode(None, None)
+                self._prob.removecbpreintsol(None, None)
+                self._prob.removecbintsol(None, None)
+                self._prob.removecbchgbranchobject(None, None)
+        m = Manager(prob)
+        try:
+            for cb, prio in self._callbacks['message']:
+                prob.addcbmessage(self._message_wrapper(solver, var2idx), cb, prio)
+            for cb, prio in self._callbacks['optnode']:
+                prob.addcboptnode(self._optnode_wrapper(solver, var2idx), cb, prio)
+            for cb, prio in self._callbacks['preintsol']:
+                prob.addcbpreintsol(self._preintsol_wrapper(solver, var2idx), cb, prio)
+            for cb, prio in self._callbacks['intsol']:
+                prob.addcbintsol(self._intsol_wrapper(solver, var2idx), cb, prio)
+            for cb, prio in self._callbacks['chgbranchobject']:
+                prob.addcbchgbranchobject(self._chgbranchobject_wrapper(solver, var2idx), cb, prio)
+            return m
+        except Exception:
+            t, v, b = sys.exc_info()
+            m.__exit__(t, v, b)
+            raise
 
 @SolverFactory.register('xpress_direct', doc='Direct python interface to XPRESS')
 class XpressDirect(DirectSolver):
+    """
+    Interface to the Xpress solver.
 
+    Note that this solver also supports interaction with the solution process
+    via callbacks. The callbacks allow notification about new solutions,
+    give opportunities to reject solution, dynamically inject cuts and
+    constraints, etc.
+
+    Callbacks are handled by the `callbacks` property which is an instance of
+    `CallbackInterface`.
+    Callbacks are registered via
+      solver.callbacks.add_preintsol(callback_function)
+      solver.callbacks.add_intsol(callback_function)
+      solver.callbacks.add_optnode(callback_function)
+    etc.
+
+    See the documentation of `CallbackInterface` for further information and
+    the Xpress specific test cases in Pyomo for some examples how to use those.
+    Also see the general Xpress documentation to understand in which contexts
+    callbacks are invoked and what you can do with them.
+    """
     _name = None
     _version = None
     XpressException = RuntimeError
@@ -130,6 +597,7 @@ class XpressDirect(DirectSolver):
         self._range_constraints = set()
 
         self._python_api_exists = xpress_available
+        self._callbacks = CallbackInterface()
 
         # TODO: this isn't a limit of XPRESS, which implements an SLP
         #       method for NLPs. But it is a limit of *this* interface
@@ -163,6 +631,9 @@ class XpressDirect(DirectSolver):
                 "No Python bindings available for %s solver plugin"
                 % (type(self),))
         return bool(xpress_available)
+    @property
+    def callbacks(self):
+        return self._callbacks
 
     def _apply_solver(self):
         StaleFlagManager.mark_all_as_stale()
@@ -224,7 +695,8 @@ class XpressDirect(DirectSolver):
         return Bunch(rc=None, log=None)
 
     def _solve_model(self):
-        self._solver_model.solve()
+        with self._callbacks._apply(self._solver_model, self):
+            self._solver_model.solve()
         self._solver_model.postsolve()
 
     def _get_expr_from_pyomo_repn(self, repn, max_degree=2):
