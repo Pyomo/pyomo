@@ -437,6 +437,31 @@ def _move_grandchildren_to_root(root, child):
     child.timers.clear()
 
 
+iterable_scalars = (str, bytes)
+
+
+def _clear_timers_except(timer, to_retain):
+    """A helper function for removing keys, except for those specified,
+    from the dictionary of timers
+
+    Parameters
+    ----------
+        timer: HierarchicalTimer or _HierarchichalHelper
+            The timer whose dict of "sub-timers" will be pruned
+
+        to_retain: str or list
+            Key, or list of keys, of the "sub-timers" to retain
+
+    """
+    if isinstance(to_retain, iterable_scalars):
+        to_retain = (to_retain,)
+    to_retain = set(to_retain)
+    keys = list(timer.timers.keys())
+    for key in keys:
+        if key not in to_retain:
+            timer.timers.pop(key)
+
+
 class _HierarchicalHelper(object):
     def __init__(self):
         self.tic_toc = TicTocTimer()
@@ -506,7 +531,10 @@ class _HierarchicalHelper(object):
             child_timer.flatten()
             # Flatten by removing grandchildren and adding them as children
             # of the root.
-            _move_grandchildren_to_root(root, child_timer)
+            _move_grandchildren_to_root(self, child_timer)
+
+    def clear_except(self, to_retain):
+        _clear_timers_except(self, to_retain)
 
 
 class HierarchicalTimer(object):
@@ -588,6 +616,10 @@ class HierarchicalTimer(object):
         # doctest: +SKIP
     aa % total: 35.976058
 
+    When implementing an algorithm, it is often useful to collect detailed
+    hierarchical timing information. However, when communicating a timing
+    profile, it is often best to retain only the most relevant information
+    in a flattened data structure.
 
     Notes
     -----
@@ -871,3 +903,16 @@ class HierarchicalTimer(object):
         for key, timer in items:
             timer.flatten()
             _move_grandchildren_to_root(self, timer)
+
+    def clear_except(self, to_retain):
+        """Prune all "sub-timers" except those specified
+
+        """
+        if self.stack:
+            raise RuntimeError(
+                "Cannot clear a HierarchicalTimer while any timers are"
+                " active. Current active timer is %s. clear_except should"
+                " only be called as a post-processing step."
+                % self.stack[-1]
+            )
+        _clear_timers_except(self, to_retain)
