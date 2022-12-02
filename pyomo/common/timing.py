@@ -614,12 +614,102 @@ class HierarchicalTimer(object):
     When implementing an algorithm, it is often useful to collect detailed
     hierarchical timing information. However, when communicating a timing
     profile, it is often best to retain only the most relevant information
-    in a flattened data structure.
+    in a flattened data structure. In the following example, suppose a
+    theoretical analysis tells us that either subroutine ``"c"`` or ``"f"``
+    should be the bottleneck, depending on problem data. To clearly
+    communicate this, we
+
+    #. Ignore subroutines of ``"c"`` and ``"f"`` that are unnecessary for\
+    this comparison
+
+    #. Flatten the hierarchical timing information
+
+    #. Eliminate all the information we don't care about
+
+    >>> import time
+    >>> from pyomo.common.timing import HierarchicalTimer
+    >>> timer = HierarchicalTimer()
+    >>> timer.start("root")
+    >>> timer.start("a")
+    >>> time.sleep(0.01)
+    >>> timer.start("b")
+    >>> timer.start("c")
+    >>> time.sleep(0.1)
+    >>> timer.stop("c")
+    >>> timer.stop("b")
+    >>> timer.stop("a")
+    >>> timer.start("d")
+    >>> timer.start("e")
+    >>> time.sleep(0.01)
+    >>> timer.start("f")
+    >>> time.sleep(0.05)
+    >>> timer.stop("f")
+    >>> timer.start("c")
+    >>> timer.start("g")
+    >>> timer.start("h")
+    >>> time.sleep(0.1)
+    >>> timer.stop("h")
+    >>> timer.stop("g")
+    >>> timer.stop("c")
+    >>> timer.stop("e")
+    >>> timer.stop("d")
+    >>> timer.stop("root")
+    >>> print(timer) # doctest: +SKIP
+    Identifier                       ncalls   cumtime   percall      %
+    ------------------------------------------------------------------
+    root                                  1     0.290     0.290  100.0
+         -------------------------------------------------------------
+         a                                1     0.118     0.118   40.5
+              --------------------------------------------------------
+              b                           1     0.105     0.105   89.4
+                   ---------------------------------------------------
+                   c                      1     0.105     0.105  100.0
+                   other                n/a     0.000       n/a    0.0
+                   ===================================================
+              other                     n/a     0.013       n/a   10.6
+              ========================================================
+         d                                1     0.173     0.173   59.5
+              --------------------------------------------------------
+              e                           1     0.173     0.173  100.0
+                   ---------------------------------------------------
+                   c                      1     0.105     0.105   60.9
+                        ----------------------------------------------
+                        g                 1     0.105     0.105  100.0
+                             -----------------------------------------
+                             h            1     0.105     0.105  100.0
+                             other      n/a     0.000       n/a    0.0
+                             =========================================
+                        other           n/a     0.000       n/a    0.0
+                        ==============================================
+                   f                      1     0.055     0.055   31.9
+                   other                n/a     0.013       n/a    7.3
+                   ===================================================
+              other                     n/a     0.000       n/a    0.0
+              ========================================================
+         other                          n/a     0.000       n/a    0.0
+         =============================================================
+    ==================================================================
+    >>> # Clear subroutines under "c" that we don't care about
+    >>> timer.timers["root"].timers["d"].timers["e"].timers["c"].timers.clear()
+    >>> # Flatten hierarchy
+    >>> timer.timers["root"].flatten()
+    >>> # Clear except for the subroutines we care about
+    >>> timer.timers["root"].clear_except("c", "f")
+    >>> print(timer) # doctest: +SKIP
+    Identifier   ncalls   cumtime   percall      %
+    ----------------------------------------------
+    root              1     0.290     0.290  100.0
+         -----------------------------------------
+         c            2     0.210     0.105   72.4
+         f            1     0.055     0.055   19.0
+         other      n/a     0.025       n/a    8.7
+         =========================================
+    ==============================================
 
     Notes
     -----
 
-    The :py:class:`HierarchicalTimer` use a stack to track which timers
+    The :py:class:`HierarchicalTimer` uses a stack to track which timers
     are active at any point in time. Additionally, each timer has a
     dictionary of timers for its children timers. Consider
 
