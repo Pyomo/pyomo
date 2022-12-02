@@ -408,13 +408,13 @@ def _move_grandchildren_to_root(root, child):
 
     Parameters
     ----------
-        root: HierarchicalTimer or _HierarchicalHelper
-            The root node. Children of `child` will become children of
-            this node
+    root: HierarchicalTimer or _HierarchicalHelper
+        The root node. Children of `child` will become children of
+        this node
 
-        child: _HierarchicalHelper
-            The child node that will be turned into a leaf by moving
-            its children to the root
+    child: _HierarchicalHelper
+        The child node that will be turned into a leaf by moving
+        its children to the root
 
     """
     for gchild_key, gchild_timer in child.timers.items():
@@ -446,16 +446,13 @@ def _clear_timers_except(timer, to_retain):
 
     Parameters
     ----------
-        timer: HierarchicalTimer or _HierarchichalHelper
-            The timer whose dict of "sub-timers" will be pruned
+    timer: HierarchicalTimer or _HierarchichalHelper
+        The timer whose dict of "sub-timers" will be pruned
 
-        to_retain: str or list
-            Key, or list of keys, of the "sub-timers" to retain
+    to_retain: set
+        Set of keys of the "sub-timers" to retain
 
     """
-    if isinstance(to_retain, iterable_scalars):
-        to_retain = (to_retain,)
-    to_retain = set(to_retain)
     keys = list(timer.timers.keys())
     for key in keys:
         if key not in to_retain:
@@ -533,7 +530,8 @@ class _HierarchicalHelper(object):
             # of the root.
             _move_grandchildren_to_root(self, child_timer)
 
-    def clear_except(self, to_retain):
+    def clear_except(self, *args):
+        to_retain = set(args)
         _clear_timers_except(self, to_retain)
 
 
@@ -904,8 +902,13 @@ class HierarchicalTimer(object):
             timer.flatten()
             _move_grandchildren_to_root(self, timer)
 
-    def clear_except(self, to_retain):
+    def clear_except(self, *args):
         """Prune all "sub-timers" except those specified
+
+        Parameters
+        ----------
+        args: str
+            Keys that will be retained
 
         """
         if self.stack:
@@ -915,4 +918,5 @@ class HierarchicalTimer(object):
                 " only be called as a post-processing step."
                 % self.stack[-1]
             )
+        to_retain = set(args)
         _clear_timers_except(self, to_retain)
