@@ -465,7 +465,16 @@ class _HierarchicalHelper(object):
 
 
 class HierarchicalTimer(object):
-    """A class for hierarchical timing.
+    """A class for collecting and displaying hierarchical timing
+    information
+
+    When implementing an iterative algorithm with nested subroutines
+    (e.g. an optimization solver), we often want to know the cumulative
+    time spent in each subroutine as well as this time as a proportion
+    of time spent in the calling routine. This class collects timing
+    information, for user-specified keys, that accumulates over the life
+    of the timer object and preserves the hierarchical (nested) structure
+    of timing categories.
 
     Examples
     --------
