@@ -858,7 +858,7 @@ class HierarchicalTimer(object):
 
     def flatten(self):
         """Flatten the HierarchicalTimer in-place, moving all the timing
-        categories present into a single level
+        categories into a single level
 
         """
         if self.stack:
