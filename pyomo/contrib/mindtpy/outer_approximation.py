@@ -18,7 +18,7 @@ from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to, copy_va
 from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object
 from pyomo.core import TransformationFactory, maximize
 from pyomo.opt import SolverFactory
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.contrib.mindtpy.feasibility_pump_new import MindtPy_FP_Solver
 from pyomo.contrib.mindtpy.util import get_integer_solution, copy_var_list_values_from_solution_pool
@@ -86,7 +86,7 @@ class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
         set_up_logger(config)
         new_logging_level = logging.INFO if config.tee else None
         with lower_logger_level_to(config.logger, new_logging_level):
-            check_config(config)
+            self.check_config()
 
         self.set_up_solve_data(model, config)
 
@@ -345,3 +345,6 @@ class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
             self.fix_dual_bound(config, last_iter_cuts)
         config.logger.info(
             ' ===============================================================================================')
+
+    def check_config(self):
+        _MindtPyAlgorithm.check_config(self)

@@ -19,7 +19,7 @@ from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to
 from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, get_integer_solution, copy_var_list_values_from_solution_pool
 from pyomo.core import TransformationFactory, maximize
 from pyomo.opt import SolverFactory
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.opt import TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
@@ -85,7 +85,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         set_up_logger(config)
         new_logging_level = logging.INFO if config.tee else None
         with lower_logger_level_to(config.logger, new_logging_level):
-            check_config(config)
+            self.check_config()
 
         self.set_up_solve_data(model, config)
 
@@ -287,3 +287,15 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
 
     def __exit__(self, t, v, traceback):
         pass
+
+
+    def check_config(self):
+        self.config.add_slack = False
+        self.config.use_mcpp = True
+        self.config.equality_relaxation = False
+        self.config.use_fbbt = True
+        # add_no_good_cuts is Ture by default in GOA
+        if not self.config.add_no_good_cuts and not self.config.use_tabu_list:
+            self.config.add_no_good_cuts = True
+            self.config.use_tabu_list = False
+        super().check_config()

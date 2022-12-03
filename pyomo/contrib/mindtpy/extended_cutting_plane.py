@@ -18,7 +18,7 @@ from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to)
 from pyomo.contrib.mindtpy.util import set_up_logger,setup_results_object
 from pyomo.core import TransformationFactory
 from pyomo.opt import SolverFactory
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 from pyomo.opt import TerminationCondition as tc
@@ -82,7 +82,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         set_up_logger(config)
         new_logging_level = logging.INFO if config.tee else None
         with lower_logger_level_to(config.logger, new_logging_level):
-            check_config(config)
+            self.check_config()
 
         self.set_up_solve_data(model, config)
 

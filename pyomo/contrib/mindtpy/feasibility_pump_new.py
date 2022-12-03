@@ -14,7 +14,7 @@
 
 from __future__ import division
 import logging
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import minimize, Constraint, TransformationFactory, value
@@ -83,7 +83,7 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
         set_up_logger(config)
         new_logging_level = logging.INFO if config.tee else None
         with lower_logger_level_to(config.logger, new_logging_level):
-            check_config(config)
+            self.check_config()
 
         self.set_up_solve_data(model, config)
 
@@ -365,6 +365,12 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
             self.working_model.MindtPy_utils.cuts.del_component(
                 'fp_orthogonality_cuts')
 
+
+    def check_config(self):
+        # feasibility pump alone will lead to iteration_limit = 0, important!
+        self.config.init_strategy = 'FP'
+        self.config.iteration_limit = 0
+        super().check_config()
 
     #
     # Support 'with' statements.

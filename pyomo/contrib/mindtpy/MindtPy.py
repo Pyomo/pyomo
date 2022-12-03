@@ -59,7 +59,7 @@ from pyomo.contrib.gdpopt.util import (copy_var_list_values,
 from pyomo.core import (Block, ConstraintList, NonNegativeReals,
                         Var, VarList, TransformationFactory, RangeSet, minimize, Constraint, Objective)
 from pyomo.opt import SolverFactory
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config, check_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 from pyomo.common.config import add_docstring_list
 from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.contrib.mindtpy.config_options import _supported_algorithms, _get_algorithm_config
