@@ -70,10 +70,6 @@ class _MindtPyAlgorithm(object):
         of the algorithm state.
 
         """
-        self.config = self.CONFIG(kwds.pop('options', {}),
-                                  preserve_implicit=True)
-        self.config.set_value(kwds)
-
         self.working_model = None
         self.mip = None
         self.fixed_nlp = None
@@ -111,32 +107,8 @@ class _MindtPyAlgorithm(object):
         self.best_solution_found = None
         self.best_solution_found_time = None
 
-        if self.config.add_regularization is not None:
-            if self.config.add_regularization in {'level_L1', 'level_L_infinity', 'grad_lag'}:
-                self.regularization_mip_type = 'MILP'
-            elif self.config.add_regularization in {'level_L2', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
-                self.regularization_mip_type = 'MIQP'
-
-        if self.config.single_tree and (self.config.add_no_good_cuts or self.config.use_tabu_list):
-            self.stored_bound = {}
-        if self.config.strategy == 'GOA' and (self.config.add_no_good_cuts or self.config.use_tabu_list):
-            self.num_no_good_cuts_added = {}
-
-        if self.config.quadratic_strategy == 0:
-            self.mip_objective_polynomial_degree = {0, 1}
-            self.mip_constraint_polynomial_degree = {0, 1}
-        elif self.config.quadratic_strategy == 1:
-            self.mip_objective_polynomial_degree = {0, 1, 2}
-            self.mip_constraint_polynomial_degree = {0, 1}
-        elif self.config.quadratic_strategy == 2:
-            self.mip_objective_polynomial_degree = {0, 1, 2}
-            self.mip_constraint_polynomial_degree = {0, 1, 2}
-
-        self.primal_bound = float('inf')
-        self.dual_bound = float('-inf')
-        self.primal_bound_progress = [self.primal_bound]
-        self.dual_bound_progress = [self.dual_bound]
-        self.config.use_dual_bound = True
+        self.stored_bound = {}
+        self.num_no_good_cuts_added = {}
 
     # Support use as a context manager under current solver API
     def __enter__(self):
@@ -395,6 +367,7 @@ class _MindtPyAlgorithm(object):
         #
         # Note: these cuts will only exclude integer realizations that are
         # not already in the primary no_good_cuts ConstraintList.
+        # TODO: this is not used.
         lin.feasible_no_good_cuts = ConstraintList(
             doc='explored no-good cuts')
         lin.feasible_no_good_cuts.deactivate()
@@ -637,7 +610,7 @@ class _MindtPyAlgorithm(object):
                     else:
                         util_blk.nonlinear_constraint_list.append(constr)
 
-
+    # TODO: check this function
     def _create_pyomo_results_object_with_problem_info(self, original_model,
                                                        config):
         """
@@ -705,12 +678,6 @@ class _MindtPyAlgorithm(object):
             The specific configurations for MindtPy.
 
         """
-        self.results = SolverResults()
-        self.timing = Bunch()
-        self.curr_int_sol = []
-        self.should_terminate = False
-        self.integer_list = []
-
         # if the objective function is a constant, dual bound constraint is not added.
         obj = next(model.component_data_objects(ctype=Objective, active=True))
         if obj.expr.polynomial_degree() == 0:
@@ -725,14 +692,6 @@ class _MindtPyAlgorithm(object):
         self.original_model = model
         self.working_model = model.clone()
 
-        # Set up iteration counters
-        self.nlp_iter = 0
-        self.mip_iter = 0
-        self.mip_subiter = 0
-        self.nlp_infeasible_counter = 0
-        if config.init_strategy == 'FP':
-            self.fp_iter = 1
-
         # set up bounds
         if obj.sense == minimize:
             self.primal_bound = float('inf')
@@ -742,28 +701,11 @@ class _MindtPyAlgorithm(object):
             self.dual_bound = float('inf')
         self.primal_bound_progress = [self.primal_bound]
         self.dual_bound_progress = [self.dual_bound]
-        self.primal_bound_progress_time = [0]
-        self.dual_bound_progress_time = [0]
-        self.abs_gap = float('inf')
-        self.rel_gap = float('inf')
-        self.log_formatter = ' {:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
-        self.fixed_nlp_log_formatter = '{:1}{:>9}   {:>15}   {:>15g}   {:>12g}   {:>12g}   {:>7.2%}   {:>7.2f}'
-        self.log_note_formatter = ' {:>9}   {:>15}   {:>15}'
         if config.add_regularization is not None:
             if config.add_regularization in {'level_L1', 'level_L_infinity', 'grad_lag'}:
                 self.regularization_mip_type = 'MILP'
             elif config.add_regularization in {'level_L2', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
                 self.regularization_mip_type = 'MIQP'
-
-        if config.single_tree and (config.add_no_good_cuts or config.use_tabu_list):
-            self.stored_bound = {}
-        if config.strategy == 'GOA' and (config.add_no_good_cuts or config.use_tabu_list):
-            self.num_no_good_cuts_added = {}
-
-        # Flag indicating whether the solution improved in the past
-        # iteration or not
-        self.primal_bound_improved = False
-        self.dual_bound_improved = False
 
         if config.nlp_solver == 'ipopt':
             if not hasattr(self.working_model, 'ipopt_zL_out'):
@@ -772,7 +714,7 @@ class _MindtPyAlgorithm(object):
             if not hasattr(self.working_model, 'ipopt_zU_out'):
                 self.working_model.ipopt_zU_out = Suffix(
                     direction=Suffix.IMPORT)
-        
+
         if config.quadratic_strategy == 0:
             self.mip_objective_polynomial_degree = {0, 1}
             self.mip_constraint_polynomial_degree = {0, 1}
@@ -1481,183 +1423,6 @@ class _MindtPyAlgorithm(object):
     
     ######################################################################################################################################################
     # iterate.py
-
-    def MindtPy_iteration_loop(self, config):
-        """Main loop for MindtPy Algorithms.
-
-        This is the outermost function for the algorithms in this package; this function controls the progression of
-        solving the model.
-
-        Parameters
-        ----------
-        config : ConfigBlock
-            The specific configurations for MindtPy.
-
-        Raises
-        ------
-        ValueError
-            The strategy value is not correct or not included.
-        """
-        last_iter_cuts = False
-        while self.mip_iter < config.iteration_limit:
-
-            self.mip_subiter = 0
-            # solve MILP main problem
-            if config.strategy in {'OA', 'GOA', 'ECP'}:
-                main_mip, main_mip_results = self.solve_main(config)
-                if main_mip_results is not None:
-                    if not config.single_tree:
-                        if main_mip_results.solver.termination_condition is tc.optimal:
-                            self.handle_main_optimal(main_mip, config)
-                        elif main_mip_results.solver.termination_condition is tc.infeasible:
-                            self.handle_main_infeasible(main_mip, config)
-                            last_iter_cuts = True
-                            break
-                        else:
-                            self.handle_main_other_conditions(
-                                main_mip, main_mip_results, config)
-                        # Call the MILP post-solve callback
-                        with time_code(self.timing, 'Call after main solve'):
-                            config.call_after_main_solve(main_mip)
-                else:
-                    config.logger.info('Algorithm should terminate here.')
-                    break
-            else:
-                raise ValueError()
-
-            # Regularization is activated after the first feasible solution is found.
-            if config.add_regularization is not None and self.best_solution_found is not None and not config.single_tree:
-                # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
-                if self.dual_bound != self.dual_bound_progress[0]:
-                    main_mip, main_mip_results = self.solve_main(config, regularization_problem=True)
-                    self.handle_regularization_main_tc(main_mip, main_mip_results, config)
-
-            # TODO: add descriptions for the following code
-            if config.add_regularization is not None and config.single_tree:
-                self.curr_int_sol = get_integer_solution(
-                    self.mip, string_zero=True)
-                copy_var_list_values(
-                    main_mip.MindtPy_utils.variable_list,
-                    self.working_model.MindtPy_utils.variable_list,
-                    config)
-                if self.curr_int_sol not in set(self.integer_list):
-                    fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
-                    self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
-            if self.algorithm_should_terminate(config, check_cycling=True):
-                last_iter_cuts = False
-                break
-
-            if not config.single_tree and config.strategy != 'ECP':  # if we don't use lazy callback, i.e. LP_NLP
-                # Solve NLP subproblem
-                # The constraint linearization happens in the handlers
-                if not config.solution_pool:
-                    fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
-                    self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
-
-                    # Call the NLP post-solve callback
-                    with time_code(self.timing, 'Call after subproblem solve'):
-                        config.call_after_subproblem_solve(fixed_nlp)
-
-                    if self.algorithm_should_terminate(config, check_cycling=False):
-                        last_iter_cuts = True
-                        break
-                else:
-                    if config.mip_solver == 'cplex_persistent':
-                        solution_pool_names = main_mip_results._solver_model.solution.pool.get_names()
-                    elif config.mip_solver == 'gurobi_persistent':
-                        solution_pool_names = list(
-                            range(main_mip_results._solver_model.SolCount))
-                    # list to store the name and objective value of the solutions in the solution pool
-                    solution_name_obj = []
-                    for name in solution_pool_names:
-                        if config.mip_solver == 'cplex_persistent':
-                            obj = main_mip_results._solver_model.solution.pool.get_objective_value(
-                                name)
-                        elif config.mip_solver == 'gurobi_persistent':
-                            main_mip_results._solver_model.setParam(
-                                gurobipy.GRB.Param.SolutionNumber, name)
-                            obj = main_mip_results._solver_model.PoolObjVal
-                        solution_name_obj.append([name, obj])
-                    solution_name_obj.sort(
-                        key=itemgetter(1), reverse=self.objective_sense == maximize)
-                    counter = 0
-                    for name, _ in solution_name_obj:
-                        # the optimal solution of the main problem has been added to integer_list above
-                        # so we should skip checking cycling for the first solution in the solution pool
-                        if counter >= 1:
-                            copy_var_list_values_from_solution_pool(self.mip.MindtPy_utils.variable_list,
-                                                                    self.working_model.MindtPy_utils.variable_list,
-                                                                    config, solver_model=main_mip_results._solver_model,
-                                                                    var_map=main_mip_results._pyomo_var_to_solver_var_map,
-                                                                    solution_name=name)
-                            self.curr_int_sol = get_integer_solution(
-                                self.working_model)
-                            if self.curr_int_sol in set(self.integer_list):
-                                config.logger.info(
-                                    'The same combination has been explored and will be skipped here.')
-                                continue
-                            else:
-                                self.integer_list.append(
-                                    self.curr_int_sol)
-                        counter += 1
-                        fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
-                        self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
-
-                        # Call the NLP post-solve callback
-                        with time_code(self.timing, 'Call after subproblem solve'):
-                            config.call_after_subproblem_solve(fixed_nlp)
-
-                        if self.algorithm_should_terminate(config, check_cycling=False):
-                            last_iter_cuts = True
-                            break
-
-                        if counter >= config.num_solution_iteration:
-                            break
-
-            if config.strategy == 'ECP':
-                add_ecp_cuts(self.mip, self.jacobians, config, self.timing)
-
-            # if config.strategy == 'PSC':
-            #     # If the hybrid algorithm is not making progress, switch to OA.
-            #     progress_required = 1E-6
-            #     if solve_data.objective_sense == minimize:
-            #         log = solve_data.LB_progress
-            #         sign_adjust = 1
-            #     else:
-            #         log = solve_data.UB_progress
-            #         sign_adjust = -1
-            #     # Maximum number of iterations in which the lower (optimistic)
-            #     # bound does not improve before switching to OA
-            #     max_nonimprove_iter = 5
-            #     making_progress = True
-            #     # TODO-romeo Unnecessary for OA and ROA, right?
-            #     for i in range(1, max_nonimprove_iter + 1):
-            #         try:
-            #             if (sign_adjust * log[-i]
-            #                     <= (log[-i - 1] + progress_required)
-            #                     * sign_adjust):
-            #                 making_progress = False
-            #             else:
-            #                 making_progress = True
-            #                 break
-            #         except IndexError:
-            #             # Not enough history yet, keep going.
-            #             making_progress = True
-            #             break
-            #     if not making_progress and (
-            #             config.strategy == 'hPSC' or
-            #             config.strategy == 'PSC'):
-            #         config.logger.info(
-            #             'Not making enough progress for {} iterations. '
-            #             'Switching to OA.'.format(max_nonimprove_iter))
-            #         config.strategy = 'OA'
-
-        # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
-        # we correct it after the iteration.
-        if (config.add_no_good_cuts or config.use_tabu_list) and config.strategy != 'FP' and not self.should_terminate and config.add_regularization is None:
-            self.fix_dual_bound(config, last_iter_cuts)
-        config.logger.info(
-            ' ===============================================================================================')
 
 
     def algorithm_should_terminate(self, config, check_cycling):

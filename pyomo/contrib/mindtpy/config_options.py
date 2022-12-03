@@ -24,7 +24,7 @@ def _get_algorithm_config():
         description="DEPRECATED: Please use 'algorithm' instead."
     ))
     CONFIG.declare("algorithm", ConfigValue(
-        default='OA', domain=In(_supported_algorithms),
+        default=None, domain=In(_supported_algorithms),
         description="Algorithm to use."
     ))
     return CONFIG
