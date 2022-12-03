@@ -13,6 +13,10 @@ from collections import namedtuple
 
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.common.timing import HierarchicalTimer
+from pyomo.common.dependencies import (
+    attempt_import,
+    numpy as np,
+)
 from pyomo.core.base.constraint import Constraint
 from pyomo.core.base.var import Var
 from pyomo.core.base.objective import Objective
@@ -25,11 +29,9 @@ from pyomo.util.subsystems import (
     generate_subsystem_blocks,
 )
 
-from pyomo.contrib.pynumero.interfaces.pyomo_nlp import PyomoNLP
-from pyomo.contrib.pynumero.interfaces.nlp_projections import (
-    ProjectedExtendedNLP,
-    ProjectedNLP,
-)
+# Use attemp_import here due to unguarded NumPy import in these files
+pyomo_nlp = attempt_import('pyomo.contrib.pynumero.interfaces.pyomo_nlp')[0]
+nlp_proj = attempt_import('pyomo.contrib.pynumero.interfaces.nlp_projections')[0]
 from pyomo.contrib.pynumero.algorithms.solvers.cyipopt_solver import (
     cyipopt_available,
     CyIpoptNLP,
@@ -52,8 +54,6 @@ from pyomo.contrib.incidence_analysis import IncidenceGraphInterface
 from pyomo.contrib.incidence_analysis.util import (
     generate_strongly_connected_components,
 )
-import networkx as nx
-import numpy as np
 
 
 class NlpSolverBase(object):
@@ -170,10 +170,12 @@ class ImplicitFunctionSolver(PyomoImplicitFunctionBase):
         block.scaling_factor[block._obj] = 1.0
 
         self._timer.start("PyomoNLP")
-        self._nlp = PyomoNLP(block)
+        self._nlp = pyomo_nlp.PyomoNLP(block)
         self._timer.stop("PyomoNLP")
         primals_ordering = [var.name for var in variables]
-        self._proj_nlp = ProjectedExtendedNLP(self._nlp, primals_ordering)
+        self._proj_nlp = nlp_proj.ProjectedExtendedNLP(
+            self._nlp, primals_ordering
+        )
 
         self._timer.start("NlpSolver")
         if solver_class is None:
@@ -348,7 +350,8 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             # variables will not show up in the NLPs
             self._timer.start("PyomoNLP")
             self._solver_subsystem_nlps = [
-                PyomoNLP(block) for block, inputs in self._solver_subsystem_list
+                pyomo_nlp.PyomoNLP(block)
+                for block, inputs in self._solver_subsystem_list
             ]
             self._timer.stop("PyomoNLP")
 
@@ -359,7 +362,7 @@ class DecomposedImplicitFunctionBase(PyomoImplicitFunctionBase):
             for block, inputs in self._solver_subsystem_list
         ]
         self._solver_proj_nlps = [
-            ProjectedExtendedNLP(nlp, names) for nlp, names in
+            nlp_proj.ProjectedExtendedNLP(nlp, names) for nlp, names in
             zip(self._solver_subsystem_nlps, self._solver_subsystem_var_names)
         ]
 
