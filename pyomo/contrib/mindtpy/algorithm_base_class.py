@@ -809,14 +809,6 @@ class _MindtPyAlgorithm(object):
         #     MindtPy.cuts.gbd_cuts = ConstraintList(
         #         doc='Generalized Benders cuts')
 
-        config.logger.info(
-            '{} is the initial strategy being used.'
-            '\n'.format(config.init_strategy))
-        config.logger.info(
-            ' ===============================================================================================')
-        config.logger.info(
-            ' {:>9} | {:>15} | {:>15} | {:>12} | {:>12} | {:^7} | {:>7}\n'.format('Iteration', 'Subproblem Type', 'Objective Value', 'Primal Bound',
-                                                                                'Dual Bound', ' Gap ', 'Time(s)'))
         # Do the initialization
         if config.init_strategy == 'rNLP':
             self.init_rNLP(config)

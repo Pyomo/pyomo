@@ -875,6 +875,14 @@ def setup_results_object(results, model, config):
          num_of.activated.binary_variables,
          num_of.activated.integer_variables,
          num_of.activated.continuous_variables))
+    config.logger.info(
+    '{} is the initial strategy being used.'
+    '\n'.format(config.init_strategy))
+    config.logger.info(
+        ' ===============================================================================================')
+    config.logger.info(
+        ' {:>9} | {:>15} | {:>15} | {:>12} | {:>12} | {:^7} | {:>7}\n'.format('Iteration', 'Subproblem Type', 'Objective Value', 'Primal Bound',
+                                                                            'Dual Bound', ' Gap ', 'Time(s)'))
 
 def process_objective(solve_data, config, move_objective=False,
                       use_mcpp=False, update_var_con_list=True,
