@@ -616,8 +616,10 @@ class HierarchicalTimer(object):
     profile, it is often best to retain only the most relevant information
     in a flattened data structure. In the following example, suppose a
     theoretical analysis tells us that either subroutine ``"c"`` or ``"f"``
-    should be the bottleneck, depending on problem data. To clearly
-    communicate this, we
+    should be the bottleneck, depending on problem data. We would like to
+    generate a timing profile that displays only the time spent in these
+    two subroutines in a flattened structure so that they are easy to
+    compare. To do this, we
 
     #. Ignore subroutines of ``"c"`` and ``"f"`` that are unnecessary for\
     this comparison
