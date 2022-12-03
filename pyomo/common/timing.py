@@ -978,6 +978,12 @@ class HierarchicalTimer(object):
         """Flatten the HierarchicalTimer in-place, moving all the timing
         categories into a single level
 
+        If any timers moved into the same level have the same identifier,
+        the ``total_time`` and ``n_calls`` fields are added together.
+        The ``total_time`` of a "child timer" that is "moved upwards" is
+        subtracted from the ``total_time`` of that timer's original
+        parent.
+
         """
         if self.stack:
             raise RuntimeError(
