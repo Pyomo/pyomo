@@ -809,13 +809,6 @@ class _MindtPyAlgorithm(object):
         #     MindtPy.cuts.gbd_cuts = ConstraintList(
         #         doc='Generalized Benders cuts')
 
-        # Set default initialization_strategy
-        if config.init_strategy is None:
-            if config.strategy in {'OA', 'GOA'}:
-                config.init_strategy = 'rNLP'
-            else:
-                config.init_strategy = 'max_binary'
-
         config.logger.info(
             '{} is the initial strategy being used.'
             '\n'.format(config.init_strategy))

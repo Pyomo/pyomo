@@ -347,4 +347,7 @@ class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
             ' ===============================================================================================')
 
     def check_config(self):
+        config = self.config
+        if config.init_strategy is None:
+            config.init_strategy = 'rNLP'
         _MindtPyAlgorithm.check_config(self)

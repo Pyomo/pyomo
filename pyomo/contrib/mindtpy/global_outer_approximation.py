@@ -290,12 +290,16 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
 
 
     def check_config(self):
-        self.config.add_slack = False
-        self.config.use_mcpp = True
-        self.config.equality_relaxation = False
-        self.config.use_fbbt = True
+        config = self.config
+        config.add_slack = False
+        config.use_mcpp = True
+        config.equality_relaxation = False
+        config.use_fbbt = True
         # add_no_good_cuts is Ture by default in GOA
-        if not self.config.add_no_good_cuts and not self.config.use_tabu_list:
-            self.config.add_no_good_cuts = True
-            self.config.use_tabu_list = False
+        if not config.add_no_good_cuts and not config.use_tabu_list:
+            config.add_no_good_cuts = True
+            config.use_tabu_list = False
+        # Set default initialization_strategy
+        if config.init_strategy is None:
+            config.init_strategy = 'rNLP'
         super().check_config()
