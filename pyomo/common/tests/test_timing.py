@@ -394,6 +394,40 @@ all                    1     [0-9.]+ +[0-9.]+ +100.0
         for l, r in zip(str(timer).splitlines(), ref):
             self.assertRegex(l, r)
 
+    def test_clear_except_base_timer(self):
+        timer = HierarchicalTimer()
+        timer.start("a")
+        timer.start("b")
+        timer.stop("b")
+        timer.stop("a")
+        timer.start("c")
+        timer.stop("c")
+        timer.start("d")
+        timer.stop("d")
+        timer.clear_except("b", "c")
+        key_set = set(timer.timers.keys())
+        self.assertEqual(key_set, {"c"})
+
+    def test_clear_except_subtimer(self):
+        # Testing this method on "sub-timers" exercises different code
+        # as while the base timer is a HierarchicalTimer, the sub-timers
+        # are _HierarchicalHelpers
+        timer = HierarchicalTimer()
+        timer.start("root")
+        timer.start("a")
+        timer.start("b")
+        timer.stop("b")
+        timer.stop("a")
+        timer.start("c")
+        timer.stop("c")
+        timer.start("d")
+        timer.stop("d")
+        timer.stop("root")
+        root = timer.timers["root"]
+        root.clear_except("b", "c")
+        key_set = set(root.timers.keys())
+        self.assertEqual(key_set, {"c"})
+
 
 class TestFlattenHierarchicalTimer(unittest.TestCase):
 
