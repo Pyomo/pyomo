@@ -8,6 +8,11 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+"""A module for "flattening" the components in a block-hierarchical model
+with respect to common indexing sets
+
+"""
+
 from pyomo.core.base import Block, Reference
 from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.block import SubclassOf
