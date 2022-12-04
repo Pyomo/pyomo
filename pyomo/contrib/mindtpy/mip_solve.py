@@ -12,7 +12,7 @@
 """main problem functions."""
 from __future__ import division
 import logging
-from pyomo.core import Constraint, Expression, Objective, minimize, value
+from pyomo.core import Constraint, Expression, Objective, minimize, value, maximize
 from pyomo.opt import TerminationCondition as tc
 from pyomo.opt import SolutionStatus, SolverFactory
 from pyomo.contrib.gdpopt.util import copy_var_list_values, SuppressInfeasibleWarning, _DoNothing, get_main_elapsed_time, time_code

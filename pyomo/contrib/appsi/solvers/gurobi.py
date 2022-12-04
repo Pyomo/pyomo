@@ -205,9 +205,11 @@ class Gurobi(PersistentBase, PersistentSolver):
     Interface to Gurobi
     """
     _available = None
+    _num_instances = 0
 
     def __init__(self, only_child_vars=True):
         super(Gurobi, self).__init__(only_child_vars=only_child_vars)
+        self._num_instances += 1
         self._config = GurobiConfig()
         self._solver_options = dict()
         self._solver_model = None
@@ -275,7 +277,9 @@ class Gurobi(PersistentBase, PersistentSolver):
 
     def __del__(self):
         if not python_is_shutting_down():
-            self.release_license()
+            self._num_instances -= 1
+            if self._num_instances == 0:
+                self.release_license()
 
     def version(self):
         version = (gurobipy.GRB.VERSION_MAJOR,
@@ -791,14 +795,14 @@ class Gurobi(PersistentBase, PersistentSolver):
         else:
             results.termination_condition = TerminationCondition.unknown
 
-        if self._objective is None:
-            results.best_feasible_objective = None
-            results.best_objective_bound = None
-        else:
-            try:
-                results.best_feasible_objective = gprob.ObjVal
-            except (gurobipy.GurobiError, AttributeError):
-                results.best_feasible_objective = None
+        results.best_feasible_objective = None
+        results.best_objective_bound = None
+        if self._objective is not None:
+            if gprob.SolCount > 0:
+                try:
+                    results.best_feasible_objective = gprob.ObjVal
+                except (gurobipy.GurobiError, AttributeError):
+                    results.best_feasible_objective = None
             try:
                 if gprob.NumBinVars + gprob.NumIntVars == 0:
                     results.best_objective_bound = gprob.ObjVal
@@ -856,6 +860,12 @@ class Gurobi(PersistentBase, PersistentSolver):
         if self._needs_updated:
             self._update_gurobi_model()  # this is needed to ensure that solutions cannot be loaded after the model has been changed
 
+        if self._solver_model.SolCount == 0:
+            raise RuntimeError(
+                'Solver does not currently have a valid solution. Please '
+                'check the termination condition.'
+            )
+
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
         if vars_to_load is None:
@@ -880,6 +890,12 @@ class Gurobi(PersistentBase, PersistentSolver):
         if self._needs_updated:
             self._update_gurobi_model()
 
+        if self._solver_model.Status != gurobipy.GRB.OPTIMAL:
+            raise RuntimeError(
+                'Solver does not currently have valid reduced costs. Please '
+                'check the termination condition.'
+            )
+
         var_map = self._pyomo_var_to_solver_var_map
         ref_vars = self._referenced_variables
         res = ComponentMap()
@@ -901,6 +917,12 @@ class Gurobi(PersistentBase, PersistentSolver):
     def get_duals(self, cons_to_load=None):
         if self._needs_updated:
             self._update_gurobi_model()
+
+        if self._solver_model.Status != gurobipy.GRB.OPTIMAL:
+            raise RuntimeError(
+                'Solver does not currently have valid duals. Please '
+                'check the termination condition.'
+            )
 
         con_map = self._pyomo_con_to_solver_con_map
         reverse_con_map = self._solver_con_to_pyomo_con_map
@@ -928,6 +950,12 @@ class Gurobi(PersistentBase, PersistentSolver):
     def get_slacks(self, cons_to_load=None):
         if self._needs_updated:
             self._update_gurobi_model()
+
+        if self._solver_model.SolCount == 0:
+            raise RuntimeError(
+                'Solver does not currently have valid slacks. Please '
+                'check the termination condition.'
+            )
 
         con_map = self._pyomo_con_to_solver_con_map
         reverse_con_map = self._solver_con_to_pyomo_con_map

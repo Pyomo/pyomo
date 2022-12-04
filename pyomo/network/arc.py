@@ -89,16 +89,6 @@ class _ArcData(ActiveComponentData):
         if len(kwds):
             self.set_value(kwds)
 
-    def __getstate__(self):
-        state = super(_ArcData, self).__getstate__()
-        for i in _ArcData.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
-    # Note: None of the slots on this class need to be edited, so we
-    # don't need to implement a specialized __setstate__ method, and
-    # can quietly rely on the super() class's implementation.
-
     def __getattr__(self, name):
         """Returns `self.expanded_block.name` if it exists"""
         eb = self.expanded_block

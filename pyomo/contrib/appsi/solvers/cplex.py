@@ -320,7 +320,11 @@ class Cplex(PersistentSolver):
 
     def get_primals(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
         if self._cplex_model.solution.get_solution_type() == self._cplex_model.solution.type.none:
-            raise RuntimeError('Cannot load variable values - no feasible solution was found.')
+            raise RuntimeError(
+                'Solver does not currently have a valid solution. Please '
+                'check the termination condition.'
+            )
+
         symbol_map = self._writer.symbol_map
         if vars_to_load is None:
             var_names = self._cplex_model.variables.get_names()
@@ -338,7 +342,11 @@ class Cplex(PersistentSolver):
 
     def get_duals(self, cons_to_load: Optional[Sequence[_GeneralConstraintData]] = None) -> Dict[_GeneralConstraintData, float]:
         if self._cplex_model.solution.get_solution_type() == self._cplex_model.solution.type.none:
-            raise RuntimeError('Cannot get duals - no feasible solution was found.')
+            raise RuntimeError(
+                'Solver does not currently have valid duals. Please '
+                'check the termination condition.'
+            )
+
         if self._cplex_model.get_problem_type() in [self._cplex_model.problem_type.MILP,
                                                     self._cplex_model.problem_type.MIQP,
                                                     self._cplex_model.problem_type.MIQCP]:
@@ -378,7 +386,11 @@ class Cplex(PersistentSolver):
 
     def get_reduced_costs(self, vars_to_load: Optional[Sequence[_GeneralVarData]] = None) -> Mapping[_GeneralVarData, float]:
         if self._cplex_model.solution.get_solution_type() == self._cplex_model.solution.type.none:
-            raise RuntimeError('Cannot get reduced costs - no feasible solution was found.')
+            raise RuntimeError(
+                'Solver does not currently have valid reduced costs. Please '
+                'check the termination condition.'
+            )
+
         if self._cplex_model.get_problem_type() in [self._cplex_model.problem_type.MILP,
                                                     self._cplex_model.problem_type.MIQP,
                                                     self._cplex_model.problem_type.MIQCP]:

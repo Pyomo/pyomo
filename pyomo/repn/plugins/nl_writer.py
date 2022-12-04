@@ -20,6 +20,7 @@ from pyomo.common.backports import nullcontext
 from pyomo.common.config import (
     ConfigBlock, ConfigValue, InEnum, add_docstring_list,
 )
+from pyomo.common.deprecation import deprecation_warning
 from pyomo.common.errors import DeveloperError
 from pyomo.common.gc_manager import PauseGC
 from pyomo.common.timing import TicTocTimer
@@ -64,6 +65,9 @@ logger=logging.getLogger(__name__)
 # Feasibility tolerance for trivial (fixed) constraints
 TOL = 1e-8
 inf = float('inf')
+nan = float('nan')
+
+HALT_ON_EVALUATION_ERROR = False
 
 class _CONSTANT(object): pass
 class _MONOMIAL(object): pass
@@ -99,7 +103,7 @@ class NLWriterInfo(object):
 
         The list of string names for the constraints / objectives
         written to the NL file in the same order as
-        :py:attr:`constraints` + :\p:attr:`objectives` and the generated
+        :py:attr:`constraints` + :py:attr:`objectives` and the generated
         .row file.
 
     column_labels: List[str]
@@ -120,9 +124,11 @@ class NLWriterInfo(object):
 
 class FileDeterminism(enum.IntEnum):
     NONE = 0
-    ORDERED = 1
-    SORT_INDICES = 2
-    SORT_SYMBOLS = 3
+    DEPRECATED_KEYS = 1
+    DEPRECATED_KEYS_AND_NAMES = 2
+    ORDERED = 10
+    SORT_INDICES = 20
+    SORT_SYMBOLS = 30
 
 
 def _activate_nl_writer_version(n):
@@ -130,6 +136,27 @@ def _activate_nl_writer_version(n):
     doc = WriterFactory.doc('nl')
     WriterFactory.unregister('nl')
     WriterFactory.register('nl', doc)(WriterFactory.get_class(f'nl_v{n}'))
+
+
+def _apply_node_operation(node, args):
+    try:
+        tmp = (_CONSTANT, node._apply_operation(args))
+        if tmp[1].__class__ is complex:
+            raise ValueError('Pyomo does not support complex numbers')
+        return tmp
+    except:
+        logger.warning(
+            "Exception encountered evaluating expression "
+            "'%s(%s)'\n\tmessage: %s\n\texpression: %s" % (
+                node.name,
+                ", ".join(map(str, args)),
+                str(sys.exc_info()[1]),
+                node
+            ))
+        if HALT_ON_EVALUATION_ERROR:
+            raise
+        return (_CONSTANT, nan)
+
 
 def categorize_valid_components(
         model, active=True, sort=None, valid=set(), targets=set()):
@@ -185,9 +212,9 @@ class NLWriter(object):
         How much effort do we want to put into ensuring the
         NL file is written deterministically for a Pyomo model:
             NONE (0) : None
-            ORDERED (1): rely on underlying component ordering (default)
-            SORT_INDICES (2) : sort keys of indexed components
-            SORT_SYMBOLS (3) : sort keys AND sort names (over declaration order)
+            ORDERED (10): rely on underlying component ordering (default)
+            SORT_INDICES (20) : sort keys of indexed components
+            SORT_SYMBOLS (30) : sort keys AND sort names (not declaration order)
         """
     ))
     CONFIG.declare('symbolic_solver_labels', ConfigValue(
@@ -225,6 +252,14 @@ class NLWriter(object):
         Within each group, continuous variables appear before discrete
         variables.  In all cases, column_order is preserved within each
         group."""
+    ))
+    CONFIG.declare('export_defined_variables', ConfigValue(
+        default=True,
+        domain=bool,
+        description='Preferred variable ordering',
+        doc="""
+        If True, export Expression objects to the NL file as 'defined
+        variables'."""
     ))
 
     def __init__(self):
@@ -335,11 +370,51 @@ class _SuffixData(object):
         self.datatype = set()
 
     def update(self, suffix):
+        missing_component = missing_other = 0
         self.datatype.add(suffix.datatype)
         for item in suffix.items():
-            self.store(*item)
+            missing = self._store(*item)
+            if missing:
+                if missing > 0:
+                    missing_component += missing
+                else:
+                    missing_other += missing
+        if missing_component:
+            logger.warning(
+                f"model contained export suffix {suffix.name} that "
+                f"contained {missing_component} component keys that are "
+                "not exported as part of the NL file.  "
+                "Skipping.")
+        if missing_other:
+            logger.warning(
+                f"model contained export suffix {suffix.name} that "
+                f"contained {missing_other} keys that are not "
+                "Var, Constraint, Objective, or the model.  Skipping.")
 
     def store(self, obj, val):
+        missing = self._store(obj, val)
+        if not missing:
+            return
+        if missing == 1:
+            logger.warning(
+                f"model contained export suffix {self._name} with "
+                f"{obj.ctype.__name__} key '{obj.name}', but that "
+                "object is not exported as part of the NL file.  "
+                "Skipping.")
+        elif missing > 1:
+            logger.warning(
+                f"model contained export suffix {self._name} with "
+                f"{obj.ctype.__name__} key '{obj.name}', but that "
+                "object contained {missing} data objects that are "
+                "not exported as part of the NL file.  "
+                "Skipping.")
+        else:
+            logger.warning(
+                f"model contained export suffix {self._name} with "
+                f"{obj.__class__.__name__} key '{obj}' that is not "
+                "a Var, Constraint, Objective, or the model.  Skipping.")
+
+    def _store(self, obj, val):
         _id = id(obj)
         if _id in self._column_order:
             self.var[self._column_order[_id]] = val
@@ -351,19 +426,14 @@ class _SuffixData(object):
             self.prob[0] = val
         elif isinstance(obj, PyomoObject):
             if obj.is_indexed():
+                missing_ct = 0
                 for o in obj.values():
-                    self.store(o, val)
+                    missing_ct += self._store(o, val)
+                return missing_ct
             else:
-                logger.warning(
-                    f"model contained export suffix {self._name} with "
-                    f"{obj.ctype.__name__} key '{obj.name}', but that "
-                    "object is not exported as part of the NL file.  "
-                    "Skipping.")
+                return 1
         else:
-            logger.warning(
-                f"model contained export suffix {self._name} with "
-                f"{obj.__class__.__name__} key '{obj}' that is not "
-                "a Var, Constrtaint, Objective, or the model.  Skipping.")
+            return -1
 
 
 class _NLWriter_impl(object):
@@ -390,10 +460,21 @@ class _NLWriter_impl(object):
             self.external_functions,
             self.var_map,
             self.used_named_expressions,
-            config.symbolic_solver_labels,
+            self.symbolic_solver_labels,
+            self.config.export_defined_variables,
         )
         self.next_V_line_id = 0
         self.pause_gc = None
+
+        if config.file_determinism in (
+                FileDeterminism.DEPRECATED_KEYS,
+                FileDeterminism.DEPRECATED_KEYS_AND_NAMES):
+            old = config.file_determinism
+            config.file_determinism = 10*(old + 1)
+            new = config.file_determinism
+            deprecation_warning(
+                f'{str(old)} ({int(old)}) is deprecated.  '
+                f'Please use {str(new)} ({int(new)})', version='TBD')
 
     def __enter__(self):
         assert AMPLRepn.ActiveVisitor is None
@@ -408,8 +489,11 @@ class _NLWriter_impl(object):
         AMPLRepn.ActiveVisitor = None
 
     def write(self, model):
-        timer = TicTocTimer(
-            logger=logging.getLogger('pyomo.common.timing.writer')
+        timing_logger = logging.getLogger('pyomo.common.timing.writer')
+        timer = TicTocTimer(logger=timing_logger)
+        with_debug_timing = (
+            timing_logger.isEnabledFor(logging.DEBUG)
+            and timing_logger.hasHandlers()
         )
 
         sorter = SortComponents.unsorted
@@ -430,7 +514,7 @@ class _NLWriter_impl(object):
                 # TODO: Piecewise, Complementarity
             },
             targets={
-                Objective, Constraint, Suffix, SOSConstraint,
+                Suffix, SOSConstraint,
             }
         )
         if unknown:
@@ -475,30 +559,23 @@ class _NLWriter_impl(object):
         #
         objectives = []
         linear_objs = []
-        for block in component_map[Objective]:
-            for obj_comp in block.component_objects(
-                    Objective, active=True, descend_into=False, sort=sorter):
-                try:
-                    obj_vals = obj_comp.values()
-                except AttributeError:
-                    # kernel does not define values() for scalar
-                    # objectives or list/tuple containers
-                    try:
-                        # This could be a list/tuple container.  Try to
-                        # iterate over it, and if that fails assume it
-                        # is a scalar
-                        obj_vals = iter(obj_comp)
-                    except:
-                        obj_vals = (obj_comp,)
-                for obj in obj_vals:
-                    if not obj.active:
-                        continue
-                    expr = visitor.walk_expression((obj.expr, obj, 1))
-                    if expr.nonlinear:
-                        objectives.append((obj, expr))
-                    else:
-                        linear_objs.append((obj, expr))
-                timer.toc('Objective %s', obj_comp, level=logging.DEBUG)
+        last_parent = None
+        for obj in model.component_data_objects(
+                Objective, active=True, sort=sorter):
+            if with_debug_timing and obj.parent_component() is not last_parent:
+                timer.toc('Objective %s', last_parent, level=logging.DEBUG)
+                last_parent = obj.parent_component()
+            expr = visitor.walk_expression((obj.expr, obj, 1))
+            if expr.named_exprs:
+                self._record_named_expression_usage(
+                    expr.named_exprs, obj, 1)
+            if expr.nonlinear:
+                objectives.append((obj, expr))
+            else:
+                linear_objs.append((obj, expr))
+        if with_debug_timing:
+            # report the last objective
+            timer.toc('Objective %s', last_parent, level=logging.DEBUG)
 
         # Order the objectives, moving all nonlinear objectives to
         # the beginning
@@ -510,62 +587,54 @@ class _NLWriter_impl(object):
         linear_cons = []
         n_ranges = 0
         n_equality = 0
-        for block in component_map[Constraint]:
-            for con_comp in block.component_objects(
-                    Constraint, active=True, descend_into=False, sort=sorter):
-                try:
-                    con_vals = con_comp.values()
-                except AttributeError:
-                    # kernel does not define values() for scalar
-                    # constraints or list/tuple containers
-                    try:
-                        # This could be a list/tuple container.  Try to
-                        # iterate over it, and if that fails assume it
-                        # is a scalar
-                        con_vals = iter(con_comp)
-                    except:
-                        con_vals = (con_comp,)
-                for con in con_vals:
-                    if not con.active:
-                        continue
-                    expr = visitor.walk_expression((con.body, con, 0))
-                    lb = con.lb
-                    if lb is not None:
-                        lb = repr(lb - expr.const)
-                    ub = con.ub
-                    if ub is not None:
-                        ub = repr(ub - expr.const)
-                    _type = _RANGE_TYPE(lb, ub)
-                    if _type == 4:
-                        n_equality += 1
-                    elif _type == 0:
-                        n_ranges += 1
-                    elif _type == 3: #and self.config.skip_trivial_constraints:
-                        # FIXME: historically the NL writer was
-                        # hard-coded to skip all unbounded constraints
-                        continue
-                    if expr.nonlinear:
-                        constraints.append((con, expr, _type, lb, ub))
-                    elif expr.linear:
-                        linear_cons.append((con, expr, _type, lb, ub))
-                    elif not self.config.skip_trivial_constraints:
-                        linear_cons.append((con, expr, _type, lb, ub))
-                    else: # constant constraint and skip_trivial_constraints
-                        #
-                        # TODO: skip_trivial_constraints should be an
-                        # enum that also accepts "Exception" so that
-                        # solvers can be (easily) notified of infeasible
-                        # trivial constraints.
-                        if (lb is not None and float(lb) > TOL) or (
-                                ub is not None and float(ub) < -TOL):
-                            logger.warning(
-                                "model contains a trivially infeasible "
-                                f"constraint {con.name}, but "
-                                "skip_trivial_constraints==True and the "
-                                "constraint is being omitted from the NL "
-                                "file.  Solving the model may incorrectly "
-                                "report a feasible solution.")
-                timer.toc('Constraint %s', con_comp, level=logging.DEBUG)
+        for con in model.component_data_objects(
+                Constraint, active=True, sort=sorter):
+            if with_debug_timing and con.parent_component() is not last_parent:
+                timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
+                last_parent = con.parent_component()
+            expr = visitor.walk_expression((con.body, con, 0))
+            if expr.named_exprs:
+                self._record_named_expression_usage(
+                    expr.named_exprs, con, 0)
+            lb = con.lb
+            if lb is not None:
+                lb = repr(lb - expr.const)
+            ub = con.ub
+            if ub is not None:
+                ub = repr(ub - expr.const)
+            _type = _RANGE_TYPE(lb, ub)
+            if _type == 4:
+                n_equality += 1
+            elif _type == 0:
+                n_ranges += 1
+            elif _type == 3: #and self.config.skip_trivial_constraints:
+                # FIXME: historically the NL writer was
+                # hard-coded to skip all unbounded constraints
+                continue
+            if expr.nonlinear:
+                constraints.append((con, expr, _type, lb, ub))
+            elif expr.linear:
+                linear_cons.append((con, expr, _type, lb, ub))
+            elif not self.config.skip_trivial_constraints:
+                linear_cons.append((con, expr, _type, lb, ub))
+            else: # constant constraint and skip_trivial_constraints
+                #
+                # TODO: skip_trivial_constraints should be an
+                # enum that also accepts "Exception" so that
+                # solvers can be (easily) notified of infeasible
+                # trivial constraints.
+                if (lb is not None and float(lb) > TOL) or (
+                        ub is not None and float(ub) < -TOL):
+                    logger.warning(
+                        "model contains a trivially infeasible "
+                        f"constraint {con.name}, but "
+                        "skip_trivial_constraints==True and the "
+                        "constraint is being omitted from the NL "
+                        "file.  Solving the model may incorrectly "
+                        "report a feasible solution.")
+        if with_debug_timing:
+            # report the last constraint
+            timer.toc('Constraint %s', last_parent, level=logging.DEBUG)
 
         if self.config.row_order:
             # Note: this relies on two things: 1) dict are ordered, and
@@ -603,6 +672,11 @@ class _NLWriter_impl(object):
         # var objects themselves)
         #
 
+        # Filter out any unused named expressions
+        self.subexpression_order = list(filter(
+            self.used_named_expressions.__contains__,
+            self.subexpression_order))
+
         # linear contribution by (constraint, objective) component.
         # Keys are component id(), Values are dicts mapping variable
         # id() to linear coefficient.  All nonzeros in the component
@@ -615,8 +689,7 @@ class _NLWriter_impl(object):
         # in constraints / objectives
         self._categorize_vars(
             map(self.subexpression_cache.__getitem__,
-                filter(self.used_named_expressions.__contains__,
-                       self.subexpression_order)),
+                self.subexpression_order),
             linear_by_comp
         )
         n_subexpressions = self._count_subexpression_occurances()
@@ -1012,8 +1085,6 @@ class _NLWriter_impl(object):
         single_use_subexpressions = {}
         self.next_V_line_id = n_vars
         for _id in self.subexpression_order:
-            if _id not in self.used_named_expressions:
-                continue
             cache_info = self.subexpression_cache[_id][2]
             if cache_info[2]:
                 # substitute expression directly into expression trees
@@ -1290,52 +1361,14 @@ class _NLWriter_impl(object):
         return all_linear_vars, all_nonlinear_vars, nnz_by_var
 
     def _count_subexpression_occurances(self):
-        # We now need to go through the subexpression cache and update
-        # the flag for nested subexpressions used by multiple components
-        # (the walker can only update the flag in subexpressions
-        # appearing explicitly in the tree, so we now need to propagate
-        # this usage info into subexpressions nested in other
-        # subexpressions).
-        #
-        # We need to walk twice: once to sort out the use in Constraints
-        # and once to sort out the use in Objectives
-        for idx in (0, 1):
-            cache = self.subexpression_cache
-            for id_ in self.subexpression_order:
-                src_id = cache[id_][2][idx]
-                if src_id is None:
-                    continue
-                # This expression is used by this component type
-                # (constraint or objective); ensure that all
-                # subexpressions (recursively) used by this expression
-                # are also marked as being used by this component type
-                queue = [id_]
-                while queue:
-                    info = cache[queue.pop()]
-                    if not info[1].nonlinear:
-                        # Subexpressions can only appear in the
-                        # nonlinear terms.  If there are none, then we
-                        # are done.
-                        continue
-                    for subid in info[1].nonlinear[1]:
-                        # Check if this "id" (normally a var id, but
-                        # could be a subexpression id) is a
-                        # subexpression id
-                        if subid not in cache:
-                            continue
-                        # Check if we need to update this subexpression:
-                        # either it has never been marked as being used
-                        # by this component type, or else it was used by
-                        # a different id.  If we need to update the
-                        # flag, then do so and recurse into it
-                        target = cache[subid][2]
-                        if target[idx] is None:
-                            target[idx] = src_id
-                            queue.append(subid)
-                        elif target[idx] and target[idx] != src_id:
-                            target[idx] = 0
-                            queue.append(subid)
-        # Now we can reliably know where nested subexpressions are used.
+        """Categorize named subexpressions based on where they are used.
+
+        This iterates through the `subexpression_order` and categorizes
+        each _id based on where it is used (1 constraint, many
+        constraints, 1 objective, many objectives, constraints and
+        objectives).
+
+        """
         # Group them into:
         #   [ used in both objectives and constraints,
         #     used by more than one constraint (but no objectives),
@@ -1343,19 +1376,29 @@ class _NLWriter_impl(object):
         #     used by one constraint,
         #     used by one objective ]
         n_subexpressions = [0]*5
-        for info in map(itemgetter(2),
-                        map(self.subexpression_cache.__getitem__,
-                            filter(self.used_named_expressions.__contains__,
-                                   self.subexpression_order))):
+        for info in map(itemgetter(2), map(
+                self.subexpression_cache.__getitem__,
+                self.subexpression_order)):
             if info[2]:
                 pass
             elif info[1] is None:
+                #assert info[0] is not None:
                 n_subexpressions[3 if info[0] else 1] += 1
             elif info[0] is None:
                 n_subexpressions[4 if info[1] else 2] += 1
             else:
                 n_subexpressions[0] += 1
         return n_subexpressions
+
+    def _record_named_expression_usage(self, named_exprs, src, comp_type):
+        self.used_named_expressions.update(named_exprs)
+        src = id(src)
+        for _id in named_exprs:
+            info = self.subexpression_cache[_id][2]
+            if info[comp_type] is None:
+                info[comp_type] = src
+            elif info[comp_type] != src:
+                info[comp_type] = 0
 
     def _write_nl_expression(self, repn, include_const):
         # Note that repn.mult should always be 1 (the AMPLRepn was
@@ -1418,7 +1461,7 @@ class NLFragment(object):
 
 
 class AMPLRepn(object):
-    __slots__ = ('nl', 'mult', 'const', 'linear', 'nonlinear')
+    __slots__ = ('nl', 'mult', 'const', 'linear', 'nonlinear', 'named_exprs')
 
     ActiveVisitor = None
 
@@ -1427,25 +1470,64 @@ class AMPLRepn(object):
         self.mult = 1
         self.const = const
         self.linear = linear
-        self.nonlinear = nonlinear
+        if nonlinear is None:
+            self.nonlinear = self.named_exprs = None
+        else:
+            nl, nl_args, self.named_exprs = nonlinear
+            self.nonlinear = nl, nl_args
 
-    def compile_repn(self, visitor, prefix='', args=None):
+    def __str__(self):
+        return (
+            f'AMPLRepn(mult={self.mult}, const={self.const}, '
+            f'linear={self.linear}, nonlinear={self.nonlinear}, '
+            f'nl={self.nl}, named_exprs={self.named_exprs})'
+        )
+
+    def __repr__(self):
+        return str(self)
+
+    def duplicate(self):
+        ans = self.__class__.__new__(self.__class__)
+        ans.nl = self.nl
+        ans.mult = self.mult
+        ans.const = self.const
+        ans.linear = self.linear
+        ans.nonlinear = self.nonlinear
+        ans.named_exprs = self.named_exprs
+        return ans
+
+    def compile_repn(self, visitor, prefix='', args=None, named_exprs=None):
         template = visitor.template
         if self.mult != 1:
             if self.mult == -1:
                 prefix += template.negation
             else:
                 prefix += template.multiplier % self.mult
+            self.mult = 1
+        if self.named_exprs is not None:
+            if named_exprs is None:
+                named_exprs = set(self.named_exprs)
+            else:
+                named_exprs.update(self.named_exprs)
         if self.nl is not None:
+            # This handles both named subexpressions and embedded
+            # non-numeric (e.g., string) arguments.
             nl, nl_args = self.nl
-            visitor._mark_named_expression_as_used(nl_args)
             if prefix:
                 nl = prefix + nl
-            if args is not None and args is not nl_args:
+            if args is not None:
+                assert args is not nl_args
                 args.extend(nl_args)
             else:
                 args = list(nl_args)
-            return nl, args
+            if nl_args:
+                # For string arguments, nl_args is an empty tuple and
+                # self.named_exprs is None.  For named subexpressions,
+                # we are guaranteed that named_exprs is NOT None.  We
+                # need to ensure that the named subexpression that we
+                # are returning is added to the named_exprs set.
+                named_exprs.update(nl_args)
+            return nl, args, named_exprs
 
         if args is None:
             args = []
@@ -1474,15 +1556,22 @@ class AMPLRepn(object):
             nl_sum += template.const % self.const
 
         if nterms > 2:
-            return prefix + (template.nary_sum % nterms) + nl_sum, args
+            return (
+                prefix + (template.nary_sum % nterms) + nl_sum,
+                args,
+                named_exprs,
+            )
         elif nterms == 2:
-            return prefix + template.binary_sum + nl_sum, args
+            return prefix + template.binary_sum + nl_sum, args, named_exprs
         elif nterms == 1:
-            return prefix + nl_sum, args
+            return prefix + nl_sum, args, named_exprs
         else: # nterms == 0
-            return prefix + (template.const % 0), []
+            return prefix + (template.const % 0), [], named_exprs
 
     def compile_nonlinear_fragment(self, visitor):
+        if not self.nonlinear:
+            self.nonlinear = None
+            return
         args = []
         nterms = len(self.nonlinear)
         nl_sum = ''.join(map(itemgetter(0), self.nonlinear))
@@ -1493,10 +1582,8 @@ class AMPLRepn(object):
             self.nonlinear = (visitor.template.nary_sum % nterms) + nl_sum, args
         elif nterms == 2:
             self.nonlinear = visitor.template.binary_sum + nl_sum, args
-        elif nterms == 1:
+        else: # nterms == 1:
             self.nonlinear = nl_sum, args
-        else: # nterms == 0
-            self.nonlinear = None
 
     def append(self, other):
         """Append a child result from acceptChildResult
@@ -1518,26 +1605,30 @@ class AMPLRepn(object):
             self.linear.append(other[1:])
         elif _type is _GENERAL:
             other = other[1]
-            if other.nl is not None and other.nonlinear:
+            if other.nl is not None and other.nl[1]:
                 if other.linear:
                     # This is a named expression with both a linear and
                     # nonlinear component.  We want to merge it with
                     # this AMPLRepn, preserving the named expression for
                     # only the nonlinear component (merging the linear
-                    # component with this AMPLRepn).  We need to make
-                    # sure that we have marked that we are using the
-                    # named expression for the nonlinear component.
-                    self.ActiveVisitor._mark_named_expression_as_used(
-                        other.nonlinear[1])
+                    # component with this AMPLRepn).
+                    pass
                 else:
                     # This is a nonlinear-only named expression,
                     # possibly with a multiplier that is not 1.  Compile
                     # it and append it (this both resolves the
                     # multiplier, and marks the named expression as
                     # having been used)
-                    self.nonlinear.append(
-                        other.compile_repn(self.ActiveVisitor))
+                    other = other.compile_repn(
+                        self.ActiveVisitor, '', None, self.named_exprs)
+                    nl, nl_args, self.named_exprs = other
+                    self.nonlinear.append((nl, nl_args))
                     return
+            if other.named_exprs is not None:
+                if self.named_exprs is None:
+                    self.named_exprs = set(other.named_exprs)
+                else:
+                    self.named_exprs.update(other.named_exprs)
             if other.mult != 1:
                 mult = other.mult
                 self.const += mult * other.const
@@ -1671,17 +1762,51 @@ def handle_product_node(visitor, node, arg1, arg2):
         mult = arg1[1]
         if not mult:
             # simplify multiplication by 0 (if arg2 is zero, the
-            # simplification happens implicitly when we evaluate the
-            # constant below)
+            # simplification happens when we evaluate the constant
+            # below).  Note that this is not IEEE-754 compliant, and
+            # will map 0*inf and 0*nan to 0 (and not to nan).  We are
+            # including this for backwards compatibility with the NLv1
+            # writer, but arguably we should deprecate/remove this
+            # "feature" in the future.
+            if arg2[0] is _CONSTANT:
+                _prod = mult * arg2[1]
+                if _prod:
+                    deprecation_warning(
+                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        "Mapping the NaN result to 0 for compatibility "
+                        "with the nl_v1 writer.  In the future, this NaN "
+                        "will be preserved/emitted to comply with IEEE-754.",
+                        version='6.4.3')
+                    _prod = 0
+                return (_CONSTANT, _prod)
             return arg1
         if mult == 1:
             return arg2
         elif arg2[0] is _MONOMIAL:
+            if mult != mult:
+                # This catches mult (i.e., arg1) == nan
+                return arg1
             return (_MONOMIAL, arg2[1], mult*arg2[2])
         elif arg2[0] is _GENERAL:
+            if mult != mult:
+                # This catches mult (i.e., arg1) == nan
+                return arg1
             arg2[1].mult *= mult
             return arg2
         elif arg2[0] is _CONSTANT:
+            if not arg2[1]:
+                # Simplify multiplication by 0; see note above about
+                # IEEE-754 incompatibility.
+                _prod = mult * arg2[1]
+                if _prod:
+                    deprecation_warning(
+                        f"Encountered {mult}*{arg2[1]} in expression tree.  "
+                        "Mapping the NaN result to 0 for compatibility "
+                        "with the nl_v1 writer.  In the future, this NaN "
+                        "will be preserved/emitted to comply with IEEE-754.",
+                        version='6.4.3')
+                    _prod = 0
+                return (_CONSTANT, _prod)
             return (_CONSTANT, mult*arg2[1])
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.product)
@@ -1694,34 +1819,55 @@ def handle_division_node(visitor, node, arg1, arg2):
         if div == 1:
             return arg1
         if arg1[0] is _MONOMIAL:
-            return (_MONOMIAL, arg1[1], arg1[2]/div)
+            tmp = _apply_node_operation(node, (arg1[2], div))
+            if tmp[1] != tmp[1]:
+                # This catches if the coefficient division results in nan
+                return tmp
+            return (_MONOMIAL, arg1[1], tmp[1])
         elif arg1[0] is _GENERAL:
-            arg1[1].mult /= div
+            tmp = _apply_node_operation(node, (arg1[1].mult, div))[1]
+            if tmp != tmp:
+                # This catches if the multiplier division results in nan
+                return _CONSTANT, tmp
+            arg1[1].mult = tmp
             return arg1
         elif arg1[0] is _CONSTANT:
-            return (_CONSTANT, arg1[1]/div)
+            return _apply_node_operation(node, (arg1[1], div))
+    elif arg1[0] is _CONSTANT and not arg1[1]:
+        return _CONSTANT, 0
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.division)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_pow_node(visitor, node, arg1, arg2):
+    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
+        return _apply_node_operation(node, (arg1[1], arg2[1]))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.pow)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_abs_node(visitor, node, arg1):
+    if arg1[0] is _CONSTANT:
+        return (_CONSTANT, abs(arg1[1]))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.abs)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_unary_node(visitor, node, arg1):
+    if arg1[0] is _CONSTANT:
+        return _apply_node_operation(node, (arg1[1],))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.unary[node.name])
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_exprif_node(visitor, node, arg1, arg2, arg3):
+    if arg1[0] is _CONSTANT:
+        if arg1[1]:
+            return arg2
+        else:
+            return arg3
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.exprif)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
@@ -1729,26 +1875,34 @@ def handle_exprif_node(visitor, node, arg1, arg2, arg3):
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_equality_node(visitor, node, arg1, arg2):
+    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
+        return (_CONSTANT, arg1[1] == arg2[1])
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.equality)
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_inequality_node(visitor, node, arg1, arg2):
+    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT:
+        return (_CONSTANT, node._apply_operation((arg1[1], arg2[1])))
     nonlin = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.strict_inequality_map[node.strict])
     nonlin = node_result_to_amplrepn(arg2).compile_repn(visitor, *nonlin)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_ranged_inequality_node(visitor, node, arg1, arg2, arg3):
+    if arg1[0] is _CONSTANT and arg2[0] is _CONSTANT and arg3[0] is _CONSTANT:
+        return (_CONSTANT, node._apply_operation((arg1[1], arg2[1], arg3[1])))
     op = visitor.template.strict_inequality_map[node.strict]
-    nl, args = node_result_to_amplrepn(arg1).compile_repn(
+    nl, args, named = node_result_to_amplrepn(arg1).compile_repn(
         visitor, visitor.template.and_expr + op[0])
-    nl2, args2 = node_result_to_amplrepn(arg2).compile_repn(visitor)
+    nl2, args2, named = node_result_to_amplrepn(arg2).compile_repn(
+        visitor, '', None, named)
     nl += nl2 + op[1] + nl2
     args.extend(args2)
     args.extend(args2)
-    nonlin = node_result_to_amplrepn(arg3).compile_repn(visitor, nl, args)
+    nonlin = node_result_to_amplrepn(arg3).compile_repn(
+        visitor, nl, args, named)
     return (_GENERAL, AMPLRepn(0, None, nonlin))
 
 def handle_named_expression_node(visitor, node, arg1):
@@ -1759,10 +1913,6 @@ def handle_named_expression_node(visitor, node, arg1):
     # definition.  We will return this as a "var" template, but
     # wrapped in the nonlinear portion of the expression tree.
     repn = node_result_to_amplrepn(arg1)
-
-    # When converting this shared subexpression to a (nonlinear)
-    # node, we want to just reference this subexpression:
-    repn.nl = (visitor.template.var, (_id,))
 
     # A local copy of the expression source list.  This will be updated
     # later if the same Expression node is encountered in another
@@ -1776,6 +1926,27 @@ def handle_named_expression_node(visitor, node, arg1):
     # expression tree that references this node (i.e., do NOT emit the V
     # line).
     expression_source = [None, None, False]
+    # Record this common expression
+    visitor.subexpression_cache[_id] = (
+        # 0: the "component" that generated this expression ID
+        node,
+        # 1: the common subexpression (to be written out)
+        repn,
+        # 2: the source usage information for this subexpression:
+        #    [(con_id, obj_id, substitute); see above]
+        expression_source,
+    )
+
+    if not visitor.use_named_exprs:
+        return _GENERAL, repn.duplicate()
+
+    mult, repn.mult = repn.mult, 1
+    if repn.named_exprs is None:
+        repn.named_exprs = set()
+
+    # When converting this shared subexpression to a (nonlinear)
+    # node, we want to just reference this subexpression:
+    repn.nl = (visitor.template.var, (_id,))
 
     if repn.nonlinear:
         # As we will eventually need the compiled form of any nonlinear
@@ -1797,24 +1968,24 @@ def handle_named_expression_node(visitor, node, arg1):
             # named subexpressions when appropriate.
             sub_node = NLFragment(repn, node)
             sub_id = id(sub_node)
-            sub_repn = AMPLRepn(0, None, repn.nonlinear)
+            sub_repn = AMPLRepn(0, None, None)
+            sub_repn.nonlinear = repn.nonlinear
             sub_repn.nl = (visitor.template.var, (sub_id,))
+            sub_repn.named_exprs = set(repn.named_exprs)
+
+            repn.named_exprs.add(sub_id)
+            repn.nonlinear = sub_repn.nl
+
             # See above for the meaning of this source information
             nl_info = list(expression_source)
             visitor.subexpression_cache[sub_id] = (
                 sub_node, sub_repn, nl_info,
             )
-            repn.nonlinear = sub_repn.nl
             # It is important that the NL subexpression comes before the
             # main named expression:
             visitor.subexpression_order.append(sub_id)
-            # The nonlinear identifier is *always* used
-            visitor.used_named_expressions.add(sub_id)
         else:
             nl_info = expression_source
-        # The nonlinear component of this named expression is
-        # guaranteed to be used by this expression
-        setitem(nl_info, *visitor.active_expression_source)
     else:
         repn.nonlinear = None
         if repn.linear:
@@ -1833,9 +2004,7 @@ def handle_named_expression_node(visitor, node, arg1):
             repn.nl = None
             expression_source[2] = True
 
-    if repn.mult != 1:
-        mult = repn.mult
-        repn.mult = 1
+    if mult != 1:
         repn.const *= mult
         if repn.linear:
             repn.linear = [(v, c*mult) for v, c in repn.linear]
@@ -1846,23 +2015,18 @@ def handle_named_expression_node(visitor, node, arg1):
                 prefix = visitor.template.multiplier % mult
             repn.nonlinear = prefix + repn.nonlinear[0], repn.nonlinear[1]
 
-    visitor.subexpression_cache[_id] = (
-        # 0: the "component" that generated this expression ID
-        node,
-        # 1: the common subexpression (to be written out)
-        repn,
-        # 2: the source usage information for this subexpression:
-        #    [(con_id, obj_id, substitute); see above]
-        expression_source,
-    )
+    if expression_source[2]:
+        if repn.linear:
+            return (_MONOMIAL, repn.linear[0][0], 1)
+        else:
+            return (_CONSTANT, repn.const)
+
+    # Defer recording this _id until after we know that this repn will
+    # not be directly substituted (and to ensure that the NL fragment is
+    # added to the order first).
     visitor.subexpression_order.append(_id)
-    ans = AMPLRepn(
-        repn.const,
-        list(repn.linear) if repn.linear is not None else repn.linear,
-        repn.nonlinear
-    )
-    ans.nl = repn.nl
-    return (_GENERAL, ans)
+
+    return (_GENERAL, repn.duplicate())
 
 def handle_external_function_node(visitor, node, *args):
     func = node._fcn._function
@@ -1876,7 +2040,7 @@ def handle_external_function_node(visitor, node, *args):
            for arg in args):
         arg_list = [arg[1] if arg[0] is _CONSTANT else arg[1].const
                     for arg in args]
-        return (_CONSTANT, node._apply_operation(arg_list))
+        return _apply_node_operation(node, arg_list)
     if func in visitor.external_functions:
         if node._fcn._library != visitor.external_functions[func][1]._library:
             raise RuntimeError(
@@ -1926,7 +2090,11 @@ _operator_handles = {
     # These are handled explicitly in beforeChild():
     # LinearExpression: handle_linear_expression,
     # SumExpression: handle_sum_expression,
-    # MonomialTermExpression: handle_monomial_term,
+    #
+    # Note: MonomialTermExpression is only hit when processing NPV
+    # subexpressions that raise errors (e.g., log(0) * m.x), so no
+    # special processing is needed [it is just a product expression]
+    MonomialTermExpression: handle_product_node,
 }
 
 
@@ -1934,7 +2102,7 @@ def _before_native(visitor, child):
     return False, (_CONSTANT, child)
 
 def _before_string(visitor, child):
-    ans = AMPLRepn(None, None, None)
+    ans = AMPLRepn(child, None, None)
     ans.nl = (visitor.template.string % (len(child), child), ())
     return False, (_GENERAL, ans)
 
@@ -1957,7 +2125,16 @@ def _before_npv(visitor, child):
     # else:
     #     child = visitor.value_cache[_id] = child()
     # return False, (_CONSTANT, child)
-    return False, (_CONSTANT, child())
+    try:
+        tmp = False, (_CONSTANT, child())
+        if tmp[1][1].__class__ is complex:
+            return True, None
+        return tmp
+    except:
+        # If there was an exception evaluating the subexpression, then
+        # we need to descend into it (in case there is something like 0 *
+        # nan that we need to map to 0)
+        return True, None
 
 def _before_monomial(visitor, child):
     #
@@ -1975,14 +2152,32 @@ def _before_monomial(visitor, child):
         #     arg1 = visitor.value_cache[_id]
         # else:
         #     arg1 = visitor.value_cache[_id] = arg1()
-        arg1 = arg1()
-    # Trap multiplication by 0
+        try:
+            arg1 = arg1()
+        except:
+            # If there was an exception evaluating the subexpression,
+            # then we need to descend into it (in case there is something
+            # like 0 * nan that we need to map to 0)
+            return True, None
+
+    if arg2.fixed:
+        arg2 = arg2.value
+        _prod = arg1 * arg2
+        if not (arg1 and arg2) and _prod:
+            deprecation_warning(
+                f"Encountered {arg1}*{arg2} in expression tree.  "
+                "Mapping the NaN result to 0 for compatibility "
+                "with the nl_v1 writer.  In the future, this NaN "
+                "will be preserved/emitted to comply with IEEE-754.",
+                version='6.4.3')
+            _prod = 0
+        return (_CONSTANT, _prod)
+
+    # Trap multiplication by 0.
     if not arg1:
         return False, (_CONSTANT, 0)
     _id = id(arg2)
     if _id not in visitor.var_map:
-        if arg2.fixed:
-            return False, (_CONSTANT, arg1 * arg2())
         visitor.var_map[_id] = arg2
     return False, (_MONOMIAL, _id, arg1)
 
@@ -2011,13 +2206,12 @@ def _before_named_expression(visitor, child):
     _id = id(child)
     if _id in visitor.subexpression_cache:
         obj, repn, info = visitor.subexpression_cache[_id]
-        ans = AMPLRepn(
-            repn.const,
-            list(repn.linear) if repn.linear is not None else repn.linear,
-            repn.nonlinear
-        )
-        ans.nl = repn.nl
-        return False, (_GENERAL, ans)
+        if info[2]:
+            if repn.linear:
+                return False, (_MONOMIAL, repn.linear[0][0], 1)
+            else:
+                return False, (_CONSTANT, repn.const)
+        return False, (_GENERAL, repn.duplicate())
     else:
         return True, None
 
@@ -2052,7 +2246,7 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def __init__(self, template, subexpression_cache, subexpression_order,
                  external_functions, var_map, used_named_expressions,
-                 symbolic_solver_labels):
+                 symbolic_solver_labels, use_named_exprs):
         super().__init__()
         self.template = template
         self.subexpression_cache = subexpression_cache
@@ -2062,9 +2256,8 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         self.var_map = var_map
         self.used_named_expressions = used_named_expressions
         self.symbolic_solver_labels = symbolic_solver_labels
+        self.use_named_exprs = use_named_exprs
         #self.value_cache = {}
-        self._before_child_handlers = _before_child_handlers
-        self._operator_handles = _operator_handles
 
     def initializeWalker(self, expr):
         expr, src, src_idx = expr
@@ -2076,16 +2269,18 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
 
     def beforeChild(self, node, child, child_idx):
         try:
-            return self._before_child_handlers[child.__class__](self, child)
+            return _before_child_handlers[child.__class__](self, child)
         except KeyError:
             self._register_new_before_child_processor(child)
-        return self._before_child_handlers[child.__class__](self, child)
+        return _before_child_handlers[child.__class__](self, child)
 
     def enterNode(self, node):
         # SumExpression are potentially large nary operators.  Directly
         # populate the result
         if node.__class__ is SumExpression:
-            return node.args, AMPLRepn(0, [], [])
+            data = AMPLRepn(0, [], None)
+            data.nonlinear = []
+            return node.args, data
         else:
             return node.args, []
 
@@ -2099,15 +2294,11 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         #
         # General expressions...
         #
-        if all(arg[0] is _CONSTANT for arg in data):
-            return (
-                _CONSTANT, node._apply_operation(list(map(
-                    itemgetter(1), data)))
-            )
-        return self._operator_handles[node.__class__](self, node, *data)
+        return _operator_handles[node.__class__](self, node, *data)
 
     def finalizeResult(self, result):
         ans = node_result_to_amplrepn(result)
+
         # If this was a nonlinear named expression, and that expression
         # has no linear portion, then we will directly use this as a
         # named expression.  We need to mark that the expression was
@@ -2118,24 +2309,37 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
         # this outer named expression).  This prevents accidentally
         # recharacterizing variables that only appear linearly as
         # nonlinear variables.
-        if ans.nl and ans.nonlinear:
-            if ans.linear:
-                self._mark_named_expression_as_used(ans.nonlinear[1])
-            else:
-                self._mark_named_expression_as_used(ans.nl[1])
+        if ans.nl is not None:
+            if not ans.nl[1]:
+                raise ValueError(
+                    "Numeric expression resolved to a string constant")
+            # This *is* a named subexpression.  If there is no linear
+            # component, then replace this expression with the named
+            # expression.  The mult will be handled later.  We know that
+            # the const is built into the nonlinear expression, because
+            # it cannot be changed "in place" (only through addition,
+            # which would have "cleared" the nl attribute)
+            if not ans.linear:
+                ans.named_exprs.update(ans.nl[1])
                 ans.nonlinear = ans.nl
-
-        ans.nl = None
+                ans.const = 0
+            else:
+                # This named expression has both a linear and a
+                # nonlinear component, and possibly a multiplier and
+                # constant.  We will not include this named expression
+                # and instead will expose the components so that linear
+                # variables are not accidentally re-characterized as
+                # nonlinear.
+                pass
+                #ans.nonlinear = orig.nonlinear
+            ans.nl = None
 
         if ans.nonlinear.__class__ is list:
-            if ans.nonlinear:
-                ans.compile_nonlinear_fragment(self)
-            else:
-                ans.nonlinear = None
+            ans.compile_nonlinear_fragment(self)
+
         linear = {}
         if ans.mult != 1:
-            mult = ans.mult
-            ans.mult = 1
+            mult, ans.mult = ans.mult, 1
             ans.const *= mult
             if ans.linear:
                 for v, c in ans.linear:
@@ -2149,7 +2353,6 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 else:
                     prefix = self.template.multiplier % mult
                 ans.nonlinear = prefix + ans.nonlinear[0], ans.nonlinear[1]
-
         elif ans.linear:
             for v, c in ans.linear:
                 if v in linear:
@@ -2177,19 +2380,21 @@ class AMPLRepnVisitor(StreamBasedExpressionVisitor):
                 handlers[child_type] = _before_npv
         elif not child.is_potentially_variable():
             handlers[child_type] = _before_npv
-        elif id(child) in self.subexpression_cache:
+            # If we descend into the named expression (because of an
+            # evaluation error), then on the way back out, we will use
+            # the potentially variable handler to process the result.
+            pv_base_type = child.potentially_variable_base_class()
+            if pv_base_type not in handlers:
+                try:
+                    child.__class__ = pv_base_type
+                    _register_new_before_child_processor(self, child)
+                finally:
+                    child.__class__ = child_type
+            if pv_base_type in _operator_handles:
+                _operator_handles[child_type] = _operator_handles[pv_base_type]
+        elif ( id(child) in self.subexpression_cache or
+               issubclass(child_type, _GeneralExpressionData) ):
             handlers[child_type] = _before_named_expression
+            _operator_handles[child_type] = handle_named_expression_node
         else:
             handlers[child_type] = _before_general_expression
-
-    def _mark_named_expression_as_used(self, ref):
-        assert len(ref) == 1
-        _named_expr_id = ref[0]
-        self.used_named_expressions.add(_named_expr_id)
-        # Record that this named expression was used
-        info = self.subexpression_cache[_named_expr_id][2]
-        _idx = self.active_expression_source[0]
-        if info[_idx] is None:
-            info[_idx] = self.active_expression_source[1]
-        elif info[_idx] != self.active_expression_source[1]:
-            info[_idx] = 0

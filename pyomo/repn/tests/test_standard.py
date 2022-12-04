@@ -20,6 +20,7 @@ currdir = dirname(abspath(__file__))+os.sep
 import pyomo.common.unittest as unittest
 
 from pyomo.core.expr.current import Expr_if
+from pyomo.core.expr.visitor import replace_expressions
 from pyomo.core.expr import current as EXPR
 from pyomo.repn import generate_standard_repn
 from pyomo.environ import AbstractModel, ConcreteModel, Var, Param, Set, Expression, RangeSet, ExternalFunction, quicksum, cos, sin, summation, sum_product
@@ -4218,6 +4219,20 @@ class Test(unittest.TestCase):
 
         e = Foo()
         self.assertRaises(AttributeError, generate_standard_repn, e)
+
+    def test_unexpectedly_NPV(self):
+        # This situation arose in PyROS development
+        m = ConcreteModel()
+        m.x = Var()
+        m.y = Var()
+        m.p = Param(mutable=True, initialize=0)
+        e = m.y*cos(m.x/2)
+
+        # Replacing Var with a Param results in a NPV product expression
+        # as the single argument of a regular (non-NPV) unary function.
+        e1 = replace_expressions(e, {id(m.x): m.p})
+        rep = generate_standard_repn(e1, compute_values=True)
+        self.assertEqual(str(rep.to_expression()), "y")
 
 
 if __name__ == "__main__":

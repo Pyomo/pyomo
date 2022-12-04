@@ -18,9 +18,9 @@ import builtins
 from pyomo.core.expr.expr_errors import TemplateExpressionError
 from pyomo.core.expr.numvalue import (
     NumericValue, native_types, nonpyomo_leaf_types,
-    as_numeric, value,
+    as_numeric, value, is_constant
 )
-from pyomo.core.expr.numeric_expr import ExpressionBase, SumExpression
+from pyomo.core.expr.numeric_expr import NumericExpression, SumExpression
 from pyomo.core.expr.visitor import (
     ExpressionReplacementVisitor, StreamBasedExpressionVisitor
 )
@@ -29,14 +29,11 @@ logger = logging.getLogger(__name__)
 
 class _NotSpecified(object): pass
 
-class GetItemExpression(ExpressionBase):
+class GetItemExpression(NumericExpression):
     """
     Expression to call :func:`__getitem__` on the base object.
     """
     PRECEDENCE = 1
-
-    def _precedence(self):
-        return GetItemExpression.PRECEDENCE
 
     def __init__(self, args):
         """Construct an expression with an operation and a set of arguments"""
@@ -108,17 +105,13 @@ class GetItemExpression(ExpressionBase):
         return ans
 
     def _apply_operation(self, result):
-        obj = result[0].__getitem__( tuple(result[1:]) )
-        if obj.__class__ in nonpyomo_leaf_types:
-            return obj
-        # Note that because it is possible (likely) that the result
-        # could be an IndexedComponent_slice object, must test "is
-        # True", as the slice will return a list of values.
-        if obj.is_numeric_type() is True:
-            obj = value(obj)
-        return obj
+        args = tuple(
+            arg if arg.__class__ in native_types or not arg.is_numeric_type()
+            else value(arg)
+            for arg in result[1:])
+        return result[0].__getitem__( tuple(result[1:]) )
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         values = tuple(_[1:-1] if _[0]=='(' and _[-1]==')' else _
                        for _ in values)
         if verbose:
@@ -129,15 +122,90 @@ class GetItemExpression(ExpressionBase):
         return args[0].__getitem__(tuple(args[1:]))
 
 
-class GetAttrExpression(ExpressionBase):
+class GetAttrExpression(NumericExpression):
     """
     Expression to call :func:`__getattr__` on the base object.
     """
     __slots__ = ()
     PRECEDENCE = 1
 
-    def _precedence(self):
-        return GetAttrExpression.PRECEDENCE
+    def nargs(self):
+        return len(self._args_)
+
+    def __getattr__(self, attr):
+        if attr.startswith('__') and attr.endswith('__'):
+            raise AttributeError()
+        return GetAttrExpression((self, attr))
+
+    def __getitem__(self, *idx):
+        return GetItemExpression((self,) + idx)
+
+    def __iter__(self):
+        return iter(value(self))
+
+    def __len__(self):
+        return len(value(self))
+
+    def __call__(self, *args, **kwargs):
+        """
+        Return the value of this object.
+        """
+        # Backwards compatibility with __call__(exception):
+        #
+        # TODO: deprecate (then remove) evaluating expressions by
+        # "calling" them.
+        if not args:
+            if not kwargs:
+                return super().__call__()
+            elif len(kwargs) == 1 and 'exception' in kwargs:
+                return super().__call__(**kwargs)
+        elif not kwargs and len(args) == 1 and (
+                args[0] is True or args[0] is False):
+            return super().__call__(*args)
+        # Note: the only time we will implicitly create a CallExpression
+        # node is directly after a GetAttrExpression: that is, someone
+        # got the attribute (method) and is now calling it.
+        # Implementing the auto-generation of CallExpression in other
+        # contexts is likely to be confounded with evaluating expressions.
+        return CallExpression((self,) + args, kwargs)
+
+    def getname(self, *args, **kwds):
+        return 'getattr'
+
+    def _compute_polynomial_degree(self, result):
+        if result[1] != 0:
+            return None
+        return result[0]
+
+    def _apply_operation(self, result):
+        assert len(result) == 2
+        return getattr(result[0], result[1])
+
+    def _to_string(self, values, verbose, smap):
+        assert len(values) == 2
+        if verbose:
+            return "getattr(%s, %s)" % tuple(values)
+        # Note that the string argument for getattr comes quoted, so we
+        # need to remove the quotes.
+        attr = values[1]
+        if attr[0] in '\"\'' and attr[0] == attr[-1]:
+            attr = attr[1:-1]
+        return "%s.%s" % (values[0], attr)
+
+    def _resolve_template(self, args):
+        return getattr(*tuple(args))
+
+
+class CallExpression(NumericExpression):
+    """
+    Expression to call :func:`__call__` on the base object.
+    """
+    __slots__ = ('_kwds',)
+    PRECEDENCE = None
+
+    def __init__(self, args, kwargs):
+        self._args_ = tuple(args) + tuple(kwargs.values())
+        self._kwds = tuple(kwargs.keys())
 
     def nargs(self):
         return len(self._args_)
@@ -157,38 +225,31 @@ class GetAttrExpression(ExpressionBase):
         return len(value(self))
 
     def getname(self, *args, **kwds):
-        return 'getattr'
+        return 'call'
 
     def _compute_polynomial_degree(self, result):
-        if result[1] != 0:
-            return None
-        return result[0]
+        return None
 
     def _apply_operation(self, result):
-        assert len(result) == 2
-        obj = getattr(result[0], result[1])
-        if obj.__class__ in nonpyomo_leaf_types:
-            return obj
-        # Note that because it is possible (likely) that the result
-        # could be an IndexedComponent_slice object, must test "is
-        # True", as the slice will return a list of values.
-        if obj.is_numeric_type() is True:
-            obj = value(obj)
-        return obj
+        na = len(self._args_) - len(self._kwds)
+        return result[0](*result[1:na], **dict(zip(self._kwds, result[na:])))
 
-    def _to_string(self, values, verbose, smap, compute_values):
-        assert len(values) == 2
+    def _to_string(self, values, verbose, smap):
+        na = len(self._args_) - len(self._kwds)
+        args = ', '.join(values[1:na])
+        if self._kwds:
+            if na > 1:
+                args += ', '
+            args += ', '.join(
+                f'{key}={val}' for key, val in
+                zip(self._kwds, values[na:])
+            )
         if verbose:
-            return "getattr(%s, %s)" % tuple(values)
-        # Note that the string argument for getattr comes quoted, so we
-        # need to remove the quotes.
-        attr = values[1]
-        if attr[0] in '\"\'' and attr[0] == attr[-1]:
-            attr = attr[1:-1]
-        return "%s.%s" % (values[0], attr)
+            return f"call({values[0]}, {args})"
+        return f"{values[0]}({args})"
 
     def _resolve_template(self, args):
-        return getattr(*tuple(args))
+        return self._apply_operation(args)
 
 
 class _TemplateSumExpression_argList(object):
@@ -267,15 +328,12 @@ class _TemplateSumExpression_argList(object):
                     iterGroup[j].set_value(v, self._lock)
 
 
-class TemplateSumExpression(ExpressionBase):
+class TemplateSumExpression(NumericExpression):
     """
     Expression to represent an unexpanded sum over one or more sets.
     """
     __slots__ = ('_iters', '_local_args_')
     PRECEDENCE = 1
-
-    def _precedence(self):
-        return TemplateSumExpression.PRECEDENCE
 
     def __init__(self, args, _iters):
         assert len(args) == 1
@@ -305,12 +363,6 @@ class TemplateSumExpression(ExpressionBase):
     def create_node_with_local_data(self, args):
         return self.__class__(args, self._iters)
 
-    def __getstate__(self):
-        state = super(TemplateSumExpression, self).__getstate__()
-        for i in TemplateSumExpression.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
     def getname(self, *args, **kwds):
         return "SUM"
 
@@ -331,7 +383,7 @@ class TemplateSumExpression(ExpressionBase):
     def _apply_operation(self, result):
         return sum(result)
 
-    def _to_string(self, values, verbose, smap, compute_values):
+    def _to_string(self, values, verbose, smap):
         ans = ''
         val = values[0]
         if val[0]=='(' and val[-1]==')' and _balanced_parens(val[1:-1]):
@@ -378,19 +430,10 @@ class IndexTemplate(NumericValue):
         self._id = _id
         self._lock = None
 
-    def __getstate__(self):
-        """
-        This method must be defined because this class uses slots.
-        """
-        state = super(IndexTemplate, self).__getstate__()
-        for i in IndexTemplate.__slots__:
-            state[i] = getattr(self, i)
-        return state
-
     def __deepcopy__(self, memo):
-        # Because we leverage deepcopy for expression cloning, we need
-        # to see if this is a clone operation and *not* copy the
-        # template.
+        # Because we leverage deepcopy for expression/component cloning,
+        # we need to see if this is a Component.clone() operation and
+        # *not* copy the template.
         #
         # TODO: JDS: We should consider converting the IndexTemplate to
         # a proper Component: that way it could leverage the normal
@@ -402,9 +445,7 @@ class IndexTemplate(NumericValue):
         #
         # "Normal" deepcopying outside the context of pyomo.
         #
-        ans = memo[id(self)] = self.__class__.__new__(self.__class__)
-        ans.__setstate__(copy.deepcopy(self.__getstate__(), memo))
-        return ans
+        return super().__deepcopy__(memo)
 
     # Note: because NONE of the slots on this class need to be edited,
     # we don't need to implement a specialized __setstate__ method.
@@ -431,12 +472,6 @@ class IndexTemplate(NumericValue):
         Returns True because this value is fixed.
         """
         return True
-
-    def is_constant(self):
-        """
-        Returns False because this cannot immediately be simplified.
-        """
-        return False
 
     def is_potentially_variable(self):
         """Returns False because index values cannot be variables.
@@ -517,7 +552,10 @@ def resolve_template(expr):
         if len(args) == node.nargs() and all(
                 a is b for a,b in zip(node.args, args)):
             return node
-        return node.create_node_with_local_data(args)
+        if all(map(is_constant, args)):
+            return node._apply_operation(args)
+        else:
+            return node.create_node_with_local_data(args)
 
     return StreamBasedExpressionVisitor(
         initializeWalker=lambda x: beforeChild(None, x, None),

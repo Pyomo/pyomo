@@ -1096,7 +1096,7 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
     This walker propagates bounds from the variables to each node in
     the expression tree (all the way to the root node).
     """
-    def __init__(self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8):
+    def __init__(self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8, ignore_fixed=False):
         """
         Parameters
         ----------
@@ -1112,6 +1112,7 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
         self.bnds_dict = bnds_dict
         self.integer_tol = integer_tol
         self.feasibility_tol = feasibility_tol
+        self.ignore_fixed = ignore_fixed
 
     def visit(self, node, values):
         if node.__class__ in _prop_bnds_leaf_to_root_map:
@@ -1128,7 +1129,7 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
         if node.is_variable_type():
             if node in self.bnds_dict:
                 return True, None
-            if node.is_fixed():
+            if node.is_fixed() and not self.ignore_fixed:
                 lb = value(node.value)
                 ub = lb
             else:
@@ -1524,13 +1525,13 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
     return new_var_bounds
 
 
-def compute_bounds_on_expr(expr):
+def compute_bounds_on_expr(expr, ignore_fixed=False):
     """
     Compute bounds on an expression based on the bounds on the variables in the expression.
 
     Parameters
     ----------
-    expr: pyomo.core.expr.numeric_expr.ExpressionBase
+    expr: pyomo.core.expr.numeric_expr.NumericExpression
 
     Returns
     -------
@@ -1538,7 +1539,7 @@ def compute_bounds_on_expr(expr):
     ub: float
     """
     bnds_dict = ComponentMap()
-    visitor = _FBBTVisitorLeafToRoot(bnds_dict)
+    visitor = _FBBTVisitorLeafToRoot(bnds_dict, ignore_fixed=ignore_fixed)
     visitor.dfs_postorder_stack(expr)
     lb, ub = bnds_dict[expr]
     if lb == -interval.inf:

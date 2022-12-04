@@ -1,4 +1,4 @@
-from pyomo.contrib.pynumero.interfaces.nlp import NLP
+from pyomo.contrib.pynumero.interfaces.nlp import NLP, ExtendedNLP
 import numpy as np
 import scipy.sparse as sp
 
@@ -103,6 +103,35 @@ class _BaseNLPDelegator(NLP):
 
     def report_solver_status(self, status_code, status_message):
         self._original_nlp.report_solver_status(status_code, status_message)
+
+
+class _ExtendedNLPDelegator(_BaseNLPDelegator):
+
+    def __init__(self, original_nlp):
+        if not isinstance(original_nlp, ExtendedNLP):
+            raise TypeError(
+                "Original NLP must be an instance of ExtendedNLP to use in"
+                " an _ExtendedNLPDelegator. Got type %s" % type(original_nlp)
+            )
+        super().__init__(original_nlp)
+
+    def n_eq_constraints(self):
+        return self._original_nlp.n_eq_constraints()
+
+    def n_ineq_constraints(self):
+        return self._original_nlp.n_ineq_constraints()
+
+    def evaluate_eq_constraints(self):
+        return self._original_nlp.evaluate_eq_constraints()
+
+    def evaluate_jacobian_eq(self):
+        return self._original_nlp.evaluate_jacobian_eq()
+
+    def evaluate_ineq_constraints(self):
+        return self._original_nlp.evaluate_ineq_constraints()
+
+    def evaluate_jacobian_ineq(self):
+        return self._original_nlp.evaluate_jacobian_ineq()
 
 
 class RenamedNLP(_BaseNLPDelegator):
@@ -262,7 +291,7 @@ class ProjectedNLP(_BaseNLPDelegator):
         if out is not None:
             np.copyto(out.data, original_jacobian.data[self._jacobian_nz_mask])
             return out
-        
+
         row = original_jacobian.row
         col = original_jacobian.col
         data = original_jacobian.data
@@ -302,3 +331,62 @@ class ProjectedNLP(_BaseNLPDelegator):
 
     def report_solver_status(self, status_code, status_message):
         raise NotImplementedError('Need to think about this...')
+
+
+class ProjectedExtendedNLP(ProjectedNLP, _ExtendedNLPDelegator):
+
+    def __init__(self, original_nlp, primals_ordering):
+        super(ProjectedExtendedNLP, self).__init__(original_nlp, primals_ordering)
+        self._jacobian_eq_nz_mask = None
+        self._jacobian_ineq_nz_mask = None
+
+    def evaluate_jacobian_eq(self, out=None):
+        original_jacobian = self._original_nlp.evaluate_jacobian_eq()
+        if out is not None:
+            np.copyto(
+                out.data, original_jacobian.data[self._jacobian_eq_nz_mask]
+            )
+            return out
+
+        row = original_jacobian.row
+        col = original_jacobian.col
+        data = original_jacobian.data
+
+        if self._jacobian_eq_nz_mask is None:
+            # need to remap the irow, jcol to the new space and change the size
+            self._jacobian_eq_nz_mask = np.isin(col, self._original_idxs)
+
+        new_col = col[self._jacobian_eq_nz_mask]
+        new_col = self._original_to_projected[new_col]
+        new_row = row[self._jacobian_eq_nz_mask]
+        new_data = data[self._jacobian_eq_nz_mask]
+
+        return sp.coo_matrix(
+            (new_data, (new_row, new_col)),
+            shape=(self.n_eq_constraints(), self.n_primals()),
+        )
+
+    def evaluate_jacobian_ineq(self, out=None):
+        original_jacobian = self._original_nlp.evaluate_jacobian_ineq()
+        if out is not None:
+            np.copyto(
+                out.data, original_jacobian.data[self._jacobian_ineq_nz_mask]
+            )
+            return out
+
+        row = original_jacobian.row
+        col = original_jacobian.col
+        data = original_jacobian.data
+
+        if self._jacobian_ineq_nz_mask is None:
+            self._jacobian_ineq_nz_mask = np.isin(col, self._original_idxs)
+
+        new_col = col[self._jacobian_ineq_nz_mask]
+        new_col = self._original_to_projected[new_col]
+        new_row = row[self._jacobian_ineq_nz_mask]
+        new_data = data[self._jacobian_ineq_nz_mask]
+
+        return sp.coo_matrix(
+            (new_data, (new_row, new_col)),
+            shape=(self.n_ineq_constraints(), self.n_primals()),
+        )

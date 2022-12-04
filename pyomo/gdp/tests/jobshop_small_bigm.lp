@@ -36,37 +36,37 @@ c_e__pyomo_gdp_bigm_reformulation_disj_xor(B_C_2)_:
 +1 NoClash(B_C_2_1)_binary_indicator_var
 = 1
 
-c_u__pyomo_gdp_bigm_reformulation_relaxedDisjuncts(0)__NoClash(A_B_3_0)_c_(ub)_:
+c_u__pyomo_gdp_bigm_reformulation_relaxedDisjuncts(0)_transformedConstraints(c_0_None_ub)_:
 +19 NoClash(A_B_3_0)_binary_indicator_var
 -1 t(A)
 +1 t(B)
 <= 19
 
-c_u__pyomo_gdp_bigm_reformulation_relaxedDisjuncts(1)__NoClash(A_B_3_1)_c_(ub)_:
+c_u__pyomo_gdp_bigm_reformulation_relaxedDisjuncts(1)_transformedConstraints(c_0_None_ub)_:
 +24 NoClash(A_B_3_1)_binary_indicator_var
 +1 t(A)
 -1 t(B)
 <= 19
 
-c_u__pyomo_gdp_bigm_reformulation_relaxedDisjuncts(2)__NoClash(A_C_1_0)_c_(ub)_:
+c_u__pyomo_gdp_bigm_reformulation_relaxedDisjuncts(2)_transformedConstraints(c_0_None_ub)_:
 +21 NoClash(A_C_1_0)_binary_indicator_var
 -1 t(A)
 +1 t(C)
 <= 19
 
-c_u__pyomo_gdp_bigm_reformulation_relaxedDisjuncts(3)__NoClash(A_C_1_1)_c_(ub)_:
+c_u__pyomo_gdp_bigm_reformulation_relaxedDisjuncts(3)_transformedConstraints(c_0_None_ub)_:
 +24 NoClash(A_C_1_1)_binary_indicator_var
 +1 t(A)
 -1 t(C)
 <= 19
 
-c_u__pyomo_gdp_bigm_reformulation_relaxedDisjuncts(4)__NoClash(B_C_2_0)_c_(ub)_:
+c_u__pyomo_gdp_bigm_reformulation_relaxedDisjuncts(4)_transformedConstraints(c_0_None_ub)_:
 +25 NoClash(B_C_2_0)_binary_indicator_var
 -1 t(B)
 +1 t(C)
 <= 19
 
-c_u__pyomo_gdp_bigm_reformulation_relaxedDisjuncts(5)__NoClash(B_C_2_1)_c_(ub)_:
+c_u__pyomo_gdp_bigm_reformulation_relaxedDisjuncts(5)_transformedConstraints(c_0_None_ub)_:
 +20 NoClash(B_C_2_1)_binary_indicator_var
 +1 t(B)
 -1 t(C)

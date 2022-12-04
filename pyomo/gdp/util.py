@@ -15,9 +15,9 @@ from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.component import _ComponentBase
 from pyomo.core import (
-    Block, TraversalStrategy, SortComponents, LogicalConstraint)
+    Block, Suffix, TraversalStrategy, SortComponents, LogicalConstraint, value)
 from pyomo.core.base.block import _BlockData
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
 from pyomo.opt import TerminationCondition, SolverStatus
 
 from weakref import ref as weakref_ref
@@ -85,34 +85,72 @@ def clone_without_expression_components(expr, substitute=None):
                                                 remove_named_expressions=True)
     return visitor.walk_expression(expr)
 
+def _raise_disjunct_in_multiple_disjunctions_error(disjunct, disjunction):
+    # we've transformed it, which means this is the second time it's appearing
+    # in a Disjunction
+    raise GDP_Error(
+        "The disjunct '%s' has been transformed, but '%s', a disjunction "
+        "it appears in, has not. Putting the same disjunct in "
+        "multiple disjunctions is not supported." % (disjunct.name,
+                                                     disjunction.name))
+
 class GDPTree:
     def __init__(self):
         self._adjacency_list = {}
-        self._in_degrees = defaultdict(lambda: 0)
+        self._in_degrees = {}
+        # Every node has exactly one or 0 parents.
+        self._parent = {}
+
+        self._root_disjunct = {}
         # This needs to be ordered so that topological sort is deterministic
-        self._vertices = []
+        self._vertices = OrderedSet()
 
     @property
     def vertices(self):
         return self._vertices
 
     def add_node(self, u):
-        if u not in self._vertices:
-            self._vertices.append(u)
+        self._vertices.add(u)
 
-    def _update_in_degree(self, v):
-        self._in_degrees[v] += 1
+    def parent(self, u):
+        """Returns the parent node of u, or None if u is a root.
+
+        Arg:
+            u : A node in the tree
+        """
+        if u not in self._vertices:
+            raise ValueError("'%s' is not a vertex in the GDP tree. Cannot "
+                             "retrieve its parent." % u)
+        if u in self._parent:
+            return self._parent[u]
+        else:
+            return None
+
+    def root_disjunct(self, u):
+        """ Returns the highest parent Disjunct in the hierarchy, or None if
+        the component is not nested.
+
+        Arg:
+            u : A node in the tree
+        """
+        rootmost_disjunct = None
+        parent = self.parent(u)
+        while True:
+            if parent is None:
+                return rootmost_disjunct
+            if isinstance(parent, _DisjunctData) or parent.ctype is Disjunct:
+                rootmost_disjunct = parent
+            parent = self.parent(parent)
 
     def add_edge(self, u, v):
-        if u in self._adjacency_list:
-            self._adjacency_list[u].append(v)
-        else:
-            self._adjacency_list[u] = [v]
-        self._update_in_degree(v)
-        if u not in self._vertices:
-            self._vertices.append(u)
-        if v not in self._vertices:
-            self._vertices.append(v)
+        if u not in self._adjacency_list:
+            self._adjacency_list[u] = OrderedSet()
+        self._adjacency_list[u].add(v)
+        if v in self._parent and self._parent[v] is not u:
+            _raise_disjunct_in_multiple_disjunctions_error(v, u)
+        self._parent[v] = u
+        self._vertices.add(u)
+        self._vertices.add(v)
 
     def _visit_vertex(self, u, leaf_to_root):
         if u in self._adjacency_list:
@@ -120,12 +158,12 @@ class GDPTree:
                 if v not in leaf_to_root:
                     self._visit_vertex(v, leaf_to_root)
         # we're done--we've been to all its children
-        leaf_to_root.append(u)
+        leaf_to_root.add(u)
 
-    def _topological_sort(self):
-        # this is reverse of the list we should return (but happens to be what
-        # we want for hull and bigm)
-        leaf_to_root = []
+    def _reverse_topological_iterator(self):
+        # this returns nodes of the tree ordered so that no node is before any
+        # of its decendents.
+        leaf_to_root = OrderedSet()
         for u in self.vertices:
             if u not in leaf_to_root:
                 self._visit_vertex(u, leaf_to_root)
@@ -133,13 +171,16 @@ class GDPTree:
         return leaf_to_root
 
     def topological_sort(self):
-        return reversed(self._topological_sort())
+        return list(reversed(self._reverse_topological_iterator()))
 
     def reverse_topological_sort(self):
-        return self._topological_sort()
+        return self._reverse_topological_iterator()
 
     def in_degree(self, u):
-        return self._in_degrees[u]
+        if u not in self._parent:
+            return 0
+        return 1
+
 
 def _parent_disjunct(obj):
     parent = obj.parent_block()
@@ -150,12 +191,36 @@ def _parent_disjunct(obj):
 
     return None
 
-def _gather_disjunctions(block, gdp_tree):
+def _check_properly_deactivated(disjunct):
+    if disjunct.indicator_var.is_fixed():
+        if not value(disjunct.indicator_var):
+            # The user cleanly deactivated the disjunct: there
+            # is nothing for us to do here.
+            return
+        else:
+            raise GDP_Error(
+                "The disjunct '%s' is deactivated, but the "
+                "indicator_var is fixed to %s. This makes no sense."
+                % ( disjunct.name, value(disjunct.indicator_var) ))
+    if disjunct._transformation_block is None:
+        raise GDP_Error(
+            "The disjunct '%s' is deactivated, but the "
+            "indicator_var is not fixed and the disjunct does not "
+            "appear to have been transformed. This makes no sense. "
+            "(If the intent is to deactivate the disjunct, fix its "
+            "indicator_var to False.)"
+            % ( disjunct.name, ))
+
+def _gather_disjunctions(block, gdp_tree, include_root=True):
+    if not include_root:
+        # The argument 'block' may be a root node (it was in the list of
+        # targets): We will not add it to the tree in this call. It may be added
+        # later if in fact it is a descendent of another target, but as far as
+        # we know now, it does not belong in the tree.
+        root = block
     to_explore = [block]
     while to_explore:
         block = to_explore.pop()
-        if block.ctype is Disjunct:
-            gdp_tree.add_node(block)
         for disjunction in block.component_data_objects(
                 Disjunction,
                 active=True,
@@ -166,10 +231,16 @@ def _gather_disjunctions(block, gdp_tree):
             gdp_tree.add_node(disjunction)
             for disjunct in disjunction.disjuncts:
                 if not disjunct.active:
+                    if disjunct.transformation_block is not None:
+                            _raise_disjunct_in_multiple_disjunctions_error(
+                                disjunct, disjunction)
+                    _check_properly_deactivated(disjunct)
                     continue
                 gdp_tree.add_edge(disjunction, disjunct)
                 to_explore.append(disjunct)
             if block.ctype is Disjunct:
+                if not include_root and block is root:
+                    continue
                 gdp_tree.add_edge(block, disjunction)
 
     return gdp_tree
@@ -187,16 +258,24 @@ def get_gdp_tree(targets, instance, knownBlocks):
             for block in _blocks:
                 if not block.active:
                     continue
-                gdp_tree = _gather_disjunctions(block, gdp_tree)
+                gdp_tree = _gather_disjunctions(block, gdp_tree,
+                                                include_root=False)
         elif t.ctype is Disjunction:
             parent = _parent_disjunct(t)
             if parent is not None and parent in targets:
                 gdp_tree.add_edge(parent, t)
             _disjunctions = t.values() if t.is_indexed() else (t,)
             for disjunction in _disjunctions:
+                if disjunction.algebraic_constraint is not None:
+                    # It's already transformed.
+                    continue
                 gdp_tree.add_node(disjunction)
                 for disjunct in disjunction.disjuncts:
                     if not disjunct.active:
+                        if disjunct.transformation_block is not None:
+                            _raise_disjunct_in_multiple_disjunctions_error(
+                                disjunct, disjunction)
+                        _check_properly_deactivated(disjunct)
                         continue
                     gdp_tree.add_edge(disjunction, disjunct)
                     gdp_tree = _gather_disjunctions(disjunct, gdp_tree)
@@ -209,10 +288,11 @@ def get_gdp_tree(targets, instance, knownBlocks):
                 % (t.name, type(t)) )
     return gdp_tree
 
-def preprocess_targets(targets, instance, knownBlocks):
-    gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
-    # this is for bigm and hull: We need to transform from the leaves up, so we
-    # want a reverse of a topological sort: no parent can come before its child.
+def preprocess_targets(targets, instance, knownBlocks, gdp_tree=None):
+    if gdp_tree is None:
+        gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
+    # this is for bigm: We need to transform from the leaves up, so we want a
+    # reverse of a topological sort: no parent can come before its child.
     return gdp_tree.reverse_topological_sort()
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
@@ -291,12 +371,12 @@ def get_src_disjunct(transBlock):
     transBlock: _BlockData which is in the relaxedDisjuncts IndexedBlock
                 on a transformation block.
     """
-    if not hasattr(transBlock, "_srcDisjunct") or \
-       type(transBlock._srcDisjunct) is not weakref_ref:
+    if not hasattr(transBlock, "_src_disjunct") or \
+       type(transBlock._src_disjunct) is not weakref_ref:
         raise GDP_Error("Block '%s' doesn't appear to be a transformation "
                         "block for a disjunct. No source disjunct found."
                         % transBlock.name)
-    return transBlock._srcDisjunct()
+    return transBlock._src_disjunct()
 
 def get_src_constraint(transformedConstraint):
     """Return the original Constraint whose transformed counterpart is
@@ -366,29 +446,6 @@ def get_transformed_constraints(srcConstraint):
         logger.error("Constraint '%s' has not been transformed."
                      % srcConstraint.name)
         raise
-
-def _warn_for_active_disjunction(disjunction, disjunct):
-    # this should only have gotten called if the disjunction is active
-    assert disjunction.active
-    problemdisj = disjunction
-    if disjunction.is_indexed():
-        for i in sorted(disjunction.keys()):
-            if disjunction[i].active:
-                # a _DisjunctionData is active, we will yell about
-                # it specifically.
-                problemdisj = disjunction[i]
-                break
-
-    parentblock = problemdisj.parent_block()
-    # the disjunction should only have been active if it wasn't transformed
-    assert problemdisj.algebraic_constraint is None
-    _probDisjName = problemdisj.getname(fully_qualified=True)
-    _disjName = disjunct.getname(fully_qualified=True)
-    raise GDP_Error("Found untransformed disjunction '%s' in disjunct '%s'! "
-                    "The disjunction must be transformed before the "
-                    "disjunct. If you are using targets, put the "
-                    "disjunction before the disjunct in the list."
-                    % (_probDisjName, _disjName))
 
 def _warn_for_active_disjunct(innerdisjunct, outerdisjunct):
     assert innerdisjunct.active
@@ -465,7 +522,7 @@ def check_model_algebraic(instance):
                 return False
 
     for cons in instance.component_data_objects(LogicalConstraint,
-                                                descend_into=Block, 
+                                                descend_into=Block,
                                                 active=True):
         if cons.active:
             logger.warning('LogicalConstraint "%s" is currently active. It '
@@ -500,3 +557,67 @@ def _disjunct_on_active_block(disjunct):
             parent_block = parent_block.parent_block()
             continue
     return True
+
+def _get_bigm_suffix_list(block, stopping_block=None):
+    # Note that you can only specify suffixes on BlockData objects or
+    # ScalarBlocks. Though it is possible at this point to stick them
+    # on whatever components you want, we won't pick them up.
+    suffix_list = []
+
+    # go searching above block in the tree, stop when we hit stopping_block
+    # (This is so that we can search on each Disjunct once, but get any
+    # information between a constraint and its Disjunct while transforming
+    # the constraint).
+    while block is not None:
+        bigm = block.component('BigM')
+        if type(bigm) is Suffix:
+            suffix_list.append(bigm)
+        if block is stopping_block:
+            break
+        block = block.parent_block()
+
+    return suffix_list
+
+def _convert_M_to_tuple(M, constraint, disjunct=None):
+    if not isinstance(M, (tuple, list)):
+        if M is None:
+            M = (None, None)
+        else:
+            try:
+                M = (-M, M)
+            except:
+                logger.error("Error converting scalar M-value %s "
+                             "to (-M,M).  Is %s not a numeric type?"
+                             % (M, type(M)))
+                raise
+    if len(M) != 2:
+        constraint_name = constraint.name
+        if disjunct is not None:
+            constraint_name += " relative to Disjunct %s" % disjunct.name
+        raise GDP_Error("Big-M %s for constraint %s is not of "
+                        "length two. "
+                        "Expected either a single value or "
+                        "tuple or list of length two for M."
+                        % (str(M), constraint.name))
+
+    return M
+
+def _warn_for_unused_bigM_args(bigM, used_args, logger):
+    # issue warnings about anything that was in the bigM args dict that we
+    # didn't use
+    if bigM is not None:
+        unused_args = ComponentSet(bigM.keys()) - \
+                      ComponentSet(used_args.keys())
+        if len(unused_args) > 0:
+            warning_msg = ("Unused arguments in the bigM map! "
+                           "These arguments were not used by the "
+                           "transformation:\n")
+            for component in unused_args:
+                if isinstance(component, (tuple, list)) and len(component) == 2:
+                    warning_msg += "\t(%s, %s)\n" % (component[0].name,
+                                                     component[1].name)
+                elif hasattr(component, 'name'):
+                    warning_msg += "\t%s\n" % component.name
+                else:
+                    warning_msg += "\t%s\n" % component
+            logger.warning(warning_msg)
