@@ -251,7 +251,7 @@ def _get_MindtPy_config():
     _add_tolerance_configs(CONFIG)
     _add_fp_configs(CONFIG)
     _add_bound_configs(CONFIG)
-    _add_loa_configs(CONFIG)
+    _add_roa_configs(CONFIG)
     return CONFIG
 
 
@@ -476,8 +476,8 @@ def _add_fp_configs(CONFIG):
     ))
 
 
-def _add_loa_configs(CONFIG):
-    """Adds the LOA-related configurations.
+def _add_roa_configs(CONFIG):
+    """Adds the ROA-related configurations.
 
     Parameters
     ----------

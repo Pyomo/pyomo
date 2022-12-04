@@ -1597,7 +1597,7 @@ class _MindtPyAlgorithm(object):
                 self.update_suboptimal_dual_bound(main_mip_results)
             if regularization_problem:
                 config.logger.info(self.log_formatter.format(self.mip_iter, 'Reg '+self.regularization_mip_type,
-                                                                value(self.mip.MindtPy_utils.loa_proj_mip_obj),
+                                                                value(self.mip.MindtPy_utils.roa_proj_mip_obj),
                                                                 self.primal_bound, self.dual_bound, self.rel_gap,
                                                                 get_main_elapsed_time(self.timing)))
 
@@ -1611,7 +1611,7 @@ class _MindtPyAlgorithm(object):
 
         if regularization_problem:
             self.mip.MindtPy_utils.objective_constr.deactivate()
-            self.mip.MindtPy_utils.del_component('loa_proj_mip_obj')
+            self.mip.MindtPy_utils.del_component('roa_proj_mip_obj')
             self.mip.MindtPy_utils.cuts.del_component('obj_reg_estimate')
             if config.add_regularization == 'level_L1':
                 self.mip.MindtPy_utils.del_component('L1_obj')
@@ -1963,7 +1963,7 @@ class _MindtPyAlgorithm(object):
         sign_adjust = 1 if self.objective_sense == minimize else - 1
         MindtPy.del_component('mip_obj')
         if regularization_problem and config.single_tree:
-            MindtPy.del_component('loa_proj_mip_obj')
+            MindtPy.del_component('roa_proj_mip_obj')
             MindtPy.cuts.del_component('obj_reg_estimate')
         if config.add_regularization is not None and config.add_no_good_cuts:
             if regularization_problem:
@@ -1995,19 +1995,19 @@ class _MindtPyAlgorithm(object):
             if MindtPy.objective_list[0].expr.polynomial_degree() in self.mip_objective_polynomial_degree:
                 MindtPy.objective_constr.activate()
             if config.add_regularization == 'level_L1':
-                MindtPy.loa_proj_mip_obj = generate_norm1_objective_function(self.mip,
+                MindtPy.roa_proj_mip_obj = generate_norm1_objective_function(self.mip,
                                                                             self.best_solution_found,
                                                                             discrete_only=False)
             elif config.add_regularization == 'level_L2':
-                MindtPy.loa_proj_mip_obj = generate_norm2sq_objective_function(self.mip,
+                MindtPy.roa_proj_mip_obj = generate_norm2sq_objective_function(self.mip,
                                                                             self.best_solution_found,
                                                                             discrete_only=False)
             elif config.add_regularization == 'level_L_infinity':
-                MindtPy.loa_proj_mip_obj = generate_norm_inf_objective_function(self.mip,
+                MindtPy.roa_proj_mip_obj = generate_norm_inf_objective_function(self.mip,
                                                                                 self.best_solution_found,
                                                                                 discrete_only=False)
             elif config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
-                MindtPy.loa_proj_mip_obj = generate_lag_objective_function(self.mip,
+                MindtPy.roa_proj_mip_obj = generate_lag_objective_function(self.mip,
                                                                         self.best_solution_found,
                                                                         config,
                                                                         self.timing,
