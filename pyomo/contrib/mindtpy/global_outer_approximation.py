@@ -16,8 +16,8 @@
 from __future__ import division
 import logging
 from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to
-from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, get_integer_solution, copy_var_list_values_from_solution_pool
-from pyomo.core import TransformationFactory, maximize
+from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, get_integer_solution, copy_var_list_values_from_solution_pool, add_var_bound, calc_jacobians
+from pyomo.core import TransformationFactory, maximize, Objective, ConstraintList
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
@@ -135,10 +135,11 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             # Save model initial values.
             self.initial_var_values = list(
                 v.value for v in MindtPy.variable_list)
+            self.initialize_mip_problem()
 
-            # Initialize the main problem
+            # Initialization
             with time_code(self.timing, 'initialization'):
-                self.MindtPy_initialize_main(config)
+                self.MindtPy_initialization(config)
 
             # Algorithm main loop
             with time_code(self.timing, 'main loop'):
@@ -303,3 +304,22 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         if config.init_strategy is None:
             config.init_strategy = 'rNLP'
         super().check_config()
+
+
+    def initialize_mip_problem(self):
+        ''' Deactivate the nonlinear constraints to create the MIP problem.
+        '''
+        # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded main problem.
+        config = self.config
+        if config.single_tree:
+            add_var_bound(self.working_model, config)
+
+        m = self.mip = self.working_model.clone()
+        next(self.mip.component_data_objects(
+            Objective, active=True)).deactivate()
+
+        MindtPy = m.MindtPy_utils
+        if config.calculate_dual_at_solution:
+            m.dual.deactivate()
+        
+        MindtPy.cuts.aff_cuts = ConstraintList(doc='Affine cuts')

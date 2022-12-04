@@ -15,8 +15,8 @@
 from __future__ import division
 import logging
 from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to)
-from pyomo.contrib.mindtpy.util import set_up_logger,setup_results_object
-from pyomo.core import TransformationFactory
+from pyomo.contrib.mindtpy.util import set_up_logger,setup_results_object, add_var_bound, calc_jacobians
+from pyomo.core import TransformationFactory, Objective, ConstraintList
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
@@ -125,10 +125,11 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
 
             # Save model initial values.
             self.initial_var_values = list(v.value for v in MindtPy.variable_list)
+            self.initialize_mip_problem()
 
-            # Initialize the main problem
+            # Initialization
             with time_code(self.timing, 'initialization'):
-                self.MindtPy_initialize_main(config)
+                self.MindtPy_initialization(config)
 
             # Algorithm main loop
             with time_code(self.timing, 'main loop'):
@@ -218,3 +219,26 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         if config.init_strategy is None:
             config.init_strategy = 'max_binary'
         super().check_config()
+
+    def initialize_mip_problem(self):
+        ''' Deactivate the nonlinear constraints to create the MIP problem.
+        '''
+        config = self.config
+
+        m = self.mip = self.working_model.clone()
+        next(self.mip.component_data_objects(
+            Objective, active=True)).deactivate()
+
+        MindtPy = m.MindtPy_utils
+        if config.calculate_dual_at_solution:
+            m.dual.deactivate()
+
+        self.jacobians = calc_jacobians(self.mip, config)  # preload jacobians
+        MindtPy.cuts.ecp_cuts = ConstraintList(doc='Extended Cutting Planes')
+
+        if config.init_strategy == 'FP':
+            MindtPy.cuts.fp_orthogonality_cuts = ConstraintList(
+                doc='Orthogonality cuts in feasibility pump')
+            if config.fp_projcuts:
+                self.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
+                    doc='Orthogonality cuts in feasibility pump')

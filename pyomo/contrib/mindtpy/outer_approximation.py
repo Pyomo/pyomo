@@ -15,8 +15,8 @@
 from __future__ import division
 import logging
 from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to, copy_var_list_values)
-from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object
-from pyomo.core import TransformationFactory, maximize
+from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, add_var_bound, calc_jacobians
+from pyomo.core import TransformationFactory, maximize, Objective, ConstraintList
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
@@ -140,11 +140,11 @@ class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
             # For example, if we remove the following two lines. test_RLPNLP_L1 will fail.
             self.best_solution_found = None
             self.best_solution_found_time = None
+            self.initialize_mip_problem()
 
-
-            # Initialize the main problem
+            # Initialization
             with time_code(self.timing, 'initialization'):
-                self.MindtPy_initialize_main(config)
+                self.MindtPy_initialization(config)
 
             # Algorithm main loop
             with time_code(self.timing, 'main loop'):
@@ -351,3 +351,30 @@ class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
         if config.init_strategy is None:
             config.init_strategy = 'rNLP'
         _MindtPyAlgorithm.check_config(self)
+
+
+    def initialize_mip_problem(self):
+        ''' Deactivate the nonlinear constraints to create the MIP problem.
+        '''
+        # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded main problem.
+        config = self.config
+        if config.single_tree:
+            add_var_bound(self.working_model, config)
+
+        m = self.mip = self.working_model.clone()
+        next(self.mip.component_data_objects(
+            Objective, active=True)).deactivate()
+
+        MindtPy = m.MindtPy_utils
+        if config.calculate_dual_at_solution:
+            m.dual.deactivate()
+
+        self.jacobians = calc_jacobians(self.mip, config)  # preload jacobians
+        MindtPy.cuts.oa_cuts = ConstraintList(doc='Outer approximation cuts')
+
+        if config.init_strategy == 'FP':
+            MindtPy.cuts.fp_orthogonality_cuts = ConstraintList(
+                doc='Orthogonality cuts in feasibility pump')
+            if config.fp_projcuts:
+                self.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
+                    doc='Orthogonality cuts in feasibility pump')

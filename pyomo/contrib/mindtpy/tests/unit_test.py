@@ -93,7 +93,7 @@
 #             # fixed_nlp = solve_data.working_model.clone()
 #             # TransformationFactory('core.fix_integer_vars').apply_to(fixed_nlp)
 
-#             # MindtPy_initialize_main(solve_data, config)
+#             # initialization(solve_data, config)
 
 #             # # test handle_subproblem_other_termination
 #             # termination_condition = tc.maxIterations

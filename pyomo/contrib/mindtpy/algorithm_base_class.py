@@ -673,45 +673,10 @@ class _MindtPyAlgorithm(object):
     # -----------------------------------------------------------------------------------------
     # initialization
 
-    # def initialize_discrete_problem(self, util_block, subprob_util_block, config, solver):
-    #     """
-    #     Calls the specified transformation (by default bigm) on the original
-    #     model and removes nonlinear constraints to create a MILP discrete problem.
-    #     """
-    #     config.logger.info("---Starting MindtPy initialization---")
-    #     # clone the original model
-    #     self.original_model
-    #     discrete = util_block.parent_block().clone()
-    #     discrete.name = discrete.name + ": discrete problem"
+    def MindtPy_initialization(self, config):
+        """Initializes the decomposition algorithm.
 
-    #     discrete_problem_util_block = discrete.component(util_block.local_name)
-    #     discrete_problem_util_block.no_good_cuts = ConstraintList()
-
-    #     # deactivate nonlinear constraints
-    #     for c in discrete.component_data_objects(Constraint, active=True,
-    #                                             descend_into=(Block, Disjunct)):
-    #         if c.body.polynomial_degree() not in (1, 0):
-    #             c.deactivate()
-
-    #     # Transform to a MILP
-    #     TransformationFactory(config.discrete_problem_transformation).apply_to(
-    #         discrete)
-    #     add_transformed_boolean_variable_list(discrete_problem_util_block)
-    #     add_algebraic_variable_list(discrete_problem_util_block,
-    #                                 name='all_mip_variables')
-
-    #     # Call the specified initialization strategy. (We've already validated the
-    #     # input in the config logic, so we know this is okay.)
-    #     init_algorithm = valid_init_strategies.get(config.init_algorithm)
-    #     init_algorithm(util_block, discrete_problem_util_block, subprob_util_block,
-    #                 config, solver)
-
-    #     return discrete_problem_util_block
-
-    def MindtPy_initialize_main(self, config):
-        """Initializes the decomposition algorithm and creates the main MIP/MILP problem.
-
-        This function initializes the decomposition problem, which includes generating the
+        This function initializes the decomposition algorithm, which includes generating the
         initial cuts required to build the main MIP.
 
         Parameters
@@ -719,40 +684,6 @@ class _MindtPyAlgorithm(object):
         config : ConfigBlock
             The specific configurations for MindtPy.
         """
-        # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded main problem.
-        if config.single_tree:
-            add_var_bound(self.working_model, config)
-
-        m = self.mip = self.working_model.clone()
-        next(self.mip.component_data_objects(
-            Objective, active=True)).deactivate()
-
-        MindtPy = m.MindtPy_utils
-        if config.calculate_dual_at_solution:
-            m.dual.deactivate()
-
-        if config.init_strategy == 'FP':
-            MindtPy.cuts.fp_orthogonality_cuts = ConstraintList(
-                doc='Orthogonality cuts in feasibility pump')
-            if config.fp_projcuts:
-                self.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
-                    doc='Orthogonality cuts in feasibility pump')
-        if config.strategy == 'OA' or config.init_strategy == 'FP':
-            self.jacobians = calc_jacobians(self.mip, config)  # preload jacobians
-            MindtPy.cuts.oa_cuts = ConstraintList(doc='Outer approximation cuts')
-        elif config.strategy == 'ECP':
-            self.jacobians = calc_jacobians(self.mip, config)  # preload jacobians
-            MindtPy.cuts.ecp_cuts = ConstraintList(doc='Extended Cutting Planes')
-        elif config.strategy == 'GOA':
-            MindtPy.cuts.aff_cuts = ConstraintList(doc='Affine cuts')
-        # elif config.strategy == 'PSC':
-        #     detect_nonlinear_vars(solve_data, config)
-        #     MindtPy.cuts.psc_cuts = ConstraintList(
-        #         doc='Partial surrogate cuts')
-        # elif config.strategy == 'GBD':
-        #     MindtPy.cuts.gbd_cuts = ConstraintList(
-        #         doc='Generalized Benders cuts')
-
         # Do the initialization
         if config.init_strategy == 'rNLP':
             self.init_rNLP(config)
@@ -762,9 +693,8 @@ class _MindtPyAlgorithm(object):
             self.curr_int_sol = get_integer_solution(
                 self.working_model)
             self.integer_list.append(self.curr_int_sol)
-            if config.strategy != 'ECP':
-                fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
-                self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
+            fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
+            self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
         elif config.init_strategy == 'FP':
             self.init_rNLP(config)
             self.fp_loop(config)
@@ -2267,3 +2197,6 @@ class _MindtPyAlgorithm(object):
 
         if config.init_strategy == 'FP' or config.add_regularization is not None:
             config.move_objective = True
+
+        if config.init_strategy == 'initial_binary' and config.strategy == 'ECP':
+            raise ValueError("ECP method do not support 'initial_binary' as the initialization strategy.")
