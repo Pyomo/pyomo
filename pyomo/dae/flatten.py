@@ -129,10 +129,9 @@ def _fill_indices_from_product(partial_index_list, product):
 
 
 def slice_component_along_sets(
-        component, sets, context_slice=None, normalize=None,
-        ):
-    """
-    This function generates all possible slices of the provided component
+    component, sets, context_slice=None, normalize=None,
+):
+    """This function generates all possible slices of the provided component
     along the provided sets. That is, it will iterate over the component's
     other indexing sets and, for each index, yield a slice along the
     sets specified in the call signature.
@@ -248,27 +247,44 @@ def generate_sliced_components(
     index_map,
     active=None,
 ):
-    """
-    Recursively generate sliced components of a block and its subblocks, along
-    with the sets that were sliced for each component.
+    """Recursively generate slices of the specified ctype along the
+    specified sets
+    
+    Parameters
+    ----------
 
-    `b` is a _BlockData object.
+    b: _BlockData
+        Block whose components will be sliced
 
-    `index_stack` is a list of indices "above" `b` in the
-    hierarchy. Note that `b` is a data object, so any index
-    of its parent component should be included in the stack.
+    index_stack: list
+        Sets above ``b`` in the block hierachy, including on its parent
+        component, that have been sliced. This is necessary to return the
+        sets that have been sliced.
 
-    `slice_` is the slice generated so far. Our goal here is to
-    yield extensions to `slice_` at this level of the hierarchy.
+    slice_: IndexedComponent_slice or _BlockData
+        Slice generated so far.  This function will yield extensions to
+        this slice at the current level of the block hierarchy.
 
-    `sets` is a ComponentSet of Pyomo sets that should be sliced.
+    sets: ComponentSet of Pyomo sets
+        Sets that will be sliced
 
-    `ctype` is the type we are looking for.
+    ctype: Subclass of Component
+        Type of components to generate
 
-    `index_map` is potentially a map from each set in `sets` to a 
-    "representative index" to use when descending into subblocks.
-    While this map does not need to contain every set in the sliced
-    sets, it must not contain any sets that will not be sliced.
+    index_map: ComponentMap
+        Map from (some of) the specified sets to a "representative index"
+        to use when descending into subblocks. While this map does not need
+        to contain every set in the sliced sets, it must not contain any
+        sets that will not be sliced.
+
+    Yields
+    ------
+    
+    Tuple of Sets and an IndexedComponent_slice or ComponentData
+        The sets indexing the returned component or slice. If the component
+        is indexed, an IndexedComponent_slice is returned. Otherwise, a
+        ComponentData is returned.
+
     """
     if type(slice_) is IndexedComponent_slice:
         context_slice = slice_.duplicate()
@@ -388,26 +404,46 @@ def generate_sliced_components(
 
 
 def flatten_components_along_sets(m, sets, ctype, indices=None, active=None):
-    """
-    This function iterates over components (recursively) contained
+    """This function iterates over components (recursively) contained
     in a block and partitions their data objects into components
     indexed only by the specified sets.
 
-    Args:
-        m : Block whose components (and their sub-components) will be
-            partitioned
-        sets : Possible indexing sets for the returned components
-        ctype : Type of component to identify and partition
-        indices : indices of sets to use when descending into subblocks
-        active : If not None, this is a boolean flag used to filter
-                 component objects by their active status
+    Parameters
+    ----------
 
-    Returns:
-        tuple: The first entry is a list of tuples of Pyomo Sets. The
-               second is a list of lists of components, each indexed by
-               the corresponding sets in the first entry.
-        
+    m: _BlockData
+        Block whose components (and their sub-components) will be
+        partitioned
+
+    sets: Tuple of Pyomo Sets
+        Sets to be sliced. Returned components will be indexed by
+        some combination of these sets, if at all.
+
+    ctype: Subclass of Component
+        Type of component to identify and partition
+
+    indices: Iterable or ComponentMap
+        Indices of sets to use when descending into subblocks. If an
+        iterable is provided, the order corresponds to the order in
+        ``sets``. If a ``ComponentMap`` is provided, the keys must be
+        in ``sets``.
+
+    active: Bool or None
+        If not None, this is a boolean flag used to filter component objects
+        by their active status
+
+    Returns
+    -------
+
+    List of tuples of Sets, list of lists of Components
+        The first entry is a list of tuples of Pyomo Sets. The second is a
+        list of lists of Components, indexed by the corresponding sets in
+        the first list. If the components are unindexed, ComponentData are
+        returned and the tuple of sets contains only UnindexedComponent_set.
+        If the components are indexed, they are references-to-slices.
+
     """
+    set_of_sets = ComponentSet(sets)
     if indices is None:
         index_map = ComponentMap()
     elif type(indices) is ComponentMap:
@@ -420,9 +456,14 @@ def flatten_components_along_sets(m, sets, ctype, indices=None, active=None):
                 "%s is a bad index for set %s. \nPlease provide an index "
                 "that is in the set." % (idx, s.name)
             )
+        if s not in set_of_sets:
+            raise RuntimeError(
+                "Index specified for set %s that is not one of the sets"
+                " that will be sliced. Indices should only be provided"
+                " for sets that will be sliced." % s.name
+            )
     index_stack = []
 
-    set_of_sets = ComponentSet(sets)
     # Using these two `OrderedDict`s is a workaround because I can't
     # reliably use tuples of components as keys in a `ComponentMap`.
     sets_dict = OrderedDict()
@@ -466,6 +507,38 @@ def flatten_components_along_sets(m, sets, ctype, indices=None, active=None):
 
 
 def flatten_dae_components(model, time, ctype, indices=None, active=None):
+    """Partitions components into ComponentData and Components indexed only
+    by the provided set.
+
+    Parameters
+    ----------
+
+    model: _BlockData
+        Block whose components are partitioned
+
+    time: Set
+        Indexing by this set (and only this set) will be preserved in the
+        returned components.
+
+    ctype: Subclass of Component
+        Type of component to identify, partition, and return
+
+    indices: Tuple or ComponentMap
+        Contains the index of the specified set to be used when descending
+        into blocks
+
+    active: Bool or None
+        If provided, used as a filter to only return components with the
+        specified active flag.
+
+    Returns
+    -------
+    List of ComponentData, list of Component
+        The first list contains ComponentData for all components not
+        indexed by the provided set. The second contains references-to
+        -slices for all components indexed by the provided set.
+
+    """
     target = ComponentSet((time,))
     sets_list, comps_list = flatten_components_along_sets(
         model, target, ctype, indices=indices, active=active
