@@ -1264,38 +1264,50 @@ class TestFlatten(TestCategorize):
         #
         # Test identifying inactive components
         #
-        # FIXME: This test seems to not work. Seems we don't identify
-        # any components with active=False
-        #
-        #m.deactivate()
-        #m.b.deactivate()
-        #sets_list, comps_list = flatten_components_along_sets(
-        #    m, sets, Var, active=False
-        #)
+        m.deactivate()
+        m.b.deactivate()
+        for t in m.time:
+            m.b.b1[t].b_s.deactivate()
+        # Remove components to make this easier to test
+        m.del_component(m.v0)
+        m.del_component(m.v1)
+        m.del_component(m.v3)
+        m.del_component(m.v_tt)
+        m.del_component(m.v_tst)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Var, active=False
+        )
 
-        #expected_time = [ComponentUID(m.b.b1[:].v0)]
-        #expected_time.extend(
-        #    ComponentUID(m.b.b1[:].v1[x]) for x in m.space
-        #)
-        #expected_time.extend(
-        #    ComponentUID(m.b.b1[:].v2[x, j]) for x in m.space for j in m.comp
-        #)
-        #expected_time.extend(
-        #    ComponentUID(m.b.b1[:].b_s[x].v0) for x in m.space
-        #)
-        #expected_time.extend(
-        #    ComponentUID(m.b.b1[:].b_s[x1].v1[x2])
-        #    for x1 in m.space for x2 in m.space
-        #)
-        #expected_time.extend(
-        #    ComponentUID(m.b.b1[:].b_s[x1].v2[x2, j])
-        #    for x1 in m.space for x2 in m.space for j in m.comp
-        #)
-        #expected_time = set(expected_time)
+        expected_time = [ComponentUID(m.b.b1[:].v0)]
+        expected_time.extend(
+            ComponentUID(m.v2[:, x]) for x in m.space
+        )
+        expected_time.extend(
+            ComponentUID(m.b.b1[:].v1[x]) for x in m.space
+        )
+        expected_time.extend(
+            ComponentUID(m.b.b1[:].v2[x, j]) for x in m.space for j in m.comp
+        )
+        expected_time.extend(
+            ComponentUID(m.b.b1[:].b_s[x].v0) for x in m.space
+        )
+        expected_time.extend(
+            ComponentUID(m.b.b1[:].b_s[x1].v1[x2])
+            for x1 in m.space for x2 in m.space
+        )
+        expected_time.extend(
+            ComponentUID(m.b.b1[:].b_s[x1].v2[x2, j])
+            for x1 in m.space for x2 in m.space for j in m.comp
+        )
+        expected_time = set(expected_time)
 
-        #self.assertEqual(len(sets_list), 1)
-        #self.assertEqual(len(sets_list[0]), 1)
-        #self.assertIs(sets_list[0][0], m.time)
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(sets_list[0]), 1)
+        self.assertIs(sets_list[0][0], m.time)
+
+        self.assertEqual(len(comps_list), 1)
+        comp_set = set(ComponentUID(comp.referent) for comp in comps_list[0])
+        self.assertEqual(comp_set, expected_time)
 
 
 class TestCUID(unittest.TestCase):
