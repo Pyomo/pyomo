@@ -39,6 +39,185 @@ def _get_MindtPy_config():
     """
     CONFIG = ConfigBlock('MindtPy')
 
+    _add_common_configs(CONFIG)
+    _add_subsolver_configs(CONFIG)
+    _add_tolerance_configs(CONFIG)
+    _add_fp_configs(CONFIG)
+    _add_bound_configs(CONFIG)
+    _add_roa_configs(CONFIG)
+    return CONFIG
+
+def _get_MindtPy_OA_config():
+    """Set up the configurations for MindtPy-OA.
+
+    Returns
+    -------
+    CONFIG : ConfigBlock
+        The specific configurations for MindtPy
+    """
+    CONFIG = ConfigBlock('MindtPy-OA')
+
+    _add_common_configs(CONFIG)
+    _add_oa_configs(CONFIG)
+    _add_roa_configs(CONFIG)
+    _add_fp_configs(CONFIG)
+    _add_oa_cuts_configs(CONFIG)
+    _add_subsolver_configs(CONFIG)
+    _add_tolerance_configs(CONFIG)
+    _add_bound_configs(CONFIG)
+    return CONFIG
+
+
+def _get_MindtPy_GOA_config():
+    """Set up the configurations for MindtPy-GOA.
+
+    Returns
+    -------
+    CONFIG : ConfigBlock
+        The specific configurations for MindtPy
+    """
+    CONFIG = ConfigBlock('MindtPy-GOA')
+
+    _add_common_configs(CONFIG)
+    _add_goa_configs(CONFIG)
+    _add_subsolver_configs(CONFIG)
+    _add_tolerance_configs(CONFIG)
+    _add_bound_configs(CONFIG)
+    return CONFIG
+
+
+def _get_MindtPy_ECP_config():
+    """Set up the configurations for MindtPy-ECP.
+
+    Returns
+    -------
+    CONFIG : ConfigBlock
+        The specific configurations for MindtPy
+    """
+    CONFIG = ConfigBlock('MindtPy-GOA')
+
+    _add_common_configs(CONFIG)
+    _add_ecp_configs(CONFIG)
+    _add_oa_cuts_configs(CONFIG)
+    _add_subsolver_configs(CONFIG)
+    _add_tolerance_configs(CONFIG)
+    _add_bound_configs(CONFIG)
+    return CONFIG
+
+
+def _get_MindtPy_FP_config():
+    """Set up the configurations for MindtPy-FP.
+
+    Returns
+    -------
+    CONFIG : ConfigBlock
+        The specific configurations for MindtPy
+    """
+    CONFIG = ConfigBlock('MindtPy-GOA')
+    CONFIG.declare('init_strategy', ConfigValue(
+        default=None,
+        domain=In(['FP']),
+        description='Initialization strategy',
+        doc='Initialization strategy used by any method. Currently the '
+            'continuous relaxation of the MINLP (rNLP), solve a maximal '
+            'covering problem (max_binary), and fix the initial value for '
+            'the integer variables (initial_binary).'
+    ))
+
+    _add_common_configs(CONFIG)
+    _add_fp_configs(CONFIG)
+    _add_oa_cuts_configs(CONFIG)
+    _add_subsolver_configs(CONFIG)
+    _add_tolerance_configs(CONFIG)
+    _add_bound_configs(CONFIG)
+    return CONFIG
+
+
+def _add_oa_configs(CONFIG):
+    CONFIG.declare('heuristic_nonconvex', ConfigValue(
+        default=False,
+        description='Use dual solution from the NLP solver and slack variables to add OA cuts for equality constraints (Equality relaxation)'
+                    'and minimize the sum of the slack variables (Augmented Penalty).',
+        domain=bool
+    ))
+    CONFIG.declare('init_strategy', ConfigValue(
+        default=None,
+        domain=In(['rNLP', 'initial_binary', 'max_binary', 'FP']),
+        description='Initialization strategy',
+        doc='Initialization strategy used by any method. Currently the '
+            'continuous relaxation of the MINLP (rNLP), solve a maximal '
+            'covering problem (max_binary), and fix the initial value for '
+            'the integer variables (initial_binary).'
+    ))
+
+
+def _add_oa_cuts_configs(CONFIG):
+    CONFIG.declare('add_slack', ConfigValue(
+        default=False,
+        description='Whether add slack variable here.'
+                    'slack variables here are used to deal with nonconvex MINLP.',
+        domain=bool
+    ))
+    CONFIG.declare('max_slack', ConfigValue(
+        default=1000.0,
+        domain=PositiveFloat,
+        description='Maximum slack variable',
+        doc='Maximum slack variable value allowed for the Outer Approximation '
+            'cuts.'
+    ))
+    CONFIG.declare('OA_penalty_factor', ConfigValue(
+        default=1000.0,
+        domain=PositiveFloat,
+        description='Outer Approximation slack penalty factor',
+        doc='In the objective function of the Outer Approximation method, the '
+            'slack variables corresponding to all the constraints get '
+            'multiplied by this number and added to the objective.'
+    ))
+    CONFIG.declare('equality_relaxation', ConfigValue(
+        default=False,
+        description='Use dual solution from the NLP solver to add OA cuts for equality constraints.',
+        domain=bool
+    ))
+    CONFIG.declare('linearize_inactive', ConfigValue(
+        default=False,
+        description='Add OA cuts for inactive constraints.',
+        domain=bool
+    ))
+
+
+def _add_goa_configs(CONFIG):
+    CONFIG.declare('init_strategy', ConfigValue(
+        default=None,
+        domain=In(['rNLP', 'initial_binary', 'max_binary']),
+        description='Initialization strategy',
+        doc='Initialization strategy used by any method. Currently the '
+            'continuous relaxation of the MINLP (rNLP), solve a maximal '
+            'covering problem (max_binary), and fix the initial value for '
+            'the integer variables (initial_binary).'
+    ))
+
+
+def _add_ecp_configs(CONFIG):
+    CONFIG.declare('ecp_tolerance', ConfigValue(
+        default=None,
+        domain=PositiveFloat,
+        description='ECP tolerance',
+        doc='Feasibility tolerance used to determine the stopping criterion in'
+            'the ECP method. As long as nonlinear constraint are violated for '
+            'more than this tolerance, the method will keep iterating.'
+    ))
+    CONFIG.declare('init_strategy', ConfigValue(
+        default=None,
+        domain=In(['rNLP', 'max_binary', 'FP']), # TODO: think about why ecp don't allow initial_binary.
+        description='Initialization strategy',
+        doc='Initialization strategy used by any method. Currently the '
+            'continuous relaxation of the MINLP (rNLP), solve a maximal '
+            'covering problem (max_binary), and fix the initial value for '
+            'the integer variables (initial_binary).'
+    ))
+
+
+def _add_common_configs(CONFIG):
     CONFIG.declare('iteration_limit', ConfigValue(
         default=50,
         domain=NonNegativeInt,
@@ -74,30 +253,6 @@ def _get_MindtPy_config():
         description='add regularization',
         doc='Solving a regularization problem before solve the fixed subproblem'
             'the objective function of the regularization problem.'
-    ))
-    CONFIG.declare('init_strategy', ConfigValue(
-        default=None,
-        domain=In(['rNLP', 'initial_binary', 'max_binary', 'FP']),
-        description='Initialization strategy',
-        doc='Initialization strategy used by any method. Currently the '
-            'continuous relaxation of the MINLP (rNLP), solve a maximal '
-            'covering problem (max_binary), and fix the initial value for '
-            'the integer variables (initial_binary).'
-    ))
-    CONFIG.declare('max_slack', ConfigValue(
-        default=1000.0,
-        domain=PositiveFloat,
-        description='Maximum slack variable',
-        doc='Maximum slack variable value allowed for the Outer Approximation '
-            'cuts.'
-    ))
-    CONFIG.declare('OA_penalty_factor', ConfigValue(
-        default=1000.0,
-        domain=PositiveFloat,
-        description='Outer Approximation slack penalty factor',
-        doc='In the objective function of the Outer Approximation method, the '
-            'slack variables corresponding to all the constraints get '
-            'multiplied by this number and added to the objective.'
     ))
     CONFIG.declare('call_after_main_solve', ConfigValue(
         default=_DoNothing(),
@@ -150,11 +305,6 @@ def _get_MindtPy_config():
         description='Use tabu list and incumbent callback to disallow same integer solution again.',
         domain=bool
     ))
-    CONFIG.declare('add_affine_cuts', ConfigValue(
-        default=False,
-        description='Add affine cuts drive from MC++.',
-        domain=bool
-    ))
     CONFIG.declare('single_tree', ConfigValue(
         default=False,
         description='Use single tree implementation in solving the MIP main problem.',
@@ -169,12 +319,6 @@ def _get_MindtPy_config():
         default=5,
         description='The number of MIP solutions (from the solution pool) used to generate the fixed NLP subproblem in each iteration.',
         domain=PositiveInt
-    ))
-    CONFIG.declare('add_slack', ConfigValue(
-        default=False,
-        description='Whether add slack variable here.'
-                    'slack variables here are used to deal with nonconvex MINLP.',
-        domain=bool
     ))
     CONFIG.declare('cycling_check', ConfigValue(
         default=True,
@@ -191,19 +335,9 @@ def _get_MindtPy_config():
         domain=In(['reverse_symbolic', 'sympy']),
         description='Differentiate mode to calculate jacobian.'
     ))
-    CONFIG.declare('linearize_inactive', ConfigValue(
-        default=False,
-        description='Add OA cuts for inactive constraints.',
-        domain=bool
-    ))
     CONFIG.declare('use_mcpp', ConfigValue(
         default=False,
         description="Use package MC++ to set a bound for variable 'objective_value', which is introduced when the original problem's objective function is nonlinear.",
-        domain=bool
-    ))
-    CONFIG.declare('equality_relaxation', ConfigValue(
-        default=False,
-        description='Use dual solution from the NLP solver to add OA cuts for equality constraints.',
         domain=bool
     ))
     CONFIG.declare('calculate_dual_at_solution', ConfigValue(
@@ -219,12 +353,6 @@ def _get_MindtPy_config():
     CONFIG.declare('use_dual_bound', ConfigValue(
         default=True,
         description='Add dual bound constraint to enforce the objective satisfies best-found dual bound.',
-        domain=bool
-    ))
-    CONFIG.declare('heuristic_nonconvex', ConfigValue(
-        default=False,
-        description='Use dual solution from the NLP solver and slack variables to add OA cuts for equality constraints (Equality relaxation)'
-                    'and minimize the sum of the slack variables (Augmented Penalty).',
         domain=bool
     ))
     CONFIG.declare('partition_obj_nonlinear_terms', ConfigValue(
@@ -245,14 +373,6 @@ def _get_MindtPy_config():
         domain=bool,
         description='Whether to replace the objective function to constraint using epigraph constraint.',
     ))
-    
-
-    _add_subsolver_configs(CONFIG)
-    _add_tolerance_configs(CONFIG)
-    _add_fp_configs(CONFIG)
-    _add_bound_configs(CONFIG)
-    _add_roa_configs(CONFIG)
-    return CONFIG
 
 
 def _add_subsolver_configs(CONFIG):
@@ -373,14 +493,6 @@ def _add_tolerance_configs(CONFIG):
     CONFIG.declare('zero_tolerance', ConfigValue(
         default=1E-8,
         description='Tolerance on variable equal to zero.'
-    ))
-    CONFIG.declare('ecp_tolerance', ConfigValue(
-        default=None,
-        domain=PositiveFloat,
-        description='ECP tolerance',
-        doc='Feasibility tolerance used to determine the stopping criterion in'
-            'the ECP method. As long as nonlinear constraint are violated for '
-            'more than this tolerance, the method will keep iterating.'
     ))
 
 

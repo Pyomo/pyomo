@@ -14,7 +14,7 @@
 
 from __future__ import division
 import logging
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_FP_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.opt import TerminationCondition as tc
 from pyomo.core import minimize, Constraint, TransformationFactory, value, Objective, ConstraintList
@@ -51,7 +51,7 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
     Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at 
     Carnegie Mellon University.
     """
-    CONFIG = _get_MindtPy_config()
+    CONFIG = _get_MindtPy_FP_config()
 
     def available(self, exception_flag=True):
         """Check if solver is available.

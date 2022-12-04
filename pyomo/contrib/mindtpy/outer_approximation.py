@@ -18,7 +18,7 @@ from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to, copy_va
 from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, add_var_bound, calc_jacobians
 from pyomo.core import TransformationFactory, maximize, Objective, ConstraintList
 from pyomo.opt import SolverFactory
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_OA_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.contrib.mindtpy.feasibility_pump_new import MindtPy_FP_Solver
 from pyomo.contrib.mindtpy.util import get_integer_solution, copy_var_list_values_from_solution_pool
@@ -54,7 +54,7 @@ class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
     Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at 
     Carnegie Mellon University.
     """
-    CONFIG = _get_MindtPy_config()
+    CONFIG = _get_MindtPy_OA_config()
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -350,6 +350,43 @@ class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
         config = self.config
         if config.init_strategy is None:
             config.init_strategy = 'rNLP'
+        if config.add_regularization is not None:
+            if config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
+                config.calculate_dual_at_solution = True
+            if config.regularization_mip_threads == 0 and config.threads > 0:
+                config.regularization_mip_threads = config.threads
+                config.logger.info(
+                    'Set regularization_mip_threads equal to threads')
+            if config.single_tree:
+                config.add_cuts_at_incumbent = True
+                # if no method is activated by users, we will use use_bb_tree_incumbent by default
+                if not (config.reduce_level_coef or config.use_bb_tree_incumbent):
+                    config.use_bb_tree_incumbent = True
+            if config.mip_regularization_solver is None:
+                config.mip_regularization_solver = config.mip_solver
+        if config.single_tree:
+            config.logger.info('Single-tree implementation is activated.')
+            config.iteration_limit = 1
+            config.add_slack = False
+            if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
+                raise ValueError("Only cplex_persistent and gurobi_persistent are supported for LP/NLP based Branch and Bound method."
+                                "Please refer to https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html#lp-nlp-based-branch-and-bound.")
+            if config.threads > 1:
+                config.threads = 1
+                config.logger.info(
+                    'The threads parameter is corrected to 1 since lazy constraint callback conflicts with multi-threads mode.')
+        if config.heuristic_nonconvex:
+            config.equality_relaxation = True
+            config.add_slack = True
+        if config.equality_relaxation:
+            config.calculate_dual_at_solution = True
+        if config.init_strategy == 'FP' or config.add_regularization is not None:
+            config.move_objective = True
+        if config.add_regularization is not None:
+            if config.add_regularization in {'level_L1', 'level_L_infinity', 'grad_lag'}:
+                self.regularization_mip_type = 'MILP'
+            elif config.add_regularization in {'level_L2', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
+                self.regularization_mip_type = 'MIQP'
         _MindtPyAlgorithm.check_config(self)
 
 

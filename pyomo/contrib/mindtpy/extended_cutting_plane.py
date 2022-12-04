@@ -18,7 +18,7 @@ from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to)
 from pyomo.contrib.mindtpy.util import set_up_logger,setup_results_object, add_var_bound, calc_jacobians
 from pyomo.core import TransformationFactory, Objective, ConstraintList
 from pyomo.opt import SolverFactory
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_ECP_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 from pyomo.opt import TerminationCondition as tc
@@ -50,7 +50,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
     Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at 
     Carnegie Mellon University.
     """
-    CONFIG = _get_MindtPy_config()
+    CONFIG = _get_MindtPy_ECP_config()
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -118,7 +118,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             self.process_objective(config,
                                    move_objective=config.move_objective,
                                    use_mcpp=config.use_mcpp,
-                                   update_var_con_list=config.add_regularization is None,
+                                   update_var_con_list=True,
                                    partition_nonlinear_terms=config.partition_obj_nonlinear_terms,
                                    obj_handleable_polynomial_degree=self.mip_objective_polynomial_degree,
                                    constr_handleable_polynomial_degree=self.mip_constraint_polynomial_degree)
@@ -218,6 +218,9 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         config = self.config
         if config.init_strategy is None:
             config.init_strategy = 'max_binary'
+        # if ecp tolerance is not provided use bound tolerance
+        if config.ecp_tolerance is None:
+            config.ecp_tolerance = config.absolute_bound_tolerance
         super().check_config()
 
     def initialize_mip_problem(self):

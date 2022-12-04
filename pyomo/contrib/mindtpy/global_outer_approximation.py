@@ -19,7 +19,7 @@ from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to
 from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, get_integer_solution, copy_var_list_values_from_solution_pool, add_var_bound, calc_jacobians
 from pyomo.core import TransformationFactory, maximize, Objective, ConstraintList
 from pyomo.opt import SolverFactory
-from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
+from pyomo.contrib.mindtpy.config_options import _get_MindtPy_GOA_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.opt import TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
@@ -53,7 +53,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
     Research Group (http://egon.cheme.cmu.edu/) at the Department of Chemical Engineering at 
     Carnegie Mellon University.
     """
-    CONFIG = _get_MindtPy_config()
+    CONFIG = _get_MindtPy_GOA_config()
 
     def available(self, exception_flag=True):
         """Check if solver is available.
@@ -303,6 +303,18 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         # Set default initialization_strategy
         if config.init_strategy is None:
             config.init_strategy = 'rNLP'
+        if config.single_tree:
+            config.logger.info('Single-tree implementation is activated.')
+            config.iteration_limit = 1
+            config.add_slack = False
+            if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
+                raise ValueError("Only cplex_persistent and gurobi_persistent are supported for LP/NLP based Branch and Bound method."
+                                "Please refer to https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html#lp-nlp-based-branch-and-bound.")
+            if config.threads > 1:
+                config.threads = 1
+                config.logger.info(
+                    'The threads parameter is corrected to 1 since lazy constraint callback conflicts with multi-threads mode.')
+
         super().check_config()
 
 

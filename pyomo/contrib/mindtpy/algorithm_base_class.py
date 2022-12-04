@@ -645,11 +645,6 @@ class _MindtPyAlgorithm(object):
             self.dual_bound = float('inf')
         self.primal_bound_progress = [self.primal_bound]
         self.dual_bound_progress = [self.dual_bound]
-        if config.add_regularization is not None:
-            if config.add_regularization in {'level_L1', 'level_L_infinity', 'grad_lag'}:
-                self.regularization_mip_type = 'MILP'
-            elif config.add_regularization in {'level_L2', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
-                self.regularization_mip_type = 'MIQP'
 
         if config.nlp_solver == 'ipopt':
             if not hasattr(self.working_model, 'ipopt_zL_out'):
@@ -2123,31 +2118,6 @@ class _MindtPyAlgorithm(object):
         """
         config = self.config
         # configuration confirmation
-        if config.add_regularization is not None:
-            if config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
-                config.calculate_dual_at_solution = True
-            if config.regularization_mip_threads == 0 and config.threads > 0:
-                config.regularization_mip_threads = config.threads
-                config.logger.info(
-                    'Set regularization_mip_threads equal to threads')
-            if config.single_tree:
-                config.add_cuts_at_incumbent = True
-                # if no method is activated by users, we will use use_bb_tree_incumbent by default
-                if not (config.reduce_level_coef or config.use_bb_tree_incumbent):
-                    config.use_bb_tree_incumbent = True
-            if config.mip_regularization_solver is None:
-                config.mip_regularization_solver = config.mip_solver
-        if config.single_tree:
-            config.logger.info('Single-tree implementation is activated.')
-            config.iteration_limit = 1
-            config.add_slack = False
-            if config.mip_solver not in {'cplex_persistent', 'gurobi_persistent'}:
-                raise ValueError("Only cplex_persistent and gurobi_persistent are supported for LP/NLP based Branch and Bound method."
-                                "Please refer to https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html#lp-nlp-based-branch-and-bound.")
-            if config.threads > 1:
-                config.threads = 1
-                config.logger.info(
-                    'The threads parameter is corrected to 1 since lazy constraint callback conflicts with multi-threads mode.')
         if config.init_strategy == 'FP':
             config.add_no_good_cuts = True
             config.use_tabu_list = False
@@ -2157,18 +2127,10 @@ class _MindtPyAlgorithm(object):
         if config.nlp_solver == 'gams' and config.nlp_solver.__contains__('solver'):
             if config.nlp_solver_args['solver'] == 'baron':
                 config.equality_relaxation = False
-        # if ecp tolerance is not provided use bound tolerance
-        if config.ecp_tolerance is None:
-            config.ecp_tolerance = config.absolute_bound_tolerance
 
         if config.solver_tee:
             config.mip_solver_tee = True
             config.nlp_solver_tee = True
-        if config.heuristic_nonconvex:
-            config.equality_relaxation = True
-            config.add_slack = True
-        if config.equality_relaxation:
-            config.calculate_dual_at_solution = True
         if config.add_no_good_cuts:
             config.integer_to_binary = True
         if config.use_tabu_list:
@@ -2194,9 +2156,6 @@ class _MindtPyAlgorithm(object):
             if config.mip_solver in {'gurobi', 'appsi_gurobi'} or \
                 config.mip_regularization_solver in {'gurobi', 'appsi_gurobi'}:
                 raise ValueError("GUROBI can not provide duals for mixed-integer problems.")
-
-        if config.init_strategy == 'FP' or config.add_regularization is not None:
-            config.move_objective = True
 
         if config.init_strategy == 'initial_binary' and config.strategy == 'ECP':
             raise ValueError("ECP method do not support 'initial_binary' as the initialization strategy.")
