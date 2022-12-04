@@ -1175,6 +1175,128 @@ class TestFlatten(TestCategorize):
             else:
                 raise RuntimeError()
 
+    def test_deactivated_block(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[1,2,3])
+        m.space = Set(initialize=[0.0, 0.5, 1.0])
+        m.comp = Set(initialize=['a','b'])
+        
+        m.v0 = Var()
+        m.v1 = Var(m.time)
+        m.v2 = Var(m.time, m.space)
+        m.v3 = Var(m.time, m.space, m.comp)
+        
+        m.v_tt = Var(m.time, m.time)
+        m.v_tst = Var(m.time, m.space, m.time)
+        
+        @m.Block()
+        def b(b):
+        
+            @b.Block(m.time)
+            def b1(b1):
+                b1.v0 = Var()
+                b1.v1 = Var(m.space)
+                b1.v2 = Var(m.space, m.comp)
+        
+                @b1.Block(m.space)
+                def b_s(b_s):
+                    b_s.v0 = Var()
+                    b_s.v1 = Var(m.space)
+                    b_s.v2 = Var(m.space, m.comp)
+        
+            @b.Block(m.time, m.space)
+            def b2(b2):
+                b2.v0 = Var()
+                b2.v1 = Var(m.comp)
+                b2.v2 = Var(m.time, m.comp)
+        
+        # Deactivating b1 should get rid of both variables directly on it
+        # as well as those on the subblock b_s
+        m.b.b1.deactivate()
+        sets = (m.time,)
+
+        #
+        # Test identifying active components
+        #
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Var, active=True
+        )
+
+        expected_unindexed = [ComponentUID(m.v0)]
+        expected_unindexed = set(expected_unindexed)
+        expected_time = [ComponentUID(m.v1[:])]
+        expected_time.extend(ComponentUID(m.v2[:, x]) for x in m.space)
+        expected_time.extend(
+            ComponentUID(m.v3[:, x, j]) for x in m.space for j in m.comp
+        )
+        expected_time.extend(ComponentUID(m.b.b2[:, x].v0) for x in m.space)
+        expected_time.extend(
+            ComponentUID(m.b.b2[:, x].v1[j]) for x in m.space for j in m.comp
+        )
+        expected_time = set(expected_time)
+
+        expected_2time = [ComponentUID(m.v_tt[:, :])]
+        expected_2time.extend(
+            ComponentUID(m.v_tst[:, x, :]) for x in m.space
+        )
+        expected_2time.extend(
+            ComponentUID(m.b.b2[:, x].v2[:, j]) for x in m.space for j in m.comp
+        )
+        expected_2time = set(expected_2time)
+
+        set_id_set = set(tuple(id(s) for s in sets) for sets in sets_list)
+        pred_sets = [(UnindexedComponent_set,), (m.time,), (m.time, m.time)]
+        pred_set_ids = set(tuple(id(s) for s in sets) for sets in pred_sets)
+        self.assertEqual(set_id_set, pred_set_ids)
+        for sets, comps in zip(sets_list, comps_list):
+            if len(sets) == 1 and sets[0] is UnindexedComponent_set:
+                comp_set = set(ComponentUID(comp) for comp in comps)
+                self.assertEqual(comp_set, expected_unindexed)
+            elif len(sets) == 1 and sets[0] is m.time:
+                comp_set = set(ComponentUID(comp.referent) for comp in comps)
+                self.assertEqual(comp_set, expected_time)
+            elif len(sets) == 2:
+                self.assertIs(sets[0], m.time)
+                self.assertIs(sets[1], m.time)
+                comp_set = set(ComponentUID(comp.referent) for comp in comps)
+                self.assertEqual(comp_set, expected_2time)
+
+        #
+        # Test identifying inactive components
+        #
+        # FIXME: This test seems to not work. Seems we don't identify
+        # any components with active=False
+        #
+        #m.deactivate()
+        #m.b.deactivate()
+        #sets_list, comps_list = flatten_components_along_sets(
+        #    m, sets, Var, active=False
+        #)
+
+        #expected_time = [ComponentUID(m.b.b1[:].v0)]
+        #expected_time.extend(
+        #    ComponentUID(m.b.b1[:].v1[x]) for x in m.space
+        #)
+        #expected_time.extend(
+        #    ComponentUID(m.b.b1[:].v2[x, j]) for x in m.space for j in m.comp
+        #)
+        #expected_time.extend(
+        #    ComponentUID(m.b.b1[:].b_s[x].v0) for x in m.space
+        #)
+        #expected_time.extend(
+        #    ComponentUID(m.b.b1[:].b_s[x1].v1[x2])
+        #    for x1 in m.space for x2 in m.space
+        #)
+        #expected_time.extend(
+        #    ComponentUID(m.b.b1[:].b_s[x1].v2[x2, j])
+        #    for x1 in m.space for x2 in m.space for j in m.comp
+        #)
+        #expected_time = set(expected_time)
+
+        #self.assertEqual(len(sets_list), 1)
+        #self.assertEqual(len(sets_list[0]), 1)
+        #self.assertIs(sets_list[0][0], m.time)
+
 
 class TestCUID(unittest.TestCase):
     """
@@ -1412,6 +1534,7 @@ class TestCUID(unittest.TestCase):
                 raise RuntimeError()
 
 
+# TODO: Don't subclass TestFlatten. This runs its tests twice.
 class TestSliceComponent(TestFlatten):
 
     def make_model(self):
@@ -1659,4 +1782,5 @@ class TestExceptional(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    #unittest.main()
+    TestFlatten().test_deactivated_block()
