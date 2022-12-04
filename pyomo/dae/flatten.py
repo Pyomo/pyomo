@@ -18,9 +18,10 @@ from pyomo.common.collections import ComponentSet, ComponentMap
 from pyomo.core.base.block import SubclassOf
 from pyomo.core.base.set import SetProduct
 from pyomo.core.base.indexed_component import (
-        UnindexedComponent_set,
-        normalize_index,
-        )
+    UnindexedComponent_set,
+    normalize_index,
+)
+from pyomo.core.base.component import ActiveComponent
 from pyomo.core.base.indexed_component_slice import IndexedComponent_slice
 from collections import OrderedDict
 
@@ -299,7 +300,12 @@ def generate_sliced_components(
     # Looks for components indexed by these sets immediately in our block.
     # Note that the active flag, if used, will filter returned slices only
     # by the flag of the Component object, not by any data objects.
-    for c in b.component_objects(ctype, descend_into=False, active=active):
+    #
+    # If active is provided and ctype is not an ActiveComponent (e.g. it is
+    # Var), we will not generate any components. To prevent this, only pass
+    # the active flag if we are looking for active components.
+    c_active = active if issubclass(ctype, ActiveComponent) else None
+    for c in b.component_objects(ctype, descend_into=False, active=c_active):
         subsets = list(c.index_set().subsets())
         new_sets = [s for s in subsets if s in sets]
         # Extend our "index stack"
@@ -372,7 +378,7 @@ def generate_sliced_components(
                         # block data object exists to descend into.
                         # Not sure if we should raise an error here... -RBP
                         continue
-                elif not descend_data.active:
+                elif active is not None and descend_data.active != active:
                     # Assume descend_data is a BlockData object. This particular
                     # BlockData was specified by the index map. In this case,
                     # we may want to respect "activity".
