@@ -742,11 +742,11 @@ class _MindtPyAlgorithm(object):
             if config.strategy in {'OA', 'GOA', 'FP'}:
                 copy_var_list_values(m.MindtPy_utils.variable_list,
                                     self.mip.MindtPy_utils.variable_list,
-                                    config, ignore_integrality=True)
+                                    config)
                 if config.init_strategy == 'FP':
                     copy_var_list_values(m.MindtPy_utils.variable_list,
                                         self.working_model.MindtPy_utils.variable_list,
-                                        config, ignore_integrality=True)
+                                        config)
                 if config.strategy in {'OA', 'FP'}:
                     add_oa_cuts(self.mip, 
                     dual_values,

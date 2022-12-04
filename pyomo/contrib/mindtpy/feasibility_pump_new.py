@@ -226,8 +226,7 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
         copy_var_list_values(
             fp_nlp.MindtPy_utils.variable_list,
             self.working_model.MindtPy_utils.variable_list,
-            config,
-            ignore_integrality=True)
+            config)
         add_orthogonality_cuts(self.working_model, self.mip, config)
 
         # if OA-like or fp converged, update Upper bound,
