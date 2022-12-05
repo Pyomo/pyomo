@@ -1,6 +1,5 @@
 import pyomo.common.unittest as unittest
 
-from pyomo.common.log import LoggingIntercept
 from pyomo.core.expr.sympy_tools import sympy_available
 from pyomo.environ import (AbstractModel, BooleanVar, ConcreteModel,
                            LogicalConstraint, TransformationFactory, Constraint)
@@ -56,16 +55,8 @@ class TestLogicalConstraintCreation(unittest.TestCase):
             [model.x.lor(model.y)], [model.y.lor(model.z)]
         ])
 
-        with LoggingIntercept() as LOG:
-            TransformationFactory('core.logical_to_linear').apply_to(
-                model, targets=model.disj.disjuncts)
-        self.assertRegex(
-            LOG.getvalue().replace("\n", " ").strip(),
-            "^DEPRECATED: The 'core.logical_to_linear' transformation "
-            "is deprecated. Please use the 'contrib.logical_to_disjunctive' "
-            "transformation instead.  \(deprecated in [^\)]+\) "
-            "\(called from [^\)]+\)$"
-        )
+        TransformationFactory('core.logical_to_linear').apply_to(
+            model, targets=model.disj.disjuncts)
 
         bigmed = TransformationFactory('gdp.bigm').create_using(model)
         # check that the algebraic versions are living on the Disjuncts
