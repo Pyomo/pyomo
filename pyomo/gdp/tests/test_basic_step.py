@@ -139,5 +139,19 @@ class TestBasicStep(unittest.TestCase):
         self.assertIs(refs[0][None], m.d[0].indicator_var)
         self.assertIs(refs[1][None], m.d[1].indicator_var)
 
+    def test_arg_errors(self):
+        m = models.makeTwoTermDisj()
+        m.simple = Constraint(expr=m.x <= m.a + 1)
+
+        with self.assertRaisesRegex(
+                ValueError, 'apply_basic_step only accepts a list containing '
+                'Disjunctions or Constraints'):
+            apply_basic_step([m.disjunction, m.simple, m.x])
+        with self.assertRaisesRegex(
+                ValueError, 'apply_basic_step: argument list must contain at '
+                'least one Disjunction'):
+            apply_basic_step([m.simple, m.simple])
+
+
 if __name__ == '__main__':
     unittest.main()

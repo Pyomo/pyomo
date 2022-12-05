@@ -347,10 +347,6 @@ class PseudoMap(AutoSlots.Mixin):
 
     __slots__ = ('_block', '_ctypes', '_active', '_sorted')
 
-    # If a writer cached a repn on this block, remove it when cloning
-    #  TODO: remove repn caching from the model
-    __autoslot_mappers = {'_repn': AutoSlots.encode_as_none}
-
     def __init__(self, block, ctype, active=None, sort=False):
         """
         TODO
@@ -576,6 +572,10 @@ class _BlockData(ActiveComponentData):
     This class holds the fundamental block data.
     """
     _Block_reserved_words = set()
+
+    # If a writer cached a repn on this block, remove it when cloning
+    #  TODO: remove repn caching from the model
+    __autoslot_mappers = {'_repn': AutoSlots.encode_as_none}
 
     def __init__(self, component):
         #
@@ -1348,7 +1348,7 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
             self._decl_order[prev] = (self._decl_order[prev][0], idx)
             self._decl_order[idx] = (obj, tmp)
 
-    def clone(self):
+    def clone(self, memo=None):
         """
         TODO
         """
@@ -1365,15 +1365,23 @@ Components must now specify their rules explicitly using 'rule=' keywords.""" %
         # NonNegativeReals, etc) that are not "owned" by any blocks and
         # should be preserved as singletons.
         #
+        pc = self.parent_component()
+        if pc is self:
+            parent = self.parent_block()
+        else:
+            parent = pc
+
+        if memo is None:
+            memo = {}
+        memo['__block_scope__'] = {id(self): True, id(None): False}
+        memo[id(parent)] = parent
+
         with PauseGC():
-            new_block = copy.deepcopy(
-                self, dict(
-                    __block_scope__={id(self): True, id(None): False},
-                ))
+            new_block = copy.deepcopy(self, memo)
 
         # We need to "detangle" the new block from the original block
         # hierarchy
-        if self.parent_component() is self:
+        if pc is self:
             new_block._parent = None
         else:
             new_block._component = None

@@ -15,9 +15,10 @@ from pyomo.common.modeling import unique_component_name
 from pyomo.core.base import Transformation
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core import (
-    Block, BooleanVar, Connector, Constraint, Expression, Param, RangeSet,
-    Set, SetOf, Suffix, Var)
+    Block, BooleanVar, Connector, Constraint, Expression, NonNegativeIntegers,
+    Param, RangeSet, Set, SetOf, Suffix, Var)
 from pyomo.gdp import Disjunct, Disjunction
+from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import get_gdp_tree
 from pyomo.network import Port
 
@@ -60,12 +61,14 @@ class GDP_to_MIP_Transformation(Transformation):
         }
         self._generate_debug_messages = False
         self._transformation_blocks = {}
+        self._algebraic_constraints = {}
 
     def _apply_to(self, instance, **kwds):
         try:
             self._apply_to_impl(instance, **kwds)
         finally:
             self._transformation_blocks.clear()
+            self._algebraic_constraints.clear()
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):

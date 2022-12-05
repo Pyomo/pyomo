@@ -158,10 +158,9 @@ class BigM_Transformation(GDP_to_MIP_Transformation):
                                         # not to be when I try to put it into
                                         # this map!
         try:
-            self._apply_to_impl(instance, **kwds)
+            super()._apply_to(instance, **kwds)
         finally:
             self.used_args.clear()
-            self._transformation_blocks.clear()
 
     def _apply_to_impl(self, instance, **kwds):
         super(BigM_Transformation, self)._apply_to_impl(instance, **kwds)
@@ -176,10 +175,10 @@ class BigM_Transformation(GDP_to_MIP_Transformation):
 
         # transform any logical constraints that might be anywhere on the stuff
         # we're about to transform.
+        targets = [] if not self._config.targets else self._config.targets
         TransformationFactory('core.logical_to_linear').apply_to(
             instance,
-            targets=[blk for blk in self._config.targets 
-                     if blk.ctype is Block] +
+            targets=[blk for blk in targets if blk.ctype is Block] +
             [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
 
         self.assume_fixed_vars_permanent = self._config.\
@@ -211,8 +210,8 @@ class BigM_Transformation(GDP_to_MIP_Transformation):
         # DisjunctionData, we did something wrong.
 
         # first check if the constraint already exists
-        if disjunction._algebraic_constraint is not None:
-            return disjunction._algebraic_constraint()
+        if disjunction in self._algebraic_constraints:
+            return self._algebraic_constraints[disjunction]
 
         # add the XOR (or OR) constraints to parent block (with unique name)
         # It's indexed if this is an IndexedDisjunction, not otherwise
@@ -223,7 +222,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation):
         orCname = unique_component_name(
             transBlock,disjunction.getname(fully_qualified=False) + '_xor')
         transBlock.add_component(orCname, orC)
-        disjunction._algebraic_constraint = weakref_ref(orC)
+        self._algebraic_constraints[disjunction] = orC
 
         return orC
 

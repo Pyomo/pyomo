@@ -67,7 +67,8 @@ would both cause this exception.""".strip() % (self,))
         return self._args_[:self.nargs()]
 
     @deprecated("is_relational() is deprecated in favor of "
-                "is_expression_type(ExpressionType.RELATIONAL)", version='TBD')
+                "is_expression_type(ExpressionType.RELATIONAL)",
+                version='6.4.3')
     def is_relational(self):
         return self.is_expression_type(ExpressionType.RELATIONAL)
 
