@@ -171,6 +171,11 @@ class BigM_Transformation(GDP_to_MIP_Transformation):
         # the list.
         gdp_tree = self._get_gdp_tree_from_targets(instance)
         preprocessed_targets = gdp_tree.reverse_topological_sort()
+        # TODO: I actually need to rearrange when the targets get filtered
+        # (since that needs to be before this) and when this gets called
+        # (because this needs to come before getting the gdp tree so that any
+        # added Disjunctions make it on the list of things to transform.
+        self._transform_logical_constraints(instance)
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
