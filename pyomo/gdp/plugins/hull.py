@@ -218,6 +218,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         gdp_tree = self._get_gdp_tree_from_targets(instance)
         preprocessed_targets = gdp_tree.topological_sort()
         self._targets = set(preprocessed_targets)
+        self._transform_logical_constraints()
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
