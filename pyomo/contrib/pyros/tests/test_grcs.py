@@ -2460,6 +2460,93 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, big_exc_str):
             fset.beta = big_beta
 
+    @unittest.skipUnless(
+        SolverFactory("cbc").available(exception_flag=False),
+        "LP solver CBC not available",
+    )
+    def test_factor_model_parameter_bounds_correct(self):
+        """
+        If LP solver is available, test parameter bounds method
+        for factor model set is correct (check against
+        results from an LP solver).
+        """
+        def eval_parameter_bounds(uncertainty_set, solver):
+            """
+            Evaluate parameter bounds of uncertainty set by solving
+            bounding problems (as opposed to via the `parameter_bounds`
+            method).
+            """
+            bounding_mdl = uncertainty_set.bounding_model()
+
+            param_bounds = []
+            for idx, obj in bounding_mdl.param_var_objectives.items():
+                # activate objective for corresponding dimension
+                obj.activate()
+                bounds = []
+
+                # solve for lower bound, then upper bound
+                # solve should be successful
+                for sense in (minimize, maximize):
+                    obj.sense = sense
+                    solver.solve(bounding_mdl)
+                    bounds.append(value(obj))
+
+                # add parameter bounds for current dimension
+                param_bounds.append(tuple(bounds))
+
+                # ensure sense is minimize when done, deactivate
+                obj.sense = minimize
+                obj.deactivate()
+
+            return param_bounds
+
+        solver = SolverFactory("cbc")
+
+        # four cases where prior parameter bounds
+        # approximations were probably too tight
+        fset1 = FactorModelSet(
+            origin=[0, 0],
+            number_of_factors=3,
+            psi_mat=[[1, -1, 1], [1, 0.1, 1]],
+            beta=1/6,
+        )
+        fset2 = FactorModelSet(
+            origin=[0],
+            number_of_factors=3,
+            psi_mat=[[1, 6, 8]],
+            beta=1/2,
+        )
+        fset3 = FactorModelSet(
+            origin=[1],
+            number_of_factors=2,
+            psi_mat=[[1, 2]],
+            beta=1/4,
+        )
+        fset4 = FactorModelSet(
+            origin=[1],
+            number_of_factors=3,
+            psi_mat=[[-1, -6, -8]],
+            beta=1/2,
+        )
+
+        # check parameter bounds matches LP results
+        # exactly for each case
+        for fset in [fset1, fset2, fset3, fset4]:
+            param_bounds = fset.parameter_bounds
+            lp_param_bounds = eval_parameter_bounds(fset, solver)
+
+            self.assertTrue(
+                np.allclose(param_bounds, lp_param_bounds),
+                msg=(
+                    "Parameter bounds not consistent with LP values for "
+                    "FactorModelSet with parameterization:\n"
+                    f"F={fset.number_of_factors},\n"
+                    f"beta={fset.beta},\n"
+                    f"psi_mat={fset.psi_mat},\n"
+                    f"origin={fset.origin}."
+                ),
+            )
+
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_uncertainty_set_with_correct_params(self):
         '''

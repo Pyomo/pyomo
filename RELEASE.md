@@ -21,7 +21,8 @@ The following are highlights of the 6.0 release series:
     - Structural model analysis
     - Rewrite of the TrustRegion Solver
 
-A full list of updates and changes is available in the CHANGELOG.txt
+A full list of updates and changes is available in the
+[`CHANGELOG.md`](https://github.com/Pyomo/pyomo/blob/main/CHANGELOG.md).
 
 Enjoy!
 
@@ -30,7 +31,6 @@ Enjoy!
  - https://www.pyomo.org
 
 
------------
 About Pyomo
 -----------
 
@@ -38,11 +38,15 @@ The Pyomo home page provides resources for Pyomo users:
 
  * https://www.pyomo.org
 
+Detailed documentation is hosted on Read the Docs:
+
+ * https://pyomo.readthedocs.io/en/stable/
+
 Pyomo development is hosted at GitHub:
 
  * https://github.com/Pyomo
 
-Get help at
+Get help at:
 
  * StackOverflow: https://stackoverflow.com/questions/tagged/pyomo
  * Pyomo Forum:   https://groups.google.com/group/pyomo-forum/

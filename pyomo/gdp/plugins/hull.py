@@ -22,8 +22,6 @@ from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
     Expression, SortComponents, TraversalStrategy, Any, RangeSet, Reals, value,
     NonNegativeIntegers, Binary )
-from pyomo.core.base.boolean_var import (
-    _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.plugins.gdp_to_mip_transformation import (
     GDP_to_MIP_Transformation)
@@ -218,15 +216,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         super(Hull_Reformulation, self)._apply_to_impl(instance, **kwds)
 
         gdp_tree = self._get_gdp_tree_from_targets(instance)
-
         preprocessed_targets = gdp_tree.topological_sort()
         self._targets = set(preprocessed_targets)
-        # transform any logical constraints that might be anywhere on the stuff
-        # we're about to transform.
-        TransformationFactory('core.logical_to_linear').apply_to(
-            instance,
-            targets=[blk for blk in targets if blk.ctype is Block] +
-            [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
@@ -602,23 +593,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
     def _transform_block_components( self, block, disjunct, var_substitute_map,
                                      zero_substitute_map):
-        # We don't know where all the BooleanVars are used, so if there are any
-        # that the above transformation didn't transform, we need to do it now,
-        # so that the Reference gets moved up. This won't be necessary when the
-        # writers are willing to find Vars not in the active subtree.
-        for boolean in block.component_data_objects(BooleanVar,
-                                                    descend_into=Block,
-                                                    active=None):
-            if isinstance(boolean._associated_binary,
-                          _DeprecatedImplicitAssociatedBinaryVariable):
-                parent_block = boolean.parent_block()
-                new_var = Var(domain=Binary)
-                parent_block.add_component(
-                    unique_component_name(parent_block,
-                                          boolean.local_name + "_asbinary"),
-                    new_var)
-                boolean.associate_binary_var(new_var)
-
         # add references to all local variables on block (including the
         # indicator_var). Note that we do this after we have moved up the
         # transformation blocks for nested disjunctions, so that we don't have

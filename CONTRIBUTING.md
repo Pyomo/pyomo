@@ -4,7 +4,8 @@ Contributing to Pyomo
 Online Documentation
 --------------------
 
-Detailed contribution guidelines may be found in our [online documentation](http://pyomo.readthedocs.io/en/latest/contribution_guide.html).
+Detailed contribution guidelines may be found in our
+[online documentation](http://pyomo.readthedocs.io/en/latest/contribution_guide.html).
 
 Pull Requests
 -------------

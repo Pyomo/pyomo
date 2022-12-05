@@ -16,6 +16,9 @@ import pickle
 from pyomo.common.fileutils import import_file, PYOMO_ROOT_DIR
 from pyomo.common.log import LoggingIntercept
 import pyomo.common.unittest as unittest
+from pyomo.core.expr.compare import (
+    assertExpressionsEqual, assertExpressionsStructurallyEqual
+)
 
 from pyomo.environ import (
     BooleanVar, ConcreteModel, Constraint, LogicalConstraint,
@@ -618,28 +621,185 @@ class LinearModelDecisionTreeExample(unittest.TestCase):
         m = self.make_model()
         m.d1.Y = BooleanVar()
         m.d1.Z = BooleanVar()
-        # include an unused boolean var because it's our job to move this out of
-        # what will be deactivated.
-        m.d1.W = BooleanVar()
         m.d1.logical = LogicalConstraint(expr=m.d1.Y.implies(m.d1.Z))
 
         mbm = TransformationFactory('gdp.mbigm')
         mbm.apply_to(m, bigM=self.get_Ms(m), reduce_bound_constraints=False)
 
-        transformed = mbm.get_transformed_constraints(
-            m.d1.logic_to_linear.transformed_constraints[1])
-        self.assertEqual(len(transformed), 1)
         y = m.d1.Y.get_associated_binary()
         z = m.d1.Z.get_associated_binary()
+        z1 = m.d1._logical_to_disjunctive.auxiliary_vars[3]
+
+        # MbigM transformation of: (1 - z1) + (1 - y) + z >= 1
+        # (1 - z1) + (1 - y) + z >= 1 - d2.ind_var - d3.ind_var
+        transformed = mbm.get_transformed_constraints(
+            m.d1._logical_to_disjunctive.transformed_constraints[1])
+        self.assertEqual(len(transformed), 1)
         c = transformed[0]
         check_obj_in_active_tree(self, c)
         self.assertIsNone(c.lower)
         self.assertEqual(value(c.upper), 0)
         repn = generate_standard_repn(c.body)
         self.assertTrue(repn.is_linear())
-        self.assertEqual(repn.constant, 0)
-        self.assertEqual(len(repn.linear_vars), 4)
-        check_linear_coef(self, repn, y, 1)
-        check_linear_coef(self, repn, z, -1)
-        check_linear_coef(self, repn, m.d2.binary_indicator_var, -1)
-        check_linear_coef(self, repn, m.d3.binary_indicator_var, -1)
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            - m.d2.binary_indicator_var - m.d3.binary_indicator_var + z1 +
+            y - z - 1)
+
+        # MbigM transformation of: z1 + 1 - (1 - y) >= 1
+        # z1 + y >= 1 - d2.ind_var - d3.ind_var
+        transformed = mbm.get_transformed_constraints(
+            m.d1._logical_to_disjunctive.transformed_constraints[2])
+        self.assertEqual(len(transformed), 1)
+        c = transformed[0]
+        check_obj_in_active_tree(self, c)
+        self.assertIsNone(c.lower)
+        self.assertEqual(value(c.upper), 0)
+        repn = generate_standard_repn(c.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            - m.d2.binary_indicator_var - m.d3.binary_indicator_var - y - z1 +
+            1)
+
+        # MbigM transformation of: z1 + 1 - z >= 1
+        # z1 + 1 - z >= 1 - d2.ind_var - d3.ind_var
+        transformed = mbm.get_transformed_constraints(
+            m.d1._logical_to_disjunctive.transformed_constraints[3])
+        self.assertEqual(len(transformed), 1)
+        c = transformed[0]
+        check_obj_in_active_tree(self, c)
+        self.assertIsNone(c.lower)
+        self.assertEqual(value(c.upper), 0)
+        repn = generate_standard_repn(c.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsStructurallyEqual(
+            self,
+            simplified,
+            - m.d2.binary_indicator_var - m.d3.binary_indicator_var + z - z1)
+
+    def check_traditionally_bigmed_constraints(self, m, mbm, Ms):
+        cons = mbm.get_transformed_constraints(m.d1.func)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        ub = cons[1]
+        assertExpressionsEqual(self, lb.expr, 0.0 <= m.x1 + m.x2 - m.d -
+                               Ms[m.d1][0]*(1 - m.d1.binary_indicator_var))
+        # [ESJ 11/23/22]: It's really hard to use assertExpressionsEqual on the
+        # ub constraints because SumExpressions are sharing args, I think. So
+        # when they get constructed in the transformation (because they come
+        # after the lb constraints), there are nested SumExpressions. Instead of
+        # trying to reproduce them I am just building a "flat" SumExpression
+        # with generate_standard_repn and comparing that.
+        self.assertIsNone(ub.lower)
+        self.assertEqual(ub.upper, 0)
+        repn = generate_standard_repn(ub.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsEqual(self, simplified, m.x1 + m.x2 - m.d +
+                               Ms[m.d1][1]*m.d1.binary_indicator_var -
+                               Ms[m.d1][1])
+
+        cons = mbm.get_transformed_constraints(m.d2.func)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        ub = cons[1]
+        assertExpressionsEqual(self, lb.expr, 0.0 <= 2*m.x1 + 4*m.x2 + 7 - m.d -
+                               Ms[m.d2][0]*(1 - m.d2.binary_indicator_var))
+        self.assertIsNone(ub.lower)
+        self.assertEqual(ub.upper, 0)
+        repn = generate_standard_repn(ub.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsEqual(self, simplified, 2*m.x1 + 4*m.x2 - m.d +
+                               Ms[m.d2][1]*m.d2.binary_indicator_var -
+                               (Ms[m.d2][1] - 7))
+
+        cons = mbm.get_transformed_constraints(m.d3.func)
+        self.assertEqual(len(cons), 2)
+        lb = cons[0]
+        ub = cons[1]
+        assertExpressionsEqual(self, lb.expr, 0.0 <= m.x1 - 5*m.x2 - 3 - m.d -
+                               Ms[m.d3][0]*(1 - m.d3.binary_indicator_var))
+        self.assertIsNone(ub.lower)
+        self.assertEqual(ub.upper, 0)
+        repn = generate_standard_repn(ub.body)
+        self.assertTrue(repn.is_linear())
+        simplified = repn.constant + sum(
+            repn.linear_coefs[i]*repn.linear_vars[i]
+            for i in range(len(repn.linear_vars)))
+        assertExpressionsEqual(self, simplified, m.x1 - 5*m.x2 - m.d +
+                               Ms[m.d3][1]*m.d3.binary_indicator_var -
+                               (Ms[m.d3][1] + 3))
+
+    def test_only_multiple_bigm_bound_constraints(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        mbm.apply_to(m, only_mbigm_bound_constraints=True)
+
+        cons = mbm.get_transformed_constraints(m.d1.x1_bounds)
+        self.assertEqual(len(cons), 2)
+        self.check_pretty_bound_constraints(cons[0], m.x1, {m.d1: 0.5, m.d2:
+                                                            0.65, m.d3: 2},
+                                            lb=True)
+        self.check_pretty_bound_constraints(cons[1], m.x1, {m.d1: 2, m.d2: 3,
+                                                            m.d3: 10}, lb=False)
+
+        cons = mbm.get_transformed_constraints(m.d1.x2_bounds)
+        self.assertEqual(len(cons), 2)
+        self.check_pretty_bound_constraints(cons[0], m.x2, {m.d1: 0.75, m.d2: 3,
+                                                            m.d3: 0.55},
+                                            lb=True)
+        self.check_pretty_bound_constraints(cons[1], m.x2, {m.d1: 3, m.d2: 10,
+                                                            m.d3: 1}, lb=False)
+
+        self.check_traditionally_bigmed_constraints(
+            m,
+            mbm,
+            {m.d1: (-1030.0, 1030.0),
+             m.d2: (-1093.0, 1107.0),
+             m.d3: (-1113.0, 1107.0)})
+
+    def test_only_multiple_bigm_bound_constraints_arg_Ms(self):
+        m = self.make_model()
+        mbm = TransformationFactory('gdp.mbigm')
+        Ms = {m.d1: 1050, m.d2.func: (-2000, 1200), None: 4000}
+        mbm.apply_to(m, only_mbigm_bound_constraints=True, bigM=Ms)
+
+        cons = mbm.get_transformed_constraints(m.d1.x1_bounds)
+        self.assertEqual(len(cons), 2)
+        self.check_pretty_bound_constraints(cons[0], m.x1, {m.d1: 0.5, m.d2:
+                                                            0.65, m.d3: 2},
+                                            lb=True)
+        self.check_pretty_bound_constraints(cons[1], m.x1, {m.d1: 2, m.d2: 3,
+                                                            m.d3: 10}, lb=False)
+
+        cons = mbm.get_transformed_constraints(m.d1.x2_bounds)
+        self.assertEqual(len(cons), 2)
+        self.check_pretty_bound_constraints(cons[0], m.x2, {m.d1: 0.75, m.d2: 3,
+                                                            m.d3: 0.55},
+                                            lb=True)
+        self.check_pretty_bound_constraints(cons[1], m.x2, {m.d1: 3, m.d2: 10,
+                                                            m.d3: 1}, lb=False)
+
+        self.check_traditionally_bigmed_constraints(
+            m,
+            mbm,
+            {m.d1: (-1050, 1050),
+             m.d2: (-2000, 1200),
+             m.d3: (-4000, 4000)})

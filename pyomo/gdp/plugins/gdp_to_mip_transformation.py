@@ -12,7 +12,7 @@
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 
-from pyomo.core.base import Transformation
+from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Expression, NonNegativeIntegers,
@@ -80,6 +80,25 @@ class GDP_to_MIP_Transformation(Transformation):
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
         self._generate_debug_messages = is_debug_set(self.logger)
+
+        # transform any logical constraints that might be anywhere on the stuff
+        # we're about to transform. We do this before we preprocess targets
+        # because we will likely create more disjunctive components that will
+        # need transformation.
+        disj_targets = []
+        targets = (instance,) if self._config.targets is None else \
+                  self._config.targets
+        for t in targets:
+            disj_datas = t.values() if t.is_indexed() else [t,]
+            if t.ctype is Disjunct:
+                disj_targets.extend(disj_datas)
+            if t.ctype is Disjunction:
+                disj_targets.extend([d for disjunction in disj_datas for d in
+                                     disjunction.disjuncts])
+        TransformationFactory('contrib.logical_to_disjunctive').apply_to(
+            instance,
+            targets=[blk for blk in targets if blk.ctype is Block] +
+            disj_targets)
 
     def _get_gdp_tree_from_targets(self, instance):
         targets = self._config.targets
