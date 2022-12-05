@@ -18,7 +18,7 @@ from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.modeling import unique_component_name
 
 from pyomo.core import (
-    Binary, Block, BooleanVar, Connector, Constraint, Expression,
+    Any, Binary, Block, BooleanVar, Connector, Constraint, Expression,
     ExternalFunction, maximize, minimize, NonNegativeIntegers, Objective,
     Param, RangeSet, Set, SetOf, SortComponents, Suffix, value, Var
 )
@@ -105,7 +105,9 @@ class MultipleBigMTransformation(Transformation):
 
         Note: Unlike in the bigm transformation, we require the keys in this
         mapping specify the components the M value applies to exactly in order
-        to avoid ambiguity.
+        to avoid ambiguity. However, if the 'only_mbigm_bound_constraints'
+        option is True, this argument can be used as it would be in the
+        traditional bigm transformation for the non-bound constraints.
         """
     ))
     CONFIG.declare('reduce_bound_constraints', ConfigValue(
@@ -140,6 +142,25 @@ class MultipleBigMTransformation(Transformation):
             Techniques," SIAM Review, vol. 57, no. 1, 2015, pp. 3-57.
         """
     ))
+    CONFIG.declare('only_mbigm_bound_constraints', ConfigValue(
+        default=False,
+        domain=bool,
+        description="Flag indicating if only bound constraints should be "
+        "transformed with multiple-bigm, or if all the disjunctive "
+        "constraints should.",
+        doc="""
+        Sometimes it is only computationally advantageous to apply multiple-
+        bigm to disjunctive constraints with the special structure:
+
+        [l_1 <= x <= u_1] v [l_2 <= x <= u_2] v ... v [l_K <= x <= u_K],
+
+        and transform other disjunctive constraints with the traditional
+        big-M transformation. This flag is used to set the above behavior.
+
+        Note that the reduce_bound_constraints flag must also be True when
+        this flag is set to True.
+        """
+    ))
 
     def __init__(self):
         super(MultipleBigMTransformation, self).__init__()
@@ -171,6 +192,7 @@ class MultipleBigMTransformation(Transformation):
         }
         self._transformation_blocks = {}
         self._algebraic_constraints = {}
+        self._arg_list = {}
 
     def _apply_to(self, instance, **kwds):
         self.used_args = ComponentMap()
@@ -180,6 +202,7 @@ class MultipleBigMTransformation(Transformation):
             self.used_args.clear()
             self._transformation_blocks.clear()
             self._algebraic_constraints.clear()
+            self._arg_list.clear()
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
@@ -190,6 +213,15 @@ class MultipleBigMTransformation(Transformation):
 
         self._config = self.CONFIG(kwds.pop('options', {}))
         self._config.set_value(kwds)
+
+        if (self._config.only_mbigm_bound_constraints and not
+            self._config.reduce_bound_constraints):
+            raise GDP_Error("The 'only_mbigm_bound_constraints' option is set "
+                            "to True, but the 'reduce_bound_constraints' "
+                            "option is not. This is not supported--please also "
+                            "set 'reduce_bound_constraints' to True if you "
+                            "only wish to transform the bound constraints with "
+                            "multiple bigm.")
 
         targets = self._config.targets
         knownBlocks = {}
@@ -272,9 +304,12 @@ class MultipleBigMTransformation(Transformation):
             transformed_constraints = self._transform_bound_constraints(
                 active_disjuncts, transBlock, arg_Ms)
 
-        Ms = transBlock.calculated_missing_m_values = self.\
-             _calculate_missing_M_values(active_disjuncts, arg_Ms, transBlock,
-                                         transformed_constraints)
+        Ms = arg_Ms
+        if not self._config.only_mbigm_bound_constraints:
+            Ms = transBlock.calculated_missing_m_values = self.\
+                 _calculate_missing_M_values(active_disjuncts, arg_Ms,
+                                             transBlock,
+                                             transformed_constraints)
 
         # Now we can deactivate the constraints we deferred, so that we don't
         # re-transform them
@@ -396,31 +431,63 @@ class MultipleBigMTransformation(Transformation):
         name = unique_component_name(relaxationBlock, obj.getname(
             fully_qualified=False))
 
-        newConstraint = Constraint(obj.index_set(), transBlock.lbub)
+        newConstraint = Constraint(Any)
         relaxationBlock.add_component(name, newConstraint)
+        bigm = TransformationFactory('gdp.bigm')
+        bigm.assume_fixed_vars_permanent = self._config.\
+                                           assume_fixed_vars_permanent
+        bigm.used_args = self.used_args
 
         for i in sorted(obj.keys()):
             c = obj[i]
             if not c.active:
                 continue
 
-            transformed = []
-            if c.lower is not None:
-                rhs = sum(Ms[c,
-                             disj][0]*disj.indicator_var.get_associated_binary()
-                          for disj in active_disjuncts if disj is not disjunct)
-                newConstraint.add((i, 'lb'), c.body - c.lower >= rhs)
-                transformed.append(newConstraint[i, 'lb'])
+            if not self._config.only_mbigm_bound_constraints:
+                transformed = []
+                if c.lower is not None:
+                    rhs = sum(
+                        Ms[c,
+                           disj][0]*disj.indicator_var.get_associated_binary()
+                        for disj in active_disjuncts if disj is not disjunct)
+                    newConstraint.add((i, 'lb'), c.body - c.lower >= rhs)
+                    transformed.append(newConstraint[i, 'lb'])
 
-            if c.upper is not None:
-                rhs = sum(Ms[c,
-                             disj][1]*disj.indicator_var.get_associated_binary()
-                          for disj in active_disjuncts if disj is not disjunct)
-                newConstraint.add((i, 'ub'), c.body - c.upper <= rhs)
-                transformed.append(newConstraint[i, 'ub'])
-            for c_new in transformed:
-                constraintMap['srcConstraints'][c_new] = [c]
-            constraintMap['transformedConstraints'][c] = transformed
+                if c.upper is not None:
+                    rhs = sum(
+                        Ms[c,
+                           disj][1]*disj.indicator_var.get_associated_binary()
+                        for disj in active_disjuncts if disj is not disjunct)
+                    newConstraint.add((i, 'ub'), c.body - c.upper <= rhs)
+                    transformed.append(newConstraint[i, 'ub'])
+                for c_new in transformed:
+                    constraintMap['srcConstraints'][c_new] = [c]
+                constraintMap['transformedConstraints'][c] = transformed
+            else:
+                lower = (None, None, None)
+                upper = (None, None, None)
+
+                if disjunct not in self._arg_list:
+                    self._arg_list[disjunct] = bigm._get_bigm_arg_list(
+                        self._config.bigM, disjunct)
+                arg_list = self._arg_list[disjunct]
+
+                # first, we see if an M value was specified in the arguments.
+                # (This returns None if not)
+                lower, upper = bigm._get_M_from_args(c, Ms, arg_list, lower,
+                                                     upper)
+                M = (lower[0], upper[0])
+
+                # estimate if we don't have what we need
+                if c.lower is not None and M[0] is None:
+                    M = (bigm._estimate_M(c.body, c)[0] - c.lower, M[1])
+                    lower = (M[0], None, None)
+                if c.upper is not None and M[1] is None:
+                    M = (M[0], bigm._estimate_M(c.body, c)[1] - c.upper)
+                    upper = (M[1], None, None)
+                bigm._add_constraint_expressions(
+                    c, i, M, disjunct.indicator_var.get_associated_binary(),
+                    newConstraint, constraintMap)
 
         # deactivate now that we have transformed
         c.deactivate()
@@ -549,7 +616,7 @@ class MultipleBigMTransformation(Transformation):
         # transformed components
         transBlockName = unique_component_name(
             block,
-            '_pyomo_gdp_hull_reformulation')
+            '_pyomo_gdp_mbigm_reformulation')
         transBlock = Block()
         block.add_component(transBlockName, transBlock)
         self._transformation_blocks[block] = transBlock
