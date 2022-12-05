@@ -1144,6 +1144,13 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
             self.bnds_dict[node] = (lb, ub)
             return True, None
 
+        if not node.is_potentially_variable():
+            # NPV nodes are effectively constant leaves.  Evaluate it
+            # and return the value.
+            val = value(node)
+            self.bnds_dict[node] = (val, val)
+            return True, None
+
         if node.__class__ is numeric_expr.LinearExpression:
             const_val = value(node.constant)
             self.bnds_dict[node.constant] = (const_val, const_val)
@@ -1155,10 +1162,11 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
             _prop_bnds_leaf_to_root_LinearExpression(node, self.bnds_dict, self.feasibility_tol)
             return True, None
 
-        if not node.is_expression_type():
-            assert is_fixed(node)
-            val = value(node)
-            self.bnds_dict[node] = (val, val)
+        if node.__class__ is numeric_expr.ExternalFunctionExpression:
+            # TODO: provide some mechanism for users to provide interval
+            # arithmetic callback functions for general external
+            # functions
+            self.bnds_dict[node] = (-interval.inf, interval.inf)
             return True, None
 
         return False, None
@@ -1251,18 +1259,21 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
                 node.setub(ub)
             return True, None
 
+        if not node.is_potentially_variable():
+            lb, ub = self.bnds_dict[node]
+            if abs(lb - value(node)) > self.feasibility_tol:
+                raise InfeasibleConstraintException('Detected an infeasible constraint.')
+            if abs(ub - value(node)) > self.feasibility_tol:
+                raise InfeasibleConstraintException('Detected an infeasible constraint.')
+            return True, None
+
         if node.__class__ is numeric_expr.LinearExpression:
             _prop_bnds_root_to_leaf_LinearExpression(node, self.bnds_dict, self.feasibility_tol)
             for v in node.linear_vars:
                 self.visiting_potential_leaf(v)
             return True, None
 
-        if not node.is_expression_type():
-            lb, ub = self.bnds_dict[node]
-            if abs(lb - value(node)) > self.feasibility_tol:
-                raise InfeasibleConstraintException('Detected an infeasible constraint.')
-            if abs(ub - value(node)) > self.feasibility_tol:
-                raise InfeasibleConstraintException('Detected an infeasible constraint.')
+        if node.__class__ is numeric_expr.ExternalFunctionExpression:
             return True, None
 
         if node.__class__ in _prop_bnds_root_to_leaf_map:
