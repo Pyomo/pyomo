@@ -1,14 +1,16 @@
-Pyomo.DOE
+Pyomo.DoE
 =========
 
-**Pyomo.DOE** (Pyomo Design of Experiments) is a Python library for model-based design of experiments using science-based models.
+**Pyomo.DoE** (Pyomo Design of Experiments) is a Python library for model-based design of experiments using science-based models.
 
-Pyomo.DOE was developed by **Jialu Wang** and **Alexander W. Dowling** at the University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact (CCSI2) <https://www.acceleratecarboncapture.org/>`_.
+Pyomo.DoE was developed by **Jialu Wang** and **Alexander W. Dowling** at the University of Notre Dame as part of the `Carbon Capture Simulation for Industry Impact (CCSI2) <https://www.acceleratecarboncapture.org/>`_.
 project, funded through the U.S. Department Of Energy Office of Fossil Energy.
 
-If you use Pyomo.DOE, please cite:
+If you use Pyomo.DoE, please cite:
 
-[Wang and Dowling, 2022] Jialu Wang, Alexander Dowling (2022), Pyomo.DOE: An Open-Source Package for Model-Based Design of Experiments in Python. (under review)
+[Wang and Dowling, 2022] Wang, Jialu, and Alexander W. Dowling. 
+"Pyomo. DOE: An open‐source package for model‐based design of experiments in Python." 
+AIChE Journal 68.12 (2022): e17813. `https://doi.org/10.1002/aic.17813`
 
 Methodology Overview
 ---------------------
@@ -18,25 +20,25 @@ Model-based Design of Experiments (MBDoE) is a technique to maximize the informa
 .. figure:: flowchart.png
    :scale: 25 %
 
-   The exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE are combined into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty. Currently, Pyomo.DOE focused on increasing parameter precision.
+   The exploratory analysis, parameter estimation, uncertainty analysis, and MBDoE are combined into an iterative framework to select, refine, and calibrate science-based mathematical models with quantified uncertainty. Currently, Pyomo.DoE focused on increasing parameter precision.
 
-Pyomo.DOE provides the exploratory analysis and MBDoE capabilities to the Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
+Pyomo.DoE provides the exploratory analysis and MBDoE capabilities to the Pyomo ecosystem. The user provides one Pyomo model, a set of parameter nominal values,
 the allowable design spaces for design variables, and the assumed observation error model.
-During exploratory analysis, Pyomo.DOE checks if the model parameters can be inferred from the postulated measurements or preliminary data.
+During exploratory analysis, Pyomo.DoE checks if the model parameters can be inferred from the postulated measurements or preliminary data.
 MBDoE then recommends optimized experimental conditions for collecting more data.
 Parameter estimation packages such as `Parmest <https://pyomo.readthedocs.io/en/stable/contributed_packages/parmest/index.html>`_ can perform parameter estimation using the available data to infer values for parameters,
 and facilitate an uncertainty analysis to approximate the parameter covariance matrix.
 If the parameter uncertainties are sufficiently small, the workflow terminates and returns the final model with quantified parametric uncertainty.
 If not, MBDoE recommends optimized experimental conditions to generate new data.
 
-Below is an overview of the type of optimization models Pyomo.DOE can accomodate:
+Below is an overview of the type of optimization models Pyomo.DoE can accomodate:
 
-* Pyomo.DOE is suitable for optimization models of **continuous** variables
-* Pyomo.DOE can handle **equality constraints** defining state variables
-* Pyomo.DOE supports (Partial) Differential-Algebraic Equations (PDAE) models via Pyomo.DAE
-* Pyomo.DOE also supports models with only algebraic constraints
+* Pyomo.DoE is suitable for optimization models of **continuous** variables
+* Pyomo.DoE can handle **equality constraints** defining state variables
+* Pyomo.DoE supports (Partial) Differential-Algebraic Equations (PDAE) models via Pyomo.DAE
+* Pyomo.DoE also supports models with only algebraic constraints
 
-The general form of a DAE problem that can be passed into Pyomo.DOE is shown below:
+The general form of a DAE problem that can be passed into Pyomo.DoE is shown below:
 
 .. math::
     \begin{align*}
@@ -62,14 +64,14 @@ where:
 *  :math:`\mathbf{t} \in \mathbb{R}^{N_t \times 1}` is a union of all time sets.
 
 .. note::
-    * Process models provided to Pyomo.DOE should define an extra scenario index for all state variables and all parameters, as the first index before any other index.
+    * Process models provided to Pyomo.DoE should define an extra scenario index for all state variables and all parameters, as the first index before any other index.
     * Process models must include an index for time, named ``t``. For steady-state models, t should be [0].
     * Measurements can have an extra index besides time.
     * Parameters and design variables should be defined as Pyomo ``var`` components on the model to use ``direct_kaug`` mode, and can be defined as Pyomo ``Param`` object if not using ``direct_kaug``.
     * Create model function should take scenarios as the first argument of this function.
     * Design variables are defined with and only with a time index.
 
-Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DOE is shown below:
+Based on the above notation, the form of the MBDoE problem addressed in Pyomo.DoE is shown below:
 
 .. math::
     \begin{equation}
@@ -93,9 +95,9 @@ where:
 *  :math:`\Psi` is the design criteria to measure FIM.
 *  :math:`\mathbf{V}_{\boldsymbol{\theta}}(\boldsymbol{\hat{\theta}})^{-1}` is the FIM of previous experiments.
 
-Pyomo.DOE provides four design criteria  :math:`\Psi` to measure the size of FIM:
+Pyomo.DoE provides four design criteria  :math:`\Psi` to measure the size of FIM:
 
-.. list-table:: Pyomo.DOE design criteria
+.. list-table:: Pyomo.DoE design criteria
     :header-rows: 1
     :class: tight-table
 
@@ -115,11 +117,11 @@ Pyomo.DOE provides four design criteria  :math:`\Psi` to measure the size of FIM
       -   :math:`\text{cond}({\mathbf{M}})`
       - Ratio of the longest axis to the shortest axis of the confidence ellipse
 
-In order to solve problems of the above, Pyomo.DOE implements the 2-stage stochastic program. Please see Wang and Dowling (2022) for details.
+In order to solve problems of the above, Pyomo.DoE implements the 2-stage stochastic program. Please see Wang and Dowling (2022) for details.
 
-Pyomo.DOE Required Inputs
+Pyomo.DoE Required Inputs
 --------------------------------
-The required inputs to the Pyomo.DOE solver are the following:
+The required inputs to the Pyomo.DoE solver are the following:
 
 * A function that creates the process model
 * Dictionary of parameters and their nominal value
@@ -128,7 +130,7 @@ The required inputs to the Pyomo.DOE solver are the following:
 * A Numpy ``array`` containing the Prior FIM
 * Local and global optimization solver
 
-Below is a list of arguments that Pyomo.DOE expects the user to provide.
+Below is a list of arguments that Pyomo.DoE expects the user to provide.
 
 param_init : ``dictionary``
     A ``dictionary`` of parameter names and values. If they are an indexed variable, put the variable name and index in a nested ``Dictionary``.
@@ -147,7 +149,7 @@ create_model : ``function``
 prior_FIM : ``array``
     An ``array`` defining the Fisher information matrix (FIM) for prior experiments, default is a zero matrix.
 
-Pyomo.DOE Solver Interface
+Pyomo.DoE Solver Interface
 ---------------------------
 
 .. figure:: uml.png
@@ -177,10 +179,10 @@ Pyomo.DOE Solver Interface
 
 
 
-Pyomo.DOE Usage Example
+Pyomo.DoE Usage Example
 ------------------------
 
-We illustrate the use of Pyomo.DOE using a reaction kinetics example (Wang and Dowling, 2022).
+We illustrate the use of Pyomo.DoE using a reaction kinetics example (Wang and Dowling, 2022).
 The Arrhenius equations model the temperature dependence of the reaction rate coefficient  :math:`k_1, k_2`. Assuming a first-order reaction mechanism gives the reaction rate model. Further, we assume only species A is fed to the reactor.
 
 
@@ -205,7 +207,7 @@ The goal of MBDoE is to optimize the experiment design variables :math:`\boldsym
 The observation errors are assumed to be independent both in time and across measurements with a constant standard deviation of 1 M for each species.
 
 
-Step 0: Import Pyomo and the Pyomo.DOE module
+Step 0: Import Pyomo and the Pyomo.DoE module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
@@ -292,7 +294,7 @@ The process model for the reaction kinetics problem is shown below.
 .. note::
     The model parameters (  :math:`A_1, A_2, E_1, E_2`) are defined as either ``Var`` or ``Param`` objects. This is suggested since it allows an easy transition when changing mode to ``direct_kaug``.
 
-Step 2: Define the inputs for Pyomo.DOE
+Step 2: Define the inputs for Pyomo.DoE
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doctest::
@@ -349,7 +351,7 @@ Step 4: Exploratory analysis (Enumeration)
 
 Exploratory analysis is suggested to enumerate the design space to check if the problem is identifiable, i.e., ensure that D-, E-optimality metrics are not small numbers near zero, and Modified E-optimality is not a big number.
 
-Pyomo.DOE accomplishes the exploratory analysis with the ``run_grid_search`` function.
+Pyomo.DoE accomplishes the exploratory analysis with the ``run_grid_search`` function.
 It allows users to define any number of design decisions. Heatmaps can be drawn by two design variables, fixing other design variables.
 1D curve can be drawn by one design variable, fixing all other variables.
 The function ``run_grid_search`` enumerates over the design space, each MBDoE problem accomplished by ``compute_FIM`` method. Therefore, ``run_grid_search`` supports only two modes: ``sequential_finite`` and ``direct_kaug``.
@@ -390,7 +392,7 @@ Successful run of the above code shows the following figure:
 Step 5: Gradient-based optimization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Pyomo.DOE accomplishes gradient-based optimization with the ``optimize_doe`` function for A- and D-optimality design.
+Pyomo.DoE accomplishes gradient-based optimization with the ``optimize_doe`` function for A- and D-optimality design.
 
 This function solves twice: It solves the square version of the MBDoE problem first, and then unfixes the design variables as degree of freedoms and solves again. In this way the optimization problem can be well initialized.
 

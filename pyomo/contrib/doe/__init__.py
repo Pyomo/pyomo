@@ -7,3 +7,5 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
+from .measurements import Measurements
+from .doe import DesignOfExperiments
