@@ -115,7 +115,7 @@ These logical propositions can include:
 .. |equiv| replace:: :math:`Y_1 \Leftrightarrow Y_2`
 .. |land| replace:: :math:`Y_1 \land Y_2`
 .. |lor| replace:: :math:`Y_1 \lor Y_2`
-.. |xor| replace:: :math:`Y_1 \underline{\lor} Y_2`
+.. |xor| replace:: :math:`Y_1 \veebar Y_2`
 .. |impl| replace:: :math:`Y_1 \Rightarrow Y_2`
 
 +-----------------+---------+-------------+-------------+-------------+

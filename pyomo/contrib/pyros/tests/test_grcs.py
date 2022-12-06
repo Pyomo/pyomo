@@ -1358,6 +1358,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
             buset.coefficients_mat,
         )
         np.testing.assert_allclose([1, 3, 0, 0, 0], buset.rhs_vec)
+        np.testing.assert_allclose(np.zeros(3), buset.origin)
 
         # update the set
         buset.budget_membership_mat = [[1, 1, 0], [0, 0, 1]]
@@ -1375,22 +1376,35 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         )
         np.testing.assert_allclose([3, 4, 0, 0, 0], buset.rhs_vec)
 
+        # update origin
+        buset.origin = [1, 0, -1.5]
+        np.testing.assert_allclose([1, 0, -1.5], buset.origin)
+
     def test_error_on_budget_set_dim_change(self):
         """
         BudgetSet dimension is considered immutable.
         Test ValueError raised when attempting to alter the
-        box set dimension (i.e. number of rows of `bounds`).
+        budget set dimension.
         """
         budget_mat = [[1, 0, 1], [0, 1, 0]]
         budget_rhs_vec = [1, 3]
         bu_set = BudgetSet(budget_mat, budget_rhs_vec)
 
+        # error on budget incidence matrix update
         exc_str = (
             r".*must have 3 columns to match set dimension "
             r"\(provided.*1 columns\)"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             bu_set.budget_membership_mat = [[1], [1]]
+
+        # error on origin update
+        exc_str = (
+            r".*must have 3 entries to match set dimension "
+            r"\(provided.*4 entries\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bu_set.origin = [1, 2, 1, 0]
 
     def test_error_on_budget_member_mat_row_change(self):
         """
@@ -1506,6 +1520,48 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         # assert error on update
         with self.assertRaisesRegex(ValueError, exc_str):
             buset.budget_membership_mat = invalid_col_mat
+
+    @unittest.skipUnless(
+        SolverFactory("cbc").available(exception_flag=False),
+        "LP solver CBC not available",
+    )
+    def test_budget_set_parameter_bounds_correct(self):
+        """
+        If LP solver is available, test parameter bounds method
+        for factor model set is correct (check against
+        results from an LP solver).
+        """
+        solver = SolverFactory("cbc")
+
+        # construct budget set instances
+        buset1 = BudgetSet(
+            budget_membership_mat=[[1, 1], [0, 1]],
+            rhs_vec=[2, 3],
+            origin=None,
+        )
+        buset2 = BudgetSet(
+            budget_membership_mat=[[1, 0], [1, 1]],
+            rhs_vec=[3, 2],
+            origin=[1, 1],
+        )
+
+        # check parameter bounds matches LP results
+        # exactly for each case
+        for buset in [buset1, buset2]:
+            param_bounds = buset.parameter_bounds
+            lp_param_bounds = eval_parameter_bounds(buset, solver)
+
+            self.assertTrue(
+                np.allclose(param_bounds, lp_param_bounds),
+                msg=(
+                    "Parameter bounds not consistent with LP values for "
+                    "BudgetSet with parameterization:\n"
+                    f"budget_membership_mat={buset.budget_membership_mat},\n"
+                    f"budget_rhs_vec={buset.budget_rhs_vec},\n"
+                    f"origin={buset.origin}.\n"
+                    f"({param_bounds} does not match {lp_param_bounds})"
+                ),
+            )
 
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -1847,6 +1903,37 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for CardinalitySet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for CardinalitySet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for CardinalitySet")
+
+
+def eval_parameter_bounds(uncertainty_set, solver):
+    """
+    Evaluate parameter bounds of uncertainty set by solving
+    bounding problems (as opposed to via the `parameter_bounds`
+    method).
+    """
+    bounding_mdl = uncertainty_set.bounding_model()
+
+    param_bounds = []
+    for idx, obj in bounding_mdl.param_var_objectives.items():
+        # activate objective for corresponding dimension
+        obj.activate()
+        bounds = []
+
+        # solve for lower bound, then upper bound
+        # solve should be successful
+        for sense in (minimize, maximize):
+            obj.sense = sense
+            solver.solve(bounding_mdl)
+            bounds.append(value(obj))
+
+        # add parameter bounds for current dimension
+        param_bounds.append(tuple(bounds))
+
+        # ensure sense is minimize when done, deactivate
+        obj.sense = minimize
+        obj.deactivate()
+
+    return param_bounds
 
 
 class testBoxUncertaintySetClass(unittest.TestCase):
@@ -2470,36 +2557,6 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         for factor model set is correct (check against
         results from an LP solver).
         """
-        def eval_parameter_bounds(uncertainty_set, solver):
-            """
-            Evaluate parameter bounds of uncertainty set by solving
-            bounding problems (as opposed to via the `parameter_bounds`
-            method).
-            """
-            bounding_mdl = uncertainty_set.bounding_model()
-
-            param_bounds = []
-            for idx, obj in bounding_mdl.param_var_objectives.items():
-                # activate objective for corresponding dimension
-                obj.activate()
-                bounds = []
-
-                # solve for lower bound, then upper bound
-                # solve should be successful
-                for sense in (minimize, maximize):
-                    obj.sense = sense
-                    solver.solve(bounding_mdl)
-                    bounds.append(value(obj))
-
-                # add parameter bounds for current dimension
-                param_bounds.append(tuple(bounds))
-
-                # ensure sense is minimize when done, deactivate
-                obj.sense = minimize
-                obj.deactivate()
-
-            return param_bounds
-
         solver = SolverFactory("cbc")
 
         # four cases where prior parameter bounds

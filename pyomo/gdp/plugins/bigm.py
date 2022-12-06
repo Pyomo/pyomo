@@ -18,13 +18,13 @@ from pyomo.common.config import ConfigBlock, ConfigValue
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated, deprecation_warning
+from pyomo.contrib.cp.transform.logical_to_disjunctive_program import (
+    LogicalToDisjunctive)
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
     Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
-    Expression, TraversalStrategy, value, RangeSet,
+    Expression, SortComponents, TraversalStrategy, value, RangeSet,
     NonNegativeIntegers, Binary, Any)
-from pyomo.core.base.boolean_var import (
-    _DeprecatedImplicitAssociatedBinaryVariable)
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core.base import Transformation, TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
@@ -210,6 +210,7 @@ class BigM_Transformation(Transformation):
         # up.
         config.set_value(kwds)
         bigM = config.bigM
+        self.assume_fixed_vars_permanent = config.assume_fixed_vars_permanent
 
         targets = config.targets
         # We need to check that all the targets are in fact on instance. As we
@@ -237,6 +238,23 @@ class BigM_Transformation(Transformation):
                     yield t
         targets = list(_filter_inactive(targets))
 
+        # transform any logical constraints that might be anywhere on the stuff
+        # we're about to transform. We do this before we preprocess targets
+        # because we will likely create more disjunctive components that will
+        # need transformation.
+        disj_targets = []
+        for t in targets:
+            disj_datas = t.values() if t.is_indexed() else [t,]
+            if t.ctype is Disjunct:
+                disj_targets.extend(disj_datas)
+            if t.ctype is Disjunction:
+                disj_targets.extend([d for disjunction in disj_datas for d in
+                                     disjunction.disjuncts])
+        TransformationFactory('contrib.logical_to_disjunctive').apply_to(
+            instance,
+            targets=[blk for blk in targets if blk.ctype is Block] +
+            disj_targets)
+
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
         # the list.
@@ -244,15 +262,6 @@ class BigM_Transformation(Transformation):
         preprocessed_targets = preprocess_targets(targets, instance,
                                                   knownBlocks,
                                                   gdp_tree=gdp_tree)
-
-        # transform any logical constraints that might be anywhere on the stuff
-        # we're about to transform.
-        TransformationFactory('core.logical_to_linear').apply_to(
-            instance,
-            targets=[blk for blk in targets if blk.ctype is Block] +
-            [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
-
-        self.assume_fixed_vars_permanent = config.assume_fixed_vars_permanent
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
@@ -394,24 +403,6 @@ class BigM_Transformation(Transformation):
 
     def _transform_block_components(self, block, disjunct, bigM, arg_list,
                                     suffix_list):
-        # We don't know where all the BooleanVars are going to be used, so if
-        # there are any that the logical_to_linear transformation didn't
-        # transform, we need to do it now, so that the Reference gets moved
-        # up. This won't be necessary when the writers are willing to find Vars
-        # not in the active subtree.
-        for boolean in block.component_data_objects(BooleanVar,
-                                                    descend_into=Block,
-                                                    active=None):
-            if isinstance(boolean._associated_binary,
-                          _DeprecatedImplicitAssociatedBinaryVariable):
-                parent_block = boolean.parent_block()
-                new_var = Var(domain=Binary)
-                parent_block.add_component(
-                    unique_component_name(parent_block,
-                                          boolean.local_name + "_asbinary"),
-                    new_var)
-                boolean.associate_binary_var(new_var)
-
         # Find all the variables declared here (including the indicator_var) and
         # add a reference on the transformation block so these will be
         # accessible when the Disjunct is deactivated.

@@ -29,15 +29,25 @@ Logical constraints
 
 .. note::
 
-    Historically it was required to convert logical propositions to
-    algebraic form prior to use of the MI(N)LP reformulations and the
-    GDPopt solver. However, this is mathematically incorrect since these
-    reformulations convert logical formulations to algebraic formulations.
-    It is therefore recommended to use both the MI(N)LP reformulations
-    and GDPopt directly to transform or solve GDPs that include logical
-    propositions.
+    Historically users needed to explicitly convert logical propositions
+    to algebraic form prior to invoking the GDP MI(N)LP reformulations
+    or the GDPopt solver. However, this is mathematically incorrect
+    since the GDP MI(N)LP reformulations themselves convert logical
+    formulations to algebraic formulations.  The current recommended
+    practice is to pass the entire (mixed logical / algebraic) model to
+    the MI(N)LP reformulations or GDPopt directly.
 
-The following transforms logical propositions on the model to algebraic form:
+There are several approaches to convert logical constraints into
+algebraic form.
+
+Conjunctive Normal Form
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The first transformation (`core.logical_to_linear`) leverages the
+`sympy` package to generate the conjunctive normal form of the logical
+constraints and then adds the equivalent as a list algebraic
+constraints.  The following transforms logical propositions on the model
+to algebraic form:
 
 .. code::
 
@@ -60,6 +70,29 @@ also be created, as described in :ref:`gdp-advanced-examples`.
 Following solution of the GDP model, values of the Boolean variables may be updated from their algebraic binary counterparts using the ``update_boolean_vars_from_binary()`` function.
 
 .. autofunction:: pyomo.core.plugins.transform.logical_to_linear.update_boolean_vars_from_binary
+
+Factorable Programming
+^^^^^^^^^^^^^^^^^^^^^^
+
+The second transformation (`contrib.logical_to_disjunctive`) leverages
+ideas from factorable programming to first generate an equivalent set of
+"factored" logical constraints form by traversing each logical
+proposition and replacing each logical operator with an additional
+Boolean variable and then adding the "simple" logical constraint that
+equates the new Boolean variable with the single logical operator.
+
+The resulting "simple" logical constraints are converted to either MIP
+or GDP form: if the constraint contains only Boolean variables, then
+then MIP representation is emitted.  Logical constraints with mixed
+integer-Boolean arguments (e.g., `atmost`, `atleast`, `exactly`, etc.)
+are converted to a disjunctive representation.
+
+As this transformation both avoids the conversion into `sympy` and only
+requires a single traversal of each logical constraint,
+`contrib.logical_to_disjunctive` is significantly faster than
+`core.logical_to_linear` at the cost of a larger model.  In practice,
+the cost of the larger model is negated by the effectiveness of the MIP
+presolve in most solvers.
 
 Reformulation to MI(N)LP
 ------------------------

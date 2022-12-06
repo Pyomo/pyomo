@@ -13,13 +13,18 @@ import pyomo.common.unittest as unittest
 import pyomo.environ as pyo
 from pyomo.contrib.fbbt.fbbt import fbbt, compute_bounds_on_expr
 from pyomo.common.dependencies import numpy as np, numpy_available
+from pyomo.common.fileutils import find_library
 from pyomo.common.log import LoggingIntercept
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.core.expr.numeric_expr import (ProductExpression,
                                           UnaryFunctionExpression,
                                           LinearExpression)
 import math
+import platform
 from io import StringIO
+
+flib = find_library("asl_external_demo")
+is_pypy = platform.python_implementation().lower().startswith('pypy')
 
 
 class DummyExpr(ProductExpression):
@@ -1044,6 +1049,37 @@ class FbbtTestBase(object):
         self.assertAlmostEqual(m.x.ub, 1)
         self.assertAlmostEqual(m.y.lb, 1)
         self.assertAlmostEqual(m.y.ub, 2)
+
+    @unittest.skipUnless(
+        flib, 'Could not find the "asl_external_demo.so" library')
+    @unittest.skipIf(is_pypy, 'Cannot evaluate external functions under pypy')
+    def test_external_function(self):
+        if self.tightener is not fbbt:
+            raise unittest.SkipTest('Appsi FBBT does not support unkown expressions yet')
+
+        m = pyo.ConcreteModel()
+        m.x = pyo.Var(bounds=(0,1))
+        m.y = pyo.Var(bounds=(0,5))
+        m.p = pyo.Param(initialize=1)
+        m.q = pyo.Param(initialize=3)
+        m.ef = pyo.ExternalFunction(library=flib, function="demo_function")
+
+        m.con1 = pyo.Constraint(expr=m.ef("sum", m.x, m.y) >= 1)
+
+        # No change due to variable EF
+        self.tightener(m)
+        self.assertAlmostEqual(m.x.lb, 0)
+        self.assertAlmostEqual(m.x.ub, 1)
+        self.assertAlmostEqual(m.y.lb, 0)
+        self.assertAlmostEqual(m.y.ub, 5)
+
+        m.con2 = pyo.Constraint(expr=m.ef("sum", m.p, m.q) - m.y >= 1)
+
+        self.tightener(m)
+        self.assertAlmostEqual(m.x.lb, 0)
+        self.assertAlmostEqual(m.x.ub, 1)
+        self.assertAlmostEqual(m.y.lb, 0)
+        self.assertAlmostEqual(m.y.ub, 3)
 
 
 class TestFBBT(FbbtTestBase, unittest.TestCase):
