@@ -256,7 +256,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
                              rhs=ub_int - cplex_convex_rhs)
                     counter += 1
 
-            config.logger.info('Added %s affine cuts' % counter)
+            config.logger.debug('Added %s affine cuts' % counter)
 
     def add_lazy_no_good_cuts(self, var_values, solve_data, config, opt, feasible=False):
         """Adds no-good cuts.
@@ -284,7 +284,7 @@ class LazyOACallback_cplex(cplex.callbacks.LazyConstraintCallback if cplex_avail
         if not config.add_no_good_cuts:
             return
 
-        config.logger.info('Adding no-good cuts')
+        config.logger.debug('Adding no-good cuts')
         with time_code(solve_data.timing, 'No-good cut generation'):
             m = solve_data.mip
             MindtPy = m.MindtPy_utils
