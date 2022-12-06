@@ -80,6 +80,7 @@ def _get_MindtPy_GOA_config():
 
     _add_common_configs(CONFIG)
     _add_goa_configs(CONFIG)
+    _add_oa_cuts_configs(CONFIG)
     _add_subsolver_configs(CONFIG)
     _add_tolerance_configs(CONFIG)
     _add_bound_configs(CONFIG)
@@ -373,6 +374,11 @@ def _add_common_configs(CONFIG):
         domain=bool,
         description='Whether to replace the objective function to constraint using epigraph constraint.',
     ))
+    CONFIG.declare('add_cuts_at_incumbent', ConfigValue(
+        default=False,
+        description='Whether to add lazy cuts to the main problem at the incumbent solution found in the branch & bound tree',
+        domain=bool
+    ))
 
 
 def _add_subsolver_configs(CONFIG):
@@ -606,11 +612,6 @@ def _add_roa_configs(CONFIG):
         default=10,
         domain=PositiveInt,
         description='The solution limit for the regularization problem since it does not need to be solved to optimality.'
-    ))
-    CONFIG.declare('add_cuts_at_incumbent', ConfigValue(
-        default=False,
-        description='Whether to add lazy cuts to the main problem at the incumbent solution found in the branch & bound tree',
-        domain=bool
     ))
     CONFIG.declare('reduce_level_coef', ConfigValue(
         default=False,
