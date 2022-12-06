@@ -4354,6 +4354,69 @@ class TestSubsolverTiming(unittest.TestCase):
             ),
         )
 
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_two_stg_mod_with_intersection_set(self):
+        """
+        Test two-stage model with `AxisAlignedEllipsoidalSet`
+        as the uncertainty set.
+        """
+        # define model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u1 = Param(initialize=1.125, mutable=True)
+        m.u2 = Param(initialize=1, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+
+        # construct the IntersectionSet
+        ellipsoid = AxisAlignedEllipsoidalSet(
+            center=[1.125, 1],
+            half_lengths=[1, 0],
+        )
+        bset = BoxSet(bounds=[[1, 2], [0.5, 1.5]])
+        iset = IntersectionSet(ellipsoid=ellipsoid, bset=bset)
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u1, m.u2],
+            uncertainty_set=iset,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            }
+        )
+
+        # check successful termination
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Did not identify robust optimal solution to problem instance."
+        )
+        self.assertGreater(
+            results.iterations,
+            0,
+            msg="Robust infeasible model terminated in 0 iterations (nominal case)."
+        )
+
+
 
 if __name__ == "__main__":
     unittest.main()
