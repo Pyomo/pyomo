@@ -191,7 +191,7 @@ def add_ecp_cuts(target_model, jacobians, config, timing,
                     )
 
 
-def add_no_good_cuts(target_model, var_values, config, timing):
+def add_no_good_cuts(target_model, var_values, config, timing, mip_iter=0, cb_opt=None):
     """Adds no-good cuts.
 
     This adds an no-good cuts to the no_good_cuts ConstraintList, which is not activated by default.
@@ -206,6 +206,10 @@ def add_no_good_cuts(target_model, var_values, config, timing):
         Data container that holds solve-instance data.
     config : ConfigBlock
         The specific configurations for MindtPy.
+    mip_iter: Int, optional
+        Mip iteration counter.
+    cb_opt : SolverFactory, optional
+        Gurobi_persistent solver, by default None.
 
     Raises
     ------
@@ -245,6 +249,9 @@ def add_no_good_cuts(target_model, var_values, config, timing):
                        if value(abs(v)) <= int_tol) >= 1)
 
         MindtPy.cuts.no_good_cuts.add(expr=int_cut)
+        if config.single_tree and config.mip_solver == 'gurobi_persistent' and mip_iter > 0 and cb_opt is not None:
+            cb_opt.cbLazy(
+                target_model.MindtPy_utils.cuts.no_good_cuts[len(target_model.MindtPy_utils.cuts.no_good_cuts)])
 
 
 def add_affine_cuts(target_model, config, timing):

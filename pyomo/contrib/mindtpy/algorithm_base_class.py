@@ -1567,8 +1567,7 @@ class _MindtPyAlgorithm(object):
                                                 load_solutions=False,
                                                 **mip_args)
                 # update_attributes should be before load_from(main_mip_results), since load_from(main_mip_results) may fail.
-                # if config.single_tree or (config.use_tabu_list and config.mip_solver == 'cplex_persistent'):
-                if (config.single_tree or config.use_tabu_list) and config.mip_solver == 'cplex_persistent': # TODO: I think this is the right logic.
+                if config.single_tree or config.use_tabu_list:
                     self.update_attributes()
                 if len(main_mip_results.solution) > 0:
                     self.mip.solutions.load_from(main_mip_results)

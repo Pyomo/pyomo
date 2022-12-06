@@ -738,7 +738,7 @@ def LazyOACallback_gurobi(cb_m, cb_opt, cb_where, solve_data, config):
                 if config.add_no_good_cuts:
                     var_values = list(
                         v.value for v in solve_data.working_model.MindtPy_utils.variable_list)
-                    add_no_good_cuts(solve_data.mip, var_values, config, solve_data.timing)
+                    add_no_good_cuts(solve_data.mip, var_values, config, solve_data.timing, mip_iter=solve_data.mip_iter, cb_opt=cb_opt)
                 return
             elif config.strategy == 'OA':
                 return

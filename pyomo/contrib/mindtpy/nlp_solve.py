@@ -141,7 +141,7 @@ def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config, cb_opt=None)
         solve_data.should_terminate = True
     else:
         handle_subproblem_other_termination(fixed_nlp, result.solver.termination_condition,
-                                            solve_data, config)
+                                            solve_data, config, cb_opt)
 
 
 # The next few functions deal with handling the solution we get from the above NLP solver function
@@ -219,7 +219,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
 
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_no_good_cuts:
-        add_no_good_cuts(solve_data.mip, var_values, config, solve_data.timing)
+        add_no_good_cuts(solve_data.mip, var_values, config, solve_data.timing, solve_data.mip_iter, cb_opt)
 
     config.call_after_subproblem_feasible(fixed_nlp, solve_data)
 
@@ -294,11 +294,11 @@ def handle_subproblem_infeasible(fixed_nlp, solve_data, config, cb_opt=None):
     var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
     if config.add_no_good_cuts:
         # excludes current discrete option
-        add_no_good_cuts(solve_data.mip, var_values, config, solve_data.timing)
+        add_no_good_cuts(solve_data.mip, var_values, config, solve_data.timing, solve_data.mip_iter, cb_opt)
 
 
 def handle_subproblem_other_termination(fixed_nlp, termination_condition,
-                                        solve_data, config):
+                                        solve_data, config, cb_opt):
     """Handles the result of the latest iteration of solving the fixed NLP subproblem given
     a solution that is neither optimal nor infeasible.
 
@@ -326,8 +326,7 @@ def handle_subproblem_other_termination(fixed_nlp, termination_condition,
             v.value for v in fixed_nlp.MindtPy_utils.variable_list)
         if config.add_no_good_cuts:
             # excludes current discrete option
-            add_no_good_cuts(solve_data.mip, var_values, config, solve_data.timing)
-
+            add_no_good_cuts(solve_data.mip, var_values, config, solve_data.timing, solve_data.mip_iter, cb_opt)
     else:
         raise ValueError(
             'MindtPy unable to handle NLP subproblem termination '
