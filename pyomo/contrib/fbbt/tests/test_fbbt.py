@@ -1054,6 +1054,9 @@ class FbbtTestBase(object):
         flib, 'Could not find the "asl_external_demo.so" library')
     @unittest.skipIf(is_pypy, 'Cannot evaluate external functions under pypy')
     def test_external_function(self):
+        if self.tightener is not fbbt:
+            raise unittest.SkipTest('Appsi FBBT does not support unkown expressions yet')
+
         m = pyo.ConcreteModel()
         m.x = pyo.Var(bounds=(0,1))
         m.y = pyo.Var(bounds=(0,5))
