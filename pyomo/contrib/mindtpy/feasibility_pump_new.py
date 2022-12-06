@@ -370,6 +370,7 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
         # feasibility pump alone will lead to iteration_limit = 0, important!
         self.config.init_strategy = 'FP'
         self.config.iteration_limit = 0
+        self.config.move_objective = True
         super().check_config()
 
     #

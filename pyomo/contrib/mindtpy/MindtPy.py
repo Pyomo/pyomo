@@ -62,19 +62,10 @@ from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_config
 from pyomo.common.config import add_docstring_list
 from pyomo.util.vars_from_expressions import get_vars_from_components
-from pyomo.contrib.mindtpy.config_options import _supported_algorithms, _get_algorithm_config
+from pyomo.contrib.mindtpy.config_options import _supported_algorithms
 
 __version__ = (0, 1, 0)
 
-
-def _handle_strategy_deprecation(config):
-    # This method won't be needed when the strategy arg is removed, but for now,
-    # we need to copy it over as algorithm. The config system already gave the
-    # deprecation warning.
-    if config.algorithm is not None:
-        config.strategy = config.algorithm
-    if config.algorithm is None and config.strategy is not None:
-        config.algorithm = config.strategy
 
 @SolverFactory.register(
     'mindtpy',
@@ -133,26 +124,8 @@ class MindtPySolver(object):
         # get the algorithm and then our job is done.
         config.set_value(kwds, skip_implicit=True)
 
-        alg_config = _get_algorithm_config()(options, preserve_implicit=True)
-        alg_config.set_value(kwds, skip_implicit=True)
-
-        _handle_strategy_deprecation(alg_config)
-        algorithm = alg_config.algorithm
-        if algorithm is None:
-            raise ValueError(
-                "No algorithm was specified to the solve method. "
-                "Please specify an algorithm or use an "
-                "algorithm-specific solver.")
-
-        # get rid of 'algorithm' and 'strategy' if they exist so that the solver
-        # can validate.
-        kwds.pop('algorithm', None)
-        # kwds.pop('strategy', None)
-        # kwds['algorithm'] = algorithm
-        kwds['strategy'] = algorithm
-        # The algorithm has already been validated, so this will work.
         return SolverFactory(
-            _supported_algorithms[algorithm][0]).solve(model, **kwds)
+            _supported_algorithms[config.strategy][0]).solve(model, **kwds)
 
     #
     # Support 'with' statements.

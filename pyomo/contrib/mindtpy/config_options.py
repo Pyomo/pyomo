@@ -12,23 +12,6 @@ _supported_algorithms = {
     'FP': ('mindtpy.fp', 'Feasibility Pump')
 }
 
-def _strategy_deprecation(strategy):
-    deprecation_warning("The argument 'strategy' has been deprecated "
-                        "in favor of 'algorithm.'", version="6.4.2")
-    return In(_supported_algorithms)(strategy)
-
-def _get_algorithm_config():
-    CONFIG = ConfigBlock("MindtPyAlgorithm")
-    CONFIG.declare("strategy", ConfigValue(
-        default='OA', domain=_strategy_deprecation,
-        description="DEPRECATED: Please use 'algorithm' instead."
-    ))
-    CONFIG.declare("algorithm", ConfigValue(
-        default=None, domain=In(_supported_algorithms),
-        description="Algorithm to use."
-    ))
-    return CONFIG
-
 def _get_MindtPy_config():
     """Set up the configurations for MindtPy.
 
