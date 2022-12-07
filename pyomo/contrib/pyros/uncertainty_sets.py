@@ -354,6 +354,12 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         value of each uncertain parameter subject to constraints on the
         uncertain parameters).
 
+        Parameters
+        ----------
+        config : None or ConfigDict, optional
+            If a ConfigDict is provided, then it contains
+            arguments passed to the PyROS solver.
+
         Returns
         -------
         model : ConcreteModel
