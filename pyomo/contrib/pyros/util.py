@@ -20,6 +20,8 @@ from pyomo.common.dependencies import scipy as sp
 from pyomo.core.expr.numvalue import native_types
 from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.core.expr.numeric_expr import SumExpression
+from pyomo.environ import SolverFactory
+
 import itertools as it
 import timeit
 from contextlib import contextmanager
@@ -66,12 +68,53 @@ def get_main_elapsed_time(timing_data_obj):
                 "You need to be in a 'time_code' context to use `get_main_elapsed_time()`."
             )
 
+
+def adjust_solver_time_settings(timing_data_obj, solver, config):
+    """
+    Adjust solver max time based on current PyROS elapsed time.
+
+    Returns
+    -------
+    new_solver : solver type
+        Clone of solver provided, with time limit setting
+        adjusted.
+    """
+    if config.time_limit is not None:
+        # determine name of option to adjust
+        if isinstance(solver, type(SolverFactory("baron"))):
+            options_key = "MaxTime"
+        elif isinstance(solver, type(SolverFactory("gams"))):
+            options_key = "reslim"
+        elif isinstance(solver, type(SolverFactory("ipopt"))):
+            options_key = "max_cpu_time"
+        else:
+            options_key = None
+
+        # NOTE:
+        # (1) adjustment only supported for GAMS, BARON, and IPOPT
+        #     interfaces. Generalize after interface to max time
+        #     introduced
+        # (2) for IPOPT, and probably also BARON, the CPU time limit
+        #     rather than the wallclock time limit, is adjusted, as
+        #     no interface to wallclock limit available.
+        #     For this reason, extra 30s is added to time remaining
+        #     for subsolver time limit
+        if options_key is not None:
+            time_remaining = (
+                config.time_limit - get_main_elapsed_time(timing_data_obj)
+            )
+
+            # ensure positive value assigned to avoid application error
+            solver.options[options_key] = max(30, 30 + time_remaining)
+
+
 def a_logger(str_or_logger):
     """Returns a logger when passed either a logger name or logger object."""
     if isinstance(str_or_logger, logging.Logger):
         return str_or_logger
     else:
         return logging.getLogger(str_or_logger)
+
 
 def ValidEnum(enum_class):
     '''

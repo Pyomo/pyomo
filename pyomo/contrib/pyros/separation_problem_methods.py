@@ -21,7 +21,7 @@ from pyomo.contrib.pyros.uncertainty_sets import Geometry
 from pyomo.common.errors import ApplicationError
 from pyomo.contrib.pyros.util import ABS_CON_CHECK_FEAS_TOL
 from pyomo.common.timing import TicTocTimer
-from pyomo.contrib.pyros.util import TIC_TOC_SOLVE_TIME_ATTR
+from pyomo.contrib.pyros.util import TIC_TOC_SOLVE_TIME_ATTR, adjust_solver_time_settings
 import os
 from copy import deepcopy
 
@@ -564,6 +564,7 @@ def solver_call_separation(model_data, config, solver, solve_data, is_global):
 
     timer = TicTocTimer()
     for opt in backup_solvers:
+        adjust_solver_time_settings(model_data.timing, opt, config)
         timer.tic(msg=None)
         try:
             results = opt.solve(

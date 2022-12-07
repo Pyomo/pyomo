@@ -6,12 +6,15 @@ from pyomo.core.base import (ConcreteModel, Block,
                              Objective, Constraint,
                              ConstraintList, SortComponents)
 from pyomo.opt import TerminationCondition as tc
+from pyomo.opt import SolverResults
 from pyomo.core.expr import value
 from pyomo.core.base.set_types import NonNegativeIntegers, NonNegativeReals
 from pyomo.contrib.pyros.util import (selective_clone,
                                       ObjectiveType,
                                       pyrosTerminationCondition,
                                       process_termination_condition_master_problem,
+                                      adjust_solver_time_settings,
+                                      get_main_elapsed_time,
                                       output_logger)
 from pyomo.contrib.pyros.solve_data import (MasterProblemData,
                                             MasterResult)
@@ -241,6 +244,7 @@ def solve_master_feasibility_problem(model_data, config):
     else:
         solver = config.local_solver
 
+    adjust_solver_time_settings(model_data.timing, solver, config)
     try:
         results = solver.solve(model, tee=config.tee, load_solutions=False)
     except ApplicationError:
@@ -400,6 +404,7 @@ def minimize_dr_vars(model_data, config):
 
     # === Solve the polishing model
     timer = TicTocTimer()
+    adjust_solver_time_settings(model_data.timing, solver, config)
     timer.tic(msg=None)
     try:
         results = solver.solve(
@@ -564,6 +569,7 @@ def solver_call_master(model_data, config, solver, solve_data):
 
     timer = TicTocTimer()
     for opt in backup_solvers:
+        adjust_solver_time_settings(model_data.timing, opt, config)
         timer.tic(msg=None)
         try:
             results = opt.solve(
@@ -619,7 +625,6 @@ def solver_call_master(model_data, config, solver, solve_data):
                 v.value
                 for v in nlp_model.scenarios[0, 0].util.first_stage_variables
             )
-
             if config.objective_focus is ObjectiveType.nominal:
                 master_soln.ssv_vals = list(
                     v.value
@@ -646,6 +651,20 @@ def solver_call_master(model_data, config, solver, solve_data):
             master_soln.nominal_block = nlp_model.scenarios[0, 0]
             master_soln.results = results
             master_soln.master_model = nlp_model
+
+        # if PyROS time limit exceeded, exit loop and return solution
+        elapsed = get_main_elapsed_time(model_data.timing)
+        if config.time_limit:
+            if elapsed >= config.time_limit:
+                try_backup = False
+                master_soln.master_subsolver_results = (
+                    None,
+                    pyrosTerminationCondition.time_out
+                )
+                master_soln.pyros_termination_condition = (
+                    pyrosTerminationCondition.time_out
+                )
+                output_logger(config=config, time_out=True, elapsed=elapsed)
 
         if not try_backup:
             return master_soln
@@ -690,6 +709,33 @@ def solve_master(model_data, config):
     if model_data.iteration > 0:
         results = solve_master_feasibility_problem(model_data, config)
         master_soln.feasibility_problem_results = results
+
+        # if pyros time limit reached, load time out status
+        # to master results and return to caller
+        elapsed = get_main_elapsed_time(model_data.timing)
+        if config.time_limit:
+            if elapsed >= config.time_limit:
+                # load master model
+                master_soln.master_model = model_data.master_model
+                master_soln.nominal_block = model_data.master_model.scenarios[0, 0]
+
+                # empty results object, with master solve time of zero
+                master_soln.results = SolverResults()
+                setattr(master_soln.results.solver, TIC_TOC_SOLVE_TIME_ATTR, 0)
+
+                # PyROS time out status
+                master_soln.pyros_termination_condition = (
+                    pyrosTerminationCondition.time_out
+                )
+                master_soln.master_subsolver_results = (
+                    None,
+                    pyrosTerminationCondition.time_out
+                )
+
+                # log time out message
+                output_logger(config=config, time_out=True, elapsed=elapsed)
+
+                return master_soln
 
     solver = config.global_solver if config.solve_master_globally else config.local_solver
 
