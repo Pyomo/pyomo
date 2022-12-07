@@ -23,8 +23,6 @@ from pyomo.core import (
     Param, RangeSet, Set, SetOf, SortComponents, Suffix, value, Var
 )
 from pyomo.core.base import Reference, Transformation, TransformationFactory
-from pyomo.core.base.boolean_var import (
-    _DeprecatedImplicitAssociatedBinaryVariable)
 import pyomo.core.expr.current as EXPR
 from pyomo.core.util import target_list
 
@@ -228,6 +226,23 @@ class MultipleBigMTransformation(Transformation):
         if targets is None:
             targets = (instance, )
 
+        # transform any logical constraints that might be anywhere on the stuff
+        # we're about to transform. We do this before we preprocess targets
+        # because we will likely create more disjunctive components that will
+        # need transformation.
+        disj_targets = []
+        for t in targets:
+            disj_datas = t.values() if t.is_indexed() else [t,]
+            if t.ctype is Disjunct:
+                disj_targets.extend(disj_datas)
+            if t.ctype is Disjunction:
+                disj_targets.extend([d for disjunction in disj_datas for d in
+                                     disjunction.disjuncts])
+        TransformationFactory('contrib.logical_to_disjunctive').apply_to(
+            instance,
+            targets=[blk for blk in targets if blk.ctype is Block] +
+            disj_targets)
+
         # We don't allow nested, so it doesn't much matter which way we sort
         # this. But transforming from leaf to root makes the error checking for
         # complaining about nested smoother, so we do that. We have to transform
@@ -235,13 +250,6 @@ class MultipleBigMTransformation(Transformation):
         # need information from the other Disjuncts in the Disjunction.
         gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
         preprocessed_targets = gdp_tree.reverse_topological_sort()
-
-        # transform any logical constraints that might be anywhere on the stuff
-        # we're about to transform.
-        TransformationFactory('core.logical_to_linear').apply_to(
-            instance,
-            targets=[blk for blk in targets if blk.ctype is Block] +
-            [disj for disj in preprocessed_targets if disj.ctype is Disjunct])
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
@@ -366,21 +374,6 @@ class MultipleBigMTransformation(Transformation):
         obj._deactivate_without_fixing_indicator()
 
     def _transform_block_components(self, disjunct, active_disjuncts, Ms):
-        # We don't know where all the BooleanVars are used, so if there are any
-        # that logical_to_linear didn't transform, we need to do it now
-        for boolean in disjunct.component_data_objects(BooleanVar,
-                                                       descend_into=Block,
-                                                       active=None):
-            if isinstance(boolean._associated_binary,
-                          _DeprecatedImplicitAssociatedBinaryVariable):
-                parent_block = boolean.parent_block()
-                new_var = Var(domain=Binary)
-                parent_block.add_component(
-                    unique_component_name(parent_block,
-                                          boolean.local_name + "_asbinary"),
-                    new_var)
-                boolean.associate_binary_var(new_var)
-
         # add references to all local variables on block (including the
         # indicator_var). We won't have to do this when the writers can find
         # Vars not in the active subtree.
