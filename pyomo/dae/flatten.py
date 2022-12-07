@@ -292,19 +292,23 @@ def generate_sliced_components(
     else:
         context_slice = None
 
-    # TODO: If active is True, check whether "b" is active and return
-    # a "no-op" if not. This matches the behavior of component_objects
+    # If active argument is specified and does not match the block's
+    # active flag, we return immediately. This matches the behavior of
+    # component_objects. We only need this check as we may modify the
+    # active argument sent to component_objects if ctype is not an
+    # ActiveComponent type.
     if active is not None and active != b.active:
         return
 
-    # Looks for components indexed by these sets immediately in our block.
-    # Note that the active flag, if used, will filter returned slices only
-    # by the flag of the Component object, not by any data objects.
-    #
-    # If active is provided and ctype is not an ActiveComponent (e.g. it is
-    # Var), we will not generate any components. To prevent this, only pass
-    # the active flag if we are looking for active components.
-    c_active = active if issubclass(ctype, ActiveComponent) else None
+    # Define this class so we don't have to call issubclass again later.
+    check_active = issubclass(ctype, ActiveComponent) and (active != None)
+
+    # If active=False and ctype is not an ActiveComponent (e.g. it is Var)
+    # we will not generate any components. To prevent this, only pass the
+    # active argument if we are looking for active components.
+    c_active = active if check_active else None
+
+    # Looks for components indexed by specified sets immediately in our block.
     for c in b.component_objects(ctype, descend_into=False, active=c_active):
         subsets = list(c.index_set().subsets())
         new_sets = [s for s in subsets if s in sets]
@@ -315,9 +319,14 @@ def generate_sliced_components(
         for idx, new_slice in slice_component_along_sets(
             c, sets, context_slice=context_slice, normalize=False
         ):
-            # If we had a consistent notion the "activity" of a slice,
-            # we might want to check it against the active flag here.
-            yield sliced_sets, new_slice
+            # If we have to check activity, check data objects defined by
+            # slice. If any match, we yield the slice. This is done for
+            # compatibility with the behavior when slicing blocks, where
+            # we can only descend into a block that matches our active flag.
+            if not check_active or any(
+                data.active == c_active for data in new_slice.duplicate()
+            ):
+                yield sliced_sets, new_slice
 
     # We now descend into subblocks
     for sub in b.component_objects(Block, descend_into=False, active=active):
@@ -361,35 +370,31 @@ def generate_sliced_components(
                 descend_data = sub[descend_idx]
                 if type(descend_data) is IndexedComponent_slice:
                     try:
-                        # If we had a consistent definition of "activity" of
-                        # a slice, we could filter here by comparing it to
-                        # the active flag. Alternatively, we could try to find
-                        # an active data object to descend into. But this seems
-                        # a bit arbitrary while we don't have a notion of
-                        # whether the entire slice is active.
-                        descend_data = next(iter(descend_data))
-                        ## Attempt to find a data object matching this slice
-                        #_data = next(iter(descend_data))
-                        #while not _data.active:
-                        #    _data = next(iter(descend_data))
-                        #descend_data = _data
+                        slice_iter = iter(descend_data)
+                        # Try to find a data object defined by the slice
+                        # that matches the active argument. In doing so,
+                        # we treat a slice as inactive if all of its data
+                        # objects are inactive. We need to find a data obj
+                        # with the correct active flag, otherwise we run into
+                        # problems when we descend (component_objects will
+                        # not yield anything).
+                        _data = next(slice_iter)
+                        while active is not None and _data.active != active:
+                            _data = next(slice_iter)
+                        descend_data = _data
                     except StopIteration:
-                        # For this particular idx (and given indices), no
-                        # block data object exists to descend into.
-                        # Not sure if we should raise an error here... -RBP
+                        # For this particular idx, we have no BlockData
+                        # to descend into.
                         continue
                 elif active is not None and descend_data.active != active:
-                    # Assume descend_data is a BlockData object. This particular
+                    # descend_data is a BlockData object. This particular
                     # BlockData was specified by the index map. In this case,
-                    # we may want to respect "activity".
+                    # we want to respect "activity".
                     continue
             else:
+                # Have encountered a ScalarBlock. Do not need to check the
+                # active flag as this came straight from component_objects.
                 descend_data = sub
-                # Here we have encountered a ScalarBlock. We should know that
-                # this block is consistent with the active flag, as the active
-                # flag was passed to component_objects(Block) above.
-                #if not descend_data.active:
-                #    continue
 
             # Recursively generate sliced components from this data object
             for st, v in generate_sliced_components(
