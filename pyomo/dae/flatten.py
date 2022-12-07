@@ -441,7 +441,8 @@ def flatten_components_along_sets(m, sets, ctype, indices=None, active=None):
 
     active: Bool or None
         If not None, this is a boolean flag used to filter component objects
-        by their active status
+        by their active status. A reference-to-slice is returned if any data
+        object defined by the slice matches this flag.
 
     Returns
     -------
@@ -540,7 +541,8 @@ def flatten_dae_components(model, time, ctype, indices=None, active=None):
 
     active: Bool or None
         If provided, used as a filter to only return components with the
-        specified active flag.
+        specified active flag. A reference-to-slice is returned if any
+        data object defined by the slice matches this flag.
 
     Returns
     -------
