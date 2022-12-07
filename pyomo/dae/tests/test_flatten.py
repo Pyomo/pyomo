@@ -1175,40 +1175,8 @@ class TestFlatten(TestCategorize):
             else:
                 raise RuntimeError()
 
-    def test_deactivated_block(self):
-        m = ConcreteModel()
-        m.time = Set(initialize=[1,2,3])
-        m.space = Set(initialize=[0.0, 0.5, 1.0])
-        m.comp = Set(initialize=['a','b'])
-        
-        m.v0 = Var()
-        m.v1 = Var(m.time)
-        m.v2 = Var(m.time, m.space)
-        m.v3 = Var(m.time, m.space, m.comp)
-        
-        m.v_tt = Var(m.time, m.time)
-        m.v_tst = Var(m.time, m.space, m.time)
-        
-        @m.Block()
-        def b(b):
-        
-            @b.Block(m.time)
-            def b1(b1):
-                b1.v0 = Var()
-                b1.v1 = Var(m.space)
-                b1.v2 = Var(m.space, m.comp)
-        
-                @b1.Block(m.space)
-                def b_s(b_s):
-                    b_s.v0 = Var()
-                    b_s.v1 = Var(m.space)
-                    b_s.v2 = Var(m.space, m.comp)
-        
-            @b.Block(m.time, m.space)
-            def b2(b2):
-                b2.v0 = Var()
-                b2.v1 = Var(m.comp)
-                b2.v2 = Var(m.time, m.comp)
+    def test_deactivated_block_active_true(self):
+        m = self._model1_1d_sets()
         
         # Deactivating b1 should get rid of both variables directly on it
         # as well as those on the subblock b_s
@@ -1261,11 +1229,11 @@ class TestFlatten(TestCategorize):
                 comp_set = set(ComponentUID(comp.referent) for comp in comps)
                 self.assertEqual(comp_set, expected_2time)
 
-        #
-        # Test identifying inactive components
-        #
+    def test_deactivated_block_active_false(self):
+        m = self._model1_1d_sets()
         m.deactivate()
         m.b.deactivate()
+        m.b.b1.deactivate()
         for t in m.time:
             m.b.b1[t].b_s.deactivate()
         # Remove components to make this easier to test
@@ -1274,6 +1242,7 @@ class TestFlatten(TestCategorize):
         m.del_component(m.v3)
         m.del_component(m.v_tt)
         m.del_component(m.v_tst)
+        sets = (m.time,)
         sets_list, comps_list = flatten_components_along_sets(
             m, sets, Var, active=False
         )
