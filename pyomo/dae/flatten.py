@@ -323,8 +323,19 @@ def generate_sliced_components(
             # slice. If any match, we yield the slice. This is done for
             # compatibility with the behavior when slicing blocks, where
             # we can only descend into a block that matches our active flag.
-            if not check_active or any(
-                data.active == c_active for data in new_slice.duplicate()
+            #
+            # Note that new_slice can be a data object. This happens if the
+            # component doesn't contain any sets we are slicing, i.e. new_sets
+            # is empty.
+            if (
+                # Yield if (a) we're not checking activity
+                not check_active
+                # or (b) we have not sliced and data object activity matches
+                or (not sliced_sets and new_slice.active == c_active)
+                # or (c) we did slice and *any* data object activity matches
+                or any(
+                    data.active == c_active for data in new_slice.duplicate()
+                )
             ):
                 yield sliced_sets, new_slice
 
