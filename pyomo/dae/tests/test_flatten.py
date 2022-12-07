@@ -31,6 +31,20 @@ from pyomo.dae.flatten import (
         slice_component_along_sets,
         )
 
+
+class _TestFlattenBase(object):
+    """A base class to hold the common _hashRef utility method.
+    We don't just derive from Test... classes directly as this
+    causes tests to run twice.
+
+    """
+    def _hashRef(self, ref):
+        if not ref.is_indexed():
+            return (id(ref),)
+        else:
+            return tuple(sorted(id(_) for _ in ref.values()))
+
+
 class TestAssumedBehavior(unittest.TestCase):
     """
     These are some behaviors we rely on that weren't
@@ -108,9 +122,7 @@ class TestAssumedBehavior(unittest.TestCase):
         normalize_index.flatten = True
 
 
-class TestCategorize(unittest.TestCase):
-    def _hashRef(self, ref):
-        return tuple(sorted(id(_) for _ in ref.values()))
+class TestCategorize(_TestFlattenBase, unittest.TestCase):
 
     def test_flat_model(self):
         m = ConcreteModel()
@@ -302,13 +314,7 @@ class TestCategorize(unittest.TestCase):
             self.assertIn(self._hashRef(ref), ref_data)
 
 
-class TestFlatten(TestCategorize):
-
-    def _hashRef(self, ref):
-        if not ref.is_indexed():
-            return (id(ref),)
-        else:
-            return tuple(sorted(id(_) for _ in ref.values()))
+class TestFlatten(_TestFlattenBase, unittest.TestCase):
 
     def _model1_1d_sets(self):
         # One-dimensional sets, no skipping.
@@ -1515,8 +1521,7 @@ class TestCUID(unittest.TestCase):
                 raise RuntimeError()
 
 
-# TODO: Don't subclass TestFlatten. This runs its tests twice.
-class TestSliceComponent(TestFlatten):
+class TestSliceComponent(_TestFlattenBase, unittest.TestCase):
 
     def make_model(self):
         m = ConcreteModel()
