@@ -4,7 +4,9 @@
 import logging
 from math import fabs
 
-from pyomo.common.config import ConfigBlock, NonNegativeFloat
+from pyomo.common.config import ConfigDict, ConfigValue, NonNegativeFloat
+from pyomo.contrib.cp.transform .logical_to_disjunctive_program import (
+    LogicalToDisjunctive)
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.block import Block
 from pyomo.core.expr.numvalue import value
@@ -13,6 +15,13 @@ from pyomo.gdp.disjunct import Disjunct, Disjunction
 
 logger = logging.getLogger('pyomo.gdp.fix_disjuncts')
 
+def _is_transformation(transformation_name):
+    xform = TransformationFactory(transformation_name)
+    if xform is None:
+        raise ValueError(
+            "Expected valid name for a registered Pyomo transformation. "
+            "\n\tRecieved: %s" % transformation_name)
+    return transformation_name
 
 @TransformationFactory.register(
     'gdp.fix_disjuncts',
@@ -35,7 +44,20 @@ class GDP_Disjunct_Fixer(Transformation):
         # standardized.
         super(GDP_Disjunct_Fixer, self).__init__(**kwargs)
 
-    CONFIG = ConfigBlock("gdp.fix_disjuncts")
+    CONFIG = ConfigDict("gdp.fix_disjuncts")
+    CONFIG.declare("GDP_to_MIP_transformation", ConfigValue(
+        default='gdp.bigm',
+        domain=_is_transformation,
+        description="The name of the transformation to call after the "
+        "'logical_to_disjunctive' transformation in order to finish "
+        "transforming to a MI(N)LP.",
+        doc="""
+        If there are no logical constraints on the model being transformed,
+        this option is not used. However, if there are logical constraints
+        that involve mixtures of Boolean and integer variables, this option
+        specifies the transformation to use to transform the model with fixed
+        Disjuncts to a MI(N)LP. Uses 'gdp.bigm' by default.
+        """))
     def _apply_to(self, model, **kwds):
         """Fix all disjuncts in the given model and reclassify them to 
         Blocks."""
@@ -52,7 +74,9 @@ class GDP_Disjunct_Fixer(Transformation):
                 disjunct_object, Block)
 
         # Transform any remaining logical stuff
-        TransformationFactory('core.logical_to_linear').apply_to(model)
+        TransformationFactory('contrib.logical_to_disjunctive').apply_to(model)
+        # Transform anything disjunctive that the above created:
+        TransformationFactory(config.GDP_to_MIP_transformation).apply_to(model)
 
     def _transformContainer(self, obj):
         """Find all disjuncts in the container and transform them."""
