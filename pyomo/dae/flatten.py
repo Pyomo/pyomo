@@ -333,9 +333,9 @@ def generate_sliced_components(
                 # or (b) we have not sliced and data object activity matches
                 or (not sliced_sets and new_slice.active == c_active)
                 # or (c) we did slice and *any* data object activity matches
-                or any(
+                or (sliced_sets and any(
                     data.active == c_active for data in new_slice.duplicate()
-                )
+                ))
             ):
                 yield sliced_sets, new_slice
 
