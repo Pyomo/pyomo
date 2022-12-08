@@ -1480,6 +1480,45 @@ class TestFlatten(_TestFlattenBase, unittest.TestCase):
         self.assertEqual(len(sets_list), 0)
         self.assertEqual(len(comps_list), 0)
 
+    def test_scalar_con_active_true(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[0, 1, 2])
+        m.v = Var()
+        m.c = Constraint(expr=m.v == 1)
+        sets = (m.time,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Constraint, active=True
+        )
+
+        self.assertEqual(len(sets_list), 1)
+        self.assertEqual(len(sets_list[0]), 1)
+        self.assertIs(sets_list[0][0], UnindexedComponent_set)
+        self.assertEqual(len(comps_list), 1)
+        self.assertEqual(len(comps_list[0]), 1)
+        self.assertIs(comps_list[0][0], m.c)
+
+    def test_deactivated_scalar_con_active_true(self):
+        m = ConcreteModel()
+        m.time = Set(initialize=[0, 1, 2])
+        m.comp = Set(initialize=["A", "B"])
+        m.v = Var()
+        def c_rule(m, j):
+            return m.v == 1
+        m.c = Constraint(m.comp, rule=c_rule)
+        m.c[:].deactivate()
+        # Because only the data objects are deactivated, we will generate
+        # this component in the component_objects loop in the flattener.
+        # But because its data objects do not match the active argument,
+        # we hit the clause that checks for slice activity. This checks
+        # the part of the clause that makes sure we have sliced a set.
+        sets = (m.time,)
+        sets_list, comps_list = flatten_components_along_sets(
+            m, sets, Constraint, active=True
+        )
+
+        self.assertEqual(len(sets_list), 0)
+        self.assertEqual(len(comps_list), 0)
+
 
 class TestCUID(unittest.TestCase):
     """
