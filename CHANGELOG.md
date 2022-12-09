@@ -2,6 +2,37 @@ Pyomo CHANGELOG
 ===============
 
 -------------------------------------------------------------------------------
+Pyomo 6.4.4    (9 Dec 2022)
+-------------------------------------------------------------------------------
+
+- General
+  - Convert txt to md files (CHANGELOG, LICENSE, RELEASE) (#2635)
+  - Parallelize build of manylinux wheels (#2636)
+  - Update source for Jenkins status badge (#2639, #2640)
+  - Update relocated_module_attribute to work with cythonized modules (#2644)
+  - Add build services infrastructure status badge (#2646)
+  - Add utility methods to HierarchicalTimer (#2651)
+- Core
+  - Fix preservation of stale flags through clone/pickle (#2633)
+  - Add support for local suffixes in scaling transformation (#2619)
+- Solver Interfaces
+  - Fix handling of nonconvex MIQCP problems in Xpress (#2625)
+- Testing
+  - Update GitHub actions to cancel jobs when new changes are pushed (#2634)
+  - Remove requirement for a 'pyutilib' directory in Jenkins driver (#2637)
+  - Enable GitHub actions build on Windows Python 3.11 (#2638)
+  - Add version upper bound on MOSEK warmstart test skip (#2649)
+  - Improve compare.py handling of nosetests/pytest output (#2661)
+- GDP
+  - Add option to use multiple-bigm only on bound constraints (#2624)
+  - Add logical_to_disjunctive and replace uses of logical_to_linear (#2627)
+- Contributed Packages
+  - FBBT: Fix bug with ExternalFuction expressions (#2657)
+  - PyROS: Fix uncertain param bounds evaluation for FactorModelSet (#2620)
+  - PyROS: Add origin attribute to BudgetSet (#2645)
+  - PyROS: Fix UncertaintySet.bounding_problem method (#2659)
+
+-------------------------------------------------------------------------------
 Pyomo 6.4.3    (28 Nov 2022)
 -------------------------------------------------------------------------------
 
