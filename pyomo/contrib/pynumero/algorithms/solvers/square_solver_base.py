@@ -85,7 +85,7 @@ class PyomoImplicitFunctionBase(object):
         of the implicit function
 
         The returned values do not necessarily need to be the values stored
-        in the Pyomo varriables, as long as they are consistent with the
+        in the Pyomo variables, as long as they are consistent with the
         latest parameters that have been set.
 
         Returns

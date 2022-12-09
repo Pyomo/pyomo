@@ -201,7 +201,7 @@ class ImplicitFunctionInputsDontAppear(object):
 
 
 class ImplicitFunctionNoInputs(ImplicitFunctionInputsDontAppear):
-    """The same system as with inputs that don't appear, but not the
+    """The same system as with inputs that don't appear, but now the
     inputs are not provided to the implicit function solver
 
     """
