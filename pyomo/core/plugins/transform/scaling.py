@@ -96,7 +96,7 @@ class ScaleModel(Transformation):
            starting at the `root` and descending down the tree to
            the component_data.  Return the first match found.
         3. Search for a Suffix with key `None`, starting from the
-           component_data and working up the tree to teh `root`.
+           component_data and working up the tree to the `root`.
            Return the first match found.
         4. Return None
 
