@@ -27,8 +27,8 @@ _init_url="$URL$"
 major=6
 minor=4
 micro=4
-releaselevel='invalid'
-#releaselevel='final'
+#releaselevel='invalid'
+releaselevel='final'
 serial=0
 
 if releaselevel == 'final':
@@ -40,7 +40,7 @@ elif releaselevel == 'invalid':
     if __file__.endswith('setup.py'):
         # This file is being sources (exec'ed) from setup.py.
         # dirname(__file__) setup.py's scope is the root sourec directory
-        _rootdir = os.path.dirname(__file__)
+        _rootdir = dirname(__file__)
     else:
         # Eventually this should import PYOMO_ROOT_DIR from
         # pyomo.common instead of reimplementing that logic here.
