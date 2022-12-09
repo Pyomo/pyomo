@@ -10,8 +10,6 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.dependencies import attempt_import
-cp, docplex_available = attempt_import('docplex.cp.model')
-cp_solver, docplex_available = attempt_import('docplex.cp.solver')
 
 import itertools
 import logging
@@ -67,6 +65,33 @@ from pyomo.opt import (
 ### longer report active==True
 from pyomo.network import Port
 ###
+
+def _finalize_docplex(module, available):
+    if not available:
+        return
+    _deferred_element_getattr_dispatcher['start_time'] = module.start_of
+    _deferred_element_getattr_dispatcher['end_time'] = module.end_of
+    _deferred_element_getattr_dispatcher['length'] = module.length_of
+    _deferred_element_getattr_dispatcher['is_present'] = module.presence_of
+
+    # Scheduling dispatchers
+    _before_dispatchers[_START_TIME, _START_TIME] = module.start_before_start
+    _before_dispatchers[_START_TIME, _END_TIME] = module.start_before_end
+    _before_dispatchers[_END_TIME, _START_TIME] = module.end_before_start
+    _before_dispatchers[_END_TIME, _END_TIME] = module.end_before_end
+
+    _at_dispatchers[_START_TIME, _START_TIME] = module.start_at_start
+    _at_dispatchers[_START_TIME, _END_TIME] = module.start_at_end
+    _at_dispatchers[_END_TIME, _START_TIME] = module.end_at_start
+    _at_dispatchers[_END_TIME, _END_TIME] = module.end_at_end
+
+    _time_point_dispatchers[_START_TIME] = module.start_of
+    _time_point_dispatchers[_END_TIME] = module.end_of
+
+
+cp, docplex_available = attempt_import(
+    'docplex.cp.model', callback=_finalize_docplex)
+cp_solver, docplex_available = attempt_import('docplex.cp.solver')
 
 logger = logging.getLogger('pyomo.contrib.cp')
 
@@ -217,13 +242,8 @@ _element_constraint_attr_dispatcher = {
     'xor': _XOR,
     'equivalent_to': _EQUIVALENT_TO,
 }
-if docplex_available:
-    _deferred_element_getattr_dispatcher = {
-        'start_time': cp.start_of,
-        'end_time': cp.end_of,
-        'length': cp.length_of,
-        'is_present': cp.presence_of,
-    }
+# This will get populated when cp is finally imported
+_deferred_element_getattr_dispatcher = {}
 
 def _handle_getattr(visitor, node, obj, attr):
     # We either end up here because we do not yet know the list of variables to
@@ -676,25 +696,13 @@ def _handle_call(visitor, node, *args):
 # Scheduling
 ##
 
-if docplex_available:
-    _before_dispatchers = {
-        (_START_TIME, _START_TIME): cp.start_before_start,
-        (_START_TIME, _END_TIME): cp.start_before_end,
-        (_END_TIME, _START_TIME): cp.end_before_start,
-        (_END_TIME, _END_TIME): cp.end_before_end,
-    }
-    _at_dispatchers = {
-        (_START_TIME, _START_TIME): cp.start_at_start,
-        (_START_TIME, _END_TIME): cp.start_at_end,
-        (_END_TIME, _START_TIME): cp.end_at_start,
-        (_END_TIME, _END_TIME): cp.end_at_end
-    }
-    _time_point_dispatchers = {
-        _START_TIME: cp.start_of,
-        _END_TIME: cp.end_of,
-        _GENERAL: lambda x: x,
-        _ELEMENT_CONSTRAINT: lambda x: x,
-    }
+# This will get populated when cp is finally imported
+_before_dispatchers = {}
+_at_dispatchers = {}
+_time_point_dispatchers = {
+    _GENERAL: lambda x: x,
+    _ELEMENT_CONSTRAINT: lambda x: x,
+}
 
 _non_precedence_types = {_GENERAL, _ELEMENT_CONSTRAINT}
 

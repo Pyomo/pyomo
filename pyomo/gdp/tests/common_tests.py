@@ -1715,7 +1715,7 @@ def check_pprint_equal(self, m, unpickle):
     self.assertMultiLineEqual(m_output, unpickle_output)
 
 def check_transformed_model_pickles(self, transformation):
-    # Do a model where we'll have to call logical_to_linear too.
+    # Do a model where we'll have to call logical_to_disjunctive too.
     m = models.makeLogicalConstraintsOnDisjuncts_NonlinearConvex()
     trans = TransformationFactory('gdp.%s' % transformation)
     trans.apply_to(m)
