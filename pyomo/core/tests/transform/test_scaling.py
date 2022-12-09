@@ -464,7 +464,10 @@ class TestScaleModelTransformation(unittest.TestCase):
         m.b1.v2 = pyo.Var()
 
         m.b1.b2 = pyo.Block()
-        m.b1.b2.v3 = pyo.Var()
+        m.b1.b2.v3 = pyo.Var([0])
+
+        xfrm = ScaleModel()
+        _suffix_finder = xfrm._suffix_finder
 
         # Add Suffixes
         m.suffix = pyo.Suffix(direction=pyo.Suffix.EXPORT)
@@ -472,31 +475,58 @@ class TestScaleModelTransformation(unittest.TestCase):
         m.b1.b2.suffix = pyo.Suffix(direction=pyo.Suffix.EXPORT)
 
         # Check for no suffix value
-        assert ScaleModel()._suffix_finder(m.b1.b2.v3, "suffix") == None
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == None
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == None
 
         # Check finding default values
         # Add a default at the top level
         m.suffix[None] = 1
-        assert ScaleModel()._suffix_finder(m.b1.b2.v3, "suffix") == 1
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == 1
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == None
 
-        # Add a suffix at a lower level
+        # Add a default suffix at a lower level
         m.b1.b2.suffix[None] = 2
-        assert ScaleModel()._suffix_finder(m.b1.b2.v3, "suffix") == 2
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == 2
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == 2
+
+        # Check for container at lowest level
+        m.b1.b2.suffix[m.b1.b2.v3] = 3
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == 3
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == 3
+
+        # Check for container at top level
+        m.suffix[m.b1.b2.v3] = 4
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == 4
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == 3
 
         # Check for specific values at lowest level
-        m.b1.b2.suffix[m.b1.b2.v3] = 3
-        assert ScaleModel()._suffix_finder(m.b1.b2.v3, "suffix") == 3
+        m.b1.b2.suffix[m.b1.b2.v3[0]] = 5
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == 5
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == 5
 
-        # Check for specific values at all levels
-        m.suffix[m.b1.b2.v3] = 4
-        assert ScaleModel()._suffix_finder(m.b1.b2.v3, "suffix") == 4
+        # Check for specific values at top level
+        m.suffix[m.b1.b2.v3[0]] = 6
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix") == 6
+        assert _suffix_finder(m.b1.b2.v3[0], "suffix", root=m.b1) == 5
 
         # Make sure we don't find default suffixes at lower levels
-        assert ScaleModel()._suffix_finder(m.v1, "suffix") == 1
+        assert _suffix_finder(m.b1.v2, "suffix") == 1
+        assert _suffix_finder(m.b1.v2, "suffix", root=m.b1) == None
 
         # Make sure we don't find specific suffixes at lower levels
         m.b1.b2.suffix[m.v1] = 5
-        assert ScaleModel()._suffix_finder(m.v1, "suffix") == 1
+        assert _suffix_finder(m.v1, "suffix") == 1
+
+        with self.assertRaisesRegex(
+                ValueError,
+                r"_find_suffix: root must be a BlockData \(found Var: v1\)"):
+            _suffix_finder(m.b1.v2, "suffix", root=m.v1)
+
+        m.bn = pyo.Block([1,2])
+        with self.assertRaisesRegex(
+                ValueError, r"_find_suffix: root must be a BlockData "
+                r"\(found IndexedBlock: bn\)"):
+            _suffix_finder(m.b1.v2, "suffix", root=m.bn)
 
 
 if __name__ == "__main__":
