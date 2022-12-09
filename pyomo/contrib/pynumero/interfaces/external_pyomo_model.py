@@ -161,6 +161,9 @@ class ExternalPyomoModel(ExternalGreyBoxModel):
             equations defining the implicit function.
         solver_options: dict
             Options dict for the ImplicitFunctionSolver
+        timer: HierarchicalTimer
+            HierarchicalTimer object to which new timing categories introduced
+            will be attached. If None, a new timer will be created.
 
         """
         if timer is None:
