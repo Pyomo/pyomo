@@ -13,15 +13,17 @@
 #  ___________________________________________________________________________
 
 import logging
-from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to
-from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, get_integer_solution, copy_var_list_values_from_solution_pool, add_var_bound, calc_jacobians
-from pyomo.core import TransformationFactory, maximize, Objective, ConstraintList
+import math
+from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to, get_main_elapsed_time
+from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, get_integer_solution, copy_var_list_values_from_solution_pool, add_var_bound
+from pyomo.core import TransformationFactory, minimize, maximize, Objective, ConstraintList
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_GOA_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.opt import TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from operator import itemgetter
+from pyomo.contrib.mindtpy.cut_generation import add_affine_cuts
 
 
 @SolverFactory.register(
@@ -331,3 +333,38 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             m.dual.deactivate()
         
         MindtPy.cuts.aff_cuts = ConstraintList(doc='Affine cuts')
+
+
+    def update_primal_bound(self, bound_value):
+        """Update the primal bound.
+
+        Call after solve fixed NLP subproblem.
+        Use the optimal primal bound of the relaxed problem to update the dual bound.
+
+        Parameters
+        ----------
+        bound_value : float
+            The input value used to update the primal bound.
+        """
+        if math.isnan(bound_value):
+            return
+        if self.objective_sense == minimize:
+            self.primal_bound = min(bound_value, self.primal_bound)
+            self.primal_bound_improved = self.primal_bound < self.primal_bound_progress[-1]
+        else:
+            self.primal_bound = max(bound_value, self.primal_bound)
+            self.primal_bound_improved = self.primal_bound > self.primal_bound_progress[-1]
+        self.primal_bound_progress.append(self.primal_bound)
+        self.primal_bound_progress_time.append(get_main_elapsed_time(self.timing))
+        if self.primal_bound_improved:
+            self.update_gap()
+            self.num_no_good_cuts_added.update(
+                    {self.primal_bound: len(self.mip.MindtPy_utils.cuts.no_good_cuts)})
+
+
+    def add_cuts(self,
+                 dual_values=None,
+                 linearize_active=True,
+                 linearize_violated=True,
+                 cb_opt=None):
+        add_affine_cuts(self.mip, self.config, self.timing)

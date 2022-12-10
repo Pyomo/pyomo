@@ -24,12 +24,13 @@ from pyomo.contrib.mindtpy.util import get_integer_solution, copy_var_list_value
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from operator import itemgetter
 from pyomo.opt import TerminationCondition as tc
+from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts
 
 
 @SolverFactory.register(
     'mindtpy.oa',
     doc='MindtPy: Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo')
-class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
+class MindtPy_OA_Solver(_MindtPyAlgorithm):
     """
     Decomposition solver for Mixed-Integer Nonlinear Programming (MINLP) problems.
 
@@ -412,3 +413,21 @@ class MindtPy_OA_Solver(MindtPy_FP_Solver,_MindtPyAlgorithm):
             if config.fp_projcuts:
                 self.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
                     doc='Orthogonality cuts in feasibility pump')
+
+
+    def add_cuts(self,
+                 dual_values,
+                 linearize_active=True,
+                 linearize_violated=True,
+                 cb_opt=None):
+        add_oa_cuts(self.mip, 
+                    dual_values,
+                    self.jacobians,
+                    self.objective_sense,
+                    self.mip_constraint_polynomial_degree,
+                    self.mip_iter,
+                    self.config,
+                    self.timing,
+                    cb_opt,
+                    linearize_active,
+                    linearize_violated)

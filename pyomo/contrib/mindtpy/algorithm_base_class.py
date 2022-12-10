@@ -24,7 +24,9 @@ from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.collections import ComponentMap, Bunch, ComponentSet
 from pyomo.common.errors import InfeasibleConstraintException
-from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_affine_cuts, add_no_good_cuts
+from pyomo.contrib.mindtpy.cut_generation import add_no_good_cuts
+from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function, set_solver_options
+from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, fp_converged, add_orthogonality_cuts
 from pyomo.opt import SolverFactory, SolverResults, ProblemSense, SolutionStatus, SolverStatus
 from pyomo.core import (minimize, maximize, Objective, VarList, Reals, ConstraintList, Constraint,
                         Block, TransformationFactory, NonNegativeReals, Suffix, Var, RangeSet, value, Expression)
@@ -717,32 +719,24 @@ class _MindtPyAlgorithm(object):
                                                             self.primal_bound, self.dual_bound, self.rel_gap,
                                                             get_main_elapsed_time(self.timing)))
             # Add OA cut
-            if config.strategy in {'OA', 'GOA', 'FP'}:
+            copy_var_list_values(m.MindtPy_utils.variable_list,
+                                self.mip.MindtPy_utils.variable_list,
+                                config)
+            if config.init_strategy == 'FP':
                 copy_var_list_values(m.MindtPy_utils.variable_list,
-                                    self.mip.MindtPy_utils.variable_list,
+                                    self.working_model.MindtPy_utils.variable_list,
                                     config)
-                if config.init_strategy == 'FP':
-                    copy_var_list_values(m.MindtPy_utils.variable_list,
-                                        self.working_model.MindtPy_utils.variable_list,
-                                        config)
-                if config.strategy in {'OA', 'FP'}:
-                    add_oa_cuts(self.mip, 
-                    dual_values,
-                    self.jacobians,
-                    self.objective_sense,
-                    self.mip_constraint_polynomial_degree,
-                    self.mip_iter,
-                    config,
-                    self.timing)
-                elif config.strategy == 'GOA':
-                    add_affine_cuts(self.mip, config, self.timing)
-                for var in self.mip.MindtPy_utils.discrete_variable_list:
-                    # We don't want to trigger the reset of the global stale
-                    # indicator, so we will set this variable to be "stale",
-                    # knowing that set_value will switch it back to "not
-                    # stale"
-                    var.stale = True
-                    var.set_value(int(round(var.value)), skip_validation=True)
+            self.add_cuts(dual_values=dual_values,
+                            linearize_active=True,
+                            linearize_violated=True,
+                            cb_opt=None)
+            for var in self.mip.MindtPy_utils.discrete_variable_list:
+                # We don't want to trigger the reset of the global stale
+                # indicator, so we will set this variable to be "stale",
+                # knowing that set_value will switch it back to "not
+                # stale"
+                var.stale = True
+                var.set_value(int(round(var.value)), skip_validation=True)
         elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
             # TODO fail? try something else?
             config.logger.info(
@@ -994,9 +988,6 @@ class _MindtPyAlgorithm(object):
             self.best_solution_found = fixed_nlp.clone()
             self.best_solution_found_time = get_main_elapsed_time(
                 self.timing)
-            if config.strategy == 'GOA':
-                self.num_no_good_cuts_added.update(
-                        {self.primal_bound: len(self.mip.MindtPy_utils.cuts.no_good_cuts)})
 
             # add obj increasing constraint for fp
             if fp:
@@ -1009,24 +1000,13 @@ class _MindtPyAlgorithm(object):
                     self.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=sum(self.mip.MindtPy_utils.objective_value[:])
                                                                                         >= self.primal_bound + config.fp_cutoffdecr*max(1, abs(self.primal_bound)))
         # Add the linear cut
-        if config.strategy == 'OA' or fp:
-            copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
-                                self.mip.MindtPy_utils.variable_list,
-                                config)
-            add_oa_cuts(self.mip, dual_values, self.jacobians, self.objective_sense,
-                        self.mip_constraint_polynomial_degree, self.mip_iter, config,
-                        self.timing, cb_opt=cb_opt)
-        elif config.strategy == 'GOA':
-            copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
-                                self.mip.MindtPy_utils.variable_list,
-                                config)
-            add_affine_cuts(self.mip, config, self.timing)
-        # elif config.strategy == 'PSC':
-        #     # !!THIS SEEMS LIKE A BUG!! - mrmundt #
-        #     add_psc_cut(solve_data, config)
-        # elif config.strategy == 'GBD':
-        #     # !!THIS SEEMS LIKE A BUG!! - mrmundt #
-        #     add_gbd_cut(solve_data, config)
+        copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
+                            self.mip.MindtPy_utils.variable_list,
+                            config)
+        self.add_cuts(dual_values=dual_values,
+                      linearize_active=True,
+                      linearize_violated=True,
+                      cb_opt=cb_opt)
 
         var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
         if config.add_no_good_cuts:
@@ -1085,21 +1065,18 @@ class _MindtPyAlgorithm(object):
         #         elif var.has_lb() and abs(value(var) - var.lb) < config.absolute_bound_tolerance:
         #             fixed_nlp.ipopt_zU_out[var] = -1
 
-        if config.strategy in {'OA', 'GOA'}:
-            config.logger.info('Solving feasibility problem')
-            feas_subproblem, feas_subproblem_results = self.solve_feasibility_subproblem(config)
-            # TODO: do we really need this?
-            if self.should_terminate:
-                return
-            copy_var_list_values(feas_subproblem.MindtPy_utils.variable_list,
-                                self.mip.MindtPy_utils.variable_list,
-                                config)
-            if config.strategy == 'OA':
-                add_oa_cuts(self.mip, dual_values, self.jacobians, self.objective_sense,
-                                self.mip_constraint_polynomial_degree, self.mip_iter, config,
-                                self.timing, cb_opt=cb_opt)
-            elif config.strategy == 'GOA':
-                add_affine_cuts(self.mip, config, self.timing)
+        config.logger.info('Solving feasibility problem')
+        feas_subproblem, feas_subproblem_results = self.solve_feasibility_subproblem(config)
+        # TODO: do we really need this?
+        if self.should_terminate:
+            return
+        copy_var_list_values(feas_subproblem.MindtPy_utils.variable_list,
+                            self.mip.MindtPy_utils.variable_list,
+                            config)
+        self.add_cuts(dual_values=dual_values,
+                      linearize_active=True,
+                      linearize_violated=True,
+                      cb_opt=cb_opt)
         # Add a no-good cut to exclude this discrete option
         var_values = list(v.value for v in fixed_nlp.MindtPy_utils.variable_list)
         if config.add_no_good_cuts:
@@ -2129,3 +2106,225 @@ class _MindtPyAlgorithm(object):
 
         if config.init_strategy == 'initial_binary' and config.strategy == 'ECP':
             raise ValueError("ECP method do not support 'initial_binary' as the initialization strategy.")
+
+
+    ################################################################################################################################
+    # feasibility_pump.py
+
+    def solve_fp_subproblem(self, config):
+        """Solves the feasibility pump NLP subproblem.
+
+        This function sets up the 'fp_nlp' by relax integer variables.
+        precomputes dual values, deactivates trivial constraints, and then solves NLP model.
+
+        Parameters
+        ----------
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+
+        Returns
+        -------
+        fp_nlp : Pyomo model
+            Fixed-NLP from the model.
+        results : SolverResults
+            Results from solving the fixed-NLP subproblem.
+        """
+        fp_nlp = self.working_model.clone()
+        MindtPy = fp_nlp.MindtPy_utils
+
+        # Set up NLP
+        fp_nlp.MindtPy_utils.objective_list[-1].deactivate()
+        if self.objective_sense == minimize:
+            fp_nlp.improving_objective_cut = Constraint(
+                expr=sum(fp_nlp.MindtPy_utils.objective_value[:]) <= self.primal_bound)
+        else:
+            fp_nlp.improving_objective_cut = Constraint(
+                expr=sum(fp_nlp.MindtPy_utils.objective_value[:]) >= self.primal_bound)
+
+        # Add norm_constraint, which guarantees the monotonicity of the norm objective value sequence of all iterations
+        # Ref: Paper 'A storm of feasibility pumps for nonconvex MINLP'   https://doi.org/10.1007/s10107-012-0608-x
+        # the norm type is consistant with the norm obj of the FP-main problem.
+        if config.fp_norm_constraint:
+            generate_norm_constraint(fp_nlp, self.mip, config)
+
+        MindtPy.fp_nlp_obj = generate_norm2sq_objective_function(
+            fp_nlp, self.mip, discrete_only=config.fp_discrete_only)
+
+        MindtPy.cuts.deactivate()
+        TransformationFactory('core.relax_integer_vars').apply_to(fp_nlp)
+        try:
+            TransformationFactory('contrib.deactivate_trivial_constraints').apply_to(
+                fp_nlp, tmp=True, ignore_infeasible=False, tolerance=config.constraint_tolerance)
+        except ValueError:
+            config.logger.warning(
+                'infeasibility detected in deactivate_trivial_constraints')
+            results = SolverResults()
+            results.solver.termination_condition = tc.infeasible
+            return fp_nlp, results
+        # Solve the NLP
+        nlpopt = SolverFactory(config.nlp_solver)
+        nlp_args = dict(config.nlp_solver_args)
+        set_solver_options(nlpopt, self.timing, config, solver_type='nlp')
+        with SuppressInfeasibleWarning():
+            with time_code(self.timing, 'fp subproblem'):
+                results = nlpopt.solve(fp_nlp,
+                                    tee=config.nlp_solver_tee,
+                                    load_solutions=False,
+                                    **nlp_args)
+                if len(results.solution) > 0:
+                    fp_nlp.solutions.load_from(results)
+        return fp_nlp, results
+
+
+    def handle_fp_subproblem_optimal(self, fp_nlp, config):
+        """Copies the solution to the working model, updates bound, adds OA cuts / no-good cuts /
+        increasing objective cut, calculates the duals and stores incumbent solution if it has been improved.
+
+        Parameters
+        ----------
+        fp_nlp : Pyomo model
+            The feasibility pump NLP subproblem.
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        """
+        copy_var_list_values(
+            fp_nlp.MindtPy_utils.variable_list,
+            self.working_model.MindtPy_utils.variable_list,
+            config)
+        add_orthogonality_cuts(self.working_model, self.mip, config)
+
+        # if OA-like or fp converged, update Upper bound,
+        # add no_good cuts and increasing objective cuts (fp)
+        if fp_converged(self.working_model, self.mip, config, discrete_only=config.fp_discrete_only):
+            copy_var_list_values(self.mip.MindtPy_utils.variable_list,
+                                self.working_model.MindtPy_utils.variable_list,
+                                config)
+            fixed_nlp, fixed_nlp_results = self.solve_subproblem(config)
+            if fixed_nlp_results.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
+                self.handle_subproblem_optimal(fixed_nlp, config, fp=True)
+            else:
+                config.logger.error('Feasibility pump Fixed-NLP is infeasible, something might be wrong. '
+                                    'There might be a problem with the precisions - the feasibility pump seems to have converged')
+
+
+    def handle_fp_main_tc(self, feas_main_results, config):
+        """Handle the termination condition of the feasibility pump main problem.
+
+        Parameters
+        ----------
+        feas_main_results : SolverResults
+            The results from solving the FP main problem.
+        solve_data : MindtPySolveData
+            Data container that holds solve-instance data.
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+
+        Returns
+        -------
+        bool
+            True if FP loop should terminate, False otherwise.
+        """
+        if feas_main_results.solver.termination_condition is tc.optimal:
+            config.logger.info(self.log_formatter.format(
+                self.fp_iter, 'FP-MIP', value(
+                    self.mip.MindtPy_utils.fp_mip_obj),
+                self.primal_bound, self.dual_bound, self.rel_gap, get_main_elapsed_time(self.timing)))
+            return False
+        elif feas_main_results.solver.termination_condition is tc.maxTimeLimit:
+            config.logger.warning('FP-MIP reaches max TimeLimit')
+            self.results.solver.termination_condition = tc.maxTimeLimit
+            return True
+        elif feas_main_results.solver.termination_condition is tc.infeasible:
+            config.logger.warning('FP-MIP infeasible')
+            no_good_cuts = self.mip.MindtPy_utils.cuts.no_good_cuts
+            if no_good_cuts.__len__() > 0:
+                no_good_cuts[no_good_cuts.__len__()].deactivate()
+            return True
+        elif feas_main_results.solver.termination_condition is tc.unbounded:
+            config.logger.warning('FP-MIP unbounded')
+            return True
+        elif (feas_main_results.solver.termination_condition is tc.other and
+                feas_main_results.solution.status is SolutionStatus.feasible):
+            config.logger.warning('MILP solver reported feasible solution of FP-MIP, '
+                                'but not guaranteed to be optimal.')
+            return False
+        else:
+            config.logger.warning('Unexpected result of FP-MIP')
+            return True
+
+
+    def fp_loop(self, config):
+        """Feasibility pump loop.
+
+        This is the outermost function for the algorithms in this package; this function
+        controls the progression of solving the model.
+
+        Parameters
+        ----------
+        solve_data : MindtPySolveData
+            Data container that holds solve-instance data.
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+
+        Raises
+        ------
+        ValueError
+            MindtPy unable to handle the termination condition of the FP-NLP subproblem.
+        """
+        while self.fp_iter < config.fp_iteration_limit:
+
+            self.mip_subiter = 0
+            # solve MILP main problem
+            feas_main, feas_main_results = self.solve_main(config, fp=True)
+            fp_should_terminate = self.handle_fp_main_tc(feas_main_results, config)
+            if fp_should_terminate:
+                break
+
+            # Solve NLP subproblem
+            # The constraint linearization happens in the handlers
+            fp_nlp, fp_nlp_result = self.solve_fp_subproblem(config)
+
+            if fp_nlp_result.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
+                config.logger.info(self.log_formatter.format(
+                    self.fp_iter, 'FP-NLP', value(
+                        fp_nlp.MindtPy_utils.fp_nlp_obj),
+                    self.primal_bound, self.dual_bound, self.rel_gap,
+                    get_main_elapsed_time(self.timing)))
+                self.handle_fp_subproblem_optimal(fp_nlp, config)
+            elif fp_nlp_result.solver.termination_condition in {tc.infeasible, tc.noSolution}:
+                config.logger.error('Feasibility pump NLP subproblem infeasible')
+                self.should_terminate = True
+                self.results.solver.status = SolverStatus.error
+                return
+            elif fp_nlp_result.solver.termination_condition is tc.maxIterations:
+                config.logger.error(
+                    'Feasibility pump NLP subproblem failed to converge within iteration limit.')
+                self.should_terminate = True
+                self.results.solver.status = SolverStatus.error
+                return
+            else:
+                raise ValueError(
+                    'MindtPy unable to handle NLP subproblem termination '
+                    'condition of {}'.format(fp_nlp_result.solver.termination_condition))
+            # Call the NLP post-solve callback
+            config.call_after_subproblem_solve(fp_nlp)
+            self.fp_iter += 1
+        self.mip.MindtPy_utils.del_component('fp_mip_obj')
+
+        if config.fp_main_norm == 'L1':
+            self.mip.MindtPy_utils.del_component('L1_obj')
+        elif config.fp_main_norm == 'L_infinity':
+            self.mip.MindtPy_utils.del_component(
+                'L_infinity_obj')
+
+        # deactivate the improving_objective_cut
+        self.mip.MindtPy_utils.cuts.del_component(
+            'improving_objective_cut')
+        if not config.fp_transfercuts:
+            for c in self.mip.MindtPy_utils.cuts.oa_cuts:
+                c.deactivate()
+            for c in self.mip.MindtPy_utils.cuts.no_good_cuts:
+                c.deactivate()
+        if config.fp_projcuts:
+            self.working_model.MindtPy_utils.cuts.del_component(
+                'fp_orthogonality_cuts')

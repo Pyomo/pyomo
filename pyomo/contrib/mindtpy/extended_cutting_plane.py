@@ -13,9 +13,9 @@
 #  ___________________________________________________________________________
 
 import logging
-from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to)
-from pyomo.contrib.mindtpy.util import set_up_logger,setup_results_object, add_var_bound, calc_jacobians
-from pyomo.core import TransformationFactory, Objective, ConstraintList
+from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to, SuppressInfeasibleWarning, get_main_elapsed_time)
+from pyomo.contrib.mindtpy.util import set_up_logger,setup_results_object, add_var_bound, calc_jacobians, set_solver_options
+from pyomo.core import TransformationFactory, Objective, ConstraintList, value
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_ECP_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
@@ -243,3 +243,63 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             if config.fp_projcuts:
                 self.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
                     doc='Orthogonality cuts in feasibility pump')
+
+
+    def init_rNLP(self, config):
+        """Initialize the problem by solving the relaxed NLP and then store the optimal variable
+        values obtained from solving the rNLP.
+
+        Parameters
+        ----------
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+
+        Raises
+        ------
+        ValueError
+            MindtPy unable to handle the termination condition of the relaxed NLP.
+        """
+        m = self.working_model.clone()
+        config.logger.debug(
+            'Relaxed NLP: Solve relaxed integrality')
+        MindtPy = m.MindtPy_utils
+        TransformationFactory('core.relax_integer_vars').apply_to(m)
+        nlp_args = dict(config.nlp_solver_args)
+        nlpopt = SolverFactory(config.nlp_solver)
+        set_solver_options(nlpopt, self.timing, config, solver_type='nlp')
+        with SuppressInfeasibleWarning():
+            results = nlpopt.solve(m,
+                                tee=config.nlp_solver_tee, 
+                                load_solutions=False,
+                                **nlp_args)
+            if len(results.solution) > 0:
+                m.solutions.load_from(results)
+        subprob_terminate_cond = results.solver.termination_condition
+        if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
+            main_objective = MindtPy.objective_list[-1]
+            if subprob_terminate_cond == tc.optimal:
+                self.update_dual_bound(value(main_objective.expr))
+            else:
+                config.logger.info(
+                    'relaxed NLP is not solved to optimality.')
+                self.update_suboptimal_dual_bound(results)
+            config.logger.info(self.log_formatter.format('-', 'Relaxed NLP', value(main_objective.expr),
+                                                            self.primal_bound, self.dual_bound, self.rel_gap,
+                                                            get_main_elapsed_time(self.timing)))
+        elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
+            # TODO fail? try something else?
+            config.logger.info(
+                'Initial relaxed NLP problem is infeasible. '
+                'Problem may be infeasible.')
+        elif subprob_terminate_cond is tc.maxTimeLimit:
+            config.logger.info(
+                'NLP subproblem failed to converge within time limit.')
+            self.results.solver.termination_condition = tc.maxTimeLimit
+        elif subprob_terminate_cond is tc.maxIterations:
+            config.logger.info(
+                'NLP subproblem failed to converge within iteration limit.')
+        else:
+            raise ValueError(
+                'MindtPy unable to handle relaxed NLP termination condition '
+                'of %s. Solver message: %s' %
+                (subprob_terminate_cond, results.solver.message))
