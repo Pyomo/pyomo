@@ -2049,9 +2049,6 @@ class _MindtPyAlgorithm(object):
                 config.mip_regularization_solver in {'gurobi', 'appsi_gurobi'}:
                 raise ValueError("GUROBI can not provide duals for mixed-integer problems.")
 
-        if config.init_strategy == 'initial_binary' and config.strategy == 'ECP':
-            raise ValueError("ECP method do not support 'initial_binary' as the initialization strategy.")
-
 
     ################################################################################################################################
     # feasibility_pump.py

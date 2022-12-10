@@ -192,7 +192,7 @@ def _add_ecp_configs(CONFIG):
     ))
     CONFIG.declare('init_strategy', ConfigValue(
         default=None,
-        domain=In(['rNLP', 'max_binary', 'FP']), # TODO: think about why ecp don't allow initial_binary.
+        domain=In(['rNLP', 'max_binary', 'FP']),
         description='Initialization strategy',
         doc='Initialization strategy used by any method. Currently the '
             'continuous relaxation of the MINLP (rNLP), solve a maximal '
