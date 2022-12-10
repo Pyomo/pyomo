@@ -1402,11 +1402,6 @@ class _MindtPyAlgorithm(object):
                         return True
                 self.integer_list.append(self.curr_int_sol)
 
-        # if not algorithm_is_making_progress(solve_data, config):
-        #     config.logger.debug(
-        #         'Algorithm is not making enough progress. '
-        #         'Exiting iteration loop.')
-        #     return True
         return False
 
 
