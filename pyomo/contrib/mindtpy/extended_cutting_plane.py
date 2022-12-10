@@ -14,7 +14,7 @@
 
 import logging
 from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to, SuppressInfeasibleWarning, get_main_elapsed_time)
-from pyomo.contrib.mindtpy.util import set_up_logger,setup_results_object, add_var_bound, calc_jacobians, set_solver_options
+from pyomo.contrib.mindtpy.util import set_up_logger,setup_results_object, add_var_bound, calc_jacobians, set_solver_options, get_integer_solution
 from pyomo.core import TransformationFactory, Objective, ConstraintList, value
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_ECP_config
@@ -303,3 +303,154 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                 'MindtPy unable to handle relaxed NLP termination condition '
                 'of %s. Solver message: %s' %
                 (subprob_terminate_cond, results.solver.message))
+
+
+    def algorithm_should_terminate(self, config, check_cycling):
+        """Checks if the algorithm should terminate at the given point.
+
+        This function determines whether the algorithm should terminate based on the solver options and progress.
+        (Sets the self.results.solver.termination_condition to the appropriate condition, i.e. optimal,
+        maxIterations, maxTimeLimit).
+
+        Parameters
+        ----------
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+        check_cycling : bool
+            Whether to check for a special case that causes the discrete variables to loop through the same values.
+
+        Returns
+        -------
+        bool
+            True if the algorithm should terminate, False otherwise.
+        """
+        if self.should_terminate:
+            if self.primal_bound == self.primal_bound_progress[0]:
+                self.results.solver.termination_condition = tc.noSolution
+            else:
+                self.results.solver.termination_condition = tc.feasible
+            return True
+
+        # Check bound convergence
+        if self.abs_gap <= config.absolute_bound_tolerance:
+            config.logger.info(
+                'MindtPy exiting on bound convergence. '
+                'Absolute gap: {} <= absolute tolerance: {} \n'.format(
+                    self.abs_gap, config.absolute_bound_tolerance))
+            self.results.solver.termination_condition = tc.optimal
+            return True
+        # Check relative bound convergence
+        if self.best_solution_found is not None:
+            if self.rel_gap <= config.relative_bound_tolerance:
+                config.logger.info(
+                    'MindtPy exiting on bound convergence. '
+                    'Relative gap : {} <= relative tolerance: {} \n'.format(
+                        self.rel_gap, config.relative_bound_tolerance))
+
+        # Check iteration limit
+        if self.mip_iter >= config.iteration_limit:
+            config.logger.info(
+                'MindtPy unable to converge bounds '
+                'after {} main iterations.'.format(self.mip_iter))
+            config.logger.info(
+                'Final bound values: Primal Bound: {}  Dual Bound: {}'.
+                format(self.primal_bound, self.dual_bound))
+            if config.single_tree:
+                self.results.solver.termination_condition = tc.feasible
+            else:
+                self.results.solver.termination_condition = tc.maxIterations
+            return True
+
+        # Check time limit
+        if get_main_elapsed_time(self.timing) >= config.time_limit:
+            config.logger.info(
+                'MindtPy unable to converge bounds '
+                'before time limit of {} seconds. '
+                'Elapsed: {} seconds'
+                .format(config.time_limit, get_main_elapsed_time(self.timing)))
+            config.logger.info(
+                'Final bound values: Primal Bound: {}  Dual Bound: {}'.
+                format(self.primal_bound, self.dual_bound))
+            self.results.solver.termination_condition = tc.maxTimeLimit
+            return True
+
+        # Check if algorithm is stalling
+        if len(self.primal_bound_progress) >= config.stalling_limit:
+            if abs(self.primal_bound_progress[-1] - self.primal_bound_progress[-config.stalling_limit]) <= config.zero_tolerance:
+                config.logger.info(
+                    'Algorithm is not making enough progress. '
+                    'Exiting iteration loop.')
+                config.logger.info(
+                    'Final bound values: Primal Bound: {}  Dual Bound: {}'.
+                    format(self.primal_bound, self.dual_bound))
+                if self.best_solution_found is not None:
+                    self.results.solver.termination_condition = tc.feasible
+                else:
+                    # TODO: Is it correct to set self.working_model as the best_solution_found?
+                    # In function copy_var_list_values, skip_fixed is set to True in default.
+                    self.best_solution_found = self.working_model.clone()
+                    config.logger.warning(
+                        'Algorithm did not find a feasible solution. '
+                        'Returning best bound solution. Consider increasing stalling_limit or absolute_bound_tolerance.')
+                    self.results.solver.termination_condition = tc.noSolution
+                return True
+
+        # check to see if the nonlinear constraints are satisfied
+        MindtPy = self.working_model.MindtPy_utils
+        nonlinear_constraints = [c for c in MindtPy.nonlinear_constraint_list]
+        for nlc in nonlinear_constraints:
+            if nlc.has_lb():
+                try:
+                    lower_slack = nlc.lslack()
+                except (ValueError, OverflowError):
+                    # Set lower_slack (upper_slack below) less than -config.ecp_tolerance in this case.
+                    lower_slack = -10*config.ecp_tolerance
+                if lower_slack < -config.ecp_tolerance:
+                    config.logger.debug(
+                        'MindtPy-ECP continuing as {} has not met the '
+                        'nonlinear constraints satisfaction.'
+                        '\n'.format(nlc))
+                    return False
+            if nlc.has_ub():
+                try:
+                    upper_slack = nlc.uslack()
+                except (ValueError, OverflowError):
+                    upper_slack = -10*config.ecp_tolerance
+                if upper_slack < -config.ecp_tolerance:
+                    config.logger.debug(
+                        'MindtPy-ECP continuing as {} has not met the '
+                        'nonlinear constraints satisfaction.'
+                        '\n'.format(nlc))
+                    return False
+        # For ECP to know whether to know which bound to copy over (primal or dual)
+        self.primal_bound = self.dual_bound
+        config.logger.info(
+            'MindtPy-ECP exiting on nonlinear constraints satisfaction. '
+            'Primal Bound: {} Dual Bound: {}\n'.format(self.primal_bound, self.dual_bound))
+
+        self.best_solution_found = self.working_model.clone()
+        self.results.solver.termination_condition = tc.optimal
+        return True
+
+        # TODO: Is cycling check necessary for ECP method?
+        # Cycling check
+        if check_cycling:
+            if config.cycling_check or config.use_tabu_list:
+                self.curr_int_sol = get_integer_solution(self.mip)
+                if config.cycling_check and self.mip_iter >= 1:
+                    if self.curr_int_sol in set(self.integer_list):
+                        config.logger.info(
+                            'Cycling happens after {} main iterations. '
+                            'The same combination is obtained in iteration {} '
+                            'This issue happens when the NLP subproblem violates constraint qualification. '
+                            'Convergence to optimal solution is not guaranteed.'
+                            .format(self.mip_iter, self.integer_list.index(self.curr_int_sol)+1))
+                        config.logger.info(
+                            'Final bound values: Primal Bound: {}  Dual Bound: {}'.
+                            format(self.primal_bound, self.dual_bound))
+                        # TODO determine self.primal_bound, self.dual_bound is inf or -inf.
+                        self.results.solver.termination_condition = tc.feasible
+                        return True
+                self.integer_list.append(self.curr_int_sol)
+
+        return False

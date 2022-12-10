@@ -1321,44 +1321,6 @@ class _MindtPyAlgorithm(object):
                     self.results.solver.termination_condition = tc.noSolution
                 return True
 
-        if config.strategy == 'ECP':
-            # check to see if the nonlinear constraints are satisfied
-            MindtPy = self.working_model.MindtPy_utils
-            nonlinear_constraints = [c for c in MindtPy.nonlinear_constraint_list]
-            for nlc in nonlinear_constraints:
-                if nlc.has_lb():
-                    try:
-                        lower_slack = nlc.lslack()
-                    except (ValueError, OverflowError):
-                        # Set lower_slack (upper_slack below) less than -config.ecp_tolerance in this case.
-                        lower_slack = -10*config.ecp_tolerance
-                    if lower_slack < -config.ecp_tolerance:
-                        config.logger.debug(
-                            'MindtPy-ECP continuing as {} has not met the '
-                            'nonlinear constraints satisfaction.'
-                            '\n'.format(nlc))
-                        return False
-                if nlc.has_ub():
-                    try:
-                        upper_slack = nlc.uslack()
-                    except (ValueError, OverflowError):
-                        upper_slack = -10*config.ecp_tolerance
-                    if upper_slack < -config.ecp_tolerance:
-                        config.logger.debug(
-                            'MindtPy-ECP continuing as {} has not met the '
-                            'nonlinear constraints satisfaction.'
-                            '\n'.format(nlc))
-                        return False
-            # For ECP to know whether to know which bound to copy over (primal or dual)
-            self.primal_bound = self.dual_bound
-            config.logger.info(
-                'MindtPy-ECP exiting on nonlinear constraints satisfaction. '
-                'Primal Bound: {} Dual Bound: {}\n'.format(self.primal_bound, self.dual_bound))
-
-            self.best_solution_found = self.working_model.clone()
-            self.results.solver.termination_condition = tc.optimal
-            return True
-
         # Cycling check
         if check_cycling:
             if config.cycling_check or config.use_tabu_list:
