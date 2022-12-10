@@ -431,3 +431,12 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                     cb_opt,
                     linearize_active,
                     linearize_violated)
+
+
+    def deactivate_no_good_cuts_when_fixing_bound(self, no_good_cuts):
+        # Only deactive the last OA cuts may not be correct.
+        # Since integer solution may also be cut off by OA cuts due to calculation approximation.
+        if self.config.add_no_good_cuts:
+            no_good_cuts[len(no_good_cuts)].deactivate()
+        if self.config.use_tabu_list:
+            self.integer_list = self.integer_list[:-1]

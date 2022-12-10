@@ -1374,24 +1374,7 @@ class _MindtPyAlgorithm(object):
 
             MindtPy = self.mip.MindtPy_utils
             # deactivate the integer cuts generated after the best solution was found.
-            if config.strategy == 'GOA':
-                try:
-                    valid_no_good_cuts_num = self.num_no_good_cuts_added[self.primal_bound]
-                    if config.add_no_good_cuts:
-                        for i in range(valid_no_good_cuts_num+1, len(MindtPy.cuts.no_good_cuts)+1):
-                            MindtPy.cuts.no_good_cuts[i].deactivate()
-                    if config.use_tabu_list:
-                        self.integer_list = self.integer_list[:valid_no_good_cuts_num]
-                except KeyError:
-                    config.logger.info('No-good cut deactivate failed.')
-            elif config.strategy == 'OA':
-                # Only deactive the last OA cuts may not be correct.
-                # Since integer solution may also be cut off by OA cuts due to calculation approximation.
-                if config.add_no_good_cuts:
-                    MindtPy.cuts.no_good_cuts[len(
-                        MindtPy.cuts.no_good_cuts)].deactivate()
-                if config.use_tabu_list:
-                    self.integer_list = self.integer_list[:-1]
+            self.deactivate_no_good_cuts_when_fixing_bound(MindtPy.cuts.no_good_cuts)
             if config.add_regularization is not None and MindtPy.find_component('mip_obj') is None:
                 MindtPy.objective_list[-1].activate()
             mainopt = SolverFactory(config.mip_solver)

@@ -368,3 +368,15 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                  linearize_violated=True,
                  cb_opt=None):
         add_affine_cuts(self.mip, self.config, self.timing)
+
+
+    def deactivate_no_good_cuts_when_fixing_bound(self, no_good_cuts):
+        try:
+            valid_no_good_cuts_num = self.num_no_good_cuts_added[self.primal_bound]
+            if self.config.add_no_good_cuts:
+                for i in range(valid_no_good_cuts_num+1, len(no_good_cuts)+1):
+                    no_good_cuts[i].deactivate()
+            if self.config.use_tabu_list:
+                self.integer_list = self.integer_list[:valid_no_good_cuts_num]
+        except KeyError:
+            self.config.logger.info('No-good cut deactivate failed.')
