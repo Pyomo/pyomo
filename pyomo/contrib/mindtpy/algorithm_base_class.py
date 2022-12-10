@@ -185,9 +185,6 @@ class _MindtPyAlgorithm(object):
             # be easily transferred between future model clones.
             self.build_ordered_component_lists(model)
             self.add_cuts_components(model)
-        # TODO yeild
-        # if created_util_block:
-        #     model.del_component(name)
 
 
     def model_is_valid(self):
