@@ -509,10 +509,10 @@ class _MindtPyAlgorithm(object):
 
 
     def process_objective(self, config, move_objective=False,
-                        use_mcpp=False, update_var_con_list=True,
-                        partition_nonlinear_terms=True,
-                        obj_handleable_polynomial_degree={0, 1},
-                        constr_handleable_polynomial_degree={0, 1}):
+                          use_mcpp=False, update_var_con_list=True,
+                          partition_nonlinear_terms=True,
+                          obj_handleable_polynomial_degree={0, 1},
+                          constr_handleable_polynomial_degree={0, 1}):
         """Process model objective function.
         Check that the model has only 1 valid objective.
         If the objective is nonlinear, move it into the constraints.
@@ -846,8 +846,6 @@ class _MindtPyAlgorithm(object):
     # nlp_solve.py
 
     def solve_subproblem(self, config):
-        # TODO: we will keep working_model.clone first
-        # This function is algorithm-dependent, therefore we will redefine it as method.
         """Solves the Fixed-NLP (with fixed integers).
 
         This function sets up the 'fixed_nlp' by fixing binaries, sets continuous variables to their intial var values,
