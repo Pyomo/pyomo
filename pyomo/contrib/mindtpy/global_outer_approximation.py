@@ -23,8 +23,6 @@ from pyomo.opt import TerminationCondition as tc
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from operator import itemgetter
 
-__version__ = (0, 1, 0)
-
 
 @SolverFactory.register(
     'mindtpy.goa',

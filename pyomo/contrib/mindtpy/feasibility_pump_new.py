@@ -22,8 +22,6 @@ from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function, set_
 from pyomo.opt import SolverFactory, SolverResults, SolutionStatus, SolverStatus
 from pyomo.contrib.gdpopt.util import SuppressInfeasibleWarning, copy_var_list_values, get_main_elapsed_time, time_code, lower_logger_level_to
 
-# 
-__version__ = (0, 1, 0)
 
 @SolverFactory.register(
     'mindtpy.fp',

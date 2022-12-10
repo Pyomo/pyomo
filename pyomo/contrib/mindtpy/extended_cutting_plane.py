@@ -22,7 +22,6 @@ from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 from pyomo.opt import TerminationCondition as tc
 
-__version__ = (0, 1, 0)
 
 @SolverFactory.register(
     'mindtpy.ecp',

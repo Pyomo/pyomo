@@ -10,44 +10,30 @@
 #  ___________________________________________________________________________
 
 """Iteration loop for MindtPy."""
-from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, copy_var_list_values_from_solution_pool, add_feas_slacks, add_var_bound, epigraph_reformulation
-from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts, add_oa_cuts, add_affine_cuts, add_no_good_cuts
-from pyomo.core import minimize, maximize, Objective, VarList, Reals, ConstraintList, Constraint, Block, TransformationFactory
-from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
-from pyomo.opt import SolverFactory
-from pyomo.common.dependencies import attempt_import
-from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
-from operator import itemgetter
-from pyomo.common.collections import Bunch
-from io import StringIO
-from pyomo.contrib.gdpopt.util import (copy_var_list_values, 
-                                       time_code, lower_logger_level_to)
 import math
-from pyomo.common.collections import ComponentMap, Bunch, ComponentSet
+from io import StringIO
 from pyomo.core.expr import current as EXPR
-from pyomo.opt import SolverFactory, SolverResults, ProblemSense
 from pyomo.repn import generate_standard_repn
 import logging
-from pyomo.util.model_size import build_model_size_report
 from pyomo.contrib.fbbt.fbbt import fbbt
+from pyomo.opt import TerminationCondition as tc
 from pyomo.gdp import Disjunct, Disjunction
-from pyomo.core import (Block, Constraint, VarList, NonNegativeReals,
-                        Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
-from pyomo.core import (ConstraintList, Objective,
-                        TransformationFactory, maximize, minimize,
-                        value, Var)
-from math import copysign
-from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
-                                       copy_var_list_values, get_main_elapsed_time)
-from pyomo.common.errors import InfeasibleConstraintException
-from pyomo.opt import SolutionStatus, SolverStatus
-from pyomo.contrib.gdpopt.solve_discrete_problem import distinguish_mip_infeasible_or_unbounded
-from pyomo.contrib.mindtpy.util import generate_norm1_objective_function, generate_norm2sq_objective_function, generate_norm_inf_objective_function, generate_lag_objective_function, set_solver_options, GurobiPersistent4MindtPy
-from pyomo.contrib.mindtpy.util import calc_jacobians, MindtPySolveData
-from pyomo.core import Constraint, Expression, Objective, minimize, value
+from pyomo.common.dependencies import attempt_import
 from pyomo.util.vars_from_expressions import get_vars_from_components
+from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+from pyomo.common.collections import ComponentMap, Bunch, ComponentSet
+from pyomo.common.errors import InfeasibleConstraintException
+from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_affine_cuts, add_no_good_cuts
+from pyomo.opt import SolverFactory, SolverResults, ProblemSense, SolutionStatus, SolverStatus
+from pyomo.core import (minimize, maximize, Objective, VarList, Reals, ConstraintList, Constraint,
+                        Block, TransformationFactory, NonNegativeReals, Suffix, Var, RangeSet, value, Expression)
+from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
+                                       copy_var_list_values, get_main_elapsed_time, time_code)
+from pyomo.contrib.gdpopt.solve_discrete_problem import distinguish_mip_infeasible_or_unbounded
+from pyomo.contrib.mindtpy.util import (generate_norm1_objective_function, generate_norm2sq_objective_function,
+                                        generate_norm_inf_objective_function, generate_lag_objective_function,
+                                        set_solver_options, GurobiPersistent4MindtPy, MindtPySolveData,
+                                        get_integer_solution, add_feas_slacks, epigraph_reformulation)
 
 single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
@@ -58,7 +44,6 @@ tabu_list, tabu_list_available = attempt_import(
 tabu_list, tabu_list_available = attempt_import(
     'pyomo.contrib.mindtpy.tabu_list')
 
-__version__ = (0, 1, 0)
 
 class _MindtPyAlgorithm(object):
     

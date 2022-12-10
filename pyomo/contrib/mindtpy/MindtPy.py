@@ -63,8 +63,6 @@ from pyomo.common.config import add_docstring_list
 from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.contrib.mindtpy.config_options import _supported_algorithms
 
-__version__ = (0, 1, 0)
-
 
 @SolverFactory.register(
     'mindtpy',
