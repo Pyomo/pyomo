@@ -10,24 +10,20 @@
 #  ___________________________________________________________________________
 
 """Utility functions and classes for the MindtPy solver."""
-from contextlib import contextmanager
 import logging
-from pyomo.common.collections import ComponentMap, Bunch, ComponentSet
+from pyomo.common.collections import ComponentMap
 from pyomo.core import (Block, Constraint, VarList,
-                        Objective, Reals, Suffix, Var, minimize, RangeSet, ConstraintList, TransformationFactory, value)
-from pyomo.gdp import Disjunct, Disjunction
+                        Objective, Reals, Var, minimize, RangeSet, ConstraintList, TransformationFactory)
 from pyomo.repn import generate_standard_repn
 from pyomo.contrib.mcpp.pyomo_mcpp import mcpp_available, McCormick
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core.expr import differentiate
 from pyomo.core.expr import current as EXPR
-from pyomo.opt import SolverFactory, SolverResults, ProblemSense
-from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
+from pyomo.opt import ProblemSense
 from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
 from pyomo.util.model_size import build_model_size_report
 from pyomo.core.expr.calculus.derivatives import differentiate
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from pyomo.solvers.plugins.solvers.gurobi_persistent import GurobiPersistent
 import math
@@ -895,7 +891,7 @@ def process_objective(solve_data, config, move_objective=False,
     objective.
     Parameters
     ----------
-    solve_data (GDPoptSolveData): solver environment data class
+    solve_data (MindtPySolveData): solver environment data class
     config (ConfigBlock): solver configuration options
     move_objective (bool): if True, move even linear
         objective functions to the constraints

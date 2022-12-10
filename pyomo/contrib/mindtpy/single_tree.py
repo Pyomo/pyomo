@@ -13,18 +13,15 @@ from pyomo.common.dependencies import attempt_import
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts, add_no_good_cuts
 from pyomo.contrib.mindtpy.mip_solve import handle_main_optimal, solve_main, handle_regularization_main_tc
-from pyomo.opt.results import ProblemSense
 from pyomo.contrib.mcpp.pyomo_mcpp import McCormick as mc, MCPP_Error
-import logging
 from pyomo.repn import generate_standard_repn
 from pyomo.core.expr import current as EXPR
-import pyomo.environ as pyo
 from math import copysign
 from pyomo.contrib.mindtpy.util import get_integer_solution, update_dual_bound, update_primal_bound
 from pyomo.contrib.gdpopt.util import copy_var_list_values, get_main_elapsed_time, time_code
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, solve_feasibility_subproblem, handle_nlp_subproblem_tc
 from pyomo.opt import TerminationCondition as tc
-from pyomo.core import Constraint, minimize, value, maximize
+from pyomo.core import minimize, value
 from pyomo.core.expr.current import identify_variables
 cplex, cplex_available = attempt_import('cplex')
 

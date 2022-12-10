@@ -18,6 +18,7 @@ import logging
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.opt import TerminationCondition as tc
 from pyomo.gdp import Disjunct, Disjunction
+from pyomo.contrib.mindtpy import __version__
 from pyomo.common.dependencies import attempt_import
 from pyomo.util.vars_from_expressions import get_vars_from_components
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
@@ -167,7 +168,7 @@ class _MindtPyAlgorithm(object):
 
     def create_utility_block(self, model, name):
         created_util_block = False
-        # Create a model block on which to store GDPopt-specific utility
+        # Create a model block on which to store MindtPy-specific utility
         # modeling objects.
         if hasattr(model, name):
             raise RuntimeError(
