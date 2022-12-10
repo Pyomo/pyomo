@@ -12,7 +12,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from __future__ import division
 import logging
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_FP_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm

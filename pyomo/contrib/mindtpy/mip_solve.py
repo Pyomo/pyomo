@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 """main problem functions."""
-from __future__ import division
 import logging
 from pyomo.core import Constraint, Expression, Objective, minimize, value, maximize
 from pyomo.opt import TerminationCondition as tc

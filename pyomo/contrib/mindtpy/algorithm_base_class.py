@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 """Iteration loop for MindtPy."""
-from __future__ import division
 from pyomo.contrib.mindtpy.util import set_solver_options, get_integer_solution, copy_var_list_values_from_solution_pool, add_feas_slacks, add_var_bound, epigraph_reformulation
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts, add_oa_cuts, add_affine_cuts, add_no_good_cuts
 from pyomo.core import minimize, maximize, Objective, VarList, Reals, ConstraintList, Constraint, Block, TransformationFactory

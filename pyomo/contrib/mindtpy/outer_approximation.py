@@ -12,7 +12,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from __future__ import division
 import logging
 from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to, copy_var_list_values)
 from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, add_var_bound, calc_jacobians

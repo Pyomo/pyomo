@@ -14,7 +14,6 @@ Ref:
 
 """
 
-from __future__ import division
 from pyomo.environ import (ConcreteModel, Constraint, Reals, Integers,
                            Objective, Var, sqrt, minimize, exp)
 from pyomo.common.collections import ComponentMap

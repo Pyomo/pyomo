@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 """Utility functions and classes for the MindtPy solver."""
-from __future__ import division
 from contextlib import contextmanager
 import logging
 from pyomo.common.collections import ComponentMap, Bunch, ComponentSet

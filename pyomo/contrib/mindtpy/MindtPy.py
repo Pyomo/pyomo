@@ -52,7 +52,6 @@
 - Fix bug in OA cut expression in cut_generation.py.
 """
 
-from __future__ import division
 import logging
 from pyomo.contrib.gdpopt.util import (copy_var_list_values, 
                                        time_code, lower_logger_level_to)

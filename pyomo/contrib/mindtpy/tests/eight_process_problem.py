@@ -22,7 +22,6 @@ page 969 of Turkay & Grossmann, 1996.
 http://dx.doi.org/10.1016/0098-1354(95)00219-7
 
 """
-from __future__ import division
 
 from pyomo.environ import (Binary, ConcreteModel, Constraint, NonNegativeReals,
                            Objective, Param, RangeSet, Var, exp, minimize)

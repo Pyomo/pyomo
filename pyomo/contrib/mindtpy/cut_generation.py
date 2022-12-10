@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 """Cut generation."""
-from __future__ import division
 from math import copysign
 from pyomo.core import minimize, value
 from pyomo.core.expr import current as EXPR
