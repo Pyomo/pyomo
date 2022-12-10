@@ -260,20 +260,16 @@ class _MindtPyAlgorithm(object):
                 model.component_data_objects(
                     ctype=Constraint, active=True,
                     descend_into=(Block, Disjunct))))
-        # if hasattr(solve_data,'mip_constraint_polynomial_degree'):
-        mip_constraint_polynomial_degree = self.mip_constraint_polynomial_degree
-        # else:
-        #     mip_constraint_polynomial_degree = {0, 1}
         setattr(
             util_blk, 'linear_constraint_list', list(
                 c for c in model.component_data_objects(
                 ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-                if c.body.polynomial_degree() in mip_constraint_polynomial_degree))
+                if c.body.polynomial_degree() in self.mip_constraint_polynomial_degree))
         setattr(
             util_blk, 'nonlinear_constraint_list', list(
                 c for c in model.component_data_objects(
                 ctype=Constraint, active=True, descend_into=(Block, Disjunct))
-                if c.body.polynomial_degree() not in mip_constraint_polynomial_degree))
+                if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree))
         setattr(
             util_blk, 'disjunct_list', list(
                 model.component_data_objects(
