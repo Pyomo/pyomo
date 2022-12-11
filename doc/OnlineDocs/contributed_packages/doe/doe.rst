@@ -215,7 +215,8 @@ Step 0: Import Pyomo and the Pyomo.DoE module
     >>> # === Required import ===
     >>> import pyomo.environ as pyo
     >>> from pyomo.dae import ContinuousSet, DerivativeVar
-    >>> import pyomo.contrib.doe.fim_doe as doe
+    >>> import pyomo.contrib.doe.doe as doe
+    >>> from pyomo.contrib.doe.measurements import Measurements
     >>> import numpy as np
 
 Step 1: Define the Pyomo process model
@@ -307,7 +308,7 @@ Step 2: Define the inputs for Pyomo.DoE
     >>> t_measure = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]   # Measurement time points [h]
     >>> measure_pass = {'C':{'CA': t_measure, 'CB': t_measure, 'CC': t_measure}}
     >>> measure_variance = {'C': {'CA': 1, 'CB': 1, 'CC': 1}} # provide measurement uncertainty
-    >>> measure_class =  doe.Measurements(measure_pass, variance=measure_variance)  # Use Pyomo.DoE.Measurements to achieve a measurement object
+    >>> measure_class =  Measurements(measure_pass, variance=measure_variance)  # Use Pyomo.DoE.Measurements to achieve a measurement object
 
     >>> # === Parameter dictionary ===
     >>> parameter_dict = {'A1': 84.79, 'A2': 371.72, 'E1': 7.78, 'E2': 15.05}
@@ -404,7 +405,7 @@ This function solves twice: It solves the square version of the MBDoE problem fi
     >>> doe_object = doe.DesignOfExperiments(parameter_dict, dv_pass, measure_class, createmod,
     ...                            prior_FIM=prior_pass, discretize_model=disc) # doctest: +SKIP
     >>> # === Optimize ===
-    >>> square_result, optimize_result= doe_object.optimize_doe(exp1,
+    >>> square_result, optimize_result= doe_object.stochastic_program(exp1,
     ...                                                         if_optimize=True,
     ...                                                          if_Cholesky=True,
     ...                                                         scale_nominal_param_value=True,
