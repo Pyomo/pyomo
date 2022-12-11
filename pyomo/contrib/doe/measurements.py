@@ -1,3 +1,31 @@
+#  ___________________________________________________________________________
+#
+#  Pyomo: Python Optimization Modeling Objects
+#  Copyright (c) 2008-2022
+#  National Technology and Engineering Solutions of Sandia, LLC
+#  Under the terms of Contract DE-NA0003525 with National Technology and
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
+#  rights in this software.
+#  This software is distributed under the 3-clause BSD License.
+#
+#  Pyomo.DOE was produced under the Department of Energy Carbon Capture Simulation 
+#  Initiative (CCSI), and is copyright (c) 2022 by the software owners: 
+#  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC., 
+#  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,  
+#  Battelle Memorial Institute, University of Notre Dame,
+#  The University of Pittsburgh, The University of Texas at Austin, 
+#  University of Toledo, West Virginia University, et al. All rights reserved.
+# 
+#  NOTICE. This Software was developed under funding from the 
+#  U.S. Department of Energy and the U.S. Government consequently retains 
+#  certain rights. As such, the U.S. Government has been granted for itself
+#  and others acting on its behalf a paid-up, nonexclusive, irrevocable, 
+#  worldwide license in the Software to reproduce, distribute copies to the 
+#  public, prepare derivative works, and perform publicly and display
+#  publicly, and to permit other to do so.
+#  ___________________________________________________________________________
+
+
 from pyomo.common.dependencies import (
     numpy as np, numpy_available,
     pandas as pd, pandas_available,
@@ -8,7 +36,8 @@ from pyomo.common.dependencies import (
 
 class Measurements:
     def __init__(self, measurement_index_time, variance=None, ind_string='_index_'):
-        """This class stores information on which algebraic and differential variables in the Pyomo model are considered measurements. 
+        """
+        This class stores information on which algebraic and differential variables in the Pyomo model are considered measurements. 
         This includes the functionality to specify indices for these measurement variables. 
         For example, with a partial differential algebraic equation model, 
         these measurement index sets can specify which spatial and temporal coordinates each measurement is available. 
@@ -17,8 +46,11 @@ class Measurements:
         Parameters
         ----------
         measurement_index_time:
-            a ``dict``, keys are measurement variable names, values are a dictionary, keys are its extra index,
-            values are its measuring time points, values are a list of measuring time point if there is no extra index for this measurement.
+            a ``dict``, keys are measurement variable names, 
+                if there are extra index, for e.g., Var[scenario, extra_index, time]:
+                    values are a dictionary, keys are its extra index, values are its measuring time points. 
+                if there are no extra index, for e.g., Var[scenario, time]:
+                    values are a list of measuring time point.
             For e.g., for the kinetics illustrative example, it should be {'C':{'CA':[0,1,..], 'CB':[0,2,...]}, 'k':[0,4,..]},
             so the measurements are C[scenario, 'CA', 0]..., k[scenario, 0]....
         variance:
@@ -35,11 +67,11 @@ class Measurements:
         # a list of measurement names
         self.measurement_name = list(measurement_index_time.keys())
         # begin flatten
-        self.__name_and_index_generator(self.measurement_all_info)
-        self.__generate_flatten_name(self.name_and_index)
-        self.__generate_variance(self.flatten_measure_name, variance, self.name_and_index)
-        self.__generate_flatten_timeset(self.measurement_all_info, self.flatten_measure_name, self.name_and_index)
-        self.__model_measure_name()
+        self._name_and_index_generator(self.measurement_all_info)
+        self._generate_flatten_name(self.name_and_index)
+        self._generate_variance(self.flatten_measure_name, variance, self.name_and_index)
+        self._generate_flatten_timeset(self.measurement_all_info, self.flatten_measure_name, self.name_and_index)
+        self._model_measure_name()
 
         # generate the overall measurement time points set, including the measurement time for all measurements
         flatten_timepoint = list(self.flatten_measure_timeset.values())
@@ -50,7 +82,7 @@ class Measurements:
         self.timepoint_overall_set = timepoint_overall_set
 
 
-    def __name_and_index_generator(self, all_info):
+    def _name_and_index_generator(self, all_info):
         """
         Generate a dictionary, keys are the variable names, values are the indexes of this variable.
         For e.g., name_and_index = {'C': ['CA', 'CB', 'CC']}
@@ -74,8 +106,9 @@ class Measurements:
         # a dictionary, keys are measurement names, values are a list of extra indexes
         self.name_and_index = dict(zip(measurement_name, measurement_extra_index))
 
-    def __generate_flatten_name(self, measure_name_and_index):
-        """Generate measurement flattened names
+    def _generate_flatten_name(self, measure_name_and_index):
+        """
+        Generate measurement flattened names
         Parameters
         ----------
         measure_name_and_index: a dictionary, keys are measurement names, values are lists of extra indexes
@@ -95,8 +128,9 @@ class Measurements:
 
         self.flatten_measure_name = flatten_names
 
-    def __generate_variance(self, flatten_measure_name, variance, name_and_index):
-        """Generate the variance dictionary
+    def _generate_variance(self, flatten_measure_name, variance, name_and_index):
+        """
+        Generate the variance dictionary
         Parameters
         ----------
         flatten_measure_name: flattened measurement names. For e.g., flattenning {'C':{'CA': 10, 'CB': 1, 'CC': 2}} will be 'C_index_CA', ..., 'C_index_CC'.
@@ -125,7 +159,7 @@ class Measurements:
                     flatten_variance[i] = variance[i]
         self.flatten_variance = flatten_variance
 
-    def __generate_flatten_timeset(self, all_info, flatten_measure_name,name_and_index):
+    def _generate_flatten_timeset(self, all_info, flatten_measure_name,name_and_index):
         """
         Generate flatten variables timeset. Return a dict where keys are the flattened variable names,
         values are a list of measurement time.
@@ -144,7 +178,7 @@ class Measurements:
                 flatten_measure_timeset[i] = all_info[i]
         self.flatten_measure_timeset = flatten_measure_timeset
 
-    def __model_measure_name(self):
+    def _model_measure_name(self):
         """Return pyomo string name
         """
         # store pyomo string name

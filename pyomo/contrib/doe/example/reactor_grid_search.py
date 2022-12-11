@@ -13,8 +13,8 @@
 #  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC., 
 #  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,  
 #  Battelle Memorial Institute, University of Notre Dame,
-#  The University of Pittsburgh, The University of Texas at Austin, TOLEDO, 
-#  West Virginia University, et al. All rights reserved.
+#  The University of Pittsburgh, The University of Texas at Austin, 
+#  University of Toledo, West Virginia University, et al. All rights reserved.
 # 
 #  NOTICE. This Software was developed under funding from the 
 #  U.S. Department of Energy and the U.S. Government consequently retains 
