@@ -27,19 +27,18 @@
 
 
 from pyomo.common.dependencies import (
-    numpy as np, numpy_available,
-    pandas as pd, pandas_available,
-    scipy, scipy_available,
-    matplotlib as plt, matplotlib_available,
+    numpy as np, numpy_available
 )
 
 import pyomo.environ as pyo
-from pyomo.opt import SolverFactory, SolverStatus, TerminationCondition
+from pyomo.opt import SolverFactory
 import time
 import pickle
 from itertools import permutations, product
 import logging
 from pyomo.contrib.sensitivity_toolbox.sens import sipopt, sensitivity_calculation, get_dsdp
+from pyomo.contrib.doe.scenario import Scenario_generator
+from pyomo.contrib.doe.result import FisherResults, GridSearchResult
 
 
 
@@ -132,8 +131,8 @@ class DesignOfExperiments:
         if self.formula not in ['central', 'forward', 'backward', None]:
             raise ValueError('Finite difference scheme should be chosen from "central", "forward", "backward" and None while receiving {}.'.formate(self.formula))
 
-        if self.prior_FIM:
-            if not (np.shape(self.prior_FIM)[0] == np.shape(self.prior_FIM)[1]):
+        if type(self.prior_FIM)!=type(None):
+            if np.shape(self.prior_FIM)[0] != np.shape(self.prior_FIM)[1]:
                 raise ValueError('Found wrong prior information matrix shape.')
 
         if check_mode:
@@ -239,7 +238,7 @@ class DesignOfExperiments:
         m, analysis_square = self._compute_stochastic_program(m, optimize_opt)
 
         if self.optimize:
-            analysis_optimize = self._optimize_stochastic_program()
+            analysis_optimize = self._optimize_stochastic_program(m)
 
             time1 = time.time()
             analysis_optimize.total_time = time1-time0
@@ -272,7 +271,7 @@ class DesignOfExperiments:
         jac_square = self._extract_jac(m)
 
         # create result object
-        analysis_square = FisherResults(self.param_name, self.measure, jacobian_info=None, all_jacobian_info=jac_square,
+        analysis_square = FisherResults(list(self.param.keys()), self.measure, jacobian_info=None, all_jacobian_info=jac_square,
                                      prior_FIM=self.prior_FIM, scale_constant_value=self.scale_constant_value)
         # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
         analysis_square.calculate_FIM(self.design_timeset, result=result_square)
@@ -302,7 +301,7 @@ class DesignOfExperiments:
         jac_optimize = self._extract_jac(m)
 
         # create result object
-        analysis_optimize = FisherResults(self.param_name, self.measure, jacobian_info=None, all_jacobian_info=jac_optimize,
+        analysis_optimize = FisherResults(list(self.param.keys()), self.measure, jacobian_info=None, all_jacobian_info=jac_optimize,
                                         prior_FIM=self.prior_FIM)
         # for simultaneous mode, FIM and Jacobian are extracted with extract_FIM()
         analysis_optimize.calculate_FIM(self.design_timeset, result=result_doe)
@@ -412,11 +411,11 @@ class DesignOfExperiments:
 
     def _sequential_finite(self, read_output, extract_single_model, store_output):
         time00 = time.time()
-        no_para = len(self.param_name)
+        no_para = len(list(self.param.keys()))
 
         # if using sequential model
         # call generator function to get scenario dictionary
-        scena_gen = Scenario_generator(self.param_init, formula=self.formula, step=self.step)
+        scena_gen = Scenario_generator(self.param, formula=self.formula, step=self.step)
         scena_gen.generate_sequential_para()
 
         # if measurements are provided
@@ -449,10 +448,6 @@ class DesignOfExperiments:
                 if self.discretize_model:
                     mod = self.discretize_model(mod)
 
-                time_set_attr = geattr(mod, self.t)
-
-                # extract (discretized) time
-                time_set = list(time_set_attr)
 
                 # solve model
                 time0_solve = time.time()
@@ -489,7 +484,7 @@ class DesignOfExperiments:
             time11 = time.time()
             self.logger.info('Build time with sequential_finite mode [s]:  %s', sum(time_allbuild))
             self.logger.info('Solve time with sequential_finite mode [s]:  %s', sum(time_allsolve))
-            self.logger.info('Total wall clock time [s]:  %s', time11-time00)f
+            self.logger.info('Total wall clock time [s]:  %s', time11-time00)
 
             # return all models formed
             self.models = models
@@ -500,7 +495,7 @@ class DesignOfExperiments:
         else:
             prior_in_use = self.specified_prior
 
-        FIM_analysis = FisherResults(self.param_name, self.measure, jacobian_info=None, all_jacobian_info=jac,
+        FIM_analysis = FisherResults(list(self.param.keys()), self.measure, jacobian_info=None, all_jacobian_info=jac,
                                     prior_FIM=prior_in_use, store_FIM=self.FIM_store_name, scale_constant_value=self.scale_constant_value)
 
         # Store the Jacobian information for access by users, not necessarily call result object to achieve jacobian information
@@ -517,7 +512,7 @@ class DesignOfExperiments:
     def _sequential_sipopt(self,read_output):
         time00 = time.time()
         # create scenario class for a base case
-        scena_gen = Scenario_generator(self.param_init, formula=None, step=self.step)
+        scena_gen = Scenario_generator(self.param, formula=None, step=self.step)
         scenario_all = scena_gen.simultaneous_scenario()
 
         # sipopt only uses backward difference scheme
@@ -539,7 +534,7 @@ class DesignOfExperiments:
             time_allbuild = []
             time_allsolve = []
             # loop over parameters
-            for pa in range(len(self.param_name)):
+            for pa in range(len(list(self.param.keys()))):
                 perturb_mea = []
                 base_mea = []
 
@@ -572,7 +567,7 @@ class DesignOfExperiments:
                 # parameter name lists for sipopt
                 list_original = []
                 list_perturb = []
-                for ele in self.param_name:
+                for ele in list(self.param.keys()):
                     # [0] is added as the scenario name
                     list_original.append(getattr(mod, ele)[0])
                 for elem in self.perturb_names:
@@ -644,12 +639,12 @@ class DesignOfExperiments:
                 all_base_measure.append(base_mea)
 
             # After collecting outputs from all scenarios, calculate sensitivity
-            for count, para in enumerate(self.param_name):
+            for count, para in enumerate(list(self.param.keys())):
                 list_jac = []
                 for i in range(len(all_perturb_measure[0])):
                     sensi = -(all_perturb_measure[count][i] - all_base_measure[count][i]) / self.step * self.scale_constant_value
                     if not self.scale_nominal_param_value:
-                        sensi /= self.param_init[para]
+                        sensi /= self.param[para]
                     list_jac.append(sensi)
                 # get Jacobian dict, keys are parameter name, values are sensitivity info
                 jac[para] = list_jac
@@ -661,7 +656,7 @@ class DesignOfExperiments:
             prior_in_use = specified_prior
 
         # Assemble and analyze results
-        FIM_analysis = FisherResults(self.param_name, self.measure, jacobian_info=None, all_jacobian_info=jac,
+        FIM_analysis = FisherResults(list(self.param.keys()), self.measure, jacobian_info=None, all_jacobian_info=jac,
                                     prior_FIM=prior_in_use, store_FIM=FIM_store_name, scale_constant_value=self.scale_constant_value)
 
         time11 = time.time()
@@ -678,7 +673,7 @@ class DesignOfExperiments:
     def _direct_kaug(self):
         time00 = time.time()
         # create scenario class for a base case
-        scena_gen = Scenario_generator(self.param_init, formula=None, step=self.step)
+        scena_gen = Scenario_generator(self.param, formula=None, step=self.step)
         scenario_all = scena_gen.simultaneous_scenario()
 
         # create model
@@ -711,18 +706,18 @@ class DesignOfExperiments:
                     measurement_accurate_time[j][no_t] = t_all[t_all.index(tt)]
 
         # set ub and lb to parameters
-        for par in self.param_name:
+        for par in list(self.param.keys()):
             component = getattr(mod, par)[0]
-            component.setlb(self.param_init[par])
-            component.setub(self.param_init[par])
+            component.setlb(self.param[par])
+            component.setub(self.param[par])
 
         # generate parameter name list and value dictionary with index
         var_name = []
         var_dict = {}
-        for name in self.param_name:
+        for name in list(self.param.keys()):
             # [0] is the scenario index
             var_name.append(name+'[0]')
-            var_dict[name+'[0]'] = self.param_init[name]
+            var_dict[name+'[0]'] = self.param[name]
 
         # call k_aug get_dsdp function
         time0_solve = time.time()
@@ -740,7 +735,7 @@ class DesignOfExperiments:
         # get right lines from results
         measurement_index = []
         # produce the sensitivity for fixed variables
-        zero_sens = np.zeros(len(self.param_name))
+        zero_sens = np.zeros(len(self.param))
 
         # loop over measurement variables and their time points
         for measurement_name in self.measure.model_measure_name:
@@ -765,15 +760,15 @@ class DesignOfExperiments:
         # Extract and calculate sensitivity if scaled by constants or parameters.
         # Convert sensitivity to a dictionary
         jac = {}
-        for par in self.param_name:
+        for par in list(self.param.keys()):
             jac[par] = []
 
         for d in range(len(dsdp_extract)):
-            for p, par in enumerate(self.param_name):
+            for p, par in enumerate(list(self.param.keys())):
                 # if scaled by parameter value or constant value
                 sensi = dsdp_extract[d][p]*self.scale_constant_value
                 if self.scale_nominal_param_value:
-                    sensi *= self.param_init[par]
+                    sensi *= self.param[par]
                 jac[par].append(sensi)
 
         time11 = time.time()
@@ -788,7 +783,7 @@ class DesignOfExperiments:
             prior_in_use = self.specified_prior
 
         # Assemble and analyze results
-        FIM_analysis = FisherResults(self.param_name,self.measure, jacobian_info=None, all_jacobian_info=jac,
+        FIM_analysis = FisherResults(list(self.param.keys()),self.measure, jacobian_info=None, all_jacobian_info=jac,
                                     prior_FIM=prior_in_use, store_FIM=self.FIM_store_name,
                                     scale_constant_value=self.scale_constant_value)
         
@@ -818,7 +813,7 @@ class DesignOfExperiments:
         jac = {}
 
         # After collecting outputs from all scenarios, calculate sensitivity
-        for no_p, para in enumerate(self.param_name):
+        for no_p, para in enumerate(list(self.param.keys())):
             # extract involved scenario No. for each parameter from scenario class
             involved_s = scena_gen.scenario_para[para]
 
@@ -829,7 +824,7 @@ class DesignOfExperiments:
             for i in range(len(output_record[s1])):
                 sensi = (output_record[s1][i] - output_record[s2][i]) / scena_gen.eps_abs[para] * self.scale_constant_value
                 if self.scale_nominal_param_value:
-                    sensi *= self.param_init[para]
+                    sensi *= self.param[para]
                 list_jac.append(sensi)
             # get Jacobian dict, keys are parameter name, values are sensitivity info
             jac[para] = list_jac
@@ -846,11 +841,11 @@ class DesignOfExperiments:
         ------
         JAC: the overall jacobian as a dictionary
         """
-        no_para = len(self.param_name)
+        no_para = len(list(self.param.keys()))
         # dictionary form of jacobian
         jac = {}
         # loop over parameters
-        for p in self.param_name: 
+        for p in list(self.param.keys()): 
             jac_para = []
             for n1, name1 in enumerate(self.jac_involved_name):
                 for t, tim in enumerate(self.timepoint_overall_set):
@@ -933,7 +928,7 @@ class DesignOfExperiments:
         failed_count = 0
         # how many sets of design variables will be run
         total_count = 1
-        for rng in grid_dimension:
+        for rng in design_ranges:
             total_count *= len(rng)
 
         # generate combinations of design variable values to go over
@@ -1005,7 +1000,7 @@ class DesignOfExperiments:
         self.all_fim = result_combine
 
         # Create figure drawing object
-        figure_draw_object = Grid_Search_Result(design_ranges, design_dimension_names, design_control_time, result_combine, store_optimality_name=filename)
+        figure_draw_object = GridSearchResult(design_ranges, design_dimension_names, design_control_time, result_combine, store_optimality_name=filename)
 
         t_enumeration_stop = time.time()
         self.logger.info('Overall model building time [s]:  %s', sum(build_time_store))
@@ -1042,7 +1037,7 @@ class DesignOfExperiments:
         m: the DOE model
         """
         # call generator function to get scenario dictionary
-        scena_gen = Scenario_generator(self.param_init, formula=self.formula, step=self.step, store=True)
+        scena_gen = Scenario_generator(self.param, formula=self.formula, step=self.step, store=True)
         scenario_all = scena_gen.simultaneous_scenario()
         
         # create model
@@ -1059,8 +1054,8 @@ class DesignOfExperiments:
         self.time_set = time_set
 
         # create parameter, measurement, time and measurement time set
-        m.para_set = pyo.Set(initialize=self.param_name)
-        param_name = self.param_name
+        m.para_set = pyo.Set(initialize=list(self.param.keys()))
+        param_name = list(self.param.keys())
         m.y_set = pyo.Set(initialize=self.jac_involved_name)
         m.t_set = pyo.Set(initialize=time_set)
 
@@ -1121,7 +1116,7 @@ class DesignOfExperiments:
             m.FIM = pyo.Var(m.para_set, m.para_set, initialize=identity_matrix)
 
         # move the L matrix initial point to a dictionary
-        if self.L_initial:
+        if type(self.L_initial) != type(None):
             dict_cho={}
             for i, bu in enumerate(m.para_set):
                 for j, un in enumerate(m.para_set):
@@ -1133,7 +1128,7 @@ class DesignOfExperiments:
         if self.Cholesky_option:
             # Define elements of Cholesky decomposition matrix as Pyomo variables and either
             # Initialize with L in L_initial
-            if self.L_initial:
+            if type(self.L_initial) != type(None):
                 m.L_ele = pyo.Var(m.para_set, m.para_set, initialize=init_cho)
             # or initialize with the identity matrix
             else:
@@ -1166,7 +1161,7 @@ class DesignOfExperiments:
                 up_C = eval(up_C_name)
                 lo_C = eval(lo_C_name)
                 if self.scale_nominal_param_value:
-                    return m.jac[j, p, t] == (up_C - lo_C) / scenario_all['eps-abs'][p] * self.param_init[p] * self.scale_constant_value
+                    return m.jac[j, p, t] == (up_C - lo_C) / scenario_all['eps-abs'][p] * self.param[p] * self.scale_constant_value
                 else:
                     return m.jac[j, p, t] == (up_C - lo_C) / scenario_all['eps-abs'][p] * self.scale_constant_value
                 # if t is not measured, let the value be 0
@@ -1190,7 +1185,7 @@ class DesignOfExperiments:
             """
             # check if scale
             if self.scale_nominal_param_value:
-                return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*self.param_init[j]*self.param_init[d]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
+                return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*self.param[j]*self.param[d]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
             else:
                 return m.FIM[j,d] == sum(sum(m.jac[z,j,i]*m.jac[z,d,i] for z in m.y_set) for i in m.tmea_set) + m.refele[j, d]*self.fim_scale_constant_value
 
@@ -1211,9 +1206,9 @@ class DesignOfExperiments:
             Calculate Cholesky L matrix using algebraic constraints
             """
         # If it is the left bottom half of L
-            if (self.param_name.index(c) >= self.param_name.index(d)):
+            if (list(self.param.keys()).index(c) >= list(self.param.keys()).index(d)):
                 return m.FIM[c, d] == sum(
-                    m.L_ele[c, self.param_name[k]] * m.L_ele[d, self.param_name[k]] for k in range(self.param_name.index(d) + 1))
+                    m.L_ele[c, list(self.param.keys())[k]] * m.L_ele[d, list(self.param.keys())[k]] for k in range(list(self.param.keys()).index(d) + 1))
             else:
         # This is the empty half of L above the diagonal
                 return pyo.Constraint.Skip
@@ -1355,8 +1350,8 @@ class DesignOfExperiments:
         param_backward[perturb] *= (1-self.step)
 
         # generate sIPOPT perturbed parameter names
-        param_perturb_names = self.param_name.copy()
-        for x, xname in enumerate(self.param_name):
+        param_perturb_names = list(self.param.keys()).copy()
+        for x, xname in enumerate(list(self.param.keys())):
             param_perturb_names[x] = xname+'_pert'
 
         self.perturb_names = param_perturb_names

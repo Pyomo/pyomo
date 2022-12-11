@@ -25,6 +25,7 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
+import pickle
 
 class Scenario_generator:
     def __init__(self, para_dict, formula='central', step=0.001, store=False):

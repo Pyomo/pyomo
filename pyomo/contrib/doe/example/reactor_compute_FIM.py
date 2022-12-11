@@ -26,10 +26,11 @@
 #  ___________________________________________________________________________
 
 
-import pyomo.contrib.doe.fim_doe as doe
+import pyomo.contrib.doe.doe as doe
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
+from pyomo.contrib.doe.measurements import Measurements
 
 def main():
     # Create model function
@@ -51,7 +52,7 @@ def main():
 
     # Create measurement object
     measure_pass = {'C':{'CA': t_measure, 'CB': t_measure, 'CC': t_measure}}
-    measure_class =  doe.Measurements(measure_pass)
+    measure_class =  Measurements(measure_pass)
 
     # Define parameter nominal value 
     parameter_dict = {'A1': 84.79085853498033, 'A2': 371.71773413976416, 'E1': 7.777032028026428, 'E2': 15.047135137500822}
@@ -95,8 +96,7 @@ def main():
                                 prior_FIM=prior_pass, discretize_model=disc, args=args_)
 
 
-    result = doe_object.compute_FIM(exp1, mode=sensi_opt, FIM_store_name = 'dynamic.csv', 
-                                    store_output = 'store_output', read_output=None,
+    result = doe_object.compute_FIM(exp1, mode=sensi_opt,
                                     scale_nominal_param_value=True, 
                                     formula='central')
 

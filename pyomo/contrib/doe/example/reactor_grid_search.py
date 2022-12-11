@@ -25,11 +25,11 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
-import pyomo.contrib.doe.fim_doe as doe
+import pyomo.contrib.doe.doe as doe
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
-
+from pyomo.contrib.doe.measurements import Measurements
 
 
 def main():
@@ -50,7 +50,7 @@ def main():
 
     # Create measurement object
     measure_pass = {'C':{'CA': t_measure, 'CB': t_measure, 'CC': t_measure}}
-    measure_class =  doe.Measurements(measure_pass)
+    measure_class =  Measurements(measure_pass)
 
     # Define parameter nominal value 
     parameter_dict = {'A1': 84.79085853498033, 'A2': 371.71773413976416, 'E1': 7.777032028026428, 'E2': 15.047135137500822}

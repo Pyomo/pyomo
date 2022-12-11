@@ -29,7 +29,6 @@
 from pyomo.common.dependencies import (
     numpy as np, numpy_available,
     pandas as pd, pandas_available,
-    scipy, scipy_available,
     matplotlib as plt, matplotlib_available,
 )
 

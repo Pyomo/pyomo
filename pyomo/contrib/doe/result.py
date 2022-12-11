@@ -29,9 +29,12 @@
 from pyomo.common.dependencies import (
     numpy as np, numpy_available,
     pandas as pd, pandas_available,
-    scipy, scipy_available,
     matplotlib as plt, matplotlib_available,
 )
+
+from itertools import product
+import logging
+from pyomo.opt import SolverStatus, TerminationCondition
 
 class FisherResults:
     def __init__(self, para_name, measure_object, jacobian_info=None, all_jacobian_info=None, 

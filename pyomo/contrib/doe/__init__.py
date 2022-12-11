@@ -9,3 +9,5 @@
 #  ___________________________________________________________________________
 from .measurements import Measurements
 from .doe import DesignOfExperiments
+from .scenario import Scenario_generator
+from .result import FisherResults, GridSearchResult
