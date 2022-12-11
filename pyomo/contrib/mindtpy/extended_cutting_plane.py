@@ -190,7 +190,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                 config.logger.info('Algorithm should terminate here.')
                 break
 
-            if self.algorithm_should_terminate(config, check_cycling=True):
+            if self.algorithm_should_terminate(config):
                 last_iter_cuts = False
                 break
 
@@ -305,7 +305,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                 (subprob_terminate_cond, results.solver.message))
 
 
-    def algorithm_should_terminate(self, config, check_cycling):
+    def algorithm_should_terminate(self, config):
         """Checks if the algorithm should terminate at the given point.
 
         This function determines whether the algorithm should terminate based on the solver options and progress.
@@ -431,26 +431,3 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         self.best_solution_found = self.working_model.clone()
         self.results.solver.termination_condition = tc.optimal
         return True
-
-        # TODO: Is cycling check necessary for ECP method?
-        # Cycling check
-        if check_cycling:
-            if config.cycling_check or config.use_tabu_list:
-                self.curr_int_sol = get_integer_solution(self.mip)
-                if config.cycling_check and self.mip_iter >= 1:
-                    if self.curr_int_sol in set(self.integer_list):
-                        config.logger.info(
-                            'Cycling happens after {} main iterations. '
-                            'The same combination is obtained in iteration {} '
-                            'This issue happens when the NLP subproblem violates constraint qualification. '
-                            'Convergence to optimal solution is not guaranteed.'
-                            .format(self.mip_iter, self.integer_list.index(self.curr_int_sol)+1))
-                        config.logger.info(
-                            'Final bound values: Primal Bound: {}  Dual Bound: {}'.
-                            format(self.primal_bound, self.dual_bound))
-                        # TODO determine self.primal_bound, self.dual_bound is inf or -inf.
-                        self.results.solver.termination_condition = tc.feasible
-                        return True
-                self.integer_list.append(self.curr_int_sol)
-
-        return False
