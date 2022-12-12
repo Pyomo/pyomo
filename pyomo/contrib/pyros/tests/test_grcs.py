@@ -16,6 +16,8 @@ from pyomo.contrib.pyros.util import selective_clone, add_decision_rule_variable
 from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
 from pyomo.contrib.pyros.util import identify_objective_functions
+from pyomo.common.collections import Bunch
+from pyomo.contrib.pyros.util import time_code
 from pyomo.core.expr import current as EXPR
 from pyomo.contrib.pyros.uncertainty_sets import *
 from pyomo.contrib.pyros.master_problem_methods import add_scenario_to_master, initial_construct_master, solve_master, \
@@ -3070,6 +3072,8 @@ class testSolveMaster(unittest.TestCase):
         master_data.master_model.scenarios[0, 0].second_stage_objective = \
             Expression(expr=master_data.master_model.scenarios[0, 0].x)
         master_data.iteration = 0
+        master_data.timing = Bunch()
+
         box_set = BoxSet(bounds=[(0,2)])
         solver = SolverFactory(global_solver)
         config = ConfigBlock()
@@ -3082,9 +3086,18 @@ class testSolveMaster(unittest.TestCase):
         config.declare("objective_focus", ConfigValue(default=ObjectiveType.worst_case))
         config.declare("second_stage_variables", ConfigValue(default=master_data.master_model.scenarios[0, 0].util.second_stage_variables))
         config.declare("subproblem_file_directory", ConfigValue(default=None))
-        master_soln = solve_master(master_data, config)
-        self.assertEqual(master_soln.termination_condition, TerminationCondition.optimal,
-                         msg="Could not solve simple master problem with solve_master function.")
+        config.declare("time_limit", ConfigValue(default=None))
+
+        with time_code(master_data.timing, "total", is_main_timer=True):
+            master_soln = solve_master(master_data, config)
+            self.assertEqual(
+                master_soln.termination_condition,
+                TerminationCondition.optimal,
+                msg=(
+                    "Could not solve simple master problem with solve_master "
+                    "function."
+                ),
+            )
 
 # === regression test for the solver
 class coefficientMatchingTests(unittest.TestCase):
@@ -3299,6 +3312,7 @@ class RegressionTest(unittest.TestCase):
         config.uncertain_params = m.working_model.util.uncertain_params
         config.tee = False
         config.solve_master_globally = True
+        config.time_limit = None
 
         add_decision_rule_variables(model_data=m, config=config)
         add_decision_rule_constraints(model_data=m, config=config)
@@ -3315,10 +3329,15 @@ class RegressionTest(unittest.TestCase):
         master_data.master_model = master
         master_data.master_model.const_efficiency_applied = False
         master_data.master_model.linear_efficiency_applied = False
-        results = minimize_dr_vars(model_data=master_data, config=config)
 
-        self.assertEqual(results.solver.termination_condition, TerminationCondition.optimal,
-                         msg="Minimize dr norm did not solve to optimality.")
+        master_data.timing = Bunch()
+        with time_code(master_data.timing, "total", is_main_timer=True):
+            results = minimize_dr_vars(model_data=master_data, config=config)
+            self.assertEqual(
+                results.solver.termination_condition,
+                TerminationCondition.optimal,
+                msg="Minimize dr norm did not solve to optimality.",
+            )
 
     @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
                          "Global NLP solver is not available and licensed.")
