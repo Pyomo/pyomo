@@ -114,10 +114,10 @@ def checkb0TargetsTransformed(self, m, transformation):
     disjBlock = m.b[0].component(
         "_pyomo_gdp_%s_reformulation" % transformation).relaxedDisjuncts
     self.assertEqual(len(disjBlock), 2)
-    self.assertIsInstance(disjBlock[0].component("b[0].disjunct[0].c"),
-                          Constraint)
-    self.assertIsInstance(disjBlock[1].component("b[0].disjunct[1].c"),
-                          Constraint)
+    self.assertIs(trans.get_transformed_constraints(
+        m.b[0].disjunct[0].c)[0].parent_block(), disjBlock[0])
+    self.assertIs(trans.get_transformed_constraints(
+        m.b[0].disjunct[1].c)[0].parent_block(), disjBlock[1])
 
     # This relies on the disjunctions being transformed in the same order
     # every time. This dictionary maps the block index to the list of
@@ -338,9 +338,8 @@ def check_transformation_block_name_collision(self, transformation):
     disjBlock = transBlock.relaxedDisjuncts
     self.assertIsInstance(disjBlock, Block)
     self.assertEqual(len(disjBlock), 2)
-    self.assertIsInstance(disjBlock[0].component("d[0].c"), Constraint)
-    self.assertIsInstance(disjBlock[1].component("d[1].c1"), Constraint)
-    self.assertIsInstance(disjBlock[1].component("d[1].c2"), Constraint)
+    self.assertIs(m.d[0].transformation_block, disjBlock[0])
+    self.assertIs(m.d[1].transformation_block, disjBlock[1])
 
     # we didn't add to the block that wasn't ours
     self.assertEqual(len(m.component("_pyomo_gdp_%s_reformulation" %
@@ -418,7 +417,7 @@ def check_indexed_xor_constraints_with_targets(self, transformation):
         targets=[m.disjunction[1],
                  m.disjunction[3]])
 
-    xorC = m.disjunction[1].algebraic_constraint().parent_component()
+    xorC = m.disjunction[1].algebraic_constraint.parent_component()
     self.assertIsInstance(xorC, Constraint)
     self.assertEqual(len(xorC), 2)
 
@@ -470,10 +469,10 @@ def check_xor_constraint_mapping(self, transformation):
     trans.apply_to(m)
 
     transBlock = m.component("_pyomo_gdp_%s_reformulation" % transformation)
-    self.assertIs( trans.get_src_disjunction(transBlock.disjunction_xor),
-                   m.disjunction)
-    self.assertIs( m.disjunction.algebraic_constraint(),
-                   transBlock.disjunction_xor)
+    self.assertIs(trans.get_src_disjunction(transBlock.disjunction_xor),
+                  m.disjunction)
+    self.assertIs(m.disjunction.algebraic_constraint,
+                  transBlock.disjunction_xor)
 
 
 def check_xor_constraint_mapping_two_disjunctions(self, transformation):
@@ -487,10 +486,10 @@ def check_xor_constraint_mapping_two_disjunctions(self, transformation):
     self.assertIs( trans.get_src_disjunction(transBlock.disjunction_xor),
                    m.disjunction)
 
-    self.assertIs( m.disjunction.algebraic_constraint(),
-                   transBlock.disjunction_xor)
-    self.assertIs( m.disjunction2.algebraic_constraint(),
-                   transBlock.disjunction2_xor)
+    self.assertIs(m.disjunction.algebraic_constraint,
+                  transBlock.disjunction_xor)
+    self.assertIs(m.disjunction2.algebraic_constraint,
+                  transBlock.disjunction2_xor)
 
 def check_disjunct_mapping(self, transformation):
     # check that we correctly map between Disjuncts and their transformation
@@ -541,13 +540,6 @@ def check_only_targets_get_transformed(self, transformation):
                 relaxedDisjuncts
     # only two disjuncts relaxed
     self.assertEqual(len(disjBlock), 2)
-    # Note that in hull, these aren't the only components that get created, but
-    # they are a proxy for which disjuncts got relaxed, which is what we want to
-    # check.
-    self.assertIsInstance(disjBlock[0].component("disjunct1[0].c"),
-                          Constraint)
-    self.assertIsInstance(disjBlock[1].component("disjunct1[1].c"),
-                          Constraint)
 
     pairs = [
         (0, 0),
@@ -620,18 +612,27 @@ def check_indexedDisj_only_targets_transformed(self, transformation):
     disjBlock = m.component("_pyomo_gdp_%s_reformulation" % transformation).\
                 relaxedDisjuncts
     self.assertEqual(len(disjBlock), 4)
-    self.assertIsInstance(
-        m.disjunct1[1,0].transformation_block.component("disjunct1[1,0].c"),
-        Constraint)
-    self.assertIsInstance(
-        m.disjunct1[1,1].transformation_block.component("disjunct1[1,1].c"),
-        Constraint)
-    self.assertIsInstance(
-        m.disjunct1[2,0].transformation_block.component("disjunct1[2,0].c"),
-        Constraint)
-    self.assertIsInstance(
-        m.disjunct1[2,1].transformation_block.component("disjunct1[2,1].c"),
-        Constraint)
+    if transformation == 'bigm':
+        self.assertIs(trans.get_transformed_constraints(
+            m.disjunct1[1, 0].c)[0].parent_block(), disjBlock[0])
+        self.assertIs(trans.get_transformed_constraints(
+            m.disjunct1[1, 1].c)[0].parent_block(), disjBlock[1])
+        self.assertIs(trans.get_transformed_constraints(
+            m.disjunct1[2, 0].c)[0].parent_block(), disjBlock[2])
+        self.assertIs(trans.get_transformed_constraints(
+            m.disjunct1[2, 1].c)[0].parent_block(), disjBlock[3])
+    elif transformation == 'hull':
+        # In the disaggregated var bounds
+        self.assertIs(trans.get_transformed_constraints(
+            m.disjunct1[1, 0].c)[0].parent_block().parent_block(),
+                      disjBlock[2])
+        self.assertIs(trans.get_transformed_constraints(
+            m.disjunct1[1, 1].c)[0].parent_block(), disjBlock[3])
+        # In the disaggregated var bounds
+        self.assertIs(trans.get_transformed_constraints(
+            m.disjunct1[2, 0].c)[0].parent_block().parent_block(), disjBlock[0])
+        self.assertIs(trans.get_transformed_constraints(
+            m.disjunct1[2, 1].c)[0].parent_block(), disjBlock[1])
 
     # This relies on the disjunctions being transformed in the same order
     # every time. These are the mappings between the indices of the original
@@ -728,10 +729,15 @@ def check_disjData_only_targets_transformed(self, transformation):
     disjBlock = m.component("_pyomo_gdp_%s_reformulation" % transformation).\
                 relaxedDisjuncts
     self.assertEqual(len(disjBlock), 2)
-    self.assertIsInstance(disjBlock[0].component("disjunct1[2,0].c"),
-                          Constraint)
-    self.assertIsInstance(disjBlock[1].component("disjunct1[2,1].c"),
-                          Constraint)
+    if transformation == 'bigm':
+        self.assertIs(trans.get_transformed_constraints(
+            m.disjunct1[2, 0].c)[0].parent_block(), disjBlock[0])
+    elif transformation == 'hull':
+            self.assertIs(trans.get_transformed_constraints(
+                m.disjunct1[2, 0].c)[0].parent_block().parent_block(),
+                          disjBlock[0])
+    self.assertIs(trans.get_transformed_constraints(
+        m.disjunct1[2, 1].c)[0].parent_block(), disjBlock[1])
 
     # This relies on the disjunctions being transformed in the same order
     # every time. These are the mappings between the indices of the original
@@ -780,17 +786,18 @@ def check_indexedBlock_only_targets_transformed(self, transformation):
     disjBlock1 = m.b[0].component(
         "_pyomo_gdp_%s_reformulation" % transformation).relaxedDisjuncts
     self.assertEqual(len(disjBlock1), 2)
-    self.assertIsInstance(disjBlock1[0].component("b[0].disjunct[0].c"),
-                          Constraint)
-    self.assertIsInstance(disjBlock1[1].component("b[0].disjunct[1].c"),
-                          Constraint)
+    self.assertIs(trans.get_transformed_constraints(
+        m.b[0].disjunct[0].c)[0].parent_block(), disjBlock1[0])
+    self.assertIs(trans.get_transformed_constraints(
+        m.b[0].disjunct[1].c)[0].parent_block(), disjBlock1[1])
+
     disjBlock2 = m.b[1].component(
         "_pyomo_gdp_%s_reformulation" % transformation).relaxedDisjuncts
     self.assertEqual(len(disjBlock2), 2)
-    self.assertIsInstance(disjBlock2[0].component("b[1].disjunct0.c"),
-                          Constraint)
-    self.assertIsInstance(disjBlock2[1].component("b[1].disjunct1.c"),
-                          Constraint)
+    self.assertIs(trans.get_transformed_constraints(
+        m.b[1].disjunct0.c)[0].parent_block(), disjBlock2[0])
+    self.assertIs(trans.get_transformed_constraints(
+        m.b[1].disjunct1.c)[0].parent_block(), disjBlock2[1])
 
     # This relies on the disjunctions being transformed in the same order
     # every time. This dictionary maps the block index to the list of
@@ -872,8 +879,7 @@ def check_disjunction_data_target(self, transformation):
     # suppose we transform the next one separately
     TransformationFactory('gdp.%s' % transformation).apply_to(
         m, targets=[m.disjunction[1]])
-    # we added to the same XOR constraint before
-    self.assertIsInstance(transBlock.disjunction_xor[1],
+    self.assertIsInstance(m.disjunction[1].algebraic_constraint,
                           constraint._GeneralConstraintData)
     transBlock = m.component("_pyomo_gdp_%s_reformulation_4" % transformation)
     self.assertIsInstance(transBlock, Block)
@@ -913,7 +919,7 @@ def check_xor_constraint_added(self, transformation):
 
     self.assertIsInstance(
         m.b.component("_pyomo_gdp_%s_reformulation" % transformation).\
-        component('b.disjunction_xor'), Constraint)
+        component(m.b.disjunction.algebraic_constraint.local_name), Constraint)
 
 def check_trans_block_created(self, transformation):
     # check we put the transformation block on the parent block of the
@@ -1161,10 +1167,18 @@ def check_block_only_targets_transformed(self, transformation):
     disjBlock = m.b.component("_pyomo_gdp_%s_reformulation" % transformation).\
                 relaxedDisjuncts
     self.assertEqual(len(disjBlock), 2)
-    self.assertIsInstance(disjBlock[0].component("b.disjunct[0].c"),
-                          Constraint)
-    self.assertIsInstance(disjBlock[1].component("b.disjunct[1].c"),
-                          Constraint)
+    if transformation == 'bigm':
+        self.assertIs(disjBlock[0],
+                      trans.get_transformed_constraints(
+                          m.b.disjunct[0].c)[0].parent_block())
+    elif transformation == 'hull':
+        # this constraint is on the bounds of the disaggregated var
+        self.assertIs(disjBlock[0],
+                      trans.get_transformed_constraints(
+                          m.b.disjunct[0].c)[0].parent_block().parent_block())
+    self.assertIs(disjBlock[1],
+                  trans.get_transformed_constraints(
+                      m.b.disjunct[1].c)[0].parent_block())
 
     # this relies on the disjuncts being transformed in the same order every
     # time
@@ -1322,7 +1336,8 @@ def check_cannot_call_transformation_on_disjunction(self, transformation,
 # constraint. We have to because in the case of nested disjunctions, our model
 # is not necessarily infeasible because of this. It just might make a Disjunct
 # infeasible.
-def setup_infeasible_xor_because_all_disjuncts_deactivated(self, transformation):
+def setup_infeasible_xor_because_all_disjuncts_deactivated(self,
+                                                           transformation):
     m = ConcreteModel()
     m.x = Var(bounds=(0,8))
     m.y = Var(bounds=(0,7))
@@ -1340,10 +1355,7 @@ def setup_infeasible_xor_because_all_disjuncts_deactivated(self, transformation)
         targets=m.disjunction.disjuncts[0].nestedDisjunction)
 
     # check that our XOR is the bad thing it should be.
-    transBlock = m.disjunction.disjuncts[0].component(
-        "_pyomo_gdp_%s_reformulation" % transformation)
-    xor = transBlock.component(
-        "disjunction_disjuncts[0].nestedDisjunction_xor")
+    xor = m.disjunction_disjuncts[0].nestedDisjunction.algebraic_constraint
     self.assertIsInstance(xor, Constraint)
     self.assertEqual(value(xor.lower), 1)
     self.assertEqual(value(xor.upper), 1)
@@ -1448,7 +1460,7 @@ def check_mappings_between_disjunctions_and_xors(self, transformation):
 
     # check disjunction mappings
     for disjunction, xor in disjunctionPairs:
-        self.assertIs(disjunction.algebraic_constraint(), xor)
+        self.assertIs(disjunction.algebraic_constraint, xor)
         self.assertIs(transform.get_src_disjunction(xor), disjunction)
 
 def check_disjunct_targets_inactive(self, transformation, **kwargs):
@@ -1482,12 +1494,12 @@ def check_disjunct_only_targets_transformed(self, transformation):
     disjBlock = m.simpledisjunct.component("_pyomo_gdp_%s_reformulation" %
                                            transformation).relaxedDisjuncts
     self.assertEqual(len(disjBlock), 2)
-    self.assertIsInstance(
-        disjBlock[0].component("simpledisjunct.innerdisjunct0.c"),
-        Constraint)
-    self.assertIsInstance(
-        disjBlock[1].component("simpledisjunct.innerdisjunct1.c"),
-        Constraint)
+    self.assertIs(transform.get_transformed_constraints(
+        m.simpledisjunct.innerdisjunct0.c)[0].parent_block(), disjBlock[0])
+    self.assertIs(transform.get_transformed_constraints(
+        m.simpledisjunct.innerdisjunct0.c)[0].parent_block(), disjBlock[0])
+    self.assertIs(transform.get_transformed_constraints(
+        m.simpledisjunct.innerdisjunct1.c)[0].parent_block(), disjBlock[1])
 
     # This also relies on the disjuncts being transformed in the same
     # order every time.
@@ -1531,12 +1543,17 @@ def check_disjunctData_only_targets_transformed(self, transformation):
     disjBlock = m.disjunct[1].component("_pyomo_gdp_%s_reformulation" %
                                         transformation).relaxedDisjuncts
     self.assertEqual(len(disjBlock), 2)
-    self.assertIsInstance(
-        disjBlock[0].component("disjunct[1].innerdisjunct[0].c"),
-        Constraint)
-    self.assertIsInstance(
-        disjBlock[1].component("disjunct[1].innerdisjunct[1].c"),
-        Constraint)
+    if transformation == 'bigm':
+        self.assertIs(transform.get_transformed_constraints(
+            m.disjunct[1].innerdisjunct[0].c)[0].parent_block(), disjBlock[0])
+    elif transformation == 'hull':
+        # This constraint is on Block deeper because it is in the bounds of a
+        # disaggregated var
+        self.assertIs(transform.get_transformed_constraints(
+            m.disjunct[1].innerdisjunct[0].c)[0].parent_block().parent_block(),
+                      disjBlock[0])
+    self.assertIs(transform.get_transformed_constraints(
+        m.disjunct[1].innerdisjunct[1].c)[0].parent_block(), disjBlock[1])
 
     # This also relies on the disjuncts being transformed in the same
     # order every time.
@@ -1553,15 +1570,15 @@ def check_disjunctData_only_targets_transformed(self, transformation):
 def check_all_components_transformed(self, m):
     # checks that all the disjunctive components claim to be transformed in the
     # makeNestedDisjunctions_NestedDisjuncts model.
-    self.assertIsInstance(m.disj.algebraic_constraint(), Constraint)
-    self.assertIsInstance(m.d1.disj2.algebraic_constraint(), Constraint)
+    self.assertIsInstance(m.disj.algebraic_constraint, Constraint)
+    self.assertIsInstance(m.d1.disj2.algebraic_constraint, Constraint)
     self.assertIsInstance(m.d1.transformation_block, _BlockData)
     self.assertIsInstance(m.d2.transformation_block, _BlockData)
     self.assertIsInstance(m.d1.d3.transformation_block, _BlockData)
     self.assertIsInstance(m.d1.d4.transformation_block, _BlockData)
 
 def check_transformation_blocks_nestedDisjunctions(self, m, transformation):
-    disjunctionTransBlock = m.disj.algebraic_constraint().parent_block()
+    disjunctionTransBlock = m.disj.algebraic_constraint.parent_block()
     transBlocks = disjunctionTransBlock.relaxedDisjuncts
     self.assertEqual(len(transBlocks), 4)
     if transformation == 'bigm':
@@ -1701,7 +1718,7 @@ def check_pprint_equal(self, m, unpickle):
     self.assertMultiLineEqual(m_output, unpickle_output)
 
 def check_transformed_model_pickles(self, transformation):
-    # Do a model where we'll have to call logical_to_linear too.
+    # Do a model where we'll have to call logical_to_disjunctive too.
     m = models.makeLogicalConstraintsOnDisjuncts_NonlinearConvex()
     trans = TransformationFactory('gdp.%s' % transformation)
     trans.apply_to(m)

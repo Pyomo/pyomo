@@ -463,14 +463,6 @@ _prop_bnds_leaf_to_root_map[numeric_expr.UnaryFunctionExpression] = _prop_bnds_l
 _prop_bnds_leaf_to_root_map[numeric_expr.LinearExpression] = _prop_bnds_leaf_to_root_SumExpression
 _prop_bnds_leaf_to_root_map[numeric_expr.AbsExpression] = _prop_bnds_leaf_to_root_abs
 
-_prop_bnds_leaf_to_root_map[numeric_expr.NPV_ProductExpression] = _prop_bnds_leaf_to_root_ProductExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.NPV_DivisionExpression] = _prop_bnds_leaf_to_root_DivisionExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.NPV_PowExpression] = _prop_bnds_leaf_to_root_PowExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.NPV_SumExpression] = _prop_bnds_leaf_to_root_SumExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_leaf_to_root_NegationExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.NPV_UnaryFunctionExpression] = _prop_bnds_leaf_to_root_UnaryFunctionExpression
-_prop_bnds_leaf_to_root_map[numeric_expr.NPV_AbsExpression] = _prop_bnds_leaf_to_root_abs
-
 _prop_bnds_leaf_to_root_map[_GeneralExpressionData] = _prop_bnds_leaf_to_root_GeneralExpression
 _prop_bnds_leaf_to_root_map[ScalarExpression] = _prop_bnds_leaf_to_root_GeneralExpression
 
@@ -1067,14 +1059,6 @@ _prop_bnds_root_to_leaf_map[numeric_expr.UnaryFunctionExpression] = _prop_bnds_r
 _prop_bnds_root_to_leaf_map[numeric_expr.LinearExpression] = _prop_bnds_root_to_leaf_SumExpression
 _prop_bnds_root_to_leaf_map[numeric_expr.AbsExpression] = _prop_bnds_root_to_leaf_abs
 
-_prop_bnds_root_to_leaf_map[numeric_expr.NPV_ProductExpression] = _prop_bnds_root_to_leaf_ProductExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.NPV_DivisionExpression] = _prop_bnds_root_to_leaf_DivisionExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.NPV_PowExpression] = _prop_bnds_root_to_leaf_PowExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.NPV_SumExpression] = _prop_bnds_root_to_leaf_SumExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.NPV_NegationExpression] = _prop_bnds_root_to_leaf_NegationExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.NPV_UnaryFunctionExpression] = _prop_bnds_root_to_leaf_UnaryFunctionExpression
-_prop_bnds_root_to_leaf_map[numeric_expr.NPV_AbsExpression] = _prop_bnds_root_to_leaf_abs
-
 _prop_bnds_root_to_leaf_map[_GeneralExpressionData] = _prop_bnds_root_to_leaf_GeneralExpression
 _prop_bnds_root_to_leaf_map[ScalarExpression] = _prop_bnds_root_to_leaf_GeneralExpression
 
@@ -1101,7 +1085,7 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
     This walker propagates bounds from the variables to each node in
     the expression tree (all the way to the root node).
     """
-    def __init__(self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8):
+    def __init__(self, bnds_dict, integer_tol=1e-4, feasibility_tol=1e-8, ignore_fixed=False):
         """
         Parameters
         ----------
@@ -1117,6 +1101,7 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
         self.bnds_dict = bnds_dict
         self.integer_tol = integer_tol
         self.feasibility_tol = feasibility_tol
+        self.ignore_fixed = ignore_fixed
 
     def visit(self, node, values):
         if node.__class__ in _prop_bnds_leaf_to_root_map:
@@ -1133,7 +1118,7 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
         if node.is_variable_type():
             if node in self.bnds_dict:
                 return True, None
-            if node.is_fixed():
+            if node.is_fixed() and not self.ignore_fixed:
                 lb = value(node.value)
                 ub = lb
             else:
@@ -1148,10 +1133,29 @@ class _FBBTVisitorLeafToRoot(ExpressionValueVisitor):
             self.bnds_dict[node] = (lb, ub)
             return True, None
 
-        if not node.is_expression_type():
-            assert is_fixed(node)
+        if not node.is_potentially_variable():
+            # NPV nodes are effectively constant leaves.  Evaluate it
+            # and return the value.
             val = value(node)
             self.bnds_dict[node] = (val, val)
+            return True, None
+
+        if node.__class__ is numeric_expr.LinearExpression:
+            const_val = value(node.constant)
+            self.bnds_dict[node.constant] = (const_val, const_val)
+            for coef in node.linear_coefs:
+                coef_val = value(coef)
+                self.bnds_dict[coef] = (coef_val, coef_val)
+            for v in node.linear_vars:
+                self.visiting_potential_leaf(v)
+            _prop_bnds_leaf_to_root_LinearExpression(node, self.bnds_dict, self.feasibility_tol)
+            return True, None
+
+        if node.__class__ is numeric_expr.ExternalFunctionExpression:
+            # TODO: provide some mechanism for users to provide interval
+            # arithmetic callback functions for general external
+            # functions
+            self.bnds_dict[node] = (-interval.inf, interval.inf)
             return True, None
 
         return False, None
@@ -1244,12 +1248,21 @@ class _FBBTVisitorRootToLeaf(ExpressionValueVisitor):
                 node.setub(ub)
             return True, None
 
-        if not node.is_expression_type():
+        if not node.is_potentially_variable():
             lb, ub = self.bnds_dict[node]
             if abs(lb - value(node)) > self.feasibility_tol:
                 raise InfeasibleConstraintException('Detected an infeasible constraint.')
             if abs(ub - value(node)) > self.feasibility_tol:
                 raise InfeasibleConstraintException('Detected an infeasible constraint.')
+            return True, None
+
+        if node.__class__ is numeric_expr.LinearExpression:
+            _prop_bnds_root_to_leaf_LinearExpression(node, self.bnds_dict, self.feasibility_tol)
+            for v in node.linear_vars:
+                self.visiting_potential_leaf(v)
+            return True, None
+
+        if node.__class__ is numeric_expr.ExternalFunctionExpression:
             return True, None
 
         if node.__class__ in _prop_bnds_root_to_leaf_map:
@@ -1512,7 +1525,7 @@ def fbbt(comp, deactivate_satisfied_constraints=False, integer_tol=1e-5, feasibi
     return new_var_bounds
 
 
-def compute_bounds_on_expr(expr):
+def compute_bounds_on_expr(expr, ignore_fixed=False):
     """
     Compute bounds on an expression based on the bounds on the variables in the expression.
 
@@ -1526,7 +1539,7 @@ def compute_bounds_on_expr(expr):
     ub: float
     """
     bnds_dict = ComponentMap()
-    visitor = _FBBTVisitorLeafToRoot(bnds_dict)
+    visitor = _FBBTVisitorLeafToRoot(bnds_dict, ignore_fixed=ignore_fixed)
     visitor.dfs_postorder_stack(expr)
     lb, ub = bnds_dict[expr]
     if lb == -interval.inf:

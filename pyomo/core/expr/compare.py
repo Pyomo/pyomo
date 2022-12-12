@@ -251,7 +251,9 @@ def assertExpressionsStructurallyEqual(test, a, b, include_named_exprs=True):
     try:
         test.assertEqual(len(prefix_a), len(prefix_b))
         for _a, _b in zip(prefix_a, prefix_b):
-            test.assertIs(_a.__class__, _b.__class__)
+            if _a.__class__ not in native_types and \
+               _b.__class__ not in native_types:
+                test.assertIs(_a.__class__, _b.__class__)
             test.assertEqual(_a, _b)
     except (PyomoException, AssertionError):
         test.fail(f"Expressions not structurally equal:\n\t"

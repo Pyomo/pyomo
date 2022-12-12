@@ -1,7 +1,8 @@
 [![Github Actions Status](https://github.com/Pyomo/pyomo/workflows/GitHub%20CI/badge.svg?event=push)](https://github.com/Pyomo/pyomo/actions?query=event%3Apush+workflow%3A%22GitHub+CI%22)
-[![Jenkins Status](https://img.shields.io/jenkins/s/https/software.sandia.gov/downloads/pub/pyomo/jenkins/Pyomo_trunk.svg?logo=jenkins&logoColor=white)](https://jenkins-srn.sandia.gov/job/Pyomo_trunk)
+[![Jenkins Status](https://github.com/Pyomo/jenkins-status/blob/main/pyomo_main.svg)](https://pyomo-jenkins.sandia.gov/)
 [![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/main/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
 [![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](http://pyomo.readthedocs.org/en/latest/)
+[![Build services](https://github.com/Pyomo/jenkins-status/blob/main/pyomo_services.svg)](https://pyomo-jenkins.sandia.gov/)
 [![GitHub contributors](https://img.shields.io/github/contributors/pyomo/pyomo.svg)](https://github.com/pyomo/pyomo/graphs/contributors)
 [![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/pyomo/pyomo.svg?label=merged+PRs)](https://github.com/pyomo/pyomo/pulls?q=is:pr+is:merged)
 
@@ -26,6 +27,7 @@ including:
  -  Generalized disjunctive programming
  -  Differential algebraic equations
  -  Mathematical programming with equilibrium constraints
+ -  Constraint programming
 
 Pyomo supports analysis and scripting within a full-featured programming
 language. Further, Pyomo has also proven an effective framework for
@@ -44,7 +46,8 @@ subproblems using Python parallel communication libraries.
 
 Pyomo was formerly released as the Coopr software library.
 
-Pyomo is available under the BSD License, see the LICENSE.txt file.
+Pyomo is available under the BSD License - see the 
+[`LICENSE.md`](https://github.com/Pyomo/pyomo/blob/main/LICENSE.md) file.
 
 Pyomo is currently tested with the following Python implementations:
 
@@ -77,7 +80,7 @@ To get help from the Pyomo community ask a question on one of the following:
 
 Pyomo development moved to this repository in June, 2016 from
 Sandia National Laboratories. Developer discussions are hosted by
-[google groups](https://groups.google.com/forum/#!forum/pyomo-developers).
+[Google Groups](https://groups.google.com/forum/#!forum/pyomo-developers).
 
 By contributing to this software project, you are agreeing to the
 following terms and conditions for your contributions:

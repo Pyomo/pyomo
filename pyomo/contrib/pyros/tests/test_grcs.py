@@ -1358,6 +1358,7 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
             buset.coefficients_mat,
         )
         np.testing.assert_allclose([1, 3, 0, 0, 0], buset.rhs_vec)
+        np.testing.assert_allclose(np.zeros(3), buset.origin)
 
         # update the set
         buset.budget_membership_mat = [[1, 1, 0], [0, 0, 1]]
@@ -1375,22 +1376,35 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         )
         np.testing.assert_allclose([3, 4, 0, 0, 0], buset.rhs_vec)
 
+        # update origin
+        buset.origin = [1, 0, -1.5]
+        np.testing.assert_allclose([1, 0, -1.5], buset.origin)
+
     def test_error_on_budget_set_dim_change(self):
         """
         BudgetSet dimension is considered immutable.
         Test ValueError raised when attempting to alter the
-        box set dimension (i.e. number of rows of `bounds`).
+        budget set dimension.
         """
         budget_mat = [[1, 0, 1], [0, 1, 0]]
         budget_rhs_vec = [1, 3]
         bu_set = BudgetSet(budget_mat, budget_rhs_vec)
 
+        # error on budget incidence matrix update
         exc_str = (
             r".*must have 3 columns to match set dimension "
             r"\(provided.*1 columns\)"
         )
         with self.assertRaisesRegex(ValueError, exc_str):
             bu_set.budget_membership_mat = [[1], [1]]
+
+        # error on origin update
+        exc_str = (
+            r".*must have 3 entries to match set dimension "
+            r"\(provided.*4 entries\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bu_set.origin = [1, 2, 1, 0]
 
     def test_error_on_budget_member_mat_row_change(self):
         """
@@ -1506,6 +1520,48 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         # assert error on update
         with self.assertRaisesRegex(ValueError, exc_str):
             buset.budget_membership_mat = invalid_col_mat
+
+    @unittest.skipUnless(
+        SolverFactory("cbc").available(exception_flag=False),
+        "LP solver CBC not available",
+    )
+    def test_budget_set_parameter_bounds_correct(self):
+        """
+        If LP solver is available, test parameter bounds method
+        for factor model set is correct (check against
+        results from an LP solver).
+        """
+        solver = SolverFactory("cbc")
+
+        # construct budget set instances
+        buset1 = BudgetSet(
+            budget_membership_mat=[[1, 1], [0, 1]],
+            rhs_vec=[2, 3],
+            origin=None,
+        )
+        buset2 = BudgetSet(
+            budget_membership_mat=[[1, 0], [1, 1]],
+            rhs_vec=[3, 2],
+            origin=[1, 1],
+        )
+
+        # check parameter bounds matches LP results
+        # exactly for each case
+        for buset in [buset1, buset2]:
+            param_bounds = buset.parameter_bounds
+            lp_param_bounds = eval_parameter_bounds(buset, solver)
+
+            self.assertTrue(
+                np.allclose(param_bounds, lp_param_bounds),
+                msg=(
+                    "Parameter bounds not consistent with LP values for "
+                    "BudgetSet with parameterization:\n"
+                    f"budget_membership_mat={buset.budget_membership_mat},\n"
+                    f"budget_rhs_vec={buset.budget_rhs_vec},\n"
+                    f"origin={buset.origin}.\n"
+                    f"({param_bounds} does not match {lp_param_bounds})"
+                ),
+            )
 
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -1847,6 +1903,37 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[0].ub, None, "Bounds not added correctly for CardinalitySet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for CardinalitySet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for CardinalitySet")
+
+
+def eval_parameter_bounds(uncertainty_set, solver):
+    """
+    Evaluate parameter bounds of uncertainty set by solving
+    bounding problems (as opposed to via the `parameter_bounds`
+    method).
+    """
+    bounding_mdl = uncertainty_set.bounding_model()
+
+    param_bounds = []
+    for idx, obj in bounding_mdl.param_var_objectives.items():
+        # activate objective for corresponding dimension
+        obj.activate()
+        bounds = []
+
+        # solve for lower bound, then upper bound
+        # solve should be successful
+        for sense in (minimize, maximize):
+            obj.sense = sense
+            solver.solve(bounding_mdl)
+            bounds.append(value(obj))
+
+        # add parameter bounds for current dimension
+        param_bounds.append(tuple(bounds))
+
+        # ensure sense is minimize when done, deactivate
+        obj.sense = minimize
+        obj.deactivate()
+
+    return param_bounds
 
 
 class testBoxUncertaintySetClass(unittest.TestCase):
@@ -2459,6 +2546,63 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
             fset.beta = neg_beta
         with self.assertRaisesRegex(ValueError, big_exc_str):
             fset.beta = big_beta
+
+    @unittest.skipUnless(
+        SolverFactory("cbc").available(exception_flag=False),
+        "LP solver CBC not available",
+    )
+    def test_factor_model_parameter_bounds_correct(self):
+        """
+        If LP solver is available, test parameter bounds method
+        for factor model set is correct (check against
+        results from an LP solver).
+        """
+        solver = SolverFactory("cbc")
+
+        # four cases where prior parameter bounds
+        # approximations were probably too tight
+        fset1 = FactorModelSet(
+            origin=[0, 0],
+            number_of_factors=3,
+            psi_mat=[[1, -1, 1], [1, 0.1, 1]],
+            beta=1/6,
+        )
+        fset2 = FactorModelSet(
+            origin=[0],
+            number_of_factors=3,
+            psi_mat=[[1, 6, 8]],
+            beta=1/2,
+        )
+        fset3 = FactorModelSet(
+            origin=[1],
+            number_of_factors=2,
+            psi_mat=[[1, 2]],
+            beta=1/4,
+        )
+        fset4 = FactorModelSet(
+            origin=[1],
+            number_of_factors=3,
+            psi_mat=[[-1, -6, -8]],
+            beta=1/2,
+        )
+
+        # check parameter bounds matches LP results
+        # exactly for each case
+        for fset in [fset1, fset2, fset3, fset4]:
+            param_bounds = fset.parameter_bounds
+            lp_param_bounds = eval_parameter_bounds(fset, solver)
+
+            self.assertTrue(
+                np.allclose(param_bounds, lp_param_bounds),
+                msg=(
+                    "Parameter bounds not consistent with LP values for "
+                    "FactorModelSet with parameterization:\n"
+                    f"F={fset.number_of_factors},\n"
+                    f"beta={fset.beta},\n"
+                    f"psi_mat={fset.psi_mat},\n"
+                    f"origin={fset.origin}."
+                ),
+            )
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_uncertainty_set_with_correct_params(self):
@@ -4266,6 +4410,69 @@ class TestSubsolverTiming(unittest.TestCase):
                 "time estimates are made using TicTocTimer"
             ),
         )
+
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_two_stg_mod_with_intersection_set(self):
+        """
+        Test two-stage model with `AxisAlignedEllipsoidalSet`
+        as the uncertainty set.
+        """
+        # define model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u1 = Param(initialize=1.125, mutable=True)
+        m.u2 = Param(initialize=1, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+
+        # construct the IntersectionSet
+        ellipsoid = AxisAlignedEllipsoidalSet(
+            center=[1.125, 1],
+            half_lengths=[1, 0],
+        )
+        bset = BoxSet(bounds=[[1, 2], [0.5, 1.5]])
+        iset = IntersectionSet(ellipsoid=ellipsoid, bset=bset)
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u1, m.u2],
+            uncertainty_set=iset,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            }
+        )
+
+        # check successful termination
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Did not identify robust optimal solution to problem instance."
+        )
+        self.assertGreater(
+            results.iterations,
+            0,
+            msg="Robust infeasible model terminated in 0 iterations (nominal case)."
+        )
+
 
 
 if __name__ == "__main__":

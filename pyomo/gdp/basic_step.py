@@ -22,14 +22,10 @@ logger = logging.getLogger('pyomo.gdp')
 
 def _clone_all_but_indicator_vars(self):
     """Clone everything in a Disjunct except for the indicator_vars"""
-    memo = {
-        '__block_scope__': {id(self): True, id(None): False},
+    return self.clone({
         id(self.indicator_var): self.indicator_var,
         id(self.binary_indicator_var): self.binary_indicator_var,
-    }
-    new_block = copy.deepcopy(self, memo)
-    new_block._parent = None
-    return new_block
+    })
 
 
 def _squish_singletons(tuple_iter):
@@ -46,9 +42,15 @@ def apply_basic_step(disjunctions_or_constraints):
     # Basic steps only apply to XOR'd disjunctions
     #
     disjunctions = list(obj for obj in disjunctions_or_constraints
-                        if obj.ctype == Disjunction)
+                        if obj.ctype is Disjunction)
     constraints = list(obj for obj in disjunctions_or_constraints
-                       if obj.ctype == Constraint)
+                       if obj.ctype is Constraint)
+    if len(disjunctions) + len(constraints) != len(disjunctions_or_constraints):
+        raise ValueError('apply_basic_step only accepts a list containing '
+                         'Disjunctions or Constraints')
+    if not disjunctions:
+        raise ValueError('apply_basic_step: argument list must contain at '
+                         'least one Disjunction')
     for d in disjunctions:
         if not d.xor:
             raise ValueError(
@@ -76,8 +78,9 @@ def apply_basic_step(disjunctions_or_constraints):
         #
         ans.disjuncts[idx].src = Block(ans.DISJUNCTIONS)
         for i in ans.DISJUNCTIONS:
-            tmp = _clone_all_but_indicator_vars(disjunctions[i].disjuncts[
-                idx[i] if isinstance(idx, tuple) else idx])
+            src_disj = disjunctions[i].disjuncts[
+                idx[i] if isinstance(idx, tuple) else idx]
+            tmp = _clone_all_but_indicator_vars(src_disj)
             for k,v in list(tmp.component_map().items()):
                 if v.parent_block() is not tmp:
                     # Skip indicator_var and binary_indicator_var

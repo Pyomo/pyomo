@@ -13,6 +13,10 @@ on:
         description: Git Hash (Optional)
         required: false
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     shell: bash -l {0}
@@ -113,11 +117,6 @@ jobs:
           skip_doctest: 1
           TARGET: win
           PYENV: pip
-
-        exclude:
-        # Exclude 3.11 on conda until matplotlib!=3.6.1 is released on
-        # conda-forge for python 3.11
-        - {os: windows-latest, python: 3.11}
 
     steps:
     - name: Checkout Pyomo source
@@ -334,7 +333,7 @@ jobs:
                 || echo "WARNING: Gurobi is not available"
             conda install -q -y -c fico-xpress xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
-            for PKG in cyipopt pymumps; do
+            for PKG in cyipopt pymumps scip; do
                 conda install -q -y -c conda-forge $PKG \
                     || echo "WARNING: $PKG is not available"
             done

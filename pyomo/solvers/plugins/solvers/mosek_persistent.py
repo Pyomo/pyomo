@@ -206,22 +206,21 @@ class MOSEKPersistent(PersistentSolver, MOSEKDirect):
             for v in solver_vars:
                 var_ids.append(self._pyomo_var_to_solver_var_map[v])
             vtypes = tuple(map(self._mosek_vartype_from_var, solver_vars))
-            lbs = tuple( value(v) if v.fixed
-                         else -float('inf') if value(v.lb) is None
-                         else value(v.lb)
-                         for v in solver_vars
-            )
-            ubs = tuple( value(v) if v.fixed
-                         else float('inf') if value(v.ub) is None
-                         else value(v.ub)
-                         for v in solver_vars
-            )
+            lbs = tuple(value(v) if v.fixed
+                        else -float('inf') if value(v.lb) is None
+                        else value(v.lb)
+                        for v in solver_vars
+                        )
+            ubs = tuple(value(v) if v.fixed
+                        else float('inf') if value(v.ub) is None
+                        else value(v.ub)
+                        for v in solver_vars
+                        )
             fxs = tuple(v.is_fixed() for v in solver_vars)
             bound_types = tuple(map(self._mosek_bounds, lbs, ubs, fxs))
             self._solver_model.putvartypelist(var_ids, vtypes)
             self._solver_model.putvarboundlist(var_ids, bound_types, lbs, ubs)
         except KeyError:
-            print(v.name)
             v_name = self._symbol_map.getSymbol(v, self._labeler)
             raise ValueError(
                 "Variable {} needs to be added before it can be modified.".format(
