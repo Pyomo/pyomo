@@ -348,11 +348,17 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
-    def bounding_model(self):
+    def bounding_model(self, config=None):
         """
         Make uncertain parameter value bounding problems (optimize
         value of each uncertain parameter subject to constraints on the
         uncertain parameters).
+
+        Parameters
+        ----------
+        config : None or ConfigDict, optional
+            If a ConfigDict is provided, then it contains
+            arguments passed to the PyROS solver.
 
         Returns
         -------
@@ -369,6 +375,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         model.cons = self.set_as_constraint(
             uncertain_params=model.param_vars,
             model=model,
+            config=config,
         )
 
         @model.Objective(range(self.dim))
@@ -406,7 +413,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         This method is invoked during the validation step of a PyROS
         solver call.
         """
-        bounding_model = self.bounding_model()
+        bounding_model = self.bounding_model(config=config)
         solver = config.global_solver
 
         # initialize uncertain parameter variables
