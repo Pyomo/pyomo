@@ -82,6 +82,10 @@ Pyomo development moved to this repository in June, 2016 from
 Sandia National Laboratories. Developer discussions are hosted by
 [Google Groups](https://groups.google.com/forum/#!forum/pyomo-developers).
 
+The Pyomo Development team holds weekly coordination meetings on
+Tuesdays 12:30 - 14:00 (MT).  Please contact wg-pyomo@sandia.gov to
+request call-in information.
+
 By contributing to this software project, you are agreeing to the
 following terms and conditions for your contributions:
 
