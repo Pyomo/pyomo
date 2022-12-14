@@ -751,6 +751,7 @@ class LogicalToDoCplex(StreamBasedExpressionVisitor):
         EXPR.AbsExpression: _handle_abs_node,
         EXPR.MonomialTermExpression: _handle_monomial_expr,
         EXPR.SumExpression: _handle_sum_node,
+        EXPR.LinearExpression: _handle_sum_node,
         MinExpression: _handle_min_node,
         MaxExpression: _handle_max_node,
         NotExpression: _handle_not_node,
