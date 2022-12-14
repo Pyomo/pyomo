@@ -559,6 +559,12 @@ def _get_bool_valued_expr(arg):
                              "expression from object in class %s" % str(arg[0]))
 
 def _handle_monomial_expr(visitor, node, arg1, arg2):
+    # Monomial terms show up a lot.  This handles some common
+    # simplifications (necessary in part for the unit tests)
+    if arg2[1].__class__ in EXPR.native_types:
+        return _GENERAL, arg1[1]*arg2[1]
+    elif arg1[1] == 1:
+        return arg2
     return (_GENERAL, cp.times(_get_int_valued_expr(arg1),
                                _get_int_valued_expr(arg2)))
 
