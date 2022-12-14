@@ -383,7 +383,7 @@ class TestNewtonPyomo(unittest.TestCase):
     def test_solve(self):
         m, _ = make_scalar_model()
         solver = pyo.SolverFactory("scipy.newton")
-        results = solver.solve(m)
+        results = solver.solve(m, tee=True)
         predicted_x = 4.90547401
         self.assertAlmostEqual(predicted_x, m.x.value)
 
