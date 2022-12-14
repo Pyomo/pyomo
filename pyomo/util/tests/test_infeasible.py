@@ -51,6 +51,16 @@ class TestInfeasible(unittest.TestCase):
     def test_log_infeasible_constraints(self):
         """Test for logging of infeasible constraints."""
         m = self.build_model()
+
+        with LoggingIntercept(None, 'pyomo.util.infeasible') as LOG:
+            log_infeasible_constraints(m)
+        self.assertEqual(
+            'log_infeasible_constraints() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged reguardless of constraint feasibility',
+            LOG.getvalue().strip(),
+        )
+
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
             log_infeasible_constraints(m)
@@ -70,6 +80,16 @@ class TestInfeasible(unittest.TestCase):
         m = self.build_model()
         m.x.setlb(2)
         m.x.setub(0)
+
+        with LoggingIntercept(None, 'pyomo.util.infeasible') as LOG:
+            log_infeasible_bounds(m)
+        self.assertEqual(
+            'log_infeasible_bounds() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged reguardless of bound feasibility',
+            LOG.getvalue().strip(),
+        )
+
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.util', logging.INFO):
             log_infeasible_bounds(m)
@@ -99,6 +119,16 @@ class TestInfeasible(unittest.TestCase):
     def test_log_close_to_bounds(self):
         """Test logging of variables and constraints near bounds."""
         m = self.build_model()
+
+        with LoggingIntercept(None, 'pyomo.util.infeasible') as LOG:
+            log_close_to_bounds(m)
+        self.assertEqual(
+            'log_close_to_bounds() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged reguardless of bound status',
+            LOG.getvalue().strip(),
+        )
+
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
             log_close_to_bounds(m)
