@@ -21,6 +21,27 @@ from pyomo.util.blockutil import log_model_constraints
 
 logger = logging.getLogger(__name__)
 
+def _check_infeasible(obj, val, tol):
+    if val is None:
+        # Undefined value due to missing variable value or evaluation error
+        return 4
+    # Check for infeasibilities
+    infeasible = 0
+    if obj.has_lb():
+        lb = value(obj.lower, exception=False)
+        if lb is None:
+            infeasible |= 4 | 1
+        elif lb - val > tol:
+            infeasible |= 1
+    if obj.has_ub():
+        ub = value(obj.upper, exception=False)
+        if ub is None:
+            infeasible |= 4 | 2
+        elif val - ub > tol:
+            infeasible |= 2
+    return infeasible
+
+
 def find_infeasible_constraints(m, tol=1E-6):
     """Find the infeasible constraints in the model.
 
@@ -39,47 +60,23 @@ def find_infeasible_constraints(m, tol=1E-6):
     constr: ConstraintData
         The infeasible constraint object
 
-    lb_value: float or None
-        The numeric value of the constraint lower bound (or None)
-
     body_value: float or None
         The numeric value of the constraint body (or None if there was an
         error evaluating the expression)
 
-    ub_value: float or None
-        The numeric value of the constraint upper bound (or None)
-
     infeasible: int
         A bitmask indicating which bound was infeasible (1 for the lower
-        bound or 2 for the upper bound)
+        bound, 2 for the upper bound, or 4 if the body or bound was
+        undefined)
 
     """
     # Iterate through all active constraints on the model
     for constr in m.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
         body_value = value(constr.body, exception=False)
-        lb_value = value(constr.lower, exception=False)
-        ub_value = value(constr.upper, exception=False)
-
-        if body_value is None:
-            # Undefined constraint body value due to missing variable value
-            pass
-        else:
-            # Check for infeasibilities
-            if constr.equality:
-                if fabs(lb_value - body_value) < tol:
-                    continue
-                infeasible = 0
-            else:
-                infeasible = 0
-                if constr.has_lb() and lb_value - body_value >= tol:
-                    infeasible |= 1
-                if constr.has_ub() and body_value - ub_value >= tol:
-                    infeasible |= 2
-                if not infeasible:
-                    continue
-
-        yield constr, lb_value, body_value, ub_value, infeasible
+        infeasible = _check_infeasible(constr, body_value, tol)
+        if infeasible:
+            yield constr, body_value, infeasible
 
 
 def log_infeasible_constraints(
@@ -115,10 +112,11 @@ def log_infeasible_constraints(
             'will be logged reguardless of constraint feasibility'
         )
 
-    for constr, lb, body, ub, infeas in find_infeasible_constraints(m, tol):
+    for constr, body, infeas in find_infeasible_constraints(m, tol):
         if constr.equality:
             lb = lb_expr = lb_op = ""
             ub_expr = constr.upper
+            ub = value(ub_expr, exception=False)
             if body is None:
                 ub_op = " =?= "
             else:
@@ -126,6 +124,7 @@ def log_infeasible_constraints(
         else:
             if constr.has_lb():
                 lb_expr = constr.lower
+                lb = value(lb_expr, exception=False)
                 if body is None:
                     lb_op = " <?= "
                 elif infeas & 1:
@@ -137,6 +136,7 @@ def log_infeasible_constraints(
 
             if constr.has_ub():
                 ub_expr = constr.upper
+                ub = value(ub_expr, exception=False)
                 if body is None:
                     ub_op = " <?= "
                 elif infeas & 2:
@@ -147,6 +147,10 @@ def log_infeasible_constraints(
                 ub = ub_expr = ub_op = ""
         if body is None:
             body = "evaluation error"
+        if lb is None:
+            lb = "evaluation error"
+        if ub is None:
+            ub = "evaluation error"
 
         line = f"CONSTR {constr.name}: {lb}{lb_op}{body}{ub_op}{ub}"
         if log_expression:
@@ -183,24 +187,24 @@ def find_infeasible_bounds(m, tol=1E-6):
 
     infeasible: int
         A bitmask indicating which bound was infeasible (1 for the lower
-        bound or 2 for the upper bound; 0 indicates the variable had no
-        value)
+        bound or 2 for the upper bound; 4 indicates the variable had no
+        value or a bound was undefined)
 
     """
     for var in m.component_data_objects(
             ctype=Var, descend_into=True):
         val = var.value
-        infeasible = 0
-        if val is None:
+        infeasible = _check_infeasible(var, val, tol)
+        if infeasible:
             yield var, infeasible
-        else:
-            if var.has_lb() and var.lb - val >= tol:
-                infeasible |= 1
-            if var.has_ub() and val - var.ub >= tol:
-                infeasible |= 2
-            if infeasible:
-                yield var, infeasible
 
+
+_evaluation_errors = {
+    4: 'no assigned value',
+    5: 'error evaluating lower bound',
+    6: 'error evaluating upper bound',
+    7: 'error evaluating lower or upper bounds',
+}
 
 def log_infeasible_bounds(m, tol=1E-6, logger=logger):
     """Logs the infeasible variable bounds in the model.
@@ -225,13 +229,32 @@ def log_infeasible_bounds(m, tol=1E-6, logger=logger):
         )
 
     for var, infeas in find_infeasible_bounds(m, tol):
-        if not infeas:
-            logger.debug("Skipping VAR {} with no assigned value.")
+        if infeas & 4:
+            logger.info(f"VAR {var.name}: {_evaluation_errors[infeas]}.")
             continue
         if infeas & 1:
-            logger.info(f'VAR {var.name}: {var.value} >/= LB {var.lb}')
+            logger.info(f'VAR {var.name}: LB {var.lb} </= {var.value}')
         if infeas & 2:
             logger.info(f'VAR {var.name}: {var.value} </= UB {var.ub}')
+
+
+def _check_close(obj, val, tol):
+    if val is None:
+        return 4
+    close = 0
+    if obj.has_lb():
+        lb = value(obj.lower, exception=False)
+        if lb is None:
+            close |= 4 | 1
+        if fabs(lb - val) <= tol:
+            close |= 1
+    if obj.has_ub():
+        ub = value(obj.upper, exception=False)
+        if ub is None:
+            close |= 4 | 2
+        if fabs(val - ub) <= tol:
+            close |= 2
+    return close
 
 
 def find_close_to_bounds(m, tol=1E-6):
@@ -281,40 +304,30 @@ def find_close_to_bounds(m, tol=1E-6):
         if var.fixed:
             continue
         val = var.value
-        close = 0
-        if val is None:
-            yield var, val, close
-        else:
-            if var.has_lb() and fabs(var.lb - val) <= tol:
-                close |= 1
-            if var.has_ub() and fabs(val - var.ub) <= tol:
-                close |= 2
-            if close == 3:
-                # The bounds are too close: skip this Var (it is
-                # effectively fixed)
-                continue
-            if close:
-                yield var, val, close
+        close = _check_close(var, val, tol)
+        if not close or close & 4:
+            # interior value or evaluation error
+            continue
+        if close == 3:
+            # The bounds are too close: skip this Var (it is
+            # effectively fixed)
+            continue
+        yield var, val, close
 
     for con in m.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
         if con.equality:
             continue
         val = value(con.body, exception=False)
-        close = 0
-        if val is None:
-            yield con, val, close
-        else:
-            if con.has_lb() and fabs(con.lb - val) <= tol:
-                close |= 1
-            if con.has_ub() and fabs(val - con.ub) <= tol:
-                close |= 2
-            if close == 3:
-                # The bounds are too close: skip this Constraint (it is
-                # effectively an equality)
-                continue
-            if close:
-                yield con, val, close
+        close = _check_close(con, val, tol)
+        if not close or close & 4:
+            # interior value or evaluation error
+            continue
+        if close == 3:
+            # The bounds are too close: skip this Constraint (it is
+            # effectively an equality)
+            continue
+        yield con, val, close
 
 
 def log_close_to_bounds(m, tol=1E-6, logger=logger):

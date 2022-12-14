@@ -94,7 +94,10 @@ class TestInfeasible(unittest.TestCase):
         with LoggingIntercept(output, 'pyomo.util', logging.INFO):
             log_infeasible_bounds(m)
         expected_output = [
-            "VAR x: 1 >/= LB 2", "VAR x: 1 </= UB 0", "VAR y4: 2 </= UB 1",
+            "VAR x: LB 2 </= 1",
+            "VAR x: 1 </= UB 0",
+            "VAR z: no assigned value.",
+            "VAR y4: 2 </= UB 1",
         ]
         self.assertEqual(expected_output, output.getvalue().splitlines())
 
@@ -136,7 +139,6 @@ class TestInfeasible(unittest.TestCase):
             "y near UB of 2",
             "yy near LB of 0",
             "c4 near LB of 1.9999999",
-            "Skipping CONSTR c5: evaluation error.",
             "c11 near UB of 1.9999999",
         ]
         self.assertEqual(expected_output, output.getvalue().splitlines())
