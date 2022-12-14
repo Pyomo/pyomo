@@ -41,7 +41,7 @@ def log_infeasible_constraints(
         logger.warning(
             'log_infeasible_constraints() called with a logger whose '
             'effective level is higher than logging.INFO: no output '
-            'will be logged reguardless of constraint feasibility'
+            'will be logged regardless of constraint feasibility'
         )
 
     # Iterate through all active constraints on the model
@@ -137,7 +137,7 @@ def log_infeasible_bounds(m, tol=1E-6, logger=logger):
         logger.warning(
             'log_infeasible_bounds() called with a logger whose '
             'effective level is higher than logging.INFO: no output '
-            'will be logged reguardless of bound feasibility'
+            'will be logged regardless of bound feasibility'
         )
 
     for var in m.component_data_objects(
@@ -167,7 +167,7 @@ def log_close_to_bounds(m, tol=1E-6, logger=logger):
         logger.warning(
             'log_close_to_bounds() called with a logger whose '
             'effective level is higher than logging.INFO: no output '
-            'will be logged reguardless of bound status'
+            'will be logged regardless of bound status'
         )
 
     for var in m.component_data_objects(
