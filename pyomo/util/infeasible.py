@@ -109,7 +109,7 @@ def log_infeasible_constraints(
         logger.warning(
             'log_infeasible_constraints() called with a logger whose '
             'effective level is higher than logging.INFO: no output '
-            'will be logged reguardless of constraint feasibility'
+            'will be logged regardless of constraint feasibility'
         )
 
     for constr, body, infeas in find_infeasible_constraints(m, tol):
@@ -225,7 +225,7 @@ def log_infeasible_bounds(m, tol=1E-6, logger=logger):
         logger.warning(
             'log_infeasible_bounds() called with a logger whose '
             'effective level is higher than logging.INFO: no output '
-            'will be logged reguardless of bound feasibility'
+            'will be logged regardless of bound feasibility'
         )
 
     for var, infeas in find_infeasible_bounds(m, tol):
@@ -352,7 +352,7 @@ def log_close_to_bounds(m, tol=1E-6, logger=logger):
         logger.warning(
             'log_close_to_bounds() called with a logger whose '
             'effective level is higher than logging.INFO: no output '
-            'will be logged reguardless of bound status'
+            'will be logged regardless of bound status'
         )
 
     for obj, val, close in find_close_to_bounds(m, tol):
