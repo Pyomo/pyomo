@@ -4648,9 +4648,6 @@ class TestIsFixedIsConstant(unittest.TestCase):
         e = m.P[t+1] + 3
         self.assertEqual(e.is_constant(), False)
         import pyomo.core.expr.numeric_expr as ne
-        print(ne._categorize_arg_types(m.P[t+1], 3))
-        print(e.to_string(verbose=True))
-        print(type(e), [type(_) for _ in e.args])
         self.assertEqual(m.P[t+1].is_potentially_variable(), False)
         self.assertEqual(e.is_potentially_variable(), False)
         self.assertEqual(e.is_fixed(), True)
