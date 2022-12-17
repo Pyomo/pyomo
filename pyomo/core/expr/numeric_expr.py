@@ -802,16 +802,6 @@ class LinearExpression(SumExpression):
 class NPV_SumExpression(NPV_Mixin, SumExpression):
     __slots__ = ()
 
-    def is_constant(self):
-        return all(arg.__class__ in native_numeric_types for arg in self.args)
-
-
-class NPV_SumExpression(NPV_Mixin, SumExpression):
-    __slots__ = ()
-
-    def create_potentially_variable_object(self):
-        return SumExpression( self._args_ )
-
     def _apply_operation(self, result):
         return sum(result)
 
