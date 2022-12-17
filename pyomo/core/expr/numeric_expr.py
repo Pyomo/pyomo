@@ -956,7 +956,7 @@ class NPV_Expr_ifExpression(NPV_Mixin, Expr_ifExpression):
 
 class UnaryFunctionExpression(NumericExpression):
     """
-    An expression object used to define intrinsic functions (e.g. sin, cos, tan).
+    An expression object for intrinsic (math) functions (e.g. sin, cos, tan).
 
     Args:
         args (tuple): Children nodes

@@ -237,7 +237,7 @@ class ExpressionBase(object):
 
         This method provides a consistent interface for constructing a
         node, which is used in tree visitor scripts.  In the simplest
-        case, this simply returns::
+        case, this returns::
 
             self.__class__(args)
 
