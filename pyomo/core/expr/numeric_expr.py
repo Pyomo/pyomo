@@ -1144,51 +1144,66 @@ class ARG_TYPE(enum.Enum):
     SUM = 7
     OTHER = 8
 
-def _categorize_arg_types(*args):
-    types = []
-    for arg in args:
-        if arg.__class__ in native_numeric_types:
-            types.append(_EXPR_TYPE.NATIVE)
-            continue
+_known_arg_types = {}
+
+
+def register_arg_type(arg_class, etype):
+    _known_arg_types.setdefault(arg_class, ARG_TYPE(etype))
+
+
+def _categorize_arg_type(arg):
+    if arg.__class__ in _known_arg_types:
+        return _known_arg_types[arg.__class__]
+
+    if arg.__class__ in native_numeric_types:
+        ans = ARG_TYPE.NATIVE
+    else:
         try:
             if not arg.is_numeric_type():
                 if hasattr(arg, 'as_binary'):
-                    types.append(_EXPR_TYPE.AS_BINARY)
+                    ans = ARG_TYPE.AS_BINARY
                 else:
-                    types.append(_EXPR_TYPE.INVALID)
-                continue
+                    ans = ARG_TYPE.INVALID
+            else:
+                ans = None
         except AttributeError:
             if check_if_numeric_type(arg):
-                types.append(_EXPR_TYPE.NATIVE)
+                ans = ARG_TYPE.NATIVE
             else:
-                types.append(_EXPR_TYPE.INVALID)
-            continue
+                ans = ARG_TYPE.INVALID
+
+    if ans is None:
         if arg.is_expression_type():
             # Note: this makes a strong assumption that NPV is a class
             # attribute and not determined by the current expression
             # arguments / state.
             if not arg.is_potentially_variable():
-                types.append(_EXPR_TYPE.NPV)
+                ans = ARG_TYPE.NPV
                 # TODO: remove NPV_expression_types
                 NPV_expression_types.add(arg.__class__)
             elif isinstance(arg, _MutableSumExpression):
-                types.append(_EXPR_TYPE.MUTABLE)
+                ans = ARG_TYPE.MUTABLE
             elif arg.__class__ is MonomialTermExpression:
-                types.append(_EXPR_TYPE.MONOMIAL)
+                ans = ARG_TYPE.MONOMIAL
             elif isinstance(arg, LinearExpression):
-                types.append(_EXPR_TYPE.LINEAR)
+                ans = ARG_TYPE.LINEAR
             elif isinstance(arg, SumExpression):
-                types.append(_EXPR_TYPE.SUM)
+                ans = ARG_TYPE.SUM
             else:
-                types.append(_EXPR_TYPE.OTHER)
+                ans = ARG_TYPE.OTHER
         else:
             if not arg.is_potentially_variable():
-                types.append(_EXPR_TYPE.PARAM)
+                ans = ARG_TYPE.PARAM
             elif arg.is_variable_type():
-                types.append(_EXPR_TYPE.VAR)
+                ans = ARG_TYPE.VAR
             else:
-                types.append(_EXPR_TYPE.OTHER)
-    return tuple(types)
+                ans = ARG_TYPE.OTHER
+    register_arg_type(arg.__class__, ans)
+    return ans
+
+
+def _categorize_arg_types(*args):
+    return tuple(_categorize_arg_type(arg) for arg in args)
 
 
 def _process_arg(obj):
@@ -1252,9 +1267,9 @@ def _unary_op_dispatcher_type_mapping(dispatcher, updates):
         return dispatcher[a.__class__](a)
 
     mapping = {
-        _EXPR_TYPE.ASBINARY: _asbinary,
-        _EXPR_TYPE.MUTABLE: _mutable,
-        _EXPR_TYPE.INVALID: _invalid,
+        ARG_TYPE.ASBINARY: _asbinary,
+        ARG_TYPE.MUTABLE: _mutable,
+        ARG_TYPE.INVALID: _invalid,
     }
 
     mapping.update(updates)
@@ -1294,16 +1309,16 @@ def _binary_op_dispatcher_type_mapping(dispatcher, updates):
         return dispatcher[a.__class__, b.__class__](a, b)
 
     mapping = {}
-    mapping.update({(i, _EXPR_TYPE.ASBINARY): _any_asbinary for i in _EXPR_TYPE})
-    mapping.update({(_EXPR_TYPE.ASBINARY, i): _asbinary_any for i in _EXPR_TYPE})
-    mapping[_EXPR_TYPE.ASBINARY, _EXPR_TYPE.ASBINARY] = _asbinary_asbinary
+    mapping.update({(i, ARG_TYPE.ASBINARY): _any_asbinary for i in ARG_TYPE})
+    mapping.update({(ARG_TYPE.ASBINARY, i): _asbinary_any for i in ARG_TYPE})
+    mapping[ARG_TYPE.ASBINARY, ARG_TYPE.ASBINARY] = _asbinary_asbinary
 
-    mapping.update({(i, _EXPR_TYPE.MUTABLE): _any_mutable for i in _EXPR_TYPE})
-    mapping.update({(_EXPR_TYPE.MUTABLE, i): _mutable_any for i in _EXPR_TYPE})
-    mapping[_EXPR_TYPE.MUTABLE, _EXPR_TYPE.MUTABLE] = _mutable_mutable
+    mapping.update({(i, ARG_TYPE.MUTABLE): _any_mutable for i in ARG_TYPE})
+    mapping.update({(ARG_TYPE.MUTABLE, i): _mutable_any for i in ARG_TYPE})
+    mapping[ARG_TYPE.MUTABLE, ARG_TYPE.MUTABLE] = _mutable_mutable
 
-    mapping.update({(i, _EXPR_TYPE.INVALID): _invalid for i in _EXPR_TYPE})
-    mapping.update({(_EXPR_TYPE.INVALID, i): _invalid for i in _EXPR_TYPE})
+    mapping.update({(i, ARG_TYPE.INVALID): _invalid for i in ARG_TYPE})
+    mapping.update({(ARG_TYPE.INVALID, i): _invalid for i in ARG_TYPE})
 
     mapping.update(updates)
     return mapping
@@ -1689,77 +1704,77 @@ _add_dispatcher = collections.defaultdict(lambda: _register_new_add_handler)
 
 _add_type_handler_mapping = _binary_op_dispatcher_type_mapping(
     _add_dispatcher, {
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NATIVE): _add_native_native,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NPV): _add_native_npv,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.PARAM): _add_native_param,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.VAR): _add_native_var,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.MONOMIAL): _add_native_monomial,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.LINEAR): _add_native_linear,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.SUM): _add_native_sum,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.OTHER): _add_native_other,
+        (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _add_native_native,
+        (ARG_TYPE.NATIVE, ARG_TYPE.NPV): _add_native_npv,
+        (ARG_TYPE.NATIVE, ARG_TYPE.PARAM): _add_native_param,
+        (ARG_TYPE.NATIVE, ARG_TYPE.VAR): _add_native_var,
+        (ARG_TYPE.NATIVE, ARG_TYPE.MONOMIAL): _add_native_monomial,
+        (ARG_TYPE.NATIVE, ARG_TYPE.LINEAR): _add_native_linear,
+        (ARG_TYPE.NATIVE, ARG_TYPE.SUM): _add_native_sum,
+        (ARG_TYPE.NATIVE, ARG_TYPE.OTHER): _add_native_other,
 
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.NATIVE): _add_npv_native,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.NPV): _add_npv_npv,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.PARAM): _add_npv_param,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.VAR): _add_npv_var,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.MONOMIAL): _add_npv_monomial,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.LINEAR): _add_npv_linear,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.SUM): _add_npv_sum,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.OTHER): _add_npv_other,
+        (ARG_TYPE.NPV, ARG_TYPE.NATIVE): _add_npv_native,
+        (ARG_TYPE.NPV, ARG_TYPE.NPV): _add_npv_npv,
+        (ARG_TYPE.NPV, ARG_TYPE.PARAM): _add_npv_param,
+        (ARG_TYPE.NPV, ARG_TYPE.VAR): _add_npv_var,
+        (ARG_TYPE.NPV, ARG_TYPE.MONOMIAL): _add_npv_monomial,
+        (ARG_TYPE.NPV, ARG_TYPE.LINEAR): _add_npv_linear,
+        (ARG_TYPE.NPV, ARG_TYPE.SUM): _add_npv_sum,
+        (ARG_TYPE.NPV, ARG_TYPE.OTHER): _add_npv_other,
 
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NATIVE): _add_param_native,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NPV): _add_param_npv,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.PARAM): _add_param_param,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.VAR): _add_param_var,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.MONOMIAL): _add_param_monomial,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.LINEAR): _add_param_linear,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.SUM): _add_param_sum,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.OTHER): _add_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _add_param_native,
+        (ARG_TYPE.PARAM, ARG_TYPE.NPV): _add_param_npv,
+        (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _add_param_param,
+        (ARG_TYPE.PARAM, ARG_TYPE.VAR): _add_param_var,
+        (ARG_TYPE.PARAM, ARG_TYPE.MONOMIAL): _add_param_monomial,
+        (ARG_TYPE.PARAM, ARG_TYPE.LINEAR): _add_param_linear,
+        (ARG_TYPE.PARAM, ARG_TYPE.SUM): _add_param_sum,
+        (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _add_param_other,
 
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.NATIVE): _add_var_native,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.NPV): _add_var_npv,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.PARAM): _add_var_param,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.VAR): _add_var_var,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.MONOMIAL): _add_var_monomial,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.LINEAR): _add_var_linear,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.SUM): _add_var_sum,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.OTHER): _add_var_other,
+        (ARG_TYPE.VAR, ARG_TYPE.NATIVE): _add_var_native,
+        (ARG_TYPE.VAR, ARG_TYPE.NPV): _add_var_npv,
+        (ARG_TYPE.VAR, ARG_TYPE.PARAM): _add_var_param,
+        (ARG_TYPE.VAR, ARG_TYPE.VAR): _add_var_var,
+        (ARG_TYPE.VAR, ARG_TYPE.MONOMIAL): _add_var_monomial,
+        (ARG_TYPE.VAR, ARG_TYPE.LINEAR): _add_var_linear,
+        (ARG_TYPE.VAR, ARG_TYPE.SUM): _add_var_sum,
+        (ARG_TYPE.VAR, ARG_TYPE.OTHER): _add_var_other,
 
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NATIVE): _add_monomial_native,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NPV): _add_monomial_npv,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.PARAM): _add_monomial_param,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.VAR): _add_monomial_var,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.MONOMIAL): _add_monomial_monomial,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.LINEAR): _add_monomial_linear,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.SUM): _add_monomial_sum,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.OTHER): _add_monomial_other,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.NATIVE): _add_monomial_native,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.NPV): _add_monomial_npv,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.PARAM): _add_monomial_param,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.VAR): _add_monomial_var,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.MONOMIAL): _add_monomial_monomial,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.LINEAR): _add_monomial_linear,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.SUM): _add_monomial_sum,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.OTHER): _add_monomial_other,
 
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NATIVE): _add_linear_native,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NPV): _add_linear_npv,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.PARAM): _add_linear_param,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.VAR): _add_linear_var,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.MONOMIAL): _add_linear_monomial,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.LINEAR): _add_linear_linear,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.SUM): _add_linear_sum,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.OTHER): _add_linear_other,
+        (ARG_TYPE.LINEAR, ARG_TYPE.NATIVE): _add_linear_native,
+        (ARG_TYPE.LINEAR, ARG_TYPE.NPV): _add_linear_npv,
+        (ARG_TYPE.LINEAR, ARG_TYPE.PARAM): _add_linear_param,
+        (ARG_TYPE.LINEAR, ARG_TYPE.VAR): _add_linear_var,
+        (ARG_TYPE.LINEAR, ARG_TYPE.MONOMIAL): _add_linear_monomial,
+        (ARG_TYPE.LINEAR, ARG_TYPE.LINEAR): _add_linear_linear,
+        (ARG_TYPE.LINEAR, ARG_TYPE.SUM): _add_linear_sum,
+        (ARG_TYPE.LINEAR, ARG_TYPE.OTHER): _add_linear_other,
 
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.NATIVE): _add_sum_native,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.NPV): _add_sum_npv,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.PARAM): _add_sum_param,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.VAR): _add_sum_var,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.MONOMIAL): _add_sum_monomial,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.LINEAR): _add_sum_linear,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.SUM): _add_sum_sum,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.OTHER): _add_sum_other,
+        (ARG_TYPE.SUM, ARG_TYPE.NATIVE): _add_sum_native,
+        (ARG_TYPE.SUM, ARG_TYPE.NPV): _add_sum_npv,
+        (ARG_TYPE.SUM, ARG_TYPE.PARAM): _add_sum_param,
+        (ARG_TYPE.SUM, ARG_TYPE.VAR): _add_sum_var,
+        (ARG_TYPE.SUM, ARG_TYPE.MONOMIAL): _add_sum_monomial,
+        (ARG_TYPE.SUM, ARG_TYPE.LINEAR): _add_sum_linear,
+        (ARG_TYPE.SUM, ARG_TYPE.SUM): _add_sum_sum,
+        (ARG_TYPE.SUM, ARG_TYPE.OTHER): _add_sum_other,
 
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NATIVE): _add_other_native,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NPV): _add_other_npv,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.PARAM): _add_other_param,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.VAR): _add_other_var,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.MONOMIAL): _add_other_monomial,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.LINEAR): _add_other_linear,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.SUM): _add_other_sum,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.OTHER): _add_other_other,
+        (ARG_TYPE.OTHER, ARG_TYPE.NATIVE): _add_other_native,
+        (ARG_TYPE.OTHER, ARG_TYPE.NPV): _add_other_npv,
+        (ARG_TYPE.OTHER, ARG_TYPE.PARAM): _add_other_param,
+        (ARG_TYPE.OTHER, ARG_TYPE.VAR): _add_other_var,
+        (ARG_TYPE.OTHER, ARG_TYPE.MONOMIAL): _add_other_monomial,
+        (ARG_TYPE.OTHER, ARG_TYPE.LINEAR): _add_other_linear,
+        (ARG_TYPE.OTHER, ARG_TYPE.SUM): _add_other_sum,
+        (ARG_TYPE.OTHER, ARG_TYPE.OTHER): _add_other_other,
 })
 
 #
@@ -1816,17 +1831,17 @@ def _iadd_mutablenpvsum_other(a, b):
     return _iadd_mutablesum_other(a, b)
 
 _iadd_mutablenpvsum_type_handler_mapping = {
-    _EXPR_TYPE.INVALID: _invalid,
-    _EXPR_TYPE.ASBINARY: _iadd_mutablenpvsum_asbinary,
-    _EXPR_TYPE.MUTABLE: _iadd_mutablenpvsum_mutable,
-    _EXPR_TYPE.NATIVE: _iadd_mutablenpvsum_native,
-    _EXPR_TYPE.NPV: _iadd_mutablenpvsum_npv,
-    _EXPR_TYPE.PARAM: _iadd_mutablenpvsum_param,
-    _EXPR_TYPE.VAR: _iadd_mutablenpvsum_var,
-    _EXPR_TYPE.MONOMIAL: _iadd_mutablenpvsum_monomial,
-    _EXPR_TYPE.LINEAR: _iadd_mutablenpvsum_linear,
-    _EXPR_TYPE.SUM: _iadd_mutablenpvsum_sum,
-    _EXPR_TYPE.OTHER: _iadd_mutablenpvsum_other,
+    ARG_TYPE.INVALID: _invalid,
+    ARG_TYPE.ASBINARY: _iadd_mutablenpvsum_asbinary,
+    ARG_TYPE.MUTABLE: _iadd_mutablenpvsum_mutable,
+    ARG_TYPE.NATIVE: _iadd_mutablenpvsum_native,
+    ARG_TYPE.NPV: _iadd_mutablenpvsum_npv,
+    ARG_TYPE.PARAM: _iadd_mutablenpvsum_param,
+    ARG_TYPE.VAR: _iadd_mutablenpvsum_var,
+    ARG_TYPE.MONOMIAL: _iadd_mutablenpvsum_monomial,
+    ARG_TYPE.LINEAR: _iadd_mutablenpvsum_linear,
+    ARG_TYPE.SUM: _iadd_mutablenpvsum_sum,
+    ARG_TYPE.OTHER: _iadd_mutablenpvsum_other,
 }
 
 def _register_new_iadd_mutablenpvsum_handler(a, b):
@@ -1900,17 +1915,17 @@ def _iadd_mutablelinear_other(a, b):
     return _iadd_mutablesum_other(a, b)
 
 _iadd_mutablelinear_type_handler_mapping = {
-    _EXPR_TYPE.INVALID: _invalid,
-    _EXPR_TYPE.ASBINARY: _iadd_mutablelinear_asbinary,
-    _EXPR_TYPE.MUTABLE: _iadd_mutablelinear_mutable,
-    _EXPR_TYPE.NATIVE: _iadd_mutablelinear_native,
-    _EXPR_TYPE.NPV: _iadd_mutablelinear_npv,
-    _EXPR_TYPE.PARAM: _iadd_mutablelinear_param,
-    _EXPR_TYPE.VAR: _iadd_mutablelinear_var,
-    _EXPR_TYPE.MONOMIAL: _iadd_mutablelinear_monomial,
-    _EXPR_TYPE.LINEAR: _iadd_mutablelinear_linear,
-    _EXPR_TYPE.SUM: _iadd_mutablelinear_sum,
-    _EXPR_TYPE.OTHER: _iadd_mutablelinear_other,
+    ARG_TYPE.INVALID: _invalid,
+    ARG_TYPE.ASBINARY: _iadd_mutablelinear_asbinary,
+    ARG_TYPE.MUTABLE: _iadd_mutablelinear_mutable,
+    ARG_TYPE.NATIVE: _iadd_mutablelinear_native,
+    ARG_TYPE.NPV: _iadd_mutablelinear_npv,
+    ARG_TYPE.PARAM: _iadd_mutablelinear_param,
+    ARG_TYPE.VAR: _iadd_mutablelinear_var,
+    ARG_TYPE.MONOMIAL: _iadd_mutablelinear_monomial,
+    ARG_TYPE.LINEAR: _iadd_mutablelinear_linear,
+    ARG_TYPE.SUM: _iadd_mutablelinear_sum,
+    ARG_TYPE.OTHER: _iadd_mutablelinear_other,
 }
 
 def _register_new_iadd_mutablelinear_handler(a, b):
@@ -1986,17 +2001,17 @@ def _iadd_mutablesum_other(a, b):
     return a
 
 _iadd_mutablesum_type_handler_mapping = {
-    _EXPR_TYPE.INVALID: _invalid,
-    _EXPR_TYPE.ASBINARY: _iadd_mutablesum_asbinary,
-    _EXPR_TYPE.MUTABLE: _iadd_mutablesum_mutable,
-    _EXPR_TYPE.NATIVE: _iadd_mutablesum_native,
-    _EXPR_TYPE.NPV: _iadd_mutablesum_npv,
-    _EXPR_TYPE.PARAM: _iadd_mutablesum_param,
-    _EXPR_TYPE.VAR: _iadd_mutablesum_var,
-    _EXPR_TYPE.MONOMIAL: _iadd_mutablesum_monomial,
-    _EXPR_TYPE.LINEAR: _iadd_mutablesum_linear,
-    _EXPR_TYPE.SUM: _iadd_mutablesum_sum,
-    _EXPR_TYPE.OTHER: _iadd_mutablesum_other,
+    ARG_TYPE.INVALID: _invalid,
+    ARG_TYPE.ASBINARY: _iadd_mutablesum_asbinary,
+    ARG_TYPE.MUTABLE: _iadd_mutablesum_mutable,
+    ARG_TYPE.NATIVE: _iadd_mutablesum_native,
+    ARG_TYPE.NPV: _iadd_mutablesum_npv,
+    ARG_TYPE.PARAM: _iadd_mutablesum_param,
+    ARG_TYPE.VAR: _iadd_mutablesum_var,
+    ARG_TYPE.MONOMIAL: _iadd_mutablesum_monomial,
+    ARG_TYPE.LINEAR: _iadd_mutablesum_linear,
+    ARG_TYPE.SUM: _iadd_mutablesum_sum,
+    ARG_TYPE.OTHER: _iadd_mutablesum_other,
 }
 
 def _register_new_iadd_mutablesum_handler(a, b):
@@ -2061,14 +2076,14 @@ _neg_dispatcher = collections.defaultdict(lambda: _register_new_neg_handler)
 
 _neg_type_handler_mapping = _unary_op_dispatcher_type_mapping(
     _neg_dispatcher, {
-        _EXPR_TYPE.NATIVE: _neg_native,
-        _EXPR_TYPE.NPV: _neg_npv,
-        _EXPR_TYPE.PARAM: _neg_param,
-        _EXPR_TYPE.VAR: _neg_var,
-        _EXPR_TYPE.MONOMIAL: _neg_monomial,
-        _EXPR_TYPE.LINEAR: _neg_sum,
-        _EXPR_TYPE.SUM: _neg_sum,
-        _EXPR_TYPE.OTHER: _neg_other,
+        ARG_TYPE.NATIVE: _neg_native,
+        ARG_TYPE.NPV: _neg_npv,
+        ARG_TYPE.PARAM: _neg_param,
+        ARG_TYPE.VAR: _neg_var,
+        ARG_TYPE.MONOMIAL: _neg_monomial,
+        ARG_TYPE.LINEAR: _neg_sum,
+        ARG_TYPE.SUM: _neg_sum,
+        ARG_TYPE.OTHER: _neg_other,
 })
 
 
@@ -2402,77 +2417,77 @@ _mul_dispatcher = collections.defaultdict(lambda: _register_new_mul_handler)
 
 _mul_type_handler_mapping = _binary_op_dispatcher_type_mapping(
     _mul_dispatcher, {
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NATIVE): _mul_native_native,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NPV): _mul_native_npv,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.PARAM): _mul_native_param,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.VAR): _mul_native_var,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.MONOMIAL): _mul_native_monomial,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.LINEAR): _mul_native_linear,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.SUM): _mul_native_sum,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.OTHER): _mul_native_other,
+        (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _mul_native_native,
+        (ARG_TYPE.NATIVE, ARG_TYPE.NPV): _mul_native_npv,
+        (ARG_TYPE.NATIVE, ARG_TYPE.PARAM): _mul_native_param,
+        (ARG_TYPE.NATIVE, ARG_TYPE.VAR): _mul_native_var,
+        (ARG_TYPE.NATIVE, ARG_TYPE.MONOMIAL): _mul_native_monomial,
+        (ARG_TYPE.NATIVE, ARG_TYPE.LINEAR): _mul_native_linear,
+        (ARG_TYPE.NATIVE, ARG_TYPE.SUM): _mul_native_sum,
+        (ARG_TYPE.NATIVE, ARG_TYPE.OTHER): _mul_native_other,
 
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.NATIVE): _mul_npv_native,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.NPV): _mul_npv_npv,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.PARAM): _mul_npv_param,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.VAR): _mul_npv_var,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.MONOMIAL): _mul_npv_monomial,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.LINEAR): _mul_npv_linear,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.SUM): _mul_npv_sum,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.OTHER): _mul_npv_other,
+        (ARG_TYPE.NPV, ARG_TYPE.NATIVE): _mul_npv_native,
+        (ARG_TYPE.NPV, ARG_TYPE.NPV): _mul_npv_npv,
+        (ARG_TYPE.NPV, ARG_TYPE.PARAM): _mul_npv_param,
+        (ARG_TYPE.NPV, ARG_TYPE.VAR): _mul_npv_var,
+        (ARG_TYPE.NPV, ARG_TYPE.MONOMIAL): _mul_npv_monomial,
+        (ARG_TYPE.NPV, ARG_TYPE.LINEAR): _mul_npv_linear,
+        (ARG_TYPE.NPV, ARG_TYPE.SUM): _mul_npv_sum,
+        (ARG_TYPE.NPV, ARG_TYPE.OTHER): _mul_npv_other,
 
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NATIVE): _mul_param_native,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NPV): _mul_param_npv,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.PARAM): _mul_param_param,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.VAR): _mul_param_var,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.MONOMIAL): _mul_param_monomial,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.LINEAR): _mul_param_linear,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.SUM): _mul_param_sum,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.OTHER): _mul_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _mul_param_native,
+        (ARG_TYPE.PARAM, ARG_TYPE.NPV): _mul_param_npv,
+        (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _mul_param_param,
+        (ARG_TYPE.PARAM, ARG_TYPE.VAR): _mul_param_var,
+        (ARG_TYPE.PARAM, ARG_TYPE.MONOMIAL): _mul_param_monomial,
+        (ARG_TYPE.PARAM, ARG_TYPE.LINEAR): _mul_param_linear,
+        (ARG_TYPE.PARAM, ARG_TYPE.SUM): _mul_param_sum,
+        (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _mul_param_other,
 
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.NATIVE): _mul_var_native,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.NPV): _mul_var_npv,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.PARAM): _mul_var_param,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.VAR): _mul_var_var,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.MONOMIAL): _mul_var_monomial,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.LINEAR): _mul_var_linear,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.SUM): _mul_var_sum,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.OTHER): _mul_var_other,
+        (ARG_TYPE.VAR, ARG_TYPE.NATIVE): _mul_var_native,
+        (ARG_TYPE.VAR, ARG_TYPE.NPV): _mul_var_npv,
+        (ARG_TYPE.VAR, ARG_TYPE.PARAM): _mul_var_param,
+        (ARG_TYPE.VAR, ARG_TYPE.VAR): _mul_var_var,
+        (ARG_TYPE.VAR, ARG_TYPE.MONOMIAL): _mul_var_monomial,
+        (ARG_TYPE.VAR, ARG_TYPE.LINEAR): _mul_var_linear,
+        (ARG_TYPE.VAR, ARG_TYPE.SUM): _mul_var_sum,
+        (ARG_TYPE.VAR, ARG_TYPE.OTHER): _mul_var_other,
 
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NATIVE): _mul_monomial_native,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NPV): _mul_monomial_npv,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.PARAM): _mul_monomial_param,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.VAR): _mul_monomial_var,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.MONOMIAL): _mul_monomial_monomial,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.LINEAR): _mul_monomial_linear,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.SUM): _mul_monomial_sum,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.OTHER): _mul_monomial_other,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.NATIVE): _mul_monomial_native,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.NPV): _mul_monomial_npv,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.PARAM): _mul_monomial_param,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.VAR): _mul_monomial_var,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.MONOMIAL): _mul_monomial_monomial,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.LINEAR): _mul_monomial_linear,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.SUM): _mul_monomial_sum,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.OTHER): _mul_monomial_other,
 
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NATIVE): _mul_linear_native,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NPV): _mul_linear_npv,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.PARAM): _mul_linear_param,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.VAR): _mul_linear_var,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.MONOMIAL): _mul_linear_monomial,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.LINEAR): _mul_linear_linear,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.SUM): _mul_linear_sum,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.OTHER): _mul_linear_other,
+        (ARG_TYPE.LINEAR, ARG_TYPE.NATIVE): _mul_linear_native,
+        (ARG_TYPE.LINEAR, ARG_TYPE.NPV): _mul_linear_npv,
+        (ARG_TYPE.LINEAR, ARG_TYPE.PARAM): _mul_linear_param,
+        (ARG_TYPE.LINEAR, ARG_TYPE.VAR): _mul_linear_var,
+        (ARG_TYPE.LINEAR, ARG_TYPE.MONOMIAL): _mul_linear_monomial,
+        (ARG_TYPE.LINEAR, ARG_TYPE.LINEAR): _mul_linear_linear,
+        (ARG_TYPE.LINEAR, ARG_TYPE.SUM): _mul_linear_sum,
+        (ARG_TYPE.LINEAR, ARG_TYPE.OTHER): _mul_linear_other,
 
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.NATIVE): _mul_sum_native,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.NPV): _mul_sum_npv,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.PARAM): _mul_sum_param,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.VAR): _mul_sum_var,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.MONOMIAL): _mul_sum_monomial,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.LINEAR): _mul_sum_linear,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.SUM): _mul_sum_sum,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.OTHER): _mul_sum_other,
+        (ARG_TYPE.SUM, ARG_TYPE.NATIVE): _mul_sum_native,
+        (ARG_TYPE.SUM, ARG_TYPE.NPV): _mul_sum_npv,
+        (ARG_TYPE.SUM, ARG_TYPE.PARAM): _mul_sum_param,
+        (ARG_TYPE.SUM, ARG_TYPE.VAR): _mul_sum_var,
+        (ARG_TYPE.SUM, ARG_TYPE.MONOMIAL): _mul_sum_monomial,
+        (ARG_TYPE.SUM, ARG_TYPE.LINEAR): _mul_sum_linear,
+        (ARG_TYPE.SUM, ARG_TYPE.SUM): _mul_sum_sum,
+        (ARG_TYPE.SUM, ARG_TYPE.OTHER): _mul_sum_other,
 
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NATIVE): _mul_other_native,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NPV): _mul_other_npv,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.PARAM): _mul_other_param,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.VAR): _mul_other_var,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.MONOMIAL): _mul_other_monomial,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.LINEAR): _mul_other_linear,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.SUM): _mul_other_sum,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.OTHER): _mul_other_other,
+        (ARG_TYPE.OTHER, ARG_TYPE.NATIVE): _mul_other_native,
+        (ARG_TYPE.OTHER, ARG_TYPE.NPV): _mul_other_npv,
+        (ARG_TYPE.OTHER, ARG_TYPE.PARAM): _mul_other_param,
+        (ARG_TYPE.OTHER, ARG_TYPE.VAR): _mul_other_var,
+        (ARG_TYPE.OTHER, ARG_TYPE.MONOMIAL): _mul_other_monomial,
+        (ARG_TYPE.OTHER, ARG_TYPE.LINEAR): _mul_other_linear,
+        (ARG_TYPE.OTHER, ARG_TYPE.SUM): _mul_other_sum,
+        (ARG_TYPE.OTHER, ARG_TYPE.OTHER): _mul_other_other,
 })
 
 
@@ -2780,77 +2795,77 @@ _div_dispatcher = collections.defaultdict(lambda: _register_new_div_handler)
 
 _div_type_handler_mapping = _binary_op_dispatcher_type_mapping(
     _div_dispatcher, {
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NATIVE): _div_native_native,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NPV): _div_native_npv,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.PARAM): _div_native_param,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.VAR): _div_native_var,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.MONOMIAL): _div_native_monomial,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.LINEAR): _div_native_linear,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.SUM): _div_native_sum,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.OTHER): _div_native_other,
+        (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _div_native_native,
+        (ARG_TYPE.NATIVE, ARG_TYPE.NPV): _div_native_npv,
+        (ARG_TYPE.NATIVE, ARG_TYPE.PARAM): _div_native_param,
+        (ARG_TYPE.NATIVE, ARG_TYPE.VAR): _div_native_var,
+        (ARG_TYPE.NATIVE, ARG_TYPE.MONOMIAL): _div_native_monomial,
+        (ARG_TYPE.NATIVE, ARG_TYPE.LINEAR): _div_native_linear,
+        (ARG_TYPE.NATIVE, ARG_TYPE.SUM): _div_native_sum,
+        (ARG_TYPE.NATIVE, ARG_TYPE.OTHER): _div_native_other,
 
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.NATIVE): _div_npv_native,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.NPV): _div_npv_npv,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.PARAM): _div_npv_param,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.VAR): _div_npv_var,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.MONOMIAL): _div_npv_monomial,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.LINEAR): _div_npv_linear,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.SUM): _div_npv_sum,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.OTHER): _div_npv_other,
+        (ARG_TYPE.NPV, ARG_TYPE.NATIVE): _div_npv_native,
+        (ARG_TYPE.NPV, ARG_TYPE.NPV): _div_npv_npv,
+        (ARG_TYPE.NPV, ARG_TYPE.PARAM): _div_npv_param,
+        (ARG_TYPE.NPV, ARG_TYPE.VAR): _div_npv_var,
+        (ARG_TYPE.NPV, ARG_TYPE.MONOMIAL): _div_npv_monomial,
+        (ARG_TYPE.NPV, ARG_TYPE.LINEAR): _div_npv_linear,
+        (ARG_TYPE.NPV, ARG_TYPE.SUM): _div_npv_sum,
+        (ARG_TYPE.NPV, ARG_TYPE.OTHER): _div_npv_other,
 
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NATIVE): _div_param_native,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NPV): _div_param_npv,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.PARAM): _div_param_param,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.VAR): _div_param_var,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.MONOMIAL): _div_param_monomial,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.LINEAR): _div_param_linear,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.SUM): _div_param_sum,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.OTHER): _div_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _div_param_native,
+        (ARG_TYPE.PARAM, ARG_TYPE.NPV): _div_param_npv,
+        (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _div_param_param,
+        (ARG_TYPE.PARAM, ARG_TYPE.VAR): _div_param_var,
+        (ARG_TYPE.PARAM, ARG_TYPE.MONOMIAL): _div_param_monomial,
+        (ARG_TYPE.PARAM, ARG_TYPE.LINEAR): _div_param_linear,
+        (ARG_TYPE.PARAM, ARG_TYPE.SUM): _div_param_sum,
+        (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _div_param_other,
 
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.NATIVE): _div_var_native,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.NPV): _div_var_npv,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.PARAM): _div_var_param,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.VAR): _div_var_var,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.MONOMIAL): _div_var_monomial,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.LINEAR): _div_var_linear,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.SUM): _div_var_sum,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.OTHER): _div_var_other,
+        (ARG_TYPE.VAR, ARG_TYPE.NATIVE): _div_var_native,
+        (ARG_TYPE.VAR, ARG_TYPE.NPV): _div_var_npv,
+        (ARG_TYPE.VAR, ARG_TYPE.PARAM): _div_var_param,
+        (ARG_TYPE.VAR, ARG_TYPE.VAR): _div_var_var,
+        (ARG_TYPE.VAR, ARG_TYPE.MONOMIAL): _div_var_monomial,
+        (ARG_TYPE.VAR, ARG_TYPE.LINEAR): _div_var_linear,
+        (ARG_TYPE.VAR, ARG_TYPE.SUM): _div_var_sum,
+        (ARG_TYPE.VAR, ARG_TYPE.OTHER): _div_var_other,
 
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NATIVE): _div_monomial_native,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NPV): _div_monomial_npv,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.PARAM): _div_monomial_param,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.VAR): _div_monomial_var,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.MONOMIAL): _div_monomial_monomial,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.LINEAR): _div_monomial_linear,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.SUM): _div_monomial_sum,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.OTHER): _div_monomial_other,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.NATIVE): _div_monomial_native,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.NPV): _div_monomial_npv,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.PARAM): _div_monomial_param,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.VAR): _div_monomial_var,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.MONOMIAL): _div_monomial_monomial,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.LINEAR): _div_monomial_linear,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.SUM): _div_monomial_sum,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.OTHER): _div_monomial_other,
 
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NATIVE): _div_linear_native,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NPV): _div_linear_npv,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.PARAM): _div_linear_param,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.VAR): _div_linear_var,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.MONOMIAL): _div_linear_monomial,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.LINEAR): _div_linear_linear,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.SUM): _div_linear_sum,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.OTHER): _div_linear_other,
+        (ARG_TYPE.LINEAR, ARG_TYPE.NATIVE): _div_linear_native,
+        (ARG_TYPE.LINEAR, ARG_TYPE.NPV): _div_linear_npv,
+        (ARG_TYPE.LINEAR, ARG_TYPE.PARAM): _div_linear_param,
+        (ARG_TYPE.LINEAR, ARG_TYPE.VAR): _div_linear_var,
+        (ARG_TYPE.LINEAR, ARG_TYPE.MONOMIAL): _div_linear_monomial,
+        (ARG_TYPE.LINEAR, ARG_TYPE.LINEAR): _div_linear_linear,
+        (ARG_TYPE.LINEAR, ARG_TYPE.SUM): _div_linear_sum,
+        (ARG_TYPE.LINEAR, ARG_TYPE.OTHER): _div_linear_other,
 
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.NATIVE): _div_sum_native,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.NPV): _div_sum_npv,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.PARAM): _div_sum_param,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.VAR): _div_sum_var,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.MONOMIAL): _div_sum_monomial,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.LINEAR): _div_sum_linear,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.SUM): _div_sum_sum,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.OTHER): _div_sum_other,
+        (ARG_TYPE.SUM, ARG_TYPE.NATIVE): _div_sum_native,
+        (ARG_TYPE.SUM, ARG_TYPE.NPV): _div_sum_npv,
+        (ARG_TYPE.SUM, ARG_TYPE.PARAM): _div_sum_param,
+        (ARG_TYPE.SUM, ARG_TYPE.VAR): _div_sum_var,
+        (ARG_TYPE.SUM, ARG_TYPE.MONOMIAL): _div_sum_monomial,
+        (ARG_TYPE.SUM, ARG_TYPE.LINEAR): _div_sum_linear,
+        (ARG_TYPE.SUM, ARG_TYPE.SUM): _div_sum_sum,
+        (ARG_TYPE.SUM, ARG_TYPE.OTHER): _div_sum_other,
 
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NATIVE): _div_other_native,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NPV): _div_other_npv,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.PARAM): _div_other_param,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.VAR): _div_other_var,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.MONOMIAL): _div_other_monomial,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.LINEAR): _div_other_linear,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.SUM): _div_other_sum,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.OTHER): _div_other_other,
+        (ARG_TYPE.OTHER, ARG_TYPE.NATIVE): _div_other_native,
+        (ARG_TYPE.OTHER, ARG_TYPE.NPV): _div_other_npv,
+        (ARG_TYPE.OTHER, ARG_TYPE.PARAM): _div_other_param,
+        (ARG_TYPE.OTHER, ARG_TYPE.VAR): _div_other_var,
+        (ARG_TYPE.OTHER, ARG_TYPE.MONOMIAL): _div_other_monomial,
+        (ARG_TYPE.OTHER, ARG_TYPE.LINEAR): _div_other_linear,
+        (ARG_TYPE.OTHER, ARG_TYPE.SUM): _div_other_sum,
+        (ARG_TYPE.OTHER, ARG_TYPE.OTHER): _div_other_other,
 })
 
 
@@ -2965,56 +2980,56 @@ _pow_dispatcher = collections.defaultdict(lambda: _register_new_pow_handler)
 
 _pow_type_handler_mapping = _binary_op_dispatcher_type_mapping(
     _pow_dispatcher, {
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NATIVE): _pow_native_native,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.NPV): _pow_native_npv,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.PARAM): _pow_native_param,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.VAR): _pow_native_other,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.MONOMIAL): _pow_native_other,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.LINEAR): _pow_native_other,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.SUM): _pow_native_other,
-        (_EXPR_TYPE.NATIVE, _EXPR_TYPE.OTHER): _pow_native_other,
+        (ARG_TYPE.NATIVE, ARG_TYPE.NATIVE): _pow_native_native,
+        (ARG_TYPE.NATIVE, ARG_TYPE.NPV): _pow_native_npv,
+        (ARG_TYPE.NATIVE, ARG_TYPE.PARAM): _pow_native_param,
+        (ARG_TYPE.NATIVE, ARG_TYPE.VAR): _pow_native_other,
+        (ARG_TYPE.NATIVE, ARG_TYPE.MONOMIAL): _pow_native_other,
+        (ARG_TYPE.NATIVE, ARG_TYPE.LINEAR): _pow_native_other,
+        (ARG_TYPE.NATIVE, ARG_TYPE.SUM): _pow_native_other,
+        (ARG_TYPE.NATIVE, ARG_TYPE.OTHER): _pow_native_other,
 
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.NATIVE): _pow_npv_native,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.NPV): _pow_npv_npv,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.PARAM): _pow_npv_param,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.VAR): _pow_npv_other,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.MONOMIAL): _pow_npv_other,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.LINEAR): _pow_npv_other,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.SUM): _pow_npv_other,
-        (_EXPR_TYPE.NPV, _EXPR_TYPE.OTHER): _pow_npv_other,
+        (ARG_TYPE.NPV, ARG_TYPE.NATIVE): _pow_npv_native,
+        (ARG_TYPE.NPV, ARG_TYPE.NPV): _pow_npv_npv,
+        (ARG_TYPE.NPV, ARG_TYPE.PARAM): _pow_npv_param,
+        (ARG_TYPE.NPV, ARG_TYPE.VAR): _pow_npv_other,
+        (ARG_TYPE.NPV, ARG_TYPE.MONOMIAL): _pow_npv_other,
+        (ARG_TYPE.NPV, ARG_TYPE.LINEAR): _pow_npv_other,
+        (ARG_TYPE.NPV, ARG_TYPE.SUM): _pow_npv_other,
+        (ARG_TYPE.NPV, ARG_TYPE.OTHER): _pow_npv_other,
 
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NATIVE): _pow_param_native,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.NPV): _pow_param_npv,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.PARAM): _pow_param_param,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.VAR): _pow_param_other,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.MONOMIAL): _pow_param_other,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.LINEAR): _pow_param_other,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.SUM): _pow_param_other,
-        (_EXPR_TYPE.PARAM, _EXPR_TYPE.OTHER): _pow_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.NATIVE): _pow_param_native,
+        (ARG_TYPE.PARAM, ARG_TYPE.NPV): _pow_param_npv,
+        (ARG_TYPE.PARAM, ARG_TYPE.PARAM): _pow_param_param,
+        (ARG_TYPE.PARAM, ARG_TYPE.VAR): _pow_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.MONOMIAL): _pow_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.LINEAR): _pow_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.SUM): _pow_param_other,
+        (ARG_TYPE.PARAM, ARG_TYPE.OTHER): _pow_param_other,
 
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.NATIVE): _pow_other_native,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.NPV): _pow_other_npv,
-        (_EXPR_TYPE.VAR, _EXPR_TYPE.PARAM): _pow_other_param,
+        (ARG_TYPE.VAR, ARG_TYPE.NATIVE): _pow_other_native,
+        (ARG_TYPE.VAR, ARG_TYPE.NPV): _pow_other_npv,
+        (ARG_TYPE.VAR, ARG_TYPE.PARAM): _pow_other_param,
 
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NATIVE): _pow_other_native,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.NPV): _pow_other_npv,
-        (_EXPR_TYPE.MONOMIAL, _EXPR_TYPE.PARAM): _pow_other_param,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.NATIVE): _pow_other_native,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.NPV): _pow_other_npv,
+        (ARG_TYPE.MONOMIAL, ARG_TYPE.PARAM): _pow_other_param,
 
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NATIVE): _pow_other_native,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.NPV): _pow_other_npv,
-        (_EXPR_TYPE.LINEAR, _EXPR_TYPE.PARAM): _pow_other_param,
+        (ARG_TYPE.LINEAR, ARG_TYPE.NATIVE): _pow_other_native,
+        (ARG_TYPE.LINEAR, ARG_TYPE.NPV): _pow_other_npv,
+        (ARG_TYPE.LINEAR, ARG_TYPE.PARAM): _pow_other_param,
 
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.NATIVE): _pow_other_native,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.NPV): _pow_other_npv,
-        (_EXPR_TYPE.SUM, _EXPR_TYPE.PARAM): _pow_other_param,
+        (ARG_TYPE.SUM, ARG_TYPE.NATIVE): _pow_other_native,
+        (ARG_TYPE.SUM, ARG_TYPE.NPV): _pow_other_npv,
+        (ARG_TYPE.SUM, ARG_TYPE.PARAM): _pow_other_param,
 
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NATIVE): _pow_other_native,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.NPV): _pow_other_npv,
-        (_EXPR_TYPE.OTHER, _EXPR_TYPE.PARAM): _pow_other_param,
+        (ARG_TYPE.OTHER, ARG_TYPE.NATIVE): _pow_other_native,
+        (ARG_TYPE.OTHER, ARG_TYPE.NPV): _pow_other_npv,
+        (ARG_TYPE.OTHER, ARG_TYPE.PARAM): _pow_other_param,
 })
 _pow_type_handler_mapping.update({
     (i, j): _pow_other_other
-    for i in _EXPR_TYPE for j in _EXPR_TYPE
+    for i in ARG_TYPE for j in ARG_TYPE
     if (i,j) not in _pow_type_handler_mapping
 })
 
@@ -3054,14 +3069,14 @@ _abs_dispatcher = collections.defaultdict(lambda: _register_new_abs_handler)
 
 _abs_type_handler_mapping = _unary_op_dispatcher_type_mapping(
     _abs_dispatcher, {
-        _EXPR_TYPE.NATIVE: _abs_native,
-        _EXPR_TYPE.NPV: _abs_npv,
-        _EXPR_TYPE.PARAM: _abs_param,
-        _EXPR_TYPE.VAR: _abs_other,
-        _EXPR_TYPE.MONOMIAL: _abs_other,
-        _EXPR_TYPE.LINEAR: _abs_other,
-        _EXPR_TYPE.SUM: _abs_other,
-        _EXPR_TYPE.OTHER: _abs_other,
+        ARG_TYPE.NATIVE: _abs_native,
+        ARG_TYPE.NPV: _abs_npv,
+        ARG_TYPE.PARAM: _abs_param,
+        ARG_TYPE.VAR: _abs_other,
+        ARG_TYPE.MONOMIAL: _abs_other,
+        ARG_TYPE.LINEAR: _abs_other,
+        ARG_TYPE.SUM: _abs_other,
+        ARG_TYPE.OTHER: _abs_other,
     })
 
 
@@ -3107,17 +3122,17 @@ def _register_new_fcn_dispatcher(a, name, fcn):
 _fcn_dispatcher = collections.defaultdict(lambda: _register_new_fcn_dispatcher)
 
 _fcn_type_handler_mapping = {
-    _EXPR_TYPE.ASBINARY: _fcn_asbinary,
-    _EXPR_TYPE.MUTABLE: _fcn_mutable,
-    _EXPR_TYPE.INVALID: _invalid,
-    _EXPR_TYPE.NATIVE: _fcn_native,
-    _EXPR_TYPE.NPV: _fcn_npv,
-    _EXPR_TYPE.PARAM: _fcn_param,
-    _EXPR_TYPE.VAR: _fcn_other,
-    _EXPR_TYPE.MONOMIAL: _fcn_other,
-    _EXPR_TYPE.LINEAR: _fcn_other,
-    _EXPR_TYPE.SUM: _fcn_other,
-    _EXPR_TYPE.OTHER: _fcn_other,
+    ARG_TYPE.ASBINARY: _fcn_asbinary,
+    ARG_TYPE.MUTABLE: _fcn_mutable,
+    ARG_TYPE.INVALID: _invalid,
+    ARG_TYPE.NATIVE: _fcn_native,
+    ARG_TYPE.NPV: _fcn_npv,
+    ARG_TYPE.PARAM: _fcn_param,
+    ARG_TYPE.VAR: _fcn_other,
+    ARG_TYPE.MONOMIAL: _fcn_other,
+    ARG_TYPE.LINEAR: _fcn_other,
+    ARG_TYPE.SUM: _fcn_other,
+    ARG_TYPE.OTHER: _fcn_other,
 }
 
 
