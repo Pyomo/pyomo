@@ -64,6 +64,7 @@ if _mode == Mode.pyomo5_trees:
                                               NPV_SumExpression, SumExpression,
                                               _MutableSumExpression,
                                               Expr_ifExpression,
+                                              NPV_Expr_ifExpression,
                                               UnaryFunctionExpression,
                                               NPV_UnaryFunctionExpression,
                                               AbsExpression, NPV_AbsExpression,
@@ -147,7 +148,9 @@ def Expr_if(IF=None, THEN=None, ELSE=None):
     """
     if _numvalue.is_constant(IF):
         return THEN if value(IF) else ELSE
-    return Expr_ifExpression(IF_=IF, THEN_=THEN, ELSE_=ELSE)
+    if not any(map(_numvalue.is_potentially_variable, (IF, THEN, ELSE))):
+        return NPV_Expr_ifExpression(IF, THEN, ELSE)
+    return Expr_ifExpression(IF=IF, THEN=THEN, ELSE=ELSE)
 
 #
 # NOTE: abs() and pow() are not defined here, because they are

@@ -883,12 +883,12 @@ class Expr_ifExpression(NumericExpression):
     """
     A logical if-then-else expression::
 
-        Expr_if(IF_=x, THEN_=y, ELSE_=z)
+        Expr_if(IF=x, THEN=y, ELSE=z)
 
     Args:
-        IF_ (expression): A relational expression
-        THEN_ (expression): An expression that is used if :attr:`IF_` is true.
-        ELSE_ (expression): An expression that is used if :attr:`IF_` is false.
+        IF (expression): A relational expression
+        THEN (expression): An expression that is used if :attr:`IF` is true.
+        ELSE (expression): An expression that is used if :attr:`IF` is false.
     """
     __slots__ = ('_if','_then','_else')
 
@@ -899,13 +899,13 @@ class Expr_ifExpression(NumericExpression):
     #           on a number of occasions. It is important that
     #           one uses __call__ for value() and NOT bool().
 
-    def __init__(self, IF_=None, THEN_=None, ELSE_=None):
-        if type(IF_) is tuple and THEN_==None and ELSE_==None:
-            IF_, THEN_, ELSE_ = IF_
-        self._args_ = (IF_, THEN_, ELSE_)
-        self._if = IF_
-        self._then = THEN_
-        self._else = ELSE_
+    def __init__(self, IF=None, THEN=None, ELSE=None):
+        if type(IF) is tuple and THEN==None and ELSE==None:
+            IF, THEN, ELSE = IF
+        self._args_ = (IF, THEN, ELSE)
+        self._if = IF
+        self._then = THEN
+        self._else = ELSE
         if self._if.__class__ in native_numeric_types:
             self._if = as_numeric(self._if)
 
@@ -928,7 +928,7 @@ class Expr_ifExpression(NumericExpression):
             return False
 
     def is_potentially_variable(self):
-        return any(map(is_potentially_variable, self._args_))
+        return True
 
     def _compute_polynomial_degree(self, result):
         _if, _then, _else = result
@@ -948,6 +948,10 @@ class Expr_ifExpression(NumericExpression):
     def _apply_operation(self, result):
         _if, _then, _else = result
         return _then if _if else _else
+
+
+class NPV_Expr_ifExpression(NPV_Mixin, Expr_ifExpression):
+    __slots__ = ()
 
 
 class UnaryFunctionExpression(NumericExpression):
@@ -1127,7 +1131,7 @@ def _decompose_linear_terms(expr, multiplier=1):
 #-------------------------------------------------------
 
 
-class _EXPR_TYPE(enum.Enum):
+class ARG_TYPE(enum.Enum):
     MUTABLE = -2
     ASBINARY = -1
     INVALID = 0
