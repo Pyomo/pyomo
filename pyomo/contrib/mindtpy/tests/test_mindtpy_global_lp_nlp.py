@@ -71,8 +71,8 @@ class TestMindtPy(unittest.TestCase):
                     value(model.objective.expr), model.optimal_value, places=2)
                 self.check_optimal_solution(model)
 
-    @unittest.skipUnless(SolverFactory('gurobi_persistent').available(),
-                         'gurobi_persistent solver is not available')
+    @unittest.skipUnless(SolverFactory('gurobi_persistent').available() and SolverFactory('gurobi_direct').available(),
+                         'gurobi_persistent and gurobi_direct solver is not available')
     def test_GOA_GUROBI(self):
         """Test the global outer approximation decomposition algorithm."""
         with SolverFactory('mindtpy') as opt:
