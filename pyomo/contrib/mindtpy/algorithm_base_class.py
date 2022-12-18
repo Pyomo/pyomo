@@ -433,6 +433,15 @@ class _MindtPyAlgorithm(object):
         return primal_integral
 
 
+    def get_integral_info(self):
+        '''
+        Obtain primal integral, dual integral and primal dual gap integral.
+        '''
+        self.primal_integral = self.get_primal_integral()
+        self.dual_integral = self.get_dual_integral()
+        self.primal_dual_gap_integral = self.primal_integral + self.dual_integral
+
+
     def update_gap(self):
         """Update the relative gap and the absolute gap.
 
@@ -1956,10 +1965,9 @@ class _MindtPyAlgorithm(object):
         self.results.solver.iterations = self.mip_iter
         self.results.solver.num_infeasible_nlp_subproblem = self.nlp_infeasible_counter
         self.results.solver.best_solution_found_time = self.best_solution_found_time
-        self.results.solver.primal_integral = self.get_primal_integral()
-        self.results.solver.dual_integral = self.get_dual_integral()
-        self.results.solver.primal_dual_gap_integral = self.results.solver.primal_integral + \
-            self.results.solver.dual_integral
+        self.results.solver.primal_integral = self.primal_integral
+        self.results.solver.dual_integral = self.dual_integral
+        self.results.solver.primal_dual_gap_integral = self.primal_dual_gap_integral
 
 
     def load_solution(self):

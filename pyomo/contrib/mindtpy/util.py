@@ -842,7 +842,6 @@ def setup_results_object(results, model, config):
     res.solver.termination_condition = None
     res.solver.message = None
     res.solver.user_time = None
-    res.solver.system_time = None
     res.solver.wallclock_time = None
     res.solver.termination_message = None
     # Record solver name

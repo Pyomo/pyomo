@@ -133,12 +133,15 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
             # Load solution
             if self.best_solution_found is not None:
                 self.load_solution()
-            
-            # Update result
-            self.update_result()
+
+            # Get integral info
+            self.get_integral_info()
 
             config.logger.info(' {:<25}:   {:>7.4f} '.format(
-                'Primal-dual gap integral', self.results.solver.primal_dual_gap_integral))
+                'Primal-dual gap integral', self.primal_dual_gap_integral))
+
+        # Update result
+        self.update_result()
 
         return self.results
 
