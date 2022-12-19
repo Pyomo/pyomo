@@ -494,7 +494,14 @@ class Solver(abc.ABC):
             # We want general formatting of this Enum to return the
             # formatted string value and not the int (which is the
             # default implementation from IntEnum)
-            return format(str(self).split('.')[-1], format_spec)
+            return format(self.name, format_spec)
+
+        def __str__(self):
+            # Note: Python 3.11 changed the core enums so that the
+            # "mixin" type for standard enums overrides the behavior
+            # specified in __format__.  We will override str() here to
+            # preserve the previous behavior
+            return self.name
 
     @abc.abstractmethod
     def solve(self, model: _BlockData, timer: HierarchicalTimer = None) -> Results:

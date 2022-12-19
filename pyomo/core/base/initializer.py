@@ -9,6 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+import collections
 import functools
 import inspect
 
@@ -18,6 +19,7 @@ from collections.abc import Mapping
 from pyomo.common.dependencies import (
     numpy, numpy_available, pandas, pandas_available,
 )
+from pyomo.common.modeling import NOTSET
 from pyomo.core.pyomoobject import PyomoObject
 
 initializer_map = {}
@@ -29,12 +31,8 @@ function_types = set([
     type(PyomoObject.is_expression_type.__call__),
 ])
 
-#
-# The following set of "Initializer" classes are a general functionality
-# and should be promoted to their own module so that we can use them on
-# all Components to standardize how we process component arguments.
-#
-def Initializer(init,
+
+def Initializer(arg,
                 allow_generators=False,
                 treat_sequences_as_mappings=True,
                 arg_not_specified=None):
@@ -45,21 +43,45 @@ def Initializer(init,
     function standardizes the processing of keyword arguments and
     returns "initializer classes" that are specialized to the specific
     data type provided.
+
+    Parameters
+    ----------
+    arg:
+
+        The argument passed to the component constructor.  This could
+        be almost any type, including a scalar, dict, list, function,
+        generator, or None.
+
+    allow_generators: bool
+
+        If False, then we will raise an exception if ``arg`` is a generator
+
+    treat_sequences_as_mappings: bool
+
+        If True, then if ``arg`` is a sequence, we will treat it as if
+        it were a mapping (i.e., ``dict(enumerate(arg))``).  Otherwise
+        sequences will be returned back as the value of the initializer.
+
+    arg_not_specified:
+
+        If ``arg`` is ``arg_not_specified``, then the function will
+        return None (and not an InitializerBase object).
+
     """
-    if init is arg_not_specified:
+    if arg is arg_not_specified:
         return None
-    if init.__class__ in initializer_map:
-        return initializer_map[init.__class__](init)
-    if init.__class__ in sequence_types:
+    if arg.__class__ in initializer_map:
+        return initializer_map[arg.__class__](arg)
+    if arg.__class__ in sequence_types:
         if treat_sequences_as_mappings:
-            return ItemInitializer(init)
+            return ItemInitializer(arg)
         else:
-            return ConstantInitializer(init)
-    if init.__class__ in function_types:
+            return ConstantInitializer(arg)
+    if arg.__class__ in function_types:
         # Note: we do not use "inspect.isfunction or inspect.ismethod"
         # because some function-like things (notably cythonized
         # functions) return False
-        if not allow_generators and inspect.isgeneratorfunction(init):
+        if not allow_generators and inspect.isgeneratorfunction(arg):
             raise ValueError("Generator functions are not allowed")
         # Historically pyomo.core.base.misc.apply_indexed_rule
         # accepted rules that took only the parent block (even for
@@ -71,50 +93,50 @@ def Initializer(init,
         # the partial handling), but I have been unable to come up with
         # an example.  The closest was getattr(), but that falls back on
         # getattr.__call__, which does support getfullargspec.
-        _args = inspect.getfullargspec(init)
+        _args = inspect.getfullargspec(arg)
         _nargs = len(_args.args)
-        if inspect.ismethod(init) and init.__self__ is not None:
+        if inspect.ismethod(arg) and arg.__self__ is not None:
             # Ignore 'self' for bound instance methods and 'cls' for
             # @classmethods
             _nargs -= 1
         if _nargs == 1 and _args.varargs is None:
             return ScalarCallInitializer(
-                init, constant=not inspect.isgeneratorfunction(init))
+                arg, constant=not inspect.isgeneratorfunction(arg))
         else:
-            return IndexedCallInitializer(init)
-    if hasattr(init, '__len__'):
-        if isinstance(init, Mapping):
-            initializer_map[init.__class__] = ItemInitializer
-        elif isinstance(init, Sequence) and not isinstance(init, str):
-            sequence_types.add(init.__class__)
-        elif isinstance(init, PyomoObject):
+            return IndexedCallInitializer(arg)
+    if hasattr(arg, '__len__'):
+        if isinstance(arg, Mapping):
+            initializer_map[arg.__class__] = ItemInitializer
+        elif isinstance(arg, Sequence) and not isinstance(arg, str):
+            sequence_types.add(arg.__class__)
+        elif isinstance(arg, PyomoObject):
             # TODO: Should IndexedComponent inherit from
             # collections.abc.Mapping?
-            if init.is_component_type() and init.is_indexed():
-                initializer_map[init.__class__] = ItemInitializer
+            if arg.is_component_type() and arg.is_indexed():
+                initializer_map[arg.__class__] = ItemInitializer
             else:
-                initializer_map[init.__class__] = ConstantInitializer
-        elif any(c.__name__ == 'ndarray' for c in init.__class__.__mro__):
-            if numpy_available and isinstance(init, numpy.ndarray):
-                sequence_types.add(init.__class__)
-        elif any(c.__name__ == 'Series' for c in init.__class__.__mro__):
-            if pandas_available and isinstance(init, pandas.Series):
-                sequence_types.add(init.__class__)
-        elif any(c.__name__ == 'DataFrame' for c in init.__class__.__mro__):
-            if pandas_available and isinstance(init, pandas.DataFrame):
-                initializer_map[init.__class__] = DataFrameInitializer
+                initializer_map[arg.__class__] = ConstantInitializer
+        elif any(c.__name__ == 'ndarray' for c in arg.__class__.__mro__):
+            if numpy_available and isinstance(arg, numpy.ndarray):
+                sequence_types.add(arg.__class__)
+        elif any(c.__name__ == 'Series' for c in arg.__class__.__mro__):
+            if pandas_available and isinstance(arg, pandas.Series):
+                sequence_types.add(arg.__class__)
+        elif any(c.__name__ == 'DataFrame' for c in arg.__class__.__mro__):
+            if pandas_available and isinstance(arg, pandas.DataFrame):
+                initializer_map[arg.__class__] = DataFrameInitializer
         else:
             # Note: this picks up (among other things) all string instances
-            initializer_map[init.__class__] = ConstantInitializer
+            initializer_map[arg.__class__] = ConstantInitializer
         # recursively call Initializer to pick up the new registration
         return Initializer(
-            init,
+            arg,
             allow_generators=allow_generators,
             treat_sequences_as_mappings=treat_sequences_as_mappings,
             arg_not_specified=arg_not_specified
         )
-    if ( inspect.isgenerator(init) or
-         hasattr(init, 'next') or hasattr(init, '__next__') ):
+    if ( inspect.isgenerator(arg) or
+         hasattr(arg, 'next') or hasattr(arg, '__next__') ):
         # This catches generators and iterators (like enumerate()), but
         # skips "reusable" iterators like range() as well as Pyomo
         # (finite) Set objects [they were both caught by the
@@ -124,46 +146,46 @@ def Initializer(init,
         # Deepcopying generators is problematic (e.g., it generates a
         # segfault in pypy3 7.3.0).  We will immediately expand the
         # generator into a tuple and then store it as a constant.
-        return ConstantInitializer(tuple(init))
-    if type(init) is functools.partial:
+        return ConstantInitializer(tuple(arg))
+    if type(arg) is functools.partial:
         try:
-            _args = inspect.getfullargspec(init.func)
+            _args = inspect.getfullargspec(arg.func)
         except:
             # Inspect doesn't work for some built-in callables (notably
             # 'int').  We will just have to assume this is a "normal"
             # IndexedCallInitializer
-            return IndexedCallInitializer(init)
-        if len(_args.args) - len(init.args) == 1 and _args.varargs is None:
-            return ScalarCallInitializer(init)
+            return IndexedCallInitializer(arg)
+        if len(_args.args) - len(arg.args) == 1 and _args.varargs is None:
+            return ScalarCallInitializer(arg)
         else:
-            return IndexedCallInitializer(init)
-    if isinstance(init, InitializerBase):
-        return init
-    if isinstance(init, PyomoObject):
+            return IndexedCallInitializer(arg)
+    if isinstance(arg, InitializerBase):
+        return arg
+    if isinstance(arg, PyomoObject):
         # We re-check for PyomoObject here, as that picks up / caches
         # non-components like component data objects and expressions
-        initializer_map[init.__class__] = ConstantInitializer
-        return ConstantInitializer(init)
-    if callable(init) and not isinstance(init, type):
+        initializer_map[arg.__class__] = ConstantInitializer
+        return ConstantInitializer(arg)
+    if callable(arg) and not isinstance(arg, type):
         # We assume any callable thing could be a functor; but, we must
         # filter out types, as we use types as special identifiers that
         # should not be called (e.g., UnknownSetDimen)
-        if inspect.isfunction(init) or inspect.ismethod(init):
+        if inspect.isfunction(arg) or inspect.ismethod(arg):
             # Add this to the set of known function types and try again
-            function_types.add(type(init))
+            function_types.add(type(arg))
         else:
             # Try again, but use the __call__ method (for supporting
             # things like functors and cythonized functions).  __call__
             # is almost certainly going to be a method-wrapper
-            init = init.__call__
+            arg = arg.__call__
         return Initializer(
-            init,
+            arg,
             allow_generators=allow_generators,
             treat_sequences_as_mappings=treat_sequences_as_mappings,
             arg_not_specified=arg_not_specified,
         )
-    initializer_map[init.__class__] = ConstantInitializer
-    return ConstantInitializer(init)
+    initializer_map[arg.__class__] = ConstantInitializer
+    return ConstantInitializer(arg)
 
 
 class InitializerBase(object):
@@ -240,7 +262,7 @@ class ItemInitializer(InitializerBase):
 
 
 class DataFrameInitializer(InitializerBase):
-    """Initializer for dict-like values supporting __getitem__()"""
+    """Initializer for pandas DataFrame values"""
     __slots__ = ('_df', '_column',)
 
     def __init__(self, dataframe, column=None):
@@ -280,7 +302,6 @@ class IndexedCallInitializer(InitializerBase):
             return self._fcn(parent, *idx)
         else:
             return self._fcn(parent, idx)
-
 
 
 class CountedCallGenerator(object):
@@ -414,8 +435,10 @@ class DefaultInitializer(InitializerBase):
     ----------
     initializer: :py:class`InitializerBase`
         the Initializer instance to wrap
+
     default:
         the value to return inlieu of the caught exception(s)
+
     exceptions: Exception or tuple
         the single Exception or tuple of Exceptions to catch and return
         the default value.
@@ -433,6 +456,76 @@ class DefaultInitializer(InitializerBase):
             return self._initializer(parent, index)
         except self._exceptions:
             return self._default
+
+    def constant(self):
+        """Return True if this initializer is constant across all indices"""
+        return self._initializer.constant()
+
+    def contains_indices(self):
+        """Return True if this initializer contains embedded indices"""
+        return self._initializer.contains_indices()
+
+    def indices(self):
+        return self._initializer.indices()
+
+
+_bound_sequence_types = collections.defaultdict(None.__class__)
+
+
+class BoundInitializer(InitializerBase):
+    """Initializer wrapper for processing bounds (mapping scalars to 2-tuples)
+
+    Note that this class is meant to mimic the behavior of
+    :py:func:`Initializer` and will return ``None`` if the initializer
+    that it is wrapping is ``None``.
+
+    Parameters
+    ----------
+    arg:
+
+        As with :py:func:`Initializer`, this is the raw argument passed
+        to the component constructor.
+
+    obj: :py:class:`Component`
+
+        The component that "owns" the initializer.  This initializer
+        will treat sequences as mappings only if the owning component is
+        indexed and the sequence passed to the initializer is not of
+        length 2
+
+    """
+    __slots__ = ('_initializer',)
+
+    def __new__(cls, arg=None, obj=NOTSET):
+        # The Initializer() function returns None if the initializer is
+        # None.  We will mock that behavior by commandeering __new__()
+        if arg is None and obj is not NOTSET:
+            return None
+        else:
+            return super().__new__(cls)
+
+    def __init__(self, arg, obj=NOTSET):
+        if obj is NOTSET or obj.is_indexed():
+            treat_sequences_as_mappings = not (
+                isinstance(arg, Sequence)
+                and len(arg) == 2
+                and not isinstance(arg[0], Sequence)
+            )
+        else:
+            treat_sequences_as_mappings = False
+        self._initializer = Initializer(
+            arg, treat_sequences_as_mappings=treat_sequences_as_mappings)
+
+    def __call__(self, parent, index):
+        val = self._initializer(parent, index)
+        if _bound_sequence_types[val.__class__]:
+            return val
+        if _bound_sequence_types[val.__class__] is None:
+            _bound_sequence_types[val.__class__] \
+                = isinstance(val, Sequence) and not isinstance(val, str)
+            if _bound_sequence_types[val.__class__]:
+                return val
+        return (val, val)
 
     def constant(self):
         """Return True if this initializer is constant across all indices"""

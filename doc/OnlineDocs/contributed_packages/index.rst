@@ -20,6 +20,7 @@ Contributed packages distributed with Pyomo:
    gdpopt.rst
    iis.rst
    mindtpy.rst
+   mpc/index.rst
    multistart.rst
    preprocessing.rst
    parmest/index.rst

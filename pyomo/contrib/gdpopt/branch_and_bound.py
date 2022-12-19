@@ -88,12 +88,12 @@ class GDP_LBB_Solver(_GDPoptAlgorithm):
         add_boolean_variable_lists(util_block)
 
         root_node = TransformationFactory(
-            'core.logical_to_linear').create_using(model)
+            'contrib.logical_to_disjunctive').create_using(model)
         root_util_blk = root_node.component(
             self.original_util_block.name)
         # Add to root utility block what we will need during the algorithm
         add_disjunction_list(root_util_blk)
-        # Now that logical_to_linear has been called.
+        # Now that logical_to_disjunctive has been called.
         add_transformed_boolean_variable_list(root_util_blk)
 
         # Map unfixed disjunct -> list of deactivated constraints

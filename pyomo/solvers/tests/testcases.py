@@ -55,6 +55,11 @@ for _io in ('python', 'persistent'):
             lambda v: True,
             "Mosek does not handle nonconvex quadratic constraints")
 
+    for _test in ('MIQP_simple', ):
+        SkipTests['mosek', _io, _test] = (
+            lambda v: v[0] == 10 and v < (10, 0, 30),
+            "Mosek 10 fails on assertion warmstarting MIQP models; see #2613")
+
 #
 # CPLEX
 #
@@ -114,10 +119,13 @@ ExpectedFailures['cbc', 'nl', 'MILP_unbounded'] = \
      "the NL interface (through 2.9.x), and fails with invalid free() "
      "(in 2.10.x).")
 
+# The following is due to a bug introduced into Clp as part of CBC 2.10
+# and was resolved by Clp commit 130dd199 (13 Feb 2021), and included
+# in the CBC 2.10.6 release
 ExpectedFailures['cbc', 'nl', 'LP_unbounded'] = \
-    (lambda v: v[:2] == (2, 10),
+    (lambda v: v > (2, 10) and v < (2, 10, 6),
      "Cbc fails (invalid free()) for unbounded LP models through "
-     "the NL interface in 2.10.x versions "
+     "the NL interface in 2.10.x versions through 2.10.5 "
      "(reported upstream as coin-or/Cbc#389)")
 
 ExpectedFailures['cbc', 'nl', 'SOS1_simple'] = \
@@ -191,12 +199,12 @@ ExpectedFailures['ipopt', 'nl', 'LP_trivial_constraints'] = \
 
 ExpectedFailures['scip', 'nl', 'SOS2_simple'] = \
     (lambda v: v <= (3, 1, 0, 9),
-    "SCIP (scipampl) does not recognize sos2 constraints "
+    "SCIP (scip) does not recognize sos2 constraints "
     "inside NL files. A ticket has been filed.")
 
 ExpectedFailures['scip', 'nl', 'SOS1_simple'] = \
     (lambda v: v <= (3, 1, 0, 9),
-    "SCIP (scipampl) does not recognize sos1 constraints "
+    "SCIP (scip) does not recognize sos1 constraints "
     "inside NL files. A ticket has been filed.")
 
 #

@@ -10,7 +10,10 @@
 #  ___________________________________________________________________________
 
 from pyomo.common.collections import ComponentMap
-from pyomo.core.base import Var, Constraint, Objective, _ConstraintData, _ObjectiveData, Suffix, value
+from pyomo.core.base import (
+    Block, Var, Constraint, Objective, _ConstraintData, _ObjectiveData,
+    Suffix, value,
+)
 from pyomo.core.plugins.transform.hierarchy import Transformation
 from pyomo.core.base import TransformationFactory
 from pyomo.core.expr.current import replace_expressions
@@ -81,16 +84,91 @@ class ScaleModel(Transformation):
         self._apply_to(scaled_model, **kwds)
         return scaled_model
 
-    def _get_float_scaling_factor(self, instance, component_data):
-        scaling_factor = None
-        if component_data in instance.scaling_factor:
-            scaling_factor = instance.scaling_factor[component_data]
-        elif component_data.parent_component() in instance.scaling_factor:
-            scaling_factor = instance.scaling_factor[component_data.parent_component()]
+    def _suffix_finder(self, component_data, suffix_name, root=None):
+        """Find suffix value for a given component data object in model tree
 
+        Suffixes are searched by traversing the model hierarchy in three passes:
+
+        1. Search for a Suffix matching the specific component_data,
+           starting at the `root` and descending down the tree to
+           the component_data.  Return the first match found.
+        2. Search for a Suffix matching the component_data's container,
+           starting at the `root` and descending down the tree to
+           the component_data.  Return the first match found.
+        3. Search for a Suffix with key `None`, starting from the
+           component_data and working up the tree to the `root`.
+           Return the first match found.
+        4. Return None
+
+        Parameters
+        ----------
+        component_data: ComponentDataBase
+
+            Component or component data object to find suffix value for.
+
+        suffix_name: str
+
+            Name of Suffix to search for.
+
+        root: BlockData
+
+            When searching up the block hierarchy, stop at this
+            BlockData instead of traversing all the way to the
+            `component_data.model()` Block.  If the `component_data` is
+            not in the subtree defined by `root`, then the search will
+            proceed up to `component_data.model()`.
+
+        Returns
+        -------
+        The value for Suffix associated with component data if found, else None.
+
+        """
+        # Prototype for Suffix finder
+
+        # We want to *include* the root (if it is not None), so if
+        # it is not None, we want to stop as soon as we get to its
+        # parent.
+        if root is not None:
+            if root.ctype is not Block and not issubclass(root.ctype, Block):
+                raise ValueError("_find_suffix: root must be a BlockData "
+                                 f"(found {root.ctype.__name__}: {root})")
+            if root.is_indexed():
+                raise ValueError(
+                    "_find_suffix: root must be a BlockData "
+                    f"(found {type(root).__name__}: {root})")
+            root = root.parent_block()
+        # Walk parent tree and search for suffixes
+        parent = component_data.parent_block()
+        suffixes = []
+        while parent is not root:
+            s = parent.component(suffix_name)
+            if s is not None and s.ctype is Suffix:
+                suffixes.append(s)
+            parent = parent.parent_block()
+        # Pass 1: look for the component_data, working root to leaf
+        for s in reversed(suffixes):
+            if component_data in s:
+                return s[component_data]
+        # Pass 2: look for the component container, working root to leaf
+        parent_comp = component_data.parent_component()
+        if parent_comp is not component_data:
+            for s in reversed(suffixes):
+                if parent_comp in s:
+                    return s[parent_comp]
+        # Pass 3: look for None, working leaf to root
+        for s in suffixes:
+            if None in s:
+                return s[None]
+        return None
+
+    def _get_float_scaling_factor(self, instance, component_data):
+        scaling_factor = self._suffix_finder(component_data, "scaling_factor")
+
+        # If still no scaling factor, return 1.0
         if scaling_factor is None:
             return 1.0
 
+        # Make sure scaling factor is a float
         try:
             scaling_factor = float(scaling_factor)
         except ValueError:

@@ -1,12 +1,12 @@
 {
     "Problem": [
         {
-            "Lower bound": -Infinity, 
+            "Lower bound": -Infinity,
             "Number of constraints": 0, 
             "Number of objectives": 1, 
             "Number of variables": 1, 
             "Sense": "unknown", 
-            "Upper bound": Infinity
+            "Upper bound": 1.0
         }
     ], 
     "Solution": [

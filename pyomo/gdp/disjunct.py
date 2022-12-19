@@ -312,12 +312,14 @@ class _Initializer(object):
 
 
 class _DisjunctData(_BlockData):
+    __autoslot_mappers__ = {'_transformation_block': AutoSlots.weakref_mapper}
 
     _Block_reserved_words = set()
 
     @property
     def transformation_block(self):
-        return self._transformation_block
+        return None if self._transformation_block is None else \
+            self._transformation_block()
 
     def __init__(self, component):
         _BlockData.__init__(self, component)
@@ -427,11 +429,13 @@ _DisjunctData._Block_reserved_words = set(dir(Disjunct()))
 
 class _DisjunctionData(ActiveComponentData):
     __slots__ = ('disjuncts', 'xor', '_algebraic_constraint')
+    __autoslot_mappers__ = {'_algebraic_constraint': AutoSlots.weakref_mapper}
     _NoArgument = (0,)
 
     @property
     def algebraic_constraint(self):
-        return self._algebraic_constraint
+        return None if self._algebraic_constraint is None else \
+            self._algebraic_constraint()
 
     def __init__(self, component=None):
         #
@@ -528,7 +532,6 @@ class Disjunction(ActiveIndexedComponent):
         self._init_expr = kwargs.pop('expr', None)
         self._init_xor = _Initializer.process(kwargs.pop('xor', True))
         self._autodisjuncts = None
-        self._algebraic_constraint = None
         kwargs.setdefault('ctype', Disjunction)
         super(Disjunction, self).__init__(*args, **kwargs)
 

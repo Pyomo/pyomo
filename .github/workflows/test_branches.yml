@@ -10,6 +10,10 @@ on:
         description: Git Hash (Optional)
         required: false
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 defaults:
   run:
     shell: bash -l {0}
@@ -31,23 +35,23 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python: ['3.10']
+        python: ['3.11']
         other: [""]
         category: [""]
 
         include:
         - os: ubuntu-latest
-          python: '3.10'
+          python: '3.11'
           TARGET: linux
           PYENV: pip
 
         - os: macos-latest
-          python: 3.8
+          python: '3.10'
           TARGET: osx
           PYENV: pip
 
         - os: windows-latest
-          python: 3.7
+          python: 3.9
           TARGET: win
           PYENV: conda
           PACKAGES: glpk
@@ -78,7 +82,7 @@ jobs:
           PYENV: pip
 
         - os: ubuntu-latest
-          python: 3.8
+          python: '3.10'
           other: /cython
           setup_options: --with-cython
           skip_doctest: 1
@@ -248,7 +252,7 @@ jobs:
         python -m pip install --cache-dir cache/pip pymysql || \
             python -m pip install --cache-dir cache/pip pymysql
         if test -z "${{matrix.slim}}"; then
-            python -m pip install --cache-dir cache/pip cplex \
+            python -m pip install --cache-dir cache/pip cplex docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             python -m pip install --cache-dir cache/pip \
                 -i https://pypi.gurobi.com gurobipy \
@@ -301,13 +305,14 @@ jobs:
         done
         conda install -q -y -c conda-forge $CONDA_DEPENDENCIES
         if test -z "${{matrix.slim}}"; then
-            conda install -q -y -c ibmdecisionoptimization 'cplex>=12.10' \
+            conda install -q -y -c ibmdecisionoptimization \
+                'cplex>=12.10' docplex \
                 || echo "WARNING: CPLEX Community Edition is not available"
             conda install -q -y -c gurobi gurobi \
                 || echo "WARNING: Gurobi is not available"
             conda install -q -y -c fico-xpress xpress \
                 || echo "WARNING: Xpress Community Edition is not available"
-            for PKG in cyipopt pymumps; do
+            for PKG in cyipopt pymumps scip; do
                 conda install -q -y -c conda-forge $PKG \
                     || echo "WARNING: $PKG is not available"
             done

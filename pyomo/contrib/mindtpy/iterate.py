@@ -18,11 +18,10 @@ from pyomo.contrib.mindtpy.mip_solve import solve_main, handle_main_optimal, han
 from pyomo.contrib.mindtpy.nlp_solve import solve_subproblem, handle_nlp_subproblem_tc
 from pyomo.core import minimize, maximize
 from pyomo.opt import TerminationCondition as tc
-from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code
+from pyomo.contrib.gdpopt.util import get_main_elapsed_time, time_code, copy_var_list_values
 from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.opt import SolverFactory
 from pyomo.common.dependencies import attempt_import
-from pyomo.contrib.gdpopt.util import copy_var_list_values
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from operator import itemgetter
 
@@ -251,8 +250,8 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
     if solve_data.abs_gap <= config.absolute_bound_tolerance:
         config.logger.info(
             'MindtPy exiting on bound convergence. '
-            '|Primal Bound: {} - Dual Bound: {}| <= (absolute tolerance {})  \n'.format(
-                solve_data.primal_bound, solve_data.dual_bound, config.absolute_bound_tolerance))
+            'Absolute gap: {} <= absolute tolerance: {} \n'.format(
+                solve_data.abs_gap, config.absolute_bound_tolerance))
         solve_data.results.solver.termination_condition = tc.optimal
         return True
     # Check relative bound convergence
@@ -260,7 +259,7 @@ def algorithm_should_terminate(solve_data, config, check_cycling):
         if solve_data.rel_gap <= config.relative_bound_tolerance:
             config.logger.info(
                 'MindtPy exiting on bound convergence. '
-                '|Primal Bound: {} - Dual Bound: {}| / (1e-10 + |Primal Bound|:{}) <= relative tolerance: {}'.format(solve_data.primal_bound, solve_data.dual_bound, abs(solve_data.primal_bound), config.relative_bound_tolerance))
+                'Relative gap : {} <= relative tolerance: {} \n'.format(solve_data.rel_gap, config.relative_bound_tolerance))
             solve_data.results.solver.termination_condition = tc.optimal
             return True
 

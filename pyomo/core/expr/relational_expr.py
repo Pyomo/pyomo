@@ -67,7 +67,8 @@ would both cause this exception.""".strip() % (self,))
         return self._args_[:self.nargs()]
 
     @deprecated("is_relational() is deprecated in favor of "
-                "is_expression_type(ExpressionType.RELATIONAL)", version='TBD')
+                "is_expression_type(ExpressionType.RELATIONAL)",
+                version='6.4.3')
     def is_relational(self):
         return self.is_expression_type(ExpressionType.RELATIONAL)
 
@@ -325,6 +326,32 @@ class EqualityExpression(RelationalExpression):
 
     def _to_string(self, values, verbose, smap):
         return "%s  ==  %s" % (values[0], values[1])
+
+
+class NotEqualExpression(RelationalExpression):
+    """
+    Not-equal expression::
+
+        x != y
+    """
+
+    __slots__ = ()
+
+    def nargs(self):
+        return 2
+
+    def __bool__(self):
+        lhs, rhs = self.args
+        if lhs is not rhs:
+            return True
+        return super().__bool__()
+        
+    def _apply_operation(self, result):
+        _l, _r = result
+        return _l != _r
+
+    def _to_string(self, values, verbose, smap):
+        return "%s  !=  %s" % (values[0], values[1])
 
 
 _relational_op = {

@@ -587,10 +587,173 @@ class testAbstractUncertaintySetClass(unittest.TestCase):
                              "variable expression.")
 
 class testEllipsoidalUncertaintySetClass(unittest.TestCase):
-    '''
-    Ellipsoidal uncertainty sets. Required inputs are covariance matrix covar, scale, mean, and list
-    of uncertain params.
-    '''
+    """
+    Unit tests for the EllipsoidalSet
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test EllipsoidalSet constructor and setter
+        work normally when arguments are appropriate.
+        """
+        center = [0, 0]
+        shape_matrix = [[1, 0], [0, 2]]
+        scale = 2
+        eset = EllipsoidalSet(center, shape_matrix, scale)
+        np.testing.assert_allclose(
+            center,
+            eset.center,
+            err_msg="EllipsoidalSet center not as expected",
+        )
+        np.testing.assert_allclose(
+            shape_matrix,
+            eset.shape_matrix,
+            err_msg="EllipsoidalSet shape matrix not as expected",
+        )
+        np.testing.assert_allclose(
+            scale,
+            eset.scale,
+            err_msg="EllipsoidalSet scale not as expected",
+        )
+
+        # check attributes update
+        new_center = [-1, -3]
+        new_shape_matrix = [[2, 1], [1, 3]]
+        new_scale = 1
+
+        eset.center = new_center
+        eset.shape_matrix = new_shape_matrix
+        eset.scale = new_scale
+
+        np.testing.assert_allclose(
+            new_center,
+            eset.center,
+            err_msg="EllipsoidalSet center update not as expected",
+        )
+        np.testing.assert_allclose(
+            new_shape_matrix,
+            eset.shape_matrix,
+            err_msg="EllipsoidalSet shape matrix update not as expected",
+        )
+        np.testing.assert_allclose(
+            new_scale,
+            eset.scale,
+            err_msg="EllipsoidalSet scale update not as expected",
+        )
+
+    def test_error_on_ellipsoidal_dim_change(self):
+        """
+        EllipsoidalSet dimension is considered immutable.
+        Test ValueError raised when center size is not equal
+        to set dimension.
+        """
+        invalid_center = [0, 0]
+        shape_matrix = [[1, 0], [0, 1]]
+        scale = 2
+
+        eset = EllipsoidalSet([0, 0], shape_matrix, scale)
+
+        exc_str = r"Attempting to set.*dimension 2 to value of dimension 3"
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.center = [0, 0, 0]
+
+    def test_error_on_neg_scale(self):
+        """
+        Test ValueError raised if scale attribute set to negative
+        value.
+        """
+        center = [0, 0]
+        shape_matrix = [[1, 0], [0, 2]]
+        neg_scale = -1
+
+        exc_str = r".*must be a non-negative real \(provided.*-1\)"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            EllipsoidalSet(center, shape_matrix, neg_scale)
+
+        # construct a valid EllipsoidalSet
+        eset = EllipsoidalSet(center, shape_matrix, scale=2)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.scale = neg_scale
+
+    def test_error_on_shape_matrix_with_wrong_size(self):
+        """
+        Test error in event EllipsoidalSet shape matrix
+        is not in accordance with set dimension.
+        """
+        center = [0, 0]
+        invalid_shape_matrix = [[1, 0]]
+        scale = 1
+
+        exc_str = (
+            r".*must be a square matrix of size 2.*"
+            r"\(provided.*shape \(1, 2\)\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            EllipsoidalSet(center, invalid_shape_matrix, scale)
+
+        # construct a valid EllipsoidalSet
+        eset = EllipsoidalSet(center, [[1, 0], [0, 1]], scale)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            eset.shape_matrix = invalid_shape_matrix
+
+    def test_error_on_invalid_shape_matrix(self):
+        """
+        Test exceptional cases of invalid square shape matrix
+        arguments
+        """
+        center = [0, 0]
+        scale = 3
+
+        # assert error on construction
+        with self.assertRaisesRegex(
+                ValueError,
+                r"Shape matrix must be symmetric",
+                msg="Asymmetric shape matrix test failed",
+                ):
+            EllipsoidalSet(center, [[1, 1], [0, 1]], scale)
+        with self.assertRaises(
+                np.linalg.LinAlgError,
+                msg="Singular shape matrix test failed",
+                ):
+            EllipsoidalSet(center, [[0, 0], [0, 0]], scale)
+        with self.assertRaisesRegex(
+                ValueError,
+                r"Non positive-definite.*",
+                msg="Indefinite shape matrix test failed"
+                ):
+            EllipsoidalSet(center, [[1, 0], [0, -2]], scale)
+
+        # construct a valid EllipsoidalSet
+        eset = EllipsoidalSet(center, [[1, 0], [0, 2]], scale)
+
+        # assert error on update
+        with self.assertRaisesRegex(
+                ValueError,
+                r"Shape matrix must be symmetric",
+                msg="Asymmetric shape matrix test failed",
+                ):
+            eset.shape_matrix = [[1, 1], [0, 1]]
+        with self.assertRaises(
+                np.linalg.LinAlgError,
+                msg="Singular shape matrix test failed",
+                ):
+            eset.shape_matrix = [[0, 0], [0, 0]]
+        with self.assertRaisesRegex(
+                ValueError,
+                r"Non positive-definite.*",
+                msg="Indefinite shape matrix test failed"
+                ):
+            eset.shape_matrix = [[1, 0], [0, -2]]
 
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -703,9 +866,87 @@ class testEllipsoidalUncertaintySetClass(unittest.TestCase):
             )
 
 class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
-    '''
-    Axis aligned ellipsoidal uncertainty sets. Required inputs are half-lengths, nominal point, and right-hand side.
-    '''
+    """
+    Unit tests for the AxisAlignedEllipsoidalSet.
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test AxisAlignedEllipsoidalSet constructor and setter
+        work normally when bounds are appropriate.
+        """
+        center = [0, 0]
+        half_lengths = [1, 3]
+        aset = AxisAlignedEllipsoidalSet(center, half_lengths)
+        np.testing.assert_allclose(
+            center,
+            aset.center,
+            err_msg="AxisAlignedEllipsoidalSet center not as expected",
+        )
+        np.testing.assert_allclose(
+            half_lengths,
+            aset.half_lengths,
+            err_msg="AxisAlignedEllipsoidalSet half-lengths not as expected",
+        )
+
+        # check attributes update
+        new_center = [-1, -3]
+        new_half_lengths = [0, 1]
+        aset.center = new_center
+        aset.half_lengths = new_half_lengths
+
+        np.testing.assert_allclose(
+            new_center,
+            aset.center,
+            err_msg="AxisAlignedEllipsoidalSet center update not as expected",
+        )
+        np.testing.assert_allclose(
+            new_half_lengths,
+            aset.half_lengths,
+            err_msg=(
+                "AxisAlignedEllipsoidalSet half lengths update not as "
+                "expected"
+            ),
+        )
+
+    def test_error_on_axis_aligned_dim_change(self):
+        """
+        AxisAlignedEllipsoidalSet dimension is considered immutable.
+        Test ValueError raised when attempting to alter the
+        box set dimension (i.e. number of rows of `bounds`).
+        """
+        center = [0, 0]
+        half_lengths = [1, 3]
+        aset = AxisAlignedEllipsoidalSet(center, half_lengths)
+
+        exc_str = r"Attempting to set.*dimension 2 to value of dimension 3"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            aset.center = [0, 0, 1]
+
+        with self.assertRaisesRegex(ValueError, exc_str):
+            aset.half_lengths = [0, 0, 1]
+
+    def test_error_on_negative_axis_aligned_half_lengths(self):
+        """
+        Test ValueError if half lengths for AxisAlignedEllipsoidalSet
+        contains a negative value.
+        """
+        center = [1, 1]
+        invalid_half_lengths = [1, -1]
+        exc_str = (
+            r"Entry -1 of.*'half_lengths' is negative.*"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            AxisAlignedEllipsoidalSet(center, invalid_half_lengths)
+
+        # construct a valid axis-aligned ellipsoidal set
+        aset = AxisAlignedEllipsoidalSet(center, [1, 0])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            aset.half_lengths= invalid_half_lengths
 
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -873,9 +1114,116 @@ class testAxisAlignedEllipsoidalUncertaintySetClass(unittest.TestCase):
 
 
 class testPolyhedralUncertaintySetClass(unittest.TestCase):
-    '''
-    Polyhedral uncertainty sets. Required inputs are matrix A, right-hand-side b, and list of uncertain params.
-    '''
+    """
+    Unit tests for the Polyhedral set.
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test PolyhedralSet constructor and attribute setters work
+        appropriately.
+        """
+        lhs_coefficients_mat = [[1, 2, 3], [4, 5, 6]]
+        rhs_vec = [1, 3]
+
+        pset = PolyhedralSet(lhs_coefficients_mat, rhs_vec)
+
+        # check attributes are as expected
+        np.testing.assert_allclose(lhs_coefficients_mat, pset.coefficients_mat)
+        np.testing.assert_allclose(rhs_vec, pset.rhs_vec)
+
+        # update the set
+        pset.coefficients_mat = [[1, 0, 1], [1, 1, 1.5]]
+        pset.rhs_vec= [3, 4]
+
+        # check updates work
+        np.testing.assert_allclose(
+            [[1, 0, 1], [1, 1, 1.5]],
+            pset.coefficients_mat,
+        )
+        np.testing.assert_allclose([3, 4], pset.rhs_vec)
+
+    def test_error_on_polyhedral_set_dim_change(self):
+        """
+        PolyhedralSet dimension (number columns of 'coefficients_mat')
+        is considered immutable.
+        Test ValueError raised if attempt made to change dimension.
+        """
+        # construct valid set
+        pset = PolyhedralSet([[1, 2, 3], [4, 5, 6]], [1, 3])
+
+        exc_str = (
+            r".*must have 3 columns to match set dimension "
+            r"\(provided.*2 columns\)"
+        )
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pset.coefficients_mat = [[1, 2], [3, 4]]
+
+    def test_error_on_inconsistent_rows(self):
+        """
+        Number of rows of budget membership mat is immutable.
+        Similarly, size of rhs_vec is immutable.
+        Check ValueError raised in event of attempted change.
+        """
+        coeffs_mat_exc_str = (
+            r".*must have 2 rows to match shape of attribute 'rhs_vec' "
+            r"\(provided.*3 rows\)"
+        )
+        rhs_vec_exc_str = (
+            r".*must have 2 entries to match shape of attribute "
+            r"'coefficients_mat' \(provided.*3 entries\)"
+        )
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, rhs_vec_exc_str):
+            PolyhedralSet([[1, 2], [3, 4]], rhs_vec=[1, 3, 3])
+
+        # construct a valid polyhedral set
+        # (2 x 2 coefficients, 2-vector for RHS)
+        pset = PolyhedralSet([[1, 2], [3, 4]], rhs_vec=[1, 3])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, coeffs_mat_exc_str):
+            # 3 x 2 matrix row mismatch
+            pset.coefficients_mat = [[1, 2], [3, 4], [5, 6]]
+        with self.assertRaisesRegex(ValueError, rhs_vec_exc_str):
+            # 3-vector mismatches 2 rows
+            pset.rhs_vec = [1, 3, 2]
+
+    def test_error_on_empty_set(self):
+        """
+        Check ValueError raised if nonemptiness check performed
+        at construction returns a negative result.
+        """
+        exc_str = r"PolyhedralSet.*is empty.*"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            PolyhedralSet([[1], [-1]], rhs_vec=[1, -3])
+
+    def test_error_on_polyhedral_mat_all_zero_columns(self):
+        """
+        Test ValueError raised if budget membership mat
+        has a column with all zeros.
+        """
+        invalid_col_mat = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
+        rhs_vec = [1, 1, 2]
+
+        exc_str = (
+            r".*all entries zero in columns at indexes: 0, 1.*"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            PolyhedralSet(invalid_col_mat, rhs_vec)
+
+        # construct a valid budget set
+        pset = PolyhedralSet([[1, 0, 1], [1, 1, 0], [1, 1, 1]], rhs_vec)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            pset.coefficients_mat = invalid_col_mat
 
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -988,8 +1336,232 @@ class testPolyhedralUncertaintySetClass(unittest.TestCase):
 
 class testBudgetUncertaintySetClass(unittest.TestCase):
     '''
-    Budget uncertainty sets. Required inputs are matrix budget_membership_mat, rhs_vec.
+    Budget uncertainty sets.
+    Required inputs are matrix budget_membership_mat, rhs_vec.
     '''
+
+    def test_normal_budget_construction_and_update(self):
+        """
+        Test BudgetSet constructor and attribute setters work
+        appropriately.
+        """
+        budget_mat = [[1, 0, 1], [0, 1, 0]]
+        budget_rhs_vec = [1, 3]
+
+        # check attributes are as expected
+        buset = BudgetSet(budget_mat, budget_rhs_vec)
+
+        np.testing.assert_allclose(budget_mat, buset.budget_membership_mat)
+        np.testing.assert_allclose(budget_rhs_vec, buset.budget_rhs_vec)
+        np.testing.assert_allclose(
+            [[1, 0, 1], [0, 1, 0], [-1, 0, 0], [0, -1, 0], [0, 0, -1]],
+            buset.coefficients_mat,
+        )
+        np.testing.assert_allclose([1, 3, 0, 0, 0], buset.rhs_vec)
+        np.testing.assert_allclose(np.zeros(3), buset.origin)
+
+        # update the set
+        buset.budget_membership_mat = [[1, 1, 0], [0, 0, 1]]
+        buset.budget_rhs_vec= [3, 4]
+
+        # check updates work
+        np.testing.assert_allclose(
+            [[1, 1, 0], [0, 0, 1]],
+            buset.budget_membership_mat,
+        )
+        np.testing.assert_allclose([3, 4], buset.budget_rhs_vec)
+        np.testing.assert_allclose(
+            [[1, 1, 0], [0, 0, 1], [-1, 0, 0], [0, -1, 0], [0, 0, -1]],
+            buset.coefficients_mat,
+        )
+        np.testing.assert_allclose([3, 4, 0, 0, 0], buset.rhs_vec)
+
+        # update origin
+        buset.origin = [1, 0, -1.5]
+        np.testing.assert_allclose([1, 0, -1.5], buset.origin)
+
+    def test_error_on_budget_set_dim_change(self):
+        """
+        BudgetSet dimension is considered immutable.
+        Test ValueError raised when attempting to alter the
+        budget set dimension.
+        """
+        budget_mat = [[1, 0, 1], [0, 1, 0]]
+        budget_rhs_vec = [1, 3]
+        bu_set = BudgetSet(budget_mat, budget_rhs_vec)
+
+        # error on budget incidence matrix update
+        exc_str = (
+            r".*must have 3 columns to match set dimension "
+            r"\(provided.*1 columns\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bu_set.budget_membership_mat = [[1], [1]]
+
+        # error on origin update
+        exc_str = (
+            r".*must have 3 entries to match set dimension "
+            r"\(provided.*4 entries\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bu_set.origin = [1, 2, 1, 0]
+
+    def test_error_on_budget_member_mat_row_change(self):
+        """
+        Number of rows of budget membership mat is immutable.
+        Hence, size of budget_rhs_vec is also immutable.
+        """
+        budget_mat = [[1, 0, 1], [0, 1, 0]]
+        budget_rhs_vec = [1, 3]
+        bu_set = BudgetSet(budget_mat, budget_rhs_vec)
+
+        exc_str = (
+            r".*must have 2 rows to match shape of attribute 'budget_rhs_vec' "
+            r"\(provided.*1 rows\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bu_set.budget_membership_mat = [[1, 0, 1]]
+
+        exc_str = (
+            r".*must have 2 entries to match shape of attribute "
+            r"'budget_membership_mat' \(provided.*1 entries\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bu_set.budget_rhs_vec = [1]
+
+    def test_error_on_neg_budget_rhs_vec_entry(self):
+        """
+        Test ValueError raised if budget RHS vec has entry
+        with negative value entry.
+        """
+        budget_mat = [[1, 0, 1], [1, 1, 0]]
+        neg_val_rhs_vec = [1, -1]
+
+        exc_str = (
+            r"Entry -1 of.*'budget_rhs_vec' is negative*"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BudgetSet(budget_mat, neg_val_rhs_vec)
+
+        # construct a valid budget set
+        buset = BudgetSet(budget_mat, [1, 1])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            buset.budget_rhs_vec = neg_val_rhs_vec
+
+    def test_error_on_non_bool_budget_mat_entry(self):
+        """
+        Test ValueError raised if budget membership mat has
+        entry which is not a 0-1 value.
+        """
+        invalid_budget_mat = [[1, 0, 1], [1, 1, 0.1]]
+        budget_rhs_vec = [1, 1]
+
+        exc_str = (
+            r"Attempting.*entries.*not 0-1 values \(example: 0.1\).*"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BudgetSet(invalid_budget_mat, budget_rhs_vec)
+
+        # construct a valid budget set
+        buset = BudgetSet([[1, 0, 1], [1, 1, 0]], budget_rhs_vec)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            buset.budget_membership_mat = invalid_budget_mat
+
+    def test_error_on_budget_mat_all_zero_rows(self):
+        """
+        Test ValueError raised if budget membership mat
+        has a row with all zeros.
+        """
+        invalid_row_mat = [[0, 0, 0], [1, 1, 1], [0, 0, 0]]
+        budget_rhs_vec = [1, 1, 2]
+
+        exc_str = (
+            r".*all entries zero in rows at indexes: 0, 2.*"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BudgetSet(invalid_row_mat, budget_rhs_vec)
+
+        # construct a valid budget set
+        buset = BudgetSet([[1, 0, 1], [1, 1, 0], [1, 1, 1]], budget_rhs_vec)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            buset.budget_membership_mat = invalid_row_mat
+
+    def test_error_on_budget_mat_all_zero_columns(self):
+        """
+        Test ValueError raised if budget membership mat
+        has a column with all zeros.
+        """
+        invalid_col_mat = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
+        budget_rhs_vec = [1, 1, 2]
+
+        exc_str = (
+            r".*all entries zero in columns at indexes: 0, 1.*"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BudgetSet(invalid_col_mat, budget_rhs_vec)
+
+        # construct a valid budget set
+        buset = BudgetSet([[1, 0, 1], [1, 1, 0], [1, 1, 1]], budget_rhs_vec)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            buset.budget_membership_mat = invalid_col_mat
+
+    @unittest.skipUnless(
+        SolverFactory("cbc").available(exception_flag=False),
+        "LP solver CBC not available",
+    )
+    def test_budget_set_parameter_bounds_correct(self):
+        """
+        If LP solver is available, test parameter bounds method
+        for factor model set is correct (check against
+        results from an LP solver).
+        """
+        solver = SolverFactory("cbc")
+
+        # construct budget set instances
+        buset1 = BudgetSet(
+            budget_membership_mat=[[1, 1], [0, 1]],
+            rhs_vec=[2, 3],
+            origin=None,
+        )
+        buset2 = BudgetSet(
+            budget_membership_mat=[[1, 0], [1, 1]],
+            rhs_vec=[3, 2],
+            origin=[1, 1],
+        )
+
+        # check parameter bounds matches LP results
+        # exactly for each case
+        for buset in [buset1, buset2]:
+            param_bounds = buset.parameter_bounds
+            lp_param_bounds = eval_parameter_bounds(buset, solver)
+
+            self.assertTrue(
+                np.allclose(param_bounds, lp_param_bounds),
+                msg=(
+                    "Parameter bounds not consistent with LP values for "
+                    "BudgetSet with parameterization:\n"
+                    f"budget_membership_mat={buset.budget_membership_mat},\n"
+                    f"budget_rhs_vec={buset.budget_rhs_vec},\n"
+                    f"origin={buset.origin}.\n"
+                    f"({param_bounds} does not match {lp_param_bounds})"
+                ),
+            )
 
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -1070,9 +1642,14 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
                                rhs_vec=rhs_vec)
         m.uncertainty_set_constr = budget_set.set_as_constraint(uncertain_params=m.uncertain_params)
 
-        self.assertEqual(len(budget_membership_mat), len(m.uncertainty_set_constr.index_set()),
-                         msg="Budget uncertainty set constraints must be as many as the"
-                             "number of rows in the matrix A.")
+        self.assertEqual(
+            len(budget_set.coefficients_mat),
+            len(m.uncertainty_set_constr.index_set()),
+            msg=(
+                "Number of budget set constraints should be equal to the "
+                "number of rows in the 'coefficients_mat' attribute"
+            ),
+        )
 
     def test_point_in_set(self):
         m = ConcreteModel()
@@ -1109,11 +1686,116 @@ class testBudgetUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for BudgetSet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for BudgetSet")
 
+
 class testCardinalityUncertaintySetClass(unittest.TestCase):
     '''
     Cardinality uncertainty sets. Required inputs are origin, positive_deviation, gamma.
     Because Cardinality adds cassi vars to model, must pass model to set_as_constraint()
     '''
+
+    def test_normal_cardinality_construction_and_update(self):
+        """
+        Test CardinalitySet constructor and setter work normally
+        when bounds are appropriate.
+        """
+        # valid inputs
+        cset = CardinalitySet(
+            origin=[0, 0],
+            positive_deviation=[1, 3],
+            gamma=2,
+        )
+
+        # check attributes are as expected
+        np.testing.assert_allclose(cset.origin, [0, 0])
+        np.testing.assert_allclose(cset.positive_deviation, [1, 3])
+        np.testing.assert_allclose(cset.gamma, 2)
+        self.assertEqual(cset.dim, 2)
+
+        # update the set
+        cset.origin = [1, 2]
+        cset.positive_deviation = [3, 0]
+        cset.gamma = 0.5
+
+        # check updates work
+        np.testing.assert_allclose(cset.origin, [1, 2])
+        np.testing.assert_allclose(cset.positive_deviation, [3, 0])
+        np.testing.assert_allclose(cset.gamma, 0.5)
+
+    def test_error_on_neg_positive_deviation(self):
+        """
+        Cardinality set positive deviation attribute should
+        contain nonnegative numerical entries.
+
+        Check ValueError raised if any negative entries provided.
+        """
+        origin = [0, 0]
+        positive_deviation = [1, -2]  # invalid
+        gamma = 2
+
+        exc_str = (
+            r"Entry -2 of attribute 'positive_deviation' is negative "
+            r"value"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset = CardinalitySet(origin, positive_deviation, gamma)
+
+        # construct a valid cardinality set
+        cset = CardinalitySet(origin, [1, 1], gamma)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.positive_deviation = positive_deviation
+
+    def test_error_on_invalid_gamma(self):
+        """
+        Cardinality set gamma attribute should be a float-like
+        between 0 and the set dimension.
+
+        Check ValueError raised if gamma attribute is set
+        to an invalid value.
+        """
+        origin = [0, 0]
+        positive_deviation = [1, 1]
+        gamma = 3  # should be invalid
+
+        exc_str = (
+            r".*attribute 'gamma' must be a real number "
+            r"between 0 and dimension 2 \(provided value 3\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            CardinalitySet(origin, positive_deviation, gamma)
+
+        # construct a valid cardinality set
+        cset = CardinalitySet(origin, positive_deviation, gamma=2)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.gamma = gamma
+
+    def test_error_on_cardinality_set_dim_change(self):
+        """
+        Dimension is considered immutable.
+        Test ValueError raised when attempting to alter the
+        set dimension (i.e. number of entries of `origin`).
+        """
+        # construct a valid cardinality set
+        cset = CardinalitySet(
+            origin=[0, 0],
+            positive_deviation=[1, 1],
+            gamma=2,
+        )
+
+        exc_str = r"Attempting to set.*dimension 2 to value of dimension 3"
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.origin = [0, 0, 0]
+        with self.assertRaisesRegex(ValueError, exc_str):
+            cset.positive_deviation = [1, 1, 1]
 
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_uncertainty_set_with_correct_params(self):
@@ -1222,10 +1904,240 @@ class testCardinalityUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for CardinalitySet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for CardinalitySet")
 
+
+def eval_parameter_bounds(uncertainty_set, solver):
+    """
+    Evaluate parameter bounds of uncertainty set by solving
+    bounding problems (as opposed to via the `parameter_bounds`
+    method).
+    """
+    bounding_mdl = uncertainty_set.bounding_model()
+
+    param_bounds = []
+    for idx, obj in bounding_mdl.param_var_objectives.items():
+        # activate objective for corresponding dimension
+        obj.activate()
+        bounds = []
+
+        # solve for lower bound, then upper bound
+        # solve should be successful
+        for sense in (minimize, maximize):
+            obj.sense = sense
+            solver.solve(bounding_mdl)
+            bounds.append(value(obj))
+
+        # add parameter bounds for current dimension
+        param_bounds.append(tuple(bounds))
+
+        # ensure sense is minimize when done, deactivate
+        obj.sense = minimize
+        obj.deactivate()
+
+    return param_bounds
+
+
 class testBoxUncertaintySetClass(unittest.TestCase):
-    '''
-    Box uncertainty sets. Required input is bounds list.
-    '''
+    """
+    Unit tests for the box uncertainty set (BoxSet).
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test BoxSet constructor and setter work normally
+        when bounds are appropriate.
+        """
+        bounds = [[1, 2], [3, 4]]
+        bset = BoxSet(bounds=bounds)
+        np.testing.assert_allclose(
+            bounds,
+            bset.bounds,
+            err_msg="BoxSet bounds not as expected",
+        )
+
+        # check bounds update
+        new_bounds = [[3, 4], [5, 6]]
+        bset.bounds = new_bounds
+        np.testing.assert_allclose(
+            new_bounds,
+            bset.bounds,
+            err_msg="BoxSet bounds not as expected",
+        )
+
+    def test_error_on_box_set_dim_change(self):
+        """
+        BoxSet dimension is considered immutable.
+        Test ValueError raised when attempting to alter the
+        box set dimension (i.e. number of rows of `bounds`).
+        """
+        bounds = [[1, 2], [3, 4]]
+        bset = BoxSet(bounds=bounds)  # 2-dimensional set
+
+        exc_str = r"Attempting to set.*dimension 2 to a value of dimension 3"
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bset.bounds = [[1, 2], [3, 4], [5, 6]]
+
+    def test_error_on_lb_exceeds_ub(self):
+        """
+        Test exception raised when an LB exceeds a UB.
+        """
+        bad_bounds = [[1, 2], [4, 3]]
+
+        exc_str = r"Lower bound 4 exceeds upper bound 3"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BoxSet(bad_bounds)
+
+        # construct a valid box set
+        bset = BoxSet([[1, 2], [3, 4]])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bset.bounds = bad_bounds
+
+    def test_error_on_ragged_bounds_array(self):
+        """
+        Test ValueError raised on attempting to set BoxSet bounds
+        to a ragged array.
+
+        This test also validates `uncertainty_sets.is_ragged` for all
+        pre-defined array-like attributes of all set-types, as the
+        `is_ragged` method is used throughout.
+        """
+        # example ragged arrays
+        ragged_arrays = (
+            [[1, 2], 3],            # list and int in same sequence
+            [[1, 2], [3, [4, 5]]],  # 2nd row ragged (list and int)
+            [[1, 2], [3]],          # variable row lengths
+        )
+
+        # construct valid box set
+        bset = BoxSet(bounds=[[1, 2], [3, 4]])
+
+        # exception message should match this regex
+        exc_str = r"Argument `bounds` should not be a ragged array-like.*"
+        for ragged_arr in ragged_arrays:
+            # assert error on construction
+            with self.assertRaisesRegex(ValueError, exc_str):
+                BoxSet(bounds=ragged_arr)
+
+            # assert error on update
+            with self.assertRaisesRegex(ValueError, exc_str):
+                bset.bounds = ragged_arr
+
+    def test_error_on_invalid_bounds_shape(self):
+        """
+        Test ValueError raised when attempting to set
+        Box set bounds to array of incorrect shape
+        (should be a 2-D array with 2 columns).
+        """
+        # 3d array
+        three_d_arr = [[[1, 2], [3, 4], [5, 6]]]
+        exc_str = (
+            r"Argument `bounds` must be a 2-dimensional.*"
+            r"\(detected 3 dimensions.*\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BoxSet(three_d_arr)
+
+        # construct valid box set
+        bset = BoxSet([[1, 2], [3, 4], [5, 6]])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bset.bounds = three_d_arr
+
+    def test_error_on_wrong_number_columns(self):
+        """
+        BoxSet bounds should be a 2D array-like with 2 columns.
+        ValueError raised if number columns wrong
+        """
+        three_col_arr = [[1, 2, 3], [4, 5, 6]]
+        exc_str = (
+            r"Attribute 'bounds' should be of shape \(\.{3},2\), "
+            r"but detected shape \(\.{3},3\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BoxSet(three_col_arr)
+
+        # construct a valid box set
+        bset = BoxSet([[1, 2], [3, 4]])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bset.bounds = three_col_arr
+
+    def test_error_on_empty_last_dimension(self):
+        """
+        Check ValueError raised when last dimension of BoxSet bounds is
+        empty.
+        """
+        empty_2d_arr = [[], [], []]
+        exc_str = (
+            r"Last dimension of argument `bounds` must be non-empty "
+            r"\(detected shape \(3, 0\)\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            BoxSet(bounds=empty_2d_arr)
+
+        # create a valid box set
+        bset = BoxSet([[1, 2], [3, 4]])
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            bset.bounds = empty_2d_arr
+
+    def test_error_on_non_numeric_bounds(self):
+        """
+        Test that ValueError is raised if box set bounds
+        are set to array-like with entries of a non-numeric
+        type (such as int, float).
+        """
+        # invalid bounds (contains an entry type str)
+        new_bounds = [[1, "test"], [3, 2]]
+
+        exc_str = (
+            r"Entry 'test' of the argument `bounds` "
+            r"is not a valid numeric type \(provided type 'str'\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(TypeError, exc_str):
+            BoxSet(new_bounds)
+
+        # construct a valid box set
+        bset = BoxSet(bounds=[[1, 2], [3, 4]])
+
+        # assert error on update
+        with self.assertRaisesRegex(TypeError, exc_str):
+            bset.bounds = new_bounds
+
+    def test_error_on_bounds_with_nan_or_inf(self):
+        """
+        Box set bounds set to array-like with inf or nan.
+        """
+        # construct a valid box set
+        bset = BoxSet(bounds=[[1, 2], [3, 4]])
+
+        for val_str in ["inf", "nan"]:
+            bad_bounds = [[1, float(val_str)], [2, 3]]
+            exc_str = (
+                fr"Entry '{val_str}' of the argument `bounds` "
+                fr"is not a finite numeric value"
+            )
+            # assert error on construction
+            with self.assertRaisesRegex(ValueError, exc_str):
+                BoxSet(bad_bounds)
+
+            # assert error on update
+            with self.assertRaisesRegex(ValueError, exc_str):
+                bset.bounds = bad_bounds
 
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -1313,6 +2225,48 @@ class testDiscreteUncertaintySetClass(unittest.TestCase):
     '''
     Discrete uncertainty sets. Required inputis a scenarios list.
     '''
+
+    def test_normal_discrete_set_construction_and_update(self):
+        """
+        Test DiscreteScenarioSet constructor and setter work normally
+        when scenarios are appropriate.
+        """
+        scenarios = [[0, 0, 0], [1, 2, 3]]
+
+        # normal construction should work
+        dset = DiscreteScenarioSet(scenarios)
+
+        # check scenarios added appropriately
+        np.testing.assert_allclose(
+            scenarios,
+            dset.scenarios,
+            err_msg="BoxSet bounds not as expected",
+        )
+
+        # check scenarios updated appropriately
+        new_scenarios = [[0, 1, 2], [1, 2, 0], [3, 5, 4]]
+        dset.scenarios = new_scenarios
+        np.testing.assert_allclose(
+            new_scenarios,
+            dset.scenarios,
+            err_msg="BoxSet bounds not as expected",
+        )
+
+    def test_error_on_discrete_set_dim_change(self):
+        """
+        Test ValueError raised when attempting to update
+        DiscreteScenarioSet dimension.
+        """
+        scenarios = [[1, 2], [3, 4]]
+        dset = DiscreteScenarioSet(scenarios)  # 2-dimensional set
+
+        exc_str = (
+            r".*must have 2 columns.* to match set dimension "
+            r"\(provided.*with 3 columns\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            dset.scenarios = [[1, 2, 3], [4, 5, 6]]
+
 
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -1470,6 +2424,186 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
     FactorModelSet uncertainty sets. Required inputs are psi_matrix, number_of_factors, origin and beta.
     '''
 
+    def test_normal_factor_model_construction_and_update(self):
+        """
+        Test FactorModelSet constructor and setter work normally
+        when attribute values are appropriate.
+        """
+        # valid inputs
+        fset = FactorModelSet(
+            origin=[0, 0, 1],
+            number_of_factors=2,
+            psi_mat=[[1, 2], [0, 1], [1, 0]],
+            beta=0.1,
+        )
+
+        # check attributes are as expected
+        np.testing.assert_allclose(fset.origin, [0, 0, 1])
+        np.testing.assert_allclose(fset.psi_mat, [[1, 2], [0, 1], [1, 0]])
+        np.testing.assert_allclose(fset.number_of_factors, 2)
+        np.testing.assert_allclose(fset.beta, 0.1)
+        self.assertEqual(fset.dim, 3)
+
+        # update the set
+        fset.origin = [1, 1, 0]
+        fset.psi_mat = [[1, 0], [0, 1], [1, 1]]
+        fset.beta = 0.5
+
+        # check updates work
+        np.testing.assert_allclose(fset.origin, [1, 1, 0])
+        np.testing.assert_allclose(fset.psi_mat, [[1, 0], [0, 1], [1, 1]])
+        np.testing.assert_allclose(fset.beta, 0.5)
+
+    def test_error_on_factor_model_set_dim_change(self):
+        """
+        Test ValueError raised when attempting to change FactorModelSet
+        dimension (by changing number of entries in origin
+        or number of rows of psi_mat).
+        """
+        origin = [0, 0, 0]
+        number_of_factors = 2
+        psi_mat = [[1, 0], [0, 1], [1, 1]]
+        beta = 0.5
+
+        # construct factor model set
+        fset = FactorModelSet(origin, number_of_factors, psi_mat, beta)
+
+        # assert error on psi mat update
+        exc_str = (
+            r"should be of shape \(3, 2\) to match.*dimensions "
+            r"\(provided shape \(2, 2\)\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            fset.psi_mat = [[1, 0], [1, 2]]
+
+        # assert error on origin update
+        exc_str = (
+            r"Attempting.*factor model set of dimension 3 "
+            r"to value of dimension 2"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            fset.origin = [1, 3]
+
+    def test_error_on_invalid_number_of_factors(self):
+        """
+        Test ValueError raised if number of factors
+        is negative int, or AttributeError
+        if attempting to update (should be immutable).
+        """
+        exc_str = (
+            r".*'number_of_factors' must be a positive int "
+            r"\(provided value -1\)"
+        )
+        with self.assertRaisesRegex(ValueError, exc_str):
+            FactorModelSet(
+                origin=[0],
+                number_of_factors=-1,
+                psi_mat=[[1, 1]],
+                beta=0.1,
+            )
+
+        fset = FactorModelSet(
+            origin=[0],
+            number_of_factors=2,
+            psi_mat=[[1, 1]],
+            beta=0.1,
+        )
+
+        exc_str = r".*'number_of_factors' is immutable"
+        with self.assertRaisesRegex(AttributeError, exc_str):
+            fset.number_of_factors = 3
+
+    def test_error_on_invalid_beta(self):
+        """
+        Test ValueError raised if beta is invalid (exceeds 1 or
+        is negative)
+        """
+        origin = [0, 0, 0]
+        number_of_factors = 2
+        psi_mat = [[1, 0], [0, 1], [1, 1]]
+        neg_beta = -0.5
+        big_beta = 1.5
+
+        # assert error on construction
+        neg_exc_str = (
+            r".*must be a real number between 0 and 1.*"
+            r"\(provided value -0.5\)"
+        )
+        big_exc_str = (
+            r".*must be a real number between 0 and 1.*"
+            r"\(provided value 1.5\)"
+        )
+        with self.assertRaisesRegex(ValueError, neg_exc_str):
+            FactorModelSet(origin, number_of_factors, psi_mat, neg_beta)
+        with self.assertRaisesRegex(ValueError, big_exc_str):
+            FactorModelSet(origin, number_of_factors, psi_mat, big_beta)
+
+        # create a valid factor model set
+        fset = FactorModelSet(origin, number_of_factors, psi_mat, 1)
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, neg_exc_str):
+            fset.beta = neg_beta
+        with self.assertRaisesRegex(ValueError, big_exc_str):
+            fset.beta = big_beta
+
+    @unittest.skipUnless(
+        SolverFactory("cbc").available(exception_flag=False),
+        "LP solver CBC not available",
+    )
+    def test_factor_model_parameter_bounds_correct(self):
+        """
+        If LP solver is available, test parameter bounds method
+        for factor model set is correct (check against
+        results from an LP solver).
+        """
+        solver = SolverFactory("cbc")
+
+        # four cases where prior parameter bounds
+        # approximations were probably too tight
+        fset1 = FactorModelSet(
+            origin=[0, 0],
+            number_of_factors=3,
+            psi_mat=[[1, -1, 1], [1, 0.1, 1]],
+            beta=1/6,
+        )
+        fset2 = FactorModelSet(
+            origin=[0],
+            number_of_factors=3,
+            psi_mat=[[1, 6, 8]],
+            beta=1/2,
+        )
+        fset3 = FactorModelSet(
+            origin=[1],
+            number_of_factors=2,
+            psi_mat=[[1, 2]],
+            beta=1/4,
+        )
+        fset4 = FactorModelSet(
+            origin=[1],
+            number_of_factors=3,
+            psi_mat=[[-1, -6, -8]],
+            beta=1/2,
+        )
+
+        # check parameter bounds matches LP results
+        # exactly for each case
+        for fset in [fset1, fset2, fset3, fset4]:
+            param_bounds = fset.parameter_bounds
+            lp_param_bounds = eval_parameter_bounds(fset, solver)
+
+            self.assertTrue(
+                np.allclose(param_bounds, lp_param_bounds),
+                msg=(
+                    "Parameter bounds not consistent with LP values for "
+                    "FactorModelSet with parameterization:\n"
+                    f"F={fset.number_of_factors},\n"
+                    f"beta={fset.beta},\n"
+                    f"psi_mat={fset.psi_mat},\n"
+                    f"origin={fset.origin}."
+                ),
+            )
+
     @unittest.skipIf(not numpy_available, 'Numpy is not available.')
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -1577,12 +2711,194 @@ class testFactorModelUncertaintySetClass(unittest.TestCase):
         self.assertNotEqual(m.util.uncertain_param_vars[1].lb, None, "Bounds not added correctly for FactorModelSet")
         self.assertNotEqual(m.util.uncertain_param_vars[1].ub, None, "Bounds not added correctly for FactorModelSet")
 
-class testIntersectionSetClass(unittest.TestCase):
-    '''
-    Intersection uncertainty sets. Required input is set objects to intersect, and set_as_constraint requires
-    a NLP solver to confirm the intersection is not empty.
-    '''
 
+class testIntersectionSetClass(unittest.TestCase):
+    """
+    Unit tests for the IntersectionSet class.
+    Required input is set objects to intersect,
+    and set_as_constraint requires
+    an NLP solver to confirm the intersection is not empty.
+    """
+
+    def test_normal_construction_and_update(self):
+        """
+        Test IntersectionSet constructor and setter
+        work normally when arguments are appropriate.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0, 0], [1, 1, 1])
+
+        iset = IntersectionSet(box_set=bset, axis_aligned_set=aset)
+        self.assertIn(
+            bset,
+            iset.all_sets,
+            msg=(
+                "IntersectionSet 'all_sets' attribute does not"
+                "contain expected BoxSet"
+            )
+        )
+        self.assertIn(
+            aset,
+            iset.all_sets,
+            msg=(
+                "IntersectionSet 'all_sets' attribute does not"
+                "contain expected AxisAlignedEllipsoidalSet"
+            )
+        )
+
+    def test_error_on_intersecting_wrong_dims(self):
+        """
+        Test ValueError raised if IntersectionSet sets
+        are not of same dimension.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0], [2, 2])
+        wrong_aset = AxisAlignedEllipsoidalSet([0, 0, 0], [1, 1, 1])
+
+        exc_str = r".*of dimension 2, but attempting to add set of dimension 3"
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            IntersectionSet(box_set=bset, axis_set=aset, wrong_set=wrong_aset)
+
+        # construct a valid intersection set
+        iset = IntersectionSet(box_set=bset, axis_set=aset)
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            iset.all_sets.append(wrong_aset)
+
+    def test_type_error_on_invalid_arg(self):
+        """
+        Test TypeError raised if an argument not of type
+        UncertaintySet is passed to the IntersectionSet
+        constructor or appended to 'all_sets'.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0], [2, 2])
+
+        exc_str = (
+            r"Entry '1' of the argument `all_sets` is not An `UncertaintySet` "
+            r"object.*\(provided type 'int'\)"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(TypeError, exc_str):
+            IntersectionSet(box_set=bset, axis_set=aset, invalid_arg=1)
+
+        # construct a valid intersection set
+        iset = IntersectionSet(box_set=bset, axis_set=aset)
+
+        # assert error on update
+        with self.assertRaisesRegex(TypeError, exc_str):
+            iset.all_sets.append(1)
+
+    def test_error_on_intersection_dim_change(self):
+        """
+        IntersectionSet dimension is considered immutable.
+        Test ValueError raised when attempting to set the
+        constituent sets to a different dimension.
+        """
+        bset = BoxSet(bounds=[[-1, 1], [-1, 1]])
+        aset = AxisAlignedEllipsoidalSet([0, 0], [2, 2])
+
+        # construct the set
+        iset = IntersectionSet(box_set=bset, axis_set=aset)
+
+        exc_str = (
+            r"Attempting to set.*dimension 2 to a sequence.* of dimension 1"
+        )
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            # attempt to set to 1-dimensional sets
+            iset.all_sets = [
+                BoxSet([[1, 1]]),
+                AxisAlignedEllipsoidalSet([0], [1]),
+            ]
+
+    def test_error_on_too_few_sets(self):
+        """
+        Check ValueError raised if too few sets are passed
+        to the intersection set.
+        """
+        exc_str = (
+            r"Attempting.*minimum required length 2.*iterable of length 1"
+        )
+
+        # assert error on construction
+        with self.assertRaisesRegex(ValueError, exc_str):
+            IntersectionSet(bset=BoxSet([[1, 2]]))
+
+        # construct a valid intersection set
+        iset = IntersectionSet(
+            box_set=BoxSet([[1, 2]]),
+            axis_set=AxisAlignedEllipsoidalSet([0], [1]),
+        )
+
+        # assert error on update
+        with self.assertRaisesRegex(ValueError, exc_str):
+            # attempt to set to 1-dimensional sets
+            iset.all_sets = [BoxSet([[1, 1]])]
+
+    def test_intersection_uncertainty_set_list_behavior(self):
+        """
+        Test the 'all_sets' attribute of the IntersectionSet
+        class behaves like a regular Python list.
+        """
+        iset = IntersectionSet(
+            bset=BoxSet([[0, 2]]),
+            aset=AxisAlignedEllipsoidalSet([0], [1]),
+        )
+
+        # an UncertaintySetList of length 2.
+        # should behave like a list of length 2
+        all_sets = iset.all_sets
+        
+        # test append
+        all_sets.append(BoxSet([[1, 2]]))
+        del all_sets[2:]
+
+        # test extend
+        all_sets.extend([BoxSet([[1, 2]]), EllipsoidalSet([0], [[1]], 2)])
+        del all_sets[2:]
+
+        # index in range. Allow slicing as well
+        # none of these should result in exception
+        all_sets[0]
+        all_sets[1]
+        all_sets[100:]
+        all_sets[0:2:20]
+        all_sets[0:2:1]
+        all_sets[-20:-1:2]
+
+        # index out of range
+        self.assertRaises(IndexError, lambda: all_sets[2])
+        self.assertRaises(IndexError, lambda: all_sets[-3])
+
+        # assert min length ValueError if attempting to clear
+        # list to length less than 2
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            all_sets[:] = all_sets[0]
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            del all_sets[1]
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            del all_sets[1:]
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            del all_sets[:]
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            all_sets.clear()
+        with self.assertRaisesRegex(ValueError, r"Length.* must be at least 2"):
+            all_sets[0:] = []
+
+        # assignment out of range
+        with self.assertRaisesRegex(IndexError, r"assignment index out of range"):
+            all_sets[-3] = BoxSet([[1, 1.5]])
+        with self.assertRaisesRegex(IndexError, r"assignment index out of range"):
+            all_sets[2] = BoxSet([[1, 1.5]])
+
+        # assigning to slices should work fine
+        all_sets[3:] = [BoxSet([[1, 1.5]]), BoxSet([[1, 3]])]
+            
     @unittest.skipUnless(SolverFactory('ipopt').available(exception_flag=False), "Local NLP solver is not available.")
     def test_uncertainty_set_with_correct_params(self):
         '''
@@ -3094,6 +4410,69 @@ class TestSubsolverTiming(unittest.TestCase):
                 "time estimates are made using TicTocTimer"
             ),
         )
+
+    @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
+                         "Global NLP solver is not available and licensed.")
+    def test_two_stg_mod_with_intersection_set(self):
+        """
+        Test two-stage model with `AxisAlignedEllipsoidalSet`
+        as the uncertainty set.
+        """
+        # define model
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u1 = Param(initialize=1.125, mutable=True)
+        m.u2 = Param(initialize=1, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u1**(0.5) - m.x2 * m.u1 <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u1 == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - m.u2) ** 2)
+
+        # construct the IntersectionSet
+        ellipsoid = AxisAlignedEllipsoidalSet(
+            center=[1.125, 1],
+            half_lengths=[1, 0],
+        )
+        bset = BoxSet(bounds=[[1, 2], [0.5, 1.5]])
+        iset = IntersectionSet(ellipsoid=ellipsoid, bset=bset)
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory('baron')
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u1, m.u2],
+            uncertainty_set=iset,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            options={
+                "objective_focus": ObjectiveType.worst_case,
+                "solve_master_globally": True,
+            }
+        )
+
+        # check successful termination
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.robust_optimal,
+            msg="Did not identify robust optimal solution to problem instance."
+        )
+        self.assertGreater(
+            results.iterations,
+            0,
+            msg="Robust infeasible model terminated in 0 iterations (nominal case)."
+        )
+
 
 
 if __name__ == "__main__":

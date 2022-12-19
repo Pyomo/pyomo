@@ -18,6 +18,7 @@ with a diverse set of optimization capabilities.
    solving_pyomo_models.rst
    working_models.rst
    working_abstractmodels/index.rst
+   model_transformations/index.rst
    modeling_extensions/index.rst
    tutorial_examples.rst
    model_debugging/index.rst

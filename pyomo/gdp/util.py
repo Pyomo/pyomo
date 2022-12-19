@@ -15,7 +15,7 @@ from pyomo.gdp.disjunct import _DisjunctData, Disjunct
 import pyomo.core.expr.current as EXPR
 from pyomo.core.base.component import _ComponentBase
 from pyomo.core import (
-    Block, TraversalStrategy, SortComponents, LogicalConstraint, value)
+    Block, Suffix, TraversalStrategy, SortComponents, LogicalConstraint, value)
 from pyomo.core.base.block import _BlockData
 from pyomo.common.collections import ComponentMap, ComponentSet, OrderedSet
 from pyomo.opt import TerminationCondition, SolverStatus
@@ -291,8 +291,8 @@ def get_gdp_tree(targets, instance, knownBlocks):
 def preprocess_targets(targets, instance, knownBlocks, gdp_tree=None):
     if gdp_tree is None:
         gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
-    # this is for bigm and hull: We need to transform from the leaves up, so we
-    # want a reverse of a topological sort: no parent can come before its child.
+    # this is for bigm: We need to transform from the leaves up, so we want a
+    # reverse of a topological sort: no parent can come before its child.
     return gdp_tree.reverse_topological_sort()
 
 # [ESJ 07/09/2019 Should this be a more general utility function elsewhere?  I'm
@@ -371,12 +371,12 @@ def get_src_disjunct(transBlock):
     transBlock: _BlockData which is in the relaxedDisjuncts IndexedBlock
                 on a transformation block.
     """
-    if not hasattr(transBlock, "_srcDisjunct") or \
-       type(transBlock._srcDisjunct) is not weakref_ref:
+    if not hasattr(transBlock, "_src_disjunct") or \
+       type(transBlock._src_disjunct) is not weakref_ref:
         raise GDP_Error("Block '%s' doesn't appear to be a transformation "
                         "block for a disjunct. No source disjunct found."
                         % transBlock.name)
-    return transBlock._srcDisjunct()
+    return transBlock._src_disjunct()
 
 def get_src_constraint(transformedConstraint):
     """Return the original Constraint whose transformed counterpart is
@@ -557,3 +557,67 @@ def _disjunct_on_active_block(disjunct):
             parent_block = parent_block.parent_block()
             continue
     return True
+
+def _get_bigm_suffix_list(block, stopping_block=None):
+    # Note that you can only specify suffixes on BlockData objects or
+    # ScalarBlocks. Though it is possible at this point to stick them
+    # on whatever components you want, we won't pick them up.
+    suffix_list = []
+
+    # go searching above block in the tree, stop when we hit stopping_block
+    # (This is so that we can search on each Disjunct once, but get any
+    # information between a constraint and its Disjunct while transforming
+    # the constraint).
+    while block is not None:
+        bigm = block.component('BigM')
+        if type(bigm) is Suffix:
+            suffix_list.append(bigm)
+        if block is stopping_block:
+            break
+        block = block.parent_block()
+
+    return suffix_list
+
+def _convert_M_to_tuple(M, constraint, disjunct=None):
+    if not isinstance(M, (tuple, list)):
+        if M is None:
+            M = (None, None)
+        else:
+            try:
+                M = (-M, M)
+            except:
+                logger.error("Error converting scalar M-value %s "
+                             "to (-M,M).  Is %s not a numeric type?"
+                             % (M, type(M)))
+                raise
+    if len(M) != 2:
+        constraint_name = constraint.name
+        if disjunct is not None:
+            constraint_name += " relative to Disjunct %s" % disjunct.name
+        raise GDP_Error("Big-M %s for constraint %s is not of "
+                        "length two. "
+                        "Expected either a single value or "
+                        "tuple or list of length two for M."
+                        % (str(M), constraint.name))
+
+    return M
+
+def _warn_for_unused_bigM_args(bigM, used_args, logger):
+    # issue warnings about anything that was in the bigM args dict that we
+    # didn't use
+    if bigM is not None:
+        unused_args = ComponentSet(bigM.keys()) - \
+                      ComponentSet(used_args.keys())
+        if len(unused_args) > 0:
+            warning_msg = ("Unused arguments in the bigM map! "
+                           "These arguments were not used by the "
+                           "transformation:\n")
+            for component in unused_args:
+                if isinstance(component, (tuple, list)) and len(component) == 2:
+                    warning_msg += "\t(%s, %s)\n" % (component[0].name,
+                                                     component[1].name)
+                elif hasattr(component, 'name'):
+                    warning_msg += "\t%s\n" % component.name
+                else:
+                    warning_msg += "\t%s\n" % component
+            logger.warning(warning_msg)
