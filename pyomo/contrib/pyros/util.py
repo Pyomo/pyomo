@@ -109,8 +109,8 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
         else:
             config.progress_logger.warning(
                 "Subproblem time limit setting not adjusted for "
-                f"subsolver of type {type(solver)}. PyROS time limit "
-                "may not be honored "
+                f"subsolver of type:\n    {type(solver)}.\n"
+                "    PyROS time limit may not be honored "
             )
 
 
