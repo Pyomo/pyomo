@@ -165,7 +165,7 @@ class IntervalTestBase(object):
                 for _x in x:
                     _z = _x ** y
                     self.assertTrue(np.all(zl - 1e-14 <= _z))
-                    self.assertTrue(np.all(zu + 1e-14>= _z))
+                    self.assertTrue(np.all(zu + 1e-14 >= _z))
 
         x_bounds = [(np.random.uniform(-5, -2), np.random.uniform(2, 5)),
                     (np.random.uniform(-5, -2), np.random.uniform(-2, 0)),
