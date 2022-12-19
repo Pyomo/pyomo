@@ -106,6 +106,12 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
 
             # ensure positive value assigned to avoid application error
             solver.options[options_key] = max(30, 30 + time_remaining)
+        else:
+            config.progress_logger.warning(
+                "Subproblem time limit setting not adjusted for "
+                f"subsolver of type {type(solver)}. PyROS time limit "
+                "may not be honored "
+            )
 
 
 def a_logger(str_or_logger):
