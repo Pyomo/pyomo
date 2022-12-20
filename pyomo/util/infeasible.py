@@ -261,7 +261,7 @@ def find_close_to_bounds(m, tol=1E-6):
     """Find variables and constraints whose values are close to their bounds.
 
     Uses the current model state. Variables with no values and
-    Constraints with evaluation errors are returned as if they were
+    constraints with evaluation errors are returned as if they were
     close to their bounds.
 
     Note
@@ -270,9 +270,9 @@ def find_close_to_bounds(m, tol=1E-6):
       - Equality constraints are omitted (as they should always
         be close to their bounds!).
       - Range constraints where both the upper and lower bounds are
-        close are omitted (these are basically equality constriants).
+        close are omitted (these are basically equality constraints).
       - Fixed variables are omitted (this is analogous to an equality
-        constriant).
+        constraint).
       - Variables where both the upper and lower bounds are close are
         omitted (these are basically fixed variables).
 
@@ -288,7 +288,7 @@ def find_close_to_bounds(m, tol=1E-6):
     Yields
     ------
     var: ComponentData
-        The variable or Constraint that is close to its bounds
+        The variable or constraint that is close to its bounds
 
     val: float
         The value of the variable or constraint body
