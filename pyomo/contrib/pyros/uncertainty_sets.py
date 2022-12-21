@@ -348,11 +348,17 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError
 
-    def bounding_model(self):
+    def bounding_model(self, config=None):
         """
         Make uncertain parameter value bounding problems (optimize
         value of each uncertain parameter subject to constraints on the
         uncertain parameters).
+
+        Parameters
+        ----------
+        config : None or ConfigDict, optional
+            If a ConfigDict is provided, then it contains
+            arguments passed to the PyROS solver.
 
         Returns
         -------
@@ -369,6 +375,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         model.cons = self.set_as_constraint(
             uncertain_params=model.param_vars,
             model=model,
+            config=config,
         )
 
         @model.Objective(range(self.dim))
@@ -406,7 +413,7 @@ class UncertaintySet(object, metaclass=abc.ABCMeta):
         This method is invoked during the validation step of a PyROS
         solver call.
         """
-        bounding_model = self.bounding_model()
+        bounding_model = self.bounding_model(config=config)
         solver = config.global_solver
 
         # initialize uncertain parameter variables
@@ -1338,15 +1345,20 @@ class BudgetSet(UncertaintySet):
         and defines which uncertain parameters
         (which dimensions) participate in that row's constraint.
     rhs_vec : (M,) array_like
-        Right-hand side values for the budget constraints.
+        Budget limits (upper bounds) with respect to
+        the origin of the set.
+    origin : (N,) array_like or None, optional
+        Origin of the budget set. If `None` is provided, then
+        the origin is set to the zero vector.
     """
 
-    def __init__(self, budget_membership_mat, rhs_vec):
+    def __init__(self, budget_membership_mat, rhs_vec, origin=None):
         """Initialize self (see class docstring).
 
         """
         self.budget_membership_mat = budget_membership_mat
         self.budget_rhs_vec = rhs_vec
+        self.origin = np.zeros(self.dim) if origin is None else origin
 
     @property
     def type(self):
@@ -1368,9 +1380,11 @@ class BudgetSet(UncertaintySet):
         incidence matrix may be altered through the
         `budget_membership_mat` attribute.
         """
-        neg_identity = -1 * np.identity(self.dim)
-
-        return np.append(self.budget_membership_mat, neg_identity, axis=0)
+        return np.append(
+            self.budget_membership_mat,
+            -np.identity(self.dim),
+            axis=0,
+        )
 
     @property
     def rhs_vec(self):
@@ -1379,11 +1393,13 @@ class BudgetSet(UncertaintySet):
         constraints defining the budget set. This also includes entries
         for nonnegativity constraints on the uncertain parameters.
 
-        This attribute cannot be set. The right-hand
-        sides for the budget constraints may be modified/accessed
-        through the `budget_rhs_vec` attribute.
+        This attribute cannot be set, and is automatically determined
+        given other attributes.
         """
-        return np.append(self.budget_rhs_vec, np.zeros(self.dim))
+        return np.append(
+            self.budget_rhs_vec + self.budget_membership_mat @ self.origin,
+            -self.origin,
+        )
 
     @property
     def budget_membership_mat(self):
@@ -1467,8 +1483,8 @@ class BudgetSet(UncertaintySet):
     @property
     def budget_rhs_vec(self):
         """
-        (M,) numpy.ndarray : Right-hand side values (upper bounds) for
-        the budget constraints.
+        (M,) numpy.ndarray : Budget limits (upper bounds)
+        with respect to the origin.
         """
         return self._budget_rhs_vec
 
@@ -1507,6 +1523,38 @@ class BudgetSet(UncertaintySet):
         self._budget_rhs_vec = rhs_vec_arr
 
     @property
+    def origin(self):
+        """
+        (N,) numpy.ndarray : Origin of the budget set.
+        """
+        return self._origin
+
+    @origin.setter
+    def origin(self, val):
+        validate_array(
+            arr=val,
+            arr_name="origin",
+            dim=1,
+            valid_types=valid_num_types,
+            valid_type_desc="a valid numeric type",
+            required_shape=None,
+        )
+
+        origin_arr = np.array(val)
+
+        # ensure shape of coefficients matrix
+        # and rhs vec match
+        if len(val) != self.dim:
+            raise ValueError(
+                "Budget set attribute 'origin' "
+                f"must have {self.dim} entries "
+                f"to match set dimension "
+                f"(provided {origin_arr.size} entries)"
+            )
+
+        self._origin = origin_arr
+
+    @property
     def dim(self):
         """
         int : Dimension of the budget set.
@@ -1533,15 +1581,18 @@ class BudgetSet(UncertaintySet):
             the uncertain parameter bounds for the corresponding set
             dimension.
         """
-        return [
-            (0, min(self.budget_rhs_vec[col == 1]))
-            for col in self.budget_membership_mat.T
-        ]
+        bounds = []
+        for orig_val, col in zip(self.origin, self.budget_membership_mat.T):
+            lb = orig_val
+            ub = orig_val + np.min(self.budget_rhs_vec[col == 1])
+            bounds.append((lb, ub))
+
+        return bounds
 
     def set_as_constraint(self, uncertain_params, **kwargs):
         """
-        Construct a list of budget constraints on a given sequence
-        of uncertain parameter objects.
+        Construct a list of the constraints defining the budget
+        set on a given sequence of uncertain parameter objects.
 
         Parameters
         ----------
@@ -1557,14 +1608,15 @@ class BudgetSet(UncertaintySet):
         conlist : ConstraintList
             The constraints on the uncertain parameters.
         """
-
         # === Ensure matrix cols == len uncertain params
-        if np.asarray(self.coefficients_mat).shape[1] != len(uncertain_params):
-               raise AttributeError("Budget membership matrix must have compatible "
-                                    "dimensions with uncertain parameters vector.")
+        if self.dim != len(uncertain_params):
+            raise ValueError(
+                f"Argument 'uncertain_params' must contain {self.dim}"
+                "Param objects to match BudgetSet dimension"
+                f"(provided {len(uncertain_params)} objects)"
+            )
 
-        conlist = PolyhedralSet.set_as_constraint(self, uncertain_params)
-        return conlist
+        return PolyhedralSet.set_as_constraint(self, uncertain_params)
 
     @staticmethod
     def add_bounds_on_uncertain_parameters(model, config):

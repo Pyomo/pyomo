@@ -2,6 +2,7 @@
 [![Jenkins Status](https://github.com/Pyomo/jenkins-status/blob/main/pyomo_main.svg)](https://pyomo-jenkins.sandia.gov/)
 [![codecov](https://codecov.io/gh/Pyomo/pyomo/branch/main/graph/badge.svg)](https://codecov.io/gh/Pyomo/pyomo)
 [![Documentation Status](https://readthedocs.org/projects/pyomo/badge/?version=latest)](http://pyomo.readthedocs.org/en/latest/)
+[![Build services](https://github.com/Pyomo/jenkins-status/blob/main/pyomo_services.svg)](https://pyomo-jenkins.sandia.gov/)
 [![GitHub contributors](https://img.shields.io/github/contributors/pyomo/pyomo.svg)](https://github.com/pyomo/pyomo/graphs/contributors)
 [![Merged PRs](https://img.shields.io/github/issues-pr-closed-raw/pyomo/pyomo.svg?label=merged+PRs)](https://github.com/pyomo/pyomo/pulls?q=is:pr+is:merged)
 
@@ -80,6 +81,10 @@ To get help from the Pyomo community ask a question on one of the following:
 Pyomo development moved to this repository in June, 2016 from
 Sandia National Laboratories. Developer discussions are hosted by
 [Google Groups](https://groups.google.com/forum/#!forum/pyomo-developers).
+
+The Pyomo Development team holds weekly coordination meetings on
+Tuesdays 12:30 - 14:00 (MT).  Please contact wg-pyomo@sandia.gov to
+request call-in information.
 
 By contributing to this software project, you are agreeing to the
 following terms and conditions for your contributions:

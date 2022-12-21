@@ -43,8 +43,9 @@ def solve_MILP_discrete_problem(util_block, solver, config):
             # are okay to leave in because if you tighten the bounds now, they
             # could only get tighter in later iterations, since you are
             # tightening this relaxation
-        except InfeasibleConstraintException:
-            config.logger.debug("MIP preprocessing detected infeasibility.")
+        except InfeasibleConstraintException as e:
+            config.logger.debug(
+                "MIP preprocessing detected infeasibility:\n\t%s" % str(e))
             return tc.infeasible
 
     # Deactivate extraneous IMPORT/EXPORT suffixes
