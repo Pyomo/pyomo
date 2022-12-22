@@ -52,6 +52,7 @@ class TimeDelaySolver(object):
         self.sub_solver = sub_solver
 
         self.num_calls = 0
+        self.options = Bunch()
 
     def solve(self, model, **kwargs):
         """
