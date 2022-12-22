@@ -176,7 +176,7 @@ def revert_solver_max_time_adjustment(
         # determine name of option to adjust
         if isinstance(solver, type(SolverFactory("gams"))):
             options_key = "add_options"
-        if isinstance(solver, type(SolverFactory("baron"))):
+        elif isinstance(solver, type(SolverFactory("baron"))):
             options_key = "MaxTime"
         elif isinstance(solver, type(SolverFactory("ipopt"))):
             options_key = "max_cpu_time"
@@ -187,6 +187,12 @@ def revert_solver_max_time_adjustment(
             if custom_setting_present:
                 # restore original setting
                 solver.options[options_key] = original_max_time_setting
+
+                # if GAMS solver used, need to remove the last entry
+                # of 'add_options', which contains the max time setting
+                # added by PyROS
+                if isinstance(solver, type(SolverFactory("gams"))):
+                    solver.options[options_key].pop()
             else:
                 # remove the max time specification introduced.
                 # Both lines are needed here to completely remove the option
