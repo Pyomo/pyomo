@@ -14,6 +14,7 @@ from pyomo.contrib.pyros.util import (selective_clone,
                                       pyrosTerminationCondition,
                                       process_termination_condition_master_problem,
                                       adjust_solver_time_settings,
+                                      revert_solver_max_time_adjustment,
                                       get_main_elapsed_time,
                                       output_logger)
 from pyomo.contrib.pyros.solve_data import (MasterProblemData,
@@ -244,7 +245,11 @@ def solve_master_feasibility_problem(model_data, config):
     else:
         solver = config.local_solver
 
-    adjust_solver_time_settings(model_data.timing, solver, config)
+    orig_setting, custom_setting_present = adjust_solver_time_settings(
+        model_data.timing,
+        solver,
+        config,
+    )
     try:
         results = solver.solve(model, tee=config.tee, load_solutions=False)
     except ApplicationError:
@@ -257,6 +262,13 @@ def solve_master_feasibility_problem(model_data, config):
             f"{model_data.iteration}"
         )
         raise
+    finally:
+        revert_solver_max_time_adjustment(
+            solver,
+            orig_setting,
+            custom_setting_present,
+            config,
+        )
 
     feasible_terminations = {
         tc.optimal, tc.locallyOptimal, tc.globallyOptimal, tc.feasible
@@ -404,7 +416,11 @@ def minimize_dr_vars(model_data, config):
 
     # === Solve the polishing model
     timer = TicTocTimer()
-    adjust_solver_time_settings(model_data.timing, solver, config)
+    orig_setting, custom_setting_present = adjust_solver_time_settings(
+        model_data.timing,
+        solver,
+        config,
+    )
     timer.tic(msg=None)
     try:
         results = solver.solve(
@@ -424,6 +440,13 @@ def minimize_dr_vars(model_data, config):
             results.solver,
             TIC_TOC_SOLVE_TIME_ATTR,
             timer.toc(msg=None),
+        )
+    finally:
+        revert_solver_max_time_adjustment(
+            solver,
+            orig_setting,
+            custom_setting_present,
+            config,
         )
 
     # === Process solution by termination condition
@@ -569,7 +592,11 @@ def solver_call_master(model_data, config, solver, solve_data):
 
     timer = TicTocTimer()
     for opt in backup_solvers:
-        adjust_solver_time_settings(model_data.timing, opt, config)
+        orig_setting, custom_setting_present = adjust_solver_time_settings(
+            model_data.timing,
+            opt,
+            config,
+        )
         timer.tic(msg=None)
         try:
             results = opt.solve(
@@ -592,6 +619,13 @@ def solver_call_master(model_data, config, solver, solve_data):
                 results.solver,
                 TIC_TOC_SOLVE_TIME_ATTR,
                 timer.toc(msg=None),
+            )
+        finally:
+            revert_solver_max_time_adjustment(
+                solver,
+                orig_setting,
+                custom_setting_present,
+                config,
             )
 
         optimal_termination = check_optimal_termination(results)

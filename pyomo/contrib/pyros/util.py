@@ -73,19 +73,49 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
     """
     Adjust solver max time based on current PyROS elapsed time.
 
+    Parameters
+    ----------
+    timing_data_obj : Bunch
+        PyROS timekeeper.
+    solver : solver type
+        Solver for which to adjust the max time setting.
+    config : ConfigDict
+        PyROS solver config.
+
     Returns
     -------
-    new_solver : solver type
-        Clone of solver provided, with time limit setting
-        adjusted.
+    original_max_time_setting : float or None
+        If IPOPT or BARON is used, a float is returned.
+        If GAMS is used, the ``options.add_options`` attribute
+        is returned.
+        Otherwise, None is returned.
+    custom_setting_present : bool, optional
+        If IPOPT or BARON is used, True if the max time is
+        specified, False otherwise.
+        If GAMS is used, True if the attribute ``options.add_options``
+        is not None, False otherwise.
+
+    Note
+    ----
+    (1) Adjustment only supported for GAMS, BARON, and IPOPT
+        interfaces. This routine can be generalized to other solvers
+        after a generic interface to the time limit setting
+        is introduced.
+    (2) For IPOPT, and probably also BARON, the CPU time limit
+        rather than the wallclock time limit, is adjusted, as
+        no interface to wallclock limit available.
+        For this reason, extra 30s is added to time remaining
+        for subsolver time limit.
     """
     if config.time_limit is not None:
         time_remaining = (
             config.time_limit - get_main_elapsed_time(timing_data_obj)
         )
         if isinstance(solver, type(SolverFactory("gams"))):
-            # round up to nearest integer (as gams requires integral time
-            # limit)
+            original_max_time_setting = solver.options["add_options"]
+            custom_setting_present = "add_options" in solver.options
+
+            # adjust GAMS solver time
             reslim_str = f"option reslim={max(30, 30 + time_remaining)};"
             if isinstance(solver.options["add_options"], list):
                 solver.options["add_options"].append(reslim_str)
@@ -100,24 +130,69 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
             else:
                 options_key = None
 
-            # NOTE:
-            # (1) adjustment only supported for GAMS, BARON, and IPOPT
-            #     interfaces. Generalize after interface to max time
-            #     introduced
-            # (2) for IPOPT, and probably also BARON, the CPU time limit
-            #     rather than the wallclock time limit, is adjusted, as
-            #     no interface to wallclock limit available.
-            #     For this reason, extra 30s is added to time remaining
-            #     for subsolver time limit
             if options_key is not None:
+                custom_setting_present = options_key in solver.options
+                original_max_time_setting = solver.options[options_key]
+
                 # ensure positive value assigned to avoid application error
                 solver.options[options_key] = max(30, 30 + time_remaining)
             else:
+                custom_setting_present = False
+                original_max_time_setting = None
                 config.progress_logger.warning(
                     "Subproblem time limit setting not adjusted for "
                     f"subsolver of type:\n    {type(solver)}.\n"
                     "    PyROS time limit may not be honored "
                 )
+
+        return original_max_time_setting, custom_setting_present
+    else:
+        return None, None
+
+
+def revert_solver_max_time_adjustment(
+        solver,
+        original_max_time_setting,
+        custom_setting_present,
+        config,
+        ):
+    """
+    Revert solver options to its state prior to a
+    time limit adjustment performed via
+    the routine `adjust_solver_time_settings`.
+
+    Parameters
+    ----------
+    solver : solver type
+        Solver of interest.
+    original_max_time_setting : float, list, or None
+        Original solver settings. Type depends on the
+        solver type.
+    custom_setting_present : bool
+        Was the max time, or other custom solver settings,
+        specified prior to the adjustment?
+    """
+    if config.time_limit is not None:
+        # determine name of option to adjust
+        if isinstance(solver, type(SolverFactory("gams"))):
+            options_key = "add_options"
+        if isinstance(solver, type(SolverFactory("baron"))):
+            options_key = "MaxTime"
+        elif isinstance(solver, type(SolverFactory("ipopt"))):
+            options_key = "max_cpu_time"
+        else:
+            options_key = None
+
+        if options_key is not None:
+            if custom_setting_present:
+                # restore original setting
+                solver.options[options_key] = original_max_time_setting
+            else:
+                # remove the max time specification introduced.
+                # Both lines are needed here to completely remove the option
+                # from access through getattr and dictionary reference
+                delattr(solver.options, options_key)
+                del solver.options[options_key]
 
 
 def a_logger(str_or_logger):

@@ -10,7 +10,6 @@
 #  ___________________________________________________________________________
 
 # pyros.py: Generalized Robust Cutting-Set Algorithm for Pyomo
-from copy import deepcopy
 import logging
 from pyomo.common.collections import Bunch, ComponentSet
 from pyomo.common.config import (
@@ -86,7 +85,7 @@ class SolverResolvable(object):
         if isinstance(obj, str):
             return SolverFactory(obj.lower())
         elif callable(getattr(obj, "solve", None)):
-            return deepcopy(obj)
+            return obj
         elif isinstance(obj, list):
             return [self(o) for o in obj]
         else:
