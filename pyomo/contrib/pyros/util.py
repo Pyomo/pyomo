@@ -71,7 +71,8 @@ def get_main_elapsed_time(timing_data_obj):
 
 def adjust_solver_time_settings(timing_data_obj, solver, config):
     """
-    Adjust solver max time based on current PyROS elapsed time.
+    Adjust solver max time setting based on current PyROS elapsed
+    time.
 
     Parameters
     ----------
@@ -87,13 +88,14 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
     original_max_time_setting : float or None
         If IPOPT or BARON is used, a float is returned.
         If GAMS is used, the ``options.add_options`` attribute
-        is returned.
+        of ``solver`` is returned.
         Otherwise, None is returned.
-    custom_setting_present : bool, optional
+    custom_setting_present : bool or None
         If IPOPT or BARON is used, True if the max time is
         specified, False otherwise.
         If GAMS is used, True if the attribute ``options.add_options``
         is not None, False otherwise.
+        If ``config.time_limit`` is None, then None is returned.
 
     Note
     ----
@@ -157,7 +159,7 @@ def revert_solver_max_time_adjustment(
         config,
         ):
     """
-    Revert solver options to its state prior to a
+    Revert solver `options` attribute to its state prior to a
     time limit adjustment performed via
     the routine `adjust_solver_time_settings`.
 
@@ -168,11 +170,16 @@ def revert_solver_max_time_adjustment(
     original_max_time_setting : float, list, or None
         Original solver settings. Type depends on the
         solver type.
-    custom_setting_present : bool
+    custom_setting_present : bool or None
         Was the max time, or other custom solver settings,
         specified prior to the adjustment?
+        Can be None if ``config.time_limit`` is None.
+    config : ConfigDict
+        PyROS solver config.
     """
     if config.time_limit is not None:
+        assert isinstance(custom_setting_present, bool)
+
         # determine name of option to adjust
         if isinstance(solver, type(SolverFactory("gams"))):
             options_key = "add_options"
