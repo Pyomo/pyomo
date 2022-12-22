@@ -17,6 +17,7 @@ from pyomo.contrib.pyros.util import replace_uncertain_bounds_with_constraints
 from pyomo.contrib.pyros.util import get_vars_from_component
 from pyomo.contrib.pyros.util import identify_objective_functions
 from pyomo.common.collections import Bunch
+import time
 from pyomo.contrib.pyros.util import time_code
 from pyomo.core.expr import current as EXPR
 from pyomo.contrib.pyros.uncertainty_sets import *
@@ -27,6 +28,18 @@ from pyomo.common.dependencies import numpy as np, numpy_available
 from pyomo.common.dependencies import scipy as sp, scipy_available
 from pyomo.environ import maximize as pyo_max
 from pyomo.common.errors import ApplicationError
+from pyomo.opt import (
+    SolverResults,
+    SolverStatus,
+    SolutionStatus,
+    TerminationCondition,
+    Solution,
+)
+from pyomo.environ import (
+    Objective,
+    value,
+    Var,
+)
 
 
 if not (numpy_available and scipy_available):
@@ -54,6 +67,18 @@ class TimeDelaySolver(object):
         self.num_calls = 0
         self.options = Bunch()
 
+    def available(self):
+        return True
+
+    def license_is_valid(self):
+        return True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, et, ev, tb):
+        pass
+
     def solve(self, model, **kwargs):
         """
         'Solve' a model.
@@ -68,19 +93,6 @@ class TimeDelaySolver(object):
         results : SolverResults
             Solver results.
         """
-        import time
-        from pyomo.opt import (
-            SolverResults,
-            SolverStatus,
-            SolutionStatus,
-            TerminationCondition,
-            Solution,
-        )
-        from pyomo.environ import (
-            Objective,
-            value,
-            Var,
-        )
 
         # ensure only one active objective
         active_objs = [
@@ -94,10 +106,11 @@ class TimeDelaySolver(object):
             self.num_calls += 1
         else:
             # trigger time delay
-            self.calls_to_sleep = 0
-
             time.sleep(self.max_time)
             results = SolverResults()
+
+            # reset number of calls
+            self.num_calls = 0
 
             # generate solution (current model variable values)
             sol = Solution()
