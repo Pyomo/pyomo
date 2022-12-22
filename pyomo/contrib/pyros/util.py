@@ -80,38 +80,44 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
         adjusted.
     """
     if config.time_limit is not None:
-        # determine name of option to adjust
-        if isinstance(solver, type(SolverFactory("baron"))):
-            options_key = "MaxTime"
-        elif isinstance(solver, type(SolverFactory("gams"))):
-            options_key = "reslim"
-        elif isinstance(solver, type(SolverFactory("ipopt"))):
-            options_key = "max_cpu_time"
+        time_remaining = (
+            config.time_limit - get_main_elapsed_time(timing_data_obj)
+        )
+        if isinstance(solver, type(SolverFactory("gams"))):
+            # round up to nearest integer (as gams requires integral time
+            # limit)
+            reslim_str = f"option reslim={max(30, 30 + time_remaining)};"
+            if isinstance(solver.options["add_options"], list):
+                solver.options["add_options"].append(reslim_str)
+            else:
+                solver.options["add_options"] = [reslim_str]
         else:
-            options_key = None
+            # determine name of option to adjust
+            if isinstance(solver, type(SolverFactory("baron"))):
+                options_key = "MaxTime"
+            elif isinstance(solver, type(SolverFactory("ipopt"))):
+                options_key = "max_cpu_time"
+            else:
+                options_key = None
 
-        # NOTE:
-        # (1) adjustment only supported for GAMS, BARON, and IPOPT
-        #     interfaces. Generalize after interface to max time
-        #     introduced
-        # (2) for IPOPT, and probably also BARON, the CPU time limit
-        #     rather than the wallclock time limit, is adjusted, as
-        #     no interface to wallclock limit available.
-        #     For this reason, extra 30s is added to time remaining
-        #     for subsolver time limit
-        if options_key is not None:
-            time_remaining = (
-                config.time_limit - get_main_elapsed_time(timing_data_obj)
-            )
-
-            # ensure positive value assigned to avoid application error
-            solver.options[options_key] = max(30, 30 + time_remaining)
-        else:
-            config.progress_logger.warning(
-                "Subproblem time limit setting not adjusted for "
-                f"subsolver of type:\n    {type(solver)}.\n"
-                "    PyROS time limit may not be honored "
-            )
+            # NOTE:
+            # (1) adjustment only supported for GAMS, BARON, and IPOPT
+            #     interfaces. Generalize after interface to max time
+            #     introduced
+            # (2) for IPOPT, and probably also BARON, the CPU time limit
+            #     rather than the wallclock time limit, is adjusted, as
+            #     no interface to wallclock limit available.
+            #     For this reason, extra 30s is added to time remaining
+            #     for subsolver time limit
+            if options_key is not None:
+                # ensure positive value assigned to avoid application error
+                solver.options[options_key] = max(30, 30 + time_remaining)
+            else:
+                config.progress_logger.warning(
+                    "Subproblem time limit setting not adjusted for "
+                    f"subsolver of type:\n    {type(solver)}.\n"
+                    "    PyROS time limit may not be honored "
+                )
 
 
 def a_logger(str_or_logger):
