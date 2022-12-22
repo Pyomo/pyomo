@@ -38,6 +38,86 @@ global_solver = 'baron'
 global_solver_args = dict()
 nlp_solver_args = dict()
 
+
+@SolverFactory.register("time_delay_solver")
+class TimeDelaySolver(object):
+    """
+    Solver which puts program to sleep for a specified
+    duration after having been invoked a specified number
+    of times.
+    """
+    def __init__(self, calls_to_sleep, max_time, sub_solver):
+        self.max_time = max_time
+        self.calls_to_sleep = calls_to_sleep
+        self.sub_solver = sub_solver
+
+        self.num_calls = 0
+
+    def solve(self, model, **kwargs):
+        """
+        'Solve' a model.
+
+        Parameters
+        ----------
+        model : ConcreteModel
+            Model of interest.
+
+        Returns
+        -------
+        results : SolverResults
+            Solver results.
+        """
+        import time
+        from pyomo.opt import (
+            SolverResults,
+            SolverStatus,
+            SolutionStatus,
+            TerminationCondition,
+            Solution,
+        )
+        from pyomo.environ import (
+            Objective,
+            value,
+            Var,
+        )
+
+        # ensure only one active objective
+        active_objs = [
+            obj for obj in model.component_data_objects(Objective, active=True)
+        ]
+        assert len(active_objs) == 1
+
+        if self.num_calls < self.calls_to_sleep:
+            # invoke subsolver
+            results = self.sub_solver.solve(model, **kwargs)
+            self.num_calls += 1
+        else:
+            # trigger time delay
+            self.calls_to_sleep = 0
+
+            time.sleep(self.max_time)
+            results = SolverResults()
+
+            # generate solution (current model variable values)
+            sol = Solution()
+            sol.variable = {
+                var.name: {"Value": value(var)}
+                for var in model.component_data_objects(Var, active=True)
+            }
+            sol._cuid = False
+            sol.status = SolutionStatus.stoppedByLimit
+            results.solution.insert(sol)
+
+            # set up results.solver
+            results.solver.time = self.max_time
+            results.solver.termination_condition = (
+                TerminationCondition.maxTimeLimit
+            )
+            results.solver.status = SolverStatus.warning
+
+        return results
+
+
 # === util.py
 class testSelectiveClone(unittest.TestCase):
     '''
@@ -3463,6 +3543,123 @@ class RegressionTest(unittest.TestCase):
 
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.time_out,
                          msg="Returned termination condition is not return time_out.")
+
+    @unittest.skipUnless(
+        SolverFactory('baron').license_is_valid(),
+        "Global NLP solver is not available and licensed."
+    )
+    def test_separation_terminate_time_limit(self):
+        """
+        Test PyROS time limit status returned in event
+        separation problem times out.
+        """
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # Define the uncertainty set
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        local_subsolver = SolverFactory(
+            'time_delay_solver',
+            calls_to_sleep=0,
+            sub_solver=SolverFactory("baron"),
+            max_time=1,
+        )
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        results = pyros_solver.solve(
+            model=m,
+            first_stage_variables=[m.x1, m.x2],
+            second_stage_variables=[],
+            uncertain_params=[m.u],
+            uncertainty_set=interval,
+            local_solver=local_subsolver,
+            global_solver=global_subsolver,
+            objective_focus=ObjectiveType.worst_case,
+            solve_master_globally=True,
+            time_limit=1,
+        )
+
+        self.assertEqual(
+            results.pyros_termination_condition,
+            pyrosTerminationCondition.time_out,
+            msg="Returned termination condition is not return time_out.",
+        )
+
+    @unittest.skipUnless(
+        SolverFactory('gams').license_is_valid()
+        and SolverFactory('baron').license_is_valid(),
+        "Global NLP solver is not available and licensed."
+    )
+    def test_gams_successful_time_limit(self):
+        """
+        Test PyROS time limit status returned in event
+        separation problem times out.
+        """
+        m = ConcreteModel()
+        m.x1 = Var(initialize=0, bounds=(0, None))
+        m.x2 = Var(initialize=0, bounds=(0, None))
+        m.x3 = Var(initialize=0, bounds=(None, None))
+        m.u = Param(initialize=1.125, mutable=True)
+
+        m.con1 = Constraint(expr=m.x1 * m.u**(0.5) - m.x2 * m.u <= 2)
+        m.con2 = Constraint(expr=m.x1 ** 2 - m.x2 ** 2 * m.u == m.x3)
+
+        m.obj = Objective(expr=(m.x1 - 4) ** 2 + (m.x2 - 1) ** 2)
+
+        # Define the uncertainty set
+        interval = BoxSet(bounds=[(0.25, 2)])
+
+        # Instantiate the PyROS solver
+        pyros_solver = SolverFactory("pyros")
+
+        # Define subsolvers utilized in the algorithm
+        # two GAMS solvers, one of which has reslim set
+        # (should be overriden when invoked in PyROS)
+        local_subsolvers = [
+            SolverFactory("gams:conopt"),
+            SolverFactory("gams:conopt"),
+            SolverFactory("ipopt"),
+        ]
+        local_subsolvers[0].options["add_options"] = ["option reslim=100;"]
+        global_subsolver = SolverFactory("baron")
+
+        # Call the PyROS solver
+        for idx, opt in enumerate(local_subsolvers):
+            results = pyros_solver.solve(
+                model=m,
+                first_stage_variables=[m.x1, m.x2],
+                second_stage_variables=[],
+                uncertain_params=[m.u],
+                uncertainty_set=interval,
+                local_solver=opt,
+                global_solver=global_subsolver,
+                objective_focus=ObjectiveType.worst_case,
+                solve_master_globally=True,
+                time_limit=100,
+            )
+
+            self.assertEqual(
+                results.pyros_termination_condition,
+                pyrosTerminationCondition.robust_optimal,
+                msg=(
+                    f"Returned termination condition with local "
+                    "subsolver {idx + 1} of 2 is not robust_optimal."
+                ),
+            )
 
     @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
                          "Global NLP solver is not available and licensed.")
