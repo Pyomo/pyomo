@@ -202,10 +202,11 @@ def revert_solver_max_time_adjustment(
                     solver.options[options_key].pop()
             else:
                 # remove the max time specification introduced.
-                # Both lines are needed here to completely remove the option
-                # from access through getattr and dictionary reference
+                # All lines are needed here to completely remove the option
+                # from access through getattr and dictionary reference.
                 delattr(solver.options, options_key)
-                del solver.options[options_key]
+                if options_key in solver.options.keys():
+                    del solver.options[options_key]
 
 
 def a_logger(str_or_logger):
