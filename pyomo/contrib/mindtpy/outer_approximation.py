@@ -68,7 +68,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         results : SolverResults
             Results from solving the MINLP problem by MindtPy.
         """
-        config = self.config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)  # TODO: do we need to set preserve_implicit=True?
+        config = self.config = self.CONFIG(kwds.pop('options', {}), preserve_implicit=True)
         config.set_value(kwds)
         set_up_logger(config)
         new_logging_level = logging.INFO if config.tee else None
