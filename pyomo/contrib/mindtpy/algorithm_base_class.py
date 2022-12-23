@@ -262,7 +262,7 @@ class _MindtPyAlgorithm(object):
             util_blk, 'constraint_list', list(
                 model.component_data_objects(
                     ctype=Constraint, active=True,
-                    descend_into=(Block, Disjunct))))
+                    descend_into=(Block))))
         setattr(
             util_blk, 'linear_constraint_list', list(
                 c for c in model.component_data_objects(
