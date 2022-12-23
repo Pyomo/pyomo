@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Problem C in paper 'Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs'.
-The problem in the paer has two optimal solution. Variable y4 and y6 are sysmetric. Therefore, we remove variable y6 for simplification.
+The problem in the paper has two optimal solution. Variable y4 and y6 are symmetric. Therefore, we remove variable y6 for simplification.
 
 Ref:
 Kesavan P, Allgor R J, Gatzke E P, et al. Outer approximation algorithms for separable nonconvex mixed-integer nonlinear programs[J]. Mathematical Programming, 2004, 100(3): 517-535.
