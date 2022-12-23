@@ -51,17 +51,6 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
     """
     CONFIG = _get_MindtPy_FP_config()
 
-    def available(self, exception_flag=True):
-        """Check if solver is available.
-        """
-        return True
-
-    def license_is_valid(self):
-        return True
-
-    def version(self):
-        """Return a 3-tuple describing the solver version."""
-        return __version__
 
     def solve(self, model, **kwds):
         """Solve the model.
@@ -153,14 +142,6 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
         self.config.move_objective = True
         super().check_config()
 
-    #
-    # Support 'with' statements.
-    #
-    def __enter__(self):
-        return self
-
-    def __exit__(self, t, v, traceback):
-        pass
 
     def initialize_mip_problem(self):
         ''' Deactivate the nonlinear constraints to create the MIP problem.

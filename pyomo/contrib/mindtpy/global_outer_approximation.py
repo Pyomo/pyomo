@@ -53,18 +53,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
     """
     CONFIG = _get_MindtPy_GOA_config()
 
-    def available(self, exception_flag=True):
-        """Check if solver is available.
-        """
-        return True
-
-    def license_is_valid(self):
-        return True
-
-    def version(self):
-        """Return a 3-tuple describing the solver version."""
-        return __version__
-
     def solve(self, model, **kwds):
         """Solve the model.
 
@@ -279,15 +267,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             self.fix_dual_bound(config, last_iter_cuts)
         config.logger.info(
             ' ===============================================================================================')
-
-    #
-    # Support 'with' statements.
-    #
-    def __enter__(self):
-        return self
-
-    def __exit__(self, t, v, traceback):
-        pass
 
 
     def check_config(self):
