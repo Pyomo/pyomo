@@ -140,7 +140,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
     def MindtPy_iteration_loop(self, config):
         """Main loop for MindtPy Algorithms.
 
-        This is the outermost function for the algorithms in this package; this function controls the progression of
+        This is the outermost function for the Extended Cutting Plane algorithm in this package; this function controls the progression of
         solving the model.
 
         Parameters

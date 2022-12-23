@@ -2189,7 +2189,7 @@ class _MindtPyAlgorithm(object):
     def fp_loop(self, config):
         """Feasibility pump loop.
 
-        This is the outermost function for the algorithms in this package; this function
+        This is the outermost function for the Feasibility Pump algorithm in this package; this function
         controls the progression of solving the model.
 
         Parameters
