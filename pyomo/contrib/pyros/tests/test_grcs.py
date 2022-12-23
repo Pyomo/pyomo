@@ -52,7 +52,7 @@ global_solver_args = dict()
 nlp_solver_args = dict()
 
 
-@SolverFactory.register("time_delay_solver")
+# @SolverFactory.register("time_delay_solver")
 class TimeDelaySolver(object):
     """
     Solver which puts program to sleep for a specified
@@ -3606,8 +3606,7 @@ class RegressionTest(unittest.TestCase):
         pyros_solver = SolverFactory("pyros")
 
         # Define subsolvers utilized in the algorithm
-        local_subsolver = SolverFactory(
-            'time_delay_solver',
+        local_subsolver = TimeDelaySolver(
             calls_to_sleep=0,
             sub_solver=SolverFactory("baron"),
             max_time=1,
