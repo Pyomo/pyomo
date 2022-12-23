@@ -1192,8 +1192,7 @@ class _MindtPyAlgorithm(object):
         return feas_subproblem, feas_soln
 
     def handle_feasibility_subproblem_tc(self, subprob_terminate_cond, MindtPy, config):
-        """Handles the result of the latest iteration of solving the feasibility NLP subproblem given
-        a solution that is neither optimal nor infeasible.
+        """Handles the result of the latest iteration of solving the feasibility NLP subproblem.
 
         Parameters
         ----------
