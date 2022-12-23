@@ -17,7 +17,6 @@ from pyomo.repn import generate_standard_repn
 import logging
 from pyomo.contrib.fbbt.fbbt import fbbt
 from pyomo.opt import TerminationCondition as tc
-from pyomo.gdp import Disjunct, Disjunction
 from pyomo.contrib.mindtpy import __version__
 from pyomo.common.dependencies import attempt_import
 from pyomo.util.vars_from_expressions import get_vars_from_components
@@ -251,8 +250,7 @@ class _MindtPyAlgorithm(object):
     def build_ordered_component_lists(self, model):
         """Define lists used for future data transfer.
 
-        Also attaches ordered lists of the variables, constraints, disjuncts, and
-        disjunctions to the model so that they can be used for mapping back and
+        Also attaches ordered lists of the variables, constraints to the model so that they can be used for mapping back and
         forth.
 
         """
@@ -266,12 +264,12 @@ class _MindtPyAlgorithm(object):
         setattr(
             util_blk, 'linear_constraint_list', list(
                 c for c in model.component_data_objects(
-                    ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+                    ctype=Constraint, active=True, descend_into=(Block))
                 if c.body.polynomial_degree() in self.mip_constraint_polynomial_degree))
         setattr(
             util_blk, 'nonlinear_constraint_list', list(
                 c for c in model.component_data_objects(
-                    ctype=Constraint, active=True, descend_into=(Block, Disjunct))
+                    ctype=Constraint, active=True, descend_into=(Block))
                 if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree))
         setattr(
             util_blk, 'objective_list', list(
@@ -292,17 +290,17 @@ class _MindtPyAlgorithm(object):
         # preserve a deterministic ordering.
         var_list = list(
             v for v in model.component_data_objects(
-                ctype=Var, descend_into=(Block, Disjunct))
+                ctype=Var, descend_into=(Block))
             if v in var_set)
         setattr(util_blk, 'variable_list', var_list)
         discrete_variable_list = list(
             v for v in model.component_data_objects(
-                ctype=Var, descend_into=(Block, Disjunct))
+                ctype=Var, descend_into=(Block))
             if v in var_set and v.is_integer())
         setattr(util_blk, 'discrete_variable_list', discrete_variable_list)
         continuous_variable_list = list(
             v for v in model.component_data_objects(
-                ctype=Var, descend_into=(Block, Disjunct))
+                ctype=Var, descend_into=(Block))
             if v in var_set and v.is_continuous())
         setattr(util_blk, 'continuous_variable_list', continuous_variable_list)
 
