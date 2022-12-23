@@ -274,16 +274,6 @@ class _MindtPyAlgorithm(object):
                     ctype=Constraint, active=True, descend_into=(Block, Disjunct))
                 if c.body.polynomial_degree() not in self.mip_constraint_polynomial_degree))
         setattr(
-            util_blk, 'disjunct_list', list(
-                model.component_data_objects(
-                    ctype=Disjunct, active=True,
-                    descend_into=(Block, Disjunct))))
-        setattr(
-            util_blk, 'disjunction_list', list(
-                model.component_data_objects(
-                    ctype=Disjunction, active=True,
-                    descend_into=(Disjunct, Block))))
-        setattr(
             util_blk, 'objective_list', list(
                 model.component_data_objects(
                     ctype=Objective, active=True,
@@ -297,12 +287,6 @@ class _MindtPyAlgorithm(object):
         for obj in model.component_data_objects(ctype=Objective, active=True):
             for v in EXPR.identify_variables(obj.expr, include_fixed=False):
                 var_set.add(v)
-        # Disjunct indicator variables might not appear in active constraints. In
-        # fact, if we consider them Logical variables, they should not appear in
-        # active algebraic constraints. For now, they need to be added to the
-        # variable set.
-        for disj in getattr(util_blk, 'disjunct_list'):
-            var_set.add(disj.binary_indicator_var)
 
         # We use component_data_objects rather than list(var_set) in order to
         # preserve a deterministic ordering.
