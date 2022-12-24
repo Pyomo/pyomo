@@ -19,7 +19,6 @@ from pyomo.core import TransformationFactory, maximize, Objective, ConstraintLis
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_OA_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
-from pyomo.contrib.mindtpy.feasibility_pump_new import MindtPy_FP_Solver
 from pyomo.contrib.mindtpy.util import get_integer_solution, copy_var_list_values_from_solution_pool
 from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from operator import itemgetter

@@ -24,9 +24,9 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.collections import ComponentMap, Bunch, ComponentSet
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.mindtpy.cut_generation import add_no_good_cuts
-from pyomo.contrib.mindtpy.util import generate_norm2sq_objective_function, set_solver_options
-from pyomo.contrib.mindtpy.feasibility_pump import generate_norm_constraint, fp_converged, add_orthogonality_cuts
 from pyomo.opt import SolverFactory, SolverResults, ProblemSense, SolutionStatus, SolverStatus
+from pyomo.contrib.mindtpy.util import (generate_norm2sq_objective_function, set_solver_options, 
+                                        generate_norm_constraint, fp_converged, add_orthogonality_cuts)
 from pyomo.core import (minimize, maximize, Objective, VarList, Reals, ConstraintList, Constraint,
                         Block, TransformationFactory, NonNegativeReals, Suffix, Var, RangeSet, value, Expression)
 from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
