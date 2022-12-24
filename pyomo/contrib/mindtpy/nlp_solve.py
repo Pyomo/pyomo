@@ -22,8 +22,6 @@ from pyomo.opt import SolverFactory, SolverResults, SolverStatus
 
 
 def solve_subproblem(solve_data, config):
-    # TODO: we will keep working_model.clone first
-    # This function is algorithm-dependent, therefore we will redefine it as method.
     """Solves the Fixed-NLP (with fixed integers).
 
     This function sets up the 'fixed_nlp' by fixing binaries, sets continuous variables to their intial var values,
