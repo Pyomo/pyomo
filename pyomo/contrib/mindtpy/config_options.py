@@ -99,7 +99,7 @@ def _get_MindtPy_FP_config():
     """
     CONFIG = ConfigBlock('MindtPy-GOA')
     CONFIG.declare('init_strategy', ConfigValue(
-        default=None,
+        default='FP',
         domain=In(['FP']),
         description='Initialization strategy',
         doc='Initialization strategy used by any method. Currently the '
@@ -125,7 +125,7 @@ def _add_oa_configs(CONFIG):
         domain=bool
     ))
     CONFIG.declare('init_strategy', ConfigValue(
-        default=None,
+        default='rNLP',
         domain=In(['rNLP', 'initial_binary', 'max_binary', 'FP']),
         description='Initialization strategy',
         doc='Initialization strategy used by any method. Currently the '
@@ -171,7 +171,7 @@ def _add_oa_cuts_configs(CONFIG):
 
 def _add_goa_configs(CONFIG):
     CONFIG.declare('init_strategy', ConfigValue(
-        default=None,
+        default='rNLP',
         domain=In(['rNLP', 'initial_binary', 'max_binary']),
         description='Initialization strategy',
         doc='Initialization strategy used by any method. Currently the '
@@ -191,7 +191,7 @@ def _add_ecp_configs(CONFIG):
             'more than this tolerance, the method will keep iterating.'
     ))
     CONFIG.declare('init_strategy', ConfigValue(
-        default=None,
+        default='max_binary',
         domain=In(['rNLP', 'max_binary', 'FP']),
         description='Initialization strategy',
         doc='Initialization strategy used by any method. Currently the '

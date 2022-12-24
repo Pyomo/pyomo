@@ -328,8 +328,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
 
     def check_config(self):
         config = self.config
-        if config.init_strategy is None:
-            config.init_strategy = 'rNLP'
         if config.add_regularization is not None:
             if config.add_regularization in {'grad_lag', 'hess_lag', 'hess_only_lag', 'sqp_lag'}:
                 config.calculate_dual_at_solution = True

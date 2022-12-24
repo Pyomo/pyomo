@@ -192,8 +192,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
 
     def check_config(self):
         config = self.config
-        if config.init_strategy is None:
-            config.init_strategy = 'max_binary'
         # if ecp tolerance is not provided use bound tolerance
         if config.ecp_tolerance is None:
             config.ecp_tolerance = config.absolute_bound_tolerance

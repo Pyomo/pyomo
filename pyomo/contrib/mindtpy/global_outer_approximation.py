@@ -280,8 +280,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             config.add_no_good_cuts = True
             config.use_tabu_list = False
         # Set default initialization_strategy
-        if config.init_strategy is None:
-            config.init_strategy = 'rNLP'
         if config.single_tree:
             config.logger.info('Single-tree implementation is activated.')
             config.iteration_limit = 1
