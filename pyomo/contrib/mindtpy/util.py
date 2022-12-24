@@ -37,7 +37,6 @@ class MindtPySolveData(object):
     """
     pass
 
-# TODO: move all functions in this file to algorithm base class and solve_data data can be removed.
 
 def calc_jacobians(model, config):
     """Generates a map of jacobians for the variables in the model.
