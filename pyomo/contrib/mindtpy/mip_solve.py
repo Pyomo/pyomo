@@ -222,7 +222,7 @@ def handle_main_optimal(main_mip, solve_data, config, update_bound=True):
                                                            get_main_elapsed_time(solve_data.timing)))
 
 def handle_regularization_main_tc(main_mip, main_mip_results, solve_data, config):
-    """Handles the result of the latest FP iteration of solving the regularization main problem.
+    """Handles the result of the regularization main problem.
 
     Parameters
     ----------

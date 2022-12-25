@@ -1773,7 +1773,7 @@ class _MindtPyAlgorithm(object):
         return main_mip_results
 
     def handle_regularization_main_tc(self, main_mip, main_mip_results, config):
-        """Handles the result of the latest FP iteration of solving the regularization main problem.
+        """Handles the result of the regularization main problem.
 
         Parameters
         ----------
