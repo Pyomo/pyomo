@@ -349,7 +349,7 @@ def solve_feasibility_subproblem(solve_data, config):
     add_feas_slacks(feas_subproblem, config)
 
     MindtPy = feas_subproblem.MindtPy_utils
-    if MindtPy.find_component('objective_value') is not None:
+    if MindtPy.component('objective_value') is not None:
         MindtPy.objective_value[:].set_value(0, skip_validation=True)
 
     next(feas_subproblem.component_data_objects(

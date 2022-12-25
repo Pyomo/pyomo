@@ -1140,7 +1140,7 @@ class _MindtPyAlgorithm(object):
         add_feas_slacks(feas_subproblem, config)
 
         MindtPy = feas_subproblem.MindtPy_utils
-        if MindtPy.find_component('objective_value') is not None:
+        if MindtPy.component('objective_value') is not None:
             MindtPy.objective_value[:].set_value(0, skip_validation=True)
 
         next(feas_subproblem.component_data_objects(
@@ -1252,6 +1252,8 @@ class _MindtPyAlgorithm(object):
             True if the algorithm should terminate, False otherwise.
         """
         if self.should_terminate:
+            # self.primal_bound_progress[0] can only be inf or -inf. 
+            # If the current primal bound equals inf or -inf, we can infer there is no solution.
             if self.primal_bound == self.primal_bound_progress[0]:
                 self.results.solver.termination_condition = tc.noSolution
             else:
@@ -1377,7 +1379,7 @@ class _MindtPyAlgorithm(object):
             # deactivate the integer cuts generated after the best solution was found.
             self.deactivate_no_good_cuts_when_fixing_bound(
                 MindtPy.cuts.no_good_cuts)
-            if config.add_regularization is not None and MindtPy.find_component('mip_obj') is None:
+            if config.add_regularization is not None and MindtPy.component('mip_obj') is None:
                 MindtPy.objective_list[-1].activate()
             mainopt = SolverFactory(config.mip_solver)
             # determine if persistent solver is called.
@@ -1967,7 +1969,7 @@ class _MindtPyAlgorithm(object):
         self.working_model.MindtPy_utils.deactivate()
         # The original objective should be activated to make sure the variable list is in the same order (get_vars_from_components).
         self.working_model.MindtPy_utils.objective_list[0].activate()
-        if self.working_model.find_component("_int_to_binary_reform") is not None:
+        if self.working_model.component("_int_to_binary_reform") is not None:
             self.working_model._int_to_binary_reform.deactivate()
         # exclude fixed variables here. This is consistent with the definition of variable_list in GDPopt.util
         working_model_variable_list = list(get_vars_from_components(block=self.working_model,
