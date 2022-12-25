@@ -80,11 +80,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
 
         with time_code(self.timing, 'total', is_main_timer=True), \
                 lower_logger_level_to(config.logger, new_logging_level):
-            config.logger.info(
-                '---------------------------------------------------------------------------------------------\n'
-                '              Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo (MindtPy)               \n'
-                '---------------------------------------------------------------------------------------------\n'
-                'For more information, please visit https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html')
+            self._log_solver_intro_message()
 
             # Validate the model to ensure that MindtPy is able to solve it.
             if not self.model_is_valid():

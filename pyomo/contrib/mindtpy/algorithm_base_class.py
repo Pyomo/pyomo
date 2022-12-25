@@ -118,26 +118,24 @@ class _MindtPyAlgorithm(object):
 
     _metasolver = False
 
-    def _log_solver_intro_message(self, config):
-        config.logger.info(
+    def _log_solver_intro_message(self):
+        self.config.logger.info(
             "Starting MindtPy version %s using %s algorithm"
-            % (".".join(map(str, self.version())), self.algorithm)
+            % (".".join(map(str, self.version())), self.config.strategy)
         )
         os = StringIO()
-        config.display(ostream=os)
-        config.logger.info(os.getvalue())
-        config.logger.info(
-            '---------------------------------------------------------------------------------------------\n'
-            '              Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo (MindtPy)               \n'
-            '---------------------------------------------------------------------------------------------\n'
+        self.config.display(ostream=os)
+        self.config.logger.info(os.getvalue())
+        self.config.logger.info(
+            '-----------------------------------------------------------------------------------------------\n'
+            '               Mixed-Integer Nonlinear Decomposition Toolbox in Pyomo (MindtPy)                \n'
+            '-----------------------------------------------------------------------------------------------\n'
             'For more information, please visit \n'
             'https://pyomo.readthedocs.io/en/stable/contributed_packages/mindtpy.html')
-        config.logger.info("""
-        If you use this software, you may cite the following:
-        - Implementation:
-        Bernal, David E., et al. "Mixed-integer nonlinear decomposition toolbox for Pyomo (MindtPy)." 
-        Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 895-900.
-        """.strip())
+        self.config.logger.info(
+            'If you use this software, you may cite the following:\n'
+            'Bernal, David E., et al. Mixed-integer nonlinear decomposition toolbox for Pyomo (MindtPy).\n'
+            'Computer Aided Chemical Engineering. Vol. 44. Elsevier, 2018. 895-900.\n')
 
     def set_up_logger(self):
         """Set up the formatter and handler for logger.
