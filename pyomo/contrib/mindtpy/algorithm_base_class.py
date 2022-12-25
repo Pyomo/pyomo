@@ -677,7 +677,7 @@ class _MindtPyAlgorithm(object):
             self.init_rNLP(config)
             self.fp_loop(config)
 
-    def init_rNLP(self, config):
+    def init_rNLP(self, config, add_oa_cuts=True):
         """Initialize the problem by solving the relaxed NLP and then store the optimal variable
         values obtained from solving the rNLP.
 
@@ -685,6 +685,8 @@ class _MindtPyAlgorithm(object):
         ----------
         config : ConfigBlock
             The specific configurations for MindtPy.
+        add_oa_cuts : Bool
+            Whether add OA cuts after solving the relaxed NLP problem.
 
         Raises
         ------
@@ -715,30 +717,31 @@ class _MindtPyAlgorithm(object):
                 config.logger.info(
                     'relaxed NLP is not solved to optimality.')
                 self.update_suboptimal_dual_bound(results)
-            dual_values = list(
-                m.dual[c] for c in MindtPy.constraint_list) if config.calculate_dual_at_solution else None
             config.logger.info(self.log_formatter.format('-', 'Relaxed NLP', value(main_objective.expr),
                                                          self.primal_bound, self.dual_bound, self.rel_gap,
                                                          get_main_elapsed_time(self.timing)))
             # Add OA cut
-            copy_var_list_values(m.MindtPy_utils.variable_list,
-                                 self.mip.MindtPy_utils.variable_list,
-                                 config)
-            if config.init_strategy == 'FP':
+            if add_oa_cuts:
+                dual_values = list(
+                    m.dual[c] for c in MindtPy.constraint_list) if config.calculate_dual_at_solution else None
                 copy_var_list_values(m.MindtPy_utils.variable_list,
-                                     self.working_model.MindtPy_utils.variable_list,
-                                     config)
-            self.add_cuts(dual_values=dual_values,
-                          linearize_active=True,
-                          linearize_violated=True,
-                          cb_opt=None)
-            for var in self.mip.MindtPy_utils.discrete_variable_list:
-                # We don't want to trigger the reset of the global stale
-                # indicator, so we will set this variable to be "stale",
-                # knowing that set_value will switch it back to "not
-                # stale"
-                var.stale = True
-                var.set_value(int(round(var.value)), skip_validation=True)
+                                    self.mip.MindtPy_utils.variable_list,
+                                    config)
+                if config.init_strategy == 'FP':
+                    copy_var_list_values(m.MindtPy_utils.variable_list,
+                                        self.working_model.MindtPy_utils.variable_list,
+                                        config)
+                self.add_cuts(dual_values=dual_values,
+                            linearize_active=True,
+                            linearize_violated=True,
+                            cb_opt=None)
+                for var in self.mip.MindtPy_utils.discrete_variable_list:
+                    # We don't want to trigger the reset of the global stale
+                    # indicator, so we will set this variable to be "stale",
+                    # knowing that set_value will switch it back to "not
+                    # stale"
+                    var.stale = True
+                    var.set_value(int(round(var.value)), skip_validation=True)
         elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
             # TODO fail? try something else?
             config.logger.info(

@@ -235,50 +235,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         ValueError
             MindtPy unable to handle the termination condition of the relaxed NLP.
         """
-        m = self.working_model.clone()
-        config.logger.debug(
-            'Relaxed NLP: Solve relaxed integrality')
-        MindtPy = m.MindtPy_utils
-        TransformationFactory('core.relax_integer_vars').apply_to(m)
-        nlp_args = dict(config.nlp_solver_args)
-        nlpopt = SolverFactory(config.nlp_solver)
-        set_solver_options(nlpopt, self.timing, config, solver_type='nlp')
-        with SuppressInfeasibleWarning():
-            results = nlpopt.solve(m,
-                                tee=config.nlp_solver_tee, 
-                                load_solutions=False,
-                                **nlp_args)
-            if len(results.solution) > 0:
-                m.solutions.load_from(results)
-        subprob_terminate_cond = results.solver.termination_condition
-        if subprob_terminate_cond in {tc.optimal, tc.feasible, tc.locallyOptimal}:
-            main_objective = MindtPy.objective_list[-1]
-            if subprob_terminate_cond == tc.optimal:
-                self.update_dual_bound(value(main_objective.expr))
-            else:
-                config.logger.info(
-                    'relaxed NLP is not solved to optimality.')
-                self.update_suboptimal_dual_bound(results)
-            config.logger.info(self.log_formatter.format('-', 'Relaxed NLP', value(main_objective.expr),
-                                                            self.primal_bound, self.dual_bound, self.rel_gap,
-                                                            get_main_elapsed_time(self.timing)))
-        elif subprob_terminate_cond in {tc.infeasible, tc.noSolution}:
-            # TODO fail? try something else?
-            config.logger.info(
-                'Initial relaxed NLP problem is infeasible. '
-                'Problem may be infeasible.')
-        elif subprob_terminate_cond is tc.maxTimeLimit:
-            config.logger.info(
-                'NLP subproblem failed to converge within time limit.')
-            self.results.solver.termination_condition = tc.maxTimeLimit
-        elif subprob_terminate_cond is tc.maxIterations:
-            config.logger.info(
-                'NLP subproblem failed to converge within iteration limit.')
-        else:
-            raise ValueError(
-                'MindtPy unable to handle relaxed NLP termination condition '
-                'of %s. Solver message: %s' %
-                (subprob_terminate_cond, results.solver.message))
+        super().init_rNLP(config, add_oa_cuts=False)
 
 
     def algorithm_should_terminate(self, config):
