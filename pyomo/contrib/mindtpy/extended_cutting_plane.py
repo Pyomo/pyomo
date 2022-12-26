@@ -13,14 +13,15 @@
 #  ___________________________________________________________________________
 
 import logging
-from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to, SuppressInfeasibleWarning, get_main_elapsed_time)
-from pyomo.contrib.mindtpy.util import set_up_logger,setup_results_object, add_var_bound, calc_jacobians, set_solver_options, get_integer_solution
+from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to, get_main_elapsed_time, copy_var_list_values)
+from pyomo.contrib.mindtpy.util import set_up_logger,setup_results_object, calc_jacobians, add_feas_slacks
 from pyomo.core import TransformationFactory, Objective, ConstraintList, value
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_ECP_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 from pyomo.opt import TerminationCondition as tc
+from pyomo.util.vars_from_expressions import get_vars_from_components
 
 
 @SolverFactory.register(
@@ -198,13 +199,13 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         '''
         config = self.config
 
-        m = self.mip = self.working_model.clone()
+        self.mip = self.working_model.clone()
         next(self.mip.component_data_objects(
             Objective, active=True)).deactivate()
 
-        MindtPy = m.MindtPy_utils
+        MindtPy = self.mip.MindtPy_utils
         if config.calculate_dual_at_solution:
-            m.dual.deactivate()
+            self.mip.dual.deactivate()
 
         self.jacobians = calc_jacobians(self.mip, config)  # preload jacobians
         MindtPy.cuts.ecp_cuts = ConstraintList(doc='Extended Cutting Planes')
@@ -215,6 +216,10 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             if config.fp_projcuts:
                 self.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
                     doc='Orthogonality cuts in feasibility pump')
+
+        self.fixed_nlp = self.working_model.clone()
+        TransformationFactory('core.fix_integer_vars').apply_to(self.fixed_nlp)
+        add_feas_slacks(self.fixed_nlp, config)
 
 
     def init_rNLP(self, config):
@@ -325,7 +330,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                 return True
 
         # check to see if the nonlinear constraints are satisfied
-        MindtPy = self.working_model.MindtPy_utils
+        MindtPy = self.mip.MindtPy_utils
         nonlinear_constraints = [c for c in MindtPy.nonlinear_constraint_list]
         for nlc in nonlinear_constraints:
             if nlc.has_lb():
@@ -357,6 +362,6 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             'MindtPy-ECP exiting on nonlinear constraints satisfaction. '
             'Primal Bound: {} Dual Bound: {}\n'.format(self.primal_bound, self.dual_bound))
 
-        self.best_solution_found = self.working_model.clone()
+        self.best_solution_found = self.mip.clone()
         self.results.solver.termination_condition = tc.optimal
         return True

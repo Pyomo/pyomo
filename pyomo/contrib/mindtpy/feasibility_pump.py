@@ -16,7 +16,7 @@ import logging
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_FP_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.core import TransformationFactory, Objective, ConstraintList
-from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, add_var_bound, calc_jacobians
+from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, add_var_bound, calc_jacobians, add_feas_slacks
 from pyomo.opt import SolverFactory
 from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to
 from pyomo.contrib.mindtpy.cut_generation import add_oa_cuts
@@ -144,13 +144,13 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
         if config.single_tree:
             add_var_bound(self.working_model, config)
 
-        m = self.mip = self.working_model.clone()
+        self.mip = self.working_model.clone()
         next(self.mip.component_data_objects(
             Objective, active=True)).deactivate()
 
-        MindtPy = m.MindtPy_utils
+        MindtPy = self.mip.MindtPy_utils
         if config.calculate_dual_at_solution:
-            m.dual.deactivate()
+            self.mip.dual.deactivate()
 
         self.jacobians = calc_jacobians(self.mip, config)  # preload jacobians
         MindtPy.cuts.oa_cuts = ConstraintList(doc='Outer approximation cuts')
@@ -159,6 +159,10 @@ class MindtPy_FP_Solver(_MindtPyAlgorithm):
         if config.fp_projcuts:
             self.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
                 doc='Orthogonality cuts in feasibility pump')
+
+        self.fixed_nlp = self.working_model.clone()
+        TransformationFactory('core.fix_integer_vars').apply_to(self.fixed_nlp)
+        add_feas_slacks(self.fixed_nlp, config)
 
 
     def add_cuts(self,

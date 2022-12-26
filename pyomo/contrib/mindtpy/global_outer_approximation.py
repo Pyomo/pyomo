@@ -15,7 +15,7 @@
 import logging
 import math
 from pyomo.contrib.gdpopt.util import time_code, lower_logger_level_to, get_main_elapsed_time
-from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, get_integer_solution, copy_var_list_values_from_solution_pool, add_var_bound
+from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, get_integer_solution, copy_var_list_values_from_solution_pool, add_var_bound, add_feas_slacks
 from pyomo.core import TransformationFactory, minimize, maximize, Objective, ConstraintList
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_GOA_config
@@ -229,7 +229,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                         # so we should skip checking cycling for the first solution in the solution pool
                         if counter >= 1:
                             copy_var_list_values_from_solution_pool(self.mip.MindtPy_utils.variable_list,
-                                                                    self.working_model.MindtPy_utils.variable_list,
+                                                                    self.fixed_nlp.MindtPy_utils.variable_list,
                                                                     config, solver_model=main_mip_results._solver_model,
                                                                     var_map=main_mip_results._pyomo_var_to_solver_var_map,
                                                                     solution_name=name)
@@ -240,8 +240,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                                     'The same combination has been explored and will be skipped here.')
                                 continue
                             else:
-                                self.integer_list.append(
-                                    self.curr_int_sol)
+                                self.integer_list.append(self.curr_int_sol)
                         counter += 1
                         fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
                         self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
@@ -299,15 +298,19 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         if config.single_tree:
             add_var_bound(self.working_model, config)
 
-        m = self.mip = self.working_model.clone()
+        self.mip = self.working_model.clone()
         next(self.mip.component_data_objects(
             Objective, active=True)).deactivate()
 
-        MindtPy = m.MindtPy_utils
+        MindtPy = self.mip.MindtPy_utils
         if config.calculate_dual_at_solution:
-            m.dual.deactivate()
+            self.mip.dual.deactivate()
         
         MindtPy.cuts.aff_cuts = ConstraintList(doc='Affine cuts')
+
+        self.fixed_nlp = self.working_model.clone()
+        TransformationFactory('core.fix_integer_vars').apply_to(self.fixed_nlp)
+        add_feas_slacks(self.fixed_nlp, config)
 
 
     def update_primal_bound(self, bound_value):

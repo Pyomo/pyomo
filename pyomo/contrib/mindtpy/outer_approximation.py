@@ -14,7 +14,7 @@
 
 import logging
 from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to, copy_var_list_values)
-from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, add_var_bound, calc_jacobians
+from pyomo.contrib.mindtpy.util import set_up_logger, setup_results_object, add_var_bound, calc_jacobians, add_feas_slacks
 from pyomo.core import TransformationFactory, maximize, Objective, ConstraintList
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_OA_config
@@ -252,7 +252,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                         # so we should skip checking cycling for the first solution in the solution pool
                         if counter >= 1:
                             copy_var_list_values_from_solution_pool(self.mip.MindtPy_utils.variable_list,
-                                                                    self.working_model.MindtPy_utils.variable_list,
+                                                                    self.fixed_nlp.MindtPy_utils.variable_list,
                                                                     config, solver_model=main_mip_results._solver_model,
                                                                     var_map=main_mip_results._pyomo_var_to_solver_var_map,
                                                                     solution_name=name)
@@ -372,13 +372,13 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         if config.single_tree:
             add_var_bound(self.working_model, config)
 
-        m = self.mip = self.working_model.clone()
+        self.mip = self.working_model.clone()
         next(self.mip.component_data_objects(
             Objective, active=True)).deactivate()
 
-        MindtPy = m.MindtPy_utils
+        MindtPy = self.mip.MindtPy_utils
         if config.calculate_dual_at_solution:
-            m.dual.deactivate()
+            self.mip.dual.deactivate()
 
         self.jacobians = calc_jacobians(self.mip, config)  # preload jacobians
         MindtPy.cuts.oa_cuts = ConstraintList(doc='Outer approximation cuts')
@@ -389,6 +389,10 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             if config.fp_projcuts:
                 self.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
                     doc='Orthogonality cuts in feasibility pump')
+
+        self.fixed_nlp = self.working_model.clone()
+        TransformationFactory('core.fix_integer_vars').apply_to(self.fixed_nlp)
+        add_feas_slacks(self.fixed_nlp, config)
 
 
     def add_cuts(self,
