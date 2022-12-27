@@ -1382,20 +1382,7 @@ class _MindtPyAlgorithm(object):
             if isinstance(mainopt, PersistentSolver):
                 mainopt.set_instance(self.mip, symbolic_solver_labels=True)
             if config.use_tabu_list:
-                tabulist = mainopt._solver_model.register_callback(
-                    tabu_list.IncumbentCallback_cplex)
-                self.solve_data = MindtPySolveData()
-                self.export_attributes()
-                tabulist.solve_data = self.solve_data
-                tabulist.opt = mainopt
-                tabulist.config = config
-                mainopt._solver_model.parameters.preprocessing.reduce.set(1)
-                # If the callback is used to reject incumbents, the user must set the
-                # parameter c.parameters.preprocessing.reduce either to the value 1 (one)
-                # to restrict presolve to primal reductions only or to 0 (zero) to disable all presolve reductions
-                mainopt._solver_model.set_warning_stream(None)
-                mainopt._solver_model.set_log_stream(None)
-                mainopt._solver_model.set_error_stream(None)
+                self.set_up_tabulist_callback(mainopt)
             mip_args = dict(config.mip_solver_args)
             set_solver_options(mainopt, self.timing, config, solver_type='mip')
             main_mip_results = mainopt.solve(self.mip,
@@ -1418,6 +1405,53 @@ class _MindtPyAlgorithm(object):
             # Check bound convergence
             if abs(self.primal_bound - self.dual_bound) <= config.absolute_bound_tolerance:
                 self.results.solver.termination_condition = tc.optimal
+
+    def set_up_tabulist_callback(self, mainopt):
+        """Set up the tabulist using IncumbentCallback
+
+        Parameters
+        ----------
+        mainopt : solver
+            The MIP solver.
+        """
+        tabulist = mainopt._solver_model.register_callback(
+            tabu_list.IncumbentCallback_cplex)
+        self.solve_data = MindtPySolveData()
+        self.export_attributes()
+        tabulist.solve_data = self.solve_data
+        tabulist.opt = mainopt
+        tabulist.config = self.config
+        mainopt._solver_model.parameters.preprocessing.reduce.set(1)
+        # If the callback is used to reject incumbents, the user must set the
+        # parameter c.parameters.preprocessing.reduce either to the value 1 (one)
+        # to restrict presolve to primal reductions only or to 0 (zero) to disable all presolve reductions
+        mainopt._solver_model.set_warning_stream(None)
+        mainopt._solver_model.set_log_stream(None)
+        mainopt._solver_model.set_error_stream(None)
+
+    def set_up_lazy_OA_callback(self, mainopt):
+        """Set up the lazy OA using LazyConstraintCallback
+
+        Parameters
+        ----------
+        mainopt : solver
+            The MIP solver.
+        """
+        if self.config.mip_solver == 'cplex_persistent':
+            lazyoa = mainopt._solver_model.register_callback(
+                single_tree.LazyOACallback_cplex)
+            # pass necessary data and parameters to lazyoa
+            lazyoa.main_mip = self.mip
+            self.solve_data = MindtPySolveData()
+            self.export_attributes()
+            lazyoa.solve_data = self.solve_data
+            lazyoa.config = self.config
+            lazyoa.opt = mainopt
+            mainopt._solver_model.set_warning_stream(None)
+            mainopt._solver_model.set_log_stream(None)
+            mainopt._solver_model.set_error_stream(None)
+        if self.config.mip_solver == 'gurobi_persistent':
+            mainopt.set_callback(single_tree.LazyOACallback_gurobi)
 
     ##########################################################################################################################################
     # mip_solve.py
@@ -1544,37 +1578,9 @@ class _MindtPyAlgorithm(object):
         if isinstance(mainopt, PersistentSolver):
             mainopt.set_instance(self.mip, symbolic_solver_labels=True)
         if config.single_tree and not regularization_problem:
-            # Configuration of cplex lazy callback
-            if config.mip_solver == 'cplex_persistent':
-                lazyoa = mainopt._solver_model.register_callback(
-                    single_tree.LazyOACallback_cplex)
-                # pass necessary data and parameters to lazyoa
-                lazyoa.main_mip = self.mip
-                self.solve_data = MindtPySolveData()
-                self.export_attributes()
-                lazyoa.solve_data = self.solve_data
-                lazyoa.config = config
-                lazyoa.opt = mainopt
-                mainopt._solver_model.set_warning_stream(None)
-                mainopt._solver_model.set_log_stream(None)
-                mainopt._solver_model.set_error_stream(None)
-            if config.mip_solver == 'gurobi_persistent':
-                mainopt.set_callback(single_tree.LazyOACallback_gurobi)
+            self.set_up_lazy_OA_callback(mainopt)
         if config.use_tabu_list:
-            self.solve_data = MindtPySolveData()
-            self.export_attributes()
-            tabulist = mainopt._solver_model.register_callback(
-                tabu_list.IncumbentCallback_cplex)
-            tabulist.solve_data = self.solve_data
-            tabulist.opt = mainopt
-            tabulist.config = config
-            mainopt._solver_model.parameters.preprocessing.reduce.set(1)
-            # If the callback is used to reject incumbents, the user must set the
-            # parameter c.parameters.preprocessing.reduce either to the value 1 (one)
-            # to restrict presolve to primal reductions only or to 0 (zero) to disable all presolve reductions
-            mainopt._solver_model.set_warning_stream(None)
-            mainopt._solver_model.set_log_stream(None)
-            mainopt._solver_model.set_error_stream(None)
+            self.set_up_tabulist_callback(mainopt)
         return mainopt
 
     # The following functions deal with handling the solution we get from the above MIP solver function
