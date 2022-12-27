@@ -1348,6 +1348,10 @@ class _MindtPyAlgorithm(object):
         last_iter_cuts : bool
             Whether the cuts in the last iteration have been added.
         """
+        # If no-good cuts or tabu list is activated, the dual bound is not valid for the final optimal solution.
+        # Therefore, we need to correct it at the end.
+        # In singletree implementation, the dual bound at one iteration before the optimal solution, is valid for the optimal solution. 
+        # So we will set the dual bound to it.
         if config.single_tree:
             config.logger.info(
                 'Fix the bound to the value of one iteration before optimal solution is found.')
