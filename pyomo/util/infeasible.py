@@ -37,6 +37,13 @@ def log_infeasible_constraints(
         log_variables (bool): If true, prints the constraint variable names and values
 
     """
+    if logger.getEffectiveLevel() > logging.INFO:
+        logger.warning(
+            'log_infeasible_constraints() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged regardless of constraint feasibility'
+        )
+
     # Iterate through all active constraints on the model
     for constr in m.component_data_objects(
             ctype=Constraint, active=True, descend_into=True):
@@ -126,6 +133,13 @@ def log_infeasible_bounds(m, tol=1E-6, logger=logger):
         tol (float): feasibility tolerance
 
     """
+    if logger.getEffectiveLevel() > logging.INFO:
+        logger.warning(
+            'log_infeasible_bounds() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged regardless of bound feasibility'
+        )
+
     for var in m.component_data_objects(
             ctype=Var, descend_into=True):
         var_value = var.value
@@ -149,6 +163,13 @@ def log_close_to_bounds(m, tol=1E-6, logger=logger):
         m (Block): Pyomo block or model to check
         tol (float): bound tolerance
     """
+    if logger.getEffectiveLevel() > logging.INFO:
+        logger.warning(
+            'log_close_to_bounds() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged regardless of bound status'
+        )
+
     for var in m.component_data_objects(
             ctype=Var, descend_into=True):
         if var.fixed:

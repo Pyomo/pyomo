@@ -54,7 +54,7 @@ These can be expressed as a disjunction as follows:
     \text{constraints} \\
     \text{for }\textit{else}
     \end{gathered}\right] \\
-    Y_1 \underline{\vee} Y_2
+    Y_1 \veebar Y_2
     \end{gather*}
 
 Here, if the Boolean :math:`Y_1` is ``True``, then the constraints in the first disjunct are enforced; otherwise, the constraints in the second disjunct are enforced.
