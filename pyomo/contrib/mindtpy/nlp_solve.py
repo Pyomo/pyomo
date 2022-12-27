@@ -180,7 +180,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None):
             solve_data.num_no_good_cuts_added.update(
                     {solve_data.primal_bound: len(solve_data.mip.MindtPy_utils.cuts.no_good_cuts)})
     # Add the linear cut
-    if config.strategy == 'OA' or fp:
+    if config.strategy == 'OA':
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              solve_data.mip.MindtPy_utils.variable_list,
                              config)
