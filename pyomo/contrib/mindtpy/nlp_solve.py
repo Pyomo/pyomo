@@ -142,7 +142,7 @@ def handle_nlp_subproblem_tc(fixed_nlp, result, solve_data, config, cb_opt=None)
 # The next few functions deal with handling the solution we get from the above NLP solver function
 
 
-def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=False):
+def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None):
     """This function copies the result of the NLP solver function ('solve_subproblem') to the working model, updates
     the bounds, adds OA and no-good cuts, and then stores the new solution if it is the new best solution. This
     function handles the result of the latest iteration of solving the NLP subproblem given an optimal solution.
@@ -157,8 +157,6 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
         The specific configurations for MindtPy.
     cb_opt : SolverFactory, optional
         The gurobi_persistent solver, by default None.
-    fp : bool, optional
-        Whether it is in the loop of feasibility pump, by default False.
     """
     copy_var_list_values(
         fixed_nlp.MindtPy_utils.variable_list,
@@ -181,17 +179,6 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
         if config.strategy == 'GOA':
             solve_data.num_no_good_cuts_added.update(
                     {solve_data.primal_bound: len(solve_data.mip.MindtPy_utils.cuts.no_good_cuts)})
-
-        # add obj increasing constraint for fp
-        if fp:
-            solve_data.mip.MindtPy_utils.cuts.del_component(
-                'improving_objective_cut')
-            if solve_data.objective_sense == minimize:
-                solve_data.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=sum(solve_data.mip.MindtPy_utils.objective_value[:])
-                                                                                       <= solve_data.primal_bound - config.fp_cutoffdecr*max(1, abs(solve_data.primal_bound)))
-            else:
-                solve_data.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=sum(solve_data.mip.MindtPy_utils.objective_value[:])
-                                                                                       >= solve_data.primal_bound + config.fp_cutoffdecr*max(1, abs(solve_data.primal_bound)))
     # Add the linear cut
     if config.strategy == 'OA' or fp:
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
@@ -219,7 +206,7 @@ def handle_subproblem_optimal(fixed_nlp, solve_data, config, cb_opt=None, fp=Fal
     config.call_after_subproblem_feasible(fixed_nlp, solve_data)
 
     config.logger.info(solve_data.fixed_nlp_log_formatter.format('*' if solve_data.primal_bound_improved else ' ',
-                                                                 solve_data.nlp_iter if not fp else solve_data.fp_iter,
+                                                                 solve_data.nlp_iter,
                                                                  'Fixed NLP', 
                                                                  value(main_objective.expr),
                                                                  solve_data.primal_bound, 

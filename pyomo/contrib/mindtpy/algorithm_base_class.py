@@ -989,17 +989,6 @@ class _MindtPyAlgorithm(object):
             self.best_solution_found = fixed_nlp.clone()
             self.best_solution_found_time = get_main_elapsed_time(
                 self.timing)
-
-            # add obj increasing constraint for fp
-            if fp:
-                self.mip.MindtPy_utils.cuts.del_component(
-                    'improving_objective_cut')
-                if self.objective_sense == minimize:
-                    self.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=sum(self.mip.MindtPy_utils.objective_value[:])
-                                                                                     <= self.primal_bound - config.fp_cutoffdecr*max(1, abs(self.primal_bound)))
-                else:
-                    self.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=sum(self.mip.MindtPy_utils.objective_value[:])
-                                                                                     >= self.primal_bound + config.fp_cutoffdecr*max(1, abs(self.primal_bound)))
         # Add the linear cut
         copy_var_list_values(fixed_nlp.MindtPy_utils.variable_list,
                              self.mip.MindtPy_utils.variable_list,
@@ -2146,7 +2135,15 @@ class _MindtPyAlgorithm(object):
                                  skip_fixed=False)
             fixed_nlp, fixed_nlp_results = self.solve_subproblem(config)
             if fixed_nlp_results.solver.termination_condition in {tc.optimal, tc.locallyOptimal, tc.feasible}:
-                self.handle_subproblem_optimal(fixed_nlp, config, fp=True)
+                self.handle_subproblem_optimal(fixed_nlp, config)
+                if self.primal_bound_improved:
+                    self.mip.MindtPy_utils.cuts.del_component('improving_objective_cut')
+                    if self.objective_sense == minimize:
+                        self.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=sum(self.mip.MindtPy_utils.objective_value[:])
+                                                                                        <= self.primal_bound - config.fp_cutoffdecr*max(1, abs(self.primal_bound)))
+                    else:
+                        self.mip.MindtPy_utils.cuts.improving_objective_cut = Constraint(expr=sum(self.mip.MindtPy_utils.objective_value[:])
+                                                                                        >= self.primal_bound + config.fp_cutoffdecr*max(1, abs(self.primal_bound)))
             else:
                 config.logger.error('Feasibility pump Fixed-NLP is infeasible, something might be wrong. '
                                     'There might be a problem with the precisions - the feasibility pump seems to have converged')
