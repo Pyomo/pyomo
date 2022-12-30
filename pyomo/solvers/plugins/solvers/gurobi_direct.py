@@ -70,6 +70,29 @@ gurobipy, gurobipy_available = attempt_import(
 )
 
 
+def _set_options(model_or_env, options):
+    # Set a parameters from the dictionary 'options' on the given gurobipy
+    # model or environment.
+    for key, option in options.items():
+        # When options come from the pyomo command, all
+        # values are string types, so we try to cast
+        # them to a numeric value in the event that
+        # setting the parameter fails.
+        try:
+            model_or_env.setParam(key, option)
+        except TypeError:
+            # we place the exception handling for
+            # checking the cast of option to a float in
+            # another function so that we can simply
+            # call raise here instead of except
+            # TypeError as e / raise e, because the
+            # latter does not preserve the Gurobi stack
+            # trace
+            if not _is_numeric(option):
+                raise
+            model_or_env.setParam(key, float(option))
+
+
 @SolverFactory.register('gurobi_direct', doc='Direct python interface to Gurobi')
 class GurobiDirect(DirectSolver):
 
@@ -120,6 +143,7 @@ class GurobiDirect(DirectSolver):
 
         self._manage_env = manage_env
         self._env = None
+        self._env_options = None
         self._solver_model = None
 
     def available(self, exception_flag=True):
@@ -165,38 +189,15 @@ class GurobiDirect(DirectSolver):
             self._solver_model.setParam('LogFile', self._log_file)
             print("Solver log file: "+self._log_file)
 
-        # Options accepted by gurobi (case insensitive):
-        # ['Cutoff', 'IterationLimit', 'NodeLimit', 'SolutionLimit', 'TimeLimit',
-        #  'FeasibilityTol', 'IntFeasTol', 'MarkowitzTol', 'MIPGap', 'MIPGapAbs',
-        #  'OptimalityTol', 'PSDTol', 'Method', 'PerturbValue', 'ObjScale', 'ScaleFlag',
-        #  'SimplexPricing', 'Quad', 'NormAdjust', 'BarIterLimit', 'BarConvTol',
-        #  'BarCorrectors', 'BarOrder', 'Crossover', 'CrossoverBasis', 'BranchDir',
-        #  'Heuristics', 'MinRelNodes', 'MIPFocus', 'NodefileStart', 'NodefileDir',
-        #  'NodeMethod', 'PumpPasses', 'RINS', 'SolutionNumber', 'SubMIPNodes', 'Symmetry',
-        #  'VarBranch', 'Cuts', 'CutPasses', 'CliqueCuts', 'CoverCuts', 'CutAggPasses',
-        #  'FlowCoverCuts', 'FlowPathCuts', 'GomoryPasses', 'GUBCoverCuts', 'ImpliedCuts',
-        #  'MIPSepCuts', 'MIRCuts', 'NetworkCuts', 'SubMIPCuts', 'ZeroHalfCuts', 'ModKCuts',
-        #  'Aggregate', 'AggFill', 'PreDual', 'DisplayInterval', 'IISMethod', 'InfUnbdInfo',
-        #  'LogFile', 'PreCrush', 'PreDepRow', 'PreMIQPMethod', 'PrePasses', 'Presolve',
-        #  'ResultFile', 'ImproveStartTime', 'ImproveStartGap', 'Threads', 'Dummy', 'OutputFlag']
-        for key, option in self.options.items():
-            # When options come from the pyomo command, all
-            # values are string types, so we try to cast
-            # them to a numeric value in the event that
-            # setting the parameter fails.
-            try:
-                self._solver_model.setParam(key, option)
-            except TypeError:
-                # we place the exception handling for
-                # checking the cast of option to a float in
-                # another function so that we can simply
-                # call raise here instead of except
-                # TypeError as e / raise e, because the
-                # latter does not preserve the Gurobi stack
-                # trace
-                if not _is_numeric(option):
-                    raise
-                self._solver_model.setParam(key, float(option))
+        # Only pass along changed parameters to the model
+        if self._env_options:
+            new_options = {
+                key: option for key, option in self.options.items()
+                if key not in self._env_options or self._env_options[key] != option
+            }
+        else:
+            new_options = self.options
+        _set_options(self._solver_model, new_options)
 
         if self._version_major >= 5:
             for suffix in self._suffixes:
@@ -284,13 +285,17 @@ class GurobiDirect(DirectSolver):
             # Ensure an environment is active for this instance
             if self._env is None:
                 assert self._solver_model is None
-                env = gurobipy.Env()
+                env = gurobipy.Env(empty=True)
+                _set_options(env, self.options)
+                env.start()
                 # Successful start (no errors): store the environment
                 self._env = env
+                self._env_options = dict(self.options)
         else:
             # Ensure the default env is started
             with gurobipy.Model():
                 pass
+            self._env_params = None
 
     def _create_model(self, model):
         self._init_env()
