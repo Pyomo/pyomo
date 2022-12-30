@@ -19,14 +19,6 @@ except ImportError:
 
 
 def clean_up_global_state():
-
-    # Clean up GurobiDirect's persistent error storage. Can be removed
-    # once GurobiDirect is updated.
-    from pyomo.solvers.plugins.solvers.gurobi_direct import GurobiDirect
-
-    GurobiDirect._verified_license = None
-    GurobiDirect._import_messages = ""
-
     # Best efforts to dispose any gurobipy objects from previous tests
     # which might keep the default environment active
     gc.collect()

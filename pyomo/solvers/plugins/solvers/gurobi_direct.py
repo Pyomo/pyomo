@@ -96,8 +96,6 @@ def _set_options(model_or_env, options):
 @SolverFactory.register('gurobi_direct', doc='Direct python interface to Gurobi')
 class GurobiDirect(DirectSolver):
 
-    _verified_license = None
-    _import_messages = ''
     _name = None
     _version = 0
     _version_major = 0
