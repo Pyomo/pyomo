@@ -61,6 +61,83 @@ class GurobiBase(unittest.TestCase):
 
 
 @unittest.skipIf(not gurobipy_available, "gurobipy is not available")
+class GurobiParameterTests(GurobiBase):
+    def test_set_environment_parameters(self):
+        # Solver options should handle parameters which must be set before the
+        # environment is started (i.e. connection params, memory limits). This
+        # can only work with a managed env.
+
+        with SolverFactory(
+            "gurobi_direct",
+            manage_env=True,
+            options={"ComputeServer": "/url/to/server"},
+        ) as opt:
+            # Check that the error comes from an attempted connection, not from setting
+            # the parameter after the environment is started.
+            with self.assertRaisesRegex(ApplicationError, "Could not resolve host"):
+                opt.solve(self.model)
+
+    def test_set_once(self):
+
+        # Make sure parameters aren't set twice. If they are set on the
+        # environment, they shouldn't also be set on the model. This isn't an
+        # issue for most parameters, but some license parameters (e.g. WLS)
+        # will complain if set in both places.
+
+        envparams = {}
+        modelparams = {}
+
+        class TempEnv(gp.Env):
+            def setParam(self, param, value):
+                envparams[param] = value
+
+        class TempModel(gp.Model):
+            def setParam(self, param, value):
+                modelparams[param] = value
+
+        with patch("gurobipy.Env", new=TempEnv), patch("gurobipy.Model", new=TempModel):
+
+            with SolverFactory(
+                "gurobi_direct", options={"Method": 2, "MIPFocus": 1}, manage_env=True
+            ) as opt:
+                opt.solve(self.model, options={"MIPFocus": 2})
+
+        # Method should not be set again, but MIPFocus was changed.
+        # OutputFlag is explicitly set on the model.
+        assert envparams == {"Method": 2, "MIPFocus": 1}
+        assert modelparams == {"MIPFocus": 2, "OutputFlag": 0}
+
+    # Try an erroneous parameter setting to ensure parameters go through in all
+    # cases. Expect an error to indicate pyomo tried to set the parameter.
+
+    def test_param_changes_1(self):
+        # Default env: parameters set on model at solve time
+        with SolverFactory("gurobi_direct", options={"Method": -100}) as opt:
+            with self.assertRaisesRegex(gp.GurobiError, "Unable to set"):
+                opt.solve(self.model)
+
+    def test_param_changes_2(self):
+        # Managed env: parameters set on env at solve time
+        with SolverFactory(
+            "gurobi_direct", options={"Method": -100}, manage_env=True
+        ) as opt:
+            with self.assertRaisesRegex(gp.GurobiError, "Unable to set"):
+                opt.solve(self.model)
+
+    def test_param_changes_3(self):
+        # Default env: parameters passed to solve()
+        with SolverFactory("gurobi_direct") as opt:
+            with self.assertRaisesRegex(gp.GurobiError, "Unable to set"):
+                opt.solve(self.model, options={"Method": -100})
+
+    def test_param_changes_4(self):
+        # Managed env: parameters passed to solve()
+        with SolverFactory("gurobi_direct", manage_env=True) as opt:
+            with self.assertRaisesRegex(gp.GurobiError, "Unable to set"):
+                opt.solve(self.model, options={"Method": -100})
+
+
+@unittest.skipIf(not gurobipy_available, "gurobipy is not available")
 @unittest.skipIf(not single_use_license(), reason="test needs a single use license")
 class GurobiSingleUseTests(GurobiBase):
     def test_persisted_license_failure(self):
