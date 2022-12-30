@@ -117,11 +117,14 @@ class GurobiParameterTests(GurobiBase):
                 opt.solve(self.model)
 
     def test_param_changes_2(self):
+        # Note that this case throws an ApplicationError instead of a
+        # GurobiError since the bad parameter value prevents the environment
+        # from starting
         # Managed env: parameters set on env at solve time
         with SolverFactory(
             "gurobi_direct", options={"Method": -100}, manage_env=True
         ) as opt:
-            with self.assertRaisesRegex(gp.GurobiError, "Unable to set"):
+            with self.assertRaisesRegex(ApplicationError, "Unable to set"):
                 opt.solve(self.model)
 
     def test_param_changes_3(self):
