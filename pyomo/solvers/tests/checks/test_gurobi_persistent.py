@@ -14,7 +14,8 @@ import pyomo.environ as pyo
 from pyomo.core.expr.taylor_series import taylor_series_expansion
 try:
     import gurobipy
-    m = gurobipy.Model()
+    with gurobipy.Env():
+        pass
     gurobipy_available = True
 except:
     gurobipy_available = False
