@@ -171,8 +171,8 @@ class GurobiDirect(DirectSolver):
         if exception_flag:
             logger.warning(msg)
             raise ApplicationError(
-                "Could not create a gurobipy Model for %s solver plugin"
-                % (type(self),))
+                "Could not create Model for %s solver plugin - gurobi message=%s"
+                % (type(self), msg))
         else:
             return False
 
