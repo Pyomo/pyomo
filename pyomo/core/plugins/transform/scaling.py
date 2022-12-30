@@ -332,19 +332,21 @@ class ScaleModel(Transformation):
         component_scaling_factor_map = scaled_model.component_scaling_factor_map
         scaled_component_to_original_name_map = scaled_model.scaled_component_to_original_name_map
 
-        # get the objective scaling factor
-        scaled_objectives = list(scaled_model.component_data_objects(ctype=Objective, active=True, descend_into=True))
-        if len(scaled_objectives) == 0:
-            objective_scaling_factor = 1
-        elif len(scaled_objectives) != 1:
-            raise NotImplementedError(
-                'ScaleModel.propagate_solution requires no more than a single active objective function, but %d objectives found.' % (
-                    len(scaled_objectives)))
-        else:
-            objective_scaling_factor = component_scaling_factor_map[scaled_objectives[0]]
-
         # transfer the variable values and reduced costs
         check_reduced_costs = type(scaled_model.component('rc')) is Suffix
+        check_dual = type(scaled_model.component('dual')) is Suffix and type(original_model.component('dual')) is Suffix
+
+        if check_reduced_costs or check_dual:
+            # get the objective scaling factor
+            scaled_objectives = list(
+                scaled_model.component_data_objects(ctype=Objective, active=True, descend_into=True))
+            if len(scaled_objectives) != 1:
+                raise NotImplementedError(
+                    'ScaleModel.propagate_solution requires a single active objective function, but %d objectives found.' % (
+                        len(scaled_objectives)))
+            else:
+                objective_scaling_factor = component_scaling_factor_map[scaled_objectives[0]]
+
         for scaled_v in scaled_model.component_objects(ctype=Var, descend_into=True):
             # get the unscaled_v from the original model
             original_v_path = scaled_component_to_original_name_map[scaled_v]
@@ -361,7 +363,7 @@ class ScaleModel(Transformation):
                         scaled_v[k]] / objective_scaling_factor
 
         # transfer the duals
-        if type(scaled_model.component('dual')) is Suffix and type(original_model.component('dual')) is Suffix:
+        if check_dual:
             for scaled_c in scaled_model.component_objects(ctype=Constraint, descend_into=True):
                 original_c = original_model.find_component(scaled_component_to_original_name_map[scaled_c])
 
