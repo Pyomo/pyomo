@@ -849,17 +849,15 @@ class _MutableNPVSumExpression(_MutableLinearExpression):
 
 
 class Expr_ifExpression(NumericExpression):
-    """
-    A logical if-then-else expression::
+    """A numeric ternary (if-then-else) expression::
 
         Expr_if(IF=x, THEN=y, ELSE=z)
 
-    Args:
-        IF (expression): A relational expression
-        THEN (expression): An expression that is used if :attr:`IF` is true.
-        ELSE (expression): An expression that is used if :attr:`IF` is false.
+    Note that this is a mixed expression: `IF` can be numeric or logical;
+    `THEN` and `ELSE` are numeric, and the result is a numeric expression.
+
     """
-    __slots__ = ('_if','_then','_else')
+    __slots__ = ()
 
     # This operator does not have an infix representation
     PRECEDENCE = None
@@ -868,16 +866,6 @@ class Expr_ifExpression(NumericExpression):
     #           on a number of occasions. It is important that
     #           one uses __call__ for value() and NOT bool().
 
-    def __init__(self, IF=None, THEN=None, ELSE=None):
-        if type(IF) is tuple and THEN==None and ELSE==None:
-            IF, THEN, ELSE = IF
-        self._args_ = (IF, THEN, ELSE)
-        self._if = IF
-        self._then = THEN
-        self._else = ELSE
-        if self._if.__class__ in native_numeric_types:
-            self._if = as_numeric(self._if)
-
     def nargs(self):
         return 3
 
@@ -885,14 +873,11 @@ class Expr_ifExpression(NumericExpression):
         return "Expr_if"
 
     def _is_fixed(self, args):
-        assert(len(args) == 3)
-        if args[1] and args[2]:
-            return True
-        if args[0]: # self._if.is_fixed():
-            if value(self._if):
-                return args[1] # self._then.is_fixed()
+        if args[0]: # if.is_fixed():
+            if value(self._args_[0]):
+                return args[1] # then.is_fixed()
             else:
-                return args[2] # self._else.is_fixed()
+                return args[2] # else.is_fixed()
         else:
             return False
 
@@ -905,7 +890,7 @@ class Expr_ifExpression(NumericExpression):
             if _then == _else:
                 return _then
             try:
-                return _then if value(self._if) else _else
+                return _then if value(self.arg(0)) else _else
             except ValueError:
                 pass
         return None

@@ -149,8 +149,8 @@ def Expr_if(IF=None, THEN=None, ELSE=None):
     if _numvalue.is_constant(IF):
         return THEN if value(IF) else ELSE
     if not any(map(_numvalue.is_potentially_variable, (IF, THEN, ELSE))):
-        return NPV_Expr_ifExpression(IF, THEN, ELSE)
-    return Expr_ifExpression(IF=IF, THEN=THEN, ELSE=ELSE)
+        return NPV_Expr_ifExpression((IF, THEN, ELSE))
+    return Expr_ifExpression((IF, THEN, ELSE))
 
 #
 # NOTE: abs() and pow() are not defined here, because they are
