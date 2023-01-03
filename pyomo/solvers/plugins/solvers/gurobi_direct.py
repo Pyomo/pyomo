@@ -315,6 +315,10 @@ class GurobiDirect(DirectSolver):
             self._solver_model = gurobipy.Model(env=self._env)
 
     def close(self):
+        """Close the Gurobi model used by this solver instance. If the solver
+        was created with manage_env=True, also closes the Gurobi environment
+        used by this solver instance.
+        """
         if self._solver_model is not None:
             self._solver_model.close()
             self._solver_model = None
