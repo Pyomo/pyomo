@@ -362,12 +362,6 @@ class MOSEKDirect(DirectSolver):
         self._pyomo_var_to_solver_var_map.update(zip(var_seq, var_ids))
         self._solver_var_to_pyomo_var_map.update(zip(var_ids, var_seq))
         self._referenced_variables.update(zip(var_seq, [0]*len(var_seq)))
-        # Initialize variables
-        for m_v, p_v in zip(var_ids, var_seq):
-            if p_v.value is not None:
-                for sol_type in mosek.soltype.values:
-                    self._solver_model.putxxslice(
-                        sol_type, m_v, m_v + 1, [(p_v.value)])
 
     def _add_cones(self, cones, num_cones):
         cone_names = tuple(self._symbol_map.getSymbol(
@@ -989,6 +983,11 @@ class MOSEKDirect(DirectSolver):
 
     def _warm_start(self):
         self._set_whichsol()
+        for pyomo_var, mosek_var in self._pyomo_var_to_solver_var_map.items():
+            if pyomo_var.value is not None:
+                self._solver_model.putxxslice(
+                    self._whichsol, mosek_var, mosek_var + 1, [(pyomo_var.value)])
+
         if (self._version[0] > 9) & (self._whichsol == mosek.soltype.itg):
             self._solver_model.putintparam(
                 mosek.iparam.mio_construct_sol, mosek.onoffkey.on)
