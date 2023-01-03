@@ -29,7 +29,7 @@ from .expr_common import (
     clone_counter,
     _add, _sub, _mul, _div, _pow, _neg, _abs, _inplace, _unary
 )
-from .base import ExpressionBase
+from .base import ExpressionBase, NPV_Mixin
 from .numvalue import (
     NumericValue,
     native_types,
@@ -176,7 +176,7 @@ class NumericExpression(ExpressionBase, NumericValue):
                 'potentially variable one violates the immutability '
                 'promise for Pyomo5 expression trees.')
             cls = list(self.__class__.__bases__)
-            cls.remove(NPV_Mixin)
+            cls.remove(Numeric_NPV_Mixin)
             assert len(cls) == 1
             self.__class__ = cls[0]
         return self
@@ -212,33 +212,12 @@ class NumericExpression(ExpressionBase, NumericValue):
         return None
 
 
-class NPV_Mixin(object):
+class Numeric_NPV_Mixin(NPV_Mixin):
     __slots__ = ()
-
-    def is_potentially_variable(self):
-        return False
-
-    def create_node_with_local_data(self, args, classtype=None):
-        assert classtype is None
-        try:
-            npv_args = all(
-                type(arg) in native_types or not arg.is_potentially_variable()
-                for arg in args
-            )
-        except AttributeError:
-            # We can hit this during expression replacement when the new
-            # type is not a PyomoObject type, but is not in the
-            # native_types set.  We will play it safe and clear the NPV flag
-            npv_args = False
-        if npv_args:
-            return super().create_node_with_local_data(args, None)
-        else:
-            return super().create_node_with_local_data(
-                args, self.potentially_variable_base_class())
 
     def potentially_variable_base_class(self):
         cls = list(self.__class__.__bases__)
-        cls.remove(NPV_Mixin)
+        cls.remove(Numeric_NPV_Mixin)
         assert len(cls) == 1
         return cls[0]
 
@@ -290,7 +269,7 @@ class NegationExpression(NumericExpression):
         return self._args_[0]
 
 
-class NPV_NegationExpression(NPV_Mixin, NegationExpression):
+class NPV_NegationExpression(Numeric_NPV_Mixin, NegationExpression):
     __slots__ = ()
 
     # Because NPV also defines __neg__ we need to override it here, too
@@ -347,7 +326,7 @@ class ExternalFunctionExpression(NumericExpression):
         """ Get the units of the return value for this external function """
         return self._fcn.get_units()
 
-class NPV_ExternalFunctionExpression(NPV_Mixin, ExternalFunctionExpression):
+class NPV_ExternalFunctionExpression(Numeric_NPV_Mixin, ExternalFunctionExpression):
     __slots__ = ()
 
 
@@ -410,7 +389,7 @@ class PowExpression(NumericExpression):
         return f"{values[0]}**{values[1]}"
 
 
-class NPV_PowExpression(NPV_Mixin, PowExpression):
+class NPV_PowExpression(Numeric_NPV_Mixin, PowExpression):
     __slots__ = ()
 
 
@@ -439,7 +418,7 @@ class MaxExpression(NumericExpression):
         return f"{self.getname()}({', '.join(values)})"
 
 
-class NPV_MaxExpression(NPV_Mixin, MaxExpression):
+class NPV_MaxExpression(Numeric_NPV_Mixin, MaxExpression):
     __slots__ = ()
 
 
@@ -468,7 +447,7 @@ class MinExpression(NumericExpression):
         return f"{self.getname()}({', '.join(values)})"
 
 
-class NPV_MinExpression(NPV_Mixin, MinExpression):
+class NPV_MinExpression(Numeric_NPV_Mixin, MinExpression):
     __slots__ = ()
 
 
@@ -524,7 +503,7 @@ class ProductExpression(NumericExpression):
     _to_string.minus_one = {"-1", "-1.0", "(-1)", "(-1.0)"}
 
 
-class NPV_ProductExpression(NPV_Mixin, ProductExpression):
+class NPV_ProductExpression(Numeric_NPV_Mixin, ProductExpression):
     __slots__ = ()
 
 
@@ -578,7 +557,7 @@ class DivisionExpression(NumericExpression):
         return result[0] / result[1]
 
 
-class NPV_DivisionExpression(NPV_Mixin, DivisionExpression):
+class NPV_DivisionExpression(Numeric_NPV_Mixin, DivisionExpression):
     __slots__ = ()
 
 
@@ -799,7 +778,7 @@ class LinearExpression(SumExpression):
         return ' '.join(values)
 
 
-class NPV_SumExpression(NPV_Mixin, SumExpression):
+class NPV_SumExpression(Numeric_NPV_Mixin, SumExpression):
     __slots__ = ()
 
     def _apply_operation(self, result):
@@ -940,7 +919,7 @@ class Expr_ifExpression(NumericExpression):
         return _then if _if else _else
 
 
-class NPV_Expr_ifExpression(NPV_Mixin, Expr_ifExpression):
+class NPV_Expr_ifExpression(Numeric_NPV_Mixin, Expr_ifExpression):
     __slots__ = ()
 
 
@@ -987,7 +966,7 @@ class UnaryFunctionExpression(NumericExpression):
         return self._fcn(result[0])
 
 
-class NPV_UnaryFunctionExpression(NPV_Mixin, UnaryFunctionExpression):
+class NPV_UnaryFunctionExpression(Numeric_NPV_Mixin, UnaryFunctionExpression):
     __slots__ = ()
 
 
@@ -1011,7 +990,7 @@ class AbsExpression(UnaryFunctionExpression):
         return classtype(args)
 
 
-class NPV_AbsExpression(NPV_Mixin, AbsExpression):
+class NPV_AbsExpression(Numeric_NPV_Mixin, AbsExpression):
     __slots__ = ()
 
 
