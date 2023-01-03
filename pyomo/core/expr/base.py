@@ -11,13 +11,14 @@
 
 import enum
 
+from pyomo.core.pyomoobject import PyomoObject
 from . import expr_common as common
 from .visitor import (
     expression_to_string, evaluate_expression, clone_expression,
     _expression_is_fixed, sizeof_expression,
 )
 
-class ExpressionBase(object):
+class ExpressionBase(PyomoObject):
     """The base class for all Pyomo expression systems.
 
     This class is used to define nodes in a general expression tree.
