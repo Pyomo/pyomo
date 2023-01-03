@@ -99,6 +99,7 @@ class GurobiDirect(DirectSolver):
     _name = None
     _version = 0
     _version_major = 0
+    _default_env_started = False
 
     def __init__(self, manage_env=False, **kwds):
         if 'type' not in kwds:
@@ -153,10 +154,7 @@ class GurobiDirect(DirectSolver):
                     "No Python bindings available for %s solver plugin"
                     % (type(self),))
             return False
-        # Check if this solver already has a license
-        if self._env is not None:
-            return True
-        # Start environment to check for a valid license
+        # Ensure environment is started to check for a valid license
         with capture_output(capture_fd=True) as OUT:
             try:
                 self._init_env()
@@ -278,6 +276,17 @@ class GurobiDirect(DirectSolver):
 
         self._needs_updated = True
 
+    def close_global(self):
+        """Closes the global default Gurobi environment used by GurobiDirect
+        solvers. All instantiated GurobiDirect solvers must also be correctly
+        closed, either by calling their .close() methods or by using context
+        managers.
+        """
+        self.close()
+        with capture_output(capture_fd=True):
+            gurobipy.disposeDefaultEnv()
+        GurobiDirect._default_env_started = False
+
     def _init_env(self):
         if self._manage_env:
             # Ensure an environment is active for this instance
@@ -290,10 +299,11 @@ class GurobiDirect(DirectSolver):
                 self._env = env
                 self._env_options = dict(self.options)
         else:
-            # Ensure the default env is started
-            with gurobipy.Model():
-                pass
-            self._env_params = None
+            # Ensure the (global) default env is started
+            if not GurobiDirect._default_env_started:
+                m = gurobipy.Model()
+                m.close()
+                GurobiDirect._default_env_started = True
 
     def _create_model(self, model):
         self._init_env()
