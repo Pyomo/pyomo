@@ -171,9 +171,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     ))
 
     def __init__(self):
-        super(Hull_Reformulation, self).__init__()
+        super(Hull_Reformulation, self).__init__(logger)
         self._targets = set()
-        self.logger = logger
 
     def _add_local_vars(self, block, local_var_dict):
         localVars = block.component('LocalVars')
@@ -215,10 +214,17 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
     def _apply_to_impl(self, instance, **kwds):
         super(Hull_Reformulation, self)._apply_to_impl(instance, **kwds)
 
+        # filter out inactive targets and handle case where targets aren't
+        # specified.
+        self._filter_targets(instance)
+        # transform logical constraints based on targets
+        self._transform_logical_constraints(instance)
+
+        # Preprocess in order to find what disjunctive components need
+        # transformation
         gdp_tree = self._get_gdp_tree_from_targets(instance)
         preprocessed_targets = gdp_tree.topological_sort()
         self._targets = set(preprocessed_targets)
-        self._transform_logical_constraints()
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:

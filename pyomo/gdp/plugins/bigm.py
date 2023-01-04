@@ -13,28 +13,28 @@
 
 import logging
 
-from pyomo.common.collections import ComponentMap, ComponentSet
+from pyomo.common.collections import ComponentMap
 from pyomo.common.config import ConfigDict, ConfigValue
 from pyomo.common.modeling import unique_component_name
 from pyomo.common.deprecation import deprecated, deprecation_warning
 from pyomo.contrib.cp.transform.logical_to_disjunctive_program import (
     LogicalToDisjunctive)
-from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 from pyomo.core import (
-    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Suffix, Var,
+    Block, BooleanVar, Connector, Constraint, Param, Set, SetOf, Var,
     Expression, SortComponents, TraversalStrategy, value, RangeSet,
     NonNegativeIntegers, Binary, Any)
 from pyomo.core.base import TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp.plugins.bigm_mixin import (
+    _BigM_MixIn, _get_bigm_suffix_list, _warn_for_unused_bigM_args)
 from pyomo.gdp.plugins.gdp_to_mip_transformation import (
     GDP_to_MIP_Transformation)
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
     is_child_of, get_src_disjunction, get_src_constraint,
     get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
-     _warn_for_active_disjunct, preprocess_targets, _to_dict,
-    _get_bigm_suffix_list, _convert_M_to_tuple, _warn_for_unused_bigM_args)
+     _warn_for_active_disjunct, preprocess_targets, _to_dict)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
@@ -45,7 +45,7 @@ logger = logging.getLogger('pyomo.gdp.bigm')
 
 @TransformationFactory.register('gdp.bigm', doc="Relax disjunctive model using "
                                 "big-M terms.")
-class BigM_Transformation(GDP_to_MIP_Transformation):
+class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     """Relax disjunctive model using big-M terms.
 
     Relaxes a disjunctive model into an algebraic model by adding Big-M
@@ -134,21 +134,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation):
         """
     ))
     def __init__(self):
-        super(BigM_Transformation, self).__init__()
-        self.logger = logger
-
-    def _get_bigm_arg_list(self, bigm_args, block):
-        # Gather what we know about blocks from args exactly once. We'll still
-        # check for constraints in the moment, but if that fails, we've
-        # preprocessed the time-consuming part of traversing up the tree.
-        arg_list = []
-        if bigm_args is None:
-            return arg_list
-        while block is not None:
-            if block in bigm_args:
-                arg_list.append({block: bigm_args[block]})
-            block = block.parent_block()
-        return arg_list
+        super(BigM_Transformation, self).__init__(logger)
 
     def _apply_to(self, instance, **kwds):
         self.used_args = ComponentMap() # If everything was sure to go well,
@@ -164,19 +150,19 @@ class BigM_Transformation(GDP_to_MIP_Transformation):
 
     def _apply_to_impl(self, instance, **kwds):
         super(BigM_Transformation, self)._apply_to_impl(instance, **kwds)
-        bigM = self._config.bigM
 
+        # filter out inactive targets and handle case where targets aren't
+        # specified.
+        self._filter_targets(instance)
+        # transform logical constraints based on targets
+        self._transform_logical_constraints(instance)
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
         # the list.
         gdp_tree = self._get_gdp_tree_from_targets(instance)
         preprocessed_targets = gdp_tree.reverse_topological_sort()
-        # TODO: I actually need to rearrange when the targets get filtered
-        # (since that needs to be before this) and when this gets called
-        # (because this needs to come before getting the gdp tree so that any
-        # added Disjunctions make it on the list of things to transform.
-        self._transform_logical_constraints(instance)
 
+        bigM = self._config.bigM
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
                 self._transform_disjunctionData(
@@ -412,128 +398,6 @@ class BigM_Transformation(GDP_to_MIP_Transformation):
             # deactivate because we relaxed
             c.deactivate()
 
-    def _add_constraint_expressions(self, c, i, M, indicator_var, newConstraint,
-                                    constraintMap):
-        # Since we are both combining components from multiple blocks and using
-        # local names, we need to make sure that the first index for
-        # transformedConstraints is guaranteed to be unique. We just grab the
-        # current length of the list here since that will be monotonically
-        # increasing and hence unique. We'll append it to the
-        # slightly-more-human-readable constraint name for something familiar
-        # but unique. (Note that we really could do this outside of the loop
-        # over the constraint indices, but I don't think it matters a lot.)
-        unique = len(newConstraint)
-        name = c.local_name + "_%s" % unique
-
-        if c.lower is not None:
-            if M[0] is None:
-                raise GDP_Error("Cannot relax disjunctive constraint '%s' "
-                                "because M is not defined." % name)
-            M_expr = M[0] * (1 - indicator_var)
-            newConstraint.add((name, i, 'lb'), c.lower <= c. body - M_expr)
-            constraintMap[
-                'transformedConstraints'][c] = [
-                    newConstraint[name, i, 'lb']]
-            constraintMap['srcConstraints'][
-                newConstraint[name, i, 'lb']] = c
-        if c.upper is not None:
-            if M[1] is None:
-                raise GDP_Error("Cannot relax disjunctive constraint '%s' "
-                                "because M is not defined." % name)
-            M_expr = M[1] * (1 - indicator_var)
-            newConstraint.add((name, i, 'ub'), c.body - M_expr <= c.upper)
-            transformed = constraintMap['transformedConstraints'].get(c)
-            if transformed is not None:
-                constraintMap['transformedConstraints'][
-                    c].append(newConstraint[name, i, 'ub'])
-            else:
-                constraintMap[
-                    'transformedConstraints'][c] = [
-                        newConstraint[name, i, 'ub']]
-            constraintMap['srcConstraints'][
-                newConstraint[name, i, 'ub']] = c
-
-    def _process_M_value(self, m, lower, upper, need_lower, need_upper, src,
-                         key, constraint, from_args=False):
-        m = _convert_M_to_tuple(m, constraint)
-        if need_lower and m[0] is not None:
-            if from_args:
-                self.used_args[key] = m
-            lower = (m[0], src, key)
-            need_lower = False
-        if need_upper and m[1] is not None:
-            if from_args:
-                self.used_args[key] = m
-            upper = (m[1], src, key)
-            need_upper = False
-        return lower, upper, need_lower, need_upper
-
-    def _get_M_from_args(self, constraint, bigMargs, arg_list, lower, upper):
-        # check args: we first look in the keys for constraint and
-        # constraintdata. In the absence of those, we traverse up the blocks,
-        # and as a last resort check for a value for None
-        if bigMargs is None:
-            return (lower, upper)
-
-        # since we check for args first, we know lower[0] and upper[0] are both
-        # None
-        need_lower = constraint.lower is not None
-        need_upper = constraint.upper is not None
-
-        # check for the constraint itself and its container
-        parent = constraint.parent_component()
-        if constraint in bigMargs:
-            m = bigMargs[constraint]
-            (lower, upper,
-             need_lower, need_upper) = self._process_M_value(m, lower, upper,
-                                                             need_lower,
-                                                             need_upper,
-                                                             bigMargs,
-                                                             constraint,
-                                                             constraint,
-                                                             from_args=True)
-            if not need_lower and not need_upper:
-                return lower, upper
-        elif parent in bigMargs:
-            m = bigMargs[parent]
-            (lower, upper,
-             need_lower, need_upper) = self._process_M_value(m, lower, upper,
-                                                             need_lower,
-                                                             need_upper,
-                                                             bigMargs, parent,
-                                                             constraint,
-                                                             from_args=True)
-            if not need_lower and not need_upper:
-                return lower, upper
-
-        # use the precomputed traversal up the blocks
-        for arg in arg_list:
-            for block, val in arg.items():
-                (lower, upper,
-                 need_lower,
-                 need_upper) = self._process_M_value(val, lower, upper,
-                                                     need_lower, need_upper,
-                                                     bigMargs, block,
-                                                     constraint,
-                                                     from_args=True)
-                if not need_lower and not need_upper:
-                    return lower, upper
-
-        # last check for value for None!
-        if None in bigMargs:
-            m = bigMargs[None]
-            (lower, upper,
-             need_lower, need_upper) = self._process_M_value(m, lower, upper,
-                                                             need_lower,
-                                                             need_upper,
-                                                             bigMargs, None,
-                                                             constraint,
-                                                             from_args=True)
-            if not need_lower and not need_upper:
-                return lower, upper
-
-        return lower, upper
-
     def _update_M_from_suffixes(self, constraint, suffix_list, lower, upper):
         # It's possible we found half the answer in args, but we are still
         # looking for half the answer.
@@ -580,19 +444,6 @@ class BigM_Transformation(GDP_to_MIP_Transformation):
                 if not need_lower and not need_upper:
                     return lower, upper
         return lower, upper
-
-    def _estimate_M(self, expr, constraint):
-        expr_lb, expr_ub = compute_bounds_on_expr(
-            expr, ignore_fixed=not self._config.assume_fixed_vars_permanent)
-        if expr_lb is None or expr_ub is None:
-            raise GDP_Error("Cannot estimate M for unbounded "
-                            "expressions.\n\t(found while processing "
-                            "constraint '%s'). Please specify a value of M "
-                            "or ensure all variables that appear in the "
-                            "constraint are bounded." % constraint.name)
-        else:
-            M = (expr_lb, expr_ub)
-        return tuple(M)
 
     # These are all functions to retrieve transformed components from
     # original ones and vice versa.
