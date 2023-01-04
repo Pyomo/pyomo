@@ -9,150 +9,74 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from pyomo.common.log import is_debug_set
-from pyomo.common.modeling import unique_component_name
+from pyomo.gdp import GDP_Error
+from pyomo.common.collections import ComponentSet
 from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
+from pyomo.core import Suffix
 
-from pyomo.core.base import Transformation, TransformationFactory
-from pyomo.core.base.external import ExternalFunction
-from pyomo.core import (
-    Block, BooleanVar, Connector, Constraint, Expression, NonNegativeIntegers,
-    Param, RangeSet, Set, SetOf, Suffix, Var)
-from pyomo.gdp import Disjunct, Disjunction, GDP_Error
-from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
-from pyomo.gdp.util import get_gdp_tree
-from pyomo.network import Port
+def _convert_M_to_tuple(M, constraint, disjunct=None):
+    if not isinstance(M, (tuple, list)):
+        if M is None:
+            M = (None, None)
+        else:
+            try:
+                M = (-M, M)
+            except:
+                logger.error("Error converting scalar M-value %s "
+                             "to (-M,M).  Is %s not a numeric type?"
+                             % (M, type(M)))
+                raise
+    if len(M) != 2:
+        constraint_name = constraint.name
+        if disjunct is not None:
+            constraint_name += " relative to Disjunct %s" % disjunct.name
+        raise GDP_Error("Big-M %s for constraint %s is not of "
+                        "length two. "
+                        "Expected either a single value or "
+                        "tuple or list of length two for M."
+                        % (str(M), constraint.name))
 
-class GDP_to_MIP_Transformation(Transformation):
-    """
-    Base class for transformations from GDP to MIP
-    """
-    def __init__(self, logger):
-        """Initialize transformation object."""
-        super(GDP_to_MIP_Transformation, self).__init__()
-        self.logger = logger
-        self.handlers = {
-            Constraint:  self._transform_constraint,
-            Var:         False, # Note that if a Var appears on a Disjunct, we
-                                # still treat its bounds as global. If the
-                                # intent is for its bounds to be on the
-                                # disjunct, it should be declared with no bounds
-                                # and the bounds should be set in constraints on
-                                # the Disjunct.
-            BooleanVar:  False,
-            Connector:   False,
-            Expression:  False,
-            Suffix:      False,
-            Param:       False,
-            Set:         False,
-            SetOf:       False,
-            RangeSet:    False,
-            Disjunction: False,# In BigM, it's impossible to encounter an active
-                               # Disjunction because preprocessing would have
-                               # put it before its parent Disjunct in the order
-                               # of transformation. In hull, we intentionally
-                               # pass over active Disjunctions that are on
-                               # Disjuncts because we know they are in the list
-                               # of objects to transform after preprocessing, so
-                               # they will be transformed later.
-            Disjunct:    self._warn_for_active_disjunct,
-            Block:       False,
-            ExternalFunction: False,
-            Port:        False, # not Arcs, because those are deactivated after
-                                # the network.expand_arcs transformation
-        }
-        self._generate_debug_messages = False
-        self._transformation_blocks = {}
-        self._algebraic_constraints = {}
+    return M
 
-    def _apply_to(self, instance, **kwds):
-        try:
-            self._apply_to_impl(instance, **kwds)
-        finally:
-            self._transformation_blocks.clear()
-            self._algebraic_constraints.clear()
+def _get_bigm_suffix_list(block, stopping_block=None):
+    # Note that you can only specify suffixes on BlockData objects or
+    # ScalarBlocks. Though it is possible at this point to stick them
+    # on whatever components you want, we won't pick them up.
+    suffix_list = []
 
-    def _apply_to_impl(self, instance, **kwds):
-        if not instance.ctype in (Block, Disjunct):
-            raise GDP_Error("Transformation called on %s of type %s. 'instance'"
-                            " must be a ConcreteModel, Block, or Disjunct (in "
-                            "the case of nested disjunctions)." %
-                            (instance.name, instance.ctype))
+    # go searching above block in the tree, stop when we hit stopping_block
+    # (This is so that we can search on each Disjunct once, but get any
+    # information between a constraint and its Disjunct while transforming
+    # the constraint).
+    while block is not None:
+        bigm = block.component('BigM')
+        if type(bigm) is Suffix:
+            suffix_list.append(bigm)
+        if block is stopping_block:
+            break
+        block = block.parent_block()
 
-        self._config = self.CONFIG(kwds.pop('options', {}))
-        self._config.set_value(kwds)
-        self._generate_debug_messages = is_debug_set(self.logger)
+    return suffix_list
 
-    def _transform_logical_constraints(self, instance):
-        # transform any logical constraints that might be anywhere on the stuff
-        # we're about to transform. We do this before we preprocess targets
-        # because we will likely create more disjunctive components that will
-        # need transformation.
-        disj_targets = []
-        for t in self.targets:
-            disj_datas = t.values() if t.is_indexed() else [t,]
-            if t.ctype is Disjunct:
-                disj_targets.extend(disj_datas)
-            if t.ctype is Disjunction:
-                disj_targets.extend([d for disjunction in disj_datas for d in
-                                     disjunction.disjuncts])
-        TransformationFactory('contrib.logical_to_disjunctive').apply_to(
-            instance,
-            targets=[blk for blk in self.targets if blk.ctype is Block] +
-            disj_targets)
-
-    def _filter_targets(self, instance):
-        targets = self._config.targets
-        if targets is None:
-            targets = (instance, )
-
-        # FIXME: For historical reasons, Hull would silently skip
-        # any targets that were explicitly deactivated.  This
-        # preserves that behavior (although adds a warning).  We
-        # should revisit that design decision and probably remove
-        # this filter, as it is slightly ambiguous as to what it
-        # means for the target to be deactivated: is it just the
-        # target itself [historical implementation] or any block in
-        # the hierarchy?
-        def _filter_inactive(targets):
-            for t in targets:
-                if not t.active:
-                    self.logger.warning(
-                        'GDP.Hull transformation passed a deactivated '
-                        f'target ({t.name}). Skipping.')
+def _warn_for_unused_bigM_args(bigM, used_args, logger):
+    # issue warnings about anything that was in the bigM args dict that we
+    # didn't use
+    if bigM is not None:
+        unused_args = ComponentSet(bigM.keys()) - \
+                      ComponentSet(used_args.keys())
+        if len(unused_args) > 0:
+            warning_msg = ("Unused arguments in the bigM map! "
+                           "These arguments were not used by the "
+                           "transformation:\n")
+            for component in unused_args:
+                if isinstance(component, (tuple, list)) and len(component) == 2:
+                    warning_msg += "\t(%s, %s)\n" % (component[0].name,
+                                                     component[1].name)
+                elif hasattr(component, 'name'):
+                    warning_msg += "\t%s\n" % component.name
                 else:
-                    yield t
-        self.targets = list(_filter_inactive(targets))
-
-    def _get_gdp_tree_from_targets(self, instance):
-        knownBlocks = {}
-        # we need to preprocess targets to make sure that if there are any
-        # disjunctions in targets that they appear before disjunctions that are
-        # contained in their disjuncts. That is, in hull, we will transform from
-        # root to leaf in order to avoid have to modify transformed constraints
-        # more than once: It is most efficient to build nested transformed
-        # constraints when we already have the disaggregated variables of the
-        # parent disjunct.
-        return get_gdp_tree(self.targets, instance)
-
-    def _add_transformation_block(self, to_block, transformation_name):
-        if to_block in self._transformation_blocks:
-            return self._transformation_blocks[to_block]
-
-        # make a transformation block on to_block to put transformed disjuncts
-        # on
-        transBlockName = unique_component_name(
-            to_block,
-            '_pyomo_gdp_%s_reformulation' % transformation_name)
-        self._transformation_blocks[to_block] = transBlock = Block()
-        to_block.add_component(transBlockName, transBlock)
-        transBlock.relaxedDisjuncts = _TransformedDisjunct(NonNegativeIntegers)
-
-        return transBlock
-
-    def _transform_constraint(self, *args):
-        raise NotImplementedError(
-            "Transformation failed to implement _transform_constraint")
+                    warning_msg += "\t%s\n" % component
+            logger.warning(warning_msg)
 
 class _BigM_MixIn(object):
     def _get_bigm_arg_list(self, bigm_args, block):

@@ -27,11 +27,15 @@ import pyomo.core.expr.current as EXPR
 from pyomo.core.util import target_list
 
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
+from pyomo.gdp.plugins.bigm_mixin import (
+    _BigM_MixIn, _convert_M_to_tuple, _warn_for_unused_bigM_args)
+from pyomo.gdp.plugins.gdp_to_mip_transformation import (
+    GDP_to_MIP_Transformation)
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
-    _convert_M_to_tuple, get_gdp_tree, get_src_constraint, get_src_disjunct,
+    get_gdp_tree, get_src_constraint, get_src_disjunct,
     get_src_disjunction, get_transformed_constraints, _to_dict,
-    _warn_for_active_disjunct, _warn_for_unused_bigM_args
+    _warn_for_active_disjunct
 )
 from pyomo.network import Port
 from pyomo.opt import SolverFactory, TerminationCondition
@@ -44,7 +48,7 @@ logger = logging.getLogger('pyomo.gdp.mbigm')
 @TransformationFactory.register(
     'gdp.mbigm',
     doc="Relax disjunctive model using big-M terms specific to each disjunct")
-class MultipleBigMTransformation(Transformation):
+class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     """
     Implements the multiple big-M transformation from [1]. Note that this
     transformation is no different than the big-M transformation for two-
@@ -161,56 +165,19 @@ class MultipleBigMTransformation(Transformation):
     ))
 
     def __init__(self):
-        super(MultipleBigMTransformation, self).__init__()
-        self.handlers = {
-            Constraint:  self._transform_constraint,
-            Var:         False, # Note that if a Var appears on a Disjunct, we
-                                # still treat its bounds as global. If the
-                                # intent is for its bounds to be on the
-                                # disjunct, it should be declared with no bounds
-                                # and the bounds should be set in constraints on
-                                # the Disjunct.
-            BooleanVar:  False,
-            Connector:   False,
-            Expression:  False,
-            Suffix:      self._warn_for_active_suffix,
-            Param:       False,
-            Set:         False,
-            SetOf:       False,
-            RangeSet:    False,
-            Disjunction: False,# It's impossible to encounter an active
-                               # Disjunction because preprocessing would have
-                               # put it before its parent Disjunct in the order
-                               # of transformation.
-            Disjunct:    self._warn_for_active_disjunct,
-            Block:       False,
-            ExternalFunction: False,
-            Port:        False, # not Arcs, because those are deactivated after
-                                # the network.expand_arcs transformation
-        }
-        self._transformation_blocks = {}
-        self._algebraic_constraints = {}
+        super(MultipleBigMTransformation, self).__init__(logger)
         self._arg_list = {}
 
     def _apply_to(self, instance, **kwds):
         self.used_args = ComponentMap()
         try:
-            self._apply_to_impl(instance, **kwds)
+            super()._apply_to(instance, **kwds)
         finally:
             self.used_args.clear()
-            self._transformation_blocks.clear()
-            self._algebraic_constraints.clear()
             self._arg_list.clear()
 
     def _apply_to_impl(self, instance, **kwds):
-        if not instance.ctype in (Block, Disjunct):
-            raise GDP_Error("Transformation called on %s of type %s. 'instance'"
-                            " must be a ConcreteModel, Block, or Disjunct (in "
-                            "the case of nested disjunctions)." %
-                            (instance.name, instance.ctype))
-
-        self._config = self.CONFIG(kwds.pop('options', {}))
-        self._config.set_value(kwds)
+        super(MultipleBigMTransformation, self)._apply_to_impl(instance, **kwds)
 
         if (self._config.only_mbigm_bound_constraints and not
             self._config.reduce_bound_constraints):
@@ -221,34 +188,20 @@ class MultipleBigMTransformation(Transformation):
                             "only wish to transform the bound constraints with "
                             "multiple bigm.")
 
-        targets = self._config.targets
-        knownBlocks = {}
-        if targets is None:
-            targets = (instance, )
-
+        # filter out inactive targets and handle case where targets aren't
+        # specified.
+        self._filter_targets(instance)
         # transform any logical constraints that might be anywhere on the stuff
         # we're about to transform. We do this before we preprocess targets
         # because we will likely create more disjunctive components that will
         # need transformation.
-        disj_targets = []
-        for t in targets:
-            disj_datas = t.values() if t.is_indexed() else [t,]
-            if t.ctype is Disjunct:
-                disj_targets.extend(disj_datas)
-            if t.ctype is Disjunction:
-                disj_targets.extend([d for disjunction in disj_datas for d in
-                                     disjunction.disjuncts])
-        TransformationFactory('contrib.logical_to_disjunctive').apply_to(
-            instance,
-            targets=[blk for blk in targets if blk.ctype is Block] +
-            disj_targets)
-
+        self._transform_logical_constraints(instance)
         # We don't allow nested, so it doesn't much matter which way we sort
         # this. But transforming from leaf to root makes the error checking for
         # complaining about nested smoother, so we do that. We have to transform
         # a Disjunction at a time because, more similarly to hull than bigm, we
         # need information from the other Disjuncts in the Disjunction.
-        gdp_tree = get_gdp_tree(targets, instance, knownBlocks)
+        gdp_tree = self._get_gdp_tree_from_targets(instance)
         preprocessed_targets = gdp_tree.reverse_topological_sort()
 
         for t in preprocessed_targets:
@@ -426,10 +379,6 @@ class MultipleBigMTransformation(Transformation):
 
         newConstraint = Constraint(Any)
         relaxationBlock.add_component(name, newConstraint)
-        bigm = TransformationFactory('gdp.bigm')
-        bigm.assume_fixed_vars_permanent = self._config.\
-                                           assume_fixed_vars_permanent
-        bigm.used_args = self.used_args
 
         for i in sorted(obj.keys()):
             c = obj[i]
@@ -461,24 +410,24 @@ class MultipleBigMTransformation(Transformation):
                 upper = (None, None, None)
 
                 if disjunct not in self._arg_list:
-                    self._arg_list[disjunct] = bigm._get_bigm_arg_list(
+                    self._arg_list[disjunct] = self._get_bigm_arg_list(
                         self._config.bigM, disjunct)
                 arg_list = self._arg_list[disjunct]
 
                 # first, we see if an M value was specified in the arguments.
                 # (This returns None if not)
-                lower, upper = bigm._get_M_from_args(c, Ms, arg_list, lower,
+                lower, upper = self._get_M_from_args(c, Ms, arg_list, lower,
                                                      upper)
                 M = (lower[0], upper[0])
 
                 # estimate if we don't have what we need
                 if c.lower is not None and M[0] is None:
-                    M = (bigm._estimate_M(c.body, c)[0] - c.lower, M[1])
+                    M = (self._estimate_M(c.body, c)[0] - c.lower, M[1])
                     lower = (M[0], None, None)
                 if c.upper is not None and M[1] is None:
-                    M = (M[0], bigm._estimate_M(c.body, c)[1] - c.upper)
+                    M = (M[0], self._estimate_M(c.body, c)[1] - c.upper)
                     upper = (M[1], None, None)
-                bigm._add_constraint_expressions(
+                self._add_constraint_expressions(
                     c, i, M, disjunct.indicator_var.get_associated_binary(),
                     newConstraint, constraintMap)
 
