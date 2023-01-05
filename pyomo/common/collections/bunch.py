@@ -27,7 +27,7 @@ class Bunch(dict):
     ActiveState Code Container (recipe 496697).
 
     For historical reasons, attributes / keys are stored in the
-    unterlying dict unless they begin with an underscore, in which case
+    underlying dict unless they begin with an underscore, in which case
     they are stored as object attributes.
 
     """
