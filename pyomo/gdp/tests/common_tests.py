@@ -1438,28 +1438,6 @@ def check_deactivated_disjunct_leaves_nested_disjunct_active(self,
     self.assertTrue(m.d1.d4.active)
     self.assertFalse(m.d1.d4.indicator_var.fixed)
 
-def check_mappings_between_disjunctions_and_xors(self, transformation):
-    # ESJ: This test is unique between hull and bigm now because bigm creates
-    # extra transformation blocks for the inner disjunctions.
-    m = models.makeNestedDisjunctions()
-    transform = TransformationFactory('gdp.%s' % transformation)
-    transform.apply_to(m)
-
-    transBlock = m.component("_pyomo_gdp_%s_reformulation" % transformation)
-
-    disjunctionPairs = [
-        (m.disjunction, transBlock.disjunction_xor),
-        (m.disjunct[1].innerdisjunction[0],
-         transBlock.component("disjunct[1].innerdisjunction_xor")[0]),
-        (m.simpledisjunct.innerdisjunction,
-         transBlock.component("simpledisjunct.innerdisjunction_xor"))
-     ]
-
-    # check disjunction mappings
-    for disjunction, xor in disjunctionPairs:
-        self.assertIs(disjunction.algebraic_constraint, xor)
-        self.assertIs(transform.get_src_disjunction(xor), disjunction)
-
 def check_disjunct_targets_inactive(self, transformation, **kwargs):
     m = models.makeNestedDisjunctions()
     TransformationFactory('gdp.%s' % transformation).apply_to(
