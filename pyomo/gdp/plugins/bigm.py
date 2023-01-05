@@ -32,13 +32,11 @@ from pyomo.gdp.plugins.gdp_to_mip_transformation import (
     GDP_to_MIP_Transformation)
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
-    is_child_of, get_src_disjunction, get_src_constraint,
-    get_transformed_constraints, _get_constraint_transBlock, get_src_disjunct,
-     _warn_for_active_disjunct, preprocess_targets, _to_dict)
+    is_child_of, _get_constraint_transBlock, _warn_for_active_disjunct,
+    _to_dict)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
-from functools import wraps
 from weakref import ref as weakref_ref, ReferenceType
 
 logger = logging.getLogger('pyomo.gdp.bigm')
@@ -133,6 +131,8 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         while the variables remain fixed.
         """
     ))
+    transformation_name = 'BigM'
+
     def __init__(self):
         super(BigM_Transformation, self).__init__(logger)
 
@@ -178,54 +178,13 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
     def _add_transformation_block(self, to_block):
         return super(BigM_Transformation, self)._add_transformation_block(
-            to_block, 'bigm')
-
-    def _add_xor_constraint(self, disjunction, transBlock):
-        # Put the disjunction constraint on the transformation block and
-        # determine whether it is an OR or XOR constraint.
-        # We never do this for just a DisjunctionData because we need to know
-        # about the index set of its parent component (so that we can make the
-        # index of this constraint match). So if we called this on a
-        # DisjunctionData, we did something wrong.
-
-        # first check if the constraint already exists
-        if disjunction in self._algebraic_constraints:
-            return self._algebraic_constraints[disjunction]
-
-        # add the XOR (or OR) constraints to parent block (with unique name)
-        # It's indexed if this is an IndexedDisjunction, not otherwise
-        if disjunction.is_indexed():
-            orC = Constraint(Any)
-        else:
-            orC = Constraint()
-        orCname = unique_component_name(
-            transBlock,disjunction.getname(fully_qualified=False) + '_xor')
-        transBlock.add_component(orCname, orC)
-        self._algebraic_constraints[disjunction] = orC
-
-        return orC
+            to_block, 'bigm')[0]
 
     def _transform_disjunctionData(self, obj, index, parent_disjunct=None,
                                    root_disjunct=None):
-        # Create or fetch the transformation block
-        if root_disjunct is not None:
-            # We want to put all the transformed things on the root
-            # Disjunct's parent's block so that they do not get
-            # re-transformed
-            transBlock = self._add_transformation_block(
-                root_disjunct.parent_block())
-        else:
-            # This isn't nested--just put it on the parent block.
-            transBlock = self._add_transformation_block(obj.parent_block())
 
-        # create or fetch the xor constraint
-        xorConstraint = self._add_xor_constraint(obj.parent_component(),
-                                                 transBlock)
-        # Just because it's unlikely this is what someone meant to do...
-        if len(obj.disjuncts) == 0:
-            raise GDP_Error("Disjunction '%s' is empty. This is "
-                            "likely indicative of a modeling error."  %
-                            obj.name)
+        transBlock, xorConstraint = self._setup_transform_disjunctionData(
+            obj, root_disjunct)
 
         # add or (or xor) constraint
         or_expr = sum(disjunct.binary_indicator_var for disjunct in
@@ -251,9 +210,9 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         suffix_list = _get_bigm_suffix_list(obj)
         arg_list = self._get_bigm_arg_list(bigM, obj)
 
-        # add reference to original disjunct on transformation block
-        relaxedDisjuncts = transBlock.relaxedDisjuncts
-        relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
+        relaxationBlock = self._create_disjunct_transformation_block(obj,
+                                                                     transBlock)
+
         # we will keep a map of constraints (hashable, ha!) to a tuple to
         # indicate what their M value is and where it came from, of the form:
         # ((lower_value, lower_source, lower_key), (upper_value, upper_source,
@@ -265,16 +224,6 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # user-specified and the other is not, hence the need to store
         # information for both.)
         relaxationBlock.bigm_src = {}
-        relaxationBlock.localVarReferences = Block()
-        # add the map that will link back and forth between transformed
-        # constraints and their originals.
-        relaxationBlock._constraintMap = {
-            'srcConstraints': ComponentMap(),
-            'transformedConstraints': ComponentMap()
-        }
-        relaxationBlock.transformedConstraints = Constraint(Any)
-        obj._transformation_block = weakref_ref(relaxationBlock)
-        relaxationBlock._src_disjunct = weakref_ref(obj)
 
         # This is crazy, but if the disjunction has been previously
         # relaxed, the disjunct *could* be deactivated.  This is a big
@@ -290,36 +239,6 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # deactivate disjunct to keep the writers happy
         obj._deactivate_without_fixing_indicator()
 
-    def _transform_block_components(self, block, disjunct, bigM, arg_list,
-                                    suffix_list):
-        # Find all the variables declared here (including the indicator_var) and
-        # add a reference on the transformation block so these will be
-        # accessible when the Disjunct is deactivated.
-        varRefBlock = disjunct._transformation_block().localVarReferences
-        for v in block.component_objects(Var, descend_into=Block, active=None):
-            varRefBlock.add_component(unique_component_name(
-                varRefBlock, v.getname(fully_qualified=False)), Reference(v))
-
-        # Now look through the component map of block and transform everything
-        # we have a handler for. Yell if we don't know how to handle it. (Note
-        # that because we only iterate through active components, this means
-        # non-ActiveComponent types cannot have handlers.)
-        for obj in block.component_objects(active=True, descend_into=Block):
-            handler = self.handlers.get(obj.ctype, None)
-            if not handler:
-                if handler is None:
-                    raise GDP_Error(
-                        "No BigM transformation handler registered "
-                        "for modeling components of type %s. If your "
-                        "disjuncts contain non-GDP Pyomo components that "
-                        "require transformation, please transform them first."
-                        % obj.ctype)
-                continue
-            # obj is what we are transforming, we pass disjunct
-            # through so that we will have access to the indicator
-            # variables down the line.
-            handler(obj, disjunct, bigM, arg_list, suffix_list)
-
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, bigMargs,
                                   arg_list, suffix_list):
         _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
@@ -332,7 +251,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         constraintMap = transBlock._constraintMap
 
         disjunctionRelaxationBlock = transBlock.parent_block()
-        
+
         # We will make indexes from ({obj.local_name} x obj.index_set() x ['lb',
         # 'ub']), but don't bother construct that set here, as taking Cartesian
         # products is kind of expensive (and redundant since we have the
@@ -444,25 +363,6 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 if not need_lower and not need_upper:
                     return lower, upper
         return lower, upper
-
-    # These are all functions to retrieve transformed components from
-    # original ones and vice versa.
-
-    @wraps(get_src_disjunct)
-    def get_src_disjunct(self, transBlock):
-        return get_src_disjunct(transBlock)
-
-    @wraps(get_src_disjunction)
-    def get_src_disjunction(self, xor_constraint):
-        return get_src_disjunction(xor_constraint)
-
-    @wraps(get_src_constraint)
-    def get_src_constraint(self, transformedConstraint):
-        return get_src_constraint(transformedConstraint)
-
-    @wraps(get_transformed_constraints)
-    def get_transformed_constraints(self, srcConstraint):
-        return get_transformed_constraints(srcConstraint)
 
     @deprecated("The get_m_value_src function is deprecated. Use "
                 "the get_M_value_src function if you need source "

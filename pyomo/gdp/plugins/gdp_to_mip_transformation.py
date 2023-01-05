@@ -9,19 +9,24 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
+from functools import wraps
+
+from pyomo.common.collections import ComponentMap
 from pyomo.common.log import is_debug_set
 from pyomo.common.modeling import unique_component_name
-from pyomo.contrib.fbbt.fbbt import compute_bounds_on_expr
 
 from pyomo.core.base import Transformation, TransformationFactory
 from pyomo.core.base.external import ExternalFunction
 from pyomo.core import (
-    Block, BooleanVar, Connector, Constraint, Expression, NonNegativeIntegers,
-    Param, RangeSet, Set, SetOf, Suffix, Var)
+    Any, Block, BooleanVar, Connector, Constraint, Expression,
+    NonNegativeIntegers, Param, RangeSet, Reference, Set, SetOf, Suffix, Var)
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
-from pyomo.gdp.util import get_gdp_tree
+from pyomo.gdp.util import (get_gdp_tree, get_src_constraint, get_src_disjunct,
+                            get_src_disjunction, get_transformed_constraints)
 from pyomo.network import Port
+
+from weakref import ref as weakref_ref
 
 class GDP_to_MIP_Transformation(Transformation):
     """
@@ -137,7 +142,7 @@ class GDP_to_MIP_Transformation(Transformation):
 
     def _add_transformation_block(self, to_block, transformation_name):
         if to_block in self._transformation_blocks:
-            return self._transformation_blocks[to_block]
+            return self._transformation_blocks[to_block], False
 
         # make a transformation block on to_block to put transformed disjuncts
         # on
@@ -148,157 +153,123 @@ class GDP_to_MIP_Transformation(Transformation):
         to_block.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = _TransformedDisjunct(NonNegativeIntegers)
 
-        return transBlock
+        return transBlock, True
 
-    def _transform_constraint(self, *args):
-        raise NotImplementedError(
-            "Transformation failed to implement _transform_constraint")
+    def _add_xor_constraint(self, disjunction, transBlock):
+        # Put the disjunction constraint on the transformation block and
+        # determine whether it is an OR or XOR constraint.
+        # We never do this for just a DisjunctionData because we need to know
+        # about the index set of its parent component (so that we can make the
+        # index of this constraint match). So if we called this on a
+        # DisjunctionData, we did something wrong.
 
-class _BigM_MixIn(object):
-    def _get_bigm_arg_list(self, bigm_args, block):
-        # Gather what we know about blocks from args exactly once. We'll still
-        # check for constraints in the moment, but if that fails, we've
-        # preprocessed the time-consuming part of traversing up the tree.
-        arg_list = []
-        if bigm_args is None:
-            return arg_list
-        while block is not None:
-            if block in bigm_args:
-                arg_list.append({block: bigm_args[block]})
-            block = block.parent_block()
-        return arg_list
+        # first check if the constraint already exists
+        if disjunction in self._algebraic_constraints:
+            return self._algebraic_constraints[disjunction]
 
-    def _process_M_value(self, m, lower, upper, need_lower, need_upper, src,
-                         key, constraint, from_args=False):
-        m = _convert_M_to_tuple(m, constraint)
-        if need_lower and m[0] is not None:
-            if from_args:
-                self.used_args[key] = m
-            lower = (m[0], src, key)
-            need_lower = False
-        if need_upper and m[1] is not None:
-            if from_args:
-                self.used_args[key] = m
-            upper = (m[1], src, key)
-            need_upper = False
-        return lower, upper, need_lower, need_upper
-
-    def _get_M_from_args(self, constraint, bigMargs, arg_list, lower, upper):
-        # check args: we first look in the keys for constraint and
-        # constraintdata. In the absence of those, we traverse up the blocks,
-        # and as a last resort check for a value for None
-        if bigMargs is None:
-            return (lower, upper)
-
-        # since we check for args first, we know lower[0] and upper[0] are both
-        # None
-        need_lower = constraint.lower is not None
-        need_upper = constraint.upper is not None
-
-        # check for the constraint itself and its container
-        parent = constraint.parent_component()
-        if constraint in bigMargs:
-            m = bigMargs[constraint]
-            (lower, upper,
-             need_lower, need_upper) = self._process_M_value(m, lower, upper,
-                                                             need_lower,
-                                                             need_upper,
-                                                             bigMargs,
-                                                             constraint,
-                                                             constraint,
-                                                             from_args=True)
-            if not need_lower and not need_upper:
-                return lower, upper
-        elif parent in bigMargs:
-            m = bigMargs[parent]
-            (lower, upper,
-             need_lower, need_upper) = self._process_M_value(m, lower, upper,
-                                                             need_lower,
-                                                             need_upper,
-                                                             bigMargs, parent,
-                                                             constraint,
-                                                             from_args=True)
-            if not need_lower and not need_upper:
-                return lower, upper
-
-        # use the precomputed traversal up the blocks
-        for arg in arg_list:
-            for block, val in arg.items():
-                (lower, upper,
-                 need_lower,
-                 need_upper) = self._process_M_value(val, lower, upper,
-                                                     need_lower, need_upper,
-                                                     bigMargs, block,
-                                                     constraint,
-                                                     from_args=True)
-                if not need_lower and not need_upper:
-                    return lower, upper
-
-        # last check for value for None!
-        if None in bigMargs:
-            m = bigMargs[None]
-            (lower, upper,
-             need_lower, need_upper) = self._process_M_value(m, lower, upper,
-                                                             need_lower,
-                                                             need_upper,
-                                                             bigMargs, None,
-                                                             constraint,
-                                                             from_args=True)
-            if not need_lower and not need_upper:
-                return lower, upper
-
-        return lower, upper
-
-    def _estimate_M(self, expr, constraint):
-        expr_lb, expr_ub = compute_bounds_on_expr(
-            expr, ignore_fixed=not self._config.assume_fixed_vars_permanent)
-        if expr_lb is None or expr_ub is None:
-            raise GDP_Error("Cannot estimate M for unbounded "
-                            "expressions.\n\t(found while processing "
-                            "constraint '%s'). Please specify a value of M "
-                            "or ensure all variables that appear in the "
-                            "constraint are bounded." % constraint.name)
+        # add the XOR (or OR) constraints to parent block (with unique name)
+        # It's indexed if this is an IndexedDisjunction, not otherwise
+        if disjunction.is_indexed():
+            orC = Constraint(Any)
         else:
-            M = (expr_lb, expr_ub)
-        return tuple(M)
+            orC = Constraint()
+        orCname = unique_component_name(
+            transBlock,disjunction.getname(fully_qualified=False) + '_xor')
+        transBlock.add_component(orCname, orC)
+        self._algebraic_constraints[disjunction] = orC
 
-    def _add_constraint_expressions(self, c, i, M, indicator_var, newConstraint,
-                                    constraintMap):
-        # Since we are both combining components from multiple blocks and using
-        # local names, we need to make sure that the first index for
-        # transformedConstraints is guaranteed to be unique. We just grab the
-        # current length of the list here since that will be monotonically
-        # increasing and hence unique. We'll append it to the
-        # slightly-more-human-readable constraint name for something familiar
-        # but unique. (Note that we really could do this outside of the loop
-        # over the constraint indices, but I don't think it matters a lot.)
-        unique = len(newConstraint)
-        name = c.local_name + "_%s" % unique
+        return orC
 
-        if c.lower is not None:
-            if M[0] is None:
-                raise GDP_Error("Cannot relax disjunctive constraint '%s' "
-                                "because M is not defined." % name)
-            M_expr = M[0] * (1 - indicator_var)
-            newConstraint.add((name, i, 'lb'), c.lower <= c. body - M_expr)
-            constraintMap[
-                'transformedConstraints'][c] = [
-                    newConstraint[name, i, 'lb']]
-            constraintMap['srcConstraints'][
-                newConstraint[name, i, 'lb']] = c
-        if c.upper is not None:
-            if M[1] is None:
-                raise GDP_Error("Cannot relax disjunctive constraint '%s' "
-                                "because M is not defined." % name)
-            M_expr = M[1] * (1 - indicator_var)
-            newConstraint.add((name, i, 'ub'), c.body - M_expr <= c.upper)
-            transformed = constraintMap['transformedConstraints'].get(c)
-            if transformed is not None:
-                constraintMap['transformedConstraints'][
-                    c].append(newConstraint[name, i, 'ub'])
-            else:
-                constraintMap[
-                    'transformedConstraints'][c] = [
-                        newConstraint[name, i, 'ub']]
-            constraintMap['srcConstraints'][
-                newConstraint[name, i, 'ub']] = c
+    def _setup_transform_disjunctionData(self, obj, root_disjunct):
+        # Just because it's unlikely this is what someone meant to do...
+        if len(obj.disjuncts) == 0:
+            raise GDP_Error("Disjunction '%s' is empty. This is "
+                            "likely indicative of a modeling error."  %
+                            obj.name)
+
+        # Create or fetch the transformation block
+        if root_disjunct is not None:
+            # We want to put all the transformed things on the root
+            # Disjunct's parent's block so that they do not get
+            # re-transformed
+            transBlock = self._add_transformation_block(
+                root_disjunct.parent_block())
+        else:
+            # This isn't nested--just put it on the parent block.
+            transBlock = self._add_transformation_block(obj.parent_block())
+
+        xorConstraint = self._add_xor_constraint(obj.parent_component(),
+                                                transBlock)
+
+        return transBlock, xorConstraint
+
+    def _create_disjunct_transformation_block(self, obj, transBlock):
+        # create a relaxation block for this disjunct
+        relaxedDisjuncts = transBlock.relaxedDisjuncts
+        relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
+
+        relaxationBlock.transformedConstraints = Constraint(Any)
+
+        relaxationBlock.localVarReferences = Block()
+        # add the map that will link back and forth between transformed
+        # constraints and their originals.
+        relaxationBlock._constraintMap = {
+            'srcConstraints': ComponentMap(),
+            'transformedConstraints': ComponentMap()
+        }
+
+        # add mappings to source disjunct (so we'll know we've relaxed)
+        obj._transformation_block = weakref_ref(relaxationBlock)
+        relaxationBlock._src_disjunct = weakref_ref(obj)
+
+        return relaxationBlock
+
+    def _transform_block_components(self, block, disjunct, *args):
+        # Find all the variables declared here (including the indicator_var) and
+        # add a reference on the transformation block so these will be
+        # accessible when the Disjunct is deactivated. Note that in hull, we do
+        # this after we have moved up the transformation blocks for nested
+        # disjunctions, so that we don't have duplicate references.
+        varRefBlock = disjunct._transformation_block().localVarReferences
+        for v in block.component_objects(Var, descend_into=Block, active=None):
+            varRefBlock.add_component(unique_component_name(
+                varRefBlock, v.getname(fully_qualified=False)), Reference(v))
+
+        # Now look through the component map of block and transform everything
+        # we have a handler for. Yell if we don't know how to handle it. (Note
+        # that because we only iterate through active components, this means
+        # non-ActiveComponent types cannot have handlers.)
+        for obj in block.component_objects(active=True, descend_into=Block):
+            handler = self.handlers.get(obj.ctype, None)
+            if not handler:
+                if handler is None:
+                    raise GDP_Error(
+                        "No %s transformation handler registered "
+                        "for modeling components of type %s. If your "
+                        "disjuncts contain non-GDP Pyomo components that "
+                        "require transformation, please transform them first."
+                        % (self.transformation_name, obj.ctype))
+                continue
+            # obj is what we are transforming, we pass disjunct
+            # through so that we will have access to the indicator
+            # variables down the line.
+            handler(obj, disjunct, *args)
+
+    # These are all functions to retrieve transformed components from
+    # original ones and vice versa.
+
+    @wraps(get_src_disjunct)
+    def get_src_disjunct(self, transBlock):
+        return get_src_disjunct(transBlock)
+
+    @wraps(get_src_disjunction)
+    def get_src_disjunction(self, xor_constraint):
+        return get_src_disjunction(xor_constraint)
+
+    @wraps(get_src_constraint)
+    def get_src_constraint(self, transformedConstraint):
+        return get_src_constraint(transformedConstraint)
+
+    @wraps(get_transformed_constraints)
+    def get_transformed_constraints(self, srcConstraint):
+        return get_transformed_constraints(srcConstraint)

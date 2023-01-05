@@ -1777,7 +1777,7 @@ class TestErrors(unittest.TestCase):
 
         relaxed_xor = disjunct1.component(
             "disjunction_disjuncts[0]._pyomo_gdp_hull_reformulation."
-            "'disjunction_disjuncts[0].nestedDisjunction_xor'")
+            "nestedDisjunction_xor")
         self.assertIsInstance(relaxed_xor, Constraint)
         self.assertEqual(len(relaxed_xor), 1)
         repn = generate_standard_repn(relaxed_xor['eq'].body)

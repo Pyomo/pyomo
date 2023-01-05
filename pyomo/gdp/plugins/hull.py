@@ -27,11 +27,8 @@ from pyomo.gdp.plugins.gdp_to_mip_transformation import (
     GDP_to_MIP_Transformation)
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
-    clone_without_expression_components, is_child_of, get_src_disjunction,
-    get_src_constraint, get_transformed_constraints,
-    get_src_disjunct, _warn_for_active_disjunct, preprocess_targets)
+    clone_without_expression_components, is_child_of,_warn_for_active_disjunct)
 from pyomo.core.util import target_list
-from functools import wraps
 from weakref import ref as weakref_ref
 
 logger = logging.getLogger('pyomo.gdp.hull')
@@ -169,6 +166,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         will be valid in the transformed model.
         """
     ))
+    transformation_name = 'Hull'
 
     def __init__(self):
         super(Hull_Reformulation, self).__init__(logger)
@@ -209,7 +207,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         finally:
             self._transformation_blocks.clear()
             self._algebraic_constraints.clear()
-            self._targets = set()
+            self._targets_set = set()
 
     def _apply_to_impl(self, instance, **kwds):
         super(Hull_Reformulation, self)._apply_to_impl(instance, **kwds)
@@ -224,7 +222,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # transformation
         gdp_tree = self._get_gdp_tree_from_targets(instance)
         preprocessed_targets = gdp_tree.topological_sort()
-        self._targets = set(preprocessed_targets)
+        self._targets_set = set(preprocessed_targets)
 
         for t in preprocessed_targets:
             if t.ctype is Disjunction:
@@ -235,19 +233,13 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
             # disjunctions to transform them (which variables to disaggregate),
             # so for hull's purposes, they need not be in the tree.
 
-    def _add_transformation_block(self, instance):
-        if instance in self._transformation_blocks:
-            return self._transformation_blocks[instance]
+    def _add_transformation_block(self, to_block):
+        transBlock, new_block = super(Hull_Reformulation,
+                                      self)._add_transformation_block(to_block,
+                                                                      'hull')
+        if not new_block:
+            return transBlock
 
-        # make a transformation block on instance where we will store
-        # transformed components
-        transBlockName = unique_component_name(
-            instance,
-            '_pyomo_gdp_hull_reformulation')
-        transBlock = Block()
-        instance.add_component(transBlockName, transBlock)
-        self._transformation_blocks[instance] = transBlock
-        transBlock.relaxedDisjuncts = _TransformedDisjunct(NonNegativeIntegers)
         transBlock.lbub = Set(initialize = ['lb','ub','eq'])
         # Map between disaggregated variables and their
         # originals
@@ -274,24 +266,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         return transBlock
 
-    def _add_xor_constraint(self, disjunction, transBlock):
-        # Put XOR constraint on the transformation block
-
-        # check if the constraint already exists
-        if disjunction in self._algebraic_constraints:
-            return self._algebraic_constraints[disjunction]
-
-        # add the XOR constraints to parent block (with unique name) It's
-        # indexed if this is an IndexedDisjunction, not otherwise
-        orC = Constraint(disjunction.index_set())
-        transBlock.add_component(
-            unique_component_name(transBlock,
-                                  disjunction.getname(
-                                      fully_qualified=True) + '_xor'), orC)
-        self._algebraic_constraints[disjunction] = orC
-
-        return orC
-
     def _transform_disjunctionData(self, obj, index, parent_disjunct=None,
                                    root_disjunct=None):
         # Hull reformulation doesn't work if this is an OR constraint. So if
@@ -301,29 +275,13 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                             "Disjunction '%s' with OR constraint.  "
                             "Must be an XOR!" % obj.name)
 
-        # Create or fetch the transformation block
-        if root_disjunct is not None:
-            # We want to put all the transformed things on the root
-            # Disjunct's parent's block so that they do not get
-            # re-transformed
-            transBlock = self._add_transformation_block(
-                root_disjunct.parent_block())
-        else:
-            # This isn't nested--just put it on the parent block.
-            transBlock = self._add_transformation_block(obj.parent_block())
+        transBlock, xorConstraint = self._setup_transform_disjunctionData(
+            obj, root_disjunct)
 
-        orConstraint = self._add_xor_constraint(obj.parent_component(),
-                                                transBlock)
         disaggregationConstraint = transBlock.disaggregationConstraints
         disaggregationConstraintMap = transBlock._disaggregationConstraintMap
         disaggregatedVars = transBlock._disaggregatedVars
         disaggregated_var_bounds = transBlock._boundsConstraints
-
-        # Just because it's unlikely this is what someone meant to do...
-        if len(obj.disjuncts) == 0:
-            raise GDP_Error("Disjunction '%s' is empty. This is "
-                            "likely indicative of a modeling error."  %
-                            obj.getname(fully_qualified=True))
 
         # We first go through and collect all the variables that we
         # are going to disaggregate.
@@ -422,10 +380,10 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                                      localVars.get(disjunct, []), local_var_set)
         rhs = 1 if parent_disjunct is None else \
               parent_disjunct.binary_indicator_var
-        orConstraint.add(index, (or_expr, rhs))
+        xorConstraint.add(index, (or_expr, rhs))
         # map the DisjunctionData to its XOR constraint to mark it as
         # transformed
-        obj._algebraic_constraint = weakref_ref(orConstraint[index])
+        obj._algebraic_constraint = weakref_ref(xorConstraint[index])
 
         # add the reaggregation constraints
         for i, var in enumerate(varsToDisaggregate):
@@ -513,30 +471,13 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         if not obj.active:
             return
 
-        # create a relaxation block for this disjunct
-        relaxedDisjuncts = transBlock.relaxedDisjuncts
-        relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
-        transBlock = relaxationBlock.parent_block()
-
-        relaxationBlock.localVarReferences = Block()
+        relaxationBlock = self._create_disjunct_transformation_block(obj,
+                                                                     transBlock)
 
         # Put the disaggregated variables all on their own block so that we can
         # isolate the name collisions and still have complete control over the
-        # names on this block. (This is for peace of mind now, but will matter
-        # in the future for adding the binaries corresponding to Boolean
-        # indicator vars.)
+        # names on this block.
         relaxationBlock.disaggregatedVars = Block()
-
-        # add the map that will link back and forth between transformed
-        # constraints and their originals.
-        relaxationBlock._constraintMap = {
-            'srcConstraints': ComponentMap(),
-            'transformedConstraints': ComponentMap()
-        }
-
-        # add mappings to source disjunct (so we'll know we've relaxed)
-        obj._transformation_block = weakref_ref(relaxationBlock)
-        relaxationBlock._src_disjunct = weakref_ref(obj)
 
         # add the disaggregated variables and their bigm constraints
         # to the relaxationBlock
@@ -598,37 +539,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         # deactivate disjunct so writers can be happy
         obj._deactivate_without_fixing_indicator()
 
-    def _transform_block_components( self, block, disjunct, var_substitute_map,
-                                     zero_substitute_map):
-        # add references to all local variables on block (including the
-        # indicator_var). Note that we do this after we have moved up the
-        # transformation blocks for nested disjunctions, so that we don't have
-        # duplicate references.
-        varRefBlock = disjunct._transformation_block().localVarReferences
-        for v in block.component_objects(Var, descend_into=Block, active=None):
-            varRefBlock.add_component(unique_component_name(
-                varRefBlock, v.getname(fully_qualified=True)), Reference(v))
-
-        # Look through the component map of block and transform everything we
-        # have a handler for. Yell if we don't know how to handle it. (Note that
-        # because we only iterate through active components, this means
-        # non-ActiveComponent types cannot have handlers.)
-        for obj in block.component_objects(active=True, descend_into=Block):
-            handler = self.handlers.get(obj.ctype, None)
-            if not handler:
-                if handler is None:
-                    raise GDP_Error(
-                        "No hull transformation handler registered "
-                        "for modeling components of type %s. If your "
-                        "disjuncts contain non-GDP Pyomo components that "
-                        "require transformation, please transform them first."
-                        % obj.ctype )
-                continue
-            # obj is what we are transforming, we pass disjunct
-            # through so that we will have access to the indicator
-            # variables down the line.
-            handler(obj, disjunct, var_substitute_map, zero_substitute_map)
-
     def _declare_disaggregated_var_bounds(self, original_var, disaggregatedVar,
                                           disjunct, bigmConstraint, lb_idx,
                                           ub_idx, var_free_indicator,
@@ -689,7 +599,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         disjuncts = innerdisjunct.values() if innerdisjunct.is_indexed() else \
                     (innerdisjunct,)
         for disj in disjuncts:
-            if disj in self._targets:
+            if disj in self._targets_set:
                 # We're getting to this, have some patience.
                 continue
             else:
@@ -702,32 +612,21 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                               zero_substitute_map):
         # we will put a new transformed constraint on the relaxation block.
         relaxationBlock = disjunct._transformation_block()
-        transBlock = relaxationBlock.parent_block()
         constraintMap = relaxationBlock._constraintMap
 
-        # Though rare, it is possible to get naming conflicts here
-        # since constraints from all blocks are getting moved onto the
-        # same block. So we get a unique name
-        name = unique_component_name(relaxationBlock, obj.getname(
-            fully_qualified=True))
-
-        if obj.is_indexed():
-            newConstraint = Constraint(obj.index_set(), transBlock.lbub)
-        else:
-            newConstraint = Constraint(transBlock.lbub)
-        relaxationBlock.add_component(name, newConstraint)
-        # map the containers:
-        # add mapping of original constraint to transformed constraint
-        if obj.is_indexed():
-            constraintMap['transformedConstraints'][obj] = newConstraint
-        # add mapping of transformed constraint container back to original
-        # constraint container (or ScalarConstraint)
-        constraintMap['srcConstraints'][newConstraint] = obj
+        # We will make indexes from ({obj.local_name} x obj.index_set() x ['lb',
+        # 'ub']), but don't bother construct that set here, as taking Cartesian
+        # products is kind of expensive (and redundant since we have the
+        # original model)
+        newConstraint = relaxationBlock.transformedConstraints
 
         for i in sorted(obj.keys()):
             c = obj[i]
             if not c.active:
                 continue
+
+            unique = len(newConstraint)
+            name = c.local_name + "_%s" % unique
 
             NL = c.body.polynomial_degree() not in (0,1)
             EPS = self._config.EPS
@@ -798,13 +697,15 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     newConsExpr = expr - (1-y)*h_0 == c.lower*y
 
                 if obj.is_indexed():
-                    newConstraint.add((i, 'eq'), newConsExpr)
+                    newConstraint.add((name, i, 'eq'), newConsExpr)
                     # map the _ConstraintDatas (we mapped the container above)
                     constraintMap[
-                        'transformedConstraints'][c] = [newConstraint[i,'eq']]
-                    constraintMap['srcConstraints'][newConstraint[i,'eq']] = c
+                        'transformedConstraints'][c] = [newConstraint[name, i,
+                                                                      'eq']]
+                    constraintMap['srcConstraints'][newConstraint[name, i,
+                                                                  'eq']] = c
                 else:
-                    newConstraint.add('eq', newConsExpr)
+                    newConstraint.add((name, 'eq'), newConsExpr)
                     # map to the _ConstraintData (And yes, for
                     # ScalarConstraints, this is overwriting the map to the
                     # container we made above, and that is what I want to
@@ -813,8 +714,10 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     # container, but more importantly, we are mapping the
                     # _ConstraintDatas to each other above)
                     constraintMap[
-                        'transformedConstraints'][c] = [newConstraint['eq']]
-                    constraintMap['srcConstraints'][newConstraint['eq']] = c
+                        'transformedConstraints'][c] = [newConstraint[name,
+                                                                      'eq']]
+                    constraintMap['srcConstraints'][newConstraint[name,
+                                                                  'eq']] = c
 
                 continue
 
@@ -829,15 +732,19 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     newConsExpr = expr - (1-y)*h_0 >= c.lower*y
 
                 if obj.is_indexed():
-                    newConstraint.add((i, 'lb'), newConsExpr)
+                    newConstraint.add((name, i, 'lb'), newConsExpr)
                     constraintMap[
-                        'transformedConstraints'][c] = [newConstraint[i,'lb']]
-                    constraintMap['srcConstraints'][newConstraint[i,'lb']] = c
+                        'transformedConstraints'][c] = [newConstraint[name, i,
+                                                                      'lb']]
+                    constraintMap['srcConstraints'][newConstraint[name, i,
+                                                                  'lb']] = c
                 else:
-                    newConstraint.add('lb', newConsExpr)
+                    newConstraint.add((name, 'lb'), newConsExpr)
                     constraintMap[
-                        'transformedConstraints'][c] = [newConstraint['lb']]
-                    constraintMap['srcConstraints'][newConstraint['lb']] = c
+                        'transformedConstraints'][c] = [newConstraint[name,
+                                                                      'lb']]
+                    constraintMap['srcConstraints'][newConstraint[name,
+                                                                  'lb']] = c
 
             if c.upper is not None:
                 if self._generate_debug_messages:
@@ -850,25 +757,27 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                     newConsExpr = expr - (1-y)*h_0 <= c.upper*y
 
                 if obj.is_indexed():
-                    newConstraint.add((i, 'ub'), newConsExpr)
+                    newConstraint.add((name, i, 'ub'), newConsExpr)
                     # map (have to account for fact we might have created list
                     # above
                     transformed = constraintMap['transformedConstraints'].get(c)
                     if transformed is not None:
-                        transformed.append(newConstraint[i,'ub'])
+                        transformed.append(newConstraint[name, i, 'ub'])
                     else:
                         constraintMap['transformedConstraints'][
-                            c] = [newConstraint[i,'ub']]
-                    constraintMap['srcConstraints'][newConstraint[i,'ub']] = c
+                            c] = [newConstraint[name, i, 'ub']]
+                    constraintMap['srcConstraints'][newConstraint[name, i,
+                                                                  'ub']] = c
                 else:
-                    newConstraint.add('ub', newConsExpr)
+                    newConstraint.add((name, 'ub'), newConsExpr)
                     transformed = constraintMap['transformedConstraints'].get(c)
                     if transformed is not None:
-                        transformed.append(newConstraint['ub'])
+                        transformed.append(newConstraint[name, 'ub'])
                     else:
                         constraintMap['transformedConstraints'][
-                            c] = [newConstraint['ub']]
-                    constraintMap['srcConstraints'][newConstraint['ub']] = c
+                            c] = [newConstraint[name, 'ub']]
+                    constraintMap['srcConstraints'][
+                        newConstraint[name, 'ub']] = c
 
         # deactivate now that we have transformed
         obj.deactivate()
@@ -886,25 +795,6 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
                             "Disjunct %s, but it is of type %s, not Suffix."
                             % (disjunct.getname(fully_qualified=True),
                                localSuffix.ctype))
-
-    # These are all functions to retrieve transformed components from
-    # original ones and vice versa.
-
-    @wraps(get_src_disjunct)
-    def get_src_disjunct(self, transBlock):
-        return get_src_disjunct(transBlock)
-
-    @wraps(get_src_disjunction)
-    def get_src_disjunction(self, xor_constraint):
-        return get_src_disjunction(xor_constraint)
-
-    @wraps(get_src_constraint)
-    def get_src_constraint(self, transformedConstraint):
-        return get_src_constraint(transformedConstraint)
-
-    @wraps(get_transformed_constraints)
-    def get_transformed_constraints(self, srcConstraint):
-        return get_transformed_constraints(srcConstraint)
 
     def get_disaggregated_var(self, v, disjunct):
         """

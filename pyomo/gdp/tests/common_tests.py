@@ -1655,7 +1655,7 @@ def check_untransformed_network_raises_GDPError(self, transformation, **kwargs):
     elif transformation == 'partition_disjuncts':
         error_name = 'partition_disjuncts'
     else:
-        error_name = 'hull'
+        error_name = 'Hull'
     self.assertRaisesRegex(
         GDP_Error,
         "No %s transformation handler registered for modeling "
