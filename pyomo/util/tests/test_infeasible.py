@@ -51,6 +51,16 @@ class TestInfeasible(unittest.TestCase):
     def test_log_infeasible_constraints(self):
         """Test for logging of infeasible constraints."""
         m = self.build_model()
+
+        with LoggingIntercept(None, 'pyomo.util.infeasible') as LOG:
+            log_infeasible_constraints(m)
+        self.assertEqual(
+            'log_infeasible_constraints() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged regardless of constraint feasibility',
+            LOG.getvalue().strip(),
+        )
+
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
             log_infeasible_constraints(m)
@@ -58,8 +68,8 @@ class TestInfeasible(unittest.TestCase):
             "CONSTR c1: 2.0 </= 1",
             "CONSTR c2: 1 =/= 4.0",
             "CONSTR c3: 1 </= 0.0",
-            "CONSTR c5: 5.0 <?= missing variable value <?= 10.0",
-            "CONSTR c7: missing variable value =?= 6.0",
+            "CONSTR c5: 5.0 <?= evaluation error <?= 10.0",
+            "CONSTR c7: evaluation error =?= 6.0",
             "CONSTR c8: 3.0 </= 1 <= 6.0",
             "CONSTR c9: 0.0 <= 1 </= 0.5",
         ]
@@ -70,11 +80,24 @@ class TestInfeasible(unittest.TestCase):
         m = self.build_model()
         m.x.setlb(2)
         m.x.setub(0)
+
+        with LoggingIntercept(None, 'pyomo.util.infeasible') as LOG:
+            log_infeasible_bounds(m)
+        self.assertEqual(
+            'log_infeasible_bounds() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged regardless of bound feasibility',
+            LOG.getvalue().strip(),
+        )
+
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.util', logging.INFO):
             log_infeasible_bounds(m)
         expected_output = [
-            "VAR x: 1 >/= LB 2", "VAR x: 1 </= UB 0", "VAR y4: 2 </= UB 1",
+            "VAR x: LB 2 </= 1",
+            "VAR x: 1 </= UB 0",
+            "VAR z: no assigned value.",
+            "VAR y4: 2 </= UB 1",
         ]
         self.assertEqual(expected_output, output.getvalue().splitlines())
 
@@ -99,13 +122,24 @@ class TestInfeasible(unittest.TestCase):
     def test_log_close_to_bounds(self):
         """Test logging of variables and constraints near bounds."""
         m = self.build_model()
+
+        with LoggingIntercept(None, 'pyomo.util.infeasible') as LOG:
+            log_close_to_bounds(m)
+        self.assertEqual(
+            'log_close_to_bounds() called with a logger whose '
+            'effective level is higher than logging.INFO: no output '
+            'will be logged regardless of bound status',
+            LOG.getvalue().strip(),
+        )
+
         output = StringIO()
         with LoggingIntercept(output, 'pyomo.util.infeasible', logging.INFO):
             log_close_to_bounds(m)
         expected_output = [
-            "y near UB of 2", "yy near LB of 0", "c4 near LB",
-            "Skipping CONSTR c5: missing variable value.",
-            "c11 near UB",
+            "y near UB of 2",
+            "yy near LB of 0",
+            "c4 near LB of 1.9999999",
+            "c11 near UB of 1.9999999",
         ]
         self.assertEqual(expected_output, output.getvalue().splitlines())
 
@@ -119,8 +153,8 @@ class TestInfeasible(unittest.TestCase):
             "CONSTR c1: 2.0 </= 1", "  - EXPR: 2.0 </= x",
             "CONSTR c2: 1 =/= 4.0", "  - EXPR: x =/= 4.0",
             "CONSTR c3: 1 </= 0.0", "  - EXPR: x </= 0.0",
-            "CONSTR c5: 5.0 <?= missing variable value <?= 10.0", "  - EXPR: 5.0 <?= z <?= 10.0",
-            "CONSTR c7: missing variable value =?= 6.0", "  - EXPR: z =?= 6.0",
+            "CONSTR c5: 5.0 <?= evaluation error <?= 10.0", "  - EXPR: 5.0 <?= z <?= 10.0",
+            "CONSTR c7: evaluation error =?= 6.0", "  - EXPR: z =?= 6.0",
             "CONSTR c8: 3.0 </= 1 <= 6.0", "  - EXPR: 3.0 </= x <= 6.0",
             "CONSTR c9: 0.0 <= 1 </= 0.5", "  - EXPR: 0.0 <= x </= 0.5",
         ]
@@ -136,8 +170,8 @@ class TestInfeasible(unittest.TestCase):
             "CONSTR c1: 2.0 </= 1", "  - VAR x: 1",
             "CONSTR c2: 1 =/= 4.0", "  - VAR x: 1",
             "CONSTR c3: 1 </= 0.0", "  - VAR x: 1",
-            "CONSTR c5: 5.0 <?= missing variable value <?= 10.0", "  - VAR z: None",
-            "CONSTR c7: missing variable value =?= 6.0", "  - VAR z: None",
+            "CONSTR c5: 5.0 <?= evaluation error <?= 10.0", "  - VAR z: None",
+            "CONSTR c7: evaluation error =?= 6.0", "  - VAR z: None",
             "CONSTR c8: 3.0 </= 1 <= 6.0", "  - VAR x: 1",
             "CONSTR c9: 0.0 <= 1 </= 0.5", "  - VAR x: 1",
         ]

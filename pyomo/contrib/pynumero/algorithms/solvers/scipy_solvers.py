@@ -268,7 +268,26 @@ class PyomoScipySolver(object):
     def set_options(self, options):
         self.options = options
 
-    def solve(self, model, timer=None):
+    def solve(self, model, timer=None, tee=False):
+        """
+        Parameters
+        ----------
+        model: BlockData
+            The model that will be solved
+        timer: HierarchicalTimer
+            A HierarchicalTimer that "sub-timers" created by this object
+            will be attached to. If not provided, a new timer is created.
+        tee: Bool
+            A dummy flag indicating whether solver output should be displayed.
+            The current SciPy solvers supported have no output, so setting this
+            flag does not do anything.
+
+        Returns
+        -------
+        SolverResults
+            Contains the results of the solve
+
+        """
         if timer is None:
             timer = HierarchicalTimer()
         self._timer = timer

@@ -46,19 +46,19 @@ import operator
 relocated_module_attribute(
     'EqualityExpression',
     'pyomo.core.expr.relational_expr.EqualityExpression',
-    version='6.4.3')
+    version='6.4.3', f_globals=globals())
 relocated_module_attribute(
     'InequalityExpression',
     'pyomo.core.expr.relational_expr.InequalityExpression',
-    version='6.4.3')
+    version='6.4.3', f_globals=globals())
 relocated_module_attribute(
     'RangedExpression',
     'pyomo.core.expr.relational_expr.RangedExpression',
-    version='6.4.3')
+    version='6.4.3', f_globals=globals())
 relocated_module_attribute(
     'inequality',
     'pyomo.core.expr.relational_expr.inequality',
-    version='6.4.3')
+    version='6.4.3', f_globals=globals())
 
 
 def _generate_logical_proposition(etype, lhs, rhs):

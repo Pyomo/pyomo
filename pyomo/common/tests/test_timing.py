@@ -393,3 +393,261 @@ all                    1     [0-9.]+ +[0-9.]+ +100.0
     '='*79)).splitlines()
         for l, r in zip(str(timer).splitlines(), ref):
             self.assertRegex(l, r)
+
+    def test_clear_except_base_timer(self):
+        timer = HierarchicalTimer()
+        timer.start("a")
+        timer.start("b")
+        timer.stop("b")
+        timer.stop("a")
+        timer.start("c")
+        timer.stop("c")
+        timer.start("d")
+        timer.stop("d")
+        timer.clear_except("b", "c")
+        key_set = set(timer.timers.keys())
+        self.assertEqual(key_set, {"c"})
+
+    def test_clear_except_subtimer(self):
+        # Testing this method on "sub-timers" exercises different code
+        # as while the base timer is a HierarchicalTimer, the sub-timers
+        # are _HierarchicalHelpers
+        timer = HierarchicalTimer()
+        timer.start("root")
+        timer.start("a")
+        timer.start("b")
+        timer.stop("b")
+        timer.stop("a")
+        timer.start("c")
+        timer.stop("c")
+        timer.start("d")
+        timer.stop("d")
+        timer.stop("root")
+        root = timer.timers["root"]
+        root.clear_except("b", "c")
+        key_set = set(root.timers.keys())
+        self.assertEqual(key_set, {"c"})
+
+
+class TestFlattenHierarchicalTimer(unittest.TestCase):
+
+    #
+    # The following methods create some hierarchical timers, then
+    # hand-code the total time of each timer in the data structure.
+    # This is so we can assert that total_time fields of flattened
+    # timers are computed correctly without relying on the actual
+    # time spent.
+    #
+    def make_singleton_timer(self):
+        timer = HierarchicalTimer()
+        timer.start("root")
+        timer.stop("root")
+        timer.timers["root"].total_time = 5.0
+        return timer
+
+    def make_flat_timer(self):
+        timer = HierarchicalTimer()
+        timer.start("root")
+        timer.start("a")
+        timer.stop("a")
+        timer.start("b")
+        timer.stop("b")
+        timer.stop("root")
+        timer.timers["root"].total_time = 5.0
+        timer.timers["root"].timers["a"].total_time = 1.0
+        timer.timers["root"].timers["b"].total_time = 2.5
+        return timer
+
+    def make_timer_depth_2_one_child(self):
+        timer = HierarchicalTimer()
+        timer.start("root")
+        timer.start("a")
+        timer.start("b")
+        timer.stop("b")
+        timer.start("c")
+        timer.stop("c")
+        timer.stop("a")
+        timer.stop("root")
+        timer.timers["root"].total_time = 5.0
+        timer.timers["root"].timers["a"].total_time = 4.0
+        timer.timers["root"].timers["a"].timers["b"].total_time = 1.1
+        timer.timers["root"].timers["a"].timers["c"].total_time = 2.2
+        return timer
+
+    def make_timer_depth_2_with_name_collision(self):
+        timer = HierarchicalTimer()
+        timer.start("root")
+        timer.start("a")
+        timer.start("b")
+        timer.stop("b")
+        timer.start("c")
+        timer.stop("c")
+        timer.stop("a")
+        timer.start("b")
+        timer.stop("b")
+        timer.stop("root")
+        timer.timers["root"].total_time = 5.0
+        timer.timers["root"].timers["a"].total_time = 4.0
+        timer.timers["root"].timers["a"].timers["b"].total_time = 1.1
+        timer.timers["root"].timers["a"].timers["c"].total_time = 2.2
+        timer.timers["root"].timers["b"].total_time = 0.11
+        return timer
+
+    def make_timer_depth_2_two_children(self):
+        timer = HierarchicalTimer()
+        timer.start("root")
+        timer.start("a")
+        timer.start("b")
+        timer.stop("b")
+        timer.start("c")
+        timer.stop("c")
+        timer.stop("a")
+        timer.start("b")
+        timer.start("c")
+        timer.stop("c")
+        timer.start("d")
+        timer.stop("d")
+        timer.stop("b")
+        timer.stop("root")
+        timer.timers["root"].total_time = 5.0
+        timer.timers["root"].timers["a"].total_time = 4.0
+        timer.timers["root"].timers["a"].timers["b"].total_time = 1.1
+        timer.timers["root"].timers["a"].timers["c"].total_time = 2.2
+        timer.timers["root"].timers["b"].total_time = 0.88
+        timer.timers["root"].timers["b"].timers["c"].total_time = 0.07
+        timer.timers["root"].timers["b"].timers["d"].total_time = 0.05
+        return timer
+
+    def make_timer_depth_4(self):
+        timer = HierarchicalTimer()
+        timer.start("root")
+        timer.start("a")
+        timer.start("b")
+        timer.stop("b")
+        timer.start("c")
+        timer.start("d")
+        timer.start("e")
+        timer.stop("e")
+        timer.stop("d")
+        timer.stop("c")
+        timer.stop("a")
+        timer.start("b")
+        timer.start("c")
+        timer.start("e")
+        timer.stop("e")
+        timer.stop("c")
+        timer.start("d")
+        timer.stop("d")
+        timer.stop("b")
+        timer.stop("root")
+        timer.timers["root"].total_time = 5.0
+        timer.timers["root"].timers["a"].total_time = 4.0
+        timer.timers["root"].timers["a"].timers["b"].total_time = 1.1
+        timer.timers["root"].timers["a"].timers["c"].total_time = 2.2
+        timer.timers["root"].timers["a"].timers["c"].timers["d"].total_time = 0.9
+        timer.timers["root"].timers["a"].timers["c"].timers["d"].timers["e"].total_time = 0.6
+        timer.timers["root"].timers["b"].total_time = 0.88
+        timer.timers["root"].timers["b"].timers["c"].total_time = 0.07
+        timer.timers["root"].timers["b"].timers["c"].timers["e"].total_time = 0.04
+        timer.timers["root"].timers["b"].timers["d"].total_time = 0.05
+        return timer
+    
+    def make_timer_depth_4_same_name(self):
+        timer = HierarchicalTimer()
+        timer.start("root")
+        timer.start("a")
+        timer.start("a")
+        timer.start("a")
+        timer.start("a")
+        timer.stop("a")
+        timer.stop("a")
+        timer.stop("a")
+        timer.stop("a")
+        timer.stop("root")
+        timer.timers["root"].total_time = 5.0
+        timer.timers["root"].timers["a"].total_time = 1.0
+        timer.timers["root"].timers["a"].timers["a"].total_time = 0.1
+        timer.timers["root"].timers["a"].timers["a"].timers["a"].total_time = 0.01
+        timer.timers["root"].timers["a"].timers["a"].timers["a"].timers["a"].total_time = 0.001
+        return timer
+
+    def test_singleton(self):
+        timer = self.make_singleton_timer()
+        root = timer.timers["root"]
+        root.flatten()
+        self.assertAlmostEqual(root.total_time, 5.0)
+
+    def test_already_flat(self):
+        timer = self.make_flat_timer()
+        root = timer.timers["root"]
+        root.flatten()
+        self.assertAlmostEqual(root.total_time, 5.0)
+        self.assertAlmostEqual(root.timers["a"].total_time, 1.0)
+        self.assertAlmostEqual(root.timers["b"].total_time, 2.5)
+
+    def test_depth_2_one_child(self):
+        timer = self.make_timer_depth_2_one_child()
+        root = timer.timers["root"]
+        root.flatten()
+        self.assertAlmostEqual(root.total_time, 5.0)
+        self.assertAlmostEqual(root.timers["a"].total_time, 0.7)
+        self.assertAlmostEqual(root.timers["b"].total_time, 1.1)
+        self.assertAlmostEqual(root.timers["c"].total_time, 2.2)
+
+    def test_timer_depth_2_with_name_collision(self):
+        timer = self.make_timer_depth_2_with_name_collision()
+        root = timer.timers["root"]
+        root.flatten()
+        self.assertAlmostEqual(root.total_time, 5.0)
+        self.assertAlmostEqual(root.timers["a"].total_time, 0.700)
+        self.assertAlmostEqual(root.timers["b"].total_time, 1.210)
+        self.assertAlmostEqual(root.timers["c"].total_time, 2.200)
+
+    def test_timer_depth_2_two_children(self):
+        timer = self.make_timer_depth_2_two_children()
+        root = timer.timers["root"]
+        root.flatten()
+        self.assertAlmostEqual(root.total_time, 5.0)
+        self.assertAlmostEqual(root.timers["a"].total_time, 0.700)
+        self.assertAlmostEqual(root.timers["b"].total_time, 1.860)
+        self.assertAlmostEqual(root.timers["c"].total_time, 2.270)
+        self.assertAlmostEqual(root.timers["d"].total_time, 0.050)
+
+    def test_timer_depth_4(self):
+        timer = self.make_timer_depth_4()
+        root = timer.timers["root"]
+        root.flatten()
+        self.assertAlmostEqual(root.total_time, 5.0)
+        self.assertAlmostEqual(root.timers["a"].total_time, 0.700)
+        self.assertAlmostEqual(root.timers["b"].total_time, 1.860)
+        self.assertAlmostEqual(root.timers["c"].total_time, 1.330)
+        self.assertAlmostEqual(root.timers["d"].total_time, 0.350)
+        self.assertAlmostEqual(root.timers["e"].total_time, 0.640)
+
+    def test_timer_depth_4_same_name(self):
+        timer = self.make_timer_depth_4_same_name()
+        root = timer.timers["root"]
+        root.flatten()
+        self.assertAlmostEqual(root.total_time, 5.0)
+        self.assertAlmostEqual(root.timers["a"].total_time, 1.0)
+
+    def test_base_timer_depth_3(self):
+        # This is depth 2 wrt the root, depth 3 wrt the
+        # "base timer"
+        timer = self.make_timer_depth_2_two_children()
+        timer.flatten()
+        self.assertAlmostEqual(timer.timers["root"].total_time, 0.120)
+        self.assertAlmostEqual(timer.timers["a"].total_time, 0.700)
+        self.assertAlmostEqual(timer.timers["b"].total_time, 1.860)
+        self.assertAlmostEqual(timer.timers["c"].total_time, 2.270)
+        self.assertAlmostEqual(timer.timers["d"].total_time, 0.050)
+
+    def test_timer_still_active(self):
+        timer = HierarchicalTimer()
+        timer.start("a")
+        timer.stop("a")
+        timer.start("b")
+        msg = "Cannot flatten.*while any timers are active"
+        with self.assertRaisesRegex(RuntimeError, msg):
+            timer.flatten()
+        timer.stop("b")

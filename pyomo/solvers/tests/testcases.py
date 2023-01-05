@@ -57,7 +57,7 @@ for _io in ('python', 'persistent'):
 
     for _test in ('MIQP_simple', ):
         SkipTests['mosek', _io, _test] = (
-            lambda v: v[0] == 10,
+            lambda v: v[0] == 10 and v < (10, 0, 30),
             "Mosek 10 fails on assertion warmstarting MIQP models; see #2613")
 
 #
