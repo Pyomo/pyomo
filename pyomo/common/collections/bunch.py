@@ -67,21 +67,28 @@ class Bunch(dict):
         The update is specialized for JSON-like data.  This
         recursively replaces dictionaries with Bunch objects.
         """
+        def _replace_dict_in_list(lst):
+            ans = []
+            for v in lst:
+                if type(v) is dict:
+                    ans.append(Bunch())
+                    ans[-1].update(v)
+                elif type(v) is list:
+                    ans.append(_replace_dict_in_list(v))
+                else:
+                    ans.append(v)
+            return ans
+
         if isinstance(d, Mapping):
             item_iter = d.items()
         else:
             item_iter = d
         for k, v in item_iter:
             if type(v) is dict:
-                self[k] = Bunch(**v)
+                self[k] = Bunch()
+                self[k].update(v)
             elif type(v) is list:
-                val = []
-                for i in v:
-                    if type(i) is dict:
-                        val.append(Bunch(**i))
-                    else:
-                        val.append(i)
-                self[k] = val
+                self[k] = _replace_dict_in_list(v)
             else:
                 self[k] = v
 
