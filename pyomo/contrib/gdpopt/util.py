@@ -491,7 +491,7 @@ def _add_bigm_constraint_to_transformed_model(m, constraint, block):
         return
 
     bigm = TransformationFactory('gdp.bigm')
-    bigm.assume_fixed_vars_permanent = False
+    bigm._config.assume_fixed_vars_permanent = False
     # ESJ: This function doesn't handle ConstraintDatas, and bigm is not
     # sufficiently modular to have a function that does at the moment, so I'm
     # making a Reference to the ComponentData so that it will look like an
