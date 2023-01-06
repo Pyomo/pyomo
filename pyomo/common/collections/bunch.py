@@ -96,21 +96,24 @@ class Bunch(dict):
         self._name_ = name
 
     def __getitem__(self, name):
+        if not isinstance(name, str):
+            raise ValueError(
+                f'Bunch keys must be str (got {type(name).__name__})')
         # Map through Python's standard getattr functionality (which
         # will resolve known attributes without hitting __getattr__)
         return getattr(self, name)
 
     def __setitem__(self, name, val):
-        if name[0] == '_':
-            super().__setattr__(name, val)
-        else:
-            super().__setitem__(name, val)
+        if not isinstance(name, str):
+            raise ValueError(
+                f'Bunch keys must be str (got {type(name).__name__})')
+        setattr(self, name, val)
 
     def __delitem__(self, name):
-        if name[0] == '_':
-            super().__delattr__(name)
-        else:
-            super().__delitem__(name)
+        if not isinstance(name, str):
+            raise ValueError(
+                f'Bunch keys must be str (got {type(name).__name__})')
+        delattr(self, name)
 
     def __getattr__(self, name):
         if name[0] == '_':
