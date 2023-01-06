@@ -4,7 +4,7 @@
 #  Copyright (c) 2008-2022
 #  National Technology and Engineering Solutions of Sandia, LLC
 #  Under the terms of Contract DE-NA0003525 with National Technology and
-#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain 
+#  Engineering Solutions of Sandia, LLC, the U.S. Government retains certain
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
@@ -42,7 +42,7 @@ class Bunch(dict):
                 if len(item) != 2:
                     raise ValueError(
                         "Bunch() positional arguments must be space separated "
-                        f"strings of form 'key=value', got {item[0]}")
+                        f"strings of form 'key=value', got '{item[0]}'")
 
                 # Historically, this used 'exec'.  That is unsafe in
                 # this context (because anyone can pass arguments to a
