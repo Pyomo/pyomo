@@ -108,16 +108,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
     def test_transformed_constraint_nonlinear(self):
         m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.hull').apply_to(m)
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
 
         disjBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts
 
         # the only constraint on the first block is the non-linear one
-        disj1c = disjBlock[0].component("d[0].c")
-        self.assertIsInstance(disj1c, Constraint)
+        disj1c = hull.get_transformed_constraints(m.d[0].c)
         # we only have an upper bound
         self.assertEqual(len(disj1c), 1)
-        cons = disj1c['ub']
+        cons = disj1c[0]
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 0)
         repn = generate_standard_repn(cons.body)
@@ -140,15 +140,16 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
     def test_transformed_constraints_linear(self):
         m = models.makeTwoTermDisj_Nonlinear()
-        TransformationFactory('gdp.hull').apply_to(m)
+        hull = TransformationFactory('gdp.hull')
+        hull.apply_to(m)
 
         disjBlock = m._pyomo_gdp_hull_reformulation.relaxedDisjuncts
 
         # the only constraint on the first block is the non-linear one
-        c1 = disjBlock[1].component("d[1].c1")
-        # has only lb
+        c1 = hull.get_transformed_constraints(m.d[1].c1)
         self.assertEqual(len(c1), 1)
-        cons = c1['lb']
+        cons = c1[0]
+        # has only lb
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 0)
         repn = generate_standard_repn(cons.body)
@@ -160,10 +161,10 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(disjBlock[1].disaggregatedVars.x.lb, 0)
         self.assertEqual(disjBlock[1].disaggregatedVars.x.ub, 8)
 
-        c2 = disjBlock[1].component("d[1].c2")
-        # 'eq' is preserved
+        c2 = hull.get_transformed_constraints(m.d[1].c2)
         self.assertEqual(len(c2), 1)
-        cons = c2['eq']
+        cons = c2[0]
+        # 'eq' is preserved
         self.assertEqual(cons.lower, 0)
         self.assertEqual(cons.upper, 0)
         repn = generate_standard_repn(cons.body)
@@ -175,10 +176,11 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         self.assertEqual(disjBlock[1].disaggregatedVars.w.lb, 0)
         self.assertEqual(disjBlock[1].disaggregatedVars.w.ub, 7)
 
-        c3 = disjBlock[1].component("d[1].c3")
+        c3 = hull.get_transformed_constraints(m.d[1].c3)
         # bounded inequality is split
         self.assertEqual(len(c3), 2)
-        cons = c3['lb']
+        # lb
+        cons = c3[0]
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 0)
         repn = generate_standard_repn(cons.body)
@@ -188,7 +190,8 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         ct.check_linear_coef(self, repn, m.d[1].indicator_var, 1)
         self.assertEqual(repn.constant, 0)
 
-        cons = c3['ub']
+        # ub
+        cons = c3[1]
         self.assertIsNone(cons.lower)
         self.assertEqual(cons.upper, 0)
         repn = generate_standard_repn(cons.body)
@@ -337,43 +340,40 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
         # first disjunct
         orig1 = m.d[0].c
-        trans1 = disjBlock[0].component("d[0].c")
+        cons = hull.get_transformed_constraints(orig1)
+        self.assertEqual(len(cons), 1)
+        trans1 = cons[0]
+        self.assertIs(trans1.parent_block(), disjBlock[0])
         self.assertIs(hull.get_src_constraint(trans1), orig1)
-        self.assertIs(hull.get_src_constraint(trans1['ub']), orig1)
-        trans_list = hull.get_transformed_constraints(orig1)
-        self.assertEqual(len(trans_list), 1)
-        self.assertIs(trans_list[0], trans1['ub'])
 
         # second disjunct
 
         # first constraint
         orig1 = m.d[1].c1
-        trans1 = disjBlock[1].component("d[1].c1")
+        cons = hull.get_transformed_constraints(orig1)
+        self.assertEqual(len(cons), 1)
+        trans1 = cons[0]
+        self.assertIs(trans1.parent_block(), disjBlock[1])
         self.assertIs(hull.get_src_constraint(trans1), orig1)
-        self.assertIs(hull.get_src_constraint(trans1['lb']), orig1)
-        trans_list = hull.get_transformed_constraints(orig1)
-        self.assertEqual(len(trans_list), 1)
-        self.assertIs(trans_list[0], trans1['lb'])
 
         # second constraint
         orig2 = m.d[1].c2
-        trans2 = disjBlock[1].component("d[1].c2")
+        cons = hull.get_transformed_constraints(orig2)
+        self.assertEqual(len(cons), 1)
+        trans2 = cons[0]
+        self.assertIs(trans1.parent_block(), disjBlock[1])
         self.assertIs(hull.get_src_constraint(trans2), orig2)
-        self.assertIs(hull.get_src_constraint(trans2['eq']), orig2)
-        trans_list = hull.get_transformed_constraints(orig2)
-        self.assertEqual(len(trans_list), 1)
-        self.assertIs(trans_list[0], trans2['eq'])
 
         # third constraint
         orig3 = m.d[1].c3
-        trans3 = disjBlock[1].component("d[1].c3")
+        cons = hull.get_transformed_constraints(orig3)
+        self.assertEqual(len(cons), 2)
+        trans3 = cons[0]
         self.assertIs(hull.get_src_constraint(trans3), orig3)
-        self.assertIs(hull.get_src_constraint(trans3['lb']), orig3)
-        self.assertIs(hull.get_src_constraint(trans3['ub']), orig3)
-        trans_list = hull.get_transformed_constraints(orig3)
-        self.assertEqual(len(trans_list), 2)
-        self.assertIs(trans_list[0], trans3['lb'])
-        self.assertIs(trans_list[1], trans3['ub'])
+        self.assertIs(trans3.parent_block(), disjBlock[1])
+        trans32 = cons[1]
+        self.assertIs(hull.get_src_constraint(trans32), orig3)
+        self.assertIs(trans32.parent_block(), disjBlock[1])
 
     def test_disaggregatedVar_mappings(self):
         m = models.makeTwoTermDisj_Nonlinear()
@@ -654,6 +654,7 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
 
     def check_threeTermDisj_IndexedConstraints(self, m, lb):
         transBlock = m._pyomo_gdp_hull_reformulation
+        hull = TransformationFactory('gdp.hull')
 
         # 2 blocks: the original Disjunct and the transformation block
         self.assertEqual(
@@ -673,18 +674,23 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
             # we always have the x[1] bounds constraint, then however many
             # original constraints were on the Disjunct
             self.assertEqual(
-                len(list(relaxed.component_objects(Constraint))), 1+i)
+                len(list(relaxed.component_objects(Constraint))), 1 + i)
             if lb == 0:
                 # i bounds constraints and i transformed constraints
                 self.assertEqual(
-                    len(list(relaxed.component_data_objects(Constraint))), i+i)
+                    len(list(relaxed.component_data_objects(Constraint))),
+                    i + i)
             else:
                 # 2*i bounds constraints and i transformed constraints
                 self.assertEqual(
                     len(list(relaxed.component_data_objects(Constraint))),
-                    2*i+i)
+                    2*i + i)
 
-            self.assertEqual(len(relaxed.component('d[%s].c'%i)), i)
+            # Check that there are i transformed constraints on relaxed:
+            for j in range(1, i + 1):
+                cons = hull.get_transformed_constraints(m.d[i].c[j])
+                self.assertEqual(len(cons), 1)
+                self.assertIs(cons[0].parent_block(), relaxed)
 
         # the remaining disaggregated variables are on the disjunction
         # transformation block
@@ -763,16 +769,14 @@ class TwoTermDisj(unittest.TestCase, CommonTests):
         transformed = hull.get_transformed_constraints(m.b.simpledisj2.c[1])
         # simpledisj2.c[1] is a <= constraint
         self.assertEqual(len(transformed), 1)
-        self.assertIs(transformed[0],
-                      m.b.simpledisj2.transformation_block.\
-                      component("b.simpledisj2.c")[(1,'ub')])
+        self.assertIs(transformed[0].parent_block(),
+                      m.b.simpledisj2.transformation_block)
 
         transformed = hull.get_transformed_constraints(m.b.simpledisj2.c[2])
         # simpledisj2.c[2] is a <= constraint
         self.assertEqual(len(transformed), 1)
-        self.assertIs(transformed[0],
-                      m.b.simpledisj2.transformation_block.\
-                      component("b.simpledisj2.c")[(2,'ub')])
+        self.assertIs(transformed[0].parent_block(),
+                      m.b.simpledisj2.transformation_block)
 
 
 class MultiTermDisj(unittest.TestCase, CommonTests):
@@ -1034,13 +1038,19 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
             transBlock.component("disjunctionList_xor"), Constraint)
         self.assertEqual(len(transBlock.disjunctionList_xor), 1)
         self.assertFalse(model.disjunctionList[0].active)
+        hull = TransformationFactory('gdp.hull')
 
         if model.component('firstTerm') is None:
-            firstTerm = "'firstTerm[0]'.cons"
-            secondTerm = "'secondTerm[0]'.cons"
+            firstTerm_cons = hull.get_transformed_constraints(
+                model.component("firstTerm[0]").cons)
+            secondTerm_cons = hull.get_transformed_constraints(
+                model.component("secondTerm[0]").cons)
+
         else:
-            firstTerm = "firstTerm[0].cons"
-            secondTerm = "secondTerm[0].cons"
+            firstTerm_cons = hull.get_transformed_constraints(
+                model.firstTerm[0].cons)
+            secondTerm_cons = hull.get_transformed_constraints(
+                model.secondTerm[0].cons)
 
         self.assertIsInstance(transBlock.relaxedDisjuncts, Block)
         self.assertEqual(len(transBlock.relaxedDisjuncts), 2)
@@ -1051,10 +1061,10 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
                         is_fixed())
         self.assertEqual(value(transBlock.relaxedDisjuncts[0].\
                                disaggregatedVars.x), 0)
-        self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
-            firstTerm), Constraint)
-        self.assertEqual(len(transBlock.relaxedDisjuncts[0].component(
-            firstTerm)), 0)
+        self.assertEqual(len(firstTerm_cons), 1)
+        self.assertIs(firstTerm_cons[0].parent_block(),
+                      # It fixes a var to 0
+                      transBlock.relaxedDisjuncts[0].disaggregatedVars)
         self.assertIsInstance(transBlock.relaxedDisjuncts[0].x_bounds,
                               Constraint)
         self.assertEqual(len(transBlock.relaxedDisjuncts[0].x_bounds), 2)
@@ -1063,10 +1073,10 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
                               disaggregatedVars.x, Var)
         self.assertFalse(transBlock.relaxedDisjuncts[1].disaggregatedVars.\
                          x.is_fixed())
-        self.assertIsInstance(transBlock.relaxedDisjuncts[1].component(
-            secondTerm), Constraint)
-        self.assertEqual(len(transBlock.relaxedDisjuncts[1].component(
-            secondTerm)), 1)
+
+        self.assertEqual(len(secondTerm_cons), 1)
+        self.assertIs(secondTerm_cons[0].parent_block(),
+                      transBlock.relaxedDisjuncts[1])
         self.assertIsInstance(transBlock.relaxedDisjuncts[1].x_bounds,
                               Constraint)
         self.assertEqual(len(transBlock.relaxedDisjuncts[1].x_bounds), 2)
@@ -1076,22 +1086,26 @@ class IndexedDisjunction(unittest.TestCase, CommonTests):
         self.assertIsInstance(transBlock, Block)
         self.assertIsInstance(transBlock.component("relaxedDisjuncts"), Block)
         self.assertEqual(len(transBlock.relaxedDisjuncts), 2)
+        hull = TransformationFactory('gdp.hull')
 
         if model.component('firstTerm') is None:
-            firstTerm = "'firstTerm[1]'.cons"
-            secondTerm = "'secondTerm[1]'.cons"
-        else:
-            firstTerm = "firstTerm[1].cons"
-            secondTerm = "secondTerm[1].cons"
+            firstTerm_cons = hull.get_transformed_constraints(
+                model.component("firstTerm[1]").cons)
+            secondTerm_cons = hull.get_transformed_constraints(
+                model.component("secondTerm[1]").cons)
 
-        self.assertIsInstance(transBlock.relaxedDisjuncts[0].component(
-            firstTerm), Constraint)
-        self.assertEqual(len(transBlock.relaxedDisjuncts[0].component(
-            firstTerm)), 1)
-        self.assertIsInstance(transBlock.relaxedDisjuncts[1].component(
-            secondTerm), Constraint)
-        self.assertEqual(len(transBlock.relaxedDisjuncts[1].component(
-            secondTerm)), 1)
+        else:
+            firstTerm_cons = hull.get_transformed_constraints(
+                model.firstTerm[1].cons)
+            secondTerm_cons = hull.get_transformed_constraints(
+                model.secondTerm[1].cons)
+
+        self.assertEqual(len(firstTerm_cons), 1)
+        self.assertIs(firstTerm_cons[0].parent_block(),
+                      transBlock.relaxedDisjuncts[0])
+        self.assertEqual(len(secondTerm_cons), 1)
+        self.assertIs(secondTerm_cons[0].parent_block(),
+                      transBlock.relaxedDisjuncts[1])
 
         orig = model.component("_pyomo_gdp_hull_reformulation")
         self.assertIsInstance(model.disjunctionList[1].algebraic_constraint,
