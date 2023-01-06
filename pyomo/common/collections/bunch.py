@@ -141,8 +141,6 @@ class Bunch(dict):
         attrs = []
         indentation = indent + "    " * nesting
         for k, v in self.items():
-            if k.startswith("_"):
-                continue
             text = [indentation, k, ":"]
             if isinstance(v, Bunch):
                 if len(v) > 0:
