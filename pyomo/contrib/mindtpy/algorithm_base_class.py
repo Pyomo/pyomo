@@ -607,6 +607,7 @@ class _MindtPyAlgorithm(object):
         # if the objective function is a constant, dual bound constraint is not added.
         obj = next(model.component_data_objects(ctype=Objective, active=True))
         if obj.expr.polynomial_degree() == 0:
+            config.logger.info('The model has a constant objecitive function. use_dual_bound is set to False.')
             config.use_dual_bound = False
 
         if config.use_fbbt:
