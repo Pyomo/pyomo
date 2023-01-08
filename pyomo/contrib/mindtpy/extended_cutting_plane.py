@@ -194,32 +194,13 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
             config.ecp_tolerance = config.absolute_bound_tolerance
         super().check_config()
 
+
     def initialize_mip_problem(self):
         ''' Deactivate the nonlinear constraints to create the MIP problem.
         '''
-        config = self.config
-
-        self.mip = self.working_model.clone()
-        next(self.mip.component_data_objects(
-            Objective, active=True)).deactivate()
-
-        MindtPy = self.mip.MindtPy_utils
-        if config.calculate_dual_at_solution:
-            self.mip.dual.deactivate()
-
-        self.jacobians = calc_jacobians(self.mip, config)  # preload jacobians
-        MindtPy.cuts.ecp_cuts = ConstraintList(doc='Extended Cutting Planes')
-
-        if config.init_strategy == 'FP':
-            MindtPy.cuts.fp_orthogonality_cuts = ConstraintList(
-                doc='Orthogonality cuts in feasibility pump')
-            if config.fp_projcuts:
-                self.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
-                    doc='Orthogonality cuts in feasibility pump')
-
-        self.fixed_nlp = self.working_model.clone()
-        TransformationFactory('core.fix_integer_vars').apply_to(self.fixed_nlp)
-        add_feas_slacks(self.fixed_nlp, config)
+        super().initialize_mip_problem()
+        self.jacobians = calc_jacobians(self.mip, self.config)  # preload jacobians
+        self.mip.MindtPy_utils.cuts.ecp_cuts = ConstraintList(doc='Extended Cutting Planes')
 
 
     def init_rNLP(self, config):

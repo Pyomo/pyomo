@@ -293,24 +293,8 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
     def initialize_mip_problem(self):
         ''' Deactivate the nonlinear constraints to create the MIP problem.
         '''
-        # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded main problem.
-        config = self.config
-        if config.single_tree:
-            add_var_bound(self.working_model, config)
-
-        self.mip = self.working_model.clone()
-        next(self.mip.component_data_objects(
-            Objective, active=True)).deactivate()
-
-        MindtPy = self.mip.MindtPy_utils
-        if config.calculate_dual_at_solution:
-            self.mip.dual.deactivate()
-        
-        MindtPy.cuts.aff_cuts = ConstraintList(doc='Affine cuts')
-
-        self.fixed_nlp = self.working_model.clone()
-        TransformationFactory('core.fix_integer_vars').apply_to(self.fixed_nlp)
-        add_feas_slacks(self.fixed_nlp, config)
+        super().initialize_mip_problem()
+        self.mip.MindtPy_utils.cuts.aff_cuts = ConstraintList(doc='Affine cuts')
 
 
     def update_primal_bound(self, bound_value):

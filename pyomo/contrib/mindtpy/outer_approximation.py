@@ -367,33 +367,9 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
     def initialize_mip_problem(self):
         ''' Deactivate the nonlinear constraints to create the MIP problem.
         '''
-        # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded main problem.
-        config = self.config
-        if config.single_tree:
-            add_var_bound(self.working_model, config)
-
-        self.mip = self.working_model.clone()
-        next(self.mip.component_data_objects(
-            Objective, active=True)).deactivate()
-
-        MindtPy = self.mip.MindtPy_utils
-        if config.calculate_dual_at_solution:
-            self.mip.dual.deactivate()
-
-        self.jacobians = calc_jacobians(self.mip, config)  # preload jacobians
-        MindtPy.cuts.oa_cuts = ConstraintList(doc='Outer approximation cuts')
-
-        if config.init_strategy == 'FP':
-            MindtPy.cuts.fp_orthogonality_cuts = ConstraintList(
-                doc='Orthogonality cuts in feasibility pump')
-            if config.fp_projcuts:
-                self.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
-                    doc='Orthogonality cuts in feasibility pump')
-
-        self.fixed_nlp = self.working_model.clone()
-        TransformationFactory('core.fix_integer_vars').apply_to(self.fixed_nlp)
-        add_feas_slacks(self.fixed_nlp, config)
-
+        super().initialize_mip_problem()
+        self.jacobians = calc_jacobians(self.mip, self.config)  # preload jacobians
+        self.mip.MindtPy_utils.cuts.oa_cuts = ConstraintList(doc='Outer approximation cuts')
 
     def add_cuts(self,
                  dual_values,

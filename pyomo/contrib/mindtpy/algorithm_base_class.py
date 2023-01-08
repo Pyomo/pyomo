@@ -34,8 +34,8 @@ from pyomo.contrib.gdpopt.util import (SuppressInfeasibleWarning, _DoNothing,
 from pyomo.contrib.gdpopt.solve_discrete_problem import distinguish_mip_infeasible_or_unbounded
 from pyomo.contrib.mindtpy.util import (generate_norm1_objective_function, generate_norm2sq_objective_function,
                                         generate_norm_inf_objective_function, generate_lag_objective_function,
-                                        set_solver_options, GurobiPersistent4MindtPy, MindtPySolveData,
-                                        get_integer_solution, add_feas_slacks, epigraph_reformulation)
+                                        set_solver_options, GurobiPersistent4MindtPy, MindtPySolveData, calc_jacobians,
+                                        get_integer_solution, add_feas_slacks, epigraph_reformulation, add_var_bound)
 
 single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
@@ -2280,3 +2280,30 @@ class _MindtPyAlgorithm(object):
         if config.fp_projcuts:
             self.working_model.MindtPy_utils.cuts.del_component(
                 'fp_orthogonality_cuts')
+
+    def initialize_mip_problem(self):
+        ''' Deactivate the nonlinear constraints to create the MIP problem.
+        '''
+        # if single tree is activated, we need to add bounds for unbounded variables in nonlinear constraints to avoid unbounded main problem.
+        config = self.config
+        if config.single_tree:
+            add_var_bound(self.working_model, config)
+
+        self.mip = self.working_model.clone()
+        next(self.mip.component_data_objects(
+            Objective, active=True)).deactivate()
+
+        MindtPy = self.mip.MindtPy_utils
+        if config.calculate_dual_at_solution:
+            self.mip.dual.deactivate()
+
+        if config.init_strategy == 'FP':
+            MindtPy.cuts.fp_orthogonality_cuts = ConstraintList(
+                doc='Orthogonality cuts in feasibility pump')
+            if config.fp_projcuts:
+                self.working_model.MindtPy_utils.cuts.fp_orthogonality_cuts = ConstraintList(
+                    doc='Orthogonality cuts in feasibility pump')
+
+        self.fixed_nlp = self.working_model.clone()
+        TransformationFactory('core.fix_integer_vars').apply_to(self.fixed_nlp)
+        add_feas_slacks(self.fixed_nlp, config)
