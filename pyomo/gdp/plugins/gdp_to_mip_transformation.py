@@ -266,6 +266,11 @@ class GDP_to_MIP_Transformation(Transformation):
             # variables down the line.
             handler(obj, disjunct, *args)
 
+    def _transform_constraint(self, obj, disjunct, *args):
+        raise NotImplementedError(
+            "Class %s failed to implement '_transform_constraint'" %
+            self.__class__)
+
     def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, *args):
         _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
 
