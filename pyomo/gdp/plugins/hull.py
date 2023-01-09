@@ -593,8 +593,10 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         return local_var_set
 
-    def _warn_for_active_disjunct( self, innerdisjunct, outerdisjunct,
-                                   var_substitute_map, zero_substitute_map):
+    def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct,
+                                  var_substitute_map, zero_substitute_map):
+        # We override the base class method because in hull, it might just be
+        # that we haven't gotten here yet.
         disjuncts = innerdisjunct.values() if innerdisjunct.is_indexed() else \
                     (innerdisjunct,)
         for disj in disjuncts:

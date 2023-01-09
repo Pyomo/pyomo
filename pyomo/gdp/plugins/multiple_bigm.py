@@ -34,8 +34,7 @@ from pyomo.gdp.plugins.gdp_to_mip_transformation import (
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
     get_gdp_tree, get_src_constraint, get_src_disjunct,
-    get_src_disjunction, get_transformed_constraints, _to_dict,
-    _warn_for_active_disjunct
+    get_src_disjunction, get_transformed_constraints, _to_dict
 )
 from pyomo.network import Port
 from pyomo.opt import SolverFactory, TerminationCondition
@@ -323,10 +322,6 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             # through so that we will have access to the indicator
             # variables down the line.
             handler(obj, disjunct, active_disjuncts, Ms)
-
-    def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct,
-                                  active_disjuncts, Ms):
-        _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
 
     def _warn_for_active_suffix(self, obj, disjunct, active_disjuncts, Ms):
         raise GDP_Error("Found active Suffix '{0}' on Disjunct '{1}'. "

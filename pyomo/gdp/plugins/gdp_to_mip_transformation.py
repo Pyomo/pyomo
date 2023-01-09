@@ -23,7 +23,8 @@ from pyomo.core import (
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (get_gdp_tree, get_src_constraint, get_src_disjunct,
-                            get_src_disjunction, get_transformed_constraints)
+                            get_src_disjunction, get_transformed_constraints,
+                            _warn_for_active_disjunct)
 from pyomo.network import Port
 
 from weakref import ref as weakref_ref
@@ -264,6 +265,9 @@ class GDP_to_MIP_Transformation(Transformation):
             # through so that we will have access to the indicator
             # variables down the line.
             handler(obj, disjunct, *args)
+
+    def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, *args):
+        _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
 
     # These are all functions to retrieve transformed components from
     # original ones and vice versa.

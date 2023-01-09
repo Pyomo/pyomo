@@ -32,8 +32,7 @@ from pyomo.gdp.plugins.gdp_to_mip_transformation import (
     GDP_to_MIP_Transformation)
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
 from pyomo.gdp.util import (
-    is_child_of, _get_constraint_transBlock, _warn_for_active_disjunct,
-    _to_dict)
+    is_child_of, _get_constraint_transBlock, _to_dict)
 from pyomo.core.util import target_list
 from pyomo.network import Port
 from pyomo.repn import generate_standard_repn
@@ -235,10 +234,6 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         # deactivate disjunct to keep the writers happy
         obj._deactivate_without_fixing_indicator()
-
-    def _warn_for_active_disjunct(self, innerdisjunct, outerdisjunct, bigMargs,
-                                  arg_list, suffix_list):
-        _warn_for_active_disjunct(innerdisjunct, outerdisjunct)
 
     def _transform_constraint(self, obj, disjunct, bigMargs, arg_list,
                               disjunct_suffix_list):
