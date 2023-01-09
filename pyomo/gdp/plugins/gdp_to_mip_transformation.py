@@ -83,6 +83,9 @@ class GDP_to_MIP_Transformation(Transformation):
         finally:
             self._transformation_blocks.clear()
             self._algebraic_constraints.clear()
+            # return to defaults. Again--we should really work towards a design
+            # where we delete this instead.
+            self._config = self.CONFIG()
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
