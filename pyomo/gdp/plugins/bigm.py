@@ -207,8 +207,8 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         suffix_list = _get_bigm_suffix_list(obj)
         arg_list = self._get_bigm_arg_list(bigM, obj)
 
-        relaxationBlock = self._create_disjunct_transformation_block(obj,
-                                                                     transBlock)
+        relaxationBlock = self._get_disjunct_transformation_block(obj,
+                                                                  transBlock)
 
         # we will keep a map of constraints (hashable, ha!) to a tuple to
         # indicate what their M value is and where it came from, of the form:

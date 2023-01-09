@@ -470,8 +470,8 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         if not obj.active:
             return
 
-        relaxationBlock = self._create_disjunct_transformation_block(obj,
-                                                                     transBlock)
+        relaxationBlock = self._get_disjunct_transformation_block(obj,
+                                                                  transBlock)
 
         # Put the disaggregated variables all on their own block so that we can
         # isolate the name collisions and still have complete control over the

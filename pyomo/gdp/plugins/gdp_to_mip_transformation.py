@@ -210,7 +210,10 @@ class GDP_to_MIP_Transformation(Transformation):
 
         return transBlock, xorConstraint
 
-    def _create_disjunct_transformation_block(self, obj, transBlock):
+    def _get_disjunct_transformation_block(self, disjunct, transBlock):
+        if disjunct.transformation_block is not None:
+            return disjunct.transformation_block
+
         # create a relaxation block for this disjunct
         relaxedDisjuncts = transBlock.relaxedDisjuncts
         relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
@@ -226,8 +229,8 @@ class GDP_to_MIP_Transformation(Transformation):
         }
 
         # add mappings to source disjunct (so we'll know we've relaxed)
-        obj._transformation_block = weakref_ref(relaxationBlock)
-        relaxationBlock._src_disjunct = weakref_ref(obj)
+        disjunct._transformation_block = weakref_ref(relaxationBlock)
+        relaxationBlock._src_disjunct = weakref_ref(disjunct)
 
         return relaxationBlock
 

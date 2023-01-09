@@ -280,35 +280,13 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         obj.deactivate()
 
-    def _get_disjunct_relaxation_block(self, disjunct, transBlock):
-        if disjunct.transformation_block is not None:
-            return disjunct.transformation_block
-
-        # create a relaxation block for this disjunct
-        relaxedDisjuncts = transBlock.relaxedDisjuncts
-        relaxationBlock = relaxedDisjuncts[len(relaxedDisjuncts)]
-
-        relaxationBlock.localVarReferences = Block()
-
-        # add the map that will link back and forth between transformed
-        # constraints and their originals.
-        relaxationBlock._constraintMap = {
-            'srcConstraints': ComponentMap(),
-            'transformedConstraints': ComponentMap()
-        }
-
-        # add mappings to source disjunct (so we'll know we've relaxed)
-        disjunct._transformation_block = weakref_ref(relaxationBlock)
-        relaxationBlock._src_disjunct = weakref_ref(disjunct)
-
-        return relaxationBlock
-
     def _transform_disjunct(self, obj, transBlock, active_disjuncts, Ms):
         # We've already filtered out deactivated disjuncts, so we know obj is
         # active.
 
         # Make a relaxation block if we haven't already.
-        relaxationBlock = self._get_disjunct_relaxation_block(obj, transBlock)
+        relaxationBlock = self._get_disjunct_transformation_block(obj,
+                                                                  transBlock)
 
         # Transform everything on the disjunct
         self._transform_block_components(obj, active_disjuncts, Ms)
@@ -483,7 +461,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             lower_rhs = 0
             upper_rhs = 0
             for disj in active_disjuncts:
-                relaxationBlock = self._get_disjunct_relaxation_block(
+                relaxationBlock = self._get_disjunct_transformation_block(
                     disj, transBlock)
                 if len(lower_dict) > 0:
                     M = lower_dict.get(disj, None)
