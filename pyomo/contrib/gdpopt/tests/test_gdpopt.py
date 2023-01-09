@@ -1578,19 +1578,12 @@ class TestConfigOptions(unittest.TestCase):
         self.assertAlmostEqual(value(m.obj), -0.25)
         self.assertEqual(opt.config.mip_solver, 'gurobi')
 
+    @unittest.skipUnless(SolverFactory('gurobi').available(),
+                         'Gurobi not available')
     def test_no_default_algorithm(self):
         m = self.make_model()
 
         opt = SolverFactory('gdpopt')
-
-        ## DEBUG
-        print('glpk version')
-        print(SolverFactory('glpk').version())
-        print('ipopt version')
-        print(SolverFactory('ipopt').version())
-        
-        opt.solve(m, algorithm='LBB', tee=True, mip_solver=mip_solver,
-                  nlp_solver=nlp_solver)
 
         buf = StringIO()
         with redirect_stdout(buf):
@@ -1606,7 +1599,7 @@ class TestConfigOptions(unittest.TestCase):
         self.assertIn('using LBB algorithm', buf.getvalue())
         ## DEBUG
         opt.solve(m, algorithm='LBB', tee=True, mip_solver=mip_solver,
-                  nlp_solver=nlp_solver)
+                  nlp_solver=nlp_solver, minlp_solver='gurobi')
         self.assertAlmostEqual(value(m.obj), -0.25)
 
 if __name__ == '__main__':
