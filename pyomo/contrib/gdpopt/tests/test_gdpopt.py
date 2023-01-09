@@ -1594,6 +1594,9 @@ class TestConfigOptions(unittest.TestCase):
             opt.solve(m, algorithm='LBB', tee=True, mip_solver=mip_solver,
                       nlp_solver=nlp_solver)
         self.assertIn('using LBB algorithm', buf.getvalue())
+        ## DEBUG
+        opt.solve(m, algorithm='LBB', tee=True, mip_solver=mip_solver,
+                  nlp_solver=nlp_solver)
         self.assertAlmostEqual(value(m.obj), -0.25)
 
 if __name__ == '__main__':
