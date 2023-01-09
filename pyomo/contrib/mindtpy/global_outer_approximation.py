@@ -308,18 +308,9 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         bound_value : float
             The input value used to update the primal bound.
         """
-        if math.isnan(bound_value):
-            return
-        if self.objective_sense == minimize:
-            self.primal_bound = min(bound_value, self.primal_bound)
-            self.primal_bound_improved = self.primal_bound < self.primal_bound_progress[-1]
-        else:
-            self.primal_bound = max(bound_value, self.primal_bound)
-            self.primal_bound_improved = self.primal_bound > self.primal_bound_progress[-1]
-        self.primal_bound_progress.append(self.primal_bound)
+        super().update_primal_bound()
         self.primal_bound_progress_time.append(get_main_elapsed_time(self.timing))
         if self.primal_bound_improved:
-            self.update_gap()
             self.num_no_good_cuts_added.update(
                     {self.primal_bound: len(self.mip.MindtPy_utils.cuts.no_good_cuts)})
 
