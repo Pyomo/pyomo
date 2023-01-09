@@ -8,7 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #
-#  Pyomo.DOE was produced under the Department of Energy Carbon Capture Simulation 
+#  Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation 
 #  Initiative (CCSI), and is copyright (c) 2022 by the software owners: 
 #  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC., 
 #  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,  
@@ -33,7 +33,6 @@ from pyomo.common.dependencies import (
 )
 
 import pyomo.common.unittest as unittest
-import pyomo.contrib.doe.doe as doe
 
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()

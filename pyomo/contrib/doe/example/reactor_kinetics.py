@@ -8,7 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #
-#  Pyomo.DOE was produced under the Department of Energy Carbon Capture Simulation 
+#  Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation 
 #  Initiative (CCSI), and is copyright (c) 2022 by the software owners: 
 #  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC., 
 #  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,  
@@ -29,7 +29,7 @@
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar
 import numpy as np
- 
+from pyomo.contrib.doe.measurements import Measurements
 
 def disc_for_measure(m, NFE=32):
     """Pyomo.DAE discretization

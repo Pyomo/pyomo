@@ -8,7 +8,7 @@
 #  rights in this software.
 #  This software is distributed under the 3-clause BSD License.
 #
-#  Pyomo.DOE was produced under the Department of Energy Carbon Capture Simulation 
+#  Pyomo.DoE was produced under the Department of Energy Carbon Capture Simulation 
 #  Initiative (CCSI), and is copyright (c) 2022 by the software owners: 
 #  TRIAD National Security, LLC., Lawrence Livermore National Security, LLC., 
 #  Lawrence Berkeley National Laboratory, Pacific Northwest National Laboratory,  
@@ -25,12 +25,11 @@
 #  publicly, and to permit other to do so.
 #  ___________________________________________________________________________
 
-import pyomo.contrib.doe.doe as doe
 import numpy as np
 import pyomo.common.unittest as unittest
 from pyomo.contrib.doe.example.reactor_kinetics import create_model, disc_for_measure
 from pyomo.contrib.doe.measurements import Measurements
-
+from pyomo.contrib.doe import DesignOfExperiments
 
 def main():
     # Create model function
@@ -83,7 +82,7 @@ def main():
           [ -24.02377324 , -139.23992532 ,  58.76422806 , 767.25584508]])
 
 
-    doe_object = doe.DesignOfExperiments(parameter_dict, dv_pass,
+    doe_object = DesignOfExperiments(parameter_dict, dv_pass,
                                  measure_class, createmod,
                                 prior_FIM=prior, discretize_model=disc, args=[True])
 
