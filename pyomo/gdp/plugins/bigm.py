@@ -131,7 +131,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         while the variables remain fixed.
         """
     ))
-    transformation_name = 'BigM'
+    transformation_name = 'bigm'
 
     def __init__(self):
         super(BigM_Transformation, self).__init__(logger)
@@ -176,15 +176,12 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # didn't use
         _warn_for_unused_bigM_args(bigM, self.used_args, logger)
 
-    def _add_transformation_block(self, to_block):
-        return super(BigM_Transformation, self)._add_transformation_block(
-            to_block, 'bigm')[0]
-
     def _transform_disjunctionData(self, obj, index, parent_disjunct=None,
                                    root_disjunct=None):
 
-        transBlock, xorConstraint = self._setup_transform_disjunctionData(
-            obj, root_disjunct)
+        (transBlock,
+         xorConstraint) = self._setup_transform_disjunctionData(obj,
+                                                                root_disjunct)
 
         # add or (or xor) constraint
         or_expr = sum(disjunct.binary_indicator_var for disjunct in
@@ -206,7 +203,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     def _transform_disjunct(self, obj, bigM, root_disjunct):
         root = root_disjunct.parent_block() if root_disjunct is not None else \
                obj.parent_block()
-        transBlock = self._add_transformation_block(root)
+        transBlock = self._add_transformation_block(root)[0]
         suffix_list = _get_bigm_suffix_list(obj)
         arg_list = self._get_bigm_arg_list(bigM, obj)
 

@@ -163,6 +163,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         this flag is set to True.
         """
     ))
+    transformation_name = 'mbigm'
 
     def __init__(self):
         super(MultipleBigMTransformation, self).__init__(logger)
@@ -238,22 +239,11 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                             "Disjunction '%s' with OR constraint.  "
                             "Must be an XOR!" % obj.name)
 
-        # Create or fetch the transformation block. We do not support nested
-        # GDPs, so this is just the parent block, which we know is not a
-        # Disjunct.
-        transBlock = self._add_transformation_block(obj.parent_block())
+        (transBlock,
+         algebraic_constraint) = self._setup_transform_disjunctionData(
+             obj, root_disjunct)
 
-        # Get the (possibly indexed) algebraic constraint for this disjunction
-        algebraic_constraint = self._add_exactly_one_constraint(
-            obj.parent_component(), transBlock)
-
-        # Just because it's unlikely this is what someone meant to do...
-        if len(obj.disjuncts) == 0:
-            raise GDP_Error("Disjunction '%s' is empty. This is "
-                            "likely indicative of a modeling error."  %
-                            obj.getname(fully_qualified=True))
-
-        ## Here's the actual transformation
+        ## Here's the logic for the actual transformation
 
         arg_Ms = self._config.bigM if self._config.bigM is not None else {}
 
@@ -487,7 +477,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         # that we can make sure that we have a term for every active disjunct in
         # the disjunction (falling back on the variable bounds if they are there
         transformed = transBlock.transformed_bound_constraints = Constraint(
-            NonNegativeIntegers, transBlock.lbub)
+            NonNegativeIntegers, ['lb', 'ub'])
         for idx, (v, (lower_dict, upper_dict)) in enumerate(
                 bounds_cons.items()):
             lower_rhs = 0
@@ -550,43 +540,14 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         return transformed_constraints
 
-    def _add_transformation_block(self, block):
-        if block in self._transformation_blocks:
-            return self._transformation_blocks[block]
+    def _add_transformation_block(self, to_block):
+        transBlock, new_block = super(MultipleBigMTransformation,
+                                      self)._add_transformation_block(to_block)
 
-        # make a transformation block on instance where we will store
-        # transformed components
-        transBlockName = unique_component_name(
-            block,
-            '_pyomo_gdp_mbigm_reformulation')
-        transBlock = Block()
-        block.add_component(transBlockName, transBlock)
-        self._transformation_blocks[block] = transBlock
-        transBlock.relaxedDisjuncts = _TransformedDisjunct(NonNegativeIntegers)
-        transBlock.lbub = Set(initialize = ['lb','ub'])
-
-        # Will store M values as we transform
-        transBlock._mbm_values = {}
-
-        return transBlock
-
-    def _add_exactly_one_constraint(self, disjunction, transBlock):
-        # Put XOR constraint on the transformation block
-
-        # check if the constraint already exists
-        if disjunction in self._algebraic_constraints:
-            return self._algebraic_constraints[disjunction]
-
-        # add the XOR constraints to parent block (with unique name) It's
-        # indexed if this is an IndexedDisjunction, not otherwise
-        orC = Constraint(disjunction.index_set())
-        transBlock.add_component(
-            unique_component_name(transBlock,
-                                  disjunction.getname(
-                                      fully_qualified=False) + '_xor'), orC)
-        self._algebraic_constraints[disjunction] = orC
-
-        return orC
+        if new_block:
+            # Will store M values as we transform
+            transBlock._mbm_values = {}
+        return transBlock, new_block
 
     def _get_all_var_objects(self, active_disjuncts):
         # This is actually a general utility for getting all Vars that appear in

@@ -166,7 +166,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         will be valid in the transformed model.
         """
     ))
-    transformation_name = 'Hull'
+    transformation_name = 'hull'
 
     def __init__(self):
         super(Hull_Reformulation, self).__init__(logger)
@@ -235,10 +235,9 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
     def _add_transformation_block(self, to_block):
         transBlock, new_block = super(Hull_Reformulation,
-                                      self)._add_transformation_block(to_block,
-                                                                      'hull')
+                                      self)._add_transformation_block(to_block)
         if not new_block:
-            return transBlock
+            return transBlock, new_block
 
         transBlock.lbub = Set(initialize = ['lb','ub','eq'])
         # Map between disaggregated variables and their
@@ -264,7 +263,7 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
         transBlock._boundsConstraints = Constraint(NonNegativeIntegers,
                                                    transBlock.lbub)
 
-        return transBlock
+        return transBlock, True
 
     def _transform_disjunctionData(self, obj, index, parent_disjunct=None,
                                    root_disjunct=None):

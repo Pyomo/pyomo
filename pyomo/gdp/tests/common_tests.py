@@ -1628,18 +1628,12 @@ def check_Expression(self, transformation, **kwargs):
 
 def check_untransformed_network_raises_GDPError(self, transformation, **kwargs):
     m = models.makeNetworkDisjunction()
-    if transformation == 'bigm':
-        error_name = 'BigM'
-    elif transformation == 'partition_disjuncts':
-        error_name = 'partition_disjuncts'
-    else:
-        error_name = 'Hull'
     self.assertRaisesRegex(
         GDP_Error,
         "No %s transformation handler registered for modeling "
         "components of type <class 'pyomo.network.arc.Arc'>. If "
         "your disjuncts contain non-GDP Pyomo components that require "
-        "transformation, please transform them first." % error_name,
+        "transformation, please transform them first." % transformation,
         TransformationFactory('gdp.%s' % transformation).apply_to,
         m, **kwargs)
 

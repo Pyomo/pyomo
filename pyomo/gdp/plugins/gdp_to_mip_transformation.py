@@ -146,7 +146,7 @@ class GDP_to_MIP_Transformation(Transformation):
         # parent disjunct.
         return get_gdp_tree(self.targets, instance)
 
-    def _add_transformation_block(self, to_block, transformation_name):
+    def _add_transformation_block(self, to_block):
         if to_block in self._transformation_blocks:
             return self._transformation_blocks[to_block], False
 
@@ -154,7 +154,7 @@ class GDP_to_MIP_Transformation(Transformation):
         # on
         transBlockName = unique_component_name(
             to_block,
-            '_pyomo_gdp_%s_reformulation' % transformation_name)
+            '_pyomo_gdp_%s_reformulation' % self.transformation_name)
         self._transformation_blocks[to_block] = transBlock = Block()
         to_block.add_component(transBlockName, transBlock)
         transBlock.relaxedDisjuncts = _TransformedDisjunct(NonNegativeIntegers)
@@ -198,11 +198,12 @@ class GDP_to_MIP_Transformation(Transformation):
             # We want to put all the transformed things on the root
             # Disjunct's parent's block so that they do not get
             # re-transformed
-            transBlock = self._add_transformation_block(
+            transBlock, new_block = self._add_transformation_block(
                 root_disjunct.parent_block())
         else:
             # This isn't nested--just put it on the parent block.
-            transBlock = self._add_transformation_block(obj.parent_block())
+            transBlock, new_block = self._add_transformation_block(
+                obj.parent_block())
 
         xorConstraint = self._add_xor_constraint(obj.parent_component(),
                                                 transBlock)
