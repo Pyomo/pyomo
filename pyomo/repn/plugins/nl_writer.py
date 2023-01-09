@@ -587,6 +587,13 @@ class _NLWriter_impl(object):
         linear_cons = []
         n_ranges = 0
         n_equality = 0
+        n_complementarity_nonlin = 0
+        n_complementarity_lin = 0
+        # TODO: update the writer to tabulate and report the range and
+        # nzlb values.  Low priority, as they do not appear to be
+        # required for solvers like PATH.
+        n_complementarity_range = 0
+        n_complementarity_nz_var_lb = 0
         for con in model.component_data_objects(
                 Constraint, active=True, sort=sorter):
             if with_debug_timing and con.parent_component() is not last_parent:
@@ -608,9 +615,23 @@ class _NLWriter_impl(object):
             elif _type == 0:
                 n_ranges += 1
             elif _type == 3: #and self.config.skip_trivial_constraints:
-                # FIXME: historically the NL writer was
-                # hard-coded to skip all unbounded constraints
                 continue
+                pass
+            # FIXME: this is a HACK to be compatible with the NLv1
+            # writer.  In the future, this writer should be expanded to
+            # look for and process Complementarity components (assuming
+            # that they are in an acceptable form).
+            if hasattr(con, '_complementarity'):
+                _type = 5
+                # we are going to pass the complementarity type and the
+                # corresponding variable id() as the "lb" and "ub" for
+                # the range.
+                lb = con._complementarity
+                ub = con._vid
+                if expr.nonlinear:
+                    n_complementarity_nonlin += 1
+                else:
+                    n_complementarity_lin += 1
             if expr.nonlinear:
                 constraints.append((con, expr, _type, lb, ub))
             elif expr.linear:
@@ -963,10 +984,15 @@ class _NLWriter_impl(object):
             "# nonlinear constrs, objs; ccons: lin, nonlin, nd, nzlb\n"
             % ( n_nonlinear_cons,
                 n_nonlinear_objs,
-                0, # ccons_lin,
-                0, # ccons_nonlin,
-                0, # ccons_nd,
-                0, # ccons_nzlb,
+                # num linear complementarity constraints
+                n_complementarity_lin,
+                # num nonlinear complementarity constraints
+                n_complementarity_nonlin,
+                # num complementarities involving double inequalities
+                n_complementarity_range,
+                # num complemented variables with either a nonzero lower
+                # bound or any upper bound (excluding ranges)
+                n_complementarity_nz_var_lb,
             ))
         #
         # LINE 4
@@ -1184,6 +1210,9 @@ class _NLWriter_impl(object):
                 ostream.write(f"2 {info[3]}{row_comments[row_idx]}\n")
             elif i == 0: # lb <= body <= ub
                 ostream.write(f"0 {info[3]} {info[4]}{row_comments[row_idx]}\n")
+            elif i == 5: # complementarity
+                ostream.write(f"5 {info[3]} {1+column_order[info[4]]}"
+                              f"{row_comments[row_idx]}\n")
             else: # i == 3; unbounded
                 ostream.write(f"3{row_comments[row_idx]}\n")
 
