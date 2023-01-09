@@ -70,12 +70,6 @@ class GDP_to_MIP_Transformation(Transformation):
         self._generate_debug_messages = False
         self._transformation_blocks = {}
         self._algebraic_constraints = {}
-        # [ESJ 1/6/23]: We don't accept any kwds in the constructor, but we do
-        # establish the ConfigDict. This isn't brilliant--it allows GDPopt to
-        # transform ConstraintDatas by directly calling bigm's
-        # _transform_constraint, which is pretty hacky and should be revisited
-        # in the future...
-        self._config = self.CONFIG()
 
     def _apply_to(self, instance, **kwds):
         try:
@@ -83,9 +77,8 @@ class GDP_to_MIP_Transformation(Transformation):
         finally:
             self._transformation_blocks.clear()
             self._algebraic_constraints.clear()
-            # return to defaults. Again--we should really work towards a design
-            # where we delete this instead.
-            self._config = self.CONFIG()
+            if hasattr(self, '_config'):
+                del self._config
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
