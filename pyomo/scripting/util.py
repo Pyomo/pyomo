@@ -277,8 +277,8 @@ def create_model(data):
         else:
             model_options = data.options.model.options.value()
             tick = time.time()
-            model = ep.service().apply( options = Bunch(*data.options),
-                                       model_options=Bunch(*model_options) )
+            model = ep.service().apply( options = Bunch(**data.options),
+                                       model_options=Bunch(**model_options) )
             if data.options.runtime.report_timing is True:
                 print("      %6.2f seconds required to construct instance" % (time.time() - tick))
                 data.local.time_initial_import = None

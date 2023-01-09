@@ -1751,7 +1751,7 @@ class Set(IndexedComponent):
            domains and provide callback functions to validate set
            members and to filter (ignore) potential members.
         2. Set expressions.  Operations on Set objects (&,|,*,-,^)
-           produce Set expressions taht preserve their references to the
+           produce Set expressions that preserve their references to the
            original Set objects so that updating the argument Sets
            implicitly updates the Set operator instance.
         3. Support for set operations with RangeSet instances (both
