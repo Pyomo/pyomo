@@ -186,18 +186,18 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         # filter out inactive targets and handle case where targets aren't
         # specified.
-        self._filter_targets(instance)
+        targets = self._filter_targets(instance)
         # transform any logical constraints that might be anywhere on the stuff
         # we're about to transform. We do this before we preprocess targets
         # because we will likely create more disjunctive components that will
         # need transformation.
-        self._transform_logical_constraints(instance)
+        self._transform_logical_constraints(instance, targets)
         # We don't allow nested, so it doesn't much matter which way we sort
         # this. But transforming from leaf to root makes the error checking for
         # complaining about nested smoother, so we do that. We have to transform
         # a Disjunction at a time because, more similarly to hull than bigm, we
         # need information from the other Disjuncts in the Disjunction.
-        gdp_tree = self._get_gdp_tree_from_targets(instance)
+        gdp_tree = self._get_gdp_tree_from_targets(instance, targets)
         preprocessed_targets = gdp_tree.reverse_topological_sort()
 
         for t in preprocessed_targets:

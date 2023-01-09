@@ -214,13 +214,13 @@ class Hull_Reformulation(GDP_to_MIP_Transformation):
 
         # filter out inactive targets and handle case where targets aren't
         # specified.
-        self._filter_targets(instance)
+        targets = self._filter_targets(instance)
         # transform logical constraints based on targets
-        self._transform_logical_constraints(instance)
+        self._transform_logical_constraints(instance, targets)
 
         # Preprocess in order to find what disjunctive components need
         # transformation
-        gdp_tree = self._get_gdp_tree_from_targets(instance)
+        gdp_tree = self._get_gdp_tree_from_targets(instance, targets)
         preprocessed_targets = gdp_tree.topological_sort()
         self._targets_set = set(preprocessed_targets)
 

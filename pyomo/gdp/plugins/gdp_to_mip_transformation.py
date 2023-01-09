@@ -79,8 +79,6 @@ class GDP_to_MIP_Transformation(Transformation):
             self._algebraic_constraints.clear()
             if hasattr(self, '_config'):
                 del self._config
-            if hasattr(self, 'targets'):
-                del self.targets
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
@@ -93,13 +91,13 @@ class GDP_to_MIP_Transformation(Transformation):
         self._config.set_value(kwds)
         self._generate_debug_messages = is_debug_set(self.logger)
 
-    def _transform_logical_constraints(self, instance):
+    def _transform_logical_constraints(self, instance, targets):
         # transform any logical constraints that might be anywhere on the stuff
         # we're about to transform. We do this before we preprocess targets
         # because we will likely create more disjunctive components that will
         # need transformation.
         disj_targets = []
-        for t in self.targets:
+        for t in targets:
             disj_datas = t.values() if t.is_indexed() else [t,]
             if t.ctype is Disjunct:
                 disj_targets.extend(disj_datas)
@@ -108,7 +106,7 @@ class GDP_to_MIP_Transformation(Transformation):
                                      disjunction.disjuncts])
         TransformationFactory('contrib.logical_to_disjunctive').apply_to(
             instance,
-            targets=[blk for blk in self.targets if blk.ctype is Block] +
+            targets=[blk for blk in targets if blk.ctype is Block] +
             disj_targets)
 
     def _filter_targets(self, instance):
@@ -132,9 +130,9 @@ class GDP_to_MIP_Transformation(Transformation):
                         f'target ({t.name}). Skipping.')
                 else:
                     yield t
-        self.targets = list(_filter_inactive(targets))
+        return list(_filter_inactive(targets))
 
-    def _get_gdp_tree_from_targets(self, instance):
+    def _get_gdp_tree_from_targets(self, instance, targets):
         knownBlocks = {}
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that they appear before disjunctions that are
@@ -143,7 +141,7 @@ class GDP_to_MIP_Transformation(Transformation):
         # more than once: It is most efficient to build nested transformed
         # constraints when we already have the disaggregated variables of the
         # parent disjunct.
-        return get_gdp_tree(self.targets, instance)
+        return get_gdp_tree(targets, instance)
 
     def _add_transformation_block(self, to_block):
         if to_block in self._transformation_blocks:

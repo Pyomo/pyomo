@@ -152,13 +152,13 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
 
         # filter out inactive targets and handle case where targets aren't
         # specified.
-        self._filter_targets(instance)
+        targets = self._filter_targets(instance)
         # transform logical constraints based on targets
-        self._transform_logical_constraints(instance)
+        self._transform_logical_constraints(instance, targets)
         # we need to preprocess targets to make sure that if there are any
         # disjunctions in targets that their disjuncts appear before them in
         # the list.
-        gdp_tree = self._get_gdp_tree_from_targets(instance)
+        gdp_tree = self._get_gdp_tree_from_targets(instance, targets)
         preprocessed_targets = gdp_tree.reverse_topological_sort()
 
         bigM = self._config.bigM
