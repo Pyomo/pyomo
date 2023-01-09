@@ -1582,6 +1582,16 @@ class TestConfigOptions(unittest.TestCase):
         m = self.make_model()
 
         opt = SolverFactory('gdpopt')
+
+        ## DEBUG
+        print('glpk version')
+        print(SolverFactory('glpk').version())
+        print('ipopt version')
+        print(SolverFactory('ipopt').version())
+        
+        opt.solve(m, algorithm='LBB', tee=True, mip_solver=mip_solver,
+                  nlp_solver=nlp_solver)
+
         buf = StringIO()
         with redirect_stdout(buf):
             opt.solve(m, algorithm='RIC', tee=True, mip_solver=mip_solver,
