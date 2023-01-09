@@ -25,6 +25,7 @@ _norm_comment = re.compile(r'\s*#\s*')
 _strip_comment = re.compile(r'\s*#.*')
 _norm_negation = re.compile(r'(?m)^o2(\s*#\s*\*)?\nn-1(.0)?\s*\n')
 _norm_timesone = re.compile(r'(?m)^o2(\s*#\s*\*)?\nn1(.0)?\s*\n')
+_norm_double_negation = re.compile(r'(?m)^o16(\s*#\s*-)?\no16(\s*#\s*-)?\n')
 
 def _compare_floats(base, test, abstol=1e-14, reltol=1e-14):
     base = base.split()
@@ -67,6 +68,8 @@ def _update_subsets(subset, base, test):
 def _preprocess_data(data):
     # Normalize negation (convert " * -1" to the negation operator)
     data = _norm_negation.sub(template.negation, data)
+    # Normalize double negation (convert "-(-x)" to x)
+    data = _norm_double_negation.sub('', data)
     # Remove multiplication by 1
     data = _norm_timesone.sub('', data)
     # Normalize consecutive whitespace to a single space
