@@ -79,6 +79,8 @@ class GDP_to_MIP_Transformation(Transformation):
             self._algebraic_constraints.clear()
             if hasattr(self, '_config'):
                 del self._config
+            if hasattr(self, 'targets'):
+                del self.targets
 
     def _apply_to_impl(self, instance, **kwds):
         if not instance.ctype in (Block, Disjunct):
