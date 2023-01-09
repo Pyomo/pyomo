@@ -138,3 +138,8 @@ def load_and_compare_nl_baseline(baseline, testfile, version='nl'):
     return nl_diff(
         *load_nl_baseline(baseline, testfile, version), baseline, testfile
     )
+
+if __name__ == '__main__':
+    import sys
+    base, test = load_and_compare_nl_baseline(sys.argv[1], sys.argv[2])
+    sys.exit(1 if base or test else 0)
