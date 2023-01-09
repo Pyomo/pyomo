@@ -9,7 +9,6 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-from functools import wraps
 import itertools
 import logging
 
@@ -32,10 +31,7 @@ from pyomo.gdp.plugins.bigm_mixin import (
 from pyomo.gdp.plugins.gdp_to_mip_transformation import (
     GDP_to_MIP_Transformation)
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
-from pyomo.gdp.util import (
-    get_gdp_tree, get_src_constraint, get_src_disjunct,
-    get_src_disjunction, get_transformed_constraints, _to_dict
-)
+from pyomo.gdp.util import get_gdp_tree,_to_dict
 from pyomo.network import Port
 from pyomo.opt import SolverFactory, TerminationCondition
 from pyomo.repn import generate_standard_repn
@@ -288,40 +284,10 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                                                                   transBlock)
 
         # Transform everything on the disjunct
-        self._transform_block_components(obj, active_disjuncts, Ms)
+        self._transform_block_components(obj, obj, active_disjuncts, Ms)
 
         # deactivate disjunct so writers can be happy
         obj._deactivate_without_fixing_indicator()
-
-    def _transform_block_components(self, disjunct, active_disjuncts, Ms):
-        # add references to all local variables on block (including the
-        # indicator_var). We won't have to do this when the writers can find
-        # Vars not in the active subtree.
-        varRefBlock = disjunct._transformation_block().localVarReferences
-        for v in disjunct.component_objects(Var, descend_into=Block,
-                                            active=None):
-            varRefBlock.add_component(unique_component_name(
-                varRefBlock, v.getname(fully_qualified=False)), Reference(v))
-
-        # Look through the component map of block and transform everything we
-        # have a handler for. Yell if we don't know how to handle it. (Note that
-        # because we only iterate through active components, this means
-        # non-ActiveComponent types cannot have handlers.)
-        for obj in disjunct.component_objects(active=True, descend_into=Block):
-            handler = self.handlers.get(obj.ctype, None)
-            if not handler:
-                if handler is None:
-                    raise GDP_Error(
-                        "No muliple bigM transformation handler registered "
-                        "for modeling components of type %s. If your "
-                        "disjuncts contain non-GDP Pyomo components that "
-                        "require transformation, please transform them first."
-                        % obj.ctype )
-                continue
-            # obj is what we are transforming, we pass disjunct
-            # through so that we will have access to the indicator
-            # variables down the line.
-            handler(obj, disjunct, active_disjuncts, Ms)
 
     def _warn_for_active_suffix(self, obj, disjunct, active_disjuncts, Ms):
         raise GDP_Error("Found active Suffix '{0}' on Disjunct '{1}'. "
@@ -626,21 +592,20 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
     # These are all functions to retrieve transformed components from
     # original ones and vice versa.
 
-    @wraps(get_src_disjunct)
-    def get_src_disjunct(self, transBlock):
-        return get_src_disjunct(transBlock)
-
-    @wraps(get_src_disjunction)
-    def get_src_disjunction(self, xor_constraint):
-        return get_src_disjunction(xor_constraint)
-
-    @wraps(get_src_constraint)
     def get_src_constraints(self, transformedConstraint):
-        return get_src_constraint(transformedConstraint)
+        """Return the original Constraints whose transformed counterpart is
+        transformedConstraint
 
-    @wraps(get_transformed_constraints)
-    def get_transformed_constraints(self, srcConstraint):
-        return get_transformed_constraints(srcConstraint)
+        Parameters
+        ----------
+        transformedConstraint: Constraint, which must be a component on one of
+        the BlockDatas in the relaxedDisjuncts Block of
+        a transformation block
+        """
+        # This is silly, but we rename this function for multiple bigm because
+        # transformed constraints have multiple source constraints.
+        return super(MultipleBigMTransformation, self).get_src_constraint(
+            transformedConstraint)
 
     def get_all_M_values(self, model):
         """Returns a dictionary mapping each constraint, disjunct pair (where
