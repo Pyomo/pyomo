@@ -107,7 +107,7 @@ def minlp_config_block(init=False):
         None,
     )).declare_as_argument(dest='symbolic_solver_labels')
     model.declare('file determinism', ConfigValue(
-        1,
+        None,
         int,
         'When interfacing with a solver using file based I/O, set '
         'the effort level for ensuring the file creation process is '

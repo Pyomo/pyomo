@@ -444,7 +444,7 @@ def create_model(data):
         io_options = {}
         if data.options.model.symbolic_solver_labels:
             io_options['symbolic_solver_labels'] = True
-        if data.options.model.file_determinism != 1:
+        if data.options.model.file_determinism is not None:
             io_options['file_determinism'] = data.options.model.file_determinism
         (fname, smap_id) = instance.write(filename=fname,
                                           format=format,
@@ -550,7 +550,7 @@ def apply_optimizer(data, instance=None):
             keywords['keepfiles'] = True
         if data.options.model.symbolic_solver_labels:
             keywords['symbolic_solver_labels'] = True
-        if data.options.model.file_determinism != 1:
+        if data.options.model.file_determinism is not None:
             keywords['file_determinism'] = data.options.model.file_determinism
         keywords['tee'] = data.options.runtime.stream_output
         keywords['timelimit'] = getattr(data.options.solvers[0].options, 'timelimit', 0)
