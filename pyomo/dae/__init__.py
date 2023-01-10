@@ -9,7 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# Import the key modeling componente here...
+# Import the key modeling components here...
 
 from pyomo.dae.contset import ContinuousSet
 from pyomo.dae.diffvar import DAE_Error, DerivativeVar
