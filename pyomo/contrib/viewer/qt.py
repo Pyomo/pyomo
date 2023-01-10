@@ -21,88 +21,116 @@
 #  ___________________________________________________________________________
 
 """
-Import PyQt5 if available, then try PyQt4, then, if all else fails, use some
-dummy classes to allow some testing. If anything fails to import, the exception
-is logged.  That should make it clear exacly what's missing, but it could be a
-little annoying if you are using PyQt4 or don't need jupyter qtconsole.  In the
-future, will probably cut PyQt4 support, so it will be less of an issue.
+Try to import PySide6, which is the current official Qt 6 Python interface. Then, 
+try PyQt5 if that doesn't work. If no compatable Qt Python interface is found,
+use some dummy classes to allow some testing.
 """
 __author__ = "John Eslick"
 
 import logging
+
 _log = logging.getLogger(__name__)
+
+qt_available = False
 
 
 class DummyQtCore(object):
     """
     A dummy QtCore class to allow some testing without PyQt
     """
+
     class QModelIndex(object):
         pass
+
     class Qt(object):
-        class DisplayRole(object):
-            pass
-        class EditRole(object):
-            pass
+        pass
+
 
 class DummyQAbstractItemModel(object):
     """
     A dummy QAbstractItemModel class to allow some testing without PyQt
     """
+
     def __init__(*args, **kwargs):
         pass
+
 
 class DummyQAbstractTableModel(object):
     """
     A dummy QAbstractTableModel class to allow some testing without PyQt
     """
+
     def __init__(*args, **kwargs):
         pass
 
-qt_available = False
-qt_import_errors = []
 
 try:
-    from PyQt5 import QtCore
+    from PySide6 import QtCore
+
+    qt_available = "PySide6"
 except:
-    qt_import_errors.append("Cannot import PyQt5.QtCore")
+    _log.error("PySide6 could not be impoerted, trying PyQt5")
     try:
-        from PyQt4 import QtCore
+        from PyQt5 import QtCore
+
+        qt_available = "PyQt5"
     except:
-        qt_import_errors.append("Cannot import PyQt4.QtCore")
-    else:
-        try:
-            from PyQt4.QtGui import (QAbstractItemView, QFileDialog, QMainWindow,
-                                     QMessageBox, QMdiArea, QApplication,
-                                     QTableWidgetItem, QColor, QAction,
-                                     QStatusBar, QLineEdit, QItemEditorFactory,
-                                     QItemEditorCreatorBase, QStyledItemDelegate,
-                                     QItemDelegate, QComboBox)
-            from PyQt4.QtCore import (QAbstractItemModel, QAbstractTableModel,
-                                      QVariant)
-            import PyQt4.QtCore as QtCore
-            from PyQt4 import uic
-            qt_available = True
-        except:
-            qt_import_errors.append("Cannot import PyQt4")
-else:
-    try:
-        from PyQt5.QtWidgets import (QAbstractItemView, QFileDialog, QMainWindow,
-                                     QMessageBox, QMdiArea, QApplication,
-                                     QTableWidgetItem, QAction, QStatusBar,
-                                     QLineEdit, QItemEditorFactory,
-                                     QItemEditorCreatorBase, QStyledItemDelegate,
-                                     QItemDelegate, QComboBox)
-        from PyQt5.QtGui import QColor
-        from PyQt5.QtCore import (QAbstractItemModel, QAbstractTableModel,
-                                  QVariant)
-        import PyQt5.QtCore as QtCore
-        from PyQt5 import uic
-        qt_available = True
-    except:
-        qt_import_errors.append("Cannot import PyQt5")
+        _log.error("PyQt5 could not be impoerted")
+        pass
+
+if qt_available == "PyQt5":
+    from PyQt5.QtWidgets import (
+        QAbstractItemView,
+        QFileDialog,
+        QMainWindow,
+        QMessageBox,
+        QMdiArea,
+        QApplication,
+        QTableWidgetItem,
+        QAction,
+        QStatusBar,
+        QLineEdit,
+        QItemEditorFactory,
+        QItemEditorCreatorBase,
+        QStyledItemDelegate,
+        QItemDelegate,
+        QComboBox,
+    )
+    from PyQt5.QtGui import QColor
+    from PyQt5.QtCore import QAbstractItemModel, QAbstractTableModel
+    import PyQt5.QtCore as QtCore
+    from PyQt5.QtCore import QMetaType, Qt, pyqtSignal as Signal
+
+    from PyQt5 import uic
+
+elif qt_available == "PySide6":
+    from PySide6.QtWidgets import (
+        QAbstractItemView,
+        QFileDialog,
+        QMainWindow,
+        QMessageBox,
+        QMdiArea,
+        QApplication,
+        QTableWidgetItem,
+        QStatusBar,
+        QLineEdit,
+        QItemEditorFactory,
+        QItemEditorCreatorBase,
+        QStyledItemDelegate,
+        QItemDelegate,
+        QComboBox,
+    )
+
+    from PySide6.QtGui import QColor, QAction
+    from PySide6.QtCore import QAbstractItemModel, QAbstractTableModel
+    import PySide6.QtCore as QtCore
+    from PySide6.QtCore import Qt, Signal, QMetaType
+
+    from PySide6 import QtUiTools as uic
+
 
 if not qt_available:
+    # Dummy classes allow some testing without PyQt
     QAbstractItemModel = DummyQAbstractItemModel
     QAbstractTableModel = DummyQAbstractTableModel
     QtCore = DummyQtCore

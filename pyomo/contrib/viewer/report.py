@@ -24,6 +24,7 @@ from pyomo.common.collections import ComponentSet
 from pyomo.core.expr.current import identify_variables
 from pyomo.environ import Constraint, value
 
+
 def value_no_exception(c, div0=None):
     """
     Get value and ignore most exceptions (including division by 0).
@@ -37,6 +38,7 @@ def value_no_exception(c, div0=None):
         return value(c, exception=False)
     except ZeroDivisionError:
         return div0
+
 
 def get_residual(ui_data, c):
     """
@@ -66,6 +68,7 @@ def get_residual(ui_data, c):
         return v - ub
     return 0.0
 
+
 def active_equalities(blk):
     """
     Generator returning active equality constraints in a model.
@@ -82,6 +85,7 @@ def active_equalities(blk):
         except ZeroDivisionError:
             pass
 
+
 def active_constraint_set(blk):
     """
     Return a set of active constraints in a model.
@@ -92,6 +96,7 @@ def active_constraint_set(blk):
         (ComponentSet): Active equality constraints
     """
     return ComponentSet(blk.component_data_objects(Constraint, active=True))
+
 
 def active_equality_set(blk):
     """
@@ -104,6 +109,7 @@ def active_equality_set(blk):
     """
     return ComponentSet(active_equalities(blk))
 
+
 def count_free_variables(blk):
     """
     Count free variables that are in active equality constraints.  Ignore
@@ -111,17 +117,20 @@ def count_free_variables(blk):
     """
     return len(free_variables_in_active_equalities_set(blk))
 
+
 def count_equality_constraints(blk):
     """
     Count active equality constraints.
     """
     return len(active_equality_set(blk))
 
+
 def count_constraints(blk):
     """
     Count active constraints.
     """
     return len(active_constraint_set(blk))
+
 
 def degrees_of_freedom(blk):
     """
@@ -133,6 +142,7 @@ def degrees_of_freedom(blk):
         (int): Number of degrees of freedom
     """
     return count_free_variables(blk) - count_equality_constraints(blk)
+
 
 def free_variables_in_active_equalities_set(blk):
     """

@@ -3,7 +3,9 @@
 ## Overview
 This is an interactive tree viewer for Pyomo models.  You can inspect and change
 values, bound, fixed, and active attributes of Pyomo components.  It also
-calculates and displays constraint and named expression values.
+calculates and displays constraint and named expression values. When used with
+Jupyter, the graphical elements are run within the Jupyter kernel, so the UI can
+be extended at runtime. 
 
 ## Installation
 
@@ -12,8 +14,8 @@ calculates and displays constraint and named expression values.
 The model viewer has a few additional Python package requirements beyond the
 standard Pyomo install.
 
-The standard way to use the model viewer is from IPython or Jupyter. **PyQt5**
-is required, and to use the stand-alone viewer, Jupyter **qtconsole** is
+The standard way to use the model viewer is from IPython or Jupyter. **Pyside6** or 
+**PyQt5** is required, and to use the stand-alone viewer, Jupyter **qtconsole** is
 required.
 
 ### Install
@@ -107,3 +109,8 @@ You can even add widgets and customize the interface while it is running.
 6. Save/Load
 7. Additional useful subwindows (maybe data frame views and plotting for
   multiple runs)?
+
+## Known Bugs
+
+Sometimes the QtConsole in the stand-alone model viewer does not display the
+first prompt until you press enter. 

@@ -23,8 +23,6 @@
 # based on the example code at:
 #  https://github.com/jupyter/qtconsole/blob/master/examples/embed_qtconsole.py
 
-from __future__ import print_function
-
 import os
 import sys
 import time
@@ -38,11 +36,13 @@ if qt_available:
     try:
         from qtconsole.rich_jupyter_widget import RichJupyterWidget
         from qtconsole.manager import QtKernelManager
+
         qtconsole_available = True
     except ImportError:
         pass
 
 if qtconsole_available:
+
     def _start_kernel():
         km = QtKernelManager(autorestart=False)
         km.start_kernel()
@@ -56,16 +56,20 @@ if qtconsole_available:
         # and whatever we may want to do to set up the environment just create
         # an empty model, so you can start the model viewer right away.  You
         # can add to the model if you want to use it, or create a new one.
-        kc.execute("""
+        kc.execute(
+            """
 from pyomo.contrib.viewer.ui import get_mainwindow
 import pyomo.environ as pyo
-model = pyo.ConcreteModel("Default Model")""", silent=True)
+model = pyo.ConcreteModel("Default Model")""",
+            silent=True,
+        )
         return km, kc
 
     class MainWindow(QMainWindow):
         """A window that contains a single Qt console."""
+
         def __init__(self, kernel_manager, kernel_client):
-            super(MainWindow, self).__init__()
+            super().__init__()
             self.jupyter_widget = RichJupyterWidget()
             self.jupyter_widget.kernel_manager = kernel_manager
             self.jupyter_widget.kernel_client = kernel_client
@@ -82,8 +86,8 @@ model = pyo.ConcreteModel("Default Model")""", silent=True)
             hide_ui_act.triggered.connect(self.hide_ui)
             wdir_set_act.triggered.connect(self.wdir_select)
             run_script_act.triggered.connect(self.run_script)
-            file_menu = menubar.addMenu('&File')
-            view_menu = menubar.addMenu('&View')
+            file_menu = menubar.addMenu("&File")
+            view_menu = menubar.addMenu("&View")
             file_menu.addAction(wdir_set_act)
             file_menu.addAction(run_script_act)
             file_menu.addAction(exit_act)
@@ -108,8 +112,8 @@ model = pyo.ConcreteModel("Default Model")""", silent=True)
             """
             if wdir is None:
                 # Show a dialog box for user to select working directory
-                wd = QFileDialog(self, 'Working Directory', os.getcwd())
-                wd.setFileMode(QFileDialog.DirectoryOnly)
+                wd = QFileDialog(self, "Working Directory", os.getcwd())
+                wd.setFileMode(QFileDialog.Directory)
             if wd.exec_() == QFileDialog.Accepted:
                 wdir = wd.selectedFiles()[0]
             else:
@@ -117,8 +121,7 @@ model = pyo.ConcreteModel("Default Model")""", silent=True)
             # Change directory if one was selected
             if wdir is not None:
                 os.chdir(wdir)
-                self.jupyter_widget.kernel_client.execute(
-                    "%cd {}".format(wdir))
+                self.jupyter_widget.kernel_client.execute("%cd {}".format(wdir))
             return wdir
 
         def run_script(self, checked=False, filename=None):
@@ -135,24 +138,20 @@ model = pyo.ConcreteModel("Default Model")""", silent=True)
             if filename is None:
                 # Show a dialog box for user to select working directory
                 filename = QFileDialog.getOpenFileName(
-                    self,
-                    'Run Script',
-                    os.getcwd(),
-                    "py (*.py);;text (*.txt);;all (*)")
-                if filename[0]: # returns a tuple of file and filter or ("","")
+                    self, "Run Script", os.getcwd(), "py (*.py);;text (*.txt);;all (*)"
+                )
+                if filename[0]:  # returns a tuple of file and filter or ("","")
                     filename = filename[0]
                 else:
                     filename = None
             # Run script if one was selected
             if filename is not None:
-                self.jupyter_widget.kernel_client.execute(
-                    "%run {}".format(filename))
+                self.jupyter_widget.kernel_client.execute("%run {}".format(filename))
             return filename
 
         def hide_ui(self):
             if self._ui_created:
-                self.jupyter_widget.kernel_client.execute(
-                    "ui.hide()", silent=True)
+                self.jupyter_widget.kernel_client.execute("ui.hide()", silent=True)
 
         def show_ui(self):
             kc = self.jupyter_widget.kernel_client
@@ -160,21 +159,21 @@ model = pyo.ConcreteModel("Default Model")""", silent=True)
                 kc.execute("ui.show()", silent=True)
             else:
                 self._ui_created = True
-                kc.execute("ui, model = get_mainwindow(model=model)",
-                           silent=True)
+                kc.execute("ui, model = get_mainwindow(model=model)", silent=True)
 
         def shutdown_kernel(self):
-            print('Shutting down kernel...')
+            print("Shutting down kernel...")
             self.jupyter_widget.kernel_client.stop_channels()
             self.jupyter_widget.kernel_manager.shutdown_kernel()
 
         def mrcv(self, m):
             try:
-                stat = m['content']['execution_state']
+                stat = m["content"]["execution_state"]
                 if stat:
                     self.status_bar.showMessage("Kernel Status: {}".format(stat))
             except:
                 pass
+
 
 def main(*args):
     if not qtconsole_available:
@@ -182,18 +181,20 @@ def main(*args):
         return
     km, kc = _start_kernel()
     app = QApplication(sys.argv)
+    time.sleep(1)
     window = MainWindow(kernel_manager=km, kernel_client=kc)
     window.show()
     app.aboutToQuit.connect(window.shutdown_kernel)
     app.exec_()
 
-# Add a subparser for the download-extensions command
+
+# Add a subparser for the model-viewer command
 add_subparser(
-    'model-viewer',
+    "model-viewer",
     func=main,
-    help='Run the Pyomo model viewer',
+    help="Run the Pyomo model viewer",
     add_help=False,
-    description='This runs the Pyomo model viewer'
+    description="This runs the Pyomo model viewer",
 )
 
 if __name__ == "__main__":

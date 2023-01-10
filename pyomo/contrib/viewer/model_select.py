@@ -23,8 +23,6 @@
 """
 A simple GUI viewer/editor for Pyomo models.
 """
-from __future__ import division, print_function, absolute_import
-
 __author__ = "John Eslick"
 
 import logging
@@ -34,21 +32,25 @@ _log = logging.getLogger(__name__)
 
 import pyomo.environ as pyo
 from pyomo.contrib.viewer.qt import *
+from pyomo.common.fileutils import this_file_dir
 
-mypath = os.path.dirname(__file__)
+mypath = this_file_dir()
 try:
-    _ModelSelectUI, _ModelSelect = \
-        uic.loadUiType(os.path.join(mypath, "model_select.ui"))
+    _ModelSelectUI, _ModelSelect = uic.loadUiType(
+        os.path.join(mypath, "model_select.ui")
+    )
 except:
     # This lets the file still be imported, but you won't be able to use it
     class _ModelSelectUI(object):
         pass
+
     class _ModelSelect(object):
         pass
 
+
 class ModelSelect(_ModelSelect, _ModelSelectUI):
     def __init__(self, ui_data, parent=None):
-        super(ModelSelect, self).__init__(parent=parent)
+        super().__init__(parent=parent)
         self.setupUi(self)
         self.ui_data = ui_data
         self.closeButton.clicked.connect(self.close)
@@ -63,6 +65,7 @@ class ModelSelect(_ModelSelect, _ModelSelectUI):
 
     def update_models(self):
         import __main__
+
         s = __main__.__dict__
         keys = []
         for k in s:
