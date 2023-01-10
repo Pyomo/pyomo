@@ -366,6 +366,7 @@ class Test_calc_var(unittest.TestCase):
             "domain Binary.")
         self.assertAlmostEqual(value(m.x), 3.5, 3)
 
+    @unittest.skipUnless(differentiate_available, "this test requires sympy")
     def test_nonlinear_overflow(self):
         # Regression check to make sure calculate_variable_from_constraint
         # can handle extreme non-linear cases where assuming linear behaviour
