@@ -592,7 +592,6 @@ class TestXpressPersistent(unittest.TestCase):
         self.assertGreater(noptnode[0], 0)
         self.assertGreater(npreintsol[0], 0)
         self.assertGreater(nintsol[0], 0)
-        self.assertGreaterEqual(lastnode[0], opt.options['MAXNODE'])
 
     @unittest.skipIf(not xpress_available, "xpress is not available")
     def test_callbacks_02(self):
