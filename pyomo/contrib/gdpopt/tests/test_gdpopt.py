@@ -1595,7 +1595,7 @@ class TestConfigOptions(unittest.TestCase):
         buf = StringIO()
         with redirect_stdout(buf):
             opt.solve(m, algorithm='LBB', tee=True, mip_solver=mip_solver,
-                      nlp_solver=nlp_solver)
+                      nlp_solver=nlp_solver, minlp_solver='gurobi')
         self.assertIn('using LBB algorithm', buf.getvalue())
         ## DEBUG
         opt.solve(m, algorithm='LBB', tee=True, mip_solver=mip_solver,
