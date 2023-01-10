@@ -127,10 +127,15 @@ class TestJson(BaseTester):
                 f1_filtered = []
                 f2_filtered = []
                 for item1, item2 in zip_longest(f1_contents, f2_contents):
-                    if not item1.startswith('['):
+                    if not item1:
+                        f1_filtered.append(item1)
+                    elif not item1.startswith('['):
                         items1 = item1.strip().split()
-                        items2 = item2.strip().split()
                         f1_filtered.append(self.filter_items(items1))
+                    if not item2:
+                        f2_filtered.append(item2)
+                    elif not item2.startswith('['):
+                        items2 = item2.strip().split()
                         f2_filtered.append(self.filter_items(items2))
                 self.assertStructuredAlmostEqual(f2_filtered, f1_filtered,
                                                  abstol=1e-6,
