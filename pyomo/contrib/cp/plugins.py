@@ -9,9 +9,7 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-# Import the key modeling components here...
-
-from pyomo.dae.contset import ContinuousSet
-from pyomo.dae.diffvar import DAE_Error, DerivativeVar
-from pyomo.dae.integral import Integral
-from pyomo.dae.simulator import Simulator
+def load():
+    from . import interval_var
+    from .repn import docplex_writer
+    from .transform import logical_to_disjunctive_program

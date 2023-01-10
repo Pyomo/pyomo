@@ -165,16 +165,17 @@ def add_boolean_variable_lists(util_block):
             util_block.non_indicator_boolean_variable_list.append(v)
 
 # For the discrete problem, we want the corresponding binaries for all of the
-# BooleanVars. This must be called after logical_to_linear has been called.
+# BooleanVars. This must be called after logical_to_disjunctive has been called.
 def add_transformed_boolean_variable_list(util_block):
     util_block.transformed_boolean_variable_list = [
         v.get_associated_binary() for v in util_block.boolean_variable_list]
 
 def get_subproblem(original_model, util_block):
     """Clone the original, and reclassify all the Disjuncts to Blocks.
-    We'll also call logical_to_linear in case any of the indicator_vars are
-    used in logical constraints and to make sure that the rest of the model is
-    algebraic (assuming it was a proper GDP to begin with).
+    We'll also call logical_to_disjunctive and bigm the disjunctive parts in
+    case any of the indicator_vars are used in logical constraints and to make
+    sure that the rest of the model is algebraic (assuming it was a proper
+    GDP to begin with).
     """
     subproblem = original_model.clone()
     subproblem.name = subproblem.name + ": subproblem"
@@ -203,7 +204,9 @@ def get_subproblem(original_model, util_block):
 
         disjunction.deactivate()
 
-    TransformationFactory('core.logical_to_linear').apply_to(subproblem)
+    TransformationFactory('contrib.logical_to_disjunctive').apply_to(subproblem)
+    # transform any of the Disjuncts we created above with bigm.
+    TransformationFactory('gdp.bigm').apply_to(subproblem)
 
     subproblem_util_block = subproblem.component(util_block.local_name)
     save_initial_values(subproblem_util_block)
