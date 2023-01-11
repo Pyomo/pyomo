@@ -841,6 +841,44 @@ class TestPyomoUnit(unittest.TestCase):
         self.assertIs(q.__class__, Quantity)
         self.assertAlmostEqual(q, 3 * _pint.kg)
 
+    def test_var_set_value(self):
+        # Tests for #1570
+        m = ConcreteModel()
+
+        # Un-united variables just strip the units
+        m.x = Var()
+        m.x.value = 10
+        self.assertEqual(m.x.value, 10)
+        m.x.value = 20*units.kg
+        self.assertEqual(m.x.value, 20)
+        m.x.value = 30*units.dimensionless
+        self.assertEqual(m.x.value, 30)
+        del m.x
+
+        # Dimensionless variables require dimensionless args
+        m.x = Var(units=units.dimensionless)
+        m.x.value = 10
+        self.assertEqual(m.x.value, 10)
+        with self.assertRaisesRegex(
+                UnitsError, 'Cannot convert kg to dimensionless'):
+            m.x.value = 20*units.kg
+        self.assertEqual(m.x.value, 10)
+        m.x.value = 30*units.dimensionless
+        self.assertEqual(m.x.value, 30)
+        del m.x
+
+        # Dimensioned variables require bare or dimensioned args
+        m.x = Var(units=units.gram)
+        m.x.value = 10
+        self.assertEqual(m.x.value, 10)
+        m.x.value = 20*units.kg
+        self.assertEqual(m.x.value, 20000)
+        with self.assertRaisesRegex(
+                UnitsError, 'Cannot convert dimensionless to g'):
+            m.x.value = 30*units.dimensionless
+        self.assertEqual(m.x.value, 20000)
+        del m.x
+
 
 if __name__ == "__main__":
     unittest.main()
