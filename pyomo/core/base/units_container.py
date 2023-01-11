@@ -127,6 +127,7 @@ pint_module, pint_available = attempt_import(
 
 logger = logging.getLogger(__name__)
 
+
 class UnitsError(Exception):
     """
     An exception class for all general errors/warnings associated with units
@@ -933,7 +934,7 @@ class PyomoUnitsContainer(object):
         Pre-defined units can be accessed through attributes on the
         PyomoUnitsContainer class; however, these attributes are created
         dynamically through the __getattr__ method, and are not present
-        on the class until they are requted.
+        on the class until they are requested.
 
     """
     def __init__(self, pint_registry=NOTSET):
@@ -1421,6 +1422,7 @@ _QuantityVisitor.handlers = {
     EXPR.ExternalFunctionExpression: _QuantityVisitor._handle_external,
     EXPR.NPV_ExternalFunctionExpression: _QuantityVisitor._handle_external,
 }
+
 
 def as_quantity(expr):
     return _QuantityVisitor().dfs_postorder_stack(expr)
