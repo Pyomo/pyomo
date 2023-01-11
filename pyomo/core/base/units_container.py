@@ -1165,12 +1165,7 @@ external
         """
         if expr is None:
             return self._pint_dimensionless
-
         return self._pintUnitExtractionVisitor.walk_expression(expr=expr)
-        if hasattr(pint_units, 'units'):
-            # likely, we got a quantity object and not a units object
-            return pint_units.units
-        return pint_units
 
     def get_units(self, expr):
         """
