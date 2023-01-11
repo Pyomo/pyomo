@@ -847,29 +847,48 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         'floor': _get_unit_for_single_child
     }
 
+    def initializeWalker(self, expr):
+        # Refresh the cached dimensionless (in case the underlying pint
+        # registry was either changed or had not been set when the
+        # PyomoUnitsContainer was originally created.
+        self._pint_dimensionless \
+            = self._pyomo_units_container._pint_dimensionless
+        walk, result = self.beforeChild(None, expr, 0)
+        if not walk:
+            result = self.finalizeResult(result)
+        return walk, result
+
+    def beforeChild(self, node, child, child_idx):
+        ctype = child.__class__
+        if ctype in native_types or ctype in pyomo_constant_types:
+            return False, self._pint_dimensionless
+
+        if child.is_expression_type():
+            return True, None
+
+        # this is a leaf, but not a native type
+        if ctype is _PyomoUnit:
+            return False, child._get_pint_unit()
+        elif hasattr(child, 'get_units'):
+            # might want to add other common types here
+            pyomo_unit = child.get_units()
+            pint_unit = self._pyomo_units_container._get_pint_units(pyomo_unit)
+            return False, pint_unit
+
+        return True, None
+
     def exitNode(self, node, data):
-        """ Callback for :class:`pyomo.core.current.StreamBasedExpressionVisitor`. This
-        method is called when moving back up the tree in a depth first search."""
-        
-        # first check if the node is a leaf
-        nodetype = type(node)
+        """Visitor callback when moving up the expression tree.
 
-        if nodetype in native_types or nodetype in pyomo_constant_types:
-            return self._pint_dimensionless
+        Callback for
+        :class:`pyomo.core.current.StreamBasedExpressionVisitor`. This
+        method is called when moving back up the tree in a depth first
+        search.
 
-        node_func = self.node_type_method_map.get(nodetype, None)
+        """
+        node_func = self.node_type_method_map.get(node.__class__, None)
         if node_func is not None:
             return node_func(self, node, data)
-
-        elif not node.is_expression_type():
-            # this is a leaf, but not a native type
-            if nodetype is _PyomoUnit:
-                return node._get_pint_unit()
-            elif hasattr(node, 'get_units'):
-                # might want to add other common types here
-                pyomo_unit = node.get_units()
-                pint_unit = self._pyomo_units_container._get_pint_units(pyomo_unit)
-                return pint_unit
 
         # not a leaf - check if it is a named expression
         if hasattr(node, 'is_named_expression_type') and node.is_named_expression_type():
@@ -877,9 +896,14 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             return pint_unit
 
         raise TypeError('An unhandled expression node type: {} was encountered while retrieving the'
-                        ' units of expression'.format(str(nodetype), str(node)))
+                        ' units of expression'.format(str(type(node)), str(node)))
 
-    
+    def finalizeResult(self, result):
+        if hasattr(result, 'units'):
+            # likely, we got a quantity object and not a units object
+            return result.units
+        return result
+
 class PyomoUnitsContainer(object):
     """Class that is used to create and contain units in Pyomo.
 
