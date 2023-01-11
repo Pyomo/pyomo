@@ -1183,11 +1183,7 @@ external
         :py:class:`pyomo.core.base.units_container.UnitsError`, :py:class:`pyomo.core.base.units_container.InconsistentUnitsError`
 
         """
-        pint_unit = self._get_pint_units(expr)
-        if pint_unit.dimensionless:
-            if pint_unit == self._pint_dimensionless:
-                return None
-        return _PyomoUnit(pint_unit, self._pint_registry)
+        return _PyomoUnit(self._get_pint_units(expr), self._pint_registry)
 
     def _pint_convert_temp_from_to(self, numerical_value, pint_from_units, pint_to_units):
         if type(numerical_value) not in native_numeric_types:
