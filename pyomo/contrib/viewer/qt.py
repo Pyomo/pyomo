@@ -28,11 +28,18 @@ use some dummy classes to allow some testing.
 __author__ = "John Eslick"
 
 import logging
+import enum
 
 _log = logging.getLogger(__name__)
 
 qt_available = False
 
+class DummyQt(object):
+    class ItemDataRole(enum.Enum):
+        EditRole = 1
+        DisplayRole = 2
+        ToolTipRole = 3
+        ForegroundRole = 4
 
 class DummyQtCore(object):
     """
@@ -42,8 +49,7 @@ class DummyQtCore(object):
     class QModelIndex(object):
         pass
 
-    class Qt(object):
-        pass
+    Qt = DummyQt
 
 
 class DummyQAbstractItemModel(object):
@@ -134,3 +140,4 @@ if not qt_available:
     QAbstractItemModel = DummyQAbstractItemModel
     QAbstractTableModel = DummyQAbstractTableModel
     QtCore = DummyQtCore
+    Qt = DummyQt
