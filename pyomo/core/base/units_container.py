@@ -146,7 +146,7 @@ class InconsistentUnitsError(UnitsError):
     E.g., x == y, where x is in units of kg and y is in units of meter
     """
     def __init__(self, exp1, exp2, msg):
-        msg = '{}: {} not compatible with {}.'.format(str(msg), str(exp1), str(exp2))
+        msg = f'{msg}: {exp1} not compatible with {exp2}.'
         super(InconsistentUnitsError, self).__init__(msg)
 
 
@@ -541,9 +541,8 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         if not self._equivalent_to_dimensionless(child_units[1]):
             # todo: allow radians?
             raise UnitsError(
-                "Error in sub-expression: {}. "
-                "Exponents in a pow expression must be dimensionless."
-                "".format(node))
+                f"Error in sub-expression: {node}. "
+                "Exponents in a pow expression must be dimensionless.")
 
         # common case - exponent is a constant number
         exponent = node.args[1]
@@ -557,9 +556,9 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         # base is not dimensionless, exponent is dimensionless
         # ensure that the exponent is fixed
         if not exponent.is_fixed():
-            raise UnitsError("The base of an exponent has units {}, but "
-                             "the exponent is not a fixed numerical value."
-                             "".format(child_units[0]))
+            raise UnitsError(
+                f"The base of an exponent has units {child_units[0]}, but "
+                "the exponent is not a fixed numerical value.")
 
         return child_units[0]**value(exponent)
 
@@ -644,8 +643,8 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         for pint_unit in child_units:
             if not self._equivalent_to_dimensionless(pint_unit):
                 raise UnitsError(
-                    'Expected no units or dimensionless units in {}, '
-                    'but found {}.'.format(str(node), str(pint_unit)))
+                    f'Expected no units or dimensionless units in {node}, '
+                    f'but found {pint_unit}.')
 
         return self._pint_dimensionless
 
@@ -693,8 +692,9 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         func_name = node.getname()
         node_func = self.unary_function_method_map.get(func_name, None)
         if node_func is None:
-            raise TypeError('An unhandled unary function: {} was encountered while retrieving the'
-                        ' units of expression {}'.format(func_name, str(node)))
+            raise TypeError(
+                f'An unhandled unary function: {func_name} was encountered '
+                f'while retrieving the units of expression {node}')
         return node_func(self, node, child_units)
 
     def _get_unit_for_expr_if(self, node, child_units):
@@ -784,8 +784,8 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             return self._pyomo_units_container._pint_registry.radian
 
         raise UnitsError(
-            'Expected dimensionless argument to function in expression {},'
-            ' but found {}'.format(str(node), str(child_units[0])))
+            f'Expected dimensionless argument to function in expression {node},'
+            f' but found {child_units[0]}')
 
     def _get_unit_sqrt(self, node, child_units):
         """
@@ -903,8 +903,9 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
             pint_unit = self._get_unit_for_single_child(node, data)
             return pint_unit
 
-        raise TypeError('An unhandled expression node type: {} was encountered while retrieving the'
-                        ' units of expression'.format(str(type(node)), str(node)))
+        raise TypeError(
+            f'An unhandled expression node type: {type(node)} was encountered '
+            f'while retrieving the units of expression {node}')
 
     def finalizeResult(self, result):
         if hasattr(result, 'units'):
@@ -1053,9 +1054,10 @@ external
                 pint_unit_container = pint_module.util.to_units_container(pint_unit, pint_registry)
                 for (u, e) in pint_unit_container.items():
                     if not pint_registry._units[u].is_multiplicative:
-                        raise UnitsError('Pyomo units system does not support the offset units "{}".'
-                                         ' Use absolute units (e.g. kelvin instead of degC) instead.'
-                                         ''.format(item))
+                        raise UnitsError(
+                            'Pyomo units system does not support the offset '
+                            f'units "{item}". Use absolute units '
+                            '(e.g. kelvin instead of degC) instead.')
 
                 unit = _PyomoUnit(pint_unit, pint_registry)
                 setattr(self, item, unit)
@@ -1064,7 +1066,7 @@ external
             pint_unit = None
 
         if pint_unit is None:
-            raise AttributeError('Attribute {0} not found.'.format(str(item)))
+            raise AttributeError(f'Attribute {item} not found.')
 
     # We added support to specify a units definition file instead of this programatic interface
     # def create_new_base_dimension(self, dimension_name, base_unit_name):
@@ -1299,8 +1301,9 @@ external
 
         """
         if type(num_value) not in native_numeric_types:
-            raise UnitsError('The argument "num_value" in convert_value must be a native numeric type, but'
-                             ' instead type {} was found.'.format(type(num_value)))
+            raise UnitsError(
+                'The argument "num_value" in convert_value must be a native '
+                'numeric type, but instead type {type(num_value)} was found.')
 
         from_pint_unit = self._get_pint_units(from_units)
         to_pint_unit = self._get_pint_units(to_units)
