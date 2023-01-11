@@ -291,15 +291,13 @@ class MOSEKDirect(DirectSolver):
         else:
             q_vars = itertools.chain.from_iterable(repn.quadratic_vars)
             referenced_vars.update(q_vars)
-            qsubi = tuple(
-                self._pyomo_var_to_solver_var_map[i] for i,
-                j in repn.quadratic_vars)
-            qsubj = tuple(
-                self._pyomo_var_to_solver_var_map[j] for i,
-                j in repn.quadratic_vars)
+            qsubi, qsubj = zip(*[(i, j) if self._pyomo_var_to_solver_var_map[i] >=
+                               self._pyomo_var_to_solver_var_map[j] else (j, i) for i, j in repn.quadratic_vars])
+            qsubi = tuple(self._pyomo_var_to_solver_var_map[i] for i in qsubi)
+            qsubj = tuple(self._pyomo_var_to_solver_var_map[j] for j in qsubj)
             qvals = tuple(v * 2 if qsubi[i] is qsubj[i] else v
                           for i, v in enumerate(repn.quadratic_coefs))
-            mosek_qexp = (qsubj, qsubi, qvals)
+            mosek_qexp = (qsubi, qsubj, qvals)
         return mosek_arow, mosek_qexp, referenced_vars
 
     def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
