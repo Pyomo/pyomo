@@ -426,8 +426,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         """
         super(PintUnitExtractionVisitor, self).__init__()
         self._pyomo_units_container = pyomo_units_container
-        self._pint_dimensionless = pyomo_units_container._pint_dimensionless
-        self._pint_radian = pyomo_units_container._pint_registry.radian
+        self._pint_dimensionless = None
         self._equivalent_pint_units = pyomo_units_container._equivalent_pint_units
         self._equivalent_to_dimensionless = pyomo_units_container._equivalent_to_dimensionless
 
@@ -744,7 +743,9 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
         if self._equivalent_to_dimensionless(child_units[0]):
             return self._pint_dimensionless
-        if self._equivalent_pint_units(child_units[0], self._pint_radian):
+        if self._equivalent_pint_units(
+                child_units[0],
+                self._pyomo_units_container._pint_registry.radian):
             return self._pint_dimensionless
 
         # units are not None, dimensionless, or radians
@@ -773,7 +774,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
         assert len(child_units) == 1
 
         if self._equivalent_to_dimensionless(child_units[0]):
-            return self._pint_radian
+            return self._pyomo_units_container._pint_registry.radian
 
         raise UnitsError(
             'Expected dimensionless argument to function in expression {},'
@@ -938,6 +939,7 @@ class PyomoUnitsContainer(object):
             self._pint_dimensionless = None
         else:
             self._pint_dimensionless = self._pint_registry.dimensionless
+        self._pintUnitExtractionVisitor = PintUnitExtractionVisitor(self)
 
     def load_definitions_from_file(self, definition_file):
         """Load new units definitions from a file
@@ -1155,7 +1157,7 @@ external
         if expr is None:
             return self._pint_dimensionless
 
-        pint_units = PintUnitExtractionVisitor(self).walk_expression(expr=expr)
+        return self._pintUnitExtractionVisitor.walk_expression(expr=expr)
         if hasattr(pint_units, 'units'):
             # likely, we got a quantity object and not a units object
             return pint_units.units
