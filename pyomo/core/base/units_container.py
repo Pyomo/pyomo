@@ -584,7 +584,7 @@ class PintUnitExtractionVisitor(EXPR.StreamBasedExpressionVisitor):
 
     def _get_units_ExternalFunction(self, node, child_units):
         """
-        Check to make sure that any child arguments are consistent with 
+        Check to make sure that any child arguments are consistent with
         arg_units return the value from node.get_units() This
         was written for ExternalFunctionExpression where the external
         function has units assigned to its return value and arguments
@@ -933,7 +933,7 @@ class PyomoUnitsContainer(object):
         Pre-defined units can be accessed through attributes on the
         PyomoUnitsContainer class; however, these attributes are created
         dynamically through the __getattr__ method, and are not present
-        on the class until they are requested.
+        on the class until they are requted.
 
     """
     def __init__(self, pint_registry=NOTSET):
@@ -1168,7 +1168,7 @@ external
             # likely, we got a quantity object and not a units object
             return pint_units.units
         return pint_units
-    
+
     def get_units(self, expr):
         """
         Return the Pyomo units corresponding to this expression (also performs validation
@@ -1196,11 +1196,11 @@ external
             raise UnitsError('Conversion routines for absolute and relative temperatures require a numerical value only.'
                              ' Pyomo objects (Var, Param, expressions) are not supported. Please use value(x) to'
                              ' extract the numerical value if necessary.')
-        
+
         src_quantity = self._pint_registry.Quantity(numerical_value, pint_from_units)
         dest_quantity = src_quantity.to(pint_to_units)
         return dest_quantity.magnitude
-        
+
     def convert_temp_K_to_C(self, value_in_K):
         """
         Convert a value in Kelvin to degrees Celcius.  Note that this method
@@ -1300,7 +1300,7 @@ external
         if type(num_value) not in native_numeric_types:
             raise UnitsError('The argument "num_value" in convert_value must be a native numeric type, but'
                              ' instead type {} was found.'.format(type(num_value)))
-        
+
         from_pint_unit = self._get_pint_units(from_units)
         to_pint_unit = self._get_pint_units(to_units)
         if from_pint_unit == to_pint_unit:
