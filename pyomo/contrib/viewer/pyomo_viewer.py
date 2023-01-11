@@ -181,7 +181,6 @@ def main(*args):
         return
     km, kc = _start_kernel()
     app = QApplication(sys.argv)
-    time.sleep(1)
     window = MainWindow(kernel_manager=km, kernel_client=kc)
     window.show()
     app.aboutToQuit.connect(window.shutdown_kernel)
