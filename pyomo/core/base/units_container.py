@@ -307,6 +307,12 @@ class _PyomoUnit(NumericValue):
         # as outside the model scope and DO NOT duplicate them.
         return self
 
+    def __eq__(self, other):
+        if other.__class__ is _PyomoUnit:
+            return ( self._pint_registry is other._pint_registry and
+                     self._pint_unit == other._pint_unit )
+        return super().__eq__(other)
+
     # __bool__ uses NumericValue base class implementation
     # __float__ uses NumericValue base class implementation
     # __int__ uses NumericValue base class implementation
