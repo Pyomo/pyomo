@@ -26,8 +26,7 @@
 #  ___________________________________________________________________________
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe.measurements import Measurements
-from pyomo.contrib.doe.scenario import Scenario_generator
+from pyomo.contrib.doe import Measurements, Scenario_generator
 
 class TestMeasurement(unittest.TestCase):
     """Test the measurement class

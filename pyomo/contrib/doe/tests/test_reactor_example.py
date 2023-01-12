@@ -33,8 +33,7 @@ from pyomo.common.dependencies import (
 )
 
 import pyomo.common.unittest as unittest
-from pyomo.contrib.doe.doe import DesignOfExperiments
-from pyomo.contrib.doe.measurements import Measurements
+from pyomo.contrib.doe import DesignOfExperiments, Measurements
 
 from pyomo.opt import SolverFactory
 ipopt_available = SolverFactory('ipopt').available()

@@ -29,7 +29,7 @@
 import pyomo.environ as pyo
 from pyomo.dae import ContinuousSet, DerivativeVar
 import numpy as np
-from pyomo.contrib.doe.measurements import Measurements
+from pyomo.contrib.doe import Measurements
 
 def disc_for_measure(m, NFE=32):
     """Pyomo.DAE discretization
