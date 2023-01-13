@@ -33,8 +33,9 @@ def _convert_M_to_tuple(M, constraint, disjunct=None):
         raise GDP_Error("Big-M %s for constraint %s is not of "
                         "length two. "
                         "Expected either a single value or "
-                        "tuple or list of length two for M."
-                        % (str(M), constraint.name))
+                        "tuple or list of length two specifying M values for "
+                        "the lower and upper sides of the constraint "
+                        "respectively." % (str(M), constraint.name))
 
     return M
 
