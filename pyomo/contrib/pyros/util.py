@@ -108,6 +108,10 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
         no interface to wallclock limit available.
         For this reason, extra 30s is added to time remaining
         for subsolver time limit.
+        (The extra 30s is large enough to ensure solver
+        elapsed time is not beneath elapsed time - user time limit,
+        but not so large as to overshoot the user-specified time limit
+        by an inordinate margin.)
     """
     if config.time_limit is not None:
         time_remaining = (
