@@ -113,7 +113,7 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
         time_remaining = (
             config.time_limit - get_main_elapsed_time(timing_data_obj)
         )
-        if isinstance(solver, type(SolverFactory("gams"))):
+        if isinstance(solver, SolverFactory.get_class("gams")):
             original_max_time_setting = solver.options["add_options"]
             custom_setting_present = "add_options" in solver.options
 
@@ -125,9 +125,9 @@ def adjust_solver_time_settings(timing_data_obj, solver, config):
                 solver.options["add_options"] = [reslim_str]
         else:
             # determine name of option to adjust
-            if isinstance(solver, type(SolverFactory("baron"))):
+            if isinstance(solver, SolverFactory.get_class("baron")):
                 options_key = "MaxTime"
-            elif isinstance(solver, type(SolverFactory("ipopt"))):
+            elif isinstance(solver, SolverFactory.get_class("ipopt")):
                 options_key = "max_cpu_time"
             else:
                 options_key = None
@@ -181,11 +181,11 @@ def revert_solver_max_time_adjustment(
         assert isinstance(custom_setting_present, bool)
 
         # determine name of option to adjust
-        if isinstance(solver, type(SolverFactory("gams"))):
+        if isinstance(solver, SolverFactory.get_class("gams")):
             options_key = "add_options"
-        elif isinstance(solver, type(SolverFactory("baron"))):
+        elif isinstance(solver, SolverFactory.get_class("baron")):
             options_key = "MaxTime"
-        elif isinstance(solver, type(SolverFactory("ipopt"))):
+        elif isinstance(solver, SolverFactory.get_class("ipopt")):
             options_key = "max_cpu_time"
         else:
             options_key = None
@@ -198,7 +198,7 @@ def revert_solver_max_time_adjustment(
                 # if GAMS solver used, need to remove the last entry
                 # of 'add_options', which contains the max time setting
                 # added by PyROS
-                if isinstance(solver, type(SolverFactory("gams"))):
+                if isinstance(solver, SolverFactory.get_class("gams")):
                     solver.options[options_key].pop()
             else:
                 # remove the max time specification introduced.
