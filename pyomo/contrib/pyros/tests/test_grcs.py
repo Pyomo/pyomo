@@ -3660,6 +3660,7 @@ class RegressionTest(unittest.TestCase):
         self.assertEqual(results.pyros_termination_condition, pyrosTerminationCondition.robust_optimal,
                          msg="Returned termination condition is not return robust_optimal.")
 
+    @unittest.skip("Test runs >90 minutes with recent Baron versions")
     @unittest.skipUnless(SolverFactory('baron').license_is_valid(),
                          "Global NLP solver is not available and licensed.")
     def test_higher_order_decision_rules(self):
