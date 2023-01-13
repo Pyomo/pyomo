@@ -25,7 +25,7 @@ gap can be set using
 
 ::
 
-   --solver-options= "mipgap=0.01 "
+   --solver-options="mipgap=0.01"
 
 Multiple options are separated by a space.  Options that do not take an
 argument should be specified with the equals sign followed by either a
@@ -36,7 +36,7 @@ mipgap of two percent and the GLPK cuts option, use
 
 ::
 
-   solver=glpk --solver-options="mipgap=0.02 cuts="
+   --solver=glpk --solver-options="mipgap=0.02 cuts="
 
 If there are multiple "levels" to the keyword, as is the case for some
 Gurobi and CPLEX options, the tokens are separated by underscore.  For
