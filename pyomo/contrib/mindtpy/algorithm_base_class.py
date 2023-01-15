@@ -2482,7 +2482,7 @@ class _MindtPyAlgorithm(object):
                         self.last_iter_cuts = True
                         break
                 else:
-                    solution_name_obj = self.get_solution_name_obj()
+                    solution_name_obj = self.get_solution_name_obj(main_mip_results)
                     for name, _ in solution_name_obj:
                         # the optimal solution of the main problem has been added to integer_list above
                         # so we should skip checking cycling for the first solution in the solution pool
