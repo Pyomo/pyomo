@@ -12,16 +12,14 @@
 #  This software is distributed under the 3-clause BSD License.
 #  ___________________________________________________________________________
 
-import logging
-from pyomo.contrib.gdpopt.util import (time_code, lower_logger_level_to, get_main_elapsed_time, copy_var_list_values)
-from pyomo.contrib.mindtpy.util import set_up_logger,setup_results_object, calc_jacobians, add_feas_slacks
-from pyomo.core import TransformationFactory, Objective, ConstraintList, value
+from pyomo.contrib.gdpopt.util import time_code, get_main_elapsed_time
+from pyomo.contrib.mindtpy.util import calc_jacobians
+from pyomo.core import ConstraintList
 from pyomo.opt import SolverFactory
 from pyomo.contrib.mindtpy.config_options import _get_MindtPy_ECP_config
 from pyomo.contrib.mindtpy.algorithm_base_class import _MindtPyAlgorithm
 from pyomo.contrib.mindtpy.cut_generation import add_ecp_cuts
 from pyomo.opt import TerminationCondition as tc
-from pyomo.util.vars_from_expressions import get_vars_from_components
 
 
 @SolverFactory.register(
@@ -68,10 +66,8 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         ValueError
             The strategy value is not correct or not included.
         """
-        last_iter_cuts = False
         while self.mip_iter < config.iteration_limit:
 
-            self.mip_subiter = 0
             # solve MILP main problem
             main_mip, main_mip_results = self.solve_main(config)
             if main_mip_results is not None:
@@ -80,7 +76,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                         self.handle_main_optimal(main_mip, config)
                     elif main_mip_results.solver.termination_condition is tc.infeasible:
                         self.handle_main_infeasible(main_mip, config)
-                        last_iter_cuts = True
+                        self.last_iter_cuts = True
                         break
                     else:
                         self.handle_main_other_conditions(
@@ -93,7 +89,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
                 break
 
             if self.algorithm_should_terminate(config):
-                last_iter_cuts = False
+                self.last_iter_cuts = False
                 break
 
             add_ecp_cuts(self.mip, self.jacobians, config, self.timing)
@@ -101,7 +97,7 @@ class MindtPy_OA_Solver(_MindtPyAlgorithm):
         # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
         # we correct it after the iteration.
         if (config.add_no_good_cuts or config.use_tabu_list) and not self.should_terminate:
-            self.fix_dual_bound(config, last_iter_cuts)
+            self.fix_dual_bound(config, self.last_iter_cuts)
         config.logger.info(
             ' ===============================================================================================')
 

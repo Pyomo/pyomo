@@ -24,6 +24,8 @@ from pyomo.solvers.plugins.solvers.persistent_solver import PersistentSolver
 from pyomo.common.collections import ComponentMap, Bunch, ComponentSet
 from pyomo.common.errors import InfeasibleConstraintException
 from pyomo.contrib.mindtpy.cut_generation import add_no_good_cuts
+from operator import itemgetter
+from pyomo.solvers.plugins.solvers.gurobi_direct import gurobipy
 from pyomo.opt import SolverFactory, SolverResults, ProblemSense, SolutionStatus, SolverStatus
 from pyomo.contrib.mindtpy.util import (generate_norm2sq_objective_function, set_solver_options, 
                                         generate_norm_constraint, fp_converged, add_orthogonality_cuts)
@@ -35,7 +37,8 @@ from pyomo.contrib.gdpopt.solve_discrete_problem import distinguish_mip_infeasib
 from pyomo.contrib.mindtpy.util import (generate_norm1_objective_function, generate_norm2sq_objective_function,
                                         generate_norm_inf_objective_function, generate_lag_objective_function,
                                         set_solver_options, GurobiPersistent4MindtPy, MindtPySolveData, setup_results_object,
-                                        get_integer_solution, add_feas_slacks, epigraph_reformulation, add_var_bound)
+                                        get_integer_solution, add_feas_slacks, epigraph_reformulation, add_var_bound,
+                                        copy_var_list_values_from_solution_pool)
 
 single_tree, single_tree_available = attempt_import(
     'pyomo.contrib.mindtpy.single_tree')
@@ -95,6 +98,7 @@ class _MindtPyAlgorithm(object):
 
         self.stored_bound = {}
         self.num_no_good_cuts_added = {}
+        self.last_iter_cuts = False
 
     # Support use as a context manager under current solver API
     def __enter__(self):
@@ -2224,7 +2228,6 @@ class _MindtPyAlgorithm(object):
         """
         while self.fp_iter < config.fp_iteration_limit:
 
-            self.mip_subiter = 0
             # solve MILP main problem
             feas_main, feas_main_results = self.solve_main(config, fp=True)
             fp_should_terminate = self.handle_fp_main_tc(
@@ -2406,3 +2409,153 @@ class _MindtPyAlgorithm(object):
                                partition_nonlinear_terms=config.partition_obj_nonlinear_terms,
                                obj_handleable_polynomial_degree=self.mip_objective_polynomial_degree,
                                constr_handleable_polynomial_degree=self.mip_constraint_polynomial_degree)
+
+
+    def handle_main_mip_termination(self, main_mip, main_mip_results):
+        should_terminate = False
+        if main_mip_results is not None:
+            if not self.config.single_tree:
+                if main_mip_results.solver.termination_condition is tc.optimal:
+                    self.handle_main_optimal(main_mip, self.config)
+                elif main_mip_results.solver.termination_condition is tc.infeasible:
+                    self.handle_main_infeasible(main_mip, self.config)
+                    self.last_iter_cuts = True
+                    should_terminate = True
+                else:
+                    self.handle_main_other_conditions(
+                        main_mip, main_mip_results, self.config)
+        else:
+            self.config.logger.info('Algorithm should terminate here.')
+            should_terminate = True
+            # break
+        return should_terminate
+
+
+    # iterate.py
+    def MindtPy_iteration_loop(self, config):
+        """Main loop for MindtPy Algorithms.
+
+        This is the outermost function for the Outer Approximation algorithm in this package; this function controls the progression of
+        solving the model.
+
+        Parameters
+        ----------
+        config : ConfigBlock
+            The specific configurations for MindtPy.
+
+        Raises
+        ------
+        ValueError
+            The strategy value is not correct or not included.
+        """
+        while self.mip_iter < config.iteration_limit:
+            
+            # solve MILP main problem
+            main_mip, main_mip_results = self.solve_main(config)
+            if self.handle_main_mip_termination(main_mip, main_mip_results):
+                break
+            # This can be moved out of this if else check?
+            # Call the MILP post-solve callback
+            with time_code(self.timing, 'Call after main solve'):
+                config.call_after_main_solve(main_mip)
+
+            # Regularization is activated after the first feasible solution is found.
+            if config.add_regularization is not None:
+                self.add_regularization()
+
+            if self.algorithm_should_terminate(config, check_cycling=True):
+                self.last_iter_cuts = False
+                break
+
+            if not config.single_tree:  # if we don't use lazy callback, i.e. LP_NLP
+                # Solve NLP subproblem
+                # The constraint linearization happens in the handlers
+                if not config.solution_pool:
+                    fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
+                    self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
+
+                    # Call the NLP post-solve callback
+                    with time_code(self.timing, 'Call after subproblem solve'):
+                        config.call_after_subproblem_solve(fixed_nlp)
+
+                    if self.algorithm_should_terminate(config, check_cycling=False):
+                        self.last_iter_cuts = True
+                        break
+                else:
+                    solution_name_obj = self.get_solution_name_obj()
+                    for name, _ in solution_name_obj:
+                        # the optimal solution of the main problem has been added to integer_list above
+                        # so we should skip checking cycling for the first solution in the solution pool
+                        copy_var_list_values_from_solution_pool(self.mip.MindtPy_utils.variable_list,
+                                                                self.fixed_nlp.MindtPy_utils.variable_list,
+                                                                config, solver_model=main_mip_results._solver_model,
+                                                                var_map=main_mip_results._pyomo_var_to_solver_var_map,
+                                                                solution_name=name)
+                        self.curr_int_sol = get_integer_solution(self.working_model)
+                        if self.curr_int_sol in set(self.integer_list):
+                            config.logger.info(
+                                'The same combination has been explored and will be skipped here.')
+                            continue
+                        else:
+                            self.integer_list.append(self.curr_int_sol)
+                        fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
+                        self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
+
+                        # Call the NLP post-solve callback
+                        with time_code(self.timing, 'Call after subproblem solve'):
+                            config.call_after_subproblem_solve(fixed_nlp)
+
+                        if self.algorithm_should_terminate(config, check_cycling=False):
+                            self.last_iter_cuts = True
+                            break # TODO: break two loops.
+
+        # if add_no_good_cuts is True, the bound obtained in the last iteration is no reliable.
+        # we correct it after the iteration.
+        if (config.add_no_good_cuts or config.use_tabu_list) and not self.should_terminate and config.add_regularization is None:
+            self.fix_dual_bound(config, self.last_iter_cuts)
+        config.logger.info(
+            ' ===============================================================================================')
+
+
+    def get_solution_name_obj(self, main_mip_results):
+        config = self.config
+        if config.mip_solver == 'cplex_persistent':
+            solution_pool_names = main_mip_results._solver_model.solution.pool.get_names()
+        elif config.mip_solver == 'gurobi_persistent':
+            solution_pool_names = list(
+                range(main_mip_results._solver_model.SolCount))
+        # list to store the name and objective value of the solutions in the solution pool
+        solution_name_obj = []
+        for name in solution_pool_names:
+            if config.mip_solver == 'cplex_persistent':
+                obj = main_mip_results._solver_model.solution.pool.get_objective_value(
+                    name)
+            elif config.mip_solver == 'gurobi_persistent':
+                main_mip_results._solver_model.setParam(
+                    gurobipy.GRB.Param.SolutionNumber, name)
+                obj = main_mip_results._solver_model.PoolObjVal
+            solution_name_obj.append([name, obj])
+        solution_name_obj.sort(
+            key=itemgetter(1), reverse=self.objective_sense == maximize)
+        solution_name_obj = solution_name_obj[:config.num_solution_iteration]
+        return solution_name_obj
+
+    def add_regularization(self):
+        config = self.config
+        if self.best_solution_found is not None and not config.single_tree:
+            # The main problem might be unbounded, regularization is activated only when a valid bound is provided.
+            if self.dual_bound != self.dual_bound_progress[0]:
+                main_mip, main_mip_results = self.solve_main(config, regularization_problem=True)
+                self.handle_regularization_main_tc(main_mip, main_mip_results, config)
+
+        # TODO: add descriptions for the following code
+        if config.single_tree:
+            self.curr_int_sol = get_integer_solution(
+                self.mip, string_zero=True)
+            copy_var_list_values(
+                main_mip.MindtPy_utils.variable_list,
+                self.working_model.MindtPy_utils.variable_list,
+                config)
+            if self.curr_int_sol not in set(self.integer_list):
+                fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
+                self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
