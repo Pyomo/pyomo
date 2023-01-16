@@ -444,7 +444,7 @@ CPLEX>"""
         results = CPLEXSHELL.process_logfile(self.solver)
         self.assertEqual(results.solver.status, SolverStatus.ok)
         self.assertEqual(
-            results.solver.termination_condition, TerminationCondition.maxDetTimeLimit
+            results.solver.termination_condition, TerminationCondition.maxTimeLimit
         )
         self.assertEqual(results.solver.deterministic_time, 100.00)
 
