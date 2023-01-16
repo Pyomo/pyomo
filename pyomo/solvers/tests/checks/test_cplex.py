@@ -23,13 +23,11 @@ from pyomo.solvers.plugins.solvers.CPLEX import CPLEXSHELL, MockCPLEX, _validate
 
 class _mock_cplex_128(object):
     def version(self):
-        return (12, 8, 0)
-
+        return (12,8,0)
 
 class _mock_cplex_126(object):
     def version(self):
-        return (12, 6, 0)
-
+        return (12,6,0)
 
 class CPLEX_utils(unittest.TestCase):
     def test_validate_file_name(self):
@@ -37,9 +35,9 @@ class CPLEX_utils(unittest.TestCase):
         _128 = _mock_cplex_128()
 
         # Check plain file
-        fname = "foo.lp"
-        self.assertEqual(fname, _validate_file_name(_126, fname, "xxx"))
-        self.assertEqual(fname, _validate_file_name(_128, fname, "xxx"))
+        fname = 'foo.lp'
+        self.assertEqual(fname, _validate_file_name(_126, fname, 'xxx'))
+        self.assertEqual(fname, _validate_file_name(_128, fname, 'xxx'))
 
         # Check spaces in the file
         fname = 'foo bar.lp'
@@ -50,9 +48,9 @@ class CPLEX_utils(unittest.TestCase):
                          _validate_file_name(_128, fname, 'xxx'))
 
         # check OK path separators
-        fname = "foo%sbar.lp" % (os.path.sep,)
-        self.assertEqual(fname, _validate_file_name(_126, fname, "xxx"))
-        self.assertEqual(fname, _validate_file_name(_128, fname, "xxx"))
+        fname = 'foo%sbar.lp' % (os.path.sep,)
+        self.assertEqual(fname, _validate_file_name(_126, fname, 'xxx'))
+        self.assertEqual(fname, _validate_file_name(_128, fname, 'xxx'))
 
         # check BAD path separators
         bad_char = '/\\'.replace(os.path.sep,'')
@@ -407,7 +405,9 @@ CPLEX>"""
         self.assertEqual(
             results.solver.termination_condition, TerminationCondition.infeasible
         )
-        self.assertEqual(results.solver.termination_message, "Presolve - Infeasible.")
+        self.assertEqual(
+            results.solver.termination_message, "Presolve - Infeasible."
+        )
         self.assertEqual(results.solver.return_code, 1217)
 
     def test_log_file_shows_max_time_limit_exceeded_with_feasible_solution(self):
@@ -429,9 +429,7 @@ CPLEX>"""
         )
         self.assertEqual(results.solver.deterministic_time, 100.00)
 
-    def test_log_file_shows_max_deterministic_time_limit_exceeded_with_feasible_solution(
-        self
-    ):
+    def test_log_file_shows_max_deterministic_time_limit_exceeded_with_feasible_solution(self):
         log_file_text = """
 MIP - Deterministic time limit exceeded, integer feasible:  Objective =  0.0000000000e+00
 Current MIP best bound =  0.0000000000e+00 (gap = 10.0, 10.00%)
