@@ -685,6 +685,23 @@ class TestLoadVars(unittest.TestCase):
         self.assertAlmostEqual(value(self._model.X), 3.6)
         self.assertAlmostEqual(value(self._model.Y), 0.8)
 
+    @unittest.skipIf(not cplexpy_available,
+                     "The 'cplex' python bindings are not available")
+    def test_soln_limit_mip(self):
+        with SolverFactory("cplex", solver_io="python") as opt:
+            model = ConcreteModel()
+            model.X = Var(within=Binary)
+            model.C1 = Constraint(expr=model.X == 1)
+            model.O = Objective(expr=model.X)
 
+            opt.options['mip_limits_solutions'] = 1
+            results = opt.solve(model)
+
+            self.assertEqual(results.solver.status,
+                             SolverStatus.aborted)
+            self.assertEqual(results.solver.termination_condition,
+                             TerminationCondition.unknown)
+            self.assertEqual(model.solutions[0].status,
+                             SolutionStatus.stoppedByLimit)
 if __name__ == "__main__":
     unittest.main()
