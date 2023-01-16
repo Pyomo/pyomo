@@ -24,6 +24,8 @@ from pyomo.solvers.plugins.solvers.cplex_direct import (_CplexExpr,
                                                         _LinearConstraintData,
                                                         _VariableData)
 
+from pyomo.solvers.plugins.solvers.cplex_direct import nullcontext
+
 try:
     import cplex
     cplexpy_available = True
@@ -810,6 +812,18 @@ class TestIsFixedCallCount(unittest.TestCase):
             self.assertEqual(mock_is_fixed.call_count, 0)
             self._opt.add_constraint(self._model.c2)
             self.assertEqual(mock_is_fixed.call_count, 1)
+
+
+# `nullcontext()` is part of the standard library as of Py3.7
+# This is verbatim from `cpython/Lib/test/test_contextlib.py`
+class NullcontextTestCase(unittest.TestCase):
+    def test_nullcontext(self):
+        class C:
+            pass
+
+        c = C()
+        with nullcontext(c) as c_in:
+            self.assertIs(c_in, c)
 
 
 if __name__ == "__main__":
