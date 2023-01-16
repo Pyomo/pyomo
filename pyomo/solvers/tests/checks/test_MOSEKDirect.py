@@ -145,6 +145,26 @@ class MOSEKDirectTests(unittest.TestCase):
         self.assertEqual(results.solution.status,
                          SolutionStatus.optimal)
 
+    def test_qcqo(self):
+        model = pmo.block()
+        model.x = pmo.variable_list()
+        for i in range(3):
+            model.x.append(pmo.variable(lb=0.0))
+
+        model.cons = pmo.constraint(expr=model.x[0] + model.x[1] + model.x[2] - model.x[0]
+                                    ** 2 - model.x[1]**2 - 0.1*model.x[2]**2 + 0.2*model.x[0]*model.x[2] >= 1.0)
+
+        model.o = pmo.objective(expr=model.x[0]**2 + 0.1*model.x[1]**2 +
+                                model.x[2]**2 - model.x[0]*model.x[2] - model.x[1], sense=pmo.minimize)
+
+        opt = pmo.SolverFactory("mosek_direct")
+        results = opt.solve(model)
+
+        self.assertAlmostEqual(results.problem.upper_bound, -4.9176e-01, 4)
+        self.assertAlmostEqual(results.problem.lower_bound, -4.9180e-01, 4)
+
+        del model
+
     def test_conic(self):
 
         model = pmo.block()

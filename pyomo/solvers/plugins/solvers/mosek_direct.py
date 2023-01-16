@@ -39,6 +39,7 @@ inf = float('inf')
 
 mosek, mosek_available = attempt_import('mosek')
 
+
 class DegreeError(ValueError):
     pass
 
@@ -290,15 +291,13 @@ class MOSEKDirect(DirectSolver):
         else:
             q_vars = itertools.chain.from_iterable(repn.quadratic_vars)
             referenced_vars.update(q_vars)
-            qsubi = tuple(
-                self._pyomo_var_to_solver_var_map[i] for i,
-                j in repn.quadratic_vars)
-            qsubj = tuple(
-                self._pyomo_var_to_solver_var_map[j] for i,
-                j in repn.quadratic_vars)
+            qsubi, qsubj = zip(*[(i, j) if self._pyomo_var_to_solver_var_map[i] >=
+                               self._pyomo_var_to_solver_var_map[j] else (j, i) for i, j in repn.quadratic_vars])
+            qsubi = tuple(self._pyomo_var_to_solver_var_map[i] for i in qsubi)
+            qsubj = tuple(self._pyomo_var_to_solver_var_map[j] for j in qsubj)
             qvals = tuple(v * 2 if qsubi[i] is qsubj[i] else v
                           for i, v in enumerate(repn.quadratic_coefs))
-            mosek_qexp = (qsubj, qsubi, qvals)
+            mosek_qexp = (qsubi, qsubj, qvals)
         return mosek_arow, mosek_qexp, referenced_vars
 
     def _get_expr_from_pyomo_expr(self, expr, max_degree=2):
@@ -566,6 +565,16 @@ class MOSEKDirect(DirectSolver):
                                      "support multiple objectives.")
                 self._set_objective(obj)
 
+    def _set_whichsol(self):
+        itr_soltypes = [mosek.problemtype.qo, mosek.problemtype.qcqo,
+                        mosek.problemtype.conic]
+        if (self._solver_model.getnumintvar() >= 1):
+            self._whichsol = mosek.soltype.itg
+        elif (self._solver_model.getprobtype() in itr_soltypes):
+            self._whichsol = mosek.soltype.itr
+        elif (self._solver_model.getprobtype() == mosek.problemtype.lo):
+            self._whichsol = mosek.soltype.bas
+
     def _postsolve(self):
 
         extract_duals = False
@@ -589,19 +598,15 @@ class MOSEKDirect(DirectSolver):
 
         msk_task = self._solver_model
 
-        itr_soltypes = [mosek.problemtype.qo, mosek.problemtype.qcqo,
-                        mosek.problemtype.conic]
+        self._set_whichsol()
 
-        if (msk_task.getnumintvar() >= 1):
-            self._whichsol = mosek.soltype.itg
+        if (self._whichsol == mosek.soltype.itg):
             if extract_reduced_costs:
                 logger.warning("Cannot get reduced costs for MIP.")
             if extract_duals:
                 logger.warning("Cannot get duals for MIP.")
             extract_reduced_costs = False
             extract_duals = False
-        elif (msk_task.getprobtype() in itr_soltypes):
-            self._whichsol = mosek.soltype.itr
 
         whichsol = self._whichsol
         sol_status = msk_task.getsolsta(whichsol)
@@ -975,11 +980,15 @@ class MOSEKDirect(DirectSolver):
         return True
 
     def _warm_start(self):
+        self._set_whichsol()
         for pyomo_var, mosek_var in self._pyomo_var_to_solver_var_map.items():
             if pyomo_var.value is not None:
-                for solType in mosek.soltype.values:
-                    self._solver_model.putxxslice(
-                        solType, mosek_var, mosek_var + 1, [(pyomo_var.value)])
+                self._solver_model.putxxslice(
+                    self._whichsol, mosek_var, mosek_var + 1, [(pyomo_var.value)])
+
+        if (self._version[0] > 9) & (self._whichsol == mosek.soltype.itg):
+            self._solver_model.putintparam(
+                mosek.iparam.mio_construct_sol, mosek.onoffkey.on)
 
     def _load_vars(self, vars_to_load=None):
         var_map = self._pyomo_var_to_solver_var_map
