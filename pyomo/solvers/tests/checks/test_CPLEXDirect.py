@@ -696,12 +696,13 @@ class TestLoadVars(unittest.TestCase):
 
             opt.options['mip_limits_solutions'] = 1
             results = opt.solve(model)
-
             self.assertEqual(results.solver.status,
                              SolverStatus.aborted)
             self.assertEqual(results.solver.termination_condition,
                              TerminationCondition.unknown)
             self.assertEqual(model.solutions[0].status,
                              SolutionStatus.stoppedByLimit)
+            self.assertGreater(results.solver.deterministic_time, 0.0)
+
 if __name__ == "__main__":
     unittest.main()

@@ -117,6 +117,7 @@ class CPLEXDirect(DirectSolver):
         DirectSolver.__init__(self, **kwds)
         self._init()
         self._wallclock_time = None
+        self._deterministic_time = None
         self._pyomo_var_to_ndx_map = ComponentMap()
         self._ndx_count = 0
 
@@ -261,6 +262,7 @@ class CPLEXDirect(DirectSolver):
 
             t1 = time.time()
             self._wallclock_time = t1 - t0
+            self._deterministic_time = self._solver_model.get_dettime()
         finally:
             self._solver_model.set_results_stream(None)
             if _close_log_file:
@@ -655,6 +657,7 @@ class CPLEXDirect(DirectSolver):
 
         self.results.solver.name = ("CPLEX {0}".format(cpxprob.get_version()))
         self.results.solver.wallclock_time = self._wallclock_time
+        self.results.solver.deterministic_time = self._deterministic_time
 
         if status in {
             rtn_codes.optimal,
