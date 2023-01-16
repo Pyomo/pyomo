@@ -39,7 +39,7 @@ def _convert_M_to_tuple(M, constraint, disjunct=None):
 
     return M
 
-def _get_bigm_suffix_list(block, stopping_block=None):
+def _get_bigM_suffix_list(block, stopping_block=None):
     # Note that you can only specify suffixes on BlockData objects or
     # ScalarBlocks. Though it is possible at this point to stick them
     # on whatever components you want, we won't pick them up.
@@ -80,7 +80,7 @@ def _warn_for_unused_bigM_args(bigM, used_args, logger):
             logger.warning(warning_msg)
 
 class _BigM_MixIn(object):
-    def _get_bigm_arg_list(self, bigm_args, block):
+    def _get_bigM_arg_list(self, bigm_args, block):
         # Gather what we know about blocks from args exactly once. We'll still
         # check for constraints in the moment, but if that fails, we've
         # preprocessed the time-consuming part of traversing up the tree.

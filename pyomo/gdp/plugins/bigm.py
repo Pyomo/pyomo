@@ -27,7 +27,7 @@ from pyomo.core.base import TransformationFactory, Reference
 import pyomo.core.expr.current as EXPR
 from pyomo.gdp import Disjunct, Disjunction, GDP_Error
 from pyomo.gdp.plugins.bigm_mixin import (
-    _BigM_MixIn, _get_bigm_suffix_list, _warn_for_unused_bigM_args)
+    _BigM_MixIn, _get_bigM_suffix_list, _warn_for_unused_bigM_args)
 from pyomo.gdp.plugins.gdp_to_mip_transformation import (
     GDP_to_MIP_Transformation)
 from pyomo.gdp.transformed_disjunct import _TransformedDisjunct
@@ -203,8 +203,8 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
         root = root_disjunct.parent_block() if root_disjunct is not None else \
                obj.parent_block()
         transBlock = self._add_transformation_block(root)[0]
-        suffix_list = _get_bigm_suffix_list(obj)
-        arg_list = self._get_bigm_arg_list(bigM, obj)
+        suffix_list = _get_bigM_suffix_list(obj)
+        arg_list = self._get_bigM_arg_list(bigM, obj)
 
         relaxationBlock = self._get_disjunct_transformation_block(obj,
                                                                   transBlock)
@@ -273,7 +273,7 @@ class BigM_Transformation(GDP_to_MIP_Transformation, _BigM_MixIn):
             if (M[0] is None and c.lower is not None) or \
                (M[1] is None and c.upper is not None):
                 # first get anything parent to c but below disjunct
-                suffix_list = _get_bigm_suffix_list(
+                suffix_list = _get_bigM_suffix_list(
                     c.parent_block(),
                     stopping_block=disjunct)
                 # prepend that to what we already collected for the disjunct.

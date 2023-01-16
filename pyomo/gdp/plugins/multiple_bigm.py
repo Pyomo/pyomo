@@ -339,7 +339,7 @@ class MultipleBigMTransformation(GDP_to_MIP_Transformation, _BigM_MixIn):
                 upper = (None, None, None)
 
                 if disjunct not in self._arg_list:
-                    self._arg_list[disjunct] = self._get_bigm_arg_list(
+                    self._arg_list[disjunct] = self._get_bigM_arg_list(
                         self._config.bigM, disjunct)
                 arg_list = self._arg_list[disjunct]
 
