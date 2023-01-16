@@ -410,5 +410,41 @@ CPLEX>"""
         )
         self.assertEqual(results.solver.return_code, 1217)
 
+    def test_log_file_shows_max_time_limit_exceeded_with_feasible_solution(self):
+        log_file_text = """
+MIP - Time limit exceeded, integer feasible:  Objective =  0.0000000000e+00
+Current MIP best bound =  0.0000000000e+00 (gap = 10.0, 10.00%)
+Solution time =   10.00 sec.  Iterations = 10000  Nodes = 1000
+Deterministic time = 100.00 ticks  (10.00 ticks/sec)
+
+CPLEX> Incumbent solution written to file '/var/folders/_x/xxx/T/tmpxxx.cplex.sol'.
+CPLEX>"""
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.status, SolverStatus.ok)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.maxTimeLimit
+        )
+
+    def test_log_file_shows_max_deterministic_time_limit_exceeded_with_feasible_solution(self):
+        log_file_text = """
+MIP - Deterministic time limit exceeded, integer feasible:  Objective =  0.0000000000e+00
+Current MIP best bound =  0.0000000000e+00 (gap = 10.0, 10.00%)
+Solution time =   10.00 sec.  Iterations = 10000  Nodes = 1000 (1)
+Deterministic time = 100.00 ticks  (10.00 ticks/sec)
+
+CPLEX> Incumbent solution written to file '/var/folders/_x/xxxx/T/tmpxxx.cplex.sol'.
+CPLEX>"""
+        with open(self.solver._log_file, "w") as f:
+            f.write(log_file_text)
+
+        results = CPLEXSHELL.process_logfile(self.solver)
+        self.assertEqual(results.solver.status, SolverStatus.ok)
+        self.assertEqual(
+            results.solver.termination_condition, TerminationCondition.maxDetTimeLimit
+        )
+
 if __name__ == "__main__":
     unittest.main()
