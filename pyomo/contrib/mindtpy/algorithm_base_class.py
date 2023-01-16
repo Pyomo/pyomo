@@ -2483,21 +2483,22 @@ class _MindtPyAlgorithm(object):
                         break
                 else:
                     solution_name_obj = self.get_solution_name_obj(main_mip_results)
-                    for name, _ in solution_name_obj:
+                    for index, (name, _) in enumerate(solution_name_obj):
                         # the optimal solution of the main problem has been added to integer_list above
                         # so we should skip checking cycling for the first solution in the solution pool
-                        copy_var_list_values_from_solution_pool(self.mip.MindtPy_utils.variable_list,
-                                                                self.fixed_nlp.MindtPy_utils.variable_list,
-                                                                config, solver_model=main_mip_results._solver_model,
-                                                                var_map=main_mip_results._pyomo_var_to_solver_var_map,
-                                                                solution_name=name)
-                        self.curr_int_sol = get_integer_solution(self.working_model)
-                        if self.curr_int_sol in set(self.integer_list):
-                            config.logger.info(
-                                'The same combination has been explored and will be skipped here.')
-                            continue
-                        else:
-                            self.integer_list.append(self.curr_int_sol)
+                        if index > 0:
+                            copy_var_list_values_from_solution_pool(self.mip.MindtPy_utils.variable_list,
+                                                                    self.fixed_nlp.MindtPy_utils.variable_list,
+                                                                    config, solver_model=main_mip_results._solver_model,
+                                                                    var_map=main_mip_results._pyomo_var_to_solver_var_map,
+                                                                    solution_name=name)
+                            self.curr_int_sol = get_integer_solution(self.fixed_nlp)
+                            if self.curr_int_sol in set(self.integer_list):
+                                config.logger.info(
+                                    'The same combination has been explored and will be skipped here.')
+                                continue
+                            else:
+                                self.integer_list.append(self.curr_int_sol)
                         fixed_nlp, fixed_nlp_result = self.solve_subproblem(config)
                         self.handle_nlp_subproblem_tc(fixed_nlp, fixed_nlp_result, config)
 
