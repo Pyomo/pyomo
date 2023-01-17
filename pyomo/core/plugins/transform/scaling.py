@@ -213,8 +213,10 @@ class ScaleModel(Transformation):
         variable_substitution_map = ComponentMap()
         already_scaled = set()
         for variable in [var for var in model.component_objects(ctype=Var, descend_into=True)]:
-            # Skip any references - these should get picked up when handling the actual variable
-            if not variable.is_reference():
+            if variable.is_reference():
+                # Skip any references - these should get picked up when handling the actual variable
+                continue
+            else:
                 # set the bounds/value for the scaled variable
                 for k in variable:
                     v = variable[k]
@@ -245,15 +247,17 @@ class ScaleModel(Transformation):
             scale_constraint_dual = True
 
         # translate the variable_substitution_map (ComponentMap)
-        # to variable_substition_dict (key: id() of component)
+        # to variable_substitution_dict (key: id() of component)
         # ToDo: We should change replace_expressions to accept a ComponentMap as well
         variable_substitution_dict = {id(k):variable_substitution_map[k]
                                       for k in variable_substitution_map}
 
         already_scaled = set()
         for component in model.component_objects(ctype=(Constraint, Objective), descend_into=True):
-            # Skip any references - these should get picked up when handling the actual component
-            if not component.is_reference():
+            if component.is_reference():
+                # Skip any references - these should get picked up when handling the actual component
+                continue
+            else:
                 for k in component:
                     c = component[k]
                     if id(c) in already_scaled:
