@@ -216,30 +216,30 @@ class ScaleModel(Transformation):
             if variable.is_reference():
                 # Skip any references - these should get picked up when handling the actual variable
                 continue
-            else:
-                # set the bounds/value for the scaled variable
-                for k in variable:
-                    v = variable[k]
-                    if id(v) in already_scaled:
-                        continue
-                    already_scaled.add(id(v))
-                    scaling_factor = component_scaling_factor_map[v]
-                    variable_substitution_map[v] = v / scaling_factor
 
-                    if v.lb is not None:
-                        v.setlb(v.lb * scaling_factor)
-                    if v.ub is not None:
-                        v.setub(v.ub * scaling_factor)
-                    if scaling_factor < 0:
-                        temp = v.lb
-                        v.setlb(v.ub)
-                        v.setub(temp)
+            # set the bounds/value for the scaled variable
+            for k in variable:
+                v = variable[k]
+                if id(v) in already_scaled:
+                    continue
+                already_scaled.add(id(v))
+                scaling_factor = component_scaling_factor_map[v]
+                variable_substitution_map[v] = v / scaling_factor
 
-                    if v.value is not None:
-                        # Since the value was OK in the unscaled space, it
-                        # should be safe to assume it is still valid in the
-                        # scaled space)
-                        v.set_value(value(v) * scaling_factor, skip_validation=True)
+                if v.lb is not None:
+                    v.setlb(v.lb * scaling_factor)
+                if v.ub is not None:
+                    v.setub(v.ub * scaling_factor)
+                if scaling_factor < 0:
+                    temp = v.lb
+                    v.setlb(v.ub)
+                    v.setub(temp)
+
+                if v.value is not None:
+                    # Since the value was OK in the unscaled space, it
+                    # should be safe to assume it is still valid in the
+                    # scaled space)
+                    v.set_value(value(v) * scaling_factor, skip_validation=True)
 
         # scale the objectives/constraints and perform the scaled variable substitution
         scale_constraint_dual = False
@@ -257,51 +257,51 @@ class ScaleModel(Transformation):
             if component.is_reference():
                 # Skip any references - these should get picked up when handling the actual component
                 continue
-            else:
-                for k in component:
-                    c = component[k]
-                    if id(c) in already_scaled:
-                        continue
-                    already_scaled.add(id(c))
-                    # perform the constraint/objective scaling and variable sub
-                    scaling_factor = component_scaling_factor_map[c]
-                    if isinstance(c, _ConstraintData):
-                        body = scaling_factor * \
-                               replace_expressions(expr=c.body,
-                                                   substitution_map=variable_substitution_dict,
-                                                   descend_into_named_expressions=True,
-                                                   remove_named_expressions=True)
 
-                        # scale the rhs
-                        lower = c.lower
-                        upper = c.upper
-                        if lower is not None:
-                            lower = lower * scaling_factor
-                        if upper is not None:
-                            upper = upper * scaling_factor
+            for k in component:
+                c = component[k]
+                if id(c) in already_scaled:
+                    continue
+                already_scaled.add(id(c))
+                # perform the constraint/objective scaling and variable sub
+                scaling_factor = component_scaling_factor_map[c]
+                if isinstance(c, _ConstraintData):
+                    body = scaling_factor * \
+                           replace_expressions(expr=c.body,
+                                               substitution_map=variable_substitution_dict,
+                                               descend_into_named_expressions=True,
+                                               remove_named_expressions=True)
 
-                        if scaling_factor < 0:
-                            lower, upper = upper, lower
+                    # scale the rhs
+                    lower = c.lower
+                    upper = c.upper
+                    if lower is not None:
+                        lower = lower * scaling_factor
+                    if upper is not None:
+                        upper = upper * scaling_factor
 
-                        if scale_constraint_dual and c in model.dual:
-                            dual_value = model.dual[c]
-                            if dual_value is not None:
-                                model.dual[c] = dual_value / scaling_factor
+                    if scaling_factor < 0:
+                        lower, upper = upper, lower
 
-                        if c.equality:
-                            c.set_value((lower, body))
-                        else:
-                            c.set_value((lower, body, upper))
+                    if scale_constraint_dual and c in model.dual:
+                        dual_value = model.dual[c]
+                        if dual_value is not None:
+                            model.dual[c] = dual_value / scaling_factor
 
-                    elif isinstance(c, _ObjectiveData):
-                        c.expr = scaling_factor * \
-                                 replace_expressions(expr=c.expr,
-                                                     substitution_map=variable_substitution_dict,
-                                                     descend_into_named_expressions=True,
-                                                     remove_named_expressions=True)
+                    if c.equality:
+                        c.set_value((lower, body))
                     else:
-                        raise NotImplementedError(
-                            'Unknown object type found when applying scaling factors in ScaleModel transformation - Internal Error')
+                        c.set_value((lower, body, upper))
+
+                elif isinstance(c, _ObjectiveData):
+                    c.expr = scaling_factor * \
+                             replace_expressions(expr=c.expr,
+                                                 substitution_map=variable_substitution_dict,
+                                                 descend_into_named_expressions=True,
+                                                 remove_named_expressions=True)
+                else:
+                    raise NotImplementedError(
+                        'Unknown object type found when applying scaling factors in ScaleModel transformation - Internal Error')
 
         model.component_scaling_factor_map = component_scaling_factor_map
         model.scaled_component_to_original_name_map = scaled_component_to_original_name_map
