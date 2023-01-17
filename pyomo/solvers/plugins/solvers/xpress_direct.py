@@ -214,13 +214,13 @@ class CallbackContext(object):
                 if cut.lower != cut.upper:
                     raise ValueError("Cannot add ranged cut {0} ".format(cut))
                 sense = 'E'
-                origrhs = cut.lower
+                orig_rhs = cut.lower
             else:
                 sense = 'G'
-                origrhs = cut.lower
+                orig_rhs = cut.lower
         elif cut.has_ub():
             sense = 'L'
-            origrhs = cut.upper
+            orig_rhs = cut.upper
         else:
             raise ValueError("Cannot add free cut {0} ".format(cut))
                 
@@ -234,18 +234,18 @@ class CallbackContext(object):
             raise ValueError("Cannot add non-linear cut {0} ".format(cut))
 
         
-        origrowcoef = lhs.linear_coefs
-        origcolind = [self._var2idx[self._solver._pyomo_var_to_solver_var_map[x]] for x in lhs.linear_vars]
-        maxcoefs = self._problem.attributes.cols
-        colind = []
-        rowcoef = []
-        redrhs, status = self._problem.presolverow(sense, origcolind,
-                                                   origrowcoef, origrhs,
-                                                   maxcoefs, colind, rowcoef)
+        orig_row_coeff = lhs.linear_coefs
+        orig_col_ind = [self._var2idx[self._solver._pyomo_var_to_solver_var_map[x]] for x in lhs.linear_vars]
+        max_coefs = self._problem.attributes.cols
+        col_ind = []
+        row_coef = []
+        red_rhs, status = self._problem.presolverow(sense, orig_col_ind,
+                                                    orig_row_coeff, orig_rhs,
+                                                    max_coefs, col_ind, row_coef)
         if status != 0:
             raise RuntimeError('Cut cannot be presolved: %d' % status)
-        self._problem.addcuts([cuttype], [sense], [redrhs], [0, len(colind)],
-                              colind, rowcoef)
+        self._problem.addcuts([cuttype], [sense], [red_rhs], [0, len(col_ind)],
+                              col_ind, row_coef)
 
 class MessageCallbackContext(CallbackContext):
     """Data passed to message callbacks.
