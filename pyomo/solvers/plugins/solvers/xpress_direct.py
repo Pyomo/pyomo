@@ -286,7 +286,7 @@ class MessageCallbackContext(CallbackContext):
 class OptNodeCallbackContext(CallbackContext):
     """Data passed to optnode callbacks.
 
-    In addition to the super class, this class has two properties:
+    In addition to the super class, this class has one property:
     - `infeas` [write]: Whether the node is considered infeasible.
     """
     def __init__(self, problem, solver, var2idx):
@@ -294,7 +294,7 @@ class OptNodeCallbackContext(CallbackContext):
         self._infeas = False
     @property
     def infeas(self):
-        """Message sent by this callback."""
+        """Whether the node is considered infeasible."""
         return self._infeas
     @infeas.setter
     def infeas(self, value):
