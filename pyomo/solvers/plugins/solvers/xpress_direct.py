@@ -372,14 +372,14 @@ class ChangeBranchObjectCallbackContext(CallbackContext):
     - `branchobject' [read/write]: The branching that will be executed.
     - `new_object()`:              Create a new branching object.
     """
-    def __init__(self, problem, solver, var2idx, obranch):
+    def __init__(self, problem, solver, var2idx, orig_branch):
         super(ChangeBranchObjectCallbackContext, self).__init__(problem, solver, var2idx)
-        self._obranch = obranch
-        self._branch = obranch
+        self._orig_branch = orig_branch
+        self._branch = orig_branch
     @property
     def orig_branchobject(self):
         """The branching suggested by Xpress."""
-        return self._obranch
+        return self._orig_branch
     @property
     def branchobject(self):
         """The branching that will be carried out.
@@ -507,8 +507,8 @@ class CallbackInterface(object):
         """Remove a specific or all (`chgbranchobjectcb` is `None`) chgbranchobject callbacks."""
         self._del_callback('chgbranchobject', prechgbranchobjectcb)
     def _chgbranchobject_wrapper(self, solver, var2idx):
-        def wrapper(prob, cb, obranch):
-            data = ChangeBranchObjectCallbackContext(prob, solver, var2idx, obranch)
+        def wrapper(prob, cb, orig_branch):
+            data = ChangeBranchObjectCallbackContext(prob, solver, var2idx, orig_branch)
             cb(data)
             return data.branchobject
         return wrapper
