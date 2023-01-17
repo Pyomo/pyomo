@@ -364,7 +364,7 @@ class IntSolCallbackContext(CallbackContext):
         """Get the objective value for `solution`."""
         return self.attributes.mipobjval
 
-class ChgBranchObjectCallbackContext(CallbackContext):
+class ChangeBranchObjectCallbackContext(CallbackContext):
     """Data passed to chgbranchobject callbacks.
 
     In addition to the super class, this class has the following properties:
@@ -373,7 +373,7 @@ class ChgBranchObjectCallbackContext(CallbackContext):
     - `new_object()`:              Create a new branching object.
     """
     def __init__(self, problem, solver, var2idx, obranch):
-        super(ChgBranchObjectCallbackContext, self).__init__(problem, solver, var2idx)
+        super(ChangeBranchObjectCallbackContext, self).__init__(problem, solver, var2idx)
         self._obranch = obranch
         self._branch = obranch
     @property
@@ -508,7 +508,7 @@ class CallbackInterface(object):
         self._del_callback('chgbranchobject', prechgbranchobjectcb)
     def _chgbranchobject_wrapper(self, solver, var2idx):
         def wrapper(prob, cb, obranch):
-            data = ChgBranchObjectCallbackContext(prob, solver, var2idx, obranch)
+            data = ChangeBranchObjectCallbackContext(prob, solver, var2idx, obranch)
             cb(data)
             return data.branchobject
         return wrapper
