@@ -42,7 +42,7 @@ class TSP:
     is not stated explicitly. Instead we check for any solution that the
     optimizer finds, whether it satisfies the subtour elimination constraint.
     If it does then we accept the solution. Otherwise we reject the solution
-    and augment the model by the violated subtour eliminiation constraint.
+    and augment the model by the violated subtour elimination constraint.
 
     This lazy addition of constraints is implemented using two callbacks:
     - a preintsol callback that rejects any solution that violates a
