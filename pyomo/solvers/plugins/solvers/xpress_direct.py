@@ -118,9 +118,9 @@ class CallbackContext(object):
     an instance of a subclass of `CallbackContext`. This instance carries
     callback-specific information and also allows callback-specific actions.
     """
-    def __init__(self, prob, solver, var2idx):
+    def __init__(self, problem, solver, var2idx):
         super(CallbackContext, self).__init__()
-        self._prob = prob
+        self._problem = problem
         self._solver = solver
         self._lpsol = None
         self._mipsol = None
@@ -130,17 +130,17 @@ class CallbackContext(object):
         """The Pyomo solver object."""
         return self._solver
     @property
-    def prob(self):
+    def problem(self):
         """The callback local Xpress problem instance."""
-        return self._prob
+        return self._problem
     @property
     def attributes(self):
         """The attributes of the callback local Xpress problem instance."""
-        return self._prob.attributes
+        return self._problem.attributes
     @property
     def controls(self):
         """The controls of the callback local Xpress problem instance."""
-        return self._prob.controls
+        return self._problem.controls
     def _make_value_map(self, values, comp2idx, component_map):
         """Create a `ComponentMap` that maps the keys in `component_map` to
         data from `values`.
@@ -162,8 +162,8 @@ class CallbackContext(object):
         Returns a `ComponentMap` that maps Pyomo variables to values.
         """
         if self._lpsol is None:
-            x = [0.0] * self._prob.attributes.originalcols
-            self._prob.getlpsol(x)
+            x = [0.0] * self._problem.attributes.originalcols
+            self._problem.getlpsol(x)
             self._lpsol = self._make_value_map(x, self._var2idx,
                                                self._solver._pyomo_var_to_solver_var_map)
         return self._lpsol
@@ -176,8 +176,8 @@ class CallbackContext(object):
         Returns a `ComponentMap` that maps Pyomo variables to values.
         """
         if self._mipsol is None:
-            x = [0.0] * self._prob.attributes.originalcols
-            self._prob.getmipsol(x)
+            x = [0.0] * self._problem.attributes.originalcols
+            self._problem.getmipsol(x)
             self._mipsol = self._make_value_map(x, self._var2idx,
                                                 self._solver._pyomo_var_to_solver_var_map)
         return self._mipsol
@@ -195,7 +195,7 @@ class CallbackContext(object):
         data = dict()
         for x in sol:
             data[var2idx[component_map[x]]] = sol[x]
-        self._prob.addmipsol([data[x] for x in sorted(data)], sorted(data))
+        self._problem.addmipsol([data[x] for x in sorted(data)], sorted(data))
 
     def addcut(self, cut, cuttype=0):
         """Add a (local) cut to the current node.
@@ -236,16 +236,16 @@ class CallbackContext(object):
         
         origrowcoef = lhs.linear_coefs
         origcolind = [self._var2idx[self._solver._pyomo_var_to_solver_var_map[x]] for x in lhs.linear_vars]
-        maxcoefs = self._prob.attributes.cols
+        maxcoefs = self._problem.attributes.cols
         colind = []
         rowcoef = []
-        redrhs, status = self._prob.presolverow(sense, origcolind,
-                                                origrowcoef, origrhs,
-                                                maxcoefs, colind, rowcoef)
+        redrhs, status = self._problem.presolverow(sense, origcolind,
+                                                   origrowcoef, origrhs,
+                                                   maxcoefs, colind, rowcoef)
         if status != 0:
             raise RuntimeError('Cut cannot be presolved: %d' % status)
-        self._prob.addcuts([cuttype], [sense], [redrhs], [0, len(colind)],
-                           colind, rowcoef)
+        self._problem.addcuts([cuttype], [sense], [redrhs], [0, len(colind)],
+                              colind, rowcoef)
 
 class MessageCallbackContext(CallbackContext):
     """Data passed to message callbacks.
@@ -254,8 +254,8 @@ class MessageCallbackContext(CallbackContext):
     - `msg`     [read]: The message that is sent (may be `None`).
     - `msgtype` [read]: The type of message sent (info, warning, error).
     """
-    def __init__(self, prob, solver, var2idx, msg, msgtype):
-        super(MessageCallbackContext, self).__init__(prob, solver, var2idx)
+    def __init__(self, problem, solver, var2idx, msg, msgtype):
+        super(MessageCallbackContext, self).__init__(problem, solver, var2idx)
         self._msg = msg
         self._msgtype = msgtype
     @property
@@ -289,8 +289,8 @@ class OptNodeCallbackContext(CallbackContext):
     In addition to the super class, this class has two properties:
     - `infeas` [write]: Wether the node is considered infeasible.
     """
-    def __init__(self, prob, solver, var2idx):
-        super(OptNodeCallbackContext, self).__init__(prob, solver, var2idx)
+    def __init__(self, problem, solver, var2idx):
+        super(OptNodeCallbackContext, self).__init__(problem, solver, var2idx)
         self._infeas = False
     @property
     def infeas(self):
@@ -310,8 +310,8 @@ class PreIntSolCallbackContext(CallbackContext):
     - `candidate_sol` [read]: The candidate solution.
     - `candidate_obj` [read]: The objective value for `candidate_sol`
     """
-    def __init__(self, prob, solver, var2idx, soltype, cutoff):
-        super(PreIntSolCallbackContext, self).__init__(prob, solver, var2idx)
+    def __init__(self, problem, solver, var2idx, soltype, cutoff):
+        super(PreIntSolCallbackContext, self).__init__(problem, solver, var2idx)
         self._soltype = soltype
         self._cutoff = cutoff
         self._reject = False
@@ -353,8 +353,8 @@ class IntSolCallbackContext(CallbackContext):
     - `solution` [read]: The solution being reported.
     - `objval`   [read]: The objective value of `solution`.
     """
-    def __init__(self, prob, solver, var2idx):
-        super(IntSolCallbackContext, self).__init__(prob, solver, var2idx)
+    def __init__(self, problem, solver, var2idx):
+        super(IntSolCallbackContext, self).__init__(problem, solver, var2idx)
     @property
     def solution(self):
         """Returns the solution as a map from Pyomo variables to values."""
@@ -372,8 +372,8 @@ class ChgBranchObjectCallbackContext(CallbackContext):
     - `branchobject' [read/write]: The branching that will be executed.
     - `new_object()`:              Create a new branching object.
     """
-    def __init__(self, prob, solver, var2idx, obranch):
-        super(ChgBranchObjectCallbackContext, self).__init__(prob, solver, var2idx)
+    def __init__(self, problem, solver, var2idx, obranch):
+        super(ChgBranchObjectCallbackContext, self).__init__(problem, solver, var2idx)
         self._obranch = obranch
         self._branch = obranch
     @property
@@ -393,7 +393,7 @@ class ChgBranchObjectCallbackContext(CallbackContext):
         self._branch = value
     def new_object(self, nbranch):
         """Create a new branch object that branches in the original space."""
-        return xpress.branchobj(prob, nbranch, isoriginal=True)
+        return xpress.branchobj(self.problem, nbranch, isoriginal=True)
     def map_pyomo_var(self, var):
         """Map a Pyomo variable to an Xpress variable."""
         return self._solver._pyomo_var_to_solver_var_map[var]
