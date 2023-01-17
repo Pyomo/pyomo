@@ -535,7 +535,7 @@ class TestXpressPersistent(unittest.TestCase):
         """Simple callback test.
 
         Tests that optnode, preintsol, intsol callbacks are invoked.
-        Also tests that information between preintsol an intsol callbacks
+        Also tests that information between preintsol and intsol callbacks
         is consistent.
         """
         model = self._markshare()
