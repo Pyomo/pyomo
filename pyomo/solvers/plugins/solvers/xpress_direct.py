@@ -287,7 +287,7 @@ class OptNodeCallbackContext(CallbackContext):
     """Data passed to optnode callbacks.
 
     In addition to the super class, this class has two properties:
-    - `infeas` [write]: Wether the node is considered infeasible.
+    - `infeas` [write]: Whether the node is considered infeasible.
     """
     def __init__(self, problem, solver, var2idx):
         super(OptNodeCallbackContext, self).__init__(problem, solver, var2idx)
