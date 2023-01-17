@@ -178,27 +178,25 @@ def ROSolver_iterative_solve(model_data, config):
             output_logger(config=config, robust_infeasible=True)
         elif master_soln.pyros_termination_condition is pyrosTerminationCondition.subsolver_error:
             term_cond = pyrosTerminationCondition.subsolver_error
+        elif master_soln.pyros_termination_condition is pyrosTerminationCondition.time_out:
+            term_cond = pyrosTerminationCondition.time_out
         else:
             term_cond = None
-        if term_cond == pyrosTerminationCondition.subsolver_error or \
-                term_cond == pyrosTerminationCondition.robust_infeasible:
-            update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=term_cond,
-                                   nominal_data=nominal_data,
-                                   timing_data=timing_data,
-                                   separation_data=separation_data,
-                                   master_soln=master_soln)
+        if term_cond in {
+                pyrosTerminationCondition.subsolver_error,
+                pyrosTerminationCondition.time_out,
+                pyrosTerminationCondition.robust_infeasible,
+                }:
+            update_grcs_solve_data(
+                pyros_soln=model_data,
+                k=k,
+                term_cond=term_cond,
+                nominal_data=nominal_data,
+                timing_data=timing_data,
+                separation_data=separation_data,
+                master_soln=master_soln,
+            )
             return model_data, []
-        # === Check if time limit reached
-        elapsed = get_main_elapsed_time(model_data.timing)
-        if config.time_limit:
-            if elapsed >= config.time_limit:
-                output_logger(config=config, time_out=True, elapsed=elapsed)
-                update_grcs_solve_data(pyros_soln=model_data, k=k, term_cond=pyrosTerminationCondition.time_out,
-                                       nominal_data=nominal_data,
-                                       timing_data=timing_data,
-                                       separation_data=separation_data,
-                                       master_soln=master_soln)
-                return model_data, []
 
         # === Save nominal information
         if k == 0:
@@ -211,7 +209,6 @@ def ROSolver_iterative_solve(model_data, config):
             nominal_data.nom_first_stage_cost = master_soln.first_stage_objective
             nominal_data.nom_second_stage_cost = master_soln.second_stage_objective
             nominal_data.nom_obj = value(master_data.master_model.obj)
-
 
         if (
             # === Decision rule polishing (do not polish on first iteration if no ssv or if decision_rule_order = 0)
@@ -233,6 +230,22 @@ def ROSolver_iterative_solve(model_data, config):
                 for dvar in varslist.values():
                     vals.append(dvar.value)
                 dr_var_lists_polished.append(vals)
+
+        # === Check if time limit reached
+        elapsed = get_main_elapsed_time(model_data.timing)
+        if config.time_limit:
+            if elapsed >= config.time_limit:
+                output_logger(config=config, time_out=True, elapsed=elapsed)
+                update_grcs_solve_data(
+                    pyros_soln=model_data,
+                    k=k,
+                    term_cond=pyrosTerminationCondition.time_out,
+                    nominal_data=nominal_data,
+                    timing_data=timing_data,
+                    separation_data=separation_data,
+                    master_soln=master_soln,
+                )
+                return model_data, []
 
         # === Set up for the separation problem
         separation_data.opt_fsv_vals = [v.value for v in master_soln.master_model.scenarios[0,0].util.first_stage_variables]
@@ -337,9 +350,3 @@ def ROSolver_iterative_solve(model_data, config):
 
     # === In this case we still return the final solution objects for the last iteration
     return model_data, separation_solns
-
-
-
-
-
-
