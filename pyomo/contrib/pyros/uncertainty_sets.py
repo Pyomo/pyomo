@@ -2554,7 +2554,7 @@ class IntersectionSet(UncertaintySet):
 
     Parameters
     ----------
-    **uncertainty_sets : dict
+    **unc_sets : dict
         PyROS ``UncertaintySet`` objects of which to construct
         an intersection. At least two uncertainty sets must
         be provided. All sets must be of the same dimension.
