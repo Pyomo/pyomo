@@ -3374,6 +3374,8 @@ class RegressionTest(unittest.TestCase):
 
     @unittest.skipUnless(baron_license_is_valid,
                          "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(baron_version<(23,1,5),
+                         "Test known to fail beginning with Baron 23.1.5")
     def test_terminate_with_max_iter(self):
         m = ConcreteModel()
         m.x1 = Var(initialize=0, bounds=(0, None))
@@ -4222,6 +4224,8 @@ class testMasterFeasibilityUnitConsistency(unittest.TestCase):
     """
     @unittest.skipUnless(baron_license_is_valid,
                          "Global NLP solver is not available and licensed.")
+    @unittest.skipUnless(baron_version<(23,1,5),
+                         "Test known to fail beginning with Baron 23.1.5")
     def test_two_stg_mod_with_axis_aligned_set(self):
         """
         Test two-stage model with `AxisAlignedEllipsoidalSet`
