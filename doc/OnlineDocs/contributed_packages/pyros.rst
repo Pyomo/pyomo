@@ -164,7 +164,7 @@ PyROS Uncertainty Set Classes
     :special-members: origin, positive_deviation, gamma, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.BudgetSet
-    :special-members: coefficients_mat, rhs_vec, budget_membership_mat, budget_rhs_vec, type, parameter_bounds, dim, point_in_set
+    :special-members: coefficients_mat, rhs_vec, origin, budget_membership_mat, budget_rhs_vec, type, parameter_bounds, dim, point_in_set
 
 .. autoclass:: pyomo.contrib.pyros.uncertainty_sets.FactorModelSet
     :special-members: origin, number_of_factors, psi_mat, beta, type, parameter_bounds, dim, point_in_set
