@@ -137,7 +137,7 @@ Mathematical representations of the sets are shown below, followed by the class 
    * - ``BudgetSet``
      - :math:`Q_B = \left\{q \in \mathbb{R}^n_+: \displaystyle\sum_{i \in B_\ell} q_i \leq b_\ell \ \forall \ell \in \left\{1,\ldots,L\right\} \right\} \\ b_\ell \in \mathbb{R}^{L}_+`
    * - ``FactorModelSet``
-     - :math:`Q_F = \left\{q \in \mathbb{R}^n: \displaystyle q = q^0 + \Psi \xi \text{ for some }\xi \in \Xi_F\right\} \\ \Xi_F = \left\{ \xi \in \left[-1, 1\right]^F, \left\lvert \displaystyle \sum_{f=1}^{F} \xi_f\right\rvert \leq \beta F \right\} \\ \beta \in [0,1] \\ \Psi \in \mathbb{R}^{n \times F}_+ \\ q^0 \in \mathbb{R}^n`
+     - :math:`Q_F = \left\{q \in \mathbb{R}^{n}\middle|\begin{array}{l}q = q^{\circ} + \Psi \xi \\\displaystyle\bigg| \sum_{f=1}^{F} \xi_f \bigg| \leq \beta F \\\xi \in [-1, 1]^{F} \\\end{array}\right\}`
    * - ``PolyhedralSet``
      - :math:`Q_P = \left\{q \in \mathbb{R}^n: \displaystyle A q \leq b \right\} \\ A \in \mathbb{R}^{m \times n} \\ b \in \mathbb{R}^{m} \\ q^0 \in \mathbb{R}^n: {Aq^0 \leq b}`
    * - ``AxisAlignedEllipsoidalSet``
