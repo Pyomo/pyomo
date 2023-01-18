@@ -32,6 +32,16 @@ from pyomo.opt.results import SolverStatus, SolverResults
 
 logger = logging.getLogger('pyomo.opt')
 
+# The minimum absolute time (in seconds) to add to the solver timeout
+# when setting the timeout for the solver subprocess.  This provides
+# time for a solver that timed out to clean up / report a solution
+# before we forcibly kill the subprocess.
+SUBPROCESS_TIMEOUT_ABS_ADJUST = 1
+# The additional time (relative to the user-specified timeout) to add to
+# the solver timeout when setting the timeout for the solver subprocess.
+# This provides time for a solver that timed out to clean up / report a
+# solution before we forcibly kill the subprocess.
+SUBPROCESS_TIMEOUT_REL_ADJUST = 0.01
 
 class SystemCallSolver(OptSolver):
     """ A generic command line solver """
@@ -312,7 +322,8 @@ class SystemCallSolver(OptSolver):
 
         timeout = self._timelimit
         if timeout is not None:
-            timeout += max(120, 0.01*self._timelimit)
+            timeout += max(SUBPROCESS_TIMEOUT_ABS_ADJUST,
+                           SUBPROCESS_TIMEOUT_REL_ADJUST*self._timelimit)
 
         ostreams = [StringIO()]
         if self._tee:
