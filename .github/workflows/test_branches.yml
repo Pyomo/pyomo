@@ -209,8 +209,6 @@ jobs:
       if: matrix.PYENV == 'conda'
       uses: conda-incubator/setup-miniconda@v2
       with:
-        auto-activate-base: true
-        activate-environment: ""
         auto-update-conda: true
         python-version: ${{ matrix.python }}
         channels: conda-forge
